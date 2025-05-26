@@ -1,0 +1,29 @@
+{
+    "editor.formatOnSave": true,
+    "isort.args": [
+        "--float-to-top",
+        "--profile",
+        "black"
+    ],
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnType": false,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.unusedImports": "explicit",
+            "source.organizeImports.isort": "always",
+        }
+    },
+    "files.exclude": {
+        "**/.git": false
+    },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "rivm-bioinformatics",
+        "projectKey": "RIVM-bioinformatics_gen-epix-api"
+    },
+    "git.allowNoVerifyCommit": true,
+}

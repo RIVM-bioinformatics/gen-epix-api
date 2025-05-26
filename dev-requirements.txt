@@ -1,0 +1,21 @@
+# code quality and testing extensions
+# typing_extensions==4.8.0 # do we need this?
+pytest==8.3.*
+pytest-cov==6.0.*
+pytest-mock==3.14.*
+pytest-dependency==0.6.*
+pyinstrument==5.0.*
+isort==5.13.*
+black==24.4.*
+pylint==3.1.*
+mypy==1.9.*
+cryptography==43.0.3
+
+# stubs
+pandas-stubs==2.2.*
+types-openpyxl==3.1.*
+types-cachetools==5.5.*
+types-python-jose==3.3.*
+
+# NCBI Taxonomy parsing
+# ete4==4.0.0b2

@@ -1,0 +1,11 @@
+[
+    {
+        "name": "mock",
+        "label": "MOCK",
+        "protocol": "OIDC",
+        "discovery_url": "https://127.0.0.1:5443/.well-known/openid-configuration",
+        "client_id": "casedb_client_id",
+        "client_secret": "casedb_client_secret",
+        "scope": "openid profile email offline_access"
+    }
+]

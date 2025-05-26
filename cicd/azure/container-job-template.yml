@@ -1,0 +1,30 @@
+properties:
+  template:
+    containers:
+    - args:
+      - -c
+      - python run.py ${RUN_ARGS}
+      command:
+      - /bin/sh
+      env:
+      - name: ${ENVIRONMENT_VARIABLE_PREFIX}_SECRETS_DIR
+        value: /sec
+      - name: ${ENVIRONMENT_VARIABLE_PREFIX}_IDPS_CONFIG_FILE
+        value: /sec/identity-providers
+      - name: APP_VERSION
+        value: ${BUILD_NUMBER}
+      image: ${AZURE_REGISTRY}.azurecr.io/lsp-api:${BUILD_ID}
+      name: ${CONTAINER_APP_CONTAINER_NAME}
+      probes: []
+      resources:
+        cpu: 1
+        memory: 2Gi
+      volumeMounts:
+      - mountPath: /sec
+        volumeName: localsecrets
+    initContainers: null
+    volumes:
+    - name: localsecrets
+      secrets: []
+      storageType: Secret
+  workloadProfileName: Consumption

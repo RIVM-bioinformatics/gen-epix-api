@@ -1,0 +1,35 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  simple:
+    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+loggers:
+  omopdb.setup:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  omopdb.service:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  omopdb.app:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  omopdb.api:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  omopdb.external:
+    level: INFO
+    handlers: [console]
+    propagate: no
+root:
+  level: INFO
+  handlers: [console]

@@ -1,0 +1,13 @@
+from enum import Enum
+
+
+class ServiceType(Enum):
+    AUTH = "AUTH"
+    RBAC = "RBAC"
+    SERVICE1 = "Service1"
+    SERVICE2 = "Service2"
+
+
+class TestType(Enum):
+    SERVICE_SERVICE_PERFORMANCE_REPOSITORY = "SERVICE_SERVICE_PERFORMANCE_REPOSITORY"
+    SERVICE_SERVICE_UNIT_REPOSITORY = "SERVICE_SERVICE_UNIT_REPOSITORY"

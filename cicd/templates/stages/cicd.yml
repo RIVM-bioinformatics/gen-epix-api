@@ -1,0 +1,367 @@
+parameters:
+  - name: AutoDeployEnvironment
+    type: string
+    default: ""
+  - name: AutoDeployCondition
+    type: string
+    default: ""
+  - name: IsRelease
+    type: boolean
+    default: false
+  - name: Dev
+    type: object
+    default:
+      {
+        AzureServiceConnection: "rivm-az-cib-lsp-dev-nprd-service-connection",
+        AzureRegistry: "lspcontainerregistrydevnprd",
+        main: {
+          AzureResourceGroup: "dev-nprd-LSP_backend_gert_ContApp",
+        },
+        seqdb: {
+          AzureResourceGroup: "dev-nprd-LSP_backend_samson_ContApp",
+        },
+        DeploymentName: "DEV",
+        EnvironmentSuffix: "dev",
+        E2EBaseUrl: "https://dev-lsp.rivm.nl",
+      }
+  - name: Tst
+    type: object
+    default:
+      {
+        AzureServiceConnection: "rivm-az-cib-lsp-tst-nprd-service-connection-cib-lsp-dev",
+        AzureRegistry: "lspcontainerregistrytstnprd",
+        main: {
+          AzureResourceGroup: "tst-nprd-LSP_backend_gert_ContApp",
+        },
+        seqdb: {
+          AzureResourceGroup: "tst-nprd-LSP_backend_samson_ContApp",
+        },
+        DeploymentName: "TST",
+        EnvironmentSuffix: "tst",
+        E2EBaseUrl: "https://tst-lsp.rivm.nl",
+      }
+  - name: Acc
+    type: object
+    default:
+      {
+        AzureServiceConnection: "rivm-az-cib-lsp-acc-nprd-service-connection-cib-lsp-dev",
+        AzureRegistry: "lspcontainerregistryaccnprd",
+        main: {
+          AzureResourceGroup: "acc-nprd-LSP_backend_gert_ContApp",
+        },
+        seqdb: {
+          AzureResourceGroup: "acc-nprd-LSP_backend_samson_ContApp",
+        },
+        DeploymentName: "ACC",
+        EnvironmentSuffix: "acc",
+        E2EBaseUrl: "https://acc-lsp.rivm.nl",
+      }
+
+stages:
+  - stage: BUILD
+    pool: RIVM-latest
+    displayName: "Build container"
+    jobs:
+      - template: "/cicd/templates/jobs/build.yml"
+        parameters:
+          IsRelease: ${{ parameters.IsRelease }}
+
+  - stage: DEPLOY_MAIN_AUTO
+    pool: RIVM-latest
+    displayName: "Deploy MAIN to ${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }} (CD)"
+    dependsOn: BUILD
+    condition: ${{ parameters.AutoDeployCondition }}
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/casedb/app.py"
+          SettingsDir: "gen_epix/casedb/config"
+          LoggingConfigFile: "gen_epix/casedb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-main"
+          ContainerAppName: "api-gert"
+          Environment: "lsp-api-main-${{ parameters[parameters.AutoDeployEnvironment].EnvironmentSuffix }}"
+          DeploymentName: "MAIN_AUTO_${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }}"
+          AzureServiceConnection: ${{ parameters[parameters.AutoDeployEnvironment].AzureServiceConnection }}
+          AzureRegistry: ${{ parameters[parameters.AutoDeployEnvironment].AzureRegistry }}
+          AzureResourceGroup: ${{ parameters[parameters.AutoDeployEnvironment].main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+
+  - stage: DEPLOY_MAIN_DEV
+    pool: RIVM-latest
+    displayName: "Deploy MAIN to ${{ parameters.Dev.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/casedb/app.py"
+          SettingsDir: "gen_epix/casedb/config"
+          LoggingConfigFile: "gen_epix/casedb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-main"
+          ContainerAppName: "api-gert"
+          Environment: "lsp-api-main-${{ parameters.Dev.EnvironmentSuffix }}"
+          DeploymentName: "MAIN_${{ parameters.Dev.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Dev.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Dev.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Dev.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+
+  - stage: DEPLOY_MAIN_TST
+    pool: RIVM-latest
+    displayName: "Deploy MAIN to ${{ parameters.Tst.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/casedb/app.py"
+          SettingsDir: "gen_epix/casedb/config"
+          LoggingConfigFile: "gen_epix/casedb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-main"
+          ContainerAppName: "api-gert"
+          Environment: "lsp-api-main-${{ parameters.Tst.EnvironmentSuffix }}"
+          DeploymentName: "MAIN_${{ parameters.Tst.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Tst.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Tst.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Tst.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+
+  - stage: DEPLOY_MAIN_ACC
+    pool: RIVM-latest
+    displayName: "Deploy MAIN to ${{ parameters.Acc.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/casedb/app.py"
+          SettingsDir: "gen_epix/casedb/config"
+          LoggingConfigFile: "gen_epix/casedb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-main"
+          ContainerAppName: "api-gert"
+          Environment: "lsp-api-main-${{ parameters.Acc.EnvironmentSuffix }}"
+          DeploymentName: "MAIN_${{ parameters.Acc.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Acc.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Acc.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Acc.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+
+  - stage: DEPLOY_SEQDB_AUTO
+    dependsOn: BUILD
+    pool: RIVM-latest
+    displayName: "Deploy SEQDB to ${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }} (CD)"
+    condition: ${{ parameters.AutoDeployCondition }}
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/seqdb/app.py"
+          SettingsDir: "gen_epix/seqdb/config"
+          LoggingConfigFile: "gen_epix/seqdb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-seqdb"
+          ContainerAppName: "api-samson"
+          Environment: "lsp-api-seqdb-${{ parameters[parameters.AutoDeployEnvironment].EnvironmentSuffix }}"
+          DeploymentName: SEQDB_AUTO_${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }}
+          AzureServiceConnection: ${{ parameters[parameters.AutoDeployEnvironment].AzureServiceConnection }}
+          AzureRegistry: ${{ parameters[parameters.AutoDeployEnvironment].AzureRegistry }}
+          AzureResourceGroup: ${{ parameters[parameters.AutoDeployEnvironment].seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+
+  - stage: DEPLOY_SEQDB_DEV
+    pool: RIVM-latest
+    displayName: "Deploy SEQDB to ${{ parameters.Dev.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/seqdb/app.py"
+          SettingsDir: "gen_epix/seqdb/config"
+          LoggingConfigFile: "gen_epix/seqdb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-seqdb"
+          ContainerAppName: "api-samson"
+          Environment: "lsp-api-seqdb-${{ parameters.Dev.EnvironmentSuffix }}"
+          DeploymentName: "SEQDB_${{ parameters.Dev.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Dev.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Dev.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Dev.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+
+  - stage: DEPLOY_SEQDB_TST
+    pool: RIVM-latest
+    displayName: "Deploy SEQDB to ${{ parameters.Tst.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/seqdb/app.py"
+          SettingsDir: "gen_epix/seqdb/config"
+          LoggingConfigFile: "gen_epix/seqdb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-seqdb"
+          ContainerAppName: "api-samson"
+          Environment: "lsp-api-seqdb-${{ parameters.Tst.EnvironmentSuffix }}"
+          DeploymentName: "SEQDB_${{ parameters.Tst.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Tst.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Tst.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Tst.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+
+  - stage: DEPLOY_SEQDB_ACC
+    pool: RIVM-latest
+    displayName: "Deploy SEQDB to ${{ parameters.Acc.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-app.yml"
+        parameters:
+          AppPath: "gen_epix/seqdb/app.py"
+          SettingsDir: "gen_epix/seqdb/config"
+          LoggingConfigFile: "gen_epix/seqdb/config/logging.yaml"
+          ContainerAppContainerName: "lsp-api-seqdb"
+          ContainerAppName: "api-samson"
+          Environment: "lsp-api-seqdb-${{ parameters.Acc.EnvironmentSuffix }}"
+          DeploymentName: "SEQDB_${{ parameters.Acc.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Acc.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Acc.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Acc.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+
+  - stage: E2E_MAIN_AUTO
+    pool: RIVM-latest
+    displayName: "Trigger E2E ${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }} (CD)"
+    dependsOn: DEPLOY_MAIN_AUTO
+    condition: succeeded()
+    jobs:
+      - template: "/cicd/templates/jobs/e2e.yml"
+        parameters:
+          ForBuild: "${{ parameters[parameters.AutoDeployEnvironment].DeploymentName }}--lsp-api-main--$(Build.BuildNumber)"
+          BaseUrl: "${{ parameters[parameters.AutoDeployEnvironment].E2EBaseUrl }}"
+
+  - stage: E2E_MAIN_DEV
+    pool: RIVM-latest
+    displayName: "Trigger E2E ${{ parameters.Dev.DeploymentName }}"
+    dependsOn: DEPLOY_MAIN_DEV
+    condition: succeeded()
+    jobs:
+      - template: "/cicd/templates/jobs/e2e.yml"
+        parameters:
+          ForBuild: "${{ parameters.Dev.DeploymentName }}--lsp-api-main--$(Build.BuildNumber)"
+          BaseUrl: "${{ parameters.Dev.E2EBaseUrl }}"
+
+  - stage: E2E_MAIN_TST
+    pool: RIVM-latest
+    displayName: "Trigger E2E ${{ parameters.Tst.DeploymentName }}"
+    dependsOn: DEPLOY_MAIN_TST
+    condition: succeeded()
+    jobs:
+      - template: "/cicd/templates/jobs/e2e.yml"
+        parameters:
+          ForBuild: "${{ parameters.Dev.DeploymentName }}--lsp-api-main--$(Build.BuildNumber)"
+          BaseUrl: "${{ parameters.Dev.E2EBaseUrl }}"
+
+  - stage: E2E_MAIN_ACC
+    pool: RIVM-latest
+    displayName: "Trigger E2E ${{ parameters.Acc.DeploymentName }}"
+    dependsOn: DEPLOY_MAIN_ACC
+    condition: succeeded()
+    jobs:
+      - template: "/cicd/templates/jobs/e2e.yml"
+        parameters:
+          ForBuild: "${{ parameters.Dev.DeploymentName }}--lsp-api-main--$(Build.BuildNumber)"
+          BaseUrl: "${{ parameters.Dev.E2EBaseUrl }}"
+
+  - stage: ETL_MAIN_DEV
+    pool: RIVM-latest
+    displayName: "Run ETL MAIN on ${{ parameters.Dev.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "dev-nprd-etl-load-main"
+          Environment: "lsp-api-etl-dev"
+          DeploymentName: "ETL_${{ parameters.Dev.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Dev.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Dev.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Dev.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+          RunArgs: "etl lsp all transform_load 1"
+  
+  - stage: ETL_MAIN_TST
+    pool: RIVM-latest
+    displayName: "Run ETL MAIN on ${{ parameters.Tst.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "tst-nprd-etl-load-main"
+          Environment: "lsp-api-etl-tst"
+          DeploymentName: "ETL_${{ parameters.Tst.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Tst.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Tst.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Tst.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+          RunArgs: "etl lsp all transform_load 1"
+          
+  - stage: ETL_MAIN_ACC
+    pool: RIVM-latest
+    displayName: "Run ETL MAIN on ${{ parameters.Acc.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "acc-nprd-etl-load-main"
+          Environment: "lsp-api-etl-acc"
+          DeploymentName: "ETL_${{ parameters.Acc.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Acc.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Acc.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Acc.main.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "CASEDB"
+          RunArgs: "etl lsp all transform_load 1"
+
+  - stage: ETL_SEQDB_DEV
+    pool: RIVM-latest
+    displayName: "Run ETL SEQDB on ${{ parameters.Dev.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "dev-nprd-etl-load-seqdb"
+          Environment: "lsp-api-etl-dev"
+          DeploymentName: "ETL_${{ parameters.Dev.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Dev.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Dev.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Dev.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+          RunArgs: "etl seqdb all transform_load 1"
+
+  - stage: ETL_SEQDB_TST
+    pool: RIVM-latest
+    displayName: "Run ETL SEQDB on ${{ parameters.Tst.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "tst-nprd-etl-load-seqdb"
+          Environment: "lsp-api-etl-tst"
+          DeploymentName: "ETL_${{ parameters.Tst.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Tst.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Tst.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Tst.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+          RunArgs: "etl seqdb all transform_load 1"
+          
+  - stage: ETL_SEQDB_ACC
+    pool: RIVM-latest
+    displayName: "Run ETL SEQDB on ${{ parameters.Acc.DeploymentName }}"
+    trigger: manual
+    jobs:
+      - template: "/cicd/templates/jobs/deploy-container-job.yml"
+        parameters:
+          ContainerAppContainerName: "lsp-api-etl"
+          ContainerAppName: "acc-nprd-etl-load-seqdb"
+          Environment: "lsp-api-etl-acc"
+          DeploymentName: "ETL_${{ parameters.Acc.DeploymentName }}"
+          AzureServiceConnection: ${{ parameters.Acc.AzureServiceConnection }}
+          AzureRegistry: ${{ parameters.Acc.AzureRegistry }}
+          AzureResourceGroup: ${{ parameters.Acc.seqdb.AzureResourceGroup }}
+          EnvironmentVariablePrefix: "SEQDB"
+          RunArgs: "etl seqdb all transform_load 1"

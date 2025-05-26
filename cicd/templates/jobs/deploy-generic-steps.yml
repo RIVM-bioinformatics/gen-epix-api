@@ -1,0 +1,34 @@
+parameters:
+  - name: AzureServiceConnection
+    type: string
+    default: ""
+  - name: AzureRegistry
+    type: string
+    default: ""
+  - name: AzureResourceGroup
+    type: string
+    default: ""
+
+steps:
+  - task: AzureCLI@2
+    displayName: Azure Container registry login
+    timeoutInMinutes: 5
+    inputs:
+      azureSubscription: ${{ parameters.AzureServiceConnection }}
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        az acr login --name ${{ parameters.AzureRegistry }} --password `az acr credential show -n ${{ parameters.AzureRegistry }} --query 'passwords[0].value' | tr -d \"` --username `az acr credential show -n ${{ parameters.AzureRegistry }} --query username | tr -d \"`
+
+  - task: AzureCLI@2
+    displayName: "Load-, tag- and push image"
+    inputs:
+      azureSubscription: ${{ parameters.AzureServiceConnection }}
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        docker load --input $(Pipeline.Workspace)/lsp-api-$(Build.BuildId)/image-lsp-api-$(Build.BuildId).tar
+        docker tag lsp-api:$(Build.BuildId) ${{ parameters.AzureRegistry }}.azurecr.io/lsp-api:$(Build.BuildId)
+        docker tag lsp-api:$(Build.BuildId) ${{ parameters.AzureRegistry }}.azurecr.io/lsp-api:latest
+        docker push ${{ parameters.AzureRegistry }}.azurecr.io/lsp-api:$(Build.BuildId)
+        docker push ${{ parameters.AzureRegistry }}.azurecr.io/lsp-api:latest

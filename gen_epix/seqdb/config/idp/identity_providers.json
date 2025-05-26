@@ -1,0 +1,29 @@
+[
+    {
+        "name": "rivm_signicat_offline_access",
+        "label": "RIVM (Internal, External, and Guest accounts)",
+        "protocol": "OIDC",
+        "discovery_url": "https://pre-login.rivm.nl/broker/sp/oidc/.well-known/openid-configuration",
+        "client_id": "cIzXnNutzMck9L1VuVmSUfVwRPLAbGCR",
+        "client_secret": "",
+        "scope": "openid profile email offline_access"
+    },
+    {
+        "name": "rivm_signicat_no_offline_access",
+        "label": "GGD GHOR Nederland, SURF & Rijksbreed Inloggen",
+        "protocol": "OIDC",
+        "discovery_url": "https://pre-login.rivm.nl/broker/sp/oidc/.well-known/openid-configuration",
+        "client_id": "POv1bEMlzAunu6LD0BcmV4pvxInkNRXY",
+        "client_secret": "",
+        "scope": "openid profile email"
+    },
+    {
+        "name": "mock",
+        "label": "MOCK",
+        "protocol": "OIDC",
+        "discovery_url": "https://127.0.0.1:5443/.well-known/openid-configuration",
+        "client_id": "seqdb_client_id",
+        "client_secret": "seqdb_client_secret",
+        "scope": "openid profile email offline_access"
+    }
+]

@@ -1,0 +1,17 @@
+pr: none
+
+trigger:
+  branches:
+    exclude:
+      - refs/heads/main
+      - refs/heads/hotfix/*
+
+variables:
+  DOCKER_BUILDKIT: 1
+
+stages:
+  - template: "/cicd/templates/stages/cicd.yml"
+    parameters:
+      AutoDeployEnvironment: "Dev"
+      AutoDeployCondition: "and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))"
+      IsRelease: false

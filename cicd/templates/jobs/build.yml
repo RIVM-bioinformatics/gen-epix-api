@@ -1,0 +1,93 @@
+parameters:
+  - name: IsRelease
+    type: boolean
+    default: false
+
+jobs:
+  - job: Build
+    displayName: Build and publish image
+    steps:
+      - checkout: self
+        clean: true
+        fetchTags: false
+
+      - task: UsePythonVersion@0
+        displayName: "Use Python 3.12"
+        inputs:
+          versionSpec: "3.12"
+          architecture: "x64"
+
+      - task: CmdLine@2
+        displayName: Install semantic release
+        inputs:
+          script: |
+            pip install python-semantic-release==9.15.1
+
+      - task: CmdLine@2
+        displayName: Run semantic release
+        condition: eq(${{ parameters.IsRelease }}, true)
+        inputs:
+          script: |
+            semantic-release -v version --no-vcs-release --skip-build
+
+      - task: CmdLine@2
+        displayName: Update build number (release)
+        condition: eq(${{ parameters.IsRelease }}, true)
+        inputs:
+          script: |
+            PACKAGE_VERSION=`semantic-release version --print-last-released`
+            if [[ $PACKAGE_VERSION == "" ]]; then
+                PACKAGE_VERSION="0.0.0"
+            fi
+            NEXT_BUILD_NUMBER="${PACKAGE_VERSION}-$(Build.BuildId)"
+            echo "##vso[build.updatebuildnumber]${NEXT_BUILD_NUMBER:0:252}"
+
+      - task: CmdLine@2
+        displayName: Update build number (snapshot)
+        condition: eq(${{ parameters.IsRelease }}, false)
+        inputs:
+          script: |
+            slugify () {
+                echo "$1" | iconv -c -t ascii//TRANSLIT | sed -E 's/[~^]+//g' | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | tr A-Z a-z
+            }
+            PACKAGE_VERSION=`semantic-release version --print-last-released`
+            if [[ $PACKAGE_VERSION == "" ]]; then
+                PACKAGE_VERSION="0.0.0"
+            fi
+            COMMIT_MESSAGE_SLUGGIFIED=`slugify "$(Build.SourceVersionMessage)"`
+            COMMIT_HASH=$(Build.SourceVersion)
+            COMMIT_HASH_TRUNCATED=${COMMIT_HASH:0:7}
+            NEXT_BUILD_NUMBER="${PACKAGE_VERSION}.SNAPSHOT-$(Build.BuildId)--${COMMIT_HASH_TRUNCATED}--${COMMIT_MESSAGE_SLUGGIFIED}"
+            echo "##vso[build.updatebuildnumber]${NEXT_BUILD_NUMBER:0:252}"
+
+      - task: Docker@2
+        displayName: "Build image"
+        inputs:
+          repository: lsp-api
+          command: build
+          Dockerfile: Dockerfile
+          tags: $(Build.BuildId)
+
+      - task: CmdLine@2
+        displayName: "Save image to TAR"
+        inputs:
+          script: |
+            docker save --output $(Build.ArtifactStagingDirectory)/image-lsp-api-$(Build.BuildId).tar lsp-api:$(Build.BuildId)
+
+      - task: PublishPipelineArtifact@1
+        displayName: "Publishing lsp-api image as pipeline artifact"
+        inputs:
+          path: $(Build.ArtifactStagingDirectory)/image-lsp-api-$(Build.BuildId).tar
+          artifact: "lsp-api-$(Build.BuildId)"
+
+      - task: PublishPipelineArtifact@1
+        displayName: "Publishing container-app-template as pipeline artifact"
+        inputs:
+          path: $(Build.SourcesDirectory)/cicd/azure/container-app-template.yml
+          artifact: "container-app-template-$(Build.BuildId)"
+
+      - task: PublishPipelineArtifact@1
+        displayName: "Publishing container-job-template as pipeline artifact"
+        inputs:
+          path: $(Build.SourcesDirectory)/cicd/azure/container-job-template.yml
+          artifact: "container-job-template-$(Build.BuildId)"

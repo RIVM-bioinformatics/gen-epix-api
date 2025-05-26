@@ -1,0 +1,35 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  simple:
+    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+loggers:
+  casedb.setup:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  casedb.service:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  casedb.app:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  casedb.api:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  casedb.external:
+    level: INFO
+    handlers: [console]
+    propagate: no
+root:
+  level: INFO
+  handlers: [console]

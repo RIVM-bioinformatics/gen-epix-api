@@ -1,0 +1,76 @@
+parameters:
+  - name: AppPath
+    type: string
+    default: ""
+  - name: ContainerAppContainerName
+    type: string
+    default: ""
+  - name: ContainerAppName
+    type: string
+    default: ""
+  - name: Environment
+    type: string
+    default: ""
+  - name: DeploymentName
+    type: string
+    default: ""
+  - name: AzureServiceConnection
+    type: string
+    default: ""
+  - name: AzureRegistry
+    type: string
+    default: ""
+  - name: AzureResourceGroup
+    type: string
+    default: ""
+  - name: EnvironmentVariablePrefix
+    type: string
+    default: ""
+  - name: SettingsDir
+    type: string
+    default: ""
+  - name: LoggingConfigFile
+    type: string
+    default: ""
+
+jobs:
+  - deployment: ${{ parameters.DeploymentName }}
+    displayName: "Deploy ${{ parameters.ContainerAppContainerName }} on ${{ parameters.DeploymentName }}"
+    environment: ${{ parameters.Environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: "/cicd/templates/jobs/deploy-generic-steps.yml"
+              parameters:
+                AzureServiceConnection: ${{ parameters.AzureServiceConnection }}
+                AzureRegistry: ${{ parameters.AzureRegistry }}
+                AzureResourceGroup: ${{ parameters.AzureResourceGroup }}
+
+            - task: CmdLine@2
+              displayName: Prepare yaml variables
+              inputs:
+                script: |
+                  rm -rf $(Pipeline.Workspace)/container-app.yml
+                  envsubst < $(Pipeline.Workspace)/container-app-template-$(Build.BuildId)/container-app-template.yml > $(Pipeline.Workspace)/container-app.yml
+              env:
+                BUILD_ID: $(Build.BuildId)
+                BUILD_NUMBER: $(Build.BuildNumber)
+                CONTAINER_APP_CONTAINER_NAME: ${{ parameters.ContainerAppContainerName }}
+                ENVIRONMENT_VARIABLE_PREFIX: ${{ parameters.EnvironmentVariablePrefix }}
+                AZURE_REGISTRY: ${{ parameters.AzureRegistry }}
+                APP_PATH: ${{ parameters.AppPath }}
+                SETTINGS_DIR: ${{ parameters.SettingsDir }}
+                LOGGING_CONFIG_FILE: ${{ parameters.LoggingConfigFile }}
+
+            - task: AzureCLI@2
+              displayName: "Update container app"
+              inputs:
+                azureSubscription: ${{ parameters.AzureServiceConnection }}
+                scriptType: bash
+                scriptLocation: inlineScript
+                inlineScript: |
+                  az containerapp update \
+                    --name ${{ parameters.ContainerAppName }} \
+                    --resource-group ${{ parameters.AzureResourceGroup }} \
+                    --yaml $(Pipeline.Workspace)/container-app.yml

@@ -1,0 +1,71 @@
+parameters:
+  - name: RunArgs
+    type: string
+    default: ""
+  - name: ContainerAppContainerName
+    type: string
+    default: ""
+  - name: ContainerAppName
+    type: string
+    default: ""
+  - name: Environment
+    type: string
+    default: ""
+  - name: DeploymentName
+    type: string
+    default: ""
+  - name: AzureServiceConnection
+    type: string
+    default: ""
+  - name: AzureRegistry
+    type: string
+    default: ""
+  - name: AzureResourceGroup
+    type: string
+    default: ""
+  - name: EnvironmentVariablePrefix
+    type: string
+    default: ""
+
+jobs:
+  - deployment: ${{ parameters.DeploymentName }}
+    displayName: "Deploy ${{ parameters.ContainerAppContainerName }} on ${{ parameters.DeploymentName }}"
+    environment: ${{ parameters.Environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: "/cicd/templates/jobs/deploy-generic-steps.yml"
+              parameters:
+                AzureServiceConnection: ${{ parameters.AzureServiceConnection }}
+                AzureRegistry: ${{ parameters.AzureRegistry }}
+                AzureResourceGroup: ${{ parameters.AzureResourceGroup }}
+
+            - task: CmdLine@2
+              displayName: Prepare yaml variables
+              inputs:
+                script: |
+                  rm -rf $(Pipeline.Workspace)/container-job.yml
+                  envsubst < $(Pipeline.Workspace)/container-job-template-$(Build.BuildId)/container-job-template.yml > $(Pipeline.Workspace)/container-job.yml
+              env:
+                BUILD_ID: $(Build.BuildId)
+                BUILD_NUMBER: $(Build.BuildNumber)
+                CONTAINER_APP_CONTAINER_NAME: ${{ parameters.ContainerAppContainerName }}
+                ENVIRONMENT_VARIABLE_PREFIX: ${{ parameters.EnvironmentVariablePrefix }}
+                AZURE_REGISTRY: ${{ parameters.AzureRegistry }}
+                RUN_ARGS: ${{ parameters.RunArgs }}
+
+            - task: AzureCLI@2
+              displayName: "Start container job"
+              inputs:
+                azureSubscription: ${{ parameters.AzureServiceConnection }}
+                scriptType: bash
+                scriptLocation: inlineScript
+                inlineScript: |
+                  az containerapp job update \
+                    --name ${{ parameters.ContainerAppName }} \
+                    --resource-group ${{ parameters.AzureResourceGroup }} \
+                    --yaml $(Pipeline.Workspace)/container-job.yml
+                  az containerapp job start \
+                    --name ${{ parameters.ContainerAppName }} \
+                    --resource-group ${{ parameters.AzureResourceGroup }}

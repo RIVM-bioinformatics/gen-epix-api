@@ -1,0 +1,11 @@
+[
+    {
+        "name": "TEST",
+        "label": "TEST",
+        "protocol": "OIDC",
+        "discovery_url": "https://test",
+        "client_id": "TEST",
+        "client_secret": "",
+        "scope": "openid profile email offline_access"
+    }
+]

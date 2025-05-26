@@ -1,0 +1,25 @@
+parameters:
+  - name: ForBuild
+    type: string
+    default: ""
+  - name: BaseUrl
+    type: string
+    default: ""
+  - name: E2EProject
+    type: string
+    default: "cib-lsp-dev"
+  - name: E2EPipelineId
+    type: string
+    default: "311"
+
+jobs:
+  - job: e2e
+    displayName: Trigger end-to-end tests
+    steps:
+      - task: CmdLine@2
+        displayName: "Trigger AssetPipeline with env parameter"
+        inputs:
+          script: |
+            az pipelines run --id ${{ parameters.E2EPipelineId }} --project ${{ parameters.E2EProject }} --organization https://dev.azure.com/RIVMNL/ --parameters "tags=smoke" "baseUrl=${{ parameters.BaseUrl }}" "forBuildNumber=${{ parameters.ForBuild}}"
+        env:
+          AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)

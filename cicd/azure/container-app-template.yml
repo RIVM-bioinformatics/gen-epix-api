@@ -1,0 +1,90 @@
+properties:
+  configuration:
+    activeRevisionsMode: single
+  template:
+    containers:
+    - command:
+      - fastapi
+      - run
+      - ${APP_PATH}
+      - --port
+      - 8000
+      env:
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_SECRETS_DIR
+      #   value: /sec
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_IDPS_CONFIG_FILE
+      #   value: /sec/identity-providers
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_SETTINGS_DIR
+      #   value: ${SETTINGS_DIR}
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_LOGGING_CONFIG_FILE
+      #   value: ${LOGGING_CONFIG_FILE}
+      # - name: APP_VERSION
+      #   value: ${BUILD_NUMBER}
+
+      - name: CASEDB_SECRETS_DIR
+        value: /sec
+      - name: CASEDB_IDPS_CONFIG_FILE
+        value: /sec/identity-providers
+      - name: CASEDB_SETTINGS_DIR
+        value: gen_epix/casedb/config
+      - name: CASEDB_LOGGING_CONFIG_FILE
+        value: gen_epix/casedb/config/logging.yaml
+
+      - name: SEQDB_SECRETS_DIR
+        value: /sec
+      - name: SEQDB_IDPS_CONFIG_FILE
+        value: /sec/identity-providers
+      - name: SEQDB_SETTINGS_DIR
+        value: gen_epix/seqdb/config
+      - name: SEQDB_LOGGING_CONFIG_FILE
+        value: gen_epix/seqdb/config/logging.yaml
+
+      - name: APP_VERSION
+        value: ${BUILD_NUMBER}
+      image: ${AZURE_REGISTRY}.azurecr.io/lsp-api:${BUILD_ID}
+      name: ${CONTAINER_APP_CONTAINER_NAME}
+      probes:
+      - httpGet:
+          path: /v1/health
+          port: 8000
+          scheme: HTTP
+        periodSeconds: 10
+        successThreshold: 1
+        type: Readiness
+        initialDelaySeconds: 15
+      - httpGet:
+          path: /v1/health
+          port: 8000
+          scheme: HTTP
+        periodSeconds: 10
+        failureThreshold: 5
+        successThreshold: 1
+        timeoutSeconds: 60
+        initialDelaySeconds: 15
+        type: Liveness
+      resources:
+        cpu: 1
+        ephemeralStorage: 2Gi
+        memory: 2Gi
+      volumeMounts:
+      - mountPath: /sec
+        volumeName: localsecrets
+    initContainers: null
+    revisionSuffix: ''
+    scale:
+      maxReplicas: 1
+      minReplicas: 1
+      rules:
+      - custom:
+          metadata:
+            type: Utilization
+            value: '70'
+          type: cpu
+        name: cpuscaler
+    serviceBinds: null
+    terminationGracePeriodSeconds: null
+    volumes:
+    - name: localsecrets
+      storageType: Secret
+  workloadProfileName: Consumption
+

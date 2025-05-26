@@ -1,0 +1,44 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  simple:
+    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+  file:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: DEBUG
+    formatter: simple
+    filename: ./test/data/output/log.debug.txt
+    when: 'midnight'
+    backupCount: 1
+    utc: True
+    encoding: utf8
+loggers:
+  seqdb.setup:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+  seqdb.service:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+  seqdb.app:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+  seqdb.api:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+  seqdb.external:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: no
+root:
+  level: INFO
+  handlers: [console]
