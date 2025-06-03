@@ -82,7 +82,7 @@ logging_use_named_masks = false
 major_on_zero = true
 allow_zero_version = true
 no_git_verify = false
-tag_format = "v{version}"
+tag_format = "{version}"
 version_toml = ["pyproject.toml:project.version"]
 
 [semantic_release.branches.main]
