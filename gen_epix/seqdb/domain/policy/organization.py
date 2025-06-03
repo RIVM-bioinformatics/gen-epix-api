@@ -8,7 +8,7 @@ class BaseUpdateUserPolicy(Policy):
         self,
         rbac_service: BaseRbacService,
         organization_service: BaseOrganizationService,
-        **kwargs: dict
+        **kwargs: dict,
     ):
         self.rbac_service = rbac_service
         self.organization_service = organization_service

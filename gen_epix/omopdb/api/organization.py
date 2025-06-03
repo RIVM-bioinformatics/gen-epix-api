@@ -27,7 +27,7 @@ def create_organization_endpoints(
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
     handle_exception: Callable | None = None,
-    **kwargs: dict
+    **kwargs: dict,
 ) -> None:
 
     assert handle_exception
