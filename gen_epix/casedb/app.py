@@ -7,6 +7,7 @@ from util.cfg import AppCfg
 APP_NAME = "CASEDB"
 
 # Data for OpenAPI schema
+# TODO: make the version in this file dynamic, e.g. from git tag or commit
 SCHEMA_KWARGS = {
     "title": "Gen-EpiX",
     "summary": "Genomic Epidemiology platform for disease X",
