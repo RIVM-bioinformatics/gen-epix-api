@@ -33,4 +33,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
-          semantic-release publish
+          which semantic-release
+          semantic-release --version
+          semantic-release publish -v
