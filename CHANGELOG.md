@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.2 (2025-06-04)
+
+### Bug Fixes
+
+- Make casedb/omopdb/seqdb OPENAPI gen epix version dynamic
+  ([`78cc66a`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/78cc66a72efd980014f23b1df073fda6783d9564))
+
+
 ## v0.1.1 (2025-06-04)
 
 ### Bug Fixes
