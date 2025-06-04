@@ -56,7 +56,7 @@ class CompositeFilter(Filter):
         | NoFilter
         | CompositeFilter
     ] = Field(description="The list of filters.", min_length=1, frozen=True)
-    key: None = None
+    key: str | None = Field(default=None)
     operator: enum.BooleanOperator = Field(
         default=enum.BooleanOperator.AND,
         description="The boolean operator for the composite filter.",
