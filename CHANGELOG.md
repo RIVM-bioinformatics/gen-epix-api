@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.6 (2025-06-04)
+
+### Bug Fixes
+
+- .github.workflows.release.yaml - pull the newly commited version into build before publishing
+  ([`7fdf0a7`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/7fdf0a7b178b4ae5b81fb65b436fabf5c8be17db))
+
+
 ## v0.1.5 (2025-06-04)
 
 ### Bug Fixes
