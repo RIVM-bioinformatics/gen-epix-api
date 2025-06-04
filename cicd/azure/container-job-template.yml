@@ -7,10 +7,21 @@ properties:
       command:
       - /bin/sh
       env:
-      - name: ${ENVIRONMENT_VARIABLE_PREFIX}_SECRETS_DIR
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_SECRETS_DIR
+      #   value: /sec
+      # - name: ${ENVIRONMENT_VARIABLE_PREFIX}_IDPS_CONFIG_FILE
+      #   value: /sec/identity-providers
+
+      - name: CASEDB_SECRETS_DIR
         value: /sec
-      - name: ${ENVIRONMENT_VARIABLE_PREFIX}_IDPS_CONFIG_FILE
+      - name: CASEDB_IDPS_CONFIG_FILE
         value: /sec/identity-providers
+
+      - name: SEQDB_SECRETS_DIR
+        value: /sec
+      - name: SEQDB_IDPS_CONFIG_FILE
+        value: /sec/identity-providers
+
       - name: APP_VERSION
         value: ${BUILD_NUMBER}
       image: ${AZURE_REGISTRY}.azurecr.io/lsp-api:${BUILD_ID}

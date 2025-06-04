@@ -279,7 +279,7 @@ stages:
           AzureRegistry: ${{ parameters.Dev.AzureRegistry }}
           AzureResourceGroup: ${{ parameters.Dev.main.AzureResourceGroup }}
           EnvironmentVariablePrefix: "CASEDB"
-          RunArgs: "etl lsp all transform_load 1"
+          RunArgs: "etl casedb all transform_load 1"
   
   - stage: ETL_MAIN_TST
     pool: RIVM-latest
@@ -296,7 +296,7 @@ stages:
           AzureRegistry: ${{ parameters.Tst.AzureRegistry }}
           AzureResourceGroup: ${{ parameters.Tst.main.AzureResourceGroup }}
           EnvironmentVariablePrefix: "CASEDB"
-          RunArgs: "etl lsp all transform_load 1"
+          RunArgs: "etl casedb all transform_load 1"
           
   - stage: ETL_MAIN_ACC
     pool: RIVM-latest
@@ -313,7 +313,7 @@ stages:
           AzureRegistry: ${{ parameters.Acc.AzureRegistry }}
           AzureResourceGroup: ${{ parameters.Acc.main.AzureResourceGroup }}
           EnvironmentVariablePrefix: "CASEDB"
-          RunArgs: "etl lsp all transform_load 1"
+          RunArgs: "etl casedb all transform_load 1"
 
   - stage: ETL_SEQDB_DEV
     pool: RIVM-latest
