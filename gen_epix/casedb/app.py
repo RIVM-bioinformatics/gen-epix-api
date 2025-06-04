@@ -1,3 +1,5 @@
+from pkg_resources import get_distribution
+
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.enum import ServiceType
@@ -7,12 +9,11 @@ from util.cfg import AppCfg
 APP_NAME = "CASEDB"
 
 # Data for OpenAPI schema
-# TODO: make the version in this file dynamic, e.g. from git tag or commit
 SCHEMA_KWARGS = {
     "title": "Gen-EpiX",
     "summary": "Genomic Epidemiology platform for disease X",
     "description": "Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.",
-    "version": "0.0.0",
+    "version": get_distribution("gen-epix").version,
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",
         "url": "https://github.com/RIVM-bioinformatics/gen-epix-api",

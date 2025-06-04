@@ -1,3 +1,5 @@
+from pkg_resources import get_distribution
+
 from gen_epix.omopdb.app_setup import create_fast_api
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.env import AppEnv
@@ -10,7 +12,7 @@ SCHEMA_KWARGS = {
     "title": "BioBase master database",
     "description": "BioBase API",
     "summary": "Summary goes here",
-    "version": "0.0.0",
+    "version": get_distribution("gen-epix").version,
     "terms_of_service": "http://example.com/terms/",
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",
