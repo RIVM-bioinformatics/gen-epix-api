@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="docs/assets/Gen-epix-logo.svg" alt="gen-epix-api-logo">
+    <img src="https://raw.githubusercontent.com/RIVM-bioinformatics/gen-epix-api/be6ec13a6f9d39be1e2a6dfbe6ba7b48ad2a2551/docs/assets/Gen-epix-logo.svg" alt="gen-epix-api-logo">
 </p>
 <p align="center">
     <em>Genomic Epidemiology platform for disease X</em>
@@ -8,11 +8,11 @@
     <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
         <img src="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" alt="tests">
     </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=51a6c8d13bac07e815053949f389fe38db584061" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=51a6c8d13bac07e815053949f389fe38db584061" alt="sonarqube">
+    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="sonarqube">
     </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=51a6c8d13bac07e815053949f389fe38db584061" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=51a6c8d13bac07e815053949f389fe38db584061" alt="coverage">
+    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="coverage">
     </a>
 </p>
 
@@ -126,7 +126,7 @@ conda activate gen-epix
 python run.py api casedb local idps
 ```
 
-<img src="docs/assets/example_docs.png" alt="example-docs">
+<img src="https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true" alt="example-docs">
 
 ---
 
