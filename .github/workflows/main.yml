@@ -7,11 +7,6 @@ on:
       - test
       - main
     types: [opened, synchronize, reopened, edited]
-  push:
-    branches:
-      - dev
-      - test
-      - main
 
 concurrency:
   group: ci-${{ github.head_ref || github.run_id }}
