@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.4 (2025-06-04)
+
+### Bug Fixes
+
+- .github.workflows.release.yaml - restore old build method
+  ([`ac1a5b7`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ac1a5b711cdcb0679ad0e3b592c55b425f6075e0))
+
+
 ## v0.1.3 (2025-06-04)
 
 ### Bug Fixes
