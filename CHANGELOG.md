@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v0.1.5 (2025-06-04)
+
+### Bug Fixes
+
+- Changed comment to test release workflow
+  ([`972299f`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/972299fa92c18256388357c7b5e0ed3d0cbc06e0))
+
+### Chores
+
+- Output `released` variable to next workflow job
+  ([`f9300ab`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f9300abe45ca1853431d2a6f292acab4ed8f9c4e))
+
+
 ## v0.1.4 (2025-06-04)
 
 ### Bug Fixes
