@@ -22,8 +22,8 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
 class CreateCasesRequestBody(PydanticBaseModel):
     cases: list[model.Case]
     data_collection_ids: set[UUID] = Field(
-        description="The data collections in which the cases will be put initially. Must contain exactly one source data collection, plus any other data collections in which the cases may be shared from there.",
-        min_length=1,
+        default=set(),
+        description="The data collections in which the cases will be put initially",
     )
 
     @field_validator("cases", mode="after")
@@ -36,8 +36,8 @@ class CreateCasesRequestBody(PydanticBaseModel):
 class CreateCaseSetRequestBody(PydanticBaseModel):
     case_set: model.CaseSet
     data_collection_ids: set[UUID] = Field(
-        description="The data collections in which the case set will be put initially. Must contain exactly one source data collection, plus any other data collections in which the case set may be shared from there.",
-        min_length=1,
+        default=set(),
+        description="The data collections in which the case set will be put initially",
     )
     case_ids: set[UUID] | None = Field(
         default=None, description="The cases to be added to the case set, if any."

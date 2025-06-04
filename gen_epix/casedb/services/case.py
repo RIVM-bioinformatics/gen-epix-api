@@ -1999,9 +1999,9 @@ class CaseService(BaseCaseService):
                         )
                 continue
             # Check if user has access to any of the data collections of the case set
-            data_collection_ids = case_set_data_collections[
-                case_set.id  # type:ignore[index]
-            ]
+            data_collection_ids = case_set_data_collections.get(
+                case_set.id, set()
+            )  # type:ignore[arg-type]
             if not data_collection_ids.intersection(has_access[case_type_id]):
                 if case_set_ids:
                     if on_invalid_case_set_id == "raise":
