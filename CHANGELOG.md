@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.1 (2025-06-04)
+
+### Bug Fixes
+
+- Remove running main workflow on push to avoid running the workflow twice
+  ([`b8ba4cb`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b8ba4cb138f8c694e3dc34b7b6fac67988cb678d))
+
+
 ## v0.1.0 (2025-06-04)
 
 ### Features
