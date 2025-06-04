@@ -756,31 +756,6 @@ class CaseService(BaseCaseService):
 
         # Retrieve all cases and case data collection links
         with repository.uow() as uow:
-            # Retrieve case/set data collection links
-            crud_command_class = (
-                command.CaseSetDataCollectionLinkCrudCommand
-                if is_case_set
-                else command.CaseDataCollectionLinkCrudCommand
-            )
-            key = "case_set_id" if is_case_set else "case_id"
-            curr_cmd = crud_command_class(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=UuidSetFilter(key=key, members=case_or_set_ids),  # type: ignore[arg-type]
-            )
-            curr_cmd._policies.extend(cmd._policies)
-            case_or_set_data_collection_links: list[model.CaseDataCollectionLink] | list[model.CaseSetDataCollectionLink] = self.crud(curr_cmd)  # type: ignore[assignment]
-            # Check validitity of case ids
-            valid_case_or_set_ids = (
-                {x.case_set_id for x in case_or_set_data_collection_links}  # type: ignore[union-attr]
-                if is_case_set
-                else {x.case_id for x in case_or_set_data_collection_links}  # type: ignore[union-attr]
-            )
-            invalid_case_or_set_ids = set(case_or_set_ids) - valid_case_or_set_ids
-            if invalid_case_or_set_ids:
-                raise exc.UnauthorizedAuthError(
-                    f"Unauthorized case{' set' if is_case_set else ''} ids: {invalid_case_or_set_ids}"
-                )
             # Retrieve cases/sets
             cases_or_sets: list[model.CaseSet] | list[model.Case] = self.repository.crud(  # type: ignore[assignment]
                 uow,
@@ -790,21 +765,42 @@ class CaseService(BaseCaseService):
                 case_or_set_ids,
                 CrudOperation.READ_SOME,
             )
+            # Retrieve case/set data collection links
+            key = "case_set_id" if is_case_set else "case_id"
+            case_or_set_data_collection_links: list[model.CaseDataCollectionLink] | list[model.CaseSetDataCollectionLink] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                (
+                    model.CaseSetDataCollectionLink
+                    if is_case_set
+                    else model.CaseDataCollectionLink
+                ),
+                None,
+                None,
+                CrudOperation.READ_ALL,
+                filter=UuidSetFilter(  # type: ignore[arg-type]
+                    key=key,
+                    members=frozenset(case_or_set_ids),  # type: ignore[arg-type]
+                ),
+            )
 
         # Determine case/set rights
-        case_or_set_data_collections: dict[UUID, frozenset[UUID]] = map_paired_elements(  # type: ignore[assignment]
+        case_or_set_data_collections: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
             (
                 (x.case_set_id if is_case_set else x.case_id, x.data_collection_id)  # type: ignore[union-attr]
                 for x in case_or_set_data_collection_links
             ),
             as_set=True,
-            frozen=True,
         )
 
         # Generate return value
         retval: list[model.CaseSetRights] | list[model.CaseRights] = []
         for case_or_set in cases_or_sets:
             assert case_or_set.id is not None
+            data_collection_ids = case_or_set_data_collections.get(
+                case_or_set.id, set()
+            )
+            data_collection_ids.add(case_or_set.created_in_data_collection_id)  # type: ignore[union-attr]
             args: tuple = (
                 case_or_set.id,
                 case_or_set.case_type_id,
@@ -2002,6 +1998,7 @@ class CaseService(BaseCaseService):
             data_collection_ids = case_set_data_collections.get(
                 case_set.id, set()
             )  # type:ignore[arg-type]
+            data_collection_ids.add(case_set.created_in_data_collection_id)
             if not data_collection_ids.intersection(has_access[case_type_id]):
                 if case_set_ids:
                     if on_invalid_case_set_id == "raise":
@@ -2123,7 +2120,10 @@ class CaseService(BaseCaseService):
                         )
                 continue
             # Check if user has access to any data collection of the case
-            data_collection_ids = case_data_collections[case.id]  # type:ignore[index]
+            data_collection_ids = case_data_collections.get(
+                case.id, set()
+            )  # type:ignore[index]
+            data_collection_ids.add(case.created_in_data_collection_id)
             if not data_collection_ids.intersection(has_access[case_type_id]):
                 if case_ids:
                     if on_invalid_case_id == "raise":
