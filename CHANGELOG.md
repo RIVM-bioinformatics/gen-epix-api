@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v0.1.7 (2025-06-04)
+
+### Bug Fixes
+
+- Casedb.api.case create case/set request bodies fixed
+  ([`1983e54`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/1983e544dcaac4044069b284c4c92c2a3f56c324))
+
+- Casedb.services.case retrieve_case_or_set_rights fixed
+  ([`c383ab0`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c383ab06c8efac451e2027f949a89540af0a96c6))
+
+- Typedcompositefilter key should be of type 'str', not 'None'
+  ([`e97bfc4`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/e97bfc4b2abc6a7db8052707a012f20a85a0db1d))
+
+### Chores
+
+- Add data changes
+  ([`1b18bda`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/1b18bda12d3114cf7e5a5731f33707cb9c25142b))
+
+- Changed automatic_new_user org
+  ([`da4ae59`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/da4ae599e67710240e16132d2f1b35f0ebd49d53))
+
+- Fix container app azure job
+  ([`15a72a4`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/15a72a4b84d51625e7fedf9e09d8f894fceff533))
+
+### Documentation
+
+- Readme.md - fixing images and badges
+  ([`d1575e6`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d1575e6f19169473dab001be9164801b718043e6))
+
+
 ## v0.1.6 (2025-06-04)
 
 ### Bug Fixes
