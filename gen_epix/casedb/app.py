@@ -8,7 +8,7 @@ from util.cfg import AppCfg
 
 APP_NAME = "CASEDB"
 
-# Data for OpenAPI schema
+# Data for openAPI schema
 SCHEMA_KWARGS = {
     "title": "Gen-EpiX",
     "summary": "Genomic Epidemiology platform for disease X",
