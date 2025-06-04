@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.0 (2025-06-04)
+
+### Features
+
+- Add distribution to repo
+  ([`0703b87`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0703b87c8fb670a32309c3d89e24584c033b1055))
+
+
 ## v0.0.1 (2025-06-03)
 
 ### Bug Fixes
