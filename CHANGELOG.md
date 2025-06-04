@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.3 (2025-06-04)
+
+### Bug Fixes
+
+- .github.workflows.release.yaml - only upload to pypi in case of a new release
+  ([`126781a`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/126781a5b8548036399bb24c12bf1cd4e6e87234))
+
+
 ## v0.1.2 (2025-06-04)
 
 ### Bug Fixes
