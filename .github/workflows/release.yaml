@@ -37,6 +37,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch latest changes after release
+        run: |
+          git fetch --all
+          git checkout main
+          git pull
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
