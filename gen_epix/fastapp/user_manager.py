@@ -45,7 +45,7 @@ class BaseUserManager(abc.ABC):
 
     @abc.abstractmethod
     def create_new_user_from_token(
-        self, user: model.User, token: str, **kwargs: dict
+        self, user: model.User, token: str, **kwargs: Any
     ) -> model.User:
         raise NotImplementedError
 

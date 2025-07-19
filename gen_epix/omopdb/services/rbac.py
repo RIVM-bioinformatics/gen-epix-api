@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Callable, Hashable
+from typing import Any, Callable, Hashable
 from uuid import UUID
 
 from gen_epix.fastapp import App, Command
@@ -16,7 +16,7 @@ class RbacService(BaseRbacService):
         self,
         app: App,
         logger: logging.Logger | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)
         kwargs["service_type"] = kwargs.get(

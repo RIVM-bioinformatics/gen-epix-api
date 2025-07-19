@@ -2171,7 +2171,7 @@ class CaseService(BaseCaseService):
         return filtered_cases
 
     def _retrieve_case_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseDataCollectionLink]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2183,7 +2183,7 @@ class CaseService(BaseCaseService):
         )
 
     def _retrieve_case_set_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetDataCollectionLink]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2195,7 +2195,7 @@ class CaseService(BaseCaseService):
         )
 
     def _retrieve_case_case_sets_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetMember]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2213,7 +2213,7 @@ class CaseService(BaseCaseService):
         association_class: Type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> tuple[dict[UUID, set[UUID]], list[model.Model]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.

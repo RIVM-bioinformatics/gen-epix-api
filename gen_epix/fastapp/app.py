@@ -54,7 +54,7 @@ class App:
         log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         id_factory: Callable[[], Hashable] = uuid.uuid4,
         timestamp_factory: Callable[[], datetime] = datetime.now,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Set input members
         self._id: str = kwargs.get("id", str(id_factory()))  # type: ignore[assignment]
@@ -400,7 +400,7 @@ class App:
         msg: str | None,
         add_debug_info: bool = True,
         cmd: Command | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> str:
         content = {}
         if add_debug_info:
@@ -440,7 +440,7 @@ class App:
         code: str,
         msg: str,
         log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> str:
         cmd: Command | None = kwargs.pop("cmd", None)  # type: ignore[assignment]
         content = kwargs

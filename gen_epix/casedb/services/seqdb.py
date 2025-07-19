@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
@@ -14,7 +15,7 @@ from gen_epix.seqdb.domain.model import User as SeqdbUser
 
 class SeqdbService(BaseSeqdbService):
 
-    def __init__(self, app: App, ext_app: App, **kwargs: dict) -> None:
+    def __init__(self, app: App, ext_app: App, **kwargs: Any) -> None:
         super().__init__(app, **kwargs)
         self._ext_app = ext_app
         # TODO: get user from config data

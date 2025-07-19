@@ -11,7 +11,7 @@ from test.fastapp.enum import ServiceType
 from test.fastapp.model import Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient
 from test.fastapp.user_manager import UserManager
-from typing import Hashable, Type
+from typing import Any, Hashable, Type
 
 import pytest
 
@@ -55,7 +55,7 @@ class RBACTestClient(ServiceTestClient):
         self,
         repository_class: Type[BaseRepository],
         logger: logging.Logger | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> None:
         super().__init__(repository_class, logger=logger, **kwargs)
         # Create RBAC service

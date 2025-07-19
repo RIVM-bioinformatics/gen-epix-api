@@ -56,7 +56,7 @@ def create_root_user_from_claims(cfg: dict, app: App) -> User:
     return user
 
 
-def parse_stats(df: pd.DataFrame, stats: Any, **kwargs: dict) -> None:
+def parse_stats(df: pd.DataFrame, stats: Any, **kwargs: Any) -> None:
     for (
         function_name,
         function_profile,

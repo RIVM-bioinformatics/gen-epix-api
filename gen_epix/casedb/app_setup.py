@@ -29,7 +29,7 @@ def create_fast_api(
     setup_logger: logging.Logger | None = None,
     api_logger: logging.Logger | None = None,
     debug: bool = False,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> FastAPI:
 
     app_id = kwargs.pop("app_id", app.generate_id())

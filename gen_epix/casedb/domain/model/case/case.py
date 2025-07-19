@@ -148,6 +148,11 @@ class Dim(Model):
         default_factory=dict, description="Additional properties of the dimension."
     )
 
+    @field_validator("code", mode="before")
+    @classmethod
+    def validate_code(cls, value: Any) -> str:
+        return str(value)
+
 
 class Col(Model):
     ENTITY: ClassVar = Entity(
@@ -226,6 +231,11 @@ class Col(Model):
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the column."
     )
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def validate_code(cls, value: Any) -> str:
+        return str(value)
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
@@ -463,6 +473,11 @@ class CaseTypeCol(Model):  # type: ignore
         default_factory=dict,
         description="Additional properties of the case type column.",
     )
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def validate_code(cls, value: Any) -> str:
+        return str(value)
 
     @field_validator("tree_algorithm_codes", mode="before")
     @classmethod

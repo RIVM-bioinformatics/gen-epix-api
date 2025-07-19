@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Type
+from typing import Annotated, Any, Type
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
@@ -20,7 +20,7 @@ class AuthService(BaseAuthService):
         logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
         repository: None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         kwargs["service_type"] = kwargs.get(
             "service_type", BaseAuthService.SERVICE_TYPE

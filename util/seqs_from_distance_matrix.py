@@ -39,7 +39,7 @@ def generate_seqs_for_distance_matrix(
     linkage_method: str = "single",
     generation_method: str = "SUB_SEQ_PER_NODE",
     fractional_distance_multiplier: int = 1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], dict[str, Any | None] | None]:
     """
     Create a set of sequences from a distance matrix. The sequences are generated using
@@ -145,7 +145,7 @@ def generate_seqs_with_sub_seq_per_node(
     int_linkage_result: np.ndarray,
     alphabet: str = "acgt",
     fractional_distance_multiplier: int = 1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], Any | None]:
     """
     Generate a set of (DNA) sequences of length m and without indels whose hamming
@@ -217,7 +217,7 @@ def generate_seqs_with_differential_evolution(
     tree_distance_matrix: np.ndarray,
     alphabet: str = "acgt",
     seq_length: int | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], Any | None]:
     """
     Generate a set of (DNA) sequences of length m and without indels whose hamming

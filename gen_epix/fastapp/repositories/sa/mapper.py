@@ -14,7 +14,7 @@ class BaseSAMapper(abc.ABC):
         self,
         model_class: Type[Model],
         row_class: Type[Row],
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         if model_class.ENTITY is None:
             raise exc.RepositoryServiceError(
@@ -86,11 +86,11 @@ class BaseSAMapper(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def dump(self, user_id: Hashable | None, obj: Model, **kwargs: dict) -> Any:
+    def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load(self, row: Row, **kwargs: dict) -> Model:
+    def load(self, row: Row, **kwargs: Any) -> Model:
         raise NotImplementedError
 
     @staticmethod
@@ -113,7 +113,7 @@ class SAMapper(BaseSAMapper):
         generate_service_metadata: (
             Callable[[Model, Hashable], dict[str, Any]] | None
         ) = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         super().__init__(model_class, row_class, **kwargs)
         field_name_map = field_name_map or {}
@@ -166,7 +166,7 @@ class SAMapper(BaseSAMapper):
     def generate_service_metadata(self, obj: Model, user_id: Hashable) -> dict:
         return self._generate_service_metadata(obj, user_id)
 
-    def dump(self, user_id: Hashable | None, obj: Model, **kwargs: dict) -> Any:
+    def dump(self, user_id: Hashable | None, obj: Model, **kwargs: Any) -> Any:
         service_metadata = self.generate_service_metadata(obj, user_id)
         if self._is_identical_common_field_names:
             mapped_dict = obj.model_dump(exclude_none=True)
@@ -188,7 +188,7 @@ class SAMapper(BaseSAMapper):
             return self.row_class(**(mapped_dict | kwargs))
         return self.row_class(**mapped_dict)
 
-    def load(self, row: Row, **kwargs: dict) -> Model:
+    def load(self, row: Row, **kwargs: Any) -> Model:
         if self._is_identical_common_field_names:
             mapped_dict = {
                 x: getattr(row, x)

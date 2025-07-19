@@ -31,7 +31,7 @@ class BaseService(abc.ABC):
         repository: BaseRepository | None = None,
         logger: logging.Logger | None = None,
         props: dict[str, Any] | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Parse kwargs
         if props is None:
@@ -354,7 +354,7 @@ class BaseService(abc.ABC):
         return retval
 
     def update_association(
-        self, cmd: UpdateAssociationCommand, **kwargs: dict
+        self, cmd: UpdateAssociationCommand, **kwargs: Any
     ) -> list[Hashable] | list[Model] | None:
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -424,7 +424,7 @@ class BaseService(abc.ABC):
         code: str,
         msg: str,
         add_debug_info: bool = True,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> str:
         if add_debug_info:
             service = kwargs.pop("service", {}) | {"id": self.id, "name": self.name}

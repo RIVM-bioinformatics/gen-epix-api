@@ -152,7 +152,7 @@ class UserManager(BaseUserManager):
         return user
 
     def create_new_user_from_token(  # type: ignore[override]
-        self, new_user: model.User, token: str, **kwargs: dict
+        self, new_user: model.User, token: str, **kwargs: Any
     ) -> model.User:
         assert self._organization_service.repository
         created_by_user_id: UUID = kwargs["created_by_user_id"]  # type: ignore[assignment]

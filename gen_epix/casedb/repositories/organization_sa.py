@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Engine, select
 
 from gen_epix.casedb.domain import exc, model
@@ -14,7 +16,7 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 
 
 class OrganizationSARepository(SARepository, BaseOrganizationRepository):
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         entities = kwargs.pop("entities", BaseOrganizationRepository.ENTITIES)
         super().__init__(
             engine,

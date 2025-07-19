@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -33,7 +33,7 @@ def create_seq_endpoints(
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
     handle_exception: Callable | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> None:
     assert handle_exception
 

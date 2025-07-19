@@ -585,6 +585,18 @@
             "justMyCode": true,
         },
         {
+            "name": "other.general.generate_uuids",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_uuids",
+                "1000",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "other.general.run_linters",
             "type": "debugpy",
             "request": "launch",

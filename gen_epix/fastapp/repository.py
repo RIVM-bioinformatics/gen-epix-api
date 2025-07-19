@@ -1,7 +1,7 @@
 import abc
 import uuid
 from itertools import chain
-from typing import Callable, Hashable, Iterable, Type
+from typing import Any, Callable, Hashable, Iterable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import CrudOperation
@@ -11,7 +11,7 @@ from gen_epix.filter import Filter
 
 
 class BaseRepository(abc.ABC):
-    def __init__(self, **kwargs: dict):
+    def __init__(self, **kwargs: Any):
         self._id: str = kwargs.get("id", str(uuid.uuid4()))  # type: ignore[attr-defined]
         self._name: str = kwargs.get("name", self._id)  # type: ignore[attr-defined]
 
@@ -33,7 +33,7 @@ class BaseRepository(abc.ABC):
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
         filter: Filter | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         """
         Perform CRUD operations on the repository within a unit of work context. The
@@ -75,7 +75,7 @@ class BaseRepository(abc.ABC):
         obj_id1: Hashable | None,
         obj_id2: Hashable | None,
         association_objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         return_id = kwargs.pop("return_id", False)
         excluded_association_objs: Iterable[Model] = kwargs.pop(
@@ -253,7 +253,7 @@ class BaseRepository(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def uow(self, **kwargs: dict) -> BaseUnitOfWork:
+    def uow(self, **kwargs: Any) -> BaseUnitOfWork:
         raise NotImplementedError()
 
     @staticmethod

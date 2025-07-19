@@ -1,5 +1,6 @@
 import abc
 import uuid
+from typing import Any
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -52,7 +53,7 @@ class BaseOrganizationService(BaseService):
     ) -> model.User:
         raise NotImplementedError
 
-    def generate_user_invitation_token(self, **kwargs: dict) -> str:
+    def generate_user_invitation_token(self, **kwargs: Any) -> str:
         return str(uuid.uuid4())
 
     @abc.abstractmethod

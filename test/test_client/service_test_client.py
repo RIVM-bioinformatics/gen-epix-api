@@ -37,7 +37,7 @@ class ServiceTestClient:
         user_class: Type[User] = User,
         verbose: bool = False,
         log_level: int = logging.ERROR,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Set provided parameters
         self.app_cfg = app_cfg
@@ -95,7 +95,7 @@ class ServiceTestClient:
         return_response: bool = False,
         endpoint_version: EndpointVersion = EndpointVersion.V1,
         use_endpoint: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any:
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
         if use_endpoint:
@@ -511,7 +511,7 @@ class ServiceTestClient:
         set_log_level(app_cfg.app_name.lower(), log_level)
 
     @staticmethod
-    def _verify_updated_obj(in_obj, out_obj, user_id, **kwargs: dict) -> None:
+    def _verify_updated_obj(in_obj, out_obj, user_id, **kwargs: Any) -> None:
         # TODO: verifying modified_by and modified_at is no longer possible here as the
         # persistence metadata no longer exists in the object. This should instead
         # be tested through unit tests on the repository in question.

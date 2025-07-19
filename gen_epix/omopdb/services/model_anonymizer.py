@@ -36,7 +36,7 @@ class BaseAnonymizer(ABC):
     _MIN_VALUES_REQUIRED = 10  # for categorical replacements, require a value occurs this many times to be a candidate for use
     _ALLOW_FUTURE_DATES = False
 
-    def __init__(self, seed: int | None = None, **kwargs: dict) -> None:
+    def __init__(self, seed: int | None = None, **kwargs: Any) -> None:
 
         self.min_days_offset: int = (
             kwargs.get("min_days_offset") or self._MIN_DAYS_OFFSET
@@ -164,7 +164,7 @@ class ModelAnonymizer(BaseAnonymizer):
         repository: BaseRepository,
         seed: int | None = None,
         strictness_level: AnonStrictness = AnonStrictness.STRICT,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> None:
         super().__init__(seed, **kwargs)
 

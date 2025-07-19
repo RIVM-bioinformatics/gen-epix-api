@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Engine
 
 from gen_epix.casedb.domain.repository.geo import BaseGeoRepository
@@ -10,7 +12,7 @@ from gen_epix.fastapp.repositories import SARepository
 
 
 class GeoSARepository(SARepository, BaseGeoRepository):
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         entities = kwargs.pop("entities", BaseGeoRepository.ENTITIES)
         super().__init__(
             engine,

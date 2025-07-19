@@ -30,7 +30,7 @@ class EndpointTestClient:
         app: App,
         fast_api: FastAPI,
         app_last_handled_exception: dict,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         register_crud_commands: bool = kwargs.get("register_crud_commands", True)
         self.app = app
@@ -56,7 +56,7 @@ class EndpointTestClient:
         cmd: Command,
         return_response: bool = False,
         endpoint_version: EndpointVersion = EndpointVersion.V1,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any:
         route_prefix = self.ENDPOINT_VERSION_PREFIX_MAP[endpoint_version]
         if cmd.user:
@@ -71,7 +71,7 @@ class EndpointTestClient:
             return retval, response
         return retval
 
-    def get_headers(self, cmd: Command, **kwargs: dict) -> dict[str, str] | None:
+    def get_headers(self, cmd: Command, **kwargs: Any) -> dict[str, str] | None:
         if cmd.user:
             assert cmd.user is not None
             headers = self.get_dummy_jwt_header(cmd.user.get_key())

@@ -10,7 +10,7 @@ from test.fastapp.model import Base1, Base2, Model1_1, Model1_2, Model2_1, Model
 from test.fastapp.service import Service1, Service2
 from test.fastapp.user_manager import UserManager
 from test.fastapp.util import get_test_name, get_test_root_output_dir
-from typing import Hashable, Type
+from typing import Any, Hashable, Type
 from uuid import UUID
 
 from gen_epix.fastapp import Entity, model
@@ -28,13 +28,13 @@ class ServiceTestClient:
     TEST_CLIENTS = {}
 
     @classmethod
-    def get_test_client(cls, repository_class: Type[BaseRepository], **kwargs: dict):
+    def get_test_client(cls, repository_class: Type[BaseRepository], **kwargs: Any):
         key = (kwargs.get("test_type", repository_class.__name__), repository_class)
         if key not in cls.TEST_CLIENTS:
             cls.TEST_CLIENTS[key] = cls(repository_class, **kwargs)
         return cls.TEST_CLIENTS[key]
 
-    def __init__(self, repository_class: Type[BaseRepository], **kwargs: dict) -> None:
+    def __init__(self, repository_class: Type[BaseRepository], **kwargs: Any) -> None:
         self.test_type = kwargs.get("test_type", repository_class.__name__)
         self.test_name = kwargs.get("test_name", get_test_name(self.test_type))
         self.test_dir = os.path.join(get_test_root_output_dir(), self.test_name)
@@ -122,7 +122,7 @@ class ServiceTestClient:
         self,
         repository_class: Type[BaseRepository],
         service: BaseService,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> BaseRepository:
         name = service.name
         entities = service.app.domain.get_dag_sorted_entities(

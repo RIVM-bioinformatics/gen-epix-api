@@ -1,3 +1,5 @@
+from typing import Any
+
 from gen_epix.fastapp import PermissionType, Policy
 from gen_epix.omopdb.domain import command
 from gen_epix.omopdb.domain.service.system import BaseSystemService
@@ -12,7 +14,7 @@ class BaseHasSystemOutagePolicy(Policy):
     def __init__(
         self,
         system_service: BaseSystemService,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         self.system_service = system_service
         self.props = kwargs
