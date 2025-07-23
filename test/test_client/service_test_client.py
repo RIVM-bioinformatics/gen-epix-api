@@ -69,11 +69,11 @@ class ServiceTestClient:
         self.repositories = self.app_env.repositories
         self.db: dict[Hashable, Model] = {}
         self.props: dict = {}
-        self.use_endpoints: bool = kwargs.get("use_endpoints", False)
-        self.endpoint_test_client: EndpointTestClient | None = kwargs.get(
+        self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
+        self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
-        self.app_last_handled_exception: dict | None = kwargs.get(
+        self.app_last_handled_exception: dict | None = kwargs.pop(
             "app_last_handled_exception"
         )
         if self.use_endpoints:
@@ -86,8 +86,17 @@ class ServiceTestClient:
                     "App last handled exception not provided while use_endpoints=True"
                 )
 
+        # Store remainder of kwargs
+        self.props = kwargs
+
     def generate_id(self) -> UUID:
         return self.app.generate_id()
+
+    def get_root_user(self) -> User:
+        return User(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
 
     def handle(
         self,

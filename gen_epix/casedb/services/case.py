@@ -111,10 +111,7 @@ class CaseService(BaseCaseService):
             case_type_id = cmd.cases[0].case_type_id  # type: ignore[union-attr]
             created_in_data_collection_id = cmd.cases[0].created_in_data_collection_id  # type: ignore[union-attr]
 
-        # @ABAC: verify if case set or cases may be created in the given data collection(s):
-        # exactly one private data collection must be provided, and add_case must be true
-        # for all the other data collections
-        # TODO: add checking for equivalent share rights establishing a connected path to these data collections
+        # @ABAC: verify if case set or cases may be created in the given data collection(s)
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
         assert case_abac is not None
         is_allowed = case_abac.is_allowed(
@@ -141,6 +138,7 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
                         objs=cmd.case_set,  # type: ignore[union-attr,arg-type]
+                        props=cmd.props,
                     )
                 )
             else:
@@ -149,6 +147,7 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_SOME,
                         objs=cmd.cases,  # type: ignore[union-attr,arg-type]
+                        props=cmd.props,
                     )
                 )
             # Associate case set/cases with data collections

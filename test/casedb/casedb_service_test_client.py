@@ -232,6 +232,12 @@ class CasedbServiceTestClient(ServiceTestClient):
             **kwargs,
         )
 
+    def get_root_user(self) -> model.User:
+        return model.User(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
+
     def create_organization(
         self, user: str | model.User, organization_name: str
     ) -> model.Organization:
