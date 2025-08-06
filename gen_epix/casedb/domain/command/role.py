@@ -113,6 +113,7 @@ class RoleGenerator:
             (command.CaseTypeCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetCrudCommand, PermissionTypeSet.R),
+            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.R),
             (
                 command.CaseDataCollectionLinkCrudCommand,
