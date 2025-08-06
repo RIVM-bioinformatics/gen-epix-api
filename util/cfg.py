@@ -6,6 +6,7 @@ import os
 import uuid
 from enum import Enum
 from locale import getpreferredencoding
+from pathlib import Path
 from typing import Any, Type
 from urllib.parse import quote_plus
 
@@ -222,12 +223,12 @@ class AppCfg(BaseAppCfg):
         settings_dir = os.environ[
             AppCfg._prefix_envvar(envvar_prefix, settings_dir_envvar)
         ]
-        if not os.path.isdir(settings_dir):
+        if not Path(settings_dir).is_dir():
             msg = f"Settings directory does not exist: {settings_dir}"
             self._setup_logger.error(App.create_static_log_message("e0d6f1d2", msg))
             raise FileNotFoundError(msg)
-        settings_full_files = [os.path.join(settings_dir, x) for x in settings_files]
-        invalid_files = [x for x in settings_full_files if not os.path.isfile(x)]
+        settings_full_files = [Path(settings_dir) / x for x in settings_files]
+        invalid_files = [x for x in settings_full_files if not x.is_file()]
         if invalid_files:
             invalid_files_str = ", ".join(invalid_files)
             msg = f"Some settings files do not exist: {invalid_files_str}"
@@ -284,7 +285,7 @@ class AppCfg(BaseAppCfg):
             logger.error(App.create_static_log_message("e2547edf", msg))
             raise FileNotFoundError(msg)
         idps_config_file = cfg.get(idps_config_file_envvar)
-        if not os.path.isfile(idps_config_file):
+        if not Path(idps_config_file).is_file():
             msg = f"Authentication settings file does not exist: {idps_config_file}"
             logger.error(App.create_static_log_message("dc779cad", msg))
             raise FileNotFoundError(msg)
@@ -339,7 +340,7 @@ class AppCfg(BaseAppCfg):
         else:
             secrets_dir = cfg.get(secrets_dir_envvar)
             if secrets_dir:
-                if not os.path.isdir(secrets_dir):
+                if not Path(secrets_dir).is_dir():
                     msg = f"Secrets directory does not exist: {secrets_dir}"
                     logger.error(App.create_static_log_message("d7190d85", msg))
                     raise FileNotFoundError(msg)
