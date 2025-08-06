@@ -5,6 +5,13 @@ from typing import Any, Callable, Hashable
 
 from gen_epix.fastapp import App, LogLevel, model
 from gen_epix.fastapp.api import exc as api_exc
+from gen_epix.fastapp.exc import (
+    AuthException,
+    DomainException,
+    DuplicateIdsError,
+    IdsError,
+    ServiceException,
+)
 
 http_exception_fmap = {
     400: api_exc.BadRequest400HTTPException,
@@ -69,8 +76,8 @@ def generate_handle_exception_function(
             log_message_id, None, user_id=user.id if user else None, exception=exception  # type: ignore[arg-type]
         )
         # Raise HTTP exception
-        if isinstance(exception, exc.DomainException):
-            if isinstance(exception, exc.IdsError):
+        if isinstance(exception, DomainException):
+            if isinstance(exception, IdsError):
                 invalid_ids = []
                 if request_ids and exception.ids:
                     # Compare ids received in request with those reported
@@ -89,7 +96,7 @@ def generate_handle_exception_function(
                     invalid_ids = [x for x in request_ids if x in exception.ids]
                 if invalid_ids:
                     # (Part of the) issue is with id(s). Provide detail on that.
-                    if isinstance(exception, exc.DuplicateIdsError):
+                    if isinstance(exception, DuplicateIdsError):
                         invalid_ids_str = ", ".join(
                             [f'"{x}"' for x in set(invalid_ids)]
                         )
@@ -105,13 +112,13 @@ def generate_handle_exception_function(
                 if logger:
                     logger.info(log_message)
                 raise http_exception_fmap[422]() from exception
-            elif isinstance(exception, exc.AuthException):
+            elif isinstance(exception, AuthException):
                 if logger:
                     logger.info(log_message)
                 raise http_exception_fmap[exception.get_http_status_code()](
                     detail="Access denied", **exception.get_http_other_props()
                 ) from exception
-            elif isinstance(exception, exc.ServiceException):
+            elif isinstance(exception, ServiceException):
                 if logger:
                     logger.error(log_message)
                 raise http_exception_fmap[exception.get_http_status_code()](
