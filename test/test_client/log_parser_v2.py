@@ -1,8 +1,8 @@
 import gzip
 import json
-import os
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
 from test.test_client.user_journey_v2 import UserJourneyColumn, V2UserJourney
 from typing import Callable, Iterable
@@ -122,7 +122,7 @@ class V2LogParser(LogParser):
         self.log_error_lines = None
         # Verify existence of log files
         for log_file in self.log_files:
-            if not os.path.isfile(log_file):
+            if not Path(log_file).is_file():
                 raise FileNotFoundError(f"Log file not found: {log_file}")
 
     def parse(self, **kwargs: dict) -> tuple[list[dict], list[str]]:
@@ -148,7 +148,7 @@ class V2LogParser(LogParser):
         records = []
         error_lines = []
         for log_file in self.log_files:
-            _, file_extension = os.path.splitext(log_file)
+            file_extension = Path(log_file).suffix
             if self.log_type == LogType.DIRECT:
                 with (
                     gzip.open(log_file, "rb")

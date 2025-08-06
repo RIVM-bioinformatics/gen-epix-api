@@ -1,11 +1,11 @@
 import cProfile
 import logging
-import os
 import pickle
 import pstats
 import re
 import sys
 import test.test_client.util as test_util
+from pathlib import Path
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
@@ -23,9 +23,7 @@ PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: dict = {}
 V1_USER_JOURNEY_FILE_PREFIX = "v1.user_journey"
 V2_USER_JOURNEY_FILE_PREFIX = "v2.user_journey"
-USER_JOURNEY_DIR = os.path.join(
-    os.path.dirname(test_util.__file__), "data", "user_journey"
-)
+USER_JOURNEY_DIR = Path(test_util.__file__).parent / "data" / "user_journey"
 
 
 class TestRead:
@@ -35,17 +33,17 @@ class TestRead:
         # TODO: add functionality to get only user journeys for a particular scenario (read, update, etc.)
         if TestRead.USER_JOURNEYS is None:
             TestRead.USER_JOURNEYS = []
-            for file in os.listdir(USER_JOURNEY_DIR):
+            for file in USER_JOURNEY_DIR.iterdir()::
                 if not re.match(r".*\.log\.txt(\.gz)?$", file, flags=re.IGNORECASE):
                     continue
-                src_file = os.path.join(USER_JOURNEY_DIR, file)
-                pkl_file = os.path.join(src_file + ".pkl.gz")
-                if os.path.isfile(pkl_file):
-                    if os.path.getmtime(pkl_file) > os.path.getmtime(src_file):
+                src_file = file
+                pkl_file = Path(str(pkl_file) + ".pkl.gz")
+                if pkl_file.is_file():
+                    if pkl_file.stat().st_mtime > src_file.stat().st_mtime:
                         TestRead.USER_JOURNEYS.append(pickle.load(open(pkl_file, "rb")))
                         continue
                     else:
-                        os.remove(pkl_file)
+                        pkl_file.unlink()
                 if file.startswith(V1_USER_JOURNEY_FILE_PREFIX):
                     name = re.sub(
                         V1_USER_JOURNEY_FILE_PREFIX + r".*\.(\w+)\.log\.txt(\.gz)?$",
@@ -149,13 +147,13 @@ class TestRead:
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
         df.to_csv(
-            os.path.join(test_dir, cls.__name__) + ".performance.csv", index=False
+            Path(test_dir) / f"{cls.__name__}.performance.csv", index=False
         )
         df.to_excel(
-            os.path.join(test_dir, cls.__name__) + ".performance.xlsx", index=False
+            Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False
         )
         for key, html_str in PERFORMANCE_HTML.items():
             with open(
-                os.path.join(test_dir, cls.__name__) + f".performance.{key}.html", "w"
+                Path(test_dir) / f"{cls.__name__}.performance.{key}.html", "w"
             ) as f:
                 f.write("".join(html_str))

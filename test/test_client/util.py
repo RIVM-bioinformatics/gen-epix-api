@@ -1,7 +1,7 @@
 import datetime
 import logging
-import os
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -18,14 +18,14 @@ def get_test_name(test_type: Enum | str) -> str:
 
 
 def get_test_root_output_dir() -> str:
-    dir = os.path.join(os.path.dirname(__file__), "data", "output")
-    os.makedirs(dir, exist_ok=True)
+    dir = Path(__file__).parent / "data" / "output"
+    dir.mkdir(parents=True, exist_ok=True)
     return dir
 
 
 def get_test_output_dir(test_name: str) -> str:
-    output_dir = os.path.join(get_test_root_output_dir(), test_name)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = Path(get_test_root_output_dir()) / test_name
+    output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
 
