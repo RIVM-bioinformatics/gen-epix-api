@@ -11,7 +11,7 @@ class RoleGenerator:
     ROLE_PERMISSION_SETS: dict[
         Role, set[tuple[Type[command.Command], PermissionTypeSet]]
     ] = {
-        Role.ADMIN: {
+        Role.APP_ADMIN: {
             (command.IdentifierIssuerCrudCommand, PermissionTypeSet.CU),
             (command.UserCrudCommand, PermissionTypeSet.R),
             (command.UserInvitationCrudCommand, PermissionTypeSet.CRD),
@@ -22,7 +22,7 @@ class RoleGenerator:
             (command.DataCollectionSetCrudCommand, PermissionTypeSet.CRUD),
             (command.DataCollectionSetMemberCrudCommand, PermissionTypeSet.CRUD),
         },
-        Role.REFDATA_ADMIN: {
+        Role.METADATA_ADMIN: {
             # organization
             # seq.metadata CRUD commands
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.CRU),
@@ -53,26 +53,24 @@ class RoleGenerator:
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.CRU),
             (command.TaxonomyProtocolCrudCommand, PermissionTypeSet.CRU),
         },
-        Role.DATA_WRITER: {
-            # seq.persistable CRUD commands
-            (command.AlleleCrudCommand, PermissionTypeSet.CUD),
-            (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CUD),
-            (command.SampleCrudCommand, PermissionTypeSet.CUD),
-            (command.ReadSetCrudCommand, PermissionTypeSet.CUD),
-            (command.SeqCrudCommand, PermissionTypeSet.CUD),
-            (command.AlleleProfileCrudCommand, PermissionTypeSet.CUD),
-            (command.SeqAlignmentCrudCommand, PermissionTypeSet.CUD),
-            (command.SeqTaxonomyCrudCommand, PermissionTypeSet.CUD),
-            (command.PcrMeasurementCrudCommand, PermissionTypeSet.CUD),
-            (command.AstMeasurementCrudCommand, PermissionTypeSet.CUD),
-            (command.AstPredictionCrudCommand, PermissionTypeSet.CUD),
-            (command.SeqDistanceCrudCommand, PermissionTypeSet.CUD),
-            (command.SeqClassificationCrudCommand, PermissionTypeSet.CUD),
-            (command.SnpProfileCrudCommand, PermissionTypeSet.CUD),
-        },
-        Role.DATA_READER: {
+        Role.ORG_USER: {
             # organization
             (command.DataCollectionCrudCommand, PermissionTypeSet.R),
+            # seq.persistable CRUD commands
+            (command.AlleleCrudCommand, PermissionTypeSet.CRUD),
+            (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CRUD),
+            (command.SampleCrudCommand, PermissionTypeSet.CRUD),
+            (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqCrudCommand, PermissionTypeSet.CRUD),
+            (command.AlleleProfileCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqAlignmentCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqTaxonomyCrudCommand, PermissionTypeSet.CRUD),
+            (command.PcrMeasurementCrudCommand, PermissionTypeSet.CRUD),
+            (command.AstMeasurementCrudCommand, PermissionTypeSet.CRUD),
+            (command.AstPredictionCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqDistanceCrudCommand, PermissionTypeSet.CRUD),
+            (command.SeqClassificationCrudCommand, PermissionTypeSet.CRUD),
+            (command.SnpProfileCrudCommand, PermissionTypeSet.CRUD),
             # seq.metadata CRUD commands
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.R),
             (command.AssemblyProtocolCrudCommand, PermissionTypeSet.R),
@@ -100,21 +98,6 @@ class RoleGenerator:
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.R),
             (command.TaxonomyProtocolCrudCommand, PermissionTypeSet.R),
-            # seq CRUD commands
-            (command.AlleleCrudCommand, PermissionTypeSet.R),
-            (command.AlleleAlignmentCrudCommand, PermissionTypeSet.R),
-            (command.SampleCrudCommand, PermissionTypeSet.R),
-            (command.ReadSetCrudCommand, PermissionTypeSet.R),
-            (command.SeqCrudCommand, PermissionTypeSet.R),
-            (command.AlleleProfileCrudCommand, PermissionTypeSet.R),
-            (command.SeqAlignmentCrudCommand, PermissionTypeSet.R),
-            (command.SeqTaxonomyCrudCommand, PermissionTypeSet.R),
-            (command.PcrMeasurementCrudCommand, PermissionTypeSet.R),
-            (command.AstMeasurementCrudCommand, PermissionTypeSet.R),
-            (command.AstPredictionCrudCommand, PermissionTypeSet.R),
-            (command.SeqDistanceCrudCommand, PermissionTypeSet.R),
-            (command.SeqClassificationCrudCommand, PermissionTypeSet.R),
-            (command.SnpProfileCrudCommand, PermissionTypeSet.R),
             # seq non-CRUD commands
             (command.RetrievePhylogeneticTreeCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteAlleleProfileCommand, PermissionTypeSet.E),
@@ -130,24 +113,21 @@ class RoleGenerator:
     # Hierarchy described here per role with union of all roles below it.
     ROLE_HIERARCHY: dict[Role, set[Role]] = {
         Role.ROOT: {
-            Role.ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.DATA_READER,
-            Role.DATA_WRITER,
+            Role.APP_ADMIN,
+            Role.METADATA_ADMIN,
+            Role.ORG_USER,
             Role.GUEST,
         },
-        Role.ADMIN: {
-            Role.REFDATA_ADMIN,
-            Role.DATA_READER,
-            Role.DATA_WRITER,
+        Role.APP_ADMIN: {
+            Role.METADATA_ADMIN,
+            Role.ORG_USER,
             Role.GUEST,
         },
-        Role.REFDATA_ADMIN: {Role.GUEST},
-        Role.DATA_READER: {Role.GUEST},
-        Role.DATA_WRITER: {Role.DATA_READER, Role.GUEST},
+        Role.METADATA_ADMIN: {Role.GUEST},
+        Role.ORG_USER: {Role.GUEST},
         Role.GUEST: set(),
     }
 
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
-        ROLE_HIERARCHY, ROLE_PERMISSIONS
+        ROLE_HIERARCHY, ROLE_PERMISSION_SETS
     )

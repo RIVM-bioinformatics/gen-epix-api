@@ -28,6 +28,8 @@ class BaseRbacService(BaseService):
     role(s) they have been assigned.
     """
 
+    SERVICE_TYPE = "RBAC"
+
     def __init__(self, *args: list, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._permissions_without_rbac: set[Permission] = set()

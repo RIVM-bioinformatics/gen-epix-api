@@ -9,7 +9,6 @@ from gen_epix.common.domain.command import CrudCommand, UpdateAssociationCommand
 
 
 class ConceptSetConceptUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ONTOLOGY
     ASSOCIATION_CLASS: ClassVar = model.ConceptSetMember
     LINK_FIELD_NAME1: ClassVar = "concept_set_id"
     LINK_FIELD_NAME2: ClassVar = "concept_id"
@@ -20,7 +19,6 @@ class ConceptSetConceptUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class DiseaseEtiologicalAgentUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ONTOLOGY
     ASSOCIATION_CLASS: ClassVar = model.Etiology
     LINK_FIELD_NAME1: ClassVar = "disease_id"
     LINK_FIELD_NAME2: ClassVar = "etiological_agent_id"

@@ -16,6 +16,6 @@ class BaseOntologyService(BaseService):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         for command_class in self.app.domain.get_commands_for_service_type(
-            self.service_type, base_class=command.UpdateAssociationCommand
+            ServiceType.ONTOLOGY, base_class=command.UpdateAssociationCommand
         ):
             f(command_class, self.update_association)

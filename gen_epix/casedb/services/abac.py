@@ -48,9 +48,6 @@ class AbacService(BaseAbacService):
         logger: logging.Logger | None = None,
         **kwargs: Any,
     ):
-        kwargs["service_type"] = kwargs.get(
-            "service_type", BaseAbacService.SERVICE_TYPE  # type:ignore[arg-type]
-        )
         super().__init__(app, repository=repository, logger=logger, **kwargs)
         self.repository: BaseAbacRepository
 

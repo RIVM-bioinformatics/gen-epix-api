@@ -158,7 +158,6 @@ class ModelAnonymizer(BaseAnonymizer):
     def __init__(
         self,
         domain: Domain,
-        service_type: ServiceType,
         repository: BaseRepository,
         seed: int | None = None,
         strictness_level: AnonStrictness = AnonStrictness.STRICT,
@@ -167,7 +166,6 @@ class ModelAnonymizer(BaseAnonymizer):
         super().__init__(seed, **kwargs)
 
         self.domain = domain
-        self.service_type = service_type
         self.repository = repository
         self.strictness_level = strictness_level
 
@@ -182,7 +180,7 @@ class ModelAnonymizer(BaseAnonymizer):
         as anonymization_method=AnonMethod.CATEGORICAL. For these, load all the data
         available (or NYI: possibly reduced scope) as possible substitutable values
         """
-        model_classes = self.domain._models_for_service_type[self.service_type]
+        model_classes = self.domain.get_dag_sorted_models(service_type=ServiceType.OMOP)
         categorical_locs = []
         for model_class in model_classes:
             for field_name, field in model_class.model_fields.items():

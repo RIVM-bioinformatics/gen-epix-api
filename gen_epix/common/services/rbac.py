@@ -22,9 +22,6 @@ class RbacService(BaseRbacService):
         **kwargs: Any,
     ):
         kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)  # type: ignore[arg-type]
-        kwargs["service_type"] = kwargs.get(
-            "service_type", BaseRbacService.SERVICE_TYPE  # type: ignore[arg-type]
-        )
         super().__init__(app, logger=logger, **kwargs)  # type: ignore[arg-type]
         self._role_enum = role_enum
         self._root_role = role_enum["ROOT"]

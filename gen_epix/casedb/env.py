@@ -41,6 +41,7 @@ from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain.enum import RepositoryType as SeqdbRepositoryType
 from gen_epix.seqdb.domain.enum import ServiceType as SeqdbServiceType
+from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppEnv as SeqdbAppEnv
 from util.cfg import AppCfg
 from util.env import BaseAppEnv
@@ -180,6 +181,7 @@ class AppEnv(BaseAppEnv):
             service_data[enum.ServiceType.SEQDB].update(
                 {
                     "kwargs": {
+                        "ext_app_user": SeqdbUser(**cfg.secret.seqdb.user),
                         "ext_app": SeqdbAppEnv(
                             # TODO: temporary fix to not import seqdb secrets, only keeping the defaults for these
                             # Ideally the namespace for casedb/seqdb/omopdb config should be different

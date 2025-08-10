@@ -6,7 +6,6 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
-from gen_epix.common.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.common.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
@@ -212,15 +211,10 @@ def create_organization_endpoints(
         return retval
 
     # CRUD
-    excluded_permissions: dict = {
-        user_class: EXCLUDED_PERMISSIONS[model.User],
-        user_invitation_class: EXCLUDED_PERMISSIONS[model.UserInvitation],
-    }
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,
         service_type=service_type,
         user_dependency=registered_user_dependency,
-        excluded_permissions=excluded_permissions,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

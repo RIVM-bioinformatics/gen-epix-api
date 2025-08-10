@@ -89,9 +89,6 @@ from gen_epix.seqdb.domain.command.seq import (
     AstProtocolCrudCommand as AstProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    ContigAlignmentCrudCommand as ContigAlignmentCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     GenerateMultipleAlignmentCommand as GenerateMultipleAlignmentCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -147,6 +144,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveCompleteSnpProfileCommand as RetrieveCompleteSnpProfileCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    RetrieveMultipleAlignmentCommand as RetrieveMultipleAlignmentCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
@@ -205,32 +205,6 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 
 COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
-    enum.ServiceType.ORGANIZATION: [
-        ContactCrudCommand,
-        DataCollectionCrudCommand,
-        DataCollectionSetCrudCommand,
-        DataCollectionSetDataCollectionUpdateAssociationCommand,
-        DataCollectionSetMemberCrudCommand,
-        GetIdentityProvidersCommand,
-        GetOwnPermissionsCommand,
-        IdentifierIssuerCrudCommand,
-        InviteUserCommand,
-        OrganizationCrudCommand,
-        OrganizationSetCrudCommand,
-        OrganizationSetMemberCrudCommand,
-        OrganizationSetOrganizationUpdateAssociationCommand,
-        OutageCrudCommand,
-        RegisterInvitedUserCommand,
-        RetrieveCompleteUserCommand,
-        RetrieveOrganizationContactCommand,
-        RetrieveOutagesCommand,
-        SiteCrudCommand,
-        UpdateAssociationCommand,
-        UpdateUserCommand,
-        UpdateUserOwnOrganizationCommand,
-        UserCrudCommand,
-        UserInvitationCrudCommand,
-    ],
     enum.ServiceType.SEQ: [
         AlignmentProtocolCrudCommand,
         AlleleAlignmentCrudCommand,
@@ -240,7 +214,6 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         AstMeasurementCrudCommand,
         AstPredictionCrudCommand,
         AstProtocolCrudCommand,
-        ContigAlignmentCrudCommand,
         GenerateMultipleAlignmentCommand,
         GeneratePhylogeneticTreeCommand,
         KmerDetectionProtocolCrudCommand,
@@ -264,6 +237,7 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         RetrieveCompleteSampleCommand,
         RetrieveCompleteSeqCommand,
         RetrieveCompleteSnpProfileCommand,
+        RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
         SampleCrudCommand,
         SeqAlignmentCrudCommand,
@@ -285,6 +259,37 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         TaxonSetMemberCrudCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
+    ],
+    enum.ServiceType.AUTH: [
+        GetIdentityProvidersCommand,
+    ],
+    enum.ServiceType.ORGANIZATION: [
+        ContactCrudCommand,
+        DataCollectionCrudCommand,
+        DataCollectionSetCrudCommand,
+        DataCollectionSetDataCollectionUpdateAssociationCommand,
+        DataCollectionSetMemberCrudCommand,
+        IdentifierIssuerCrudCommand,
+        InviteUserCommand,
+        OrganizationCrudCommand,
+        OrganizationSetCrudCommand,
+        OrganizationSetMemberCrudCommand,
+        OrganizationSetOrganizationUpdateAssociationCommand,
+        RegisterInvitedUserCommand,
+        RetrieveCompleteUserCommand,
+        RetrieveOrganizationContactCommand,
+        SiteCrudCommand,
+        UpdateUserCommand,
+        UpdateUserOwnOrganizationCommand,
+        UserCrudCommand,
+        UserInvitationCrudCommand,
+    ],
+    enum.ServiceType.RBAC: [
+        GetOwnPermissionsCommand,
+    ],
+    enum.ServiceType.SYSTEM: [
+        OutageCrudCommand,
+        RetrieveOutagesCommand,
     ],
 }
 

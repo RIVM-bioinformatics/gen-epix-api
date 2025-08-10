@@ -14,6 +14,8 @@ from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
 
 
 class AuthService(BaseAuthService):
+    SERVICE_TYPE = "AUTH"
+
     def __init__(
         self,
         app: App,
@@ -22,9 +24,6 @@ class AuthService(BaseAuthService):
         repository: None = None,
         **kwargs: Any,
     ):
-        kwargs["service_type"] = kwargs.get(
-            "service_type", BaseAuthService.SERVICE_TYPE
-        )
         super().__init__(app, repository=repository, logger=logger, **kwargs)
         self._idp_clients: list[IDPClient] = []
 

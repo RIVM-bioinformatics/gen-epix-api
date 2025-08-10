@@ -10,7 +10,7 @@ from pydantic import Field, field_serializer, field_validator
 
 from gen_epix.common.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-from gen_epix.seqdb.domain import DOMAIN, enum
+from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, SeqMixin
 
 _SERVICE_TYPE = enum.ServiceType.SEQ
@@ -560,6 +560,3 @@ class RefSnpSetMember(Model):
     index: int = Field(
         description="The index (ordinal number) of the reference SNP in the reference SNP set."
     )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

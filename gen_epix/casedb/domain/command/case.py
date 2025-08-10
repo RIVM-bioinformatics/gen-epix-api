@@ -16,7 +16,6 @@ from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
     ASSOCIATION_CLASS: ClassVar = model.CaseTypeSetMember
     LINK_FIELD_NAME1: ClassVar = "case_type_set_id"
     LINK_FIELD_NAME2: ClassVar = "case_type_id"
@@ -27,7 +26,6 @@ class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
     ASSOCIATION_CLASS: ClassVar = model.CaseTypeColSetMember
     LINK_FIELD_NAME1: ClassVar = "case_type_col_set_id"
     LINK_FIELD_NAME2: ClassVar = "case_type_col_id"
@@ -38,7 +36,6 @@ class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand
 
 
 class CaseSetCreateCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_set: model.CaseSet = Field(description="The case set to create.")
     data_collection_ids: set[UUID] = Field(
@@ -56,7 +53,6 @@ class CaseSetCreateCommand(Command):
 
 
 class CasesCreateCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     cases: list[model.Case] = Field(
         description="The cases to create. All cases must have the same case type and created_in_data_collection."
@@ -83,7 +79,6 @@ class CasesCreateCommand(Command):
 
 
 class RetrieveCaseSetStatsCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_set_ids: list[UUID] | None = Field(
         default=None,
@@ -98,7 +93,6 @@ class RetrieveCaseSetStatsCommand(Command):
 
 
 class RetrieveCaseTypeStatsCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -117,19 +111,16 @@ class RetrieveCaseTypeStatsCommand(Command):
 
 
 class RetrieveCompleteCaseTypeCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_type_id: UUID
 
 
 class RetrieveCasesByQueryCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_query: model.CaseQuery
 
 
 class RetrieveCasesByIdCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve cases for. UNIQUE"
@@ -143,7 +134,6 @@ class RetrieveCasesByIdCommand(Command):
 
 
 class RetrieveCaseRightsCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve access for. UNIQUE"
@@ -157,7 +147,6 @@ class RetrieveCaseRightsCommand(Command):
 
 
 class RetrieveCaseSetRightsCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     case_set_ids: list[UUID] = Field(
         description="The case set ids to retrieve access for. UNIQUE"
@@ -171,28 +160,24 @@ class RetrieveCaseSetRightsCommand(Command):
 
 
 class RetrievePhylogeneticTreeBySequencesCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
     tree_algorithm_code: enum.TreeAlgorithmType
     seqdb_seq_distance_protocol_id: UUID
     sequence_ids: list[UUID]
 
 
 class RetrievePhylogeneticTreeByCasesCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
     tree_algorithm: enum.TreeAlgorithmType
     genetic_distance_case_type_col_id: UUID
     case_ids: list[UUID]
 
 
 class RetrieveGeneticSequenceByCaseCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     genetic_sequence_case_type_col_id: UUID
     case_ids: list[UUID]
 
 
 class RetrieveAlleleProfileCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.CASE
 
     sequence_ids: list[UUID]
 

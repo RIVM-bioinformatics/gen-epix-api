@@ -1,5 +1,3 @@
-# pylint: disable=useless-import-alias
-
 from typing import Type
 
 from gen_epix import fastapp
@@ -101,20 +99,6 @@ SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
         enum.ServiceType.SYSTEM: [
             Outage,
         ],
-        enum.ServiceType.ONTOLOGY: [
-            Concept,
-            ConceptSet,
-            ConceptSetMember,
-            Disease,
-            EtiologicalAgent,
-            Etiology,
-        ],
-        enum.ServiceType.GEO: [
-            RegionSet,
-            Region,
-            RegionRelation,
-            RegionSetShape,
-        ],
         enum.ServiceType.ORGANIZATION: [
             Organization,
             OrganizationSet,
@@ -128,6 +112,20 @@ SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
             UserNameEmail,
             User,
             UserInvitation,
+        ],
+        enum.ServiceType.ONTOLOGY: [
+            Concept,
+            ConceptSet,
+            ConceptSetMember,
+            Disease,
+            EtiologicalAgent,
+            Etiology,
+        ],
+        enum.ServiceType.GEO: [
+            RegionSet,
+            Region,
+            RegionRelation,
+            RegionSetShape,
         ],
         enum.ServiceType.SEQDB: [
             AlleleProfile,

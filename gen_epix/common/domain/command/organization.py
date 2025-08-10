@@ -3,7 +3,6 @@ from typing import ClassVar
 from uuid import UUID
 
 import gen_epix.common.domain.model.organization as model
-from gen_epix.common.domain import enum
 from gen_epix.common.domain.command.base import (
     Command,
     CrudCommand,
@@ -15,11 +14,10 @@ from gen_epix.fastapp import PermissionTypeSet
 
 
 class RetrieveCompleteUserCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
+    pass
 
 
 class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
     ASSOCIATION_CLASS: ClassVar = model.OrganizationSetMember
     LINK_FIELD_NAME1: ClassVar = "organization_set_id"
     LINK_FIELD_NAME2: ClassVar = "organization_id"
@@ -30,7 +28,6 @@ class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationComma
 
 
 class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationCommand):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
     ASSOCIATION_CLASS: ClassVar = model.DataCollectionSetMember
     LINK_FIELD_NAME1: ClassVar = "data_collection_set_id"
     LINK_FIELD_NAME2: ClassVar = "data_collection_id"
@@ -41,7 +38,6 @@ class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationC
 
 
 class InviteUserCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
 
     email: str
     roles: set[Enum]
@@ -49,13 +45,11 @@ class InviteUserCommand(Command):
 
 
 class RegisterInvitedUserCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
 
     token: str
 
 
 class RetrieveOrganizationContactCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
 
     organization_ids: list[UUID] | None = None
     site_ids: list[UUID] | None = None
@@ -63,7 +57,6 @@ class RetrieveOrganizationContactCommand(Command):
 
 
 class UpdateUserCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
 
     tgt_user_id: UUID
     is_active: bool | None
@@ -72,7 +65,6 @@ class UpdateUserCommand(Command):
 
 
 class UpdateUserOwnOrganizationCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.ORGANIZATION
 
     organization_id: UUID
     is_new_user: bool = False

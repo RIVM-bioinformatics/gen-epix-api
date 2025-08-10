@@ -36,16 +36,14 @@ class BaseService(abc.ABC):
         # Parse kwargs
         if props is None:
             props = {}
-        id_factory: Callable[[], Hashable] = kwargs.pop(  # type: ignore
-            "id_factory", app.generate_id
-        )
+        id_factory: Callable[[], Hashable] = kwargs.pop("id_factory", app.generate_id)
         timestamp_factory: Callable[[], datetime.datetime] = kwargs.pop(
             "timestamp_factory", app.generate_timestamp
         )
         register_handlers = kwargs.pop("register_handlers", True)
         # Set input members
         self._id: str = kwargs.pop("id", str(id_factory()))
-        self._service_type: Hashable = kwargs.pop(  # type: ignore
+        self._service_type: Hashable = kwargs.pop(
             "service_type", self.__class__.SERVICE_TYPE
         )
         self._name: str = Domain.get_service_name(self._service_type)

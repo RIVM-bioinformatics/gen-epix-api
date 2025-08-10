@@ -8,7 +8,7 @@ from test.fastapp.command import (
     Model2_2CrudCommand,
 )
 from test.fastapp.enum import ServiceType
-from test.fastapp.model import Model1_1, Model1_2, Model2_1, Model2_2
+from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient
 from test.fastapp.user_manager import UserManager
 from typing import Any, Hashable, Type
@@ -178,7 +178,7 @@ class RBACTestClient(ServiceTestClient):
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> RBACTestClient:
-    return RBACTestClient.get_test_client(DictRepository)
+    return RBACTestClient.get_test_client(DictRepository, domain=DOMAIN)
 
 
 class TestRBAC:

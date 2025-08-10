@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import LogLevel
-from gen_epix.omopdb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.omopdb.domain import enum
 
 
@@ -26,7 +25,6 @@ def create_omop_endpoints(
         app,
         service_type=enum.ServiceType.OMOP,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

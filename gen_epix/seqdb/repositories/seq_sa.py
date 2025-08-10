@@ -8,7 +8,7 @@ from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
-from gen_epix.seqdb.repositories.sa_model.base import (
+from gen_epix.seqdb.repositories.sa_model import (
     DB_METADATA_FIELDS,
     GENERATE_SERVICE_METADATA,
     SERVICE_METADATA_FIELDS,

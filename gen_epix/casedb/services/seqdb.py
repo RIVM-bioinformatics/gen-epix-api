@@ -7,7 +7,6 @@ from gen_epix.fastapp import App
 from gen_epix.seqdb.domain.command import (
     RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
 )
-from gen_epix.seqdb.domain.enum import Role as SeqdbRole
 from gen_epix.seqdb.domain.enum import TreeAlgorithm as SeqdbTreeAlgorithm
 from gen_epix.seqdb.domain.model import PhylogeneticTree as SeqdbPhylogeneticTree
 from gen_epix.seqdb.domain.model import User as SeqdbUser
@@ -15,24 +14,20 @@ from gen_epix.seqdb.domain.model import User as SeqdbUser
 
 class SeqdbService(BaseSeqdbService):
 
-    def __init__(self, app: App, ext_app: App, **kwargs: Any) -> None:
+    def __init__(
+        self, app: App, ext_app: App, ext_app_user: SeqdbUser, **kwargs: Any
+    ) -> None:
         super().__init__(app, **kwargs)
         self._ext_app = ext_app
-        # TODO: get user from config data
-        self._functional_user = SeqdbUser(
-            id=UUID("00000000-0000-0000-0000-000000000001"),
-            email="functional.user@org.org",
-            roles={SeqdbRole.ADMIN},
-            data_collection_ids=set(),
-        )
+        self._ext_app_user = ext_app_user
 
     @property
     def ext_app(self) -> App:
         return self._ext_app
 
     @property
-    def functional_user(self) -> SeqdbUser:
-        return self._functional_user
+    def ext_app_user(self) -> SeqdbUser:
+        return self._ext_app_user
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
@@ -44,7 +39,7 @@ class SeqdbService(BaseSeqdbService):
         else:
             leaf_names = None
         seqdb_cmd = SeqdbRetrievePhylogeneticTreeCommand(
-            user=self.functional_user,
+            user=self.ext_app_user,
             seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
             tree_algorithm=SeqdbTreeAlgorithm[cmd.tree_algorithm_code.value],
             seq_ids=cmd.sequence_ids,

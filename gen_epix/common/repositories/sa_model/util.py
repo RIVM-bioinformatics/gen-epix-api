@@ -40,10 +40,10 @@ def create_table_args(
 
 
 def create_mapped_column(
+    domain: Domain,
     model_class: Type[Model],
     field_name: str,
     field_name_map: dict[Type[Model], dict[str, str]] | None = None,
-    ignore_service_type: bool = False,
     **kwargs: Any,
 ) -> MappedColumn[Any]:
     assert model_class.ENTITY is not None
@@ -53,10 +53,9 @@ def create_mapped_column(
     nullable = kwargs.get("nullable", fieldinfo.is_required() is False)
     doc = kwargs.pop("doc", fieldinfo.description)
     link_entity = entity.get_link_entity(field_name)
-    if ignore_service_type:
-        # TODO: TEMPORARY: to be removed when ENTITY no longer has service type, but this is registered in the DOMAIN instead
-        pass
-    elif link_entity and link_entity.service_type != entity.service_type:
+    if link_entity and domain.get_service_type_for_entity(
+        link_entity
+    ) != domain.get_service_type_for_entity(entity):
         # Create foreign keys only within the same service
         link_entity = None
     ondelete = kwargs.pop("ondelete", None)

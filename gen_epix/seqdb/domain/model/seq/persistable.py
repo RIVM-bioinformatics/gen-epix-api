@@ -10,7 +10,7 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-from gen_epix.seqdb.domain import DOMAIN, enum
+from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import (
     AlignmentMixin,
     CodeMixin,
@@ -777,6 +777,3 @@ class SeqDistance(Model):
         if isinstance(value, enum.SeqDistanceFormat):
             return value.value
         return value
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

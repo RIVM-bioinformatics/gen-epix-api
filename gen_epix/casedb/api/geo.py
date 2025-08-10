@@ -2,7 +2,6 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter, FastAPI
 
-from gen_epix.casedb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.casedb.domain import enum
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -24,7 +23,6 @@ def create_geo_endpoints(
         app,
         service_type=enum.ServiceType.GEO,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

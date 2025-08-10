@@ -12,7 +12,7 @@ from gen_epix.common.repositories.sa_model import (
     create_mapped_column,
     create_table_args,
 )
-from gen_epix.omopdb.domain import enum, model
+from gen_epix.omopdb.domain import DOMAIN, enum, model
 
 Base: Type = sa.orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
@@ -26,28 +26,32 @@ Base: Type = sa.orm.declarative_base(name=enum.ServiceType.OMOP.value)
 class CareSite(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CareSite)
 
-    care_site_id: Mapped[UUID] = create_mapped_column(model.CareSite, "care_site_id")
+    care_site_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CareSite, "care_site_id"
+    )
     care_site_name: Mapped[str | None] = create_mapped_column(
-        model.CareSite, "care_site_name"
+        DOMAIN, model.CareSite, "care_site_name"
     )
     care_site_source_value: Mapped[str | None] = create_mapped_column(
-        model.CareSite, "care_site_source_value"
+        DOMAIN, model.CareSite, "care_site_source_value"
     )
     place_of_service_source_value: Mapped[str | None] = create_mapped_column(
-        model.CareSite, "place_of_service_source_value"
+        DOMAIN, model.CareSite, "place_of_service_source_value"
     )
     place_of_service_concept_id: Mapped[int] = create_mapped_column(
-        model.CareSite, "place_of_service_concept_id"
+        DOMAIN, model.CareSite, "place_of_service_concept_id"
     )
     location_id: Mapped[UUID | None] = create_mapped_column(
-        model.CareSite, "location_id"
+        DOMAIN, model.CareSite, "location_id"
     )
     organization_id: Mapped[UUID] = create_mapped_column(
-        model.CareSite, "organization_id"
+        DOMAIN, model.CareSite, "organization_id"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.CareSite, "provenance_id")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CareSite, "provenance_id"
+    )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.CareSite, "source_traceback"
+        DOMAIN, model.CareSite, "source_traceback"
     )
 
 
@@ -55,32 +59,34 @@ class CdmSource(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CdmSource)
 
     cdm_release_date: Mapped[date | None] = create_mapped_column(
-        model.CdmSource, "cdm_release_date"
+        DOMAIN, model.CdmSource, "cdm_release_date"
     )
     source_release_date: Mapped[date | None] = create_mapped_column(
-        model.CdmSource, "source_release_date"
+        DOMAIN, model.CdmSource, "source_release_date"
     )
     cdm_version: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "cdm_version"
+        DOMAIN, model.CdmSource, "cdm_version"
     )
     vocabulary_version: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "vocabulary_version"
+        DOMAIN, model.CdmSource, "vocabulary_version"
     )
     cdm_source_abbreviation: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "cdm_source_abbreviation"
+        DOMAIN, model.CdmSource, "cdm_source_abbreviation"
     )
     cdm_source_name: Mapped[str] = create_mapped_column(
-        model.CdmSource, "cdm_source_name"
+        DOMAIN, model.CdmSource, "cdm_source_name"
     )
-    cdm_holder: Mapped[str | None] = create_mapped_column(model.CdmSource, "cdm_holder")
+    cdm_holder: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_holder"
+    )
     source_documentation_reference: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "source_documentation_reference"
+        DOMAIN, model.CdmSource, "source_documentation_reference"
     )
     cdm_etl_reference: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "cdm_etl_reference"
+        DOMAIN, model.CdmSource, "cdm_etl_reference"
     )
     source_description: Mapped[str | None] = create_mapped_column(
-        model.CdmSource, "source_description"
+        DOMAIN, model.CdmSource, "source_description"
     )
 
 
@@ -88,80 +94,88 @@ class Cohort(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Cohort)
 
     cohort_end_date: Mapped[date] = create_mapped_column(
-        model.Cohort, "cohort_end_date"
+        DOMAIN, model.Cohort, "cohort_end_date"
     )
     cohort_start_date: Mapped[date] = create_mapped_column(
-        model.Cohort, "cohort_start_date"
+        DOMAIN, model.Cohort, "cohort_start_date"
     )
     cohort_definition_id: Mapped[UUID] = create_mapped_column(
-        model.Cohort, "cohort_definition_id"
+        DOMAIN, model.Cohort, "cohort_definition_id"
     )
-    subject_id: Mapped[UUID] = create_mapped_column(model.Cohort, "subject_id")
+    subject_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "subject_id")
 
 
 class CohortDefinition(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
 
     cohort_initiation_date: Mapped[date | None] = create_mapped_column(
-        model.CohortDefinition, "cohort_initiation_date"
+        DOMAIN, model.CohortDefinition, "cohort_initiation_date"
     )
     cohort_definition_name: Mapped[str] = create_mapped_column(
-        model.CohortDefinition, "cohort_definition_name"
+        DOMAIN, model.CohortDefinition, "cohort_definition_name"
     )
     cohort_definition_description: Mapped[str | None] = create_mapped_column(
-        model.CohortDefinition, "cohort_definition_description"
+        DOMAIN, model.CohortDefinition, "cohort_definition_description"
     )
     cohort_definition_syntax: Mapped[str | None] = create_mapped_column(
-        model.CohortDefinition, "cohort_definition_syntax"
+        DOMAIN, model.CohortDefinition, "cohort_definition_syntax"
     )
     definition_type_concept_id: Mapped[int] = create_mapped_column(
-        model.CohortDefinition, "definition_type_concept_id"
+        DOMAIN, model.CohortDefinition, "definition_type_concept_id"
     )
     subject_concept_id: Mapped[int] = create_mapped_column(
-        model.CohortDefinition, "subject_concept_id"
+        DOMAIN, model.CohortDefinition, "subject_concept_id"
     )
     cohort_definition_id: Mapped[UUID] = create_mapped_column(
-        model.CohortDefinition, "cohort_definition_id"
+        DOMAIN, model.CohortDefinition, "cohort_definition_id"
     )
 
 
 class Concept(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
-    valid_end_date: Mapped[date] = create_mapped_column(model.Concept, "valid_end_date")
-    valid_start_date: Mapped[date] = create_mapped_column(
-        model.Concept, "valid_start_date"
+    valid_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Concept, "valid_end_date"
     )
-    concept_id: Mapped[int] = create_mapped_column(model.Concept, "concept_id")
+    valid_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Concept, "valid_start_date"
+    )
+    concept_id: Mapped[int] = create_mapped_column(DOMAIN, model.Concept, "concept_id")
     standard_concept: Mapped[str | None] = create_mapped_column(
-        model.Concept, "standard_concept"
+        DOMAIN, model.Concept, "standard_concept"
     )
     invalid_reason: Mapped[str | None] = create_mapped_column(
-        model.Concept, "invalid_reason"
+        DOMAIN, model.Concept, "invalid_reason"
     )
-    concept_name: Mapped[str] = create_mapped_column(model.Concept, "concept_name")
-    concept_code: Mapped[str] = create_mapped_column(model.Concept, "concept_code")
+    concept_name: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Concept, "concept_name"
+    )
+    concept_code: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Concept, "concept_code"
+    )
     concept_class_id: Mapped[str] = create_mapped_column(
-        model.Concept, "concept_class_id"
+        DOMAIN, model.Concept, "concept_class_id"
     )
-    domain_id: Mapped[str] = create_mapped_column(model.Concept, "domain_id")
-    vocabulary_id: Mapped[str] = create_mapped_column(model.Concept, "vocabulary_id")
+    domain_id: Mapped[str] = create_mapped_column(DOMAIN, model.Concept, "domain_id")
+    vocabulary_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Concept, "vocabulary_id"
+    )
 
 
 class ConceptAncestor(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptAncestor)
 
     ancestor_concept_id: Mapped[int] = create_mapped_column(
-        model.ConceptAncestor, "ancestor_concept_id"
+        DOMAIN, model.ConceptAncestor, "ancestor_concept_id"
     )
     min_levels_of_separation: Mapped[int] = create_mapped_column(
-        model.ConceptAncestor, "min_levels_of_separation"
+        DOMAIN, model.ConceptAncestor, "min_levels_of_separation"
     )
     max_levels_of_separation: Mapped[int] = create_mapped_column(
-        model.ConceptAncestor, "max_levels_of_separation"
+        DOMAIN, model.ConceptAncestor, "max_levels_of_separation"
     )
     descendant_concept_id: Mapped[int] = create_mapped_column(
-        model.ConceptAncestor, "descendant_concept_id"
+        DOMAIN, model.ConceptAncestor, "descendant_concept_id"
     )
 
 
@@ -169,13 +183,13 @@ class ConceptClass(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptClass)
 
     concept_class_concept_id: Mapped[int] = create_mapped_column(
-        model.ConceptClass, "concept_class_concept_id"
+        DOMAIN, model.ConceptClass, "concept_class_concept_id"
     )
     concept_class_id: Mapped[str] = create_mapped_column(
-        model.ConceptClass, "concept_class_id"
+        DOMAIN, model.ConceptClass, "concept_class_id"
     )
     concept_class_name: Mapped[str] = create_mapped_column(
-        model.ConceptClass, "concept_class_name"
+        DOMAIN, model.ConceptClass, "concept_class_name"
     )
 
 
@@ -183,34 +197,36 @@ class ConceptRelationship(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptRelationship)
 
     valid_end_date: Mapped[date] = create_mapped_column(
-        model.ConceptRelationship, "valid_end_date"
+        DOMAIN, model.ConceptRelationship, "valid_end_date"
     )
     valid_start_date: Mapped[date] = create_mapped_column(
-        model.ConceptRelationship, "valid_start_date"
+        DOMAIN, model.ConceptRelationship, "valid_start_date"
     )
     concept_id_1: Mapped[int] = create_mapped_column(
-        model.ConceptRelationship, "concept_id_1"
+        DOMAIN, model.ConceptRelationship, "concept_id_1"
     )
     invalid_reason: Mapped[str | None] = create_mapped_column(
-        model.ConceptRelationship, "invalid_reason"
+        DOMAIN, model.ConceptRelationship, "invalid_reason"
     )
     concept_id_2: Mapped[int] = create_mapped_column(
-        model.ConceptRelationship, "concept_id_2"
+        DOMAIN, model.ConceptRelationship, "concept_id_2"
     )
     relationship_id: Mapped[str] = create_mapped_column(
-        model.ConceptRelationship, "relationship_id"
+        DOMAIN, model.ConceptRelationship, "relationship_id"
     )
 
 
 class ConceptSynonym(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptSynonym)
 
-    concept_id: Mapped[int] = create_mapped_column(model.ConceptSynonym, "concept_id")
+    concept_id: Mapped[int] = create_mapped_column(
+        DOMAIN, model.ConceptSynonym, "concept_id"
+    )
     concept_synonym_name: Mapped[str] = create_mapped_column(
-        model.ConceptSynonym, "concept_synonym_name"
+        DOMAIN, model.ConceptSynonym, "concept_synonym_name"
     )
     language_concept_id: Mapped[int] = create_mapped_column(
-        model.ConceptSynonym, "language_concept_id"
+        DOMAIN, model.ConceptSynonym, "language_concept_id"
     )
 
 
@@ -218,20 +234,22 @@ class ConditionEra(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConditionEra)
 
     condition_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.ConditionEra, "condition_era_end_datetime"
+        DOMAIN, model.ConditionEra, "condition_era_end_datetime"
     )
     condition_concept_id: Mapped[int] = create_mapped_column(
-        model.ConditionEra, "condition_concept_id"
+        DOMAIN, model.ConditionEra, "condition_concept_id"
     )
     condition_era_id: Mapped[UUID] = create_mapped_column(
-        model.ConditionEra, "condition_era_id"
+        DOMAIN, model.ConditionEra, "condition_era_id"
     )
-    person_id: Mapped[int] = create_mapped_column(model.ConditionEra, "person_id")
+    person_id: Mapped[int] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "person_id"
+    )
     condition_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.ConditionEra, "condition_era_start_datetime"
+        DOMAIN, model.ConditionEra, "condition_era_start_datetime"
     )
     condition_occurrence_count: Mapped[int | None] = create_mapped_column(
-        model.ConditionEra, "condition_occurrence_count"
+        DOMAIN, model.ConditionEra, "condition_occurrence_count"
     )
 
 
@@ -239,64 +257,64 @@ class ConditionOccurrence(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConditionOccurrence)
 
     condition_concept_id: Mapped[int] = create_mapped_column(
-        model.ConditionOccurrence, "condition_concept_id"
+        DOMAIN, model.ConditionOccurrence, "condition_concept_id"
     )
     condition_end_date: Mapped[date | None] = create_mapped_column(
-        model.ConditionOccurrence, "condition_end_date"
+        DOMAIN, model.ConditionOccurrence, "condition_end_date"
     )
     condition_source_concept_id: Mapped[int] = create_mapped_column(
-        model.ConditionOccurrence, "condition_source_concept_id"
+        DOMAIN, model.ConditionOccurrence, "condition_source_concept_id"
     )
     condition_occurrence_id: Mapped[UUID] = create_mapped_column(
-        model.ConditionOccurrence, "condition_occurrence_id"
+        DOMAIN, model.ConditionOccurrence, "condition_occurrence_id"
     )
     condition_status_concept_id: Mapped[int] = create_mapped_column(
-        model.ConditionOccurrence, "condition_status_concept_id"
+        DOMAIN, model.ConditionOccurrence, "condition_status_concept_id"
     )
     condition_type_concept_id: Mapped[int] = create_mapped_column(
-        model.ConditionOccurrence, "condition_type_concept_id"
+        DOMAIN, model.ConditionOccurrence, "condition_type_concept_id"
     )
     condition_end_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.ConditionOccurrence, "condition_end_datetime"
+        DOMAIN, model.ConditionOccurrence, "condition_end_datetime"
     )
     condition_end_iso_interval: Mapped[str | None] = create_mapped_column(
-        model.ConditionOccurrence, "condition_end_iso_interval"
+        DOMAIN, model.ConditionOccurrence, "condition_end_iso_interval"
     )
     condition_start_date: Mapped[date] = create_mapped_column(
-        model.ConditionOccurrence, "condition_start_date"
+        DOMAIN, model.ConditionOccurrence, "condition_start_date"
     )
     condition_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.ConditionOccurrence, "condition_start_datetime"
+        DOMAIN, model.ConditionOccurrence, "condition_start_datetime"
     )
     condition_start_iso_interval: Mapped[str] = create_mapped_column(
-        model.ConditionOccurrence, "condition_start_iso_interval"
+        DOMAIN, model.ConditionOccurrence, "condition_start_iso_interval"
     )
     stop_reason: Mapped[str | None] = create_mapped_column(
-        model.ConditionOccurrence, "stop_reason"
+        DOMAIN, model.ConditionOccurrence, "stop_reason"
     )
     condition_source_value: Mapped[str | None] = create_mapped_column(
-        model.ConditionOccurrence, "condition_source_value"
+        DOMAIN, model.ConditionOccurrence, "condition_source_value"
     )
     condition_status_source_value: Mapped[str | None] = create_mapped_column(
-        model.ConditionOccurrence, "condition_status_source_value"
+        DOMAIN, model.ConditionOccurrence, "condition_status_source_value"
     )
     person_id: Mapped[UUID] = create_mapped_column(
-        model.ConditionOccurrence, "person_id"
+        DOMAIN, model.ConditionOccurrence, "person_id"
     )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.ConditionOccurrence, "provider_id"
+        DOMAIN, model.ConditionOccurrence, "provider_id"
     )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.ConditionOccurrence, "visit_detail_id"
+        DOMAIN, model.ConditionOccurrence, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.ConditionOccurrence, "visit_occurrence_id"
+        DOMAIN, model.ConditionOccurrence, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.ConditionOccurrence, "provenance_id"
+        DOMAIN, model.ConditionOccurrence, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.ConditionOccurrence, "source_traceback"
+        DOMAIN, model.ConditionOccurrence, "source_traceback"
     )
 
 
@@ -304,108 +322,120 @@ class Cost(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Cost)
 
     cost_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "cost_concept_id"
+        DOMAIN, model.Cost, "cost_concept_id"
     )
-    billed_date: Mapped[date | None] = create_mapped_column(model.Cost, "billed_date")
+    billed_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Cost, "billed_date"
+    )
     cost_event_field_concept_id: Mapped[int] = create_mapped_column(
-        model.Cost, "cost_event_field_concept_id"
+        DOMAIN, model.Cost, "cost_event_field_concept_id"
     )
     cost_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "cost_source_concept_id"
+        DOMAIN, model.Cost, "cost_source_concept_id"
     )
     cost_type_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "cost_type_concept_id"
+        DOMAIN, model.Cost, "cost_type_concept_id"
     )
-    cost_id: Mapped[UUID] = create_mapped_column(model.Cost, "cost_id")
-    person_id: Mapped[int] = create_mapped_column(model.Cost, "person_id")
-    cost_event_id: Mapped[int] = create_mapped_column(model.Cost, "cost_event_id")
+    cost_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "cost_id")
+    person_id: Mapped[int] = create_mapped_column(DOMAIN, model.Cost, "person_id")
+    cost_event_id: Mapped[int] = create_mapped_column(
+        DOMAIN, model.Cost, "cost_event_id"
+    )
     payer_plan_period_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "payer_plan_period_id"
+        DOMAIN, model.Cost, "payer_plan_period_id"
     )
     incurred_date: Mapped[date | None] = create_mapped_column(
-        model.Cost, "incurred_date"
+        DOMAIN, model.Cost, "incurred_date"
     )
-    paid_date: Mapped[date | None] = create_mapped_column(model.Cost, "paid_date")
-    cost: Mapped[float | None] = create_mapped_column(model.Cost, "cost")
+    paid_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_date"
+    )
+    cost: Mapped[float | None] = create_mapped_column(DOMAIN, model.Cost, "cost")
     currency_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "currency_concept_id"
+        DOMAIN, model.Cost, "currency_concept_id"
     )
     cost_source_value: Mapped[str | None] = create_mapped_column(
-        model.Cost, "cost_source_value"
+        DOMAIN, model.Cost, "cost_source_value"
     )
     revenue_code_source_value: Mapped[str | None] = create_mapped_column(
-        model.Cost, "revenue_code_source_value"
+        DOMAIN, model.Cost, "revenue_code_source_value"
     )
     drg_source_value: Mapped[str | None] = create_mapped_column(
-        model.Cost, "drg_source_value"
+        DOMAIN, model.Cost, "drg_source_value"
     )
     drg_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "drg_concept_id"
+        DOMAIN, model.Cost, "drg_concept_id"
     )
     revenue_code_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Cost, "revenue_code_concept_id"
+        DOMAIN, model.Cost, "revenue_code_concept_id"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Cost, "provenance_id")
-    source_traceback: Mapped[str] = create_mapped_column(model.Cost, "source_traceback")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Cost, "provenance_id"
+    )
+    source_traceback: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Cost, "source_traceback"
+    )
 
 
 class DeviceExposure(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DeviceExposure)
 
     device_concept_id: Mapped[int] = create_mapped_column(
-        model.DeviceExposure, "device_concept_id"
+        DOMAIN, model.DeviceExposure, "device_concept_id"
     )
     device_source_concept_id: Mapped[int] = create_mapped_column(
-        model.DeviceExposure, "device_source_concept_id"
+        DOMAIN, model.DeviceExposure, "device_source_concept_id"
     )
     device_type_concept_id: Mapped[int] = create_mapped_column(
-        model.DeviceExposure, "device_type_concept_id"
+        DOMAIN, model.DeviceExposure, "device_type_concept_id"
     )
     device_exposure_end_date: Mapped[date | None] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_end_date"
+        DOMAIN, model.DeviceExposure, "device_exposure_end_date"
     )
     device_exposure_id: Mapped[UUID] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_id"
+        DOMAIN, model.DeviceExposure, "device_exposure_id"
     )
     device_exposure_end_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_end_datetime"
+        DOMAIN, model.DeviceExposure, "device_exposure_end_datetime"
     )
     device_exposure_end_iso_interval: Mapped[str | None] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_end_iso_interval"
+        DOMAIN, model.DeviceExposure, "device_exposure_end_iso_interval"
     )
     device_exposure_start_date: Mapped[date] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_start_date"
+        DOMAIN, model.DeviceExposure, "device_exposure_start_date"
     )
     device_exposure_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_start_datetime"
+        DOMAIN, model.DeviceExposure, "device_exposure_start_datetime"
     )
     device_exposure_start_iso_interval: Mapped[str] = create_mapped_column(
-        model.DeviceExposure, "device_exposure_start_iso_interval"
+        DOMAIN, model.DeviceExposure, "device_exposure_start_iso_interval"
     )
     quantity: Mapped[int | None] = create_mapped_column(
-        model.DeviceExposure, "quantity"
+        DOMAIN, model.DeviceExposure, "quantity"
     )
     unique_device_id: Mapped[str | None] = create_mapped_column(
-        model.DeviceExposure, "unique_device_id"
+        DOMAIN, model.DeviceExposure, "unique_device_id"
     )
     device_source_value: Mapped[str | None] = create_mapped_column(
-        model.DeviceExposure, "device_source_value"
+        DOMAIN, model.DeviceExposure, "device_source_value"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.DeviceExposure, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "person_id"
+    )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.DeviceExposure, "provider_id"
+        DOMAIN, model.DeviceExposure, "provider_id"
     )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.DeviceExposure, "visit_detail_id"
+        DOMAIN, model.DeviceExposure, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.DeviceExposure, "visit_occurrence_id"
+        DOMAIN, model.DeviceExposure, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.DeviceExposure, "provenance_id"
+        DOMAIN, model.DeviceExposure, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.DeviceExposure, "source_traceback"
+        DOMAIN, model.DeviceExposure, "source_traceback"
     )
 
 
@@ -413,135 +443,147 @@ class Domain(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Domain)
 
     domain_concept_id: Mapped[int] = create_mapped_column(
-        model.Domain, "domain_concept_id"
+        DOMAIN, model.Domain, "domain_concept_id"
     )
-    domain_id: Mapped[str] = create_mapped_column(model.Domain, "domain_id")
-    domain_name: Mapped[str] = create_mapped_column(model.Domain, "domain_name")
+    domain_id: Mapped[str] = create_mapped_column(DOMAIN, model.Domain, "domain_id")
+    domain_name: Mapped[str] = create_mapped_column(DOMAIN, model.Domain, "domain_name")
 
 
 class DoseEra(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DoseEra)
 
     dose_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.DoseEra, "dose_era_end_datetime"
+        DOMAIN, model.DoseEra, "dose_era_end_datetime"
     )
     drug_concept_id: Mapped[int] = create_mapped_column(
-        model.DoseEra, "drug_concept_id"
+        DOMAIN, model.DoseEra, "drug_concept_id"
     )
-    dose_era_id: Mapped[UUID] = create_mapped_column(model.DoseEra, "dose_era_id")
+    dose_era_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_era_id"
+    )
     dose_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.DoseEra, "dose_era_start_datetime"
+        DOMAIN, model.DoseEra, "dose_era_start_datetime"
     )
-    dose_value: Mapped[float] = create_mapped_column(model.DoseEra, "dose_value")
+    dose_value: Mapped[float] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_value"
+    )
     unit_concept_id: Mapped[int] = create_mapped_column(
-        model.DoseEra, "unit_concept_id"
+        DOMAIN, model.DoseEra, "unit_concept_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.DoseEra, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DoseEra, "person_id")
 
 
 class DrugEra(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugEra)
 
     drug_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugEra, "drug_concept_id"
+        DOMAIN, model.DrugEra, "drug_concept_id"
     )
     drug_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.DrugEra, "drug_era_end_datetime"
+        DOMAIN, model.DrugEra, "drug_era_end_datetime"
     )
-    drug_era_id: Mapped[UUID] = create_mapped_column(model.DrugEra, "drug_era_id")
+    drug_era_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_id"
+    )
     drug_era_end_iso_interval: Mapped[str] = create_mapped_column(
-        model.DrugEra, "drug_era_end_iso_interval"
+        DOMAIN, model.DrugEra, "drug_era_end_iso_interval"
     )
     drug_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.DrugEra, "drug_era_start_datetime"
+        DOMAIN, model.DrugEra, "drug_era_start_datetime"
     )
     drug_era_start_iso_interval: Mapped[str] = create_mapped_column(
-        model.DrugEra, "drug_era_start_iso_interval"
+        DOMAIN, model.DrugEra, "drug_era_start_iso_interval"
     )
     drug_exposure_count: Mapped[int | None] = create_mapped_column(
-        model.DrugEra, "drug_exposure_count"
+        DOMAIN, model.DrugEra, "drug_exposure_count"
     )
-    gap_days: Mapped[int | None] = create_mapped_column(model.DrugEra, "gap_days")
-    person_id: Mapped[UUID] = create_mapped_column(model.DrugEra, "person_id")
+    gap_days: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.DrugEra, "gap_days"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DrugEra, "person_id")
 
 
 class DrugExposure(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugExposure)
 
     drug_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugExposure, "drug_concept_id"
+        DOMAIN, model.DrugExposure, "drug_concept_id"
     )
     drug_source_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugExposure, "drug_source_concept_id"
+        DOMAIN, model.DrugExposure, "drug_source_concept_id"
     )
     drug_type_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugExposure, "drug_type_concept_id"
+        DOMAIN, model.DrugExposure, "drug_type_concept_id"
     )
     drug_exposure_end_date: Mapped[date | None] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_end_date"
+        DOMAIN, model.DrugExposure, "drug_exposure_end_date"
     )
     drug_exposure_id: Mapped[UUID] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_id"
+        DOMAIN, model.DrugExposure, "drug_exposure_id"
     )
     drug_exposure_end_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_end_datetime"
+        DOMAIN, model.DrugExposure, "drug_exposure_end_datetime"
     )
     drug_exposure_end_iso_interval: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_end_iso_interval"
+        DOMAIN, model.DrugExposure, "drug_exposure_end_iso_interval"
     )
     drug_exposure_start_date: Mapped[date | None] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_start_date"
+        DOMAIN, model.DrugExposure, "drug_exposure_start_date"
     )
     drug_exposure_start_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_start_datetime"
+        DOMAIN, model.DrugExposure, "drug_exposure_start_datetime"
     )
     drug_exposure_start_iso_interval: Mapped[str] = create_mapped_column(
-        model.DrugExposure, "drug_exposure_start_iso_interval"
+        DOMAIN, model.DrugExposure, "drug_exposure_start_iso_interval"
     )
     verbatim_end_date: Mapped[date | None] = create_mapped_column(
-        model.DrugExposure, "verbatim_end_date"
+        DOMAIN, model.DrugExposure, "verbatim_end_date"
     )
     quantity: Mapped[float | None] = create_mapped_column(
-        model.DrugExposure, "quantity"
+        DOMAIN, model.DrugExposure, "quantity"
     )
-    refills: Mapped[int | None] = create_mapped_column(model.DrugExposure, "refills")
+    refills: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.DrugExposure, "refills"
+    )
     days_supply: Mapped[int | None] = create_mapped_column(
-        model.DrugExposure, "days_supply"
+        DOMAIN, model.DrugExposure, "days_supply"
     )
     stop_reason: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "stop_reason"
+        DOMAIN, model.DrugExposure, "stop_reason"
     )
     lot_number: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "lot_number"
+        DOMAIN, model.DrugExposure, "lot_number"
     )
     drug_source_value: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "drug_source_value"
+        DOMAIN, model.DrugExposure, "drug_source_value"
     )
     route_source_value: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "route_source_value"
+        DOMAIN, model.DrugExposure, "route_source_value"
     )
     dose_unit_source_value: Mapped[str | None] = create_mapped_column(
-        model.DrugExposure, "dose_unit_source_value"
+        DOMAIN, model.DrugExposure, "dose_unit_source_value"
     )
-    sig: Mapped[str | None] = create_mapped_column(model.DrugExposure, "sig")
+    sig: Mapped[str | None] = create_mapped_column(DOMAIN, model.DrugExposure, "sig")
     route_concept_id: Mapped[int | None] = create_mapped_column(
-        model.DrugExposure, "route_concept_id"
+        DOMAIN, model.DrugExposure, "route_concept_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.DrugExposure, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DrugExposure, "person_id"
+    )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.DrugExposure, "provider_id"
+        DOMAIN, model.DrugExposure, "provider_id"
     )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.DrugExposure, "visit_detail_id"
+        DOMAIN, model.DrugExposure, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.DrugExposure, "visit_occurrence_id"
+        DOMAIN, model.DrugExposure, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.DrugExposure, "provenance_id"
+        DOMAIN, model.DrugExposure, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.DrugExposure, "source_traceback"
+        DOMAIN, model.DrugExposure, "source_traceback"
     )
 
 
@@ -549,50 +591,52 @@ class DrugStrength(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugStrength)
 
     amount_unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.DrugStrength, "amount_unit_concept_id"
+        DOMAIN, model.DrugStrength, "amount_unit_concept_id"
     )
     denominator_unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.DrugStrength, "denominator_unit_concept_id"
+        DOMAIN, model.DrugStrength, "denominator_unit_concept_id"
     )
     drug_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugStrength, "drug_concept_id"
+        DOMAIN, model.DrugStrength, "drug_concept_id"
     )
     valid_end_date: Mapped[date] = create_mapped_column(
-        model.DrugStrength, "valid_end_date"
+        DOMAIN, model.DrugStrength, "valid_end_date"
     )
     valid_start_date: Mapped[date] = create_mapped_column(
-        model.DrugStrength, "valid_start_date"
+        DOMAIN, model.DrugStrength, "valid_start_date"
     )
     ingredient_concept_id: Mapped[int] = create_mapped_column(
-        model.DrugStrength, "ingredient_concept_id"
+        DOMAIN, model.DrugStrength, "ingredient_concept_id"
     )
     amount_value: Mapped[float | None] = create_mapped_column(
-        model.DrugStrength, "amount_value"
+        DOMAIN, model.DrugStrength, "amount_value"
     )
     numerator_value: Mapped[float | None] = create_mapped_column(
-        model.DrugStrength, "numerator_value"
+        DOMAIN, model.DrugStrength, "numerator_value"
     )
     denominator_value: Mapped[float | None] = create_mapped_column(
-        model.DrugStrength, "denominator_value"
+        DOMAIN, model.DrugStrength, "denominator_value"
     )
-    box_size: Mapped[int | None] = create_mapped_column(model.DrugStrength, "box_size")
+    box_size: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.DrugStrength, "box_size"
+    )
     invalid_reason: Mapped[str | None] = create_mapped_column(
-        model.DrugStrength, "invalid_reason"
+        DOMAIN, model.DrugStrength, "invalid_reason"
     )
     numerator_unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.DrugStrength, "numerator_unit_concept_id"
+        DOMAIN, model.DrugStrength, "numerator_unit_concept_id"
     )
 
 
 class Etl(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Etl)
 
-    etl_id: Mapped[UUID] = create_mapped_column(model.Etl, "etl_id")
-    etl_desc: Mapped[str] = create_mapped_column(model.Etl, "etl_desc")
-    etl_abbrev: Mapped[str] = create_mapped_column(model.Etl, "etl_abbrev")
-    etl_version: Mapped[str] = create_mapped_column(model.Etl, "etl_version")
+    etl_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Etl, "etl_id")
+    etl_desc: Mapped[str] = create_mapped_column(DOMAIN, model.Etl, "etl_desc")
+    etl_abbrev: Mapped[str] = create_mapped_column(DOMAIN, model.Etl, "etl_abbrev")
+    etl_version: Mapped[str] = create_mapped_column(DOMAIN, model.Etl, "etl_version")
     etl_release_datetime: Mapped[datetime] = create_mapped_column(
-        model.Etl, "etl_release_datetime"
+        DOMAIN, model.Etl, "etl_release_datetime"
     )
 
 
@@ -600,39 +644,55 @@ class FactRelationship(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.FactRelationship)
 
     domain_concept_id_1: Mapped[int] = create_mapped_column(
-        model.FactRelationship, "domain_concept_id_1"
+        DOMAIN, model.FactRelationship, "domain_concept_id_1"
     )
     domain_concept_id_2: Mapped[int] = create_mapped_column(
-        model.FactRelationship, "domain_concept_id_2"
+        DOMAIN, model.FactRelationship, "domain_concept_id_2"
     )
-    fact_id_1: Mapped[int] = create_mapped_column(model.FactRelationship, "fact_id_1")
-    fact_id_2: Mapped[int] = create_mapped_column(model.FactRelationship, "fact_id_2")
+    fact_id_1: Mapped[int] = create_mapped_column(
+        DOMAIN, model.FactRelationship, "fact_id_1"
+    )
+    fact_id_2: Mapped[int] = create_mapped_column(
+        DOMAIN, model.FactRelationship, "fact_id_2"
+    )
     relationship_concept_id: Mapped[int] = create_mapped_column(
-        model.FactRelationship, "relationship_concept_id"
+        DOMAIN, model.FactRelationship, "relationship_concept_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.FactRelationship, "provenance_id"
+        DOMAIN, model.FactRelationship, "provenance_id"
     )
 
 
 class Location(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Location)
 
-    location_id: Mapped[UUID] = create_mapped_column(model.Location, "location_id")
-    latitude: Mapped[float | None] = create_mapped_column(model.Location, "latitude")
-    longitude: Mapped[float | None] = create_mapped_column(model.Location, "longitude")
-    state: Mapped[str | None] = create_mapped_column(model.Location, "state")
-    county: Mapped[str | None] = create_mapped_column(model.Location, "county")
-    address_1: Mapped[str | None] = create_mapped_column(model.Location, "address_1")
-    address_2: Mapped[str | None] = create_mapped_column(model.Location, "address_2")
-    city: Mapped[str | None] = create_mapped_column(model.Location, "city")
-    location_source_value: Mapped[str | None] = create_mapped_column(
-        model.Location, "location_source_value"
+    location_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Location, "location_id"
     )
-    zip: Mapped[str | None] = create_mapped_column(model.Location, "zip")
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Location, "provenance_id")
+    latitude: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Location, "latitude"
+    )
+    longitude: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Location, "longitude"
+    )
+    state: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "state")
+    county: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "county")
+    address_1: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "address_1"
+    )
+    address_2: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "address_2"
+    )
+    city: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "city")
+    location_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "location_source_value"
+    )
+    zip: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "zip")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Location, "provenance_id"
+    )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Location, "source_traceback"
+        DOMAIN, model.Location, "source_traceback"
     )
 
 
@@ -640,31 +700,37 @@ class LocationHistory(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.LocationHistory)
 
     end_date: Mapped[date | None] = create_mapped_column(
-        model.LocationHistory, "end_date"
+        DOMAIN, model.LocationHistory, "end_date"
     )
     end_iso_interval: Mapped[str | None] = create_mapped_column(
-        model.LocationHistory, "end_iso_interval"
+        DOMAIN, model.LocationHistory, "end_iso_interval"
     )
-    entity_id: Mapped[UUID] = create_mapped_column(model.LocationHistory, "entity_id")
-    start_date: Mapped[date] = create_mapped_column(model.LocationHistory, "start_date")
+    entity_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocationHistory, "entity_id"
+    )
+    start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.LocationHistory, "start_date"
+    )
     start_iso_interval: Mapped[str] = create_mapped_column(
-        model.LocationHistory, "start_iso_interval"
+        DOMAIN, model.LocationHistory, "start_iso_interval"
     )
-    domain_id: Mapped[str] = create_mapped_column(model.LocationHistory, "domain_id")
+    domain_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.LocationHistory, "domain_id"
+    )
     relationship_type_concept_id: Mapped[int] = create_mapped_column(
-        model.LocationHistory, "relationship_type_concept_id"
+        DOMAIN, model.LocationHistory, "relationship_type_concept_id"
     )
     location_id: Mapped[UUID] = create_mapped_column(
-        model.LocationHistory, "location_id"
+        DOMAIN, model.LocationHistory, "location_id"
     )
     location_history_id: Mapped[UUID] = create_mapped_column(
-        model.LocationHistory, "location_history_id"
+        DOMAIN, model.LocationHistory, "location_history_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.LocationHistory, "provenance_id"
+        DOMAIN, model.LocationHistory, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.LocationHistory, "source_traceback"
+        DOMAIN, model.LocationHistory, "source_traceback"
     )
 
 
@@ -672,80 +738,82 @@ class Measurement(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Measurement)
 
     measurement_concept_id: Mapped[int] = create_mapped_column(
-        model.Measurement, "measurement_concept_id"
+        DOMAIN, model.Measurement, "measurement_concept_id"
     )
     measurement_source_concept_id: Mapped[int] = create_mapped_column(
-        model.Measurement, "measurement_source_concept_id"
+        DOMAIN, model.Measurement, "measurement_source_concept_id"
     )
     measurement_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Measurement, "measurement_type_concept_id"
+        DOMAIN, model.Measurement, "measurement_type_concept_id"
     )
     measurement_date: Mapped[date] = create_mapped_column(
-        model.Measurement, "measurement_date"
+        DOMAIN, model.Measurement, "measurement_date"
     )
     measurement_iso_interval: Mapped[str] = create_mapped_column(
-        model.Measurement, "measurement_iso_interval"
+        DOMAIN, model.Measurement, "measurement_iso_interval"
     )
     measurement_id: Mapped[UUID] = create_mapped_column(
-        model.Measurement, "measurement_id"
+        DOMAIN, model.Measurement, "measurement_id"
     )
     measurement_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Measurement, "measurement_datetime"
+        DOMAIN, model.Measurement, "measurement_datetime"
     )
     value_as_number: Mapped[float | None] = create_mapped_column(
-        model.Measurement, "value_as_number"
+        DOMAIN, model.Measurement, "value_as_number"
     )
     range_low: Mapped[float | None] = create_mapped_column(
-        model.Measurement, "range_low"
+        DOMAIN, model.Measurement, "range_low"
     )
     range_high: Mapped[float | None] = create_mapped_column(
-        model.Measurement, "range_high"
+        DOMAIN, model.Measurement, "range_high"
     )
     operator_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Measurement, "operator_concept_id"
+        DOMAIN, model.Measurement, "operator_concept_id"
     )
     measurement_time: Mapped[str | None] = create_mapped_column(
-        model.Measurement, "measurement_time"
+        DOMAIN, model.Measurement, "measurement_time"
     )
     measurement_source_value: Mapped[str | None] = create_mapped_column(
-        model.Measurement, "measurement_source_value"
+        DOMAIN, model.Measurement, "measurement_source_value"
     )
     unit_source_value: Mapped[str | None] = create_mapped_column(
-        model.Measurement, "unit_source_value"
+        DOMAIN, model.Measurement, "unit_source_value"
     )
     value_source_value: Mapped[str | None] = create_mapped_column(
-        model.Measurement, "value_source_value"
+        DOMAIN, model.Measurement, "value_source_value"
     )
     unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Measurement, "unit_concept_id"
+        DOMAIN, model.Measurement, "unit_concept_id"
     )
     value_as_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Measurement, "value_as_concept_id"
+        DOMAIN, model.Measurement, "value_as_concept_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.Measurement, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Measurement, "person_id"
+    )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "provider_id"
+        DOMAIN, model.Measurement, "provider_id"
     )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "visit_detail_id"
+        DOMAIN, model.Measurement, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "visit_occurrence_id"
+        DOMAIN, model.Measurement, "visit_occurrence_id"
     )
     provided_by_organization_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "provided_by_organization_id"
+        DOMAIN, model.Measurement, "provided_by_organization_id"
     )
     measurement_derived_from_specimen_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "measurement_derived_from_specimen_id"
+        DOMAIN, model.Measurement, "measurement_derived_from_specimen_id"
     )
     measurement_derived_from_measurement_id: Mapped[UUID | None] = create_mapped_column(
-        model.Measurement, "measurement_derived_from_measurement_id"
+        DOMAIN, model.Measurement, "measurement_derived_from_measurement_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Measurement, "source_traceback"
+        DOMAIN, model.Measurement, "source_traceback"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.Measurement, "provenance_id"
+        DOMAIN, model.Measurement, "provenance_id"
     )
 
 
@@ -753,23 +821,23 @@ class Metadata(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Metadata)
 
     metadata_concept_id: Mapped[int] = create_mapped_column(
-        model.Metadata, "metadata_concept_id"
+        DOMAIN, model.Metadata, "metadata_concept_id"
     )
     metadata_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Metadata, "metadata_type_concept_id"
+        DOMAIN, model.Metadata, "metadata_type_concept_id"
     )
     metadata_date: Mapped[date | None] = create_mapped_column(
-        model.Metadata, "metadata_date"
+        DOMAIN, model.Metadata, "metadata_date"
     )
     metadata_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Metadata, "metadata_datetime"
+        DOMAIN, model.Metadata, "metadata_datetime"
     )
-    name: Mapped[str] = create_mapped_column(model.Metadata, "name")
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.Metadata, "name")
     value_as_string: Mapped[str | None] = create_mapped_column(
-        model.Metadata, "value_as_string"
+        DOMAIN, model.Metadata, "value_as_string"
     )
     value_as_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Metadata, "value_as_concept_id"
+        DOMAIN, model.Metadata, "value_as_concept_id"
     )
 
 
@@ -777,75 +845,89 @@ class Note(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Note)
 
     encoding_concept_id: Mapped[int] = create_mapped_column(
-        model.Note, "encoding_concept_id"
+        DOMAIN, model.Note, "encoding_concept_id"
     )
     language_concept_id: Mapped[int] = create_mapped_column(
-        model.Note, "language_concept_id"
+        DOMAIN, model.Note, "language_concept_id"
     )
     note_class_concept_id: Mapped[int] = create_mapped_column(
-        model.Note, "note_class_concept_id"
+        DOMAIN, model.Note, "note_class_concept_id"
     )
     note_event_field_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Note, "note_event_field_concept_id"
+        DOMAIN, model.Note, "note_event_field_concept_id"
     )
     note_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Note, "note_type_concept_id"
+        DOMAIN, model.Note, "note_type_concept_id"
     )
-    note_date: Mapped[date] = create_mapped_column(model.Note, "note_date")
+    note_date: Mapped[date] = create_mapped_column(DOMAIN, model.Note, "note_date")
     note_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Note, "note_datetime"
+        DOMAIN, model.Note, "note_datetime"
     )
     note_event_id: Mapped[int | None] = create_mapped_column(
-        model.Note, "note_event_id"
+        DOMAIN, model.Note, "note_event_id"
     )
-    note_id: Mapped[UUID] = create_mapped_column(model.Note, "note_id")
-    note_title: Mapped[str | None] = create_mapped_column(model.Note, "note_title")
+    note_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "note_id")
+    note_title: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Note, "note_title"
+    )
     note_source_value: Mapped[str | None] = create_mapped_column(
-        model.Note, "note_source_value"
+        DOMAIN, model.Note, "note_source_value"
     )
-    note_text: Mapped[str] = create_mapped_column(model.Note, "note_text")
-    person_id: Mapped[UUID] = create_mapped_column(model.Note, "person_id")
-    provider_id: Mapped[UUID | None] = create_mapped_column(model.Note, "provider_id")
+    note_text: Mapped[str] = create_mapped_column(DOMAIN, model.Note, "note_text")
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "person_id")
+    provider_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Note, "provider_id"
+    )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.Note, "visit_detail_id"
+        DOMAIN, model.Note, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.Note, "visit_occurrence_id"
+        DOMAIN, model.Note, "visit_occurrence_id"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Note, "provenance_id")
-    source_traceback: Mapped[str] = create_mapped_column(model.Note, "source_traceback")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Note, "provenance_id"
+    )
+    source_traceback: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Note, "source_traceback"
+    )
 
 
 class NoteNlp(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.NoteNlp)
 
     note_nlp_concept_id: Mapped[int | None] = create_mapped_column(
-        model.NoteNlp, "note_nlp_concept_id"
+        DOMAIN, model.NoteNlp, "note_nlp_concept_id"
     )
     note_nlp_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.NoteNlp, "note_nlp_source_concept_id"
+        DOMAIN, model.NoteNlp, "note_nlp_source_concept_id"
     )
-    nlp_date: Mapped[date] = create_mapped_column(model.NoteNlp, "nlp_date")
+    nlp_date: Mapped[date] = create_mapped_column(DOMAIN, model.NoteNlp, "nlp_date")
     nlp_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.NoteNlp, "nlp_datetime"
+        DOMAIN, model.NoteNlp, "nlp_datetime"
     )
-    note_nlp_id: Mapped[UUID] = create_mapped_column(model.NoteNlp, "note_nlp_id")
-    note_id: Mapped[UUID] = create_mapped_column(model.NoteNlp, "note_id")
+    note_nlp_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.NoteNlp, "note_nlp_id"
+    )
+    note_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.NoteNlp, "note_id")
     section_concept_id: Mapped[int | None] = create_mapped_column(
-        model.NoteNlp, "section_concept_id"
+        DOMAIN, model.NoteNlp, "section_concept_id"
     )
-    term_exists: Mapped[str | None] = create_mapped_column(model.NoteNlp, "term_exists")
+    term_exists: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.NoteNlp, "term_exists"
+    )
     term_modifiers: Mapped[str | None] = create_mapped_column(
-        model.NoteNlp, "term_modifiers"
+        DOMAIN, model.NoteNlp, "term_modifiers"
     )
-    snippet: Mapped[str | None] = create_mapped_column(model.NoteNlp, "snippet")
+    snippet: Mapped[str | None] = create_mapped_column(DOMAIN, model.NoteNlp, "snippet")
     lexical_variant: Mapped[str] = create_mapped_column(
-        model.NoteNlp, "lexical_variant"
+        DOMAIN, model.NoteNlp, "lexical_variant"
     )
-    nlp_system: Mapped[str | None] = create_mapped_column(model.NoteNlp, "nlp_system")
-    offset: Mapped[str | None] = create_mapped_column(model.NoteNlp, "offset")
+    nlp_system: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.NoteNlp, "nlp_system"
+    )
+    offset: Mapped[str | None] = create_mapped_column(DOMAIN, model.NoteNlp, "offset")
     term_temporal: Mapped[str | None] = create_mapped_column(
-        model.NoteNlp, "term_temporal"
+        DOMAIN, model.NoteNlp, "term_temporal"
     )
 
 
@@ -853,77 +935,79 @@ class Observation(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Observation)
 
     obs_event_field_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Observation, "obs_event_field_concept_id"
+        DOMAIN, model.Observation, "obs_event_field_concept_id"
     )
     observation_concept_id: Mapped[int] = create_mapped_column(
-        model.Observation, "observation_concept_id"
+        DOMAIN, model.Observation, "observation_concept_id"
     )
     observation_source_concept_id: Mapped[int] = create_mapped_column(
-        model.Observation, "observation_source_concept_id"
+        DOMAIN, model.Observation, "observation_source_concept_id"
     )
     observation_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Observation, "observation_type_concept_id"
+        DOMAIN, model.Observation, "observation_type_concept_id"
     )
     qualifier_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Observation, "qualifier_concept_id"
+        DOMAIN, model.Observation, "qualifier_concept_id"
     )
     observation_date: Mapped[date | None] = create_mapped_column(
-        model.Observation, "observation_date"
+        DOMAIN, model.Observation, "observation_date"
     )
     observation_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Observation, "observation_datetime"
+        DOMAIN, model.Observation, "observation_datetime"
     )
     observation_id: Mapped[UUID] = create_mapped_column(
-        model.Observation, "observation_id"
+        DOMAIN, model.Observation, "observation_id"
     )
     observation_event_id: Mapped[int | None] = create_mapped_column(
-        model.Observation, "observation_event_id"
+        DOMAIN, model.Observation, "observation_event_id"
     )
     observation_iso_interval: Mapped[str] = create_mapped_column(
-        model.Observation, "observation_iso_interval"
+        DOMAIN, model.Observation, "observation_iso_interval"
     )
     value_as_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Observation, "value_as_datetime"
+        DOMAIN, model.Observation, "value_as_datetime"
     )
     value_as_iso_interval: Mapped[str | None] = create_mapped_column(
-        model.Observation, "value_as_iso_interval"
+        DOMAIN, model.Observation, "value_as_iso_interval"
     )
     value_as_number: Mapped[float | None] = create_mapped_column(
-        model.Observation, "value_as_number"
+        DOMAIN, model.Observation, "value_as_number"
     )
     observation_source_value: Mapped[str | None] = create_mapped_column(
-        model.Observation, "observation_source_value"
+        DOMAIN, model.Observation, "observation_source_value"
     )
     unit_source_value: Mapped[str | None] = create_mapped_column(
-        model.Observation, "unit_source_value"
+        DOMAIN, model.Observation, "unit_source_value"
     )
     qualifier_source_value: Mapped[str | None] = create_mapped_column(
-        model.Observation, "qualifier_source_value"
+        DOMAIN, model.Observation, "qualifier_source_value"
     )
     value_as_string: Mapped[str | None] = create_mapped_column(
-        model.Observation, "value_as_string"
+        DOMAIN, model.Observation, "value_as_string"
     )
     unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Observation, "unit_concept_id"
+        DOMAIN, model.Observation, "unit_concept_id"
     )
     value_as_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Observation, "value_as_concept_id"
+        DOMAIN, model.Observation, "value_as_concept_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.Observation, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Observation, "person_id"
+    )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.Observation, "provider_id"
+        DOMAIN, model.Observation, "provider_id"
     )
     visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.Observation, "visit_detail_id"
+        DOMAIN, model.Observation, "visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.Observation, "visit_occurrence_id"
+        DOMAIN, model.Observation, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.Observation, "provenance_id"
+        DOMAIN, model.Observation, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Observation, "source_traceback"
+        DOMAIN, model.Observation, "source_traceback"
     )
 
 
@@ -931,37 +1015,25 @@ class ObservationPeriod(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ObservationPeriod)
 
     period_type_concept_id: Mapped[int] = create_mapped_column(
-        model.ObservationPeriod, "period_type_concept_id"
+        DOMAIN, model.ObservationPeriod, "period_type_concept_id"
     )
     observation_period_end_date: Mapped[date | None] = create_mapped_column(
-        model.ObservationPeriod, "observation_period_end_date"
+        DOMAIN, model.ObservationPeriod, "observation_period_end_date"
     )
     observation_period_end_iso_interval: Mapped[str] = create_mapped_column(
-        model.ObservationPeriod, "observation_period_end_iso_interval"
+        DOMAIN, model.ObservationPeriod, "observation_period_end_iso_interval"
     )
     observation_period_id: Mapped[UUID] = create_mapped_column(
-        model.ObservationPeriod, "observation_period_id"
+        DOMAIN, model.ObservationPeriod, "observation_period_id"
     )
     observation_period_start_date: Mapped[date | None] = create_mapped_column(
-        model.ObservationPeriod, "observation_period_start_date"
+        DOMAIN, model.ObservationPeriod, "observation_period_start_date"
     )
     observation_period_start_iso_interval: Mapped[str] = create_mapped_column(
-        model.ObservationPeriod, "observation_period_start_iso_interval"
+        DOMAIN, model.ObservationPeriod, "observation_period_start_iso_interval"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.ObservationPeriod, "person_id")
-
-
-class Organization(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.Organization)
-
-    organization_id: Mapped[UUID] = create_mapped_column(
-        model.Organization, "organization_id"
-    )
-    provenance_id: Mapped[UUID] = create_mapped_column(
-        model.Organization, "provenance_id"
-    )
-    source_traceback: Mapped[str] = create_mapped_column(
-        model.Organization, "source_traceback"
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ObservationPeriod, "person_id"
     )
 
 
@@ -969,128 +1041,136 @@ class PayerPlanPeriod(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
 
     contract_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "contract_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "contract_concept_id"
     )
     payer_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "payer_concept_id"
     )
     payer_source_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_source_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "payer_source_concept_id"
     )
     plan_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "plan_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "plan_concept_id"
     )
     plan_source_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "plan_source_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "plan_source_concept_id"
     )
     sponsor_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "sponsor_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "sponsor_concept_id"
     )
     sponsor_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.PayerPlanPeriod, "sponsor_source_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "sponsor_source_concept_id"
     )
     stop_reason_concept_id: Mapped[int | None] = create_mapped_column(
-        model.PayerPlanPeriod, "stop_reason_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_concept_id"
     )
     stop_reason_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.PayerPlanPeriod, "stop_reason_source_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_concept_id"
     )
     payer_plan_period_end_date: Mapped[date] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_plan_period_end_date"
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_end_date"
     )
     payer_plan_period_start_date: Mapped[date] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_plan_period_start_date"
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_start_date"
     )
     payer_source_value: Mapped[str | None] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_source_value"
+        DOMAIN, model.PayerPlanPeriod, "payer_source_value"
     )
     plan_source_value: Mapped[str | None] = create_mapped_column(
-        model.PayerPlanPeriod, "plan_source_value"
+        DOMAIN, model.PayerPlanPeriod, "plan_source_value"
     )
     contract_source_value: Mapped[str] = create_mapped_column(
-        model.PayerPlanPeriod, "contract_source_value"
+        DOMAIN, model.PayerPlanPeriod, "contract_source_value"
     )
     sponsor_source_value: Mapped[str | None] = create_mapped_column(
-        model.PayerPlanPeriod, "sponsor_source_value"
+        DOMAIN, model.PayerPlanPeriod, "sponsor_source_value"
     )
     family_source_value: Mapped[str | None] = create_mapped_column(
-        model.PayerPlanPeriod, "family_source_value"
+        DOMAIN, model.PayerPlanPeriod, "family_source_value"
     )
     stop_reason_source_value: Mapped[str | None] = create_mapped_column(
-        model.PayerPlanPeriod, "stop_reason_source_value"
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_value"
     )
     contract_person_id: Mapped[UUID | None] = create_mapped_column(
-        model.PayerPlanPeriod, "contract_person_id"
+        DOMAIN, model.PayerPlanPeriod, "contract_person_id"
     )
     contract_source_concept_id: Mapped[int] = create_mapped_column(
-        model.PayerPlanPeriod, "contract_source_concept_id"
+        DOMAIN, model.PayerPlanPeriod, "contract_source_concept_id"
     )
     payer_plan_period_id: Mapped[UUID] = create_mapped_column(
-        model.PayerPlanPeriod, "payer_plan_period_id"
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.PayerPlanPeriod, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "person_id"
+    )
 
 
 class Person(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Person)
 
     care_site_id: Mapped[UUID | None] = create_mapped_column(
-        model.Person, "care_site_id"
+        DOMAIN, model.Person, "care_site_id"
     )
     day_of_birth: Mapped[int | None] = create_mapped_column(
-        model.Person, "day_of_birth"
+        DOMAIN, model.Person, "day_of_birth"
     )
     ethnicity_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "ethnicity_concept_id"
+        DOMAIN, model.Person, "ethnicity_concept_id"
     )
     ethnicity_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "ethnicity_source_concept_id"
+        DOMAIN, model.Person, "ethnicity_source_concept_id"
     )
     ethnicity_source_value: Mapped[str | None] = create_mapped_column(
-        model.Person, "ethnicity_source_value"
+        DOMAIN, model.Person, "ethnicity_source_value"
     )
     birth_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Person, "birth_datetime"
+        DOMAIN, model.Person, "birth_datetime"
     )
     death_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Person, "death_datetime"
+        DOMAIN, model.Person, "death_datetime"
     )
     gender_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "gender_concept_id"
+        DOMAIN, model.Person, "gender_concept_id"
     )
     gender_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "gender_source_concept_id"
+        DOMAIN, model.Person, "gender_source_concept_id"
     )
     gender_source_value: Mapped[str | None] = create_mapped_column(
-        model.Person, "gender_source_value"
+        DOMAIN, model.Person, "gender_source_value"
     )
-    location_id: Mapped[UUID | None] = create_mapped_column(model.Person, "location_id")
+    location_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Person, "location_id"
+    )
     month_of_birth: Mapped[int | None] = create_mapped_column(
-        model.Person, "month_of_birth"
+        DOMAIN, model.Person, "month_of_birth"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.Person, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Person, "person_id")
     person_source_value: Mapped[str | None] = create_mapped_column(
-        model.Person, "person_source_value"
+        DOMAIN, model.Person, "person_source_value"
     )
     person_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Person, "person_type_concept_id"
+        DOMAIN, model.Person, "person_type_concept_id"
     )
-    provider_id: Mapped[UUID | None] = create_mapped_column(model.Person, "provider_id")
+    provider_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Person, "provider_id"
+    )
     race_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "race_concept_id"
+        DOMAIN, model.Person, "race_concept_id"
     )
     race_source_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Person, "race_source_concept_id"
+        DOMAIN, model.Person, "race_source_concept_id"
     )
     race_source_value: Mapped[str | None] = create_mapped_column(
-        model.Person, "race_source_value"
+        DOMAIN, model.Person, "race_source_value"
     )
     year_of_birth: Mapped[int | None] = create_mapped_column(
-        model.Person, "year_of_birth"
+        DOMAIN, model.Person, "year_of_birth"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Person, "provenance_id")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Person, "provenance_id"
+    )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Person, "source_traceback"
+        DOMAIN, model.Person, "source_traceback"
     )
 
 
@@ -1098,55 +1178,55 @@ class ProcedureOccurrence(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ProcedureOccurrence)
 
     modifier_concept_id: Mapped[int | None] = create_mapped_column(
-        model.ProcedureOccurrence, "modifier_concept_id"
+        DOMAIN, model.ProcedureOccurrence, "modifier_concept_id"
     )
     procedure_concept_id: Mapped[int] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_concept_id"
+        DOMAIN, model.ProcedureOccurrence, "procedure_concept_id"
     )
     procedure_type_concept_id: Mapped[int] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_type_concept_id"
+        DOMAIN, model.ProcedureOccurrence, "procedure_type_concept_id"
     )
     procedure_occurrence_id: Mapped[UUID] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_occurrence_id"
+        DOMAIN, model.ProcedureOccurrence, "procedure_occurrence_id"
     )
     provider_id: Mapped[int | None] = create_mapped_column(
-        model.ProcedureOccurrence, "provider_id"
+        DOMAIN, model.ProcedureOccurrence, "provider_id"
     )
     visit_occurrence_id: Mapped[int | None] = create_mapped_column(
-        model.ProcedureOccurrence, "visit_occurrence_id"
+        DOMAIN, model.ProcedureOccurrence, "visit_occurrence_id"
     )
     visit_detail_id: Mapped[int | None] = create_mapped_column(
-        model.ProcedureOccurrence, "visit_detail_id"
+        DOMAIN, model.ProcedureOccurrence, "visit_detail_id"
     )
     procedure_date: Mapped[date | None] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_date"
+        DOMAIN, model.ProcedureOccurrence, "procedure_date"
     )
     procedure_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_datetime"
+        DOMAIN, model.ProcedureOccurrence, "procedure_datetime"
     )
     quantity: Mapped[int | None] = create_mapped_column(
-        model.ProcedureOccurrence, "quantity"
+        DOMAIN, model.ProcedureOccurrence, "quantity"
     )
     procedure_source_concept_id: Mapped[int] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_source_concept_id"
+        DOMAIN, model.ProcedureOccurrence, "procedure_source_concept_id"
     )
     procedure_source_value: Mapped[str | None] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_source_value"
+        DOMAIN, model.ProcedureOccurrence, "procedure_source_value"
     )
     modifier_source_value: Mapped[str | None] = create_mapped_column(
-        model.ProcedureOccurrence, "modifier_source_value"
+        DOMAIN, model.ProcedureOccurrence, "modifier_source_value"
     )
     procedure_iso_interval: Mapped[str] = create_mapped_column(
-        model.ProcedureOccurrence, "procedure_iso_interval"
+        DOMAIN, model.ProcedureOccurrence, "procedure_iso_interval"
     )
     person_id: Mapped[UUID] = create_mapped_column(
-        model.ProcedureOccurrence, "person_id"
+        DOMAIN, model.ProcedureOccurrence, "person_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.ProcedureOccurrence, "provenance_id"
+        DOMAIN, model.ProcedureOccurrence, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.ProcedureOccurrence, "source_traceback"
+        DOMAIN, model.ProcedureOccurrence, "source_traceback"
     )
 
 
@@ -1154,15 +1234,17 @@ class Provenance(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Provenance)
 
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.Provenance, "provenance_id"
+        DOMAIN, model.Provenance, "provenance_id"
     )
-    source_id: Mapped[UUID] = create_mapped_column(model.Provenance, "source_id")
-    etl_id: Mapped[UUID] = create_mapped_column(model.Provenance, "etl_id")
+    source_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Provenance, "source_id"
+    )
+    etl_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Provenance, "etl_id")
     etl_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.Provenance, "etl_start_datetime"
+        DOMAIN, model.Provenance, "etl_start_datetime"
     )
     etl_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.Provenance, "etl_end_datetime"
+        DOMAIN, model.Provenance, "etl_end_datetime"
     )
 
 
@@ -1170,41 +1252,45 @@ class Provider(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Provider)
 
     gender_concept_id: Mapped[int] = create_mapped_column(
-        model.Provider, "gender_concept_id"
+        DOMAIN, model.Provider, "gender_concept_id"
     )
     gender_source_concept_id: Mapped[int] = create_mapped_column(
-        model.Provider, "gender_source_concept_id"
+        DOMAIN, model.Provider, "gender_source_concept_id"
     )
     specialty_concept_id: Mapped[int] = create_mapped_column(
-        model.Provider, "specialty_concept_id"
+        DOMAIN, model.Provider, "specialty_concept_id"
     )
     specialty_source_concept_id: Mapped[int] = create_mapped_column(
-        model.Provider, "specialty_source_concept_id"
+        DOMAIN, model.Provider, "specialty_source_concept_id"
     )
     care_site_id: Mapped[UUID | None] = create_mapped_column(
-        model.Provider, "care_site_id"
+        DOMAIN, model.Provider, "care_site_id"
     )
-    provider_id: Mapped[UUID] = create_mapped_column(model.Provider, "provider_id")
+    provider_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Provider, "provider_id"
+    )
     year_of_birth: Mapped[int | None] = create_mapped_column(
-        model.Provider, "year_of_birth"
+        DOMAIN, model.Provider, "year_of_birth"
     )
-    npi: Mapped[str | None] = create_mapped_column(model.Provider, "npi")
-    dea: Mapped[str | None] = create_mapped_column(model.Provider, "dea")
+    npi: Mapped[str | None] = create_mapped_column(DOMAIN, model.Provider, "npi")
+    dea: Mapped[str | None] = create_mapped_column(DOMAIN, model.Provider, "dea")
     provider_name: Mapped[str | None] = create_mapped_column(
-        model.Provider, "provider_name"
+        DOMAIN, model.Provider, "provider_name"
     )
     provider_source_value: Mapped[str | None] = create_mapped_column(
-        model.Provider, "provider_source_value"
+        DOMAIN, model.Provider, "provider_source_value"
     )
     specialty_source_value: Mapped[str | None] = create_mapped_column(
-        model.Provider, "specialty_source_value"
+        DOMAIN, model.Provider, "specialty_source_value"
     )
     gender_source_value: Mapped[str | None] = create_mapped_column(
-        model.Provider, "gender_source_value"
+        DOMAIN, model.Provider, "gender_source_value"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Provider, "provenance_id")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Provider, "provenance_id"
+    )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Provider, "source_traceback"
+        DOMAIN, model.Provider, "source_traceback"
     )
 
 
@@ -1212,62 +1298,64 @@ class Relationship(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Relationship)
 
     relationship_concept_id: Mapped[int] = create_mapped_column(
-        model.Relationship, "relationship_concept_id"
+        DOMAIN, model.Relationship, "relationship_concept_id"
     )
     is_hierarchical: Mapped[str] = create_mapped_column(
-        model.Relationship, "is_hierarchical"
+        DOMAIN, model.Relationship, "is_hierarchical"
     )
     defines_ancestry: Mapped[str] = create_mapped_column(
-        model.Relationship, "defines_ancestry"
+        DOMAIN, model.Relationship, "defines_ancestry"
     )
     relationship_id: Mapped[str] = create_mapped_column(
-        model.Relationship, "relationship_id"
+        DOMAIN, model.Relationship, "relationship_id"
     )
     reverse_relationship_id: Mapped[str] = create_mapped_column(
-        model.Relationship, "reverse_relationship_id"
+        DOMAIN, model.Relationship, "reverse_relationship_id"
     )
     relationship_name: Mapped[str] = create_mapped_column(
-        model.Relationship, "relationship_name"
+        DOMAIN, model.Relationship, "relationship_name"
     )
 
 
 class Source(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Source)
 
-    source_id: Mapped[UUID] = create_mapped_column(model.Source, "source_id")
-    source_desc: Mapped[str] = create_mapped_column(model.Source, "source_desc")
-    source_abbrev: Mapped[str] = create_mapped_column(model.Source, "source_abbrev")
+    source_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Source, "source_id")
+    source_desc: Mapped[str] = create_mapped_column(DOMAIN, model.Source, "source_desc")
+    source_abbrev: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Source, "source_abbrev"
+    )
 
 
 class SourceToConceptMap(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
 
     source_concept_id: Mapped[int] = create_mapped_column(
-        model.SourceToConceptMap, "source_concept_id"
+        DOMAIN, model.SourceToConceptMap, "source_concept_id"
     )
     target_concept_id: Mapped[int] = create_mapped_column(
-        model.SourceToConceptMap, "target_concept_id"
+        DOMAIN, model.SourceToConceptMap, "target_concept_id"
     )
     valid_end_date: Mapped[date] = create_mapped_column(
-        model.SourceToConceptMap, "valid_end_date"
+        DOMAIN, model.SourceToConceptMap, "valid_end_date"
     )
     valid_start_date: Mapped[date] = create_mapped_column(
-        model.SourceToConceptMap, "valid_start_date"
+        DOMAIN, model.SourceToConceptMap, "valid_start_date"
     )
     invalid_reason: Mapped[str | None] = create_mapped_column(
-        model.SourceToConceptMap, "invalid_reason"
+        DOMAIN, model.SourceToConceptMap, "invalid_reason"
     )
     source_vocabulary_id: Mapped[str] = create_mapped_column(
-        model.SourceToConceptMap, "source_vocabulary_id"
+        DOMAIN, model.SourceToConceptMap, "source_vocabulary_id"
     )
     source_code_description: Mapped[str | None] = create_mapped_column(
-        model.SourceToConceptMap, "source_code_description"
+        DOMAIN, model.SourceToConceptMap, "source_code_description"
     )
     source_code: Mapped[str] = create_mapped_column(
-        model.SourceToConceptMap, "source_code"
+        DOMAIN, model.SourceToConceptMap, "source_code"
     )
     target_vocabulary_id: Mapped[str] = create_mapped_column(
-        model.SourceToConceptMap, "target_vocabulary_id"
+        DOMAIN, model.SourceToConceptMap, "target_vocabulary_id"
     )
 
 
@@ -1275,59 +1363,65 @@ class Specimen(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Specimen)
 
     anatomic_site_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Specimen, "anatomic_site_concept_id"
+        DOMAIN, model.Specimen, "anatomic_site_concept_id"
     )
     disease_status_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Specimen, "disease_status_concept_id"
+        DOMAIN, model.Specimen, "disease_status_concept_id"
     )
     specimen_concept_id: Mapped[int] = create_mapped_column(
-        model.Specimen, "specimen_concept_id"
+        DOMAIN, model.Specimen, "specimen_concept_id"
     )
     specimen_type_concept_id: Mapped[int] = create_mapped_column(
-        model.Specimen, "specimen_type_concept_id"
+        DOMAIN, model.Specimen, "specimen_type_concept_id"
     )
     unit_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Specimen, "unit_concept_id"
+        DOMAIN, model.Specimen, "unit_concept_id"
     )
-    specimen_id: Mapped[UUID] = create_mapped_column(model.Specimen, "specimen_id")
+    specimen_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Specimen, "specimen_id"
+    )
     specimen_date: Mapped[date | None] = create_mapped_column(
-        model.Specimen, "specimen_date"
+        DOMAIN, model.Specimen, "specimen_date"
     )
     specimen_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.Specimen, "specimen_datetime"
+        DOMAIN, model.Specimen, "specimen_datetime"
     )
-    quantity: Mapped[float | None] = create_mapped_column(model.Specimen, "quantity")
-    person_id: Mapped[UUID] = create_mapped_column(model.Specimen, "person_id")
+    quantity: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Specimen, "quantity"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Specimen, "person_id")
     specimen_source_id: Mapped[str | None] = create_mapped_column(
-        model.Specimen, "specimen_source_id"
+        DOMAIN, model.Specimen, "specimen_source_id"
     )
     specimen_source_value: Mapped[str | None] = create_mapped_column(
-        model.Specimen, "specimen_source_value"
+        DOMAIN, model.Specimen, "specimen_source_value"
     )
     unit_source_value: Mapped[str | None] = create_mapped_column(
-        model.Specimen, "unit_source_value"
+        DOMAIN, model.Specimen, "unit_source_value"
     )
     anatomic_site_source_value: Mapped[str | None] = create_mapped_column(
-        model.Specimen, "anatomic_site_source_value"
+        DOMAIN, model.Specimen, "anatomic_site_source_value"
     )
     disease_status_source_value: Mapped[str | None] = create_mapped_column(
-        model.Specimen, "disease_status_source_value"
+        DOMAIN, model.Specimen, "disease_status_source_value"
     )
     specimen_iso_interval: Mapped[str] = create_mapped_column(
-        model.Specimen, "specimen_iso_interval"
+        DOMAIN, model.Specimen, "specimen_iso_interval"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.Specimen, "visit_occurrence_id"
+        DOMAIN, model.Specimen, "visit_occurrence_id"
     )
     derived_from_specimen_id: Mapped[UUID | None] = create_mapped_column(
-        model.Specimen, "derived_from_specimen_id"
+        DOMAIN, model.Specimen, "derived_from_specimen_id"
     )
     derivation_concept_id: Mapped[int | None] = create_mapped_column(
-        model.Specimen, "derivation_concept_id"
+        DOMAIN, model.Specimen, "derivation_concept_id"
     )
-    provenance_id: Mapped[UUID] = create_mapped_column(model.Specimen, "provenance_id")
+    provenance_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Specimen, "provenance_id"
+    )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.Specimen, "source_traceback"
+        DOMAIN, model.Specimen, "source_traceback"
     )
 
 
@@ -1335,80 +1429,82 @@ class SurveyConduct(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SurveyConduct)
 
     assisted_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "assisted_concept_id"
+        DOMAIN, model.SurveyConduct, "assisted_concept_id"
     )
     collection_method_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "collection_method_concept_id"
+        DOMAIN, model.SurveyConduct, "collection_method_concept_id"
     )
     respondent_type_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "respondent_type_concept_id"
+        DOMAIN, model.SurveyConduct, "respondent_type_concept_id"
     )
     survey_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "survey_concept_id"
+        DOMAIN, model.SurveyConduct, "survey_concept_id"
     )
     survey_source_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "survey_source_concept_id"
+        DOMAIN, model.SurveyConduct, "survey_source_concept_id"
     )
     timing_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "timing_concept_id"
+        DOMAIN, model.SurveyConduct, "timing_concept_id"
     )
     validated_survey_concept_id: Mapped[int] = create_mapped_column(
-        model.SurveyConduct, "validated_survey_concept_id"
+        DOMAIN, model.SurveyConduct, "validated_survey_concept_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.SurveyConduct, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SurveyConduct, "person_id"
+    )
     survey_conduct_id: Mapped[UUID] = create_mapped_column(
-        model.SurveyConduct, "survey_conduct_id"
+        DOMAIN, model.SurveyConduct, "survey_conduct_id"
     )
     survey_end_date: Mapped[date | None] = create_mapped_column(
-        model.SurveyConduct, "survey_end_date"
+        DOMAIN, model.SurveyConduct, "survey_end_date"
     )
     survey_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.SurveyConduct, "survey_end_datetime"
+        DOMAIN, model.SurveyConduct, "survey_end_datetime"
     )
     survey_start_date: Mapped[date | None] = create_mapped_column(
-        model.SurveyConduct, "survey_start_date"
+        DOMAIN, model.SurveyConduct, "survey_start_date"
     )
     survey_start_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.SurveyConduct, "survey_start_datetime"
+        DOMAIN, model.SurveyConduct, "survey_start_datetime"
     )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.SurveyConduct, "provider_id"
+        DOMAIN, model.SurveyConduct, "provider_id"
     )
     respondent_type_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "respondent_type_source_value"
+        DOMAIN, model.SurveyConduct, "respondent_type_source_value"
     )
     timing_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "timing_source_value"
+        DOMAIN, model.SurveyConduct, "timing_source_value"
     )
     collection_method_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "collection_method_source_value"
+        DOMAIN, model.SurveyConduct, "collection_method_source_value"
     )
     survey_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "survey_source_value"
+        DOMAIN, model.SurveyConduct, "survey_source_value"
     )
     survey_source_identifier: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "survey_source_identifier"
+        DOMAIN, model.SurveyConduct, "survey_source_identifier"
     )
     validated_survey_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "validated_survey_source_value"
+        DOMAIN, model.SurveyConduct, "validated_survey_source_value"
     )
     survey_version_number: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "survey_version_number"
+        DOMAIN, model.SurveyConduct, "survey_version_number"
     )
     assisted_source_value: Mapped[str | None] = create_mapped_column(
-        model.SurveyConduct, "assisted_source_value"
+        DOMAIN, model.SurveyConduct, "assisted_source_value"
     )
     response_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.SurveyConduct, "response_visit_occurrence_id"
+        DOMAIN, model.SurveyConduct, "response_visit_occurrence_id"
     )
     visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.SurveyConduct, "visit_occurrence_id"
+        DOMAIN, model.SurveyConduct, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.SurveyConduct, "provenance_id"
+        DOMAIN, model.SurveyConduct, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.SurveyConduct, "source_traceback"
+        DOMAIN, model.SurveyConduct, "source_traceback"
     )
 
 
@@ -1416,65 +1512,67 @@ class VisitDetail(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.VisitDetail)
 
     admitted_from_source_value: Mapped[int] = create_mapped_column(
-        model.VisitDetail, "admitted_from_source_value"
+        DOMAIN, model.VisitDetail, "admitted_from_source_value"
     )
     discharge_to_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitDetail, "discharge_to_concept_id"
+        DOMAIN, model.VisitDetail, "discharge_to_concept_id"
     )
     visit_detail_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitDetail, "visit_detail_concept_id"
+        DOMAIN, model.VisitDetail, "visit_detail_concept_id"
     )
     visit_detail_source_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitDetail, "visit_detail_source_concept_id"
+        DOMAIN, model.VisitDetail, "visit_detail_source_concept_id"
     )
     visit_detail_type_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitDetail, "visit_detail_type_concept_id"
+        DOMAIN, model.VisitDetail, "visit_detail_type_concept_id"
     )
     care_site_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitDetail, "care_site_id"
+        DOMAIN, model.VisitDetail, "care_site_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.VisitDetail, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "person_id"
+    )
     preceding_visit_detail_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitDetail, "preceding_visit_detail_id"
+        DOMAIN, model.VisitDetail, "preceding_visit_detail_id"
     )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitDetail, "provider_id"
+        DOMAIN, model.VisitDetail, "provider_id"
     )
     visit_detail_id: Mapped[UUID] = create_mapped_column(
-        model.VisitDetail, "visit_detail_id"
+        DOMAIN, model.VisitDetail, "visit_detail_id"
     )
     visit_detail_end_date: Mapped[date] = create_mapped_column(
-        model.VisitDetail, "visit_detail_end_date"
+        DOMAIN, model.VisitDetail, "visit_detail_end_date"
     )
     visit_detail_end_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.VisitDetail, "visit_detail_end_datetime"
+        DOMAIN, model.VisitDetail, "visit_detail_end_datetime"
     )
     visit_detail_start_date: Mapped[date] = create_mapped_column(
-        model.VisitDetail, "visit_detail_start_date"
+        DOMAIN, model.VisitDetail, "visit_detail_start_date"
     )
     visit_detail_start_datetime: Mapped[datetime | None] = create_mapped_column(
-        model.VisitDetail, "visit_detail_start_datetime"
+        DOMAIN, model.VisitDetail, "visit_detail_start_datetime"
     )
     visit_detail_parent_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitDetail, "visit_detail_parent_id"
+        DOMAIN, model.VisitDetail, "visit_detail_parent_id"
     )
     visit_detail_source_value: Mapped[str | None] = create_mapped_column(
-        model.VisitDetail, "visit_detail_source_value"
+        DOMAIN, model.VisitDetail, "visit_detail_source_value"
     )
     admitted_from_concept_id: Mapped[str | None] = create_mapped_column(
-        model.VisitDetail, "admitted_from_concept_id"
+        DOMAIN, model.VisitDetail, "admitted_from_concept_id"
     )
     discharge_to_source_value: Mapped[str | None] = create_mapped_column(
-        model.VisitDetail, "discharge_to_source_value"
+        DOMAIN, model.VisitDetail, "discharge_to_source_value"
     )
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
-        model.VisitDetail, "visit_occurrence_id"
+        DOMAIN, model.VisitDetail, "visit_occurrence_id"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.VisitDetail, "provenance_id"
+        DOMAIN, model.VisitDetail, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.VisitDetail, "source_traceback"
+        DOMAIN, model.VisitDetail, "source_traceback"
     )
 
 
@@ -1482,59 +1580,61 @@ class VisitOccurrence(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.VisitOccurrence)
 
     admitted_from_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitOccurrence, "admitted_from_concept_id"
+        DOMAIN, model.VisitOccurrence, "admitted_from_concept_id"
     )
     discharge_to_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitOccurrence, "discharge_to_concept_id"
+        DOMAIN, model.VisitOccurrence, "discharge_to_concept_id"
     )
     visit_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitOccurrence, "visit_concept_id"
+        DOMAIN, model.VisitOccurrence, "visit_concept_id"
     )
     visit_source_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitOccurrence, "visit_source_concept_id"
+        DOMAIN, model.VisitOccurrence, "visit_source_concept_id"
     )
     visit_type_concept_id: Mapped[int] = create_mapped_column(
-        model.VisitOccurrence, "visit_type_concept_id"
+        DOMAIN, model.VisitOccurrence, "visit_type_concept_id"
     )
     care_site_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitOccurrence, "care_site_id"
+        DOMAIN, model.VisitOccurrence, "care_site_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(model.VisitOccurrence, "person_id")
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.VisitOccurrence, "person_id"
+    )
     preceding_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitOccurrence, "preceding_visit_occurrence_id"
+        DOMAIN, model.VisitOccurrence, "preceding_visit_occurrence_id"
     )
     provider_id: Mapped[UUID | None] = create_mapped_column(
-        model.VisitOccurrence, "provider_id"
+        DOMAIN, model.VisitOccurrence, "provider_id"
     )
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
-        model.VisitOccurrence, "visit_occurrence_id"
+        DOMAIN, model.VisitOccurrence, "visit_occurrence_id"
     )
     visit_end_date: Mapped[date | None] = create_mapped_column(
-        model.VisitOccurrence, "visit_end_date"
+        DOMAIN, model.VisitOccurrence, "visit_end_date"
     )
     visit_end_datetime: Mapped[datetime] = create_mapped_column(
-        model.VisitOccurrence, "visit_end_datetime"
+        DOMAIN, model.VisitOccurrence, "visit_end_datetime"
     )
     visit_start_date: Mapped[date | None] = create_mapped_column(
-        model.VisitOccurrence, "visit_start_date"
+        DOMAIN, model.VisitOccurrence, "visit_start_date"
     )
     visit_start_datetime: Mapped[datetime] = create_mapped_column(
-        model.VisitOccurrence, "visit_start_datetime"
+        DOMAIN, model.VisitOccurrence, "visit_start_datetime"
     )
     visit_source_value: Mapped[str | None] = create_mapped_column(
-        model.VisitOccurrence, "visit_source_value"
+        DOMAIN, model.VisitOccurrence, "visit_source_value"
     )
     admitted_from_source_value: Mapped[str | None] = create_mapped_column(
-        model.VisitOccurrence, "admitted_from_source_value"
+        DOMAIN, model.VisitOccurrence, "admitted_from_source_value"
     )
     discharge_to_source_value: Mapped[str | None] = create_mapped_column(
-        model.VisitOccurrence, "discharge_to_source_value"
+        DOMAIN, model.VisitOccurrence, "discharge_to_source_value"
     )
     provenance_id: Mapped[UUID] = create_mapped_column(
-        model.VisitOccurrence, "provenance_id"
+        DOMAIN, model.VisitOccurrence, "provenance_id"
     )
     source_traceback: Mapped[str] = create_mapped_column(
-        model.VisitOccurrence, "source_traceback"
+        DOMAIN, model.VisitOccurrence, "source_traceback"
     )
 
 
@@ -1542,15 +1642,17 @@ class Vocabulary(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Vocabulary)
 
     vocabulary_concept_id: Mapped[int] = create_mapped_column(
-        model.Vocabulary, "vocabulary_concept_id"
+        DOMAIN, model.Vocabulary, "vocabulary_concept_id"
     )
-    vocabulary_id: Mapped[str] = create_mapped_column(model.Vocabulary, "vocabulary_id")
+    vocabulary_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Vocabulary, "vocabulary_id"
+    )
     vocabulary_name: Mapped[str] = create_mapped_column(
-        model.Vocabulary, "vocabulary_name"
+        DOMAIN, model.Vocabulary, "vocabulary_name"
     )
     vocabulary_reference: Mapped[str] = create_mapped_column(
-        model.Vocabulary, "vocabulary_reference"
+        DOMAIN, model.Vocabulary, "vocabulary_reference"
     )
     vocabulary_version: Mapped[str | None] = create_mapped_column(
-        model.Vocabulary, "vocabulary_version"
+        DOMAIN, model.Vocabulary, "vocabulary_version"
     )

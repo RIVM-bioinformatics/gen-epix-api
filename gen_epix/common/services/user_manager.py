@@ -40,12 +40,13 @@ class UserManager(BaseUserManager):
             raise exc.InitializationServiceError(
                 "Root organization ID is not set in the configuration"
             )
+        if "roles" not in root_cfg["user"]:
+            root_cfg["user"]["roles"] = [self._root_role.name]
         self._root["user"] = self._user_class(
             is_active=True,
             organization_id=self._root["organization"].id,
             **root_cfg["user"],  # type: ignore[arg-type]
         )
-        self._root["user"].roles.add(self._root_role)
 
         # Get automatic new user data
         self._automatic_new_user: dict[str, Any] | None = None

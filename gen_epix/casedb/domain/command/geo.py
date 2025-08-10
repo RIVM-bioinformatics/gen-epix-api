@@ -9,7 +9,6 @@ from gen_epix.common.domain.command import Command, CrudCommand
 
 
 class RetrieveContainingRegionCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.GEO
 
     region_ids: list[UUID]
     region_set_id: UUID

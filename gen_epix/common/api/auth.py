@@ -2,7 +2,6 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter, FastAPI
 
-from gen_epix.common.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.common.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -40,7 +39,6 @@ def create_auth_endpoints(
         app,
         service_type=service_type,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

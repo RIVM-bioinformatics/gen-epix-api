@@ -12,7 +12,7 @@ from pydantic import Field
 
 from gen_epix.common.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys
-from gen_epix.omopdb.domain import DOMAIN, enum
+from gen_epix.omopdb.domain import enum
 
 _SERVICE_TYPE = enum.ServiceType.OMOP
 _ENTITY_KWARGS = {
@@ -2429,6 +2429,3 @@ class Subject(Model):
     measurement_records: list[Measurement]
     drug_exposure_records: list[DrugExposure]
     location_history_records: list[LocationHistory]
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

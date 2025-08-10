@@ -5,7 +5,7 @@
 from typing import ClassVar
 
 from gen_epix.common.domain.command import CrudCommand
-from gen_epix.omopdb.domain import DOMAIN, model
+from gen_epix.omopdb.domain import model
 
 
 class PersonCrudCommand(CrudCommand):
@@ -170,6 +170,3 @@ class EtlCrudCommand(CrudCommand):
 
 class SourceCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Source
-
-
-DOMAIN.register_locals(locals())

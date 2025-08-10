@@ -336,7 +336,10 @@ class OrganizationService(BaseOrganizationService):
                         CrudOperation.READ_ALL,
                         cascade_read=True,  # type: ignore[arg-type]
                         links=self.app.domain.get_model_links(
-                            model.Contact, service_type=self.service_type
+                            model.Contact,
+                            service_type=self.app.domain.get_service_type_for_model(
+                                model.Contact
+                            ),
                         ),
                     ),
                 )

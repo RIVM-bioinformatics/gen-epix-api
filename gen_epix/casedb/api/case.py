@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
-from gen_epix.casedb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -396,7 +395,6 @@ def create_case_endpoints(
         app,
         service_type=enum.ServiceType.CASE,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

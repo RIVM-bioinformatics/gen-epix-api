@@ -8,7 +8,6 @@ from gen_epix.common.domain.command import Command
 
 
 class RetrieveGeneticSequenceByIdCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQDB
 
     seq_ids: list[UUID]
 

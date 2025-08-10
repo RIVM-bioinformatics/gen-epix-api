@@ -1,14 +1,13 @@
 from typing import ClassVar
 
 import gen_epix.common.domain.model.system as model
-from gen_epix.common.domain import enum
 from gen_epix.common.domain.command.base import Command, CrudCommand
 
 # Non-CRUD commands
 
 
 class RetrieveOutagesCommand(Command):
-    SERVICE_TYPE = enum.ServiceType.SYSTEM
+    pass
 
 
 # CRUD commands

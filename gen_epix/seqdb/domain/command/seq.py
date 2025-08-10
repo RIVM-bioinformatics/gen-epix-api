@@ -8,35 +8,33 @@ from uuid import UUID
 from pydantic import model_validator
 
 from gen_epix.common.domain.command import Command, CrudCommand
-from gen_epix.seqdb.domain import DOMAIN, enum, model
+from gen_epix.seqdb.domain import enum, model
 
 # Non-CRUD commands
 
 
 class RetrieveCompleteContigCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class RetrieveCompleteAlleleProfileCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class RetrieveCompleteSnpProfileCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class RetrieveCompleteSeqCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
 
     seq_ids: list[UUID]
 
 
 class RetrieveCompleteSampleCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class RetrievePhylogeneticTreeCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
 
     seq_distance_protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
@@ -53,15 +51,15 @@ class RetrievePhylogeneticTreeCommand(Command):
 
 
 class RetrieveMultipleAlignmentCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class GenerateMultipleAlignmentCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 class GeneratePhylogeneticTreeCommand(Command):
-    SERVICE_TYPE: ClassVar = enum.ServiceType.SEQ
+    pass
 
 
 # CRUD commands
@@ -245,10 +243,3 @@ class KmerProfileCrudCommand(CrudCommand):
 
 class KmerDetectionProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.KmerDetectionProtocol
-
-
-class ContigAlignmentCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.ContigAlignment
-
-
-DOMAIN.register_locals(locals())

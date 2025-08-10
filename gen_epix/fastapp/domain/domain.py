@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Hashable, Type
+from typing import Hashable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
@@ -301,6 +301,29 @@ class Domain:
             return frozenset(self._permissions_for_service_type[service_type])
         return set(self._permissions_for_service_type[service_type])
 
+    def get_model_excluded_permissions(self) -> dict[Type[Model], PermissionTypeSet]:
+        """
+        For all registered CRUD commands, return a dict where the key is the
+        model class and the value is a PermissionTypeSet that indicates which
+        CRUD operations are not allowed. Only models that have missing
+        permissions are included in the dict.
+        """
+        permission_type_map: dict[frozenset[PermissionType], PermissionTypeSet] = {
+            x.value: x for x in PermissionTypeSet
+        }
+        excluded_permissions = {}
+        for crud_command_class in self._crud_commands:
+            assert crud_command_class._PERMISSIONS is not None
+            curr_excluded_permissions = PermissionTypeSet.CRUD.value - {
+                x.permission_type for x in crud_command_class._PERMISSIONS
+            }
+            if not curr_excluded_permissions:
+                continue
+            excluded_permissions[self._model_for_crud_command[crud_command_class]] = (
+                permission_type_map[frozenset(curr_excluded_permissions)]
+            )
+        return excluded_permissions
+
     def get_service_type_for_permission(self, permission: Permission) -> Hashable:
         self._verify_permission_exists(permission)
         return self._service_type_for_permission[permission]
@@ -422,7 +445,11 @@ class Domain:
         links = {}
         for link_type_id, link in entity.links.items():
             link_entity = self.get_entity_for_model(link.link_model_class)  # type: ignore
-            if service_type and (link_entity.service_type != service_type) != invert:
+            if (
+                service_type
+                and (self.get_service_type_for_entity(link_entity) != service_type)
+                != invert
+            ):
                 continue
             if url_name and (link_entity.url_name != url_name) != invert:
                 continue
@@ -449,7 +476,10 @@ class Domain:
             self._verify_service_type_exists(service_type)
         entities = []
         for entity in self._dag_sorted_entities:
-            if service_type and (entity.service_type != service_type) != invert:
+            if (
+                service_type
+                and (self.get_service_type_for_entity(entity) != service_type) != invert
+            ):
                 continue
             if (
                 persistable is not None
@@ -488,57 +518,6 @@ class Domain:
             )
         ]
 
-    def register_locals(
-        self,
-        variables: dict[str, Any],
-        service_type: Hashable | dict[Type, Hashable] | None = None,
-    ) -> None:
-        model_meta_class = type(Model)
-        orig_service_type = service_type
-
-        def _get_service_type(model_or_command_class: Type) -> Hashable | None:
-            if orig_service_type is None:
-                return None
-            if isinstance(orig_service_type, dict):
-                return orig_service_type.get(model_or_command_class)
-            return orig_service_type
-
-        for name, value in variables.items():
-            if type(value) is not model_meta_class:
-                continue
-            if value in {Model, Command, CrudCommand}:
-                continue
-            if issubclass(value, Model):
-                entity = value.ENTITY
-                if entity is None:
-                    # Skip models without entity, e.g. abstract models
-                    # Models that mistakenly do not have ENTITY set will raise
-                    # an exception at a later stage
-                    continue
-                # Adjust for model name already set due to subclassing
-                model_name = Domain.get_model_name(value)
-                if model_name in self._model_for_name:
-                    registered_model_class = self._model_for_name[model_name]
-                    if (
-                        issubclass(value, registered_model_class)
-                        and value is not registered_model_class
-                    ):
-                        # Set name for new model class
-                        value.NAME = value.__name__
-                service_type = _get_service_type(value)
-                if service_type and entity.service_type is None:
-                    entity.set_service_type(service_type)
-                self.register_entity(entity, model_class=value)
-            elif issubclass(value, Command):
-                service_type = _get_service_type(value)
-                # Set service type if missing and possible to retrieve from model class in case of CrudCommand
-                if not self._set_command_service_type(value, service_type=service_type):  # type: ignore
-                    # Skip commands without service type, e.g. abstract commands
-                    # Commands that mistakenly do not have SERVICE_TYPE set will raise
-                    # an exception at a later stage
-                    continue
-                self.register_command(value)  # type: ignore
-
     def register_service_type(self, service_type: Hashable) -> Hashable:
         if service_type not in self._service_types:
             self._service_types.add(service_type)
@@ -558,15 +537,13 @@ class Domain:
         on_cycle: str = "raise",
     ) -> Entity:
         # Set service type Model and CrudCommand
-        if service_type:
-            entity.set_service_type(service_type)
         if model_class:
             entity.set_model_class(model_class)
         if crud_command_class:
             entity.set_crud_command_class(crud_command_class)
 
         # Register new service_type
-        service_type = self.register_service_type(entity.service_type)
+        self.register_service_type(service_type)
 
         # Register new Entity
         if entity not in self._entities:
@@ -613,7 +590,7 @@ class Domain:
 
         # Register CrudCommand if necessary
         if entity.persistable and entity.crud_command_class:
-            self.register_command(entity.crud_command_class)  # type: ignore
+            self.register_command(entity.crud_command_class, service_type=service_type)  # type: ignore
 
         return entity
 
@@ -644,10 +621,6 @@ class Domain:
                         f"Command {command_name} is already registered and linked to model {linked_model_class.NAME}"
                     )
             return command_class
-
-        # Set service type if missing and possible to retrieve from model class in case of CrudCommand
-        if not self._set_command_service_type(command_class, service_type=service_type):
-            raise exc.DomainException(f"Command {command_name} is missing service type")
 
         # Register new service_type
         self.register_service_type(service_type)
@@ -721,50 +694,6 @@ class Domain:
                     crud_command_class=crud_command_class,
                 )
         return command_class
-
-    def _set_command_service_type(
-        self, command_class: Type[Command], service_type: Hashable | None = None
-    ) -> Hashable:
-        if command_class.SERVICE_TYPE is not None:
-            # Service type already set, keep original
-            if service_type and command_class.SERVICE_TYPE != service_type:
-                # Service type mismatch
-                command_name = Domain.get_command_name(command_class)
-                registered_service_name = Domain.get_service_name(
-                    command_class.SERVICE_TYPE
-                )
-                service_name = Domain.get_service_name(service_type)
-                raise exc.DomainException(
-                    f"Command {command_name} is already registered with service {service_name} instead of {registered_service_name}"
-                )
-            if issubclass(command_class, CrudCommand):
-                # CrudCommand: check correspondence with model service type
-                model_class = command_class.MODEL_CLASS
-                if model_class in self._models:
-                    model_service_type = self.get_service_type_for_model(model_class)
-                    if model_service_type != command_class.SERVICE_TYPE:
-                        command_name = Domain.get_command_name(command_class)
-                        model_name = Domain.get_model_name(model_class)
-                        service_name = Domain.get_service_name(
-                            command_class.SERVICE_TYPE
-                        )
-                        model_service_name = Domain.get_service_name(model_service_type)
-                        raise exc.DomainException(
-                            f"Command {command_name} has service {service_name} but model {model_name} is registered with service {model_service_name}"
-                        )
-            return command_class.SERVICE_TYPE
-        if service_type:
-            # Service type given, set and return
-            command_class.SERVICE_TYPE = service_type
-            return service_type
-        # Try to set service type from model class
-        if not issubclass(command_class, CrudCommand):
-            return None
-        model_class = command_class.MODEL_CLASS
-        if model_class in self._models:
-            command_class.SERVICE_TYPE = self.get_service_type_for_model(model_class)
-            return command_class.SERVICE_TYPE
-        return None
 
     def _verify_model_has_entity(self, model_class: Type[Model]) -> None:
         if model_class.ENTITY is None:

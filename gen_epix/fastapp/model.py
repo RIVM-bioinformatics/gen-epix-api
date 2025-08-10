@@ -116,7 +116,6 @@ class Policy(abc.ABC):
 
 
 class Command(PydanticBaseModel):
-    SERVICE_TYPE: ClassVar[Hashable | None] = None
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.E
     NAME: ClassVar[str | None] = None
 

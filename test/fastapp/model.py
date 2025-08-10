@@ -7,9 +7,12 @@ from pydantic import Field
 from sqlalchemy.orm import declarative_mixin
 from sqlalchemy_utils.types.uuid import UUIDType
 
+from gen_epix import fastapp
 from gen_epix.fastapp.domain import Domain, Entity, create_links
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories import ServerUtcCurrentTime
+
+DOMAIN = Domain("service.test")
 
 
 @declarative_mixin
@@ -32,7 +35,6 @@ class Model1_1(Model):
     ENTITY: ClassVar = Entity(
         id=UUID("ea7e423a-d7c3-4fba-a11d-64879c88ce12"),
         snake_case_plural_name="models1_1",
-        service_type=ServiceType.SERVICE1,
         schema_name="schema1",
         table_name="model1_1",
         persistable=True,
@@ -47,7 +49,6 @@ class Model1_2(Model):
     ENTITY: ClassVar = Entity(
         id=UUID("08d0deb8-d4a2-48b0-94eb-6df1b8d81405"),
         snake_case_plural_name="models1_2",
-        service_type=ServiceType.SERVICE1,
         schema_name="schema1",
         table_name="model1_1",
         persistable=True,
@@ -69,7 +70,6 @@ class Model2_1(Model):
     ENTITY: ClassVar = Entity(
         id=UUID("a6af25f1-1e61-4782-9051-4c4ce056f0c1"),
         snake_case_plural_name="models2_1",
-        service_type=ServiceType.SERVICE2,
         schema_name="schema2",
         table_name="model2_1",
         persistable=True,
@@ -91,7 +91,6 @@ class Model2_2(Model):
     ENTITY: ClassVar = Entity(
         id=UUID("1fc5643c-7c11-4c2b-bb93-d420be1a4615"),
         snake_case_plural_name="models2_2",
-        service_type=ServiceType.SERVICE2,
         schema_name="schema2",
         table_name="model2_2",
         persistable=True,
@@ -158,15 +157,29 @@ class SAModel2_2(Base2, RowMetadataMixin):
     model2_1 = sa.orm.relationship("SAModel2_1")
 
 
-DOMAIN = Domain("service.test")
-DOMAIN.register_locals(locals())
+SORTED_MODELS_BY_SERVICE: dict[ServiceType, list[Type[fastapp.Model]]] = {
+    ServiceType.SERVICE1: [
+        Model1_1,
+        Model1_2,
+    ],
+    ServiceType.SERVICE2: [
+        Model2_1,
+        Model2_2,
+    ],
+}
+for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
+    for model_class in model_classes:
+        assert model_class.ENTITY is not None
+        DOMAIN.register_entity(
+            model_class.ENTITY, model_class=model_class, service_type=service_type
+        )
 
-MODEL_MAP = {
+MODEL_MAP: dict[Type[fastapp.Model], Type] = {
     Model1_1: SAModel1_1,
     Model1_2: SAModel1_2,
     Model2_1: SAModel2_1,
     Model2_2: SAModel2_2,
 }
 for model_class, db_model_class in MODEL_MAP.items():
-    assert isinstance(model_class.ENTITY, Entity)
+    assert model_class.ENTITY is not None
     model_class.ENTITY.set_db_model_class(db_model_class)

@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.casedb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
@@ -79,7 +78,6 @@ def create_ontology_endpoints(
         app,
         service_type=enum.ServiceType.ONTOLOGY,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

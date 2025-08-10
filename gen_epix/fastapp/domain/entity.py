@@ -28,7 +28,6 @@ class Entity(BaseModel):
 
     id: UUID = Field(default_factory=uuid.uuid4)
     persistable: bool = Field(default=False, frozen=True)
-    service_type: Hashable | None = None
     snake_case_singular_name: str | None = None
     snake_case_plural_name: str | None = None
     camel_case_singular_name: str | None = None
@@ -164,15 +163,6 @@ class Entity(BaseModel):
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         assert self.id_field_name
         return lambda x: getattr(x, self.id_field_name)
-
-    def set_service_type(self, service_type: Hashable) -> Self:
-        if self.service_type is not None:
-            if self.service_type != service_type:
-                raise ValueError(
-                    f"Entity {self.name} already has a service type set: {self.service_type}"
-                )
-        self.service_type = service_type
-        return self
 
     def set_model_class(
         self, model_class: Type[BaseModel], on_existing: str = "raise"

@@ -8,10 +8,10 @@ from gen_epix.omopdb.domain.enum import Role
 
 class RoleGenerator:
 
-    ROLE_PERMISSIONS: dict[
+    ROLE_PERMISSION_SETS: dict[
         Role, set[tuple[Type[command.Command], PermissionTypeSet]]
     ] = {
-        Role.ADMIN: {
+        Role.APP_ADMIN: {
             # organization
             (command.IdentifierIssuerCrudCommand, PermissionTypeSet.CU),
             (command.UserCrudCommand, PermissionTypeSet.R),
@@ -23,9 +23,9 @@ class RoleGenerator:
             (command.DataCollectionSetCrudCommand, PermissionTypeSet.CRUD),
             (command.DataCollectionSetMemberCrudCommand, PermissionTypeSet.CRUD),
         },
-        Role.REFDATA_ADMIN: set(),
-        Role.DATA_READER: set(),
-        Role.DATA_WRITER: set(),
+        # TODO: fill in permissions
+        Role.METADATA_ADMIN: set(),
+        Role.ORG_USER: set(),
         Role.GUEST: set(),
     }
 
@@ -33,24 +33,21 @@ class RoleGenerator:
     # Hierarchy described here per role with union of all roles below it.
     ROLE_HIERARCHY: dict[Role, set[Role]] = {
         Role.ROOT: {
-            Role.ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.DATA_READER,
-            Role.DATA_WRITER,
+            Role.APP_ADMIN,
+            Role.METADATA_ADMIN,
+            Role.ORG_USER,
             Role.GUEST,
         },
-        Role.ADMIN: {
-            Role.REFDATA_ADMIN,
-            Role.DATA_READER,
-            Role.DATA_WRITER,
+        Role.APP_ADMIN: {
+            Role.METADATA_ADMIN,
+            Role.ORG_USER,
             Role.GUEST,
         },
-        Role.REFDATA_ADMIN: {Role.GUEST},
-        Role.DATA_READER: {Role.GUEST},
-        Role.DATA_WRITER: {Role.DATA_READER, Role.GUEST},
+        Role.METADATA_ADMIN: {Role.GUEST},
+        Role.ORG_USER: {Role.GUEST},
         Role.GUEST: set(),
     }
 
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
-        ROLE_HIERARCHY, ROLE_PERMISSIONS
+        ROLE_HIERARCHY, ROLE_PERMISSION_SETS
     )
