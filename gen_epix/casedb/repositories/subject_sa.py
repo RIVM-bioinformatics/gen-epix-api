@@ -2,8 +2,8 @@ from typing import Any
 
 from sqlalchemy import Engine
 
-from gen_epix.casedb.domain.repository.subject import BaseSubjectRepository
-from gen_epix.casedb.repositories.sa_model.base import (
+from gen_epix.casedb.domain.repository import BaseSubjectRepository
+from gen_epix.casedb.repositories.sa_model import (
     DB_METADATA_FIELDS,
     GENERATE_SERVICE_METADATA,
     SERVICE_METADATA_FIELDS,

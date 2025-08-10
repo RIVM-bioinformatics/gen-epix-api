@@ -1,5 +1,5 @@
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.policy.abac import BaseIsOrganizationAdminPolicy
+from gen_epix.casedb.domain.policy import BaseIsOrganizationAdminPolicy
 from gen_epix.fastapp import Command, CrudCommand, CrudOperation, CrudOperationSet
 
 

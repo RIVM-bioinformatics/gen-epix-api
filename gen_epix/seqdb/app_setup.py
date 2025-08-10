@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, NoReturn
 
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
@@ -11,6 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from gen_epix.common.api.exc import generate_handle_exception_function
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
+from gen_epix.fastapp.enum import LogLevel
 from gen_epix.fastapp.middleware import (
     HandleAuthExceptionMiddleware,
     UpdateResponseHeaderMiddleware,
@@ -25,7 +26,7 @@ def create_fast_api(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
+    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
     setup_logger: logging.Logger | None = None,
     api_logger: logging.Logger | None = None,
     debug: bool = False,
@@ -41,7 +42,7 @@ def create_fast_api(
             setup_logger.info(
                 app.create_log_message(
                     "a49dedfc",
-                    {"status": "STARTING_APP", "app_id": str(app_id)},
+                    {"status": "STARTING_APP", "app_id": str(app_id)},  # type: ignore[arg-type]
                 )
             )
         yield
@@ -49,7 +50,7 @@ def create_fast_api(
             setup_logger.info(
                 app.create_log_message(
                     "dcabb0ac",
-                    {"status": "STOPPING_APP", "app_id": str(app_id)},
+                    {"status": "STOPPING_APP", "app_id": str(app_id)},  # type: ignore[arg-type]
                 )
             )
 
@@ -73,7 +74,7 @@ def create_fast_api(
     # Rate limiting
     if not debug:
         fast_api.state.limiter = limiter.limiter
-        fast_api.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore
+        fast_api.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
         # The SlowAPIMiddleware is added to fast_api globally to limit the number of requests
         # The limiter can be applied to specific routes by adding the decorator @limiter.limit
         fast_api.add_middleware(SlowAPIMiddleware)
@@ -95,6 +96,7 @@ def create_fast_api(
             fast_app=app,
             logger=api_logger,
         )
+
     # Add routers
     handle_exception = generate_handle_exception_function(app=app, logger=api_logger)
     routers = create_routers(

@@ -1,19 +1,19 @@
 import datetime
 import gzip
+import json
 import pickle
+import zipfile
+from functools import partial
 from typing import Any, Callable, Hashable, Iterable, Type
 from uuid import UUID
 
-from gen_epix.fastapp import (
-    BaseRepository,
-    BaseUnitOfWork,
-    CrudOperation,
-    Entity,
-    FieldTypeSet,
-    Model,
-    exc,
-)
+from gen_epix.fastapp import exc
+from gen_epix.fastapp.domain.entity import Entity
+from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet
+from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
+from gen_epix.fastapp.repository import BaseRepository
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import BooleanOperator, CompositeFilter, Filter
 
 
@@ -22,16 +22,50 @@ class DictRepository(BaseRepository):
     def from_pkl(
         repository_class: Type[BaseRepository],
         entities: Iterable[Entity],
-        file: str,
+        pkl_file: str,
         **kwargs: Any,
     ) -> "DictRepository":
-        if file.lower().endswith(".gz"):
-            with gzip.open(file, "rb") as handle:
+        if pkl_file.lower().endswith(".gz"):
+            with gzip.open(pkl_file, "rb") as handle:
                 db = pickle.load(handle)
         else:
-            with open(file, "rb") as handle:
+            with open(pkl_file, "rb") as handle:
                 db = pickle.load(handle)
         # TODO: check validity of db
+        repository = repository_class(entities, db, **kwargs)
+        assert isinstance(repository, DictRepository)
+        return repository
+
+    @staticmethod
+    def from_json(
+        repository_class: Type[BaseRepository],
+        entities: Iterable[Entity],
+        zip_file: str,
+        **kwargs: Any,
+    ) -> "DictRepository":
+        if not zip_file.lower().endswith(".zip"):
+            raise exc.RepositoryServiceError("Invalid file format. Expected .zip")
+        db = {}
+        entities = list(entities)
+        with zipfile.ZipFile(zip_file, "r") as zip_handle:
+            files = set(zip_handle.namelist())
+            for entity in entities:
+                if not entity.persistable:
+                    continue
+                json_file = entity.name + ".json"
+                if json_file not in files and entity.table_name:
+                    json_file = entity.table_name + ".json"
+                if json_file not in files:
+                    raise exc.RepositoryServiceError(
+                        f"Missing file for entity {entity.name} in archive {zip_file}"
+                    )
+                model_class = entity.model_class
+                with zip_handle.open(json_file) as handle:
+                    id_field_name = entity.id_field_name
+                    db[model_class] = {
+                        getattr(y, id_field_name): y
+                        for y in (model_class(**x) for x in json.load(handle))
+                    }
         repository = repository_class(entities, db, **kwargs)
         assert isinstance(repository, DictRepository)
         return repository
@@ -85,12 +119,18 @@ class DictRepository(BaseRepository):
                     raise ValueError(f"No data for model {model_class}")
                 else:
                     raise NotImplementedError
+            # Create ID getter
             id_field_name = entity.id_field_name
+            if id_field_name is None:
+                # No ID field defined for this model, no getter can be created
+                continue
             if not isinstance(id_field_name, str):
                 raise NotImplementedError(
                     f"Model {model_class.__name__} has more than one ID field"
                 )
-            self._get_id[model_class] = lambda x: getattr(x, id_field_name)
+            self._get_id[model_class] = partial(
+                lambda x, y: getattr(y, x), id_field_name
+            )
 
     def _verify_extra_models_and_extract_reverse_links(self, extra_data: str) -> None:
         # Verify extra Models in db and extract reverse links
@@ -237,6 +277,7 @@ class DictRepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> list[Model]:
+        return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         # Get any query filter
         obj_filter = kwargs.get("obj_filter")
@@ -266,12 +307,12 @@ class DictRepository(BaseRepository):
             objs: list[Hashable] = list(df.keys())
         else:
             objs: list[Model] = list(df.values())
-        # Make copy of objects for returning
-        if not return_id:
+        # Make copy of objects for returning if necessary
+        if not return_id and return_copy:
             objs = [x.model_copy() for x in objs if x]
         # Cascade read linked objects if necessary
         if cascade_read and not return_id:
-            self._cascade_read(model_class, objs)
+            self._cascade_read(model_class, objs, return_copy)
         return objs
 
     def read_one(
@@ -301,6 +342,7 @@ class DictRepository(BaseRepository):
         allow_duplicate_ids: bool = False,
         **kwargs: Any,
     ) -> list[Model]:
+        return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         # Read some or one
         if return_id:
@@ -318,12 +360,12 @@ class DictRepository(BaseRepository):
                 DictRepository._verify_duplicate_ids(model_class, obj_ids)
 
         # Make copy of objects for returning
-        if not return_id:
+        if not return_id and return_copy:
             objs = [x.model_copy() for x in objs if x]
 
         # Cascade read linked objects if necessary
         if cascade_read and not return_id:
-            self._cascade_read(model_class, objs)
+            self._cascade_read(model_class, objs, return_copy)
         return objs
 
     def upsert_some(
@@ -336,6 +378,7 @@ class DictRepository(BaseRepository):
         return_id: bool = False,
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model]:
+        return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         get_id = self._get_id[model_class]
         is_iterable, objs = DictRepository._to_iterable(objs)
@@ -403,11 +446,13 @@ class DictRepository(BaseRepository):
                 df_objs[i] = df_obj
         if return_id:
             return obj_ids if is_iterable else obj_ids[0]
-        return (
-            [x.model_copy() for x in df_objs]
-            if is_iterable
-            else df_objs[0].model_copy()
-        )
+        if return_copy:
+            return (
+                [x.model_copy() for x in df_objs]
+                if is_iterable
+                else df_objs[0].model_copy()
+            )
+        return df_objs if is_iterable else df_objs[0]
 
     def delete_some(
         self,
@@ -519,6 +564,7 @@ class DictRepository(BaseRepository):
         self,
         model_class: Type[Model],
         objs: list[Model],
+        return_copy: bool,
     ) -> None:
         for (
             link_field_name,
@@ -537,6 +583,7 @@ class DictRepository(BaseRepository):
                 linked_obj_ids,
                 cascade_read=False,
                 allow_duplicate_ids=True,
+                return_copy=return_copy,
             )
             for obj, linked_obj in zip(objs, linked_objs):
                 setattr(obj, relationship_field_name, linked_obj)

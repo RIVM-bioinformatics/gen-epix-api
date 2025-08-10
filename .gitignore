@@ -171,9 +171,6 @@ gen_epix/casedb/config/.ignore/*
 test/unit/*.xlsx
 test/cicd_reports/*
 test/data/output/*
-test/data/sqlfs_sql/data*
-test/data/sqlfs_sql/log*
-test/data/sqlfs_sql/secrets*
 test/test_client/data/output/*
 
 # Logs

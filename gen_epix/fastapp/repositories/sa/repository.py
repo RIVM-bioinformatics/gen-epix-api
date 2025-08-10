@@ -1,7 +1,7 @@
-import os
 import re
 import uuid
 import warnings
+from pathlib import Path
 from typing import Any, Callable, Hashable, Iterable, Self, Sequence, Type
 
 import sqlalchemy as sa
@@ -41,6 +41,7 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
+    DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
@@ -288,6 +289,9 @@ class SARepository(BaseRepository):
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
+        max_batch_size = int(
+            kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
+        )
         objs = objs if isinstance(objs, list) else list(objs)
         if not objs:
             return []
@@ -300,9 +304,21 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             rows = self.to_sql(user_id, model_class, objs)
-            session.add_all(rows)
-            if flush:
-                session.flush()
+            n_rows = len(rows)
+            n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
+            if not flush and n_batches > 1:
+                raise exc.RepositoryServiceError(
+                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batche while flush={flush}"
+                )
+            for i in range(n_batches):
+                slice_ = slice(
+                    i * max_batch_size,
+                    min((i + 1) * max_batch_size, n_rows),
+                )
+                rows_slice = rows[slice_]
+                session.add_all(rows_slice)
+                if flush:
+                    session.flush()
             if return_id:
                 mapper = self.get_mapper(model_class)
                 get_row_id = mapper.get_row_id
@@ -968,18 +984,20 @@ class SARepository(BaseRepository):
 
         is_sqlite = str(connection_string).lower().startswith("sqlite:///")
         if is_sqlite:
-            sqlite_file = re.sub(
-                ".*sqlite:///", "", connection_string, flags=re.IGNORECASE
+            sqlite_file = Path(
+                re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
             )
             if recreate_sqlite_file:
                 # Remove existing file
-                if os.path.isfile(sqlite_file):
-                    os.remove(sqlite_file)
+                if sqlite_file.exists():
+                    sqlite_file.unlink()
                 # Create the file by creating a connection
-                engine = sa.create_engine("sqlite:///" + sqlite_file)
+                engine = sa.create_engine(
+                    f"sqlite:///{sqlite_file.as_posix()}", echo=echo
+                )
                 conn = engine.connect()
                 conn.close()
-            elif not os.path.isfile(sqlite_file):
+            elif not sqlite_file.exists():
                 raise ValueError("Unable to derive file from connection string")
 
             # Filter some warnings
@@ -1046,3 +1064,20 @@ class SARepository(BaseRepository):
         )
 
         return repository
+
+    @classmethod
+    def test_connection(
+        cls,
+        connection_string: str,
+        **kwargs: Any,
+    ) -> BaseException | None:
+        try:
+            connection = sa.create_engine(
+                connection_string,
+                connect_args=kwargs,
+            ).connect()
+            connection.close()
+            return None
+        except BaseException as exception:
+            # Connection failed, skip loading
+            return exception

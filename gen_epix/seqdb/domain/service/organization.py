@@ -23,10 +23,7 @@ class BaseOrganizationService(BaseService):
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
-        for command_class in self.app.domain.get_crud_commands_for_service_type(
-            self.service_type
-        ):
-            f(command_class, self.crud)
+        self.register_default_crud_handlers()
         f(command.InviteUserCommand, self.invite_user)
         f(command.RegisterInvitedUserCommand, self.register_invited_user)
         f(command.RetrieveCompleteUserCommand, self.retrieve_complete_user)

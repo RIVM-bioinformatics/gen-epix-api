@@ -1,9 +1,9 @@
 import logging
 import uuid
 from functools import partial
-from typing import Any, Callable, Hashable
+from typing import Any, Callable, Hashable, NoReturn
 
-from gen_epix.fastapp import App, LogLevel, model
+from gen_epix.fastapp import App, LogLevel, exc, model
 from gen_epix.fastapp.api import exc as api_exc
 
 http_exception_fmap = {
@@ -37,12 +37,13 @@ LAST_HANDLED_EXCEPTION: dict[str, Any] = {
 }
 
 
+# TODO: Consider refactoring this into a callable ExceptionHandler class
 def generate_handle_exception_function(
     app: App,
     logger: logging.Logger | None,
 ) -> Callable[
     [str, model.User | None, Exception, Hashable | list[Hashable] | None, LogLevel],
-    None,
+    NoReturn,
 ]:
 
     def handle_exception(
@@ -53,7 +54,7 @@ def generate_handle_exception_function(
         exception: Exception,
         request_ids: Hashable | list[Hashable] | None = None,
         level: LogLevel = LogLevel.ERROR,
-    ) -> None:
+    ) -> NoReturn:
         LAST_HANDLED_EXCEPTION.update(
             {
                 "id": uuid.uuid4(),

@@ -10,11 +10,9 @@ from typing import Any, Collection, Iterable
 
 import sqlalchemy as sa
 
-from gen_epix.fastapp import BaseRepository
-from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.omopdb.domain.enum import ServiceType
+from gen_epix.fastapp import BaseRepository, Domain
+from gen_epix.omopdb.domain.enum import AnonMethod, AnonStrictness, ServiceType
 from gen_epix.omopdb.domain.model.base import Model
-from gen_epix.omopdb.enum import AnonMethod, AnonStrictness
 
 
 class BaseAnonymizer(ABC):

@@ -1,7 +1,7 @@
 from typing import Any
 
 from gen_epix.casedb.domain import command, exc, model
-from gen_epix.casedb.domain.service.abac import BaseAbacService
+from gen_epix.casedb.domain.service import BaseAbacService
 from gen_epix.fastapp.model import Policy
 
 

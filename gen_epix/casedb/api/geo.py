@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter, FastAPI
 
@@ -6,6 +6,7 @@ from gen_epix.casedb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.casedb.domain import enum
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.enum import LogLevel
 
 
 def create_geo_endpoints(
@@ -14,7 +15,7 @@ def create_geo_endpoints(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
+    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
     assert handle_exception

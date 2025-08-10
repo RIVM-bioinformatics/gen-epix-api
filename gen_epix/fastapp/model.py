@@ -30,8 +30,9 @@ class Model(PydanticBaseModel):
 
 
 class User(Model):
-    id: Hashable = Field(
-        default_factory=uuid.uuid4, description="The ID of the user obj"
+    id: Hashable | None = Field(
+        default_factory=uuid.uuid4,
+        description="The ID of the user. This can be the key of the user (see get_key method), or a separate ID.",
     )
 
     def get_key(self) -> str:
@@ -45,7 +46,7 @@ class User(Model):
 
     # @field_serializer("id")
     # def _serialize_id(self, value: Hashable, _info: Any) -> str:
-    #     return serialize_id(value)  # type: ignore[return-value]
+    #     return str(value)
 
 
 class Permission(PydanticBaseModel, frozen=True):
@@ -67,11 +68,11 @@ class Permission(PydanticBaseModel, frozen=True):
     @computed_field
     def sort_key(self) -> tuple[str, int]:
         permission_type_map = {
-            PermissionType.EXECUTE: 0,
-            PermissionType.CREATE: 1,
-            PermissionType.READ: 2,
-            PermissionType.UPDATE: 3,
-            PermissionType.DELETE: 4,
+            PermissionType.E: 0,
+            PermissionType.C: 1,
+            PermissionType.R: 2,
+            PermissionType.U: 3,
+            PermissionType.D: 4,
         }
         return self.command_name, permission_type_map[self.permission_type]
 
@@ -89,7 +90,7 @@ class Permission(PydanticBaseModel, frozen=True):
         return f"({self.command_name},{self.permission_type.value})"
 
     @field_serializer("permission_type")
-    def serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
+    def _serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
         return value.value
 
 

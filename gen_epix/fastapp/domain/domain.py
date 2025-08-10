@@ -10,23 +10,23 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 class Domain:
     CRUD_PERMISSION_TYPE_MAP: dict[CrudOperation, PermissionType] = {
-        CrudOperation.CREATE_ONE: PermissionType.CREATE,
-        CrudOperation.CREATE_SOME: PermissionType.CREATE,
-        CrudOperation.READ_ALL: PermissionType.READ,
-        CrudOperation.READ_SOME: PermissionType.READ,
-        CrudOperation.READ_ONE: PermissionType.READ,
-        CrudOperation.UPDATE_ONE: PermissionType.UPDATE,
-        CrudOperation.UPDATE_SOME: PermissionType.UPDATE,
-        CrudOperation.DELETE_ONE: PermissionType.DELETE,
-        CrudOperation.DELETE_SOME: PermissionType.DELETE,
-        CrudOperation.EXISTS_ONE: PermissionType.READ,
-        CrudOperation.EXISTS_SOME: PermissionType.READ,
+        CrudOperation.CREATE_ONE: PermissionType.C,
+        CrudOperation.CREATE_SOME: PermissionType.C,
+        CrudOperation.READ_ALL: PermissionType.R,
+        CrudOperation.READ_SOME: PermissionType.R,
+        CrudOperation.READ_ONE: PermissionType.R,
+        CrudOperation.UPDATE_ONE: PermissionType.U,
+        CrudOperation.UPDATE_SOME: PermissionType.U,
+        CrudOperation.DELETE_ONE: PermissionType.D,
+        CrudOperation.DELETE_SOME: PermissionType.D,
+        CrudOperation.EXISTS_ONE: PermissionType.R,
+        CrudOperation.EXISTS_SOME: PermissionType.R,
     }
     PERMISSION_TYPE_CRUD_MAP: dict[PermissionType, frozenset[CrudOperation]] = {
-        PermissionType.CREATE: frozenset(
+        PermissionType.C: frozenset(
             {CrudOperation.CREATE_ONE, CrudOperation.CREATE_SOME}
         ),
-        PermissionType.READ: frozenset(
+        PermissionType.R: frozenset(
             {
                 CrudOperation.READ_ALL,
                 CrudOperation.READ_SOME,
@@ -35,10 +35,10 @@ class Domain:
                 CrudOperation.EXISTS_SOME,
             }
         ),
-        PermissionType.UPDATE: frozenset(
+        PermissionType.U: frozenset(
             {CrudOperation.UPDATE_ONE, CrudOperation.UPDATE_SOME}
         ),
-        PermissionType.DELETE: frozenset(
+        PermissionType.D: frozenset(
             {
                 CrudOperation.DELETE_ALL,
                 CrudOperation.DELETE_SOME,
@@ -404,7 +404,7 @@ class Domain:
         if issubclass(command_class, CrudCommand):
             permission_type = Domain.CRUD_PERMISSION_TYPE_MAP[cmd.operation]  # type: ignore
         else:
-            permission_type = PermissionType.EXECUTE
+            permission_type = PermissionType.E
         return self._permission_for_tuple[(command_class, permission_type)]
 
     def get_model_links(
@@ -602,7 +602,7 @@ class Domain:
                 if link.link_model_class not in self._models:
                     if on_cycle.upper() == "RAISE":
                         raise exc.DomainException(
-                            f"Entity {entity.id} references unknown model {link.link_model_class} - add entities in DAG sorted order"
+                            f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order"
                         )
                     if on_cycle.upper() != "IGNORE":
                         continue
@@ -629,7 +629,7 @@ class Domain:
                     f"Command {command_name} is already registered with different name {self._name_for_command[command_class]}"
                 )
             linked_service_type = self._service_type_for_command[command_class]
-            if linked_service_type != command_class.SERVICE_TYPE:
+            if linked_service_type != service_type:
                 raise exc.DomainException(
                     f"Command {command_name} is already registered with service type {linked_service_type}"
                 )
@@ -650,7 +650,7 @@ class Domain:
             raise exc.DomainException(f"Command {command_name} is missing service type")
 
         # Register new service_type
-        service_type = self.register_service_type(command_class.SERVICE_TYPE)
+        self.register_service_type(service_type)
 
         # Register new Command
         permissions = Domain.get_command_permissions(command_class)

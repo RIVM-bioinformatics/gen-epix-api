@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import DOMAIN, enum
+from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac.case_abac import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
@@ -28,6 +28,7 @@ _ENTITY_KWARGS = {
 
 
 class CompleteCaseType(CaseType):
+    NAME: ClassVar = "CompleteCaseType"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_case_types",
         persistable=False,
@@ -62,6 +63,3 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

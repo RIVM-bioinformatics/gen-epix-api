@@ -64,3 +64,17 @@ class ConceptSetType(Enum):
     NOMINAL = "NOMINAL"
     ORDINAL = "ORDINAL"
     INTERVAL = "INTERVAL"
+
+
+class AnonStrictness(Enum):
+    IGNORE = "ignore"
+    WARN = "warn"
+    STRICT = "strict"
+
+
+class AnonMethod(Enum):
+    MAKE_NULL = "make_null"
+    SHIFT = "shift"
+    RANDOM = "random"
+    CATEGORICAL = "categorical"
+    MODEL_ANONYIMIZATION = "model_anonymization"  # for future use

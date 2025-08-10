@@ -2,66 +2,67 @@ from enum import Enum
 
 
 class SortOrder(Enum):
-    ASCENDING = "ASCENDING"
-    DESCENDING = "DESCENDING"
+    ASC = "ASC"  # Ascending order
+    DESC = "DESC"  # Descending order
 
 
 class PermissionType(Enum):
-    CREATE = "CREATE"
-    READ = "READ"
-    UPDATE = "UPDATE"
-    DELETE = "DELETE"
-    EXECUTE = "EXECUTE"
+    C = "C"  # Create
+    R = "R"  # Read
+    U = "U"  # Update
+    D = "D"  # Delete
+    E = "E"  # Execute
 
 
 class PermissionTypeSet(Enum):
-    E = frozenset({PermissionType.EXECUTE})
+    E = frozenset({PermissionType.E})
     CRUD = frozenset(
         {
-            PermissionType.CREATE,
-            PermissionType.READ,
-            PermissionType.UPDATE,
-            PermissionType.DELETE,
+            PermissionType.C,
+            PermissionType.R,
+            PermissionType.U,
+            PermissionType.D,
         }
     )
     CRU = frozenset(
         {
-            PermissionType.CREATE,
-            PermissionType.READ,
-            PermissionType.UPDATE,
+            PermissionType.C,
+            PermissionType.R,
+            PermissionType.U,
         }
     )  # Undeletable
     CRD = frozenset(
         {
-            PermissionType.CREATE,
-            PermissionType.READ,
-            PermissionType.DELETE,
+            PermissionType.C,
+            PermissionType.R,
+            PermissionType.D,
         }
     )  # Immutable and deletable
     CUD = frozenset(
         {
-            PermissionType.CREATE,
-            PermissionType.UPDATE,
-            PermissionType.DELETE,
+            PermissionType.C,
+            PermissionType.U,
+            PermissionType.D,
         }
     )
     RUD = frozenset(
         {
-            PermissionType.READ,
-            PermissionType.UPDATE,
-            PermissionType.DELETE,
+            PermissionType.R,
+            PermissionType.U,
+            PermissionType.D,
         }
     )
-    CR = frozenset({PermissionType.CREATE, PermissionType.READ})  # Immutable
-    CU = frozenset({PermissionType.CREATE, PermissionType.UPDATE})
-    CD = frozenset({PermissionType.CREATE, PermissionType.DELETE})
-    RU = frozenset({PermissionType.READ, PermissionType.UPDATE})
-    RD = frozenset({PermissionType.READ, PermissionType.DELETE})
-    UD = frozenset({PermissionType.UPDATE, PermissionType.DELETE})
-    C = frozenset({PermissionType.CREATE})
-    R = frozenset({PermissionType.READ})  # Read only
-    U = frozenset({PermissionType.UPDATE})
-    D = frozenset({PermissionType.DELETE})
+    CR = frozenset({PermissionType.C, PermissionType.R})  # Immutable
+    CU = frozenset({PermissionType.C, PermissionType.U})
+    CD = frozenset({PermissionType.C, PermissionType.D})
+    RU = frozenset({PermissionType.R, PermissionType.U})
+    RD = frozenset({PermissionType.R, PermissionType.D})
+    UD = frozenset({PermissionType.U, PermissionType.D})
+    C = frozenset({PermissionType.C})
+    R = frozenset({PermissionType.R})  # Read only
+    U = frozenset({PermissionType.U})
+    D = frozenset({PermissionType.D})
+    NONE = frozenset()
 
 
 class CrudOperation(Enum):

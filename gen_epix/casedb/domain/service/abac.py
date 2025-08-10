@@ -2,9 +2,10 @@ import abc
 import uuid
 from typing import Type
 
+import gen_epix.common.domain.model.organization
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
-from gen_epix.casedb.domain.repository.abac import BaseAbacRepository
+from gen_epix.casedb.domain.repository import BaseAbacRepository
 from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.model import Command
 
@@ -78,10 +79,7 @@ class BaseAbacService(BaseService):
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
-        for command_class in self.app.domain.get_crud_commands_for_service_type(
-            self.service_type
-        ):
-            f(command_class, self.crud)
+        self.register_default_crud_handlers()
         f(
             command.RetrieveOrganizationAdminNameEmailsCommand,
             self.retrieve_organization_admin_name_emails,
@@ -102,7 +100,7 @@ class BaseAbacService(BaseService):
     @abc.abstractmethod
     def retrieve_complete_user(
         self, cmd: command.RetrieveCompleteUserCommand
-    ) -> model.CompleteUser:
+    ) -> gen_epix.common.domain.model.organization.CompleteUser:
         raise NotImplementedError
 
     @abc.abstractmethod

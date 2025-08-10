@@ -16,10 +16,7 @@ class BaseSystemService(BaseService):
 
     def register_handlers(self) -> None:
         f = self.app.register_handler
-        for command_class in self.app.domain.get_crud_commands_for_service_type(
-            self.service_type
-        ):
-            f(command_class, self.crud)
+        self.register_default_crud_handlers()
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
 
     @abc.abstractmethod

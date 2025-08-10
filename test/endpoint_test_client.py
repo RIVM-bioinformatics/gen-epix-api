@@ -12,8 +12,8 @@ from httpx import Response
 from jose import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.casedb.api.auth import UserInvitationRequestBody
 from gen_epix.casedb.domain import command, model
+from gen_epix.common.api.auth import UserInvitationRequestBody
 from gen_epix.fastapp import CrudOperation
 
 

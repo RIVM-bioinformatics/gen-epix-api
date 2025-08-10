@@ -7,7 +7,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
-from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet

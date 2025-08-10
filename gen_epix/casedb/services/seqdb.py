@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
-from gen_epix.casedb.domain.service.seqdb import BaseSeqdbService
+from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.fastapp import App
 from gen_epix.seqdb.domain.command import (
     RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,

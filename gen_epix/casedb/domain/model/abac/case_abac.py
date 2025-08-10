@@ -1,15 +1,14 @@
 from typing import Callable
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet
 from gen_epix.casedb.domain.model.case.case import CaseRights, CaseSetRights
 from gen_epix.fastapp import exc
 
 
-class CaseTypeAccessAbac(PydanticBaseModel):
+class CaseTypeAccessAbac(BaseModel):
     case_type_id: UUID = Field(description="The ID of the case type")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     is_private: bool = Field(
@@ -56,7 +55,7 @@ class CaseTypeAccessAbac(PydanticBaseModel):
         )
 
 
-class CaseTypeShareAbac(PydanticBaseModel):
+class CaseTypeShareAbac(BaseModel):
     case_type_id: UUID = Field(description="The ID of the case type")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     add_case_from_data_collection_ids: set[UUID] = Field(
@@ -84,7 +83,7 @@ class CaseTypeShareAbac(PydanticBaseModel):
         )
 
 
-class CaseAbac(PydanticBaseModel):
+class CaseAbac(BaseModel):
     is_full_access: bool = Field(
         description="Whether the user has full access, i.e. is not limited by any ABAC policies. If so, the other fields are empty and are to be ignored."
     )

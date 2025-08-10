@@ -1,13 +1,11 @@
-import importlib
 import json
 import os
 import uuid
-from enum import Enum
-from typing import Any, Hashable, Iterable, Type
+from pathlib import Path
+from typing import Any, Hashable, Iterable
 
 import ulid
-
-from gen_epix.fastapp import Domain
+from pkg_resources import DistributionNotFound, get_distribution
 
 
 def generate_ulid() -> uuid.UUID:
@@ -103,65 +101,25 @@ def update_cfg_from_file(
     _add_value_recursion(cfg, new_cfg, "")
 
 
-def set_entity_repository_model_classes(
-    domain: Domain,
-    service_type_enum: Type[Enum],
-    row_metadata_mixin_class: Type,
-    service_modules_path: str,
-    field_name_map: dict[Type, dict[str, str]] | None = None,
-) -> None:
-    if field_name_map is None:
-        field_name_map = {}
-    sa_metadata_field_names = set(
-        row_metadata_mixin_class.__dict__["__annotations__"].keys()
-    ) - {"id"}
-    sa_model_name_class_map = {}
-    for service_type in service_type_enum:
-        try:
-            sa_module = importlib.import_module(
-                f"{service_modules_path}.{service_type.value.lower()}"
+# Get version with fallback for development
+def get_package_version() -> str:
+    version: str
+    try:
+        version = get_distribution("Gen-EpiX").version
+    except DistributionNotFound:
+        # Fallback version for development when package is not installed
+        dir = Path(__file__).parent
+        file = dir / "pyproject.toml"
+        while dir.parent != dir:
+            if (file := dir / "pyproject.toml").exists():
+                break
+        if file.exists():
+            raise FileNotFoundError(
+                f"Could not find pyproject.toml in {dir} or its parent directories."
             )
-        except ModuleNotFoundError:
-            continue
-        for variable_content in sa_module.__dict__.values():
-            if not hasattr(variable_content, "__tablename__"):
-                # Not an SA model class
-                continue
-            sa_model_name_class_map[variable_content.__name__] = variable_content
-    for entity in domain.get_dag_sorted_entities():
-        if not entity.persistable:
-            continue
-        model_class = entity.model_class
-        sa_model_class = sa_model_name_class_map.get(model_class.__name__)
-        if not sa_model_class:
-            raise ValueError(
-                f"Model {model_class.__name__} does not have a corresponding SA model"
-            )
-        entity.set_db_model_class(sa_model_class)
-        # Verify that the SA model has exactly the same fields as the model
-        field_names = set(entity.get_field_names())
-        curr_field_name_map = field_name_map.get(model_class)
-        if curr_field_name_map:
-            field_names = {curr_field_name_map.get(x, x) for x in field_names}
-        sa_field_names = (
-            set(sa_model_class.__table__.columns.keys()) - sa_metadata_field_names
-        )
-        extra_field_names = field_names - sa_field_names
-        extra_field_names = {
-            x for x in extra_field_names if f"{x}_id" not in field_names
-        }
-        if extra_field_names:
-            print(
-                f"TEMPORARY PRINT STATEMENT: Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
-            )
-            # raise ValueError(
-            #     f"Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
-            # )
-        extra_sa_field_names = sa_field_names - field_names
-        if extra_sa_field_names:
-            print(
-                f"TEMPORARY PRINT STATEMENT: Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
-            )
-            # raise ValueError(
-            #     f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names} that are not in model {model_class.__name__}"
-            # )
+        with open(file, "rb") as handle:
+            version: str = tomllib.load(handle)["project"]["version"]
+    return version
+    # raise ValueError(
+    #     f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names} that are not in model {model_class.__name__}"
+    # )

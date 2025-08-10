@@ -2,10 +2,10 @@ import re
 import uuid
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, ClassVar, Hashable, Self, Type
+from typing import Any, Callable, ClassVar, Hashable, Mapping, Self, Type
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from gen_epix.fastapp.domain.key import Key
 from gen_epix.fastapp.domain.link import Link
@@ -22,6 +22,7 @@ class Entity(BaseModel):
     NO_ERM_ERROR_MSG: ClassVar[str] = (
         "Entity is not linked to an entity-relationship model"
     )
+    DEFAULT_ID_FIELD_NAME: ClassVar[str] = "id"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -40,7 +41,7 @@ class Entity(BaseModel):
     database_name: str | None = None
     schema_name: str | None = None
     table_name: str | None = None
-    id_field_name: str = "id"
+    id_field_name: str | None = None
     keys: dict[int, Key] = {}
     links: dict[int, Link] = {}
 
@@ -75,6 +76,17 @@ class Entity(BaseModel):
     def _validate_names(cls, value: str | Enum | None) -> str | None:
         return str(value.value) if isinstance(value, Enum) else value
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_model(cls, data: Any) -> Any:
+        if (
+            "id_field_name" not in data
+            and "persistable" in data
+            and data["persistable"]
+        ):
+            data["id_field_name"] = cls.DEFAULT_ID_FIELD_NAME
+        return data
+
     @field_validator("keys", mode="before")
     @classmethod
     def _validate_keys(cls, value: dict[int, Any]) -> dict[int, Key]:
@@ -93,10 +105,14 @@ class Entity(BaseModel):
             x: (
                 y
                 if isinstance(y, Link)
-                else Link(
-                    link_field_name=y[0],
-                    link_model_class=y[1],
-                    relationship_field_name=y[2],
+                else (
+                    Link(
+                        link_field_name=y[0],
+                        link_model_class=y[1],
+                        relationship_field_name=y[2],
+                    )
+                    if isinstance(y, tuple)
+                    else Link(**y)
                 )
             )
             for x, y in value.items()
@@ -146,18 +162,21 @@ class Entity(BaseModel):
     def get_obj_id(self) -> Callable[[Any], Hashable]:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
+        assert self.id_field_name
         return lambda x: getattr(x, self.id_field_name)
 
     def set_service_type(self, service_type: Hashable) -> Self:
         if self.service_type is not None:
             if self.service_type != service_type:
                 raise ValueError(
-                    f"Entity already has a service type set: {self.service_type}"
+                    f"Entity {self.name} already has a service type set: {self.service_type}"
                 )
         self.service_type = service_type
         return self
 
-    def set_model_class(self, model_class: Type[BaseModel]) -> Self:
+    def set_model_class(
+        self, model_class: Type[BaseModel], on_existing: str = "raise"
+    ) -> Self:
         """
         Set the model class for the entity.
 
@@ -179,7 +198,12 @@ class Entity(BaseModel):
         if self.has_model():
             if self._model_class is model_class:
                 return self
-            raise ValueError("Instance already has a model set")
+            if on_existing == "raise":
+                raise ValueError("Instance already has a model set")
+            elif on_existing == "replace":
+                pass
+            else:
+                raise ValueError(f"Unknown on_existing value: {on_existing}")
         field_names = Entity._get_model_field_names(model_class)
 
         # Set fields and derive their FieldType
@@ -193,14 +217,15 @@ class Entity(BaseModel):
         }
 
         # Set ID field
-        if self.id_field_name not in self._fields:
-            raise ValueError(
-                f"id_field_name property for model {model_class} does "
-                f"not contain a valid field name: {self.id_field_name}"
-            )
-        self._fields[self.id_field_name]["type"] = FieldType.ID
+        if self.id_field_name:
+            if self.id_field_name not in self._fields:
+                raise ValueError(
+                    f"id_field_name property for model {model_class} does "
+                    f"not contain a valid field name: {self.id_field_name}"
+                )
+            self._fields[self.id_field_name]["type"] = FieldType.ID
 
-        # Set LINK and BACK_POPULATE fields
+        # Set LINK and RELATIONSHIP fields
         for link in self.links.values():
             self._fields[link.link_field_name]["type"] = FieldType.LINK
             if link.relationship_field_name:
@@ -308,7 +333,7 @@ class Entity(BaseModel):
             if not field_type or x["type"] == field_type
         ]
 
-    def get_id_field_name(self, by_alias: bool = True) -> str:
+    def get_id_field_name(self, by_alias: bool = True) -> str | None:
         """
         Get the ID field name of the entity.
 
@@ -323,7 +348,10 @@ class Entity(BaseModel):
             The ID field name of the entity.
 
         """
-        return self.get_field_names(by_alias=by_alias, field_type=FieldType.ID)[0]
+        field_names = self.get_field_names(by_alias=by_alias, field_type=FieldType.ID)
+        if not field_names:
+            raise ValueError("Entity does not have an ID field")
+        return field_names[0]
 
     def get_keys_field_names(self, by_alias: bool = True) -> list[tuple[str, ...]]:
         if by_alias:
@@ -512,7 +540,26 @@ class Entity(BaseModel):
             raise NotImplementedError(f"String casing {string_casing} not implemented")
         return name
 
-    def _verify_and_parse_model_links(self, model_class) -> Self:
+    def copy(self, update: Mapping[str, Any]) -> "Entity":
+        """
+        Create a copy of the entity with the given keyword arguments replacing
+        any of the existing values.
+
+        Parameters
+        ----------
+        **kwargs : Any
+            Keyword arguments to update the entity.
+
+        Returns
+        -------
+        Self
+            A copy of the entity with updated attributes.
+        """
+        props = self.model_dump(exclude_unset=True, exclude_defaults=True)
+        props.update(update)
+        return Entity(**props)
+
+    def _verify_and_parse_model_links(self, model_class: Type[BaseModel]) -> Self:
         """
         Check if the link field names and back populate field names are valid given
         the model class. If they are valid, set the type of the field to LINK and

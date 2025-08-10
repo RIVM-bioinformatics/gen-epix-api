@@ -11,14 +11,10 @@ class BaseRbacService(ServiceBaseRbacService):
         # user and hence no existing user can be included in the command. The command
         # therefore does not require a permission policy, but the permissions can be
         # checked nonetheless through the implementing handler.
-        (command.RegisterInvitedUserCommand, PermissionType.EXECUTE),
-        (command.GetIdentityProvidersCommand, PermissionType.EXECUTE),
-        (command.RetrieveOutagesCommand, PermissionType.EXECUTE),
+        (command.RegisterInvitedUserCommand, PermissionType.E),
+        (command.GetIdentityProvidersCommand, PermissionType.E),
+        (command.RetrieveOutagesCommand, PermissionType.E),
     }
 
     def register_handlers(self) -> None:
-        f = self.app.register_handler
-        for command_class in self.app.domain.get_crud_commands_for_service_type(
-            self.service_type
-        ):
-            f(command_class, self.crud)
+        self.register_default_crud_handlers()

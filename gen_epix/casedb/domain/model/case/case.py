@@ -7,15 +7,13 @@ from datetime import datetime
 from typing import Any, ClassVar, Iterable, Self
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
-from gen_epix.casedb.domain import DOMAIN, enum, exc
-from gen_epix.casedb.domain.model.base import Model
+from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
-from gen_epix.casedb.domain.model.organization import DataCollection
 from gen_epix.casedb.domain.model.subject import Subject
+from gen_epix.common.domain.model import DataCollection, Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
 
@@ -742,7 +740,7 @@ class CaseSetDataCollectionLink(Model):
 # Non-persistable models
 
 
-class CaseTypeDim(PydanticBaseModel):
+class CaseTypeDim(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_dims",
         persistable=False,
@@ -767,7 +765,7 @@ class CaseTypeDim(PydanticBaseModel):
     )
 
 
-class CaseTypeStat(PydanticBaseModel):
+class CaseTypeStat(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_stats",
         persistable=False,
@@ -785,7 +783,7 @@ class CaseTypeStat(PydanticBaseModel):
     )
 
 
-class CaseSetStat(PydanticBaseModel):
+class CaseSetStat(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_stats",
         persistable=False,
@@ -872,6 +870,7 @@ class CaseRights(BaseCaseRights):
     collections in which it is currently shared.
     """
 
+    NAME: ClassVar = "CaseRights"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_rights",
         persistable=False,
@@ -892,6 +891,7 @@ class CaseSetRights(BaseCaseRights):
     data collections in which it is currently shared.
     """
 
+    NAME: ClassVar = "CaseSetRights"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_rights",
         persistable=False,
@@ -904,6 +904,3 @@ class CaseSetRights(BaseCaseRights):
     write_case_set: bool = Field(
         description="Whether the case set is allowed to be written",
     )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

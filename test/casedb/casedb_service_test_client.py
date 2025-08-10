@@ -13,8 +13,8 @@ from uuid import UUID
 import gen_epix.casedb.domain.model.case.case
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command.role import RoleGenerator
 from gen_epix.casedb.domain.enum import RepositoryType, Role, ServiceType
+from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.fastapp import CrudOperation
@@ -224,6 +224,8 @@ class CasedbServiceTestClient(ServiceTestClient):
             roles=enum.Role,
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,
             user_class=model.User,
+            user_invitation_class=model.UserInvitation,
+            complete_user_class=model.CompleteUser,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,

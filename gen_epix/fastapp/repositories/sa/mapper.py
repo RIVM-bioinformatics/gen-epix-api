@@ -312,6 +312,7 @@ class SAMapper(BaseSAMapper):
                     for x in actual_row_only_field_names
                     if x not in db_metadata_field_names_set
                 )
+                service_metadata_field_names_set = set(service_metadata_field_names)
         elif db_metadata_field_names is None:
             # db_metadata_field_names is the complement of service_metadata_field_names
             service_metadata_field_names_set = set(service_metadata_field_names)
@@ -320,6 +321,11 @@ class SAMapper(BaseSAMapper):
                 for x in actual_row_only_field_names
                 if x not in service_metadata_field_names_set
             )
+            db_metadata_field_names_set = set(db_metadata_field_names)
+        else:
+            # Both are provided, create sets for validation
+            service_metadata_field_names_set = set(service_metadata_field_names)
+            db_metadata_field_names_set = set(db_metadata_field_names)
 
         # Final check of field names
         if not service_metadata_field_names_set.isdisjoint(db_metadata_field_names_set):
@@ -373,14 +379,14 @@ class SAMapper(BaseSAMapper):
             self._relationship_field_name_reverse_map[row_field_name] = field_name
 
     def _init_extract_primary_key(self, model_class: Type[Model]) -> None:
-        id_field_name = self._field_names_by_type[FieldType.ID]
-        row_id_field_name = self._row_field_names_by_type[FieldType.ID]
-        if len(id_field_name) != 1 or len(row_id_field_name) != 1:
+        id_field_names = self._field_names_by_type[FieldType.ID]
+        row_id_field_names = self._row_field_names_by_type[FieldType.ID]
+        if len(id_field_names) != 1 or len(row_id_field_names) != 1:
             raise NotImplementedError(
                 f"Model {model_class.__name__} has more than one ID field"
             )
-        id_field_name = id_field_name[0]
-        row_id_field_name = row_id_field_name[0]
+        id_field_name = id_field_names[0]
+        row_id_field_name = row_id_field_names[0]
         self._get_id: Callable[[Model], Hashable] = lambda x: getattr(x, id_field_name)
         self._get_row_id: Callable[[Row | Type[Row]], Hashable | MappedColumn] = (
             lambda x: getattr(x, row_id_field_name)

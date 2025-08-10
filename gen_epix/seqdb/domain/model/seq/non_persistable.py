@@ -3,9 +3,9 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
+from gen_epix.common.domain.model import Model
 from gen_epix.fastapp import Entity
 from gen_epix.seqdb.domain import DOMAIN, enum
-from gen_epix.seqdb.domain.model.base import Model
 from gen_epix.seqdb.domain.model.seq.metadata import RefSnp
 from gen_epix.seqdb.domain.model.seq.persistable import (
     AstMeasurement,

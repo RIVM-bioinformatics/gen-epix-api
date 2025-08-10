@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, NoReturn
 
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
@@ -12,6 +12,7 @@ from gen_epix.casedb.api.router import create_routers
 from gen_epix.common.api.exc import generate_handle_exception_function
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
+from gen_epix.fastapp.enum import LogLevel
 from gen_epix.fastapp.middleware import (
     HandleAuthExceptionMiddleware,
     UpdateResponseHeaderMiddleware,
@@ -25,7 +26,7 @@ def create_fast_api(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
+    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
     setup_logger: logging.Logger | None = None,
     api_logger: logging.Logger | None = None,
     debug: bool = False,
@@ -57,7 +58,7 @@ def create_fast_api(
     fast_api = FastAPI(
         separate_input_output_schemas=False,
         swagger_ui_init_oauth={"usePkceWithAuthorizationCodeGrant": True},
-        openapi_tags=kwargs.get(  # type: ignore[arg-type]
+        openapi_tags=kwargs.get(
             "openapi_tags",
             [
                 {

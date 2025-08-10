@@ -4,7 +4,7 @@ from sqlalchemy import Engine
 
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.omopdb.domain.repository.omop import BaseOmopRepository
-from gen_epix.omopdb.repositories.sa_model.base import (
+from gen_epix.omopdb.repositories.sa_model import (
     DB_METADATA_FIELDS,
     GENERATE_SERVICE_METADATA,
     SERVICE_METADATA_FIELDS,

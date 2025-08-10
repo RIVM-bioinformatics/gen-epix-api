@@ -1,7 +1,7 @@
 from typing import Type
 
 from gen_epix.casedb.domain import model
-from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.fastapp import Command
 
 

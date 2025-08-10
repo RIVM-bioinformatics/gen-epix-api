@@ -1,0 +1,3 @@
+
+DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)
+

@@ -1,19 +1,18 @@
-from pkg_resources import get_distribution
-
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.env import AppEnv
 from util.cfg import AppCfg
+from util.util import get_package_version
 
 APP_NAME = "CASEDB"
+
 
 # Data for openAPI schema
 SCHEMA_KWARGS = {
     "title": "Gen-EpiX",
     "summary": "Genomic Epidemiology platform for disease X",
     "description": "Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.",
-    "version": get_distribution("gen-epix").version,
+    "version": get_package_version(),
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",
         "url": "https://github.com/RIVM-bioinformatics/gen-epix-api",
@@ -44,7 +43,7 @@ FAST_API = create_fast_api(
     update_openapi_kwargs={
         "get_openapi_kwargs": SCHEMA_KWARGS,
         "fix_schema": True,
-        "auth_service": APP_ENV.services[ServiceType.AUTH],
+        "auth_service": APP_ENV.services[enum.ServiceType.AUTH],
     },
 )
 

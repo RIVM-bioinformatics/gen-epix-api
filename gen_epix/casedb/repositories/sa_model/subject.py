@@ -8,8 +8,8 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.repositories.sa_model.base import RowMetadataMixin
-from gen_epix.casedb.repositories.sa_model.util import (
+from gen_epix.common.repositories.sa_model import (
+    RowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )

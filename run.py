@@ -1,5 +1,7 @@
+import gzip
 import importlib.resources
 import os
+import pickle
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -9,6 +11,11 @@ import pandas as pd
 import pytest
 import uvicorn
 
+from gen_epix.fastapp import Domain
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.repositories.dict.repository import DictRepository
+from gen_epix.fastapp.repositories.sa.repository import SARepository
+from util.cfg import AppCfg
 from util.util import generate_ulid
 
 
@@ -17,6 +24,10 @@ class AppType(Enum):
     SEQDB = "seqdb"
     OMOPDB = "omopdb"
     ALL = "all"
+
+
+class AppTypeSet(Enum):
+    ALL = frozenset({AppType.CASEDB, AppType.SEQDB, AppType.OMOPDB})
 
 
 class AppConfigType(Enum):
@@ -98,7 +109,9 @@ class ConfigDiscovery:
     @staticmethod
     def get_config_path_from_package(app_type: str, extension: str = "") -> str | None:
         """Get config path from package, if not return None."""
-        with importlib.resources.path("gen_epix", "") as package_path:
+        with importlib.resources.as_file(
+            importlib.resources.files("gen_epix")
+        ) as package_path:
             package_config_path = package_path / app_type / "config"
         if package_config_path.exists():
             if extension:
@@ -288,7 +301,7 @@ class Run:
 
     ETL_ENV = {
         AppType.CASEDB: {
-            "module_root": "gen_epix_demo.gen_epix_demo.casedb",
+            "module_root": "gen_epix.casedb",
             "targets": [
                 "geo",
                 "ontology",
@@ -301,11 +314,11 @@ class Run:
             "other_targets": ["seqdb"],
         },
         AppType.SEQDB: {
-            "module_root": "gen_epix_demo.gen_epix_demo.seqdb",
+            "module_root": "gen_epix.seqdb",
             "targets": ["organization", "system", "seq"],
         },
         AppType.OMOPDB: {
-            "module_root": "gen_epix_demo.gen_epix_demo.omopdb",
+            "module_root": "gen_epix.omopdb",
             "targets": ["organization", "system", "omop"],
         },
     }
@@ -324,9 +337,7 @@ class Run:
     def set_env_variables(app_type: AppType, idp_config: AppConfigType) -> None:
         # Special case: set environment variables for all apps
         if app_type == AppType.ALL:
-            for app2 in AppType:
-                if app2 == AppType.ALL:
-                    continue
+            for app2 in AppTypeSet.ALL.value:
                 Run.set_env_variables(app2, idp_config)
             return
         elif app_type == AppType.CASEDB:
@@ -385,7 +396,166 @@ class Run:
         Run.set_env_variables(AppType.OMOPDB, AppConfigType.IDPS)
         import gen_epix.omopdb.env as env
 
-    ## Test
+    ## etl
+    def etl_load_demo_data(
+        self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
+    ) -> None:
+        if isinstance(app_type, str):
+            app_type = AppType[app_type.upper()]
+        assert isinstance(app_type, AppType)
+        # Special case: apply to all apps
+        if app_type == AppType.ALL:
+            for app_type2 in AppTypeSet.ALL.value:
+                Run.etl_load_demo_data(app_type2)
+            return
+        # Set all environment variables
+        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
+
+        def _create_from_repository(
+            user_id: str,
+            entities: list,
+            dict_repository: DictRepository,
+            sa_repository: SARepository,
+        ) -> None:
+            for entity in entities:
+                model_class = entity.model_class
+                with (
+                    dict_repository.uow() as dict_uow,
+                    sa_repository.uow() as sa_uow,
+                ):
+                    objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
+                        dict_uow,
+                        user_id,
+                        model_class,
+                        None,
+                        None,
+                        CrudOperation.READ_ALL,
+                        return_copy=False,
+                    )
+                    sa_repository.crud(
+                        sa_uow,
+                        user_id,
+                        model_class,
+                        objs,
+                        None,
+                        CrudOperation.CREATE_SOME,
+                    )
+
+        # Get classes and config for the app type
+        module_root: str = Run.ETL_ENV[app_type]["module_root"]
+        enum = importlib.import_module(f"{module_root}.domain.enum")
+        model = importlib.import_module(f"{module_root}.domain.model")
+        domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
+        cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
+        service_data: dict[Enum, dict] = importlib.import_module(
+            f"{module_root}.env"
+        ).AppEnv.SERVICE_DATA
+        user_id = cfg.cfg.SECRET.root.user.id
+        for service_type, data in service_data.items():
+            # # TODO: TEMPORARY for debugging, remove later
+            # if service_type.value != "CASE":
+            #     continue
+            if "repository_class" not in data:
+                continue
+            entities = domain.get_dag_sorted_entities(
+                service_type=service_type, persistable=True
+            )
+            # Create dict repository, which is assumed to always be available
+            dict_repository_class: DictRepository = data["repository_class"][
+                enum.RepositoryType.DICT
+            ]
+            repository_cfg = cfg.cfg.SECRET.repository.dict[service_type.value]
+            file = Path(repository_cfg["file"]).absolute()
+            zip_file: str = str(file).replace(".pkl.gz", ".zip")
+            start_time = datetime.now()
+            dict_repository = dict_repository_class.from_json(
+                dict_repository_class, entities, zip_file
+            )
+            end_time = datetime.now()
+            if verbose:
+                print(
+                    f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
+                )
+            # Write empty and demo dict repository to file
+            start_time = datetime.now()
+            with gzip.open(str(file).replace(".full.", ".empty."), "wb") as handle:
+                pickle.dump({x: {} for x in dict_repository._db}, handle)
+            with gzip.open(file, "wb") as handle:
+                pickle.dump(dict_repository._db, handle)
+            end_time = datetime.now()
+            if verbose:
+                print(
+                    f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
+                )
+            # Create empty and demo SA_SQLITE repositories
+            repository_cfg = cfg.cfg.SECRET.repository.sa_sqlite[service_type.value]
+            file = Path(repository_cfg["file"]).absolute()
+            connection_string = "sqlite:///" + str(file.as_posix())
+            sa_repository_class: SARepository = data["repository_class"][
+                enum.RepositoryType.SA_SQL
+            ]
+            start_time = datetime.now()
+            # Empty repository
+            sa_repository_class.create_sa_repository(
+                entities,
+                connection_string.replace(".full.", ".empty."),
+                name=service_type.value,
+            )
+            # Full repository
+            sa_repository = sa_repository_class.create_sa_repository(
+                entities,
+                connection_string,
+                name=service_type.value,
+                recreate_sqlite_file=True,
+            )
+            _create_from_repository(user_id, entities, dict_repository, sa_repository)
+            end_time = datetime.now()
+            if verbose:
+                print(
+                    f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
+                )
+            # Create empty SA_SQL repository or loaded with demo data
+            repository_cfg = cfg.cfg.SECRET.repository.sa_sql[service_type.value]
+            connection_string = repository_cfg["connection_string"]
+            sa_repository_class: SARepository = data["repository_class"][
+                enum.RepositoryType.SA_SQL
+            ]
+            if "mssql" in connection_string:
+                connect_args = {
+                    "timeout": connect_timeout,
+                    "login_timeout": connect_timeout,
+                }
+            elif "pyodcb" in connection_string:
+                connect_args = {
+                    "connect_timeout": connect_timeout,
+                    "timeout": connect_timeout,
+                }
+            else:
+                connect_args = {}
+            # Skip load if no connection can be made
+            if exception := sa_repository_class.test_connection(
+                connection_string, **connect_args
+            ):
+                if verbose:
+                    print(
+                        # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
+                        f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
+                    )
+                continue
+            start_time = datetime.now()
+            sa_repository = sa_repository_class.create_sa_repository(
+                entities,
+                connection_string,
+                name=service_type.value,
+            )
+            _create_from_repository(user_id, entities, dict_repository, sa_repository)
+            end_time = datetime.now()
+            if verbose:
+                print(
+                    f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
+                )
+
+    ## test
     def test_all(self) -> None:
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
@@ -415,7 +585,6 @@ class Run:
             + [
                 "test/filter/unit",
                 "test/fastapp/unit",
-                "gen_epix_demo/test/unit",
             ]
         )
 

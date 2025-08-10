@@ -6,18 +6,18 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped
 
+from gen_epix.common.repositories.sa_model import (
+    RowMetadataMixin,
+    create_mapped_column,
+    create_table_args,
+)
 from gen_epix.seqdb.domain import enum, model
 from gen_epix.seqdb.repositories.sa_model.base import (
     AlignmentMixin,
     CodeMixin,
     ProtocolMixin,
     QualityMixin,
-    RowMetadataMixin,
     SeqMixin,
-)
-from gen_epix.seqdb.repositories.sa_model.util import (
-    create_mapped_column,
-    create_table_args,
 )
 
 Base: Type = sa.orm.declarative_base(name=enum.ServiceType.SEQ.value)

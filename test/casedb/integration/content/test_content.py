@@ -228,7 +228,7 @@ class TestContent:
             permissions: frozenset[model.Permission] = (
                 app.domain.get_permissions_for_command(command_class)
             )
-            if PermissionType.READ not in {x.permission_type for x in permissions}:
+            if PermissionType.R not in {x.permission_type for x in permissions}:
                 continue
             app.handle(
                 command_class(
