@@ -2,6 +2,42 @@
 
 <!-- version list -->
 
+## v0.1.8 (2025-08-11)
+
+### Bug Fixes
+
+- Allow command.CaseTypeColSetMemberCrudCommand READ for all users
+  ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+- Fix imports common/api/exc ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+### Chores
+
+- Add version uitil ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+### Documentation
+
+- Add version.py doc string ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+### Refactoring
+
+- Replaced os.path with PathLib for file operations in repository.py and run.py,
+  ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+- **test**: Replaced os.path with PathLib in the the test module,
+  ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+- **util**: Replaced os.path with PathLib in the the util module,
+  ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
+  [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
+
+
 ## v0.1.7 (2025-06-04)
 
 ### Bug Fixes
