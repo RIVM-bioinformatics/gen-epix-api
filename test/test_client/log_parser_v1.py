@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
 from test.test_client.user_journey_v1 import UserJourneyColumn, V1UserJourney
-from typing import Iterable
+from typing import Any, Iterable
 
 import pandas as pd
 
@@ -113,7 +113,7 @@ class V1LogParser(LogParser):
             if not os.path.isfile(log_file):
                 raise FileNotFoundError(f"Log file not found: {log_file}")
 
-    def parse(self, **kwargs: dict) -> tuple[list[dict], list[str]]:
+    def parse(self, **kwargs: Any) -> tuple[list[dict], list[str]]:
         if self._is_parsed:
             raise ValueError("Log already parsed")
         # Get row filter
@@ -167,7 +167,7 @@ class V1LogParser(LogParser):
         self.log_error_lines = error_lines
         return records, error_lines
 
-    def create_user_journey(self, **kwargs: dict) -> V1UserJourney:
+    def create_user_journey(self, **kwargs: Any) -> V1UserJourney:
         # TODO: add filtering, e.g. for a particular user
         add_command = kwargs.get("add_command", False)
         if not self._is_parsed:

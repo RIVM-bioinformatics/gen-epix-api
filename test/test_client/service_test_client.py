@@ -37,7 +37,7 @@ class ServiceTestClient:
         user_class: Type[User] = User,
         verbose: bool = False,
         log_level: int = logging.ERROR,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Set provided parameters
         self.app_cfg = app_cfg
@@ -69,11 +69,11 @@ class ServiceTestClient:
         self.repositories = self.app_env.repositories
         self.db: dict[Hashable, Model] = {}
         self.props: dict = {}
-        self.use_endpoints: bool = kwargs.get("use_endpoints", False)
-        self.endpoint_test_client: EndpointTestClient | None = kwargs.get(
+        self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
+        self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
-        self.app_last_handled_exception: dict | None = kwargs.get(
+        self.app_last_handled_exception: dict | None = kwargs.pop(
             "app_last_handled_exception"
         )
         if self.use_endpoints:
@@ -86,8 +86,17 @@ class ServiceTestClient:
                     "App last handled exception not provided while use_endpoints=True"
                 )
 
+        # Store remainder of kwargs
+        self.props = kwargs
+
     def generate_id(self) -> UUID:
         return self.app.generate_id()
+
+    def get_root_user(self) -> User:
+        return User(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
 
     def handle(
         self,
@@ -95,7 +104,7 @@ class ServiceTestClient:
         return_response: bool = False,
         endpoint_version: EndpointVersion = EndpointVersion.V1,
         use_endpoint: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any:
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
         if use_endpoint:
@@ -511,7 +520,7 @@ class ServiceTestClient:
         set_log_level(app_cfg.app_name.lower(), log_level)
 
     @staticmethod
-    def _verify_updated_obj(in_obj, out_obj, user_id, **kwargs: dict) -> None:
+    def _verify_updated_obj(in_obj, out_obj, user_id, **kwargs: Any) -> None:
         # TODO: verifying modified_by and modified_at is no longer possible here as the
         # persistence metadata no longer exists in the object. This should instead
         # be tested through unit tests on the repository in question.

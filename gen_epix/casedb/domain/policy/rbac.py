@@ -1,3 +1,5 @@
+from typing import Any
+
 from gen_epix.casedb.domain.service.rbac import BaseRbacService
 from gen_epix.fastapp import Policy
 
@@ -13,6 +15,6 @@ class BaseIsPermissionSubsetNewRolePolicy(Policy):
     Does not apply to read or delete operations.
     """
 
-    def __init__(self, rbac_service: BaseRbacService, **kwargs: dict):
+    def __init__(self, rbac_service: BaseRbacService, **kwargs: Any):
         self.rbac_service = rbac_service
         self.props = kwargs

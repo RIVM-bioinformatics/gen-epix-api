@@ -37,7 +37,10 @@ class ConfigDiscovery:
 
     @staticmethod
     def get_config_path(
-        app_type: str, env_var_substring: str = "", extension: str = ""
+        app_type: str,
+        env_var_substring: str = "",
+        extension: str = "",
+        verbose: bool = False,
     ) -> str:
         """
         Config path picked in the following order:
@@ -50,17 +53,20 @@ class ConfigDiscovery:
             app_type, env_var_substring=env_var_substring, extension=extension
         )
         if path:
-            print(f"Config path found in environment variable: {path}")
+            if verbose:
+                print(f"Config path found in environment variable: {path}")
             return path
         path = ConfigDiscovery.get_config_path_from_local(app_type, extension=extension)
         if path:
-            print(f"Config path found in local file: {path}")
+            if verbose:
+                print(f"Config path found in local file: {path}")
             return path
         path = ConfigDiscovery.get_config_path_from_package(
             app_type, extension=extension
         )
         if path:
-            print(f"Config path found in package: {path}")
+            if verbose:
+                print(f"Config path found in package: {path}")
             return path
         raise ValueError(
             f"Config path not found for app type {app_type}. Please set the environment variable {app_type.upper()}_CONFIG_PATH."

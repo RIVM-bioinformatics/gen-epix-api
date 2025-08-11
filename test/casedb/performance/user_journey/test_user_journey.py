@@ -87,8 +87,8 @@ class TestRead:
     def test_journeys(self) -> None:
 
         from test.test_client.enum import (
-            TestType as EnumTestType,  # to avoid pytest warning
-        )
+            TestType as EnumTestType,
+        )  # to avoid pytest warning
         from test.test_client.service_test_client import ServiceTestClient
 
         from gen_epix.casedb.domain import enum

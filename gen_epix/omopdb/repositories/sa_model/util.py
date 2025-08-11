@@ -12,7 +12,7 @@ from gen_epix.omopdb.domain.model.base import Model
 def create_table_args(
     model_class: Type[Model],
     field_name_map: dict[str, str] | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple:
     entity: Entity = model_class.ENTITY  # type: ignore[attr-defined]
     uq_constraints = []
@@ -42,7 +42,7 @@ def create_mapped_column(
     field_name: str,
     field_name_map: dict[str, str] | None = None,
     sql_column_name: str | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> MappedColumn[Any]:
     """
     Stub of a docstring reflecting best practice: what do the args do? ;-)

@@ -27,7 +27,7 @@ class EndpointTestClient:
     SECRET_KEY = str(uuid.uuid4())
     ENCRYPTION_ALGORITHM = "HS256"
 
-    def __init__(self, fast_api: FastAPI, **kwargs: dict) -> None:
+    def __init__(self, fast_api: FastAPI, **kwargs: Any) -> None:
         self.fast_api = fast_api
         self.test_client = TestClient(fast_api, raise_server_exceptions=False)
 

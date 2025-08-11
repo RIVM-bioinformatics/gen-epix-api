@@ -284,6 +284,10 @@ class CaseAbac(PydanticBaseModel):
         - READ/WRITE_CASE/SET: read a case or case set from at least one of the given
           data collections
         """
+        # Special case: full access
+        if self.is_full_access:
+            return True
+
         # Parse input
         if current_data_collection_ids is None:
             current_data_collection_ids = set()

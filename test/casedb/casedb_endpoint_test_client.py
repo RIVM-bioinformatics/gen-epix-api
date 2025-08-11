@@ -21,7 +21,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
         app: App,
         fast_api: FastAPI,
         app_last_handled_exception: dict,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         super().__init__(app, fast_api, app_last_handled_exception, **kwargs)
         self.register_handler(

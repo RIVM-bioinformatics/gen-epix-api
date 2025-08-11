@@ -26,4 +26,25 @@
         "projectKey": "RIVM-bioinformatics_gen-epix-api"
     },
     "git.allowNoVerifyCommit": true,
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        { "text": "Use conventional commit format: type(scope): description" },
+        { "text": "Use imperative mood: 'Add feature' not 'Added feature'" },
+        // { "text": "Keep subject line under 50 characters" },
+        { "text": "Capitalize the first letter of the subject line" },
+        { "text": "Do not end the subject line with a period" },
+        { "text": "Use body for detailed explanation if needed" },
+        { "text": "Separate subject from body with a blank line" },
+        { "text": "Use bullet points for multiple changes in the body" },
+        { "text": "Reference related issues or pull requests" },
+        { "text": "Use emojis for visual clarity (optional)" },
+        { "text": "Keep commit messages concise and clear" },
+        { "text": "Avoid using 'WIP' in commit messages" },
+        { "text": "Use present tense for the subject line" },
+        { "text": "Use past tense for the body if describing completed work" },
+        { "text": "Avoid using 'fixes' or 'closes' in the subject line" },
+        { "text": "Use 'BREAKING CHANGE:' in the body for major changes" },
+        { "text": "Use types: feat, fix, docs, style, refactor, perf, test, chore, ci" },
+        { "text": "Include scope when relevant (e.g., casedb, omopdb, seqdb)" },
+        { "text": "Reference issue numbers with # prefix" }
+    ]
 }

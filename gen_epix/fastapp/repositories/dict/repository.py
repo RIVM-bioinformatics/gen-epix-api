@@ -23,7 +23,7 @@ class DictRepository(BaseRepository):
         repository_class: Type[BaseRepository],
         entities: Iterable[Entity],
         file: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> "DictRepository":
         if file.lower().endswith(".gz"):
             with gzip.open(file, "rb") as handle:
@@ -40,7 +40,7 @@ class DictRepository(BaseRepository):
         self,
         entities: Iterable[Entity],
         db: dict[Type[Model], dict[Hashable, Model]],
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         extra_data = kwargs.pop("extra_data", "ignore")
         missing_data = kwargs.pop("missing_data", "raise")
@@ -125,7 +125,7 @@ class DictRepository(BaseRepository):
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
         filter: Filter | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         BaseRepository.verify_crud_args(model_class, objs, obj_ids, operation)
         match operation:
@@ -202,7 +202,7 @@ class DictRepository(BaseRepository):
             case _:
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
-    def uow(self, **kwargs: dict) -> BaseUnitOfWork:
+    def uow(self, **kwargs: Any) -> BaseUnitOfWork:
         return DictUnitOfWork()
 
     def split_filter(
@@ -235,7 +235,7 @@ class DictRepository(BaseRepository):
         filter: Filter | None,
         cascade_read: bool = False,
         return_id: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model]:
         df = self._db[model_class]
         # Get any query filter
@@ -281,7 +281,7 @@ class DictRepository(BaseRepository):
         cascade_read: bool = False,
         return_id: bool = False,
         allow_duplicate_ids: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Model:
         return self.read_some(
             model_class,
@@ -299,7 +299,7 @@ class DictRepository(BaseRepository):
         cascade_read: bool = False,
         return_id: bool = False,
         allow_duplicate_ids: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model]:
         df = self._db[model_class]
         # Read some or one
@@ -334,7 +334,7 @@ class DictRepository(BaseRepository):
         raise_on_present: bool = False,
         raise_on_missing: bool = False,
         return_id: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Hashable | list[Hashable] | Model | list[Model]:
         df = self._db[model_class]
         get_id = self._get_id[model_class]
@@ -413,7 +413,7 @@ class DictRepository(BaseRepository):
         self,
         model_class: Type[Model],
         obj_ids: Hashable | Iterable[Hashable],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Hashable | list[Hashable] | None:
         df = self._db[model_class]
         is_iterable, obj_ids = DictRepository._to_iterable(obj_ids)
@@ -450,7 +450,7 @@ class DictRepository(BaseRepository):
         return obj_ids if is_iterable else obj_ids[0]
 
     def delete_all(
-        self, model_class: Type[Model], filter: Filter | None, **kwargs: dict
+        self, model_class: Type[Model], filter: Filter | None, **kwargs: Any
     ) -> list[Hashable]:
         df = self._db[model_class]
         # Get any query filter

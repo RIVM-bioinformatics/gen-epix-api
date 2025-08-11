@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -15,7 +16,7 @@ from gen_epix.seqdb.repositories.sa_model.base import (
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         entities = kwargs.pop("entities", BaseSeqRepository.ENTITIES)
         super().__init__(
             engine,

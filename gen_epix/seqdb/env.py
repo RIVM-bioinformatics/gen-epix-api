@@ -9,8 +9,8 @@ from gen_epix.fastapp.repositories import DictRepository, SARepository
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.services.auth import AuthService
 from gen_epix.fastapp.services.auth import (
-    OIDCClient as OIDCClient,  # pylint: disable=unused-import,useless-import-alias
-)
+    OIDCClient as OIDCClient,
+)  # pylint: disable=unused-import,useless-import-alias
 from gen_epix.seqdb.domain import DOMAIN, enum
 from gen_epix.seqdb.domain.command.role import RoleGenerator
 from gen_epix.seqdb.domain.service import ORDERED_SERVICE_TYPES
@@ -35,7 +35,7 @@ from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):
-    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict):
+    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
         data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
         self._app: App = data["app"]
@@ -49,7 +49,7 @@ class AppEnv(BaseAppEnv):
 
     @staticmethod
     def compose_application(
-        app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict
+        app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
     ) -> dict:
         # Get logger for setup
         try:

@@ -1,6 +1,7 @@
 import abc
 from enum import Enum
 from test.test_client.user_journey import UserJourney
+from typing import Any
 
 import pandas as pd
 
@@ -46,7 +47,7 @@ class LogParser(abc.ABC):
         self.log_records: list[dict] = []
 
     @abc.abstractmethod
-    def parse(self, **kwargs: dict) -> tuple[list[dict], list[str]]:
+    def parse(self, **kwargs: Any) -> tuple[list[dict], list[str]]:
         raise NotImplementedError
 
     def to_excel(self, path: str) -> None:
@@ -54,5 +55,5 @@ class LogParser(abc.ABC):
         df.to_excel(path, index=False)
 
     @abc.abstractmethod
-    def create_user_journey(self, **kwargs: dict) -> UserJourney:
+    def create_user_journey(self, **kwargs: Any) -> UserJourney:
         raise NotImplementedError

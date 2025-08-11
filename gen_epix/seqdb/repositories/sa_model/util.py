@@ -12,7 +12,7 @@ from gen_epix.seqdb.domain.model.base import Model
 def create_table_args(
     model_class: Type[Model],
     field_name_map: dict[str, str] | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple:
     entity: Entity = model_class.ENTITY  # type: ignore[attr-defined]
     uq_constraints = []
@@ -41,7 +41,7 @@ def create_mapped_column(
     model_class: Type[Model],
     field_name: str,
     field_name_map: dict[str, str] | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> MappedColumn[Any]:
     entity: Entity = model_class.ENTITY  # type: ignore[attr-defined]
     fieldinfo = model_class.model_fields[field_name]

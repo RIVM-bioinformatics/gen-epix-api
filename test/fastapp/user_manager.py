@@ -35,9 +35,7 @@ class UserManager(BaseUserManager):
         self.users[new_user.id] = new_user
         return new_user
 
-    def create_new_user_from_token(
-        self, user: User, token: str, **kwargs: dict
-    ) -> User:
+    def create_new_user_from_token(self, user: User, token: str, **kwargs: Any) -> User:
         if user.id in self.users:
             raise exc.AlreadyExistingIdsError(f"{user.id} already exists")
         self.users[user.id] = user

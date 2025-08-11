@@ -42,7 +42,7 @@ from gen_epix.filter import (
 
 class SARepository(BaseRepository):
 
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
         self._id: str = kwargs.get("id", str(uuid.uuid4()))  # type: ignore[assignment]
@@ -83,7 +83,7 @@ class SARepository(BaseRepository):
 
     def uow(
         self,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> BaseUnitOfWork:
         if self._uow_context_stack:
             # Nested within another context -> reuse the session of that context
@@ -112,7 +112,7 @@ class SARepository(BaseRepository):
         self,
         isolation_level: IsolationLevel | None = None,
         expire_on_commit: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Session:
         isolation_level = isolation_level or self._default_isolation_level
         session: Session = self._session_maker_by_isolation_level[isolation_level](
@@ -120,7 +120,7 @@ class SARepository(BaseRepository):
         )
         return session
 
-    def register_mappers(self, **kwargs: dict) -> None:
+    def register_mappers(self, **kwargs: Any) -> None:
         """
         Default implementation to register standard mappers for a list of entities.
         """
@@ -192,7 +192,7 @@ class SARepository(BaseRepository):
         user_id: Hashable | None,
         model_class: Type,
         obj: Any | Iterable[Any],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(obj, model_class):
@@ -200,7 +200,7 @@ class SARepository(BaseRepository):
         return [mapper.dump(user_id, x, **kwargs) for x in obj]
 
     def from_sql(
-        self, model_class: Type, row: Any | Iterable[Any], **kwargs: dict
+        self, model_class: Type, row: Any | Iterable[Any], **kwargs: Any
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(row, Iterable):
@@ -273,7 +273,7 @@ class SARepository(BaseRepository):
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
     def create_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.create_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -282,7 +282,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -312,11 +312,11 @@ class SARepository(BaseRepository):
         created_objs = self._execute_sa(session, _execute, kwargs)
         return created_objs  # type: ignore[return-value]
 
-    def read_one(self, model_class: Type, obj_id: Hashable, **kwargs: dict) -> Model:
+    def read_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> Model:
         return self.read_some(model_class, [obj_id], **kwargs)[0]
 
     def read_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: dict
+        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[Model]:
         """
         :param optimize_parameter_handling, optional kwarg:
@@ -365,7 +365,7 @@ class SARepository(BaseRepository):
         return objs
 
     def read_all(
-        self, model_class: Type, filter: Filter | None, **kwargs: dict
+        self, model_class: Type, filter: Filter | None, **kwargs: Any
     ) -> list[Model]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -415,7 +415,7 @@ class SARepository(BaseRepository):
         return objs
 
     def update_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.update_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -424,7 +424,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
         objs = objs if isinstance(objs, list) else list(objs)
@@ -469,7 +469,7 @@ class SARepository(BaseRepository):
         return updated_objs
 
     def upsert_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.upsert_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -478,12 +478,12 @@ class SARepository(BaseRepository):
         model_class: Type,
         _user_id: Hashable,
         _objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         raise NotImplementedError
 
     def delete_one(
-        self, model_class: Type, user_id: Hashable, row_id: Hashable, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, row_id: Hashable, **kwargs: Any
     ) -> Hashable:
         return self.delete_some(model_class, user_id, [row_id], **kwargs)[0]
 
@@ -492,7 +492,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         row_ids: Iterable[Hashable],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Hashable]:
         # Check arguments
         row_ids = row_ids if isinstance(row_ids, list) else list(row_ids)
@@ -524,7 +524,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         filter: Filter | None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Hashable] | None:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -550,11 +550,11 @@ class SARepository(BaseRepository):
         deleted_row_ids = self._execute_sa(session, _execute, kwargs)
         return deleted_row_ids if return_id else None
 
-    def exists_one(self, model_class: Type, obj_id: Hashable, **kwargs: dict) -> bool:
+    def exists_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> bool:
         return self.exists_some(model_class, [obj_id], **kwargs)[0]
 
     def exists_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: dict
+        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[bool]:
         session: Session = kwargs.get("session")  # type: ignore[assignment]
 
@@ -712,7 +712,7 @@ class SARepository(BaseRepository):
         # Filter cannot be converted
         return None, filter
 
-    def print_db_content(self, model_class: Type[Model], **kwargs: dict) -> None:
+    def print_db_content(self, model_class: Type[Model], **kwargs: Any) -> None:
         """Helper method for debugging"""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
@@ -958,7 +958,7 @@ class SARepository(BaseRepository):
         cls,
         entities: list[Entity],
         connection_string: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> "SARepository":
         # Parse arguments
         echo = kwargs.pop("echo", False)

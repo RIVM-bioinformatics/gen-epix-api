@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import Engine
 
 from gen_epix.casedb.domain.repository.system import BaseSystemRepository
@@ -10,7 +12,7 @@ from gen_epix.fastapp.repositories import SARepository
 
 
 class SystemSARepository(SARepository, BaseSystemRepository):
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         entities = kwargs.pop("entities", BaseSystemRepository.ENTITIES)
         super().__init__(
             engine,
