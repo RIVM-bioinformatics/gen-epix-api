@@ -1,7 +1,7 @@
-import os
 import re
 import uuid
 import warnings
+from pathlib import Path
 from typing import Any, Callable, Hashable, Iterable, Self, Sequence, Type
 
 import sqlalchemy as sa
@@ -973,13 +973,14 @@ class SARepository(BaseRepository):
             )
             if recreate_sqlite_file:
                 # Remove existing file
-                if os.path.isfile(sqlite_file):
-                    os.remove(sqlite_file)
+                if Path(sqlite_file).is_file():
+                    Path(sqlite_file).unlink()
+
                 # Create the file by creating a connection
                 engine = sa.create_engine("sqlite:///" + sqlite_file)
                 conn = engine.connect()
                 conn.close()
-            elif not os.path.isfile(sqlite_file):
+            elif not Path(sqlite_file).is_file():
                 raise ValueError("Unable to derive file from connection string")
 
             # Filter some warnings

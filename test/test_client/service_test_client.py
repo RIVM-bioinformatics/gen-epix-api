@@ -1,9 +1,9 @@
 import datetime
 import logging
-import os
 import re
 import shutil
 from enum import Enum
+from pathlib import Path
 from test.test_client.endpoint_test_client import EndpointTestClient, EndpointVersion
 from test.test_client.enum import RepositoryType, TestType
 from test.test_client.util import get_test_name, get_test_output_dir, set_log_level
@@ -358,9 +358,9 @@ class ServiceTestClient:
                         curr_cfg["file"],
                         flags=re.IGNORECASE,
                     )
-                    if not os.path.isfile(source_file):
+                    if not Path(source_file).is_file():
                         continue
-                    target_file = os.path.join(test_dir, os.path.basename(source_file))
+                    target_file = Path(test_dir) / Path(source_file).name
                     curr_cfg["file"] = target_file
                     shutil.copyfile(source_file, target_file)
                 case RepositoryType.SA_SQL:

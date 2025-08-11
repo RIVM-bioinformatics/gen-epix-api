@@ -1,17 +1,17 @@
 import gzip
-import os
 import pickle
 import sys
+from pathlib import Path
 
 import pandas as pd
 
 from util.util import generate_ulid
 
-sys.path.append(os.path.join(os.getcwd()))
+sys.path.append(str(Path.cwd()))
 
-db_file_name = os.path.join(os.getcwd(), "data/CASEDB - Reference data.pkl.gz")
-out_excel_file_name = os.path.join(
-    os.getcwd(), "data/CASEDB - Reference data.extra_case_type_set_members.xlsx"
+db_file_name = Path.cwd() / "data/CASEDB - Reference data.pkl.gz"
+out_excel_file_name = (
+    Path.cwd() / "data/CASEDB - Reference data.extra_case_type_set_members.xlsx"
 )
 
 
