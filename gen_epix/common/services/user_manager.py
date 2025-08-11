@@ -263,7 +263,7 @@ class UserManager(BaseUserManager):
 
             # Verify if create_by_user made an invitation for this user that is valid
             timestamp = datetime.datetime.now()
-            user_invitations: list[self.user_invitation_class] = (
+            user_invitations: list[self.user_invitation_class] = ( # pyright: ignore[reportInvalidTypeForm]
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     created_by_user_id,

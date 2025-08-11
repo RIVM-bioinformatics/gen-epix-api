@@ -120,6 +120,3 @@ def get_package_version() -> str:
         with open(file, "rb") as handle:
             version: str = tomllib.load(handle)["project"]["version"]
     return version
-    # raise ValueError(
-    #     f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names} that are not in model {model_class.__name__}"
-    # )

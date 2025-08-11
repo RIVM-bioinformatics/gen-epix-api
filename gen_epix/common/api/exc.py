@@ -67,7 +67,7 @@ def generate_handle_exception_function(
         )
         # Log without stack trace since this is expected to be logged separately
         log_message = app.create_log_message(
-            log_message_id, None, user_id=user.id if user else None, exception=exception  # type: ignore[arg-type]
+            log_message_id, None, user_id=user.id if user else None, exception=exception
         )
         # Raise HTTP exception
         if isinstance(exception, exc.DomainException):
