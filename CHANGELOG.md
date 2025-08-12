@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.9 (2025-08-12)
+
+### Bug Fixes
+
+- Add correct renovate config
+  ([`676412e`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/676412ef1e36bf372d2c901f7e46b6ef27e5b662))
+
+
 ## v0.1.8 (2025-08-11)
 
 ### Bug Fixes
