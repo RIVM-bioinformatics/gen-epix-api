@@ -1,0 +1,38 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:best-practices"
+    ],
+    "automerge": false,
+    "prHourlyLimit": 2,
+    "prConcurrentLimit": 5,
+    "packageRules": [
+        {
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "labels": [
+                "dependencies",
+                "major"
+            ]
+        },
+        {
+            "matchUpdateTypes": [
+                "minor"
+            ],
+            "labels": [
+                "dependencies",
+                "minor"
+            ]
+        },
+        {
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "labels": [
+                "dependencies",
+                "patch"
+            ]
+        }
+    ]
+}
