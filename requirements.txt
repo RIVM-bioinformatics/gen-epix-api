@@ -3,7 +3,7 @@
 # application server
 fastapi[standard]==0.115.5
 uvicorn==0.32.1
-gunicorn==21.2.*
+gunicorn==23.0.*
 starlette==0.41.3
 httpx==0.27.2
 python-jose==3.3.0
