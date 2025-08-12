@@ -6,6 +6,7 @@
     "automerge": false,
     "prHourlyLimit": 2,
     "prConcurrentLimit": 5,
+   "baseBranches": ["dev"],    
     "packageRules": [
         {
             "matchUpdateTypes": [
