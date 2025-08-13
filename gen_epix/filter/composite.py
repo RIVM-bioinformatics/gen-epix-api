@@ -64,6 +64,14 @@ class CompositeFilter(Filter):
     )
     _is_composite: bool = True
 
+    def _get_row_value(
+        self, row: dict | BaseModel, key: Hashable, is_model: bool
+    ) -> Any:
+        """Get the value from the row, handling both dict and BaseModel."""
+        if is_model:
+            return getattr(row, key, None)
+        return row.get(key, None)
+
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
         if len(self.filters) == 0:
@@ -155,27 +163,38 @@ class CompositeFilter(Filter):
         # Function is implemented dynamically in _validate_state
         raise NotImplementedError()
 
-    def _match_row(self, value_exists: Iterable[bool], value: Iterable[Any]) -> bool:
+    def _match_row(
+        self, value_exists: Iterable[bool], value: Iterable[Any], is_model: bool
+    ) -> bool:
         # Function is implemented dynamically in _validate_state
         raise NotImplementedError()
 
     def _not_none_row_iterator(
-        self, row: dict[Hashable, Any | None] | BaseModel
+        self, row: dict[Hashable, Any | None] | BaseModel, is_model: bool = False
     ) -> Generator:
         for filter in self.filters:  # type: ignore
             if filter._is_composite:
-                yield all(filter._not_none_row_iterator(row))
+                yield all(filter._not_none_row_iterator(row, is_model))
             else:
-                yield filter.key in row and row[filter.key] is not None
+                yield (
+                    (is_model or filter.key in row)
+                    and self._get_row_value(row, filter.key, is_model) is not None
+                )
 
     def _not_na_row_iterator(
-        self, row: dict[Hashable, Any | None] | BaseModel, na_values: set[Any]
+        self,
+        row: dict[Hashable, Any | None] | BaseModel,
+        na_values: set[Any],
+        is_model: bool = False,
     ) -> Generator:
         for filter in self.filters:  # type: ignore
             if filter._is_composite:
-                yield all(filter._not_na_row_iterator(row, na_values))
+                yield all(filter._not_na_row_iterator(row, na_values, is_model))
             else:
-                yield filter.key in row and row[filter.key] not in na_values
+                yield (
+                    (is_model or filter.key in row)
+                    and self._get_row_value(row, filter.key, is_model) not in na_values
+                )
 
     def _all_subfilters_have_key(self) -> bool:
         retval = True
@@ -227,13 +246,16 @@ class CompositeFilter(Filter):
             )
         # Match, per filter, if both key exists, value not null and value matches
         map_fun = self._get_map_fun_list(map_fun)
-        row_dict = row.model_dump() if is_model else row
         if na_values is None:
             return (
                 self._match_row(
-                    self._not_none_row_iterator(row_dict),
+                    self._not_none_row_iterator(row, is_model),
                     (
-                        y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                        (
+                            y(row)
+                            if x._is_composite
+                            else y(self._get_row_value(row, x.key, is_model))
+                        )
                         for x, y in zip(self.filters, map_fun)
                     ),
                 )
@@ -247,9 +269,13 @@ class CompositeFilter(Filter):
         else:
             return (
                 self._match_row(
-                    self._not_na_row_iterator(row_dict, na_values),
+                    self._not_na_row_iterator(row, na_values, is_model),
                     (
-                        y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                        (
+                            y(row)
+                            if x._is_composite
+                            else y(self._get_row_value(row, x.key, is_model))
+                        )
                         for x, y in zip(self.filters, map_fun)
                     ),
                 )
@@ -276,12 +302,15 @@ class CompositeFilter(Filter):
         map_fun = self._get_map_fun_list(map_fun)
         if na_values is None:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 yield (
                     self._match_row(
-                        self._not_none_row_iterator(row_dict),
+                        self._not_none_row_iterator(row, is_model),
                         (
-                            y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                            (
+                                y(row)
+                                if x._is_composite
+                                else y(self._get_row_value(row, x.key, is_model))
+                            )
                             for x, y in zip(self.filters, map_fun)
                         ),
                     )
@@ -289,12 +318,15 @@ class CompositeFilter(Filter):
                 )
         else:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 yield (
                     self._match_row(
-                        self._not_na_row_iterator(row_dict, na_values),
+                        self._not_na_row_iterator(row, na_values, is_model),
                         (
-                            y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                            (
+                                y(row)
+                                if x._is_composite
+                                else y(self._get_row_value(row, x.key, is_model))
+                            )
                             for x, y in zip(self.filters, map_fun)
                         ),
                     )
@@ -321,12 +353,15 @@ class CompositeFilter(Filter):
         map_fun = self._get_map_fun_list(map_fun)
         if na_values is None:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 if (
                     self._match_row(
-                        self._not_none_row_iterator(row_dict),
+                        self._not_none_row_iterator(row, is_model),
                         (
-                            y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                            (
+                                y(row)
+                                if x._is_composite
+                                else y(self._get_row_value(row, x.key, is_model))
+                            )
                             for x, y in zip(self.filters, map_fun)
                         ),
                     )
@@ -335,12 +370,15 @@ class CompositeFilter(Filter):
                     yield row
         else:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 if (
                     self._match_row(
-                        self._not_na_row_iterator(row_dict, na_values),
+                        self._not_na_row_iterator(row, na_values, is_model),
                         (
-                            y(row_dict) if x._is_composite else y(row_dict.get(x.key))
+                            (
+                                y(row)
+                                if x._is_composite
+                                else y(self._get_row_value(row, x.key, is_model))
+                            )
                             for x, y in zip(self.filters, map_fun)
                         ),
                     )
