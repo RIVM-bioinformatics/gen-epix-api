@@ -30,6 +30,14 @@ class Filter(BaseModel):
     def is_composite(self) -> bool:
         return self._is_composite
 
+    def _get_row_value(
+        self, row: dict | BaseModel, key: Hashable, is_model: bool
+    ) -> Any:
+        """Helper method to get a attribute value from a row model"""
+        if is_model:
+            return getattr(row, key, None)
+        return row.get(key, None)
+
     def match_value(
         self,
         value: Any | None,
@@ -126,18 +134,17 @@ class Filter(BaseModel):
         if not map_fun:
             map_fun = lambda x: x
         key = self.key
-        row_dict = row.model_dump() if is_model else row
         if na_values is None:
             return (
-                key in row_dict
-                and row_dict[key] is not None
-                and self._match(map_fun(row_dict[key]))
+                (is_model or key in row)
+                and self._get_row_value(row, key, is_model) is not None
+                and self._match(map_fun(self._get_row_value(row, key, is_model)))
             ) ^ self.invert
         else:
             return (
-                key in row_dict
-                and row_dict[key] not in na_values
-                and self._match(map_fun(row_dict[key]))
+                (is_model or key in row)
+                and self._get_row_value(row, key, is_model) not in na_values
+                and self._match(map_fun(self._get_row_value(row, key, is_model)))
             ) ^ self.invert
 
     def match_rows(
@@ -166,19 +173,17 @@ class Filter(BaseModel):
         key = self.key
         if na_values is None:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 yield (
-                    key in row_dict
-                    and row_dict[key] is not None
-                    and self._match(map_fun(row_dict[key]))
+                    (is_model or key in row)
+                    and self._get_row_value(row, key, is_model) is not None
+                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert
         else:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 yield (
-                    key in row_dict
-                    and row_dict[key] not in na_values
-                    and self._match(map_fun(row_dict[key]))
+                    (is_model or key in row)
+                    and self._get_row_value(row, key, is_model) not in na_values
+                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert
 
     def filter_rows(
@@ -199,20 +204,18 @@ class Filter(BaseModel):
         key = self.key
         if na_values is None:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 if (
-                    key in row_dict
-                    and row_dict[key] is not None
-                    and self._match(map_fun(row_dict[key]))
+                    (is_model or key in row)
+                    and self._get_row_value(row, key, is_model) is not None
+                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert:
                     yield row
         else:
             for row in rows:
-                row_dict = row.model_dump() if is_model else row
                 if (
-                    key in row_dict
-                    and row_dict[key] not in na_values
-                    and self._match(map_fun(row_dict[key]))
+                    (is_model or key in row)
+                    and self._get_row_value(row, key, is_model) not in na_values
+                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert:
                     yield row
 

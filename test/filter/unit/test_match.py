@@ -4,6 +4,7 @@ from test.filter.unit import util
 
 import numpy as np
 import pytest
+from pydantic import BaseModel
 
 from gen_epix.filter import ExistsFilter, NumberRangeFilter
 from gen_epix.filter.composite import CompositeFilter
@@ -317,3 +318,111 @@ class TestFilterMatch:
             {"a": "a"},
         ]
         util._test_filter(filter, rows, [True])
+
+    def test_simple_filter_pydantic_and_plain_python_class(self) -> None:
+        
+        class _PydanticModel(BaseModel):
+            x: int
+
+        class _SimpleClass:
+            def __init__(self, x: int):
+                self.x = x
+
+        values: list[int] = [5, 10, 15, 20, 26]
+        pydantic_rows = [_PydanticModel(x=x) for x in values]
+        plain_rows = [_SimpleClass(x=x) for x in values]
+
+        num_range_filter = NumberRangeFilter(lower_bound=1, upper_bound=25, key="x")
+        expected_matches: list[bool] = [True, True, True, True, False]
+
+        pydantic_matches = list(
+            num_range_filter.match_rows(pydantic_rows, is_model=True)
+        )
+        pydantic_filtered = list(
+            num_range_filter.filter_rows(pydantic_rows, is_model=True)
+        )
+
+        assert pydantic_matches == expected_matches
+        assert pydantic_filtered == pydantic_rows[:-1]
+        assert [row.x for row in pydantic_filtered] == values[:-1]
+
+        # Test with plain Python class
+        simple_matches = list(num_range_filter.match_rows(plain_rows, is_model=True))
+        simple_filtered = list(num_range_filter.filter_rows(plain_rows, is_model=True))
+
+        assert simple_matches == expected_matches
+        assert len(simple_filtered) == len(plain_rows) - 1
+        assert [row.x for row in simple_filtered] == values[:-1]
+
+    def test_composite_filter_pydantic_and_plain_python_class(self) -> None:
+
+        class _PydanticXY(BaseModel):
+            x: int
+            y: str
+
+        class _PlainXY:
+            def __init__(self, x: int, y: str):
+                self.x = x
+                self.y = y
+
+        data: list[tuple[int, str]] = [
+            (5, "a"),
+            (10, "b"),
+            (15, "z"),
+            (20, "b"),
+            (26, "a"),
+        ]
+        pydantic_rows = [_PydanticXY(x=x, y=y) for x, y in data]
+        plain_rows = [_PlainXY(x=x, y=y) for x, y in data]
+
+        filter_range = NumberRangeFilter(lower_bound=10, upper_bound=20, key="x")
+        filter_set = StringSetFilter(members={"a", "b"}, key="y")
+
+        # AND
+        composite_and = CompositeFilter(
+            filters=[filter_range, filter_set],
+            operator="AND",
+        )
+        expected_matches = [False, True, False, False, False]
+        assert (
+            list(composite_and.match_rows(pydantic_rows, is_model=True))
+            == expected_matches
+        )
+        assert (
+            list(composite_and.match_rows(plain_rows, is_model=True))
+            == expected_matches
+        )
+
+        pydantic_filtered_and = list(
+            composite_and.filter_rows(pydantic_rows, is_model=True)
+        )
+        plain_filtered_and = list(composite_and.filter_rows(plain_rows, is_model=True))
+
+        assert [(r.x, r.y) for r in pydantic_filtered_and] == [data[1]]
+        assert [(r.x, r.y) for r in plain_filtered_and] == [data[1]]
+        assert pydantic_filtered_and[0] == pydantic_rows[1]
+        assert plain_filtered_and[0] == plain_rows[1]
+
+        # OR
+        composite_or = CompositeFilter(
+            filters=[filter_range, filter_set],
+            operator="OR",
+        )
+        expected_matches = [True, True, True, True, True]
+
+        assert (
+            list(composite_or.match_rows(pydantic_rows, is_model=True))
+            == expected_matches
+        )
+        assert (
+            list(composite_or.match_rows(plain_rows, is_model=True)) == expected_matches
+        )
+
+        pydantic_filtered_or = list(
+            composite_or.filter_rows(pydantic_rows, is_model=True)
+        )
+        plain_filtered_or = list(composite_or.filter_rows(plain_rows, is_model=True))
+        assert [(r.x, r.y) for r in pydantic_filtered_or] == data
+        assert [(r.x, r.y) for r in plain_filtered_or] == data
+        assert pydantic_filtered_or == pydantic_rows
+        assert plain_filtered_or == plain_rows
