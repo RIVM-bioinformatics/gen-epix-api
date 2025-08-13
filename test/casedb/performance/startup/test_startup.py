@@ -1,7 +1,7 @@
 import cProfile
 import logging
-import os
 import pstats
+from pathlib import Path
 from test.test_client.util import parse_stats
 
 import pandas as pd
@@ -72,15 +72,11 @@ class TestStartup:
             test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
             repository_type=RepositoryType.DICT,
         ).test_dir
-        with open(os.path.join(test_dir, cls.__name__) + ".performance.html", "w") as f:
+        with open(Path(test_dir) / f"{cls.__name__}.performance.html", "w") as f:
             f.write("".join(PERFORMANCE_HTML))
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(
-            os.path.join(test_dir, cls.__name__) + ".performance.csv", index=False
-        )
-        df.to_excel(
-            os.path.join(test_dir, cls.__name__) + ".performance.xlsx", index=False
-        )
+        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
+        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
 
     # @classmethod
     # def tearDownClass(cls):
@@ -90,8 +86,8 @@ class TestStartup:
     #     ).test_dir
     #     df = pd.DataFrame.from_records(PERFORMANCE_DF)
     #     df.to_csv(
-    #         os.path.join(test_dir, cls.__name__) + ".performance.csv", index=False
+    #         Path(test_dir) / f"{cls.__name__}.performance.csv", index=False
     #     )
     #     df.to_excel(
-    #         os.path.join(test_dir, cls.__name__) + ".performance.xlsx", index=False
+    #         Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False
     #     )

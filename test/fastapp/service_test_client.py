@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from test.fastapp.command import (
     Model1_1CrudCommand,
     Model1_2CrudCommand,
@@ -38,9 +38,9 @@ class ServiceTestClient:
 
     def __init__(self, repository_class: Type[BaseRepository], **kwargs: Any) -> None:
         self.test_type = kwargs.get("test_type", repository_class.__name__)
-        self.test_name = kwargs.get("test_name", get_test_name(self.test_type))
-        self.test_dir = os.path.join(get_test_root_output_dir(), self.test_name)
-        os.makedirs(self.test_dir, exist_ok=True)
+        self.test_name: str = kwargs.get("test_name", get_test_name(self.test_type))
+        self.test_dir = get_test_root_output_dir() / self.test_name
+        self.test_dir.mkdir(parents=True, exist_ok=True)
         self.repository_type = kwargs.get("repository_type", repository_class.__name__)
         self.user_manager = kwargs.pop("user_manager", UserManager())
         self.domain = kwargs.pop("domain", Domain(self.__class__.__name__))
@@ -126,8 +126,8 @@ class ServiceTestClient:
         if issubclass(repository_class, DictRepository):
             repository = DictRepository(entities, {}, missing_data="ignore")
         elif issubclass(repository_class, SARepository):
-            sqlite_file = os.path.join(self.test_dir, f"{name}.sqlite")
-            connection_string = f"sqlite:///{sqlite_file}"
+            sqlite_file = Path(self.test_dir) / f"{name}.sqlite"
+            connection_string = f"sqlite:///{str(sqlite_file)}"
             repository = repository_class.create_sa_repository(
                 entities,
                 connection_string,
@@ -142,9 +142,9 @@ class ServiceTestClient:
             #     raise ValueError("Multiple schemas are not supported")
             # schema_name = schema_names.pop()
 
-            # sqlite_file = os.path.join(self.test_dir, f"{name}.sqlite")
-            # if os.path.exists(sqlite_file):
-            #     os.remove(sqlite_file)
+            # sqlite_file = Path(self.test_dir) / f"{name}.sqlite"
+            # if sqlite_file.is_file():
+            #     sqlite_file.unlink()
 
             # @sa.event.listens_for(sa.Engine, "connect")
             # def set_sqlite_pragma(dbapi_connection, _) -> None:

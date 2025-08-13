@@ -989,7 +989,7 @@ class SARepository(BaseRepository):
             )
             if recreate_sqlite_file:
                 # Remove existing file
-                if sqlite_file.exists():
+                if sqlite_file.is_file():
                     sqlite_file.unlink()
                 # Create the file by creating a connection
                 engine = sa.create_engine(
@@ -997,7 +997,7 @@ class SARepository(BaseRepository):
                 )
                 conn = engine.connect()
                 conn.close()
-            elif not sqlite_file.exists():
+            elif not sqlite_file.is_file():
                 raise ValueError("Unable to derive file from connection string")
 
             # Filter some warnings

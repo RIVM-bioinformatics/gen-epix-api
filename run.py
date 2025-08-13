@@ -840,12 +840,12 @@ class Run:
         df = pd.DataFrame.from_dict(
             {f"uuid{i}": [generate_ulid() for j in range(n_rows)] for i in range(100)}
         )
-        xls_file = os.path.join(
-            os.path.dirname(__file__), "test", "data", "output", "generated_uuids.xlsx"
+        xls_file = (
+            Path(__file__).parent / "test" / "data" / "output" / "generated_uuids.xlsx"
         )
         df.to_excel(xls_file, sheet_name="uuid", index=False)
         print(
-            f"Total of {n_rows} uuids times {df.shape[1]} columns generated and written to file {xls_file}"
+            f"Total of {n_rows} uuids times {df.shape[1]} columns generated and written to file {str(xls_file)}"
         )
 
     def other_general_run_linters(self) -> None:
@@ -917,11 +917,14 @@ class Run:
         from test.test_client.log_parser_v1 import V1LogParser
         from test.test_client.log_parser_v2 import V2LogParser
 
-        path = path or os.path.join("test", "data", "output", "log.debug.txt")
-        out_log_excel_file = os.path.join(os.path.dirname(path), "log.debug.xlsx")
-        out_user_journey_file = os.path.join(
-            os.path.dirname(path), "log.user_journey.pkl.gz"
-        )
+        if path:
+            path_obj = Path(path)
+        else:
+            path_obj = Path("test") / "data" / "output" / "log.debug.txt"
+        out_log_excel_file = str(path_obj.parent / "log.debug.xlsx")
+        out_user_journey_file = str(path_obj.parent / "log.user_journey.pkl.gz")
+        path = str(path_obj)
+
         log_parser: LogParser
         if not version or version == 2:
             log_parser = V2LogParser(path)
@@ -935,18 +938,18 @@ class Run:
         user_journey.to_pickle(out_user_journey_file)
 
     def other_seqdb_parse_ncbi_taxonomy(self) -> None:
-        dir = os.path.join(os.getcwd(), ".ete")
-        os.environ["HOME"] = dir
-        os.environ["XDG_DATA_HOME"] = os.path.join(dir, "data")
-        os.environ["XDG_CONFIG_HOME"] = os.path.join(dir, "config")
-        os.environ["XDG_CACHE_HOME"] = os.path.join(dir, "cache")
+        dir = Path.cwd() / ".ete"
+        os.environ["HOME"] = str(dir)
+        os.environ["XDG_DATA_HOME"] = str(dir / "data")
+        os.environ["XDG_CONFIG_HOME"] = str(dir / "config")
+        os.environ["XDG_CACHE_HOME"] = str(dir / "cache")
         from util.ncbi_taxonomy import parse_ncbi_taxonomy
 
         parse_ncbi_taxonomy()
 
     def other_seqdb_parse_alleles(self) -> None:
-        dir = os.path.join(os.getcwd(), ".ete")
-        os.environ["HOME"] = dir
+        dir = Path.cwd() / ".ete"
+        os.environ["HOME"] = str(dir)
         from util.wgmlst import parse_alleles
 
         parse_alleles()
