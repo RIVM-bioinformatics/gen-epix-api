@@ -12,7 +12,7 @@ from gen_epix.fastapp.model import Permission
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
-class ApiPermission(BaseModel):
+class ApiPermission(BaseModel, frozen=True):
     command_name: CommandName = Field(description=Permission.model_fields["command_name"].description) # pyright: ignore[reportInvalidTypeForm] # Dynamic type annotation required
     permission_type: PermissionType = Field(description=Permission.model_fields["permission_type"].description)
 

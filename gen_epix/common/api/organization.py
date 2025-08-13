@@ -179,7 +179,7 @@ def create_organization_endpoints(
         try:
             cmd = command.RetrieveOwnPermissionsCommand(user=user)
             permissions: set[Permission] = app.handle(cmd)
-            retval = {api_permission_class(x.model_dump()) for x in permissions}
+            retval = {api_permission_class(**x.model_dump()) for x in permissions}
         except Exception as exception:
             handle_exception("a7f3b8e2", user, exception)
         return retval
