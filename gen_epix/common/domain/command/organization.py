@@ -13,10 +13,6 @@ from gen_epix.fastapp import PermissionTypeSet
 # Non-CRUD commands
 
 
-class RetrieveCompleteUserCommand(Command):
-    pass
-
-
 class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationCommand):
     ASSOCIATION_CLASS: ClassVar = model.OrganizationSetMember
     LINK_FIELD_NAME1: ClassVar = "organization_set_id"

@@ -1,10 +1,20 @@
-from pydantic import Field
+from enum import Enum
+
+from pydantic import BaseModel, Field
 
 from gen_epix.common.api import UpdateUserRequestBody as CommonUpdateUserRequestBody
 from gen_epix.common.api import (
     UserInvitationRequestBody as CommonUserInvitationRequestBody,
 )
-from gen_epix.omopdb.domain import enum
+from gen_epix.fastapp.enum import PermissionType
+from gen_epix.fastapp.model import Permission
+from gen_epix.omopdb.domain import DOMAIN, enum
+
+CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
+
+class ApiPermission(BaseModel, frozen=True):
+    command_name: CommandName = Field(description=Permission.model_fields["command_name"].description) # pyright: ignore[reportInvalidTypeForm] # Dynamic type annotation required
+    permission_type: PermissionType = Field(description=Permission.model_fields["permission_type"].description)
 
 
 class UserInvitationRequestBody(CommonUserInvitationRequestBody):

@@ -11,7 +11,7 @@ from time import sleep
 from typing import Any, Hashable, Type, TypeVar
 from uuid import UUID
 
-from gen_epix.common.domain.model import CompleteUser, Model, User, UserInvitation
+from gen_epix.common.domain.model import Model, User, UserInvitation
 from gen_epix.fastapp import Command, CrudOperation
 from util.cfg import BaseAppCfg
 from util.env import BaseAppEnv
@@ -37,7 +37,6 @@ class ServiceTestClient:
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[User] = User,
         user_invitation_class: Type[UserInvitation] = UserInvitation,
-        complete_user_class: Type[CompleteUser] = CompleteUser,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         **kwargs: Any,
@@ -60,7 +59,6 @@ class ServiceTestClient:
         )
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
-        self.complete_user_class = complete_user_class
         self.log_level = log_level
         self.verbose = verbose
 

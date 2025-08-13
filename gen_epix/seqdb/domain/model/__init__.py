@@ -18,7 +18,6 @@ from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import DOMAIN, enum
-from gen_epix.seqdb.domain.model.organization import CompleteUser as CompleteUser
 from gen_epix.seqdb.domain.model.organization import User as User
 from gen_epix.seqdb.domain.model.organization import UserInvitation as UserInvitation
 from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol

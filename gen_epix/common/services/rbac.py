@@ -21,7 +21,7 @@ class RbacService(BaseRbacService):
         role_enum: Type[Enum] = Enum,
         **kwargs: Any,
     ):
-        kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)  # type: ignore[arg-type]
+        kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)
         super().__init__(app, logger=logger, **kwargs)  # type: ignore[arg-type]
         self._role_enum = role_enum
         self._root_role = role_enum["ROOT"]
@@ -37,7 +37,7 @@ class RbacService(BaseRbacService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         self.register_default_crud_handlers()
-        f(command.GetOwnPermissionsCommand, self.retrieve_user_permissions)
+        f(command.RetrieveOwnPermissionsCommand, self.retrieve_own_permissions)
 
     def register_policies(self) -> None:
         self.register_rbac_policies()
@@ -58,10 +58,10 @@ class RbacService(BaseRbacService):
     def retrieve_user_is_root(self, user: model.User) -> bool:  # type: ignore[override]
         return self._root_role in user.roles
 
-    def get_own_permissions(
-        self, cmd: command.GetOwnPermissionsCommand
+    def retrieve_own_permissions(
+        self, cmd: command.RetrieveOwnPermissionsCommand
     ) -> set[Permission]:
         user: model.User | None = cmd.user
         if not user or not user.id:
             return set()
-        return self.retrieve_user_permissions(user)  # type: ignore[arg-type]
+        return self.retrieve_user_permissions(user)

@@ -16,7 +16,6 @@ _ENTITY_KWARGS = {
 
 assert common_model.User.ENTITY
 assert common_model.UserInvitation.ENTITY
-assert common_model.CompleteUser.ENTITY
 
 class User(common_model.User):
     ENTITY: ClassVar = Entity(
@@ -48,22 +47,12 @@ class UserInvitation(common_model.UserInvitation):
         **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    invited_by_user: User | None = Field(
+        default=None,
+        description=common_model.UserInvitation.model_fields["invited_by_user"].description,
+    )
+    # Override roles to ensure it is a set of enum.Role
     roles: set[enum.Role] = Field( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
         description=common_model.UserInvitation.model_fields["roles"].description, # type: ignore[assignment]
-        min_length=1,
-    )
-
-
-# Non-persistable
-class CompleteUser(common_model.CompleteUser):
-    ENTITY: ClassVar = Entity(
-        **common_model.CompleteUser.ENTITY.model_dump(
-            exclude_unset=True, exclude_defaults=True, exclude={"schema_name"}
-        ),
-        **_ENTITY_KWARGS,
-    )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[enum.Role] = Field( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        description=common_model.CompleteUser.model_fields["roles"].description, # type: ignore[assignment]
         min_length=1,
     )

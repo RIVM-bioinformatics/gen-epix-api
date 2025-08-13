@@ -60,7 +60,6 @@ from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
-from gen_epix.omopdb.domain.model.organization import CompleteUser as CompleteUser
 from gen_epix.omopdb.domain.model.organization import User as User
 from gen_epix.omopdb.domain.model.organization import UserInvitation as UserInvitation
 

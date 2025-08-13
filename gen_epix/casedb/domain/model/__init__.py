@@ -64,7 +64,6 @@ from gen_epix.casedb.domain.model.ontology import ConceptSetMember as ConceptSet
 from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
-from gen_epix.casedb.domain.model.organization import CompleteUser as CompleteUser
 from gen_epix.casedb.domain.model.organization import User as User
 from gen_epix.casedb.domain.model.organization import UserInvitation as UserInvitation
 from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile

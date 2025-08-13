@@ -161,7 +161,7 @@ class RoleGenerator:
         },
         Role.GUEST: {
             # organization
-            (command.RetrieveCompleteUserCommand, PermissionTypeSet.E),
+            (command.RetrieveOwnPermissionsCommand, PermissionTypeSet.E),
             # system
             (command.RetrieveOutagesCommand, PermissionTypeSet.E),
         },

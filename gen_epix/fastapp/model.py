@@ -68,11 +68,11 @@ class Permission(PydanticBaseModel, frozen=True):
     @computed_field
     def sort_key(self) -> tuple[str, int]:
         permission_type_map = {
-            PermissionType.E: 0,
-            PermissionType.C: 1,
-            PermissionType.R: 2,
-            PermissionType.U: 3,
-            PermissionType.D: 4,
+            PermissionType.EXECUTE: 0,
+            PermissionType.CREATE: 1,
+            PermissionType.READ: 2,
+            PermissionType.UPDATE: 3,
+            PermissionType.DELETE: 4,
         }
         return self.command_name, permission_type_map[self.permission_type]
 

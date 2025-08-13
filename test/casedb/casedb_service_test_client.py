@@ -2,6 +2,7 @@ import datetime
 import logging
 from pathlib import Path
 import re
+from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.enum import RepositoryType as TestClientRepositoryType
 from test.test_client.enum import TestType
@@ -168,7 +169,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         app_cfg = APP_CFG
         cfg = app_cfg.cfg
         test_name = get_test_name(test_type)
-        test_dir: Path test_dir or get_test_output_dir(test_name)
+        test_dir: Path = test_dir or get_test_output_dir(test_name)
 
         # Set and adjust cfg
         app_cfg.cfg.app.debug = True
@@ -226,7 +227,6 @@ class CasedbServiceTestClient(ServiceTestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
-            complete_user_class=model.CompleteUser,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,

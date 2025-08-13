@@ -85,12 +85,6 @@ class RetrieveCaseSetStatsCommand(Command):
         description="The case set ids to retrieve stats for, if not all. UNIQUE",
     )
 
-    @field_validator("case_set_ids", mode="after")
-    def _validate_case_set_ids(cls, value: list[UUID]) -> list[UUID]:
-        if len(set(value)) < len(value):
-            raise ValueError("Duplicate case set ids")
-        return value
-
 
 class RetrieveCaseTypeStatsCommand(Command):
 
@@ -102,12 +96,6 @@ class RetrieveCaseTypeStatsCommand(Command):
         default=None,
         description="The datetime range to filter cases by, if any. The key attribute fo the filter should be left empty.",
     )
-
-    @field_validator("case_type_ids", mode="after")
-    def _validate_case_type_ids(cls, value: list[UUID]) -> list[UUID]:
-        if len(set(value)) < len(value):
-            raise ValueError("Duplicate case type ids")
-        return value
 
 
 class RetrieveCompleteCaseTypeCommand(Command):

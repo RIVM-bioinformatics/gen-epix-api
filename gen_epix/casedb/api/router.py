@@ -7,6 +7,7 @@ from gen_epix.casedb.api.case import create_case_endpoints
 from gen_epix.casedb.api.geo import create_geo_endpoints
 from gen_epix.casedb.api.ontology import create_ontology_endpoints
 from gen_epix.casedb.api.organization import (
+    ApiPermission,
     UpdateUserRequestBody,
     UserInvitationRequestBody,
 )
@@ -17,7 +18,6 @@ from gen_epix.common.api.organization import create_organization_endpoints
 from gen_epix.common.api.rbac import create_rbac_endpoints
 from gen_epix.common.api.system import create_system_endpoints
 from gen_epix.fastapp import App
-from gen_epix.fastapp.enum import LogLevel
 
 
 def create_routers(
@@ -25,7 +25,7 @@ def create_routers(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
     assert app
@@ -55,9 +55,9 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
-                "complete_user_class": model.CompleteUser,
                 "user_invitation_request_body_class": UserInvitationRequestBody,
                 "update_user_request_body_class": UpdateUserRequestBody,
+                "api_permission_class": ApiPermission,
             },
         },
         {

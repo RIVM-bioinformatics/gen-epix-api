@@ -2,7 +2,6 @@ import abc
 import uuid
 from typing import Type
 
-import gen_epix.common.domain.model.organization
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.domain.repository import BaseAbacRepository
@@ -26,7 +25,6 @@ class BaseAbacService(BaseService):
     }
 
     CASE_ABAC_COMMANDS: set[Type[Command]] = {
-        # command.RetrieveCompleteUserCommand,
         command.RetrieveCompleteCaseTypeCommand,
         command.RetrieveCasesByQueryCommand,
         command.RetrieveCasesByIdCommand,
@@ -85,22 +83,12 @@ class BaseAbacService(BaseService):
             self.retrieve_organization_admin_name_emails,
         )
         f(
-            command.RetrieveCompleteUserCommand,
-            self.retrieve_complete_user,
-        )
-        f(
             command.UpdateUserOwnOrganizationCommand,
             self.temp_update_user_own_organization,
         )
 
     @abc.abstractmethod
     def register_policies(self) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def retrieve_complete_user(
-        self, cmd: command.RetrieveCompleteUserCommand
-    ) -> gen_epix.common.domain.model.organization.CompleteUser:
         raise NotImplementedError
 
     @abc.abstractmethod

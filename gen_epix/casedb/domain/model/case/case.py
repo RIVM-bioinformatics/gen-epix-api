@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator, model_validator
 
+from gen_epix import fastapp
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
@@ -765,7 +766,7 @@ class CaseTypeDim(Model):
     )
 
 
-class CaseTypeStat(Model):
+class CaseTypeStat(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_stats",
         persistable=False,
@@ -783,7 +784,7 @@ class CaseTypeStat(Model):
     )
 
 
-class CaseSetStat(Model):
+class CaseSetStat(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_stats",
         persistable=False,

@@ -7,6 +7,7 @@ import pytest
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation, PermissionType
+from gen_epix.fastapp.model import Permission
 from gen_epix.filter import BooleanOperator, TypedCompositeFilter, TypedStringSetFilter
 
 
@@ -28,10 +29,8 @@ class TestContent:
         app = env.app
         # Get root user
         root_user = test_util.create_root_user_from_claims(env.cfg, env.app)
-        complete_root_user: model.CompleteUser = app.handle(
-            command.RetrieveCompleteUserCommand(
-                user=root_user,
-            )
+        root_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=root_user)
         )
         # Get all users and permissions
         users = app.handle(
@@ -62,10 +61,8 @@ class TestContent:
             )
         )
         org_admin_user = [x for x in users if x.id == org_admin_policies[0].user_id][0]
-        complete_org_admin_user: model.CompleteUser = app.handle(
-            command.RetrieveCompleteUserCommand(
-                user=org_admin_user,
-            )
+        org_admin_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
         )
         # Get org user
         user_access_case_policies = app.handle(
@@ -81,10 +78,8 @@ class TestContent:
             and enum.Role.ORG_USER in x.roles
             and len(x.roles) == 1
         ][0]
-        complete_org_user: model.CompleteUser = app.handle(
-            command.RetrieveCompleteUserCommand(
-                user=org_user,
-            )
+        org_user_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=org_user)
         )
         # Get some metadata as org user
         case_types = app.handle(
@@ -228,7 +223,7 @@ class TestContent:
             permissions: frozenset[model.Permission] = (
                 app.domain.get_permissions_for_command(command_class)
             )
-            if PermissionType.R not in {x.permission_type for x in permissions}:
+            if PermissionType.READ not in {x.permission_type for x in permissions}:
                 continue
             app.handle(
                 command_class(

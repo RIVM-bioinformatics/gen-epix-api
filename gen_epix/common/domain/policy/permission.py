@@ -6,14 +6,14 @@ from gen_epix.fastapp.enum import PermissionType
 NO_RBAC_PERMISSIONS: set[tuple[type[Command], PermissionType]] = {
     # Used to create a user and hence no existing user can be included in the
     # command.
-    (command.RegisterInvitedUserCommand, PermissionType.E),
+    (command.RegisterInvitedUserCommand, PermissionType.EXECUTE),
     # Used to retrieve identity providers so that users can be authenticated and
     # subsequently provided with other commands.
-    (command.GetIdentityProvidersCommand, PermissionType.E),
+    (command.GetIdentityProvidersCommand, PermissionType.EXECUTE),
     # Used to retrieve outages, which is a public operation since authentication
     # may also be offline.
-    (command.RetrieveOutagesCommand, PermissionType.E),
+    (command.RetrieveOutagesCommand, PermissionType.EXECUTE),
     # Used to update the user's own organization, which does not require RBAC
     # as a special case for development/testing purposes only.
-    (command.UpdateUserOwnOrganizationCommand, PermissionType.E),
+    (command.UpdateUserOwnOrganizationCommand, PermissionType.EXECUTE),
 }

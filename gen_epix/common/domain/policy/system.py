@@ -20,5 +20,5 @@ class BaseHasSystemOutagePolicy(Policy):
         self.system_service = system_service
         self.props = kwargs
         self.outage_update_permission = system_service.app.domain.get_permission(
-            command.OutageCrudCommand, PermissionType.U
+            command.OutageCrudCommand, PermissionType.UPDATE
         )

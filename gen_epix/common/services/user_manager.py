@@ -6,7 +6,8 @@ from uuid import UUID
 from gen_epix.common.domain import command, exc, model
 from gen_epix.common.domain.service.organization import BaseOrganizationService
 from gen_epix.common.domain.service.rbac import BaseRbacService
-from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, CrudOperation, Permission
+from gen_epix.fastapp import (BaseUnitOfWork, BaseUserManager, CrudOperation,
+                              Permission)
 from gen_epix.fastapp.services.auth import get_email_from_claims
 
 

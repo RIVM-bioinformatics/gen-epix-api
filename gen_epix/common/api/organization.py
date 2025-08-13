@@ -9,7 +9,7 @@ from pydantic import Field, field_validator
 from gen_epix.common.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
+from gen_epix.fastapp.model import Permission
 
 
 class UserInvitationRequestBody(PydanticBaseModel):
@@ -51,7 +51,9 @@ class UpdateUserRequestBody(PydanticBaseModel):
 
 
 class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
-    organization_id: UUID
+    organization_id: UUID = Field(
+        description="The ID of the organization to update the user to"
+    )
 
 
 def create_organization_endpoints(
@@ -60,15 +62,15 @@ def create_organization_endpoints(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     service_type: enum.ServiceType = enum.ServiceType.ORGANIZATION,
     user_class: Type[model.User] = model.User,
     user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
-    complete_user_class: Type[model.CompleteUser] = model.CompleteUser,
     user_invitation_request_body_class: Type[
         UserInvitationRequestBody
     ] = UserInvitationRequestBody,
     update_user_request_body_class: Type[UpdateUserRequestBody] = UpdateUserRequestBody,
+    api_permission_class: Type = Permission,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
@@ -163,12 +165,23 @@ def create_organization_endpoints(
     )
     async def user_me__get_one(
         user: registered_user_dependency,  # type: ignore
-    ) -> complete_user_class:
+    ) -> user_class:
+        return user
+
+    @router.get(
+        "/user_me/permissions",
+        operation_id="user_me__retrieve_permissions",
+        name="UserMe",
+    )
+    async def user_me__retrieve_permissions(
+        user: registered_user_dependency,  # type: ignore
+    ) -> set[api_permission_class]:  # pyricht: ignore[reportInvalidTypeForm]
         try:
-            cmd = command.RetrieveCompleteUserCommand(user=user)
-            retval: complete_user_class = app.handle(cmd)
+            cmd = command.RetrieveOwnPermissionsCommand(user=user)
+            permissions: set[Permission] = app.handle(cmd)
+            retval = {api_permission_class(**x.model_dump()) for x in permissions}
         except Exception as exception:
-            handle_exception("f98b34ec", user, exception)
+            handle_exception("a7f3b8e2", user, exception)
         return retval
 
     @router.put(
@@ -199,7 +212,7 @@ def create_organization_endpoints(
     )
     async def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore
-    ) -> model.User:
+    ) -> user_class:
         try:
             cmd = command.UpdateUserOwnOrganizationCommand(
                 user=user,

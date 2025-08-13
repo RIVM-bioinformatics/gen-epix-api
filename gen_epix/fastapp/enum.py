@@ -2,66 +2,66 @@ from enum import Enum
 
 
 class SortOrder(Enum):
-    ASC = "ASC"  # Ascending order
-    DESC = "DESC"  # Descending order
+    ASCENDING = "ASCENDING"
+    DESCENDING = "DESCENDING"
 
 
 class PermissionType(Enum):
-    C = "C"  # Create
-    R = "R"  # Read
-    U = "U"  # Update
-    D = "D"  # Delete
-    E = "E"  # Execute
+    CREATE = "CREATE"
+    READ = "READ"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+    EXECUTE = "EXECUTE"
 
 
 class PermissionTypeSet(Enum):
-    E = frozenset({PermissionType.E})
+    E = frozenset({PermissionType.EXECUTE})
     CRUD = frozenset(
         {
-            PermissionType.C,
-            PermissionType.R,
-            PermissionType.U,
-            PermissionType.D,
+            PermissionType.CREATE,
+            PermissionType.READ,
+            PermissionType.UPDATE,
+            PermissionType.DELETE,
         }
     )
     CRU = frozenset(
         {
-            PermissionType.C,
-            PermissionType.R,
-            PermissionType.U,
+            PermissionType.CREATE,
+            PermissionType.READ,
+            PermissionType.UPDATE,
         }
     )  # Undeletable
     CRD = frozenset(
         {
-            PermissionType.C,
-            PermissionType.R,
-            PermissionType.D,
+            PermissionType.CREATE,
+            PermissionType.READ,
+            PermissionType.DELETE,
         }
     )  # Immutable and deletable
     CUD = frozenset(
         {
-            PermissionType.C,
-            PermissionType.U,
-            PermissionType.D,
+            PermissionType.CREATE,
+            PermissionType.UPDATE,
+            PermissionType.DELETE,
         }
     )
     RUD = frozenset(
         {
-            PermissionType.R,
-            PermissionType.U,
-            PermissionType.D,
+            PermissionType.READ,
+            PermissionType.UPDATE,
+            PermissionType.DELETE,
         }
     )
-    CR = frozenset({PermissionType.C, PermissionType.R})  # Immutable
-    CU = frozenset({PermissionType.C, PermissionType.U})
-    CD = frozenset({PermissionType.C, PermissionType.D})
-    RU = frozenset({PermissionType.R, PermissionType.U})
-    RD = frozenset({PermissionType.R, PermissionType.D})
-    UD = frozenset({PermissionType.U, PermissionType.D})
-    C = frozenset({PermissionType.C})
-    R = frozenset({PermissionType.R})  # Read only
-    U = frozenset({PermissionType.U})
-    D = frozenset({PermissionType.D})
+    CR = frozenset({PermissionType.CREATE, PermissionType.READ})  # Immutable
+    CU = frozenset({PermissionType.CREATE, PermissionType.UPDATE})
+    CD = frozenset({PermissionType.CREATE, PermissionType.DELETE})
+    RU = frozenset({PermissionType.READ, PermissionType.UPDATE})
+    RD = frozenset({PermissionType.READ, PermissionType.DELETE})
+    UD = frozenset({PermissionType.UPDATE, PermissionType.DELETE})
+    C = frozenset({PermissionType.CREATE})
+    R = frozenset({PermissionType.READ})  # Read only
+    U = frozenset({PermissionType.UPDATE})
+    D = frozenset({PermissionType.DELETE})
     NONE = frozenset()
 
 

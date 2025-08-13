@@ -42,7 +42,7 @@ def generate_handle_exception_function(
     app: App,
     logger: logging.Logger | None,
 ) -> Callable[
-    [str, model.User | None, Exception, Hashable | list[Hashable] | None, LogLevel],
+    [str, model.User | None, Exception, Hashable | list[Hashable] | None],
     NoReturn,
 ]:
 
