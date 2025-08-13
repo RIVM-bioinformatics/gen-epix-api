@@ -47,6 +47,11 @@ class UserInvitation(common_model.UserInvitation):
         **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    invited_by_user: User | None = Field(
+        default=None,
+        description=common_model.UserInvitation.model_fields["invited_by_user"].description,
+    )
+    # Override roles to ensure it is a set of enum.Role
     roles: set[enum.Role] = Field( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
         description=common_model.UserInvitation.model_fields["roles"].description, # type: ignore[assignment]
         min_length=1,

@@ -1242,7 +1242,7 @@ class CaseService(BaseCaseService):
 
         elif isinstance(cmd, command.CaseCrudCommand):
             # Determine valid case types and data collections
-            case_set_ids = cmd.get_obj_ids()
+            case_ids = cmd.get_obj_ids()
             if is_create | is_read | is_update:
                 # Implemented through separate create case set command
                 raise AssertionError("Unexpected operation")

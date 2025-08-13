@@ -212,7 +212,7 @@ def create_organization_endpoints(
     )
     async def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore
-    ) -> model.User:
+    ) -> user_class:
         try:
             cmd = command.UpdateUserOwnOrganizationCommand(
                 user=user,
