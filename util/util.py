@@ -1,5 +1,4 @@
 import json
-import os
 import uuid
 from pathlib import Path
 from typing import Any, Hashable, Iterable
@@ -72,24 +71,24 @@ def update_cfg_from_file(
                 cfg[key] = value
 
     # Get list of files
-    if os.path.isfile(file_or_dir):
+    if Path(file_or_dir).is_file():
         files = [file_or_dir]
-    elif os.path.isdir(file_or_dir):
-        files = [os.path.join(file_or_dir, x) for x in os.listdir(file_or_dir)]
+    elif Path(file_or_dir).is_dir():
+        files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
     else:
         raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
 
     # Read files into new_cfg
     new_cfg: dict[str, Any] = {}
     for file in files:
-        name = os.path.basename(file)
+        name = Path(file).name
         keys = [cfg_key_map.get(x, x) for x in name.split(file_key_delimiter)]
         curr_cfg = new_cfg
         for key in keys[0:-1]:
             if key not in curr_cfg:
                 curr_cfg[key] = {}
             curr_cfg = curr_cfg[key]
-        with open(os.path.join(file), "r") as handle:
+        with open(Path(file), "r") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:

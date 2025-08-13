@@ -53,7 +53,7 @@ def parse_alleles() -> None:
     Create a table with one allele per row and with columns locus_set_id, locus_code,
     allele_code, allele_id, seq_hash_sha256.
     """
-    tgt_file = os.path.join(os.getcwd(), "util", "data", "alleles.pkl.gz")
+    tgt_file = Path.cwd() / "util" / "data" / "alleles.pkl.gz"
     # Go over each allele file
     # dfs = []
     for file_data in ALLELE_FILES:

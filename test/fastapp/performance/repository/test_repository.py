@@ -1,5 +1,4 @@
 import cProfile
-import os
 import pstats
 from test.fastapp.command import Model2_2CrudCommand
 from test.fastapp.enum import TestType as EnumTestType  # to avoid PyTest warning
@@ -112,14 +111,10 @@ class TestRepository:
             return
         test_dir = env.test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(
-            os.path.join(test_dir, cls.__name__) + ".performance.csv", index=False
-        )
-        df.to_excel(
-            os.path.join(test_dir, cls.__name__) + ".performance.xlsx", index=False
-        )
+        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
+        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
         for key, html_str in PERFORMANCE_HTML.items():
             with open(
-                os.path.join(test_dir, cls.__name__) + f".performance.{key}.html", "w"
+                Path(test_dir) / f"{cls.__name__}.performance.{key}.html", "w"
             ) as f:
                 f.write("".join(html_str))

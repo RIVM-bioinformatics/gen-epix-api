@@ -1,9 +1,9 @@
 import datetime
 import logging
-import os
 import re
 import shutil
 from enum import Enum
+from pathlib import Path
 from test.test_client.endpoint_test_client import EndpointTestClient, EndpointVersion
 from test.test_client.enum import RepositoryType, TestType
 from test.test_client.util import get_test_name, get_test_output_dir, set_log_level
@@ -47,7 +47,7 @@ class ServiceTestClient:
         self.app_env = app_env
         self.test_type = test_type
         self.test_name: str = test_name or get_test_name(test_type)
-        self.test_dir: str = test_dir or get_test_output_dir(self.test_name)
+        self.test_dir: Path = test_dir or get_test_output_dir(self.test_name)
         self.repository_type = (
             RepositoryType(repository_type.value)
             if isinstance(repository_type, Enum)
@@ -344,7 +344,7 @@ class ServiceTestClient:
         services: set[Hashable],
         repository_type: RepositoryType,
         load_target: str,
-        test_dir: str,
+        test_dir: Path,
     ) -> None:
         for service_type in services:
             service_type_str = (
@@ -366,16 +366,18 @@ class ServiceTestClient:
                     )
                 case RepositoryType.SA_SQLITE:
                     # Copy sqlite files to test output directory
-                    source_file = re.sub(
-                        r"\.[A-Za-z]+\.sqlite",
-                        f".{load_target.lower()}.sqlite",
-                        curr_cfg["file"],
-                        flags=re.IGNORECASE,
+                    source_file = Path(
+                        re.sub(
+                            r"\.[A-Za-z]+\.sqlite",
+                            f".{load_target.lower()}.sqlite",
+                            curr_cfg["file"],
+                            flags=re.IGNORECASE,
+                        )
                     )
-                    if not os.path.isfile(source_file):
+                    if not source_file.is_file():
                         continue
-                    target_file = os.path.join(test_dir, os.path.basename(source_file))
-                    curr_cfg["file"] = target_file
+                    target_file = test_dir / source_file.name
+                    curr_cfg["file"] = str(target_file.absolute())
                     shutil.copyfile(source_file, target_file)
                 case RepositoryType.SA_SQL:
                     # Nothing to do

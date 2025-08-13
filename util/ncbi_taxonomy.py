@@ -1,6 +1,7 @@
 import json
 import os
 import sqlite3
+from pathlib import Path
 from uuid import UUID
 
 import pandas as pd
@@ -147,7 +148,7 @@ def update_ncbi_taxonomy(update_database: bool = False) -> None:
 
 def read_ncbi_taxonomy() -> pd.DataFrame:
     # Retrieve data from sqlite database with NCBI taxonomy created by ete package
-    file = os.path.join(os.environ["XDG_DATA_HOME"], "ete", "taxa.sqlite")
+    file = Path(os.environ["XDG_DATA_HOME"]) / "ete" / "taxa.sqlite"
     conn = sqlite3.connect(file)
     ncbi_df = pd.read_sql_query("SELECT * FROM species", conn)
     conn.close()
@@ -200,15 +201,16 @@ def get_ncbi_taxon_subset(ncbi_df: pd.DataFrame) -> None:
     )
     ncbi_df.drop(ncbi_df.index[ncbi_df["is_unclassified_taxon"]], inplace=True)
     # # TODO: Temporary write out to facilitate debugging
-    # ncbi_df.to_pickle(os.path.join(os.environ["XDG_DATA_HOME"], "ncbi_taxonomy.pkl"))
+    # ncbi_df.to_pickle(Path(os.environ["XDG_DATA_HOME"]) / "ncbi_taxonomy.pkl")
+
     # ncbi_df.to_excel(
-    #     os.path.join(os.environ["XDG_DATA_HOME"], "ncbi_taxonomy.xlsx"),
+    #     Path(os.environ["XDG_DATA_HOME"]) / "ncbi_taxonomy.xlsx",
     #     sheet_name="ncbi_taxonomy",
     # )
 
 
 def retrieve_seqdb_taxon(file: str) -> pd.DataFrame:
-    if not os.path.exists(file):
+    if not Path(file).is_file():
         seqdb_df = pd.DataFrame.from_dict(
             {
                 "id": pd.Series([], dtype=object),
@@ -353,17 +355,15 @@ def get_seqdb_taxon_changes(
 
 def parse_ncbi_taxonomy(update_ncbi_database: bool = False) -> None:
     # Create some config data
-    seqdb_taxon_file = os.path.join(
-        os.getcwd(), "seqdb", "data", "extract", "seqdb.src.seq.taxon.tsv"
+    seqdb_taxon_file = (
+        Path.cwd() / "seqdb" / "data" / "extract" / "seqdb.src.seq.taxon.tsv"
     )
     out_files = {
-        x: os.path.join(
-            os.getcwd(),
-            "seqdb",
-            "data",
-            "extract",
-            f"seqdb.src.seq.taxon.{x.lower()}.tsv",
-        )
+        x: Path.cwd()
+        / "seqdb"
+        / "data"
+        / "extract"
+        / f"seqdb.src.seq.taxon.{x.lower()}.tsv"
         for x in ["CREATED", "UPDATED", "DELETED"]
     }
     # Retrieve NCBI taxonomy data, parse it, and compare it with the current seqdb taxonomy
@@ -372,7 +372,7 @@ def parse_ncbi_taxonomy(update_ncbi_database: bool = False) -> None:
     get_ncbi_taxon_subset(ncbi_df)
     # # TODO: Temporary read in to facilitate debugging
     # ncbi_df = pd.read_pickle(
-    #     os.path.join(os.environ["XDG_DATA_HOME"], "ncbi_taxonomy.pkl")
+    #     Path(os.environ["XDG_DATA_HOME"]) / "ncbi_taxonomy.pkl"
     # )
     seqdb_df = retrieve_seqdb_taxon(seqdb_taxon_file)
     seqdb_changes = get_seqdb_taxon_changes(seqdb_df, ncbi_df)
@@ -385,7 +385,7 @@ def parse_ncbi_taxonomy(update_ncbi_database: bool = False) -> None:
         df.to_csv(out_files[key], index=False, sep="\t", na_rep="")
     # TODO: Temporary write out to facilitate debugging
     # ncbi_df.to_csv(
-    #     os.path.join(os.environ["XDG_DATA_HOME"], "ncbi_taxonomy.tsv"),
+    #     Path(os.environ["XDG_DATA_HOME"]) / "ncbi_taxonomy.tsv",
     #     index=False,
     #     sep="\t",
     # )

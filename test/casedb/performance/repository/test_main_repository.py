@@ -1,9 +1,9 @@
 import cProfile
 import logging
-import os
 import pstats
 import sys
 import test.test_client.util as test_util
+from pathlib import Path
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from test.test_client.service_test_client import ServiceTestClient
 from test.test_client.util import parse_stats
@@ -58,9 +58,5 @@ class TestRead:
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(
-            os.path.join(test_dir, cls.__name__) + ".performance.csv", index=False
-        )
-        df.to_excel(
-            os.path.join(test_dir, cls.__name__) + ".performance.xlsx", index=False
-        )
+        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
+        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
