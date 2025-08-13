@@ -26,7 +26,7 @@ def create_fast_api(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     setup_logger: logging.Logger | None = None,
     api_logger: logging.Logger | None = None,
     debug: bool = False,

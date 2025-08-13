@@ -6,12 +6,15 @@ import re
 import sys
 import test.test_client.util as test_util
 from pathlib import Path
-from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
+from test.test_client.enum import \
+    TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
 from test.test_client.service_test_client import ServiceTestClient
-from test.test_client.user_journey_v1 import UserJourneyColumn as V1UserJourneyColumn
-from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyColumn
+from test.test_client.user_journey_v1 import \
+    UserJourneyColumn as V1UserJourneyColumn
+from test.test_client.user_journey_v2 import \
+    UserJourneyColumn as V2UserJourneyColumn
 from test.test_client.util import parse_stats
 
 import pandas as pd
@@ -84,9 +87,8 @@ class TestRead:
 
     def test_journeys(self) -> None:
 
-        from test.test_client.enum import (
-            TestType as EnumTestType,
-        )  # to avoid pytest warning
+        from test.test_client.enum import \
+            TestType as EnumTestType  # to avoid pytest warning
         from test.test_client.service_test_client import ServiceTestClient
 
         from gen_epix.casedb.domain import enum

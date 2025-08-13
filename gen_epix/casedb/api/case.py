@@ -73,7 +73,7 @@ def create_case_endpoints(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
     assert handle_exception

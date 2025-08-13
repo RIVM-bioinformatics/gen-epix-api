@@ -8,7 +8,6 @@ from pydantic import Field, field_serializer, field_validator
 
 from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model
-from gen_epix.fastapp import Permission
 from gen_epix.fastapp import User as ServiceUser
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
@@ -337,15 +336,3 @@ class UserInvitation(Model):
     @field_serializer("roles")
     def serialize_roles(self, value: set[Enum], _info) -> list[str]:
         return [x.value for x in value]
-
-
-class CompleteUser(User):
-    NAME: ClassVar = "CompleteUser"
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_users",
-        persistable=False,
-        **_ENTITY_KWARGS,
-    )
-    permissions: set[Permission] = Field(
-        description="The union of all the permissions of the user"
-    )

@@ -908,11 +908,11 @@ class CrudEndpointGenerator:
         crud_operations = set()
         for permission in permissions:
             permission_type = permission.permission_type
-            if permission_type == PermissionType.C:
+            if permission_type == PermissionType.CREATE:
                 crud_operations.update(
                     {CrudOperation.CREATE_ONE, CrudOperation.CREATE_SOME}
                 )
-            elif permission_type == PermissionType.R:
+            elif permission_type == PermissionType.READ:
                 crud_operations.update(
                     {
                         CrudOperation.READ_ALL,
@@ -920,11 +920,11 @@ class CrudEndpointGenerator:
                         CrudOperation.READ_ONE,
                     }
                 )
-            elif permission_type == PermissionType.U:
+            elif permission_type == PermissionType.UPDATE:
                 crud_operations.update(
                     {CrudOperation.UPDATE_ONE, CrudOperation.UPDATE_SOME}
                 )
-            elif permission_type == PermissionType.D:
+            elif permission_type == PermissionType.DELETE:
                 crud_operations.update(
                     {
                         CrudOperation.DELETE_ALL,

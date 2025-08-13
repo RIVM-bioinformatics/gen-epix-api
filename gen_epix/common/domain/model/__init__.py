@@ -3,7 +3,6 @@ from typing import Type
 import gen_epix.fastapp as fastapp
 from gen_epix.common.domain import DOMAIN, enum
 from gen_epix.common.domain.model.base import Model as Model
-from gen_epix.common.domain.model.organization import CompleteUser as CompleteUser
 from gen_epix.common.domain.model.organization import Contact as Contact
 from gen_epix.common.domain.model.organization import DataCollection as DataCollection
 from gen_epix.common.domain.model.organization import (

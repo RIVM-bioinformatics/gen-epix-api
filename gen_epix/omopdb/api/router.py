@@ -7,8 +7,8 @@ from gen_epix.common.api.organization import create_organization_endpoints
 from gen_epix.common.api.rbac import create_rbac_endpoints
 from gen_epix.common.api.system import create_system_endpoints
 from gen_epix.fastapp import App
-from gen_epix.fastapp.enum import LogLevel
 from gen_epix.omopdb.api.omop import create_omop_endpoints
+from gen_epix.omopdb.api.organization import ApiPermission
 from gen_epix.omopdb.domain import enum, model
 
 
@@ -17,7 +17,7 @@ def create_routers(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
     assert app
@@ -39,7 +39,7 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
-                "complete_user_class": model.CompleteUser,
+                "api_permission_class": ApiPermission,
             },
         },
         {

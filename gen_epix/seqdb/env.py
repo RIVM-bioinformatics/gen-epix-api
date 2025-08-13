@@ -41,7 +41,6 @@ class AppEnv(BaseAppEnv):
             "kwargs": {
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
-                "complete_user_class": model.CompleteUser,
             },
             "repository_kwargs": {
                 "user_class": model.User,

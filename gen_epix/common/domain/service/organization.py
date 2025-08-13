@@ -17,13 +17,11 @@ class BaseOrganizationService(BaseService):
         *args: Any,
         user_class: Type[model.User],
         user_invitation_class: Type[model.UserInvitation],
-        complete_user_class: Type[model.CompleteUser],
         **kwargs: Any,
     ) -> None:
         super().__init__(*args, **kwargs)
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
-        self.complete_user_class = complete_user_class
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore

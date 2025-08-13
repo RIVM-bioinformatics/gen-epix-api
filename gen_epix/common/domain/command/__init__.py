@@ -47,9 +47,6 @@ from gen_epix.common.domain.command.organization import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
 from gen_epix.common.domain.command.organization import (
-    RetrieveCompleteUserCommand as RetrieveCompleteUserCommand,
-)
-from gen_epix.common.domain.command.organization import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
 from gen_epix.common.domain.command.organization import (
@@ -68,7 +65,7 @@ from gen_epix.common.domain.command.organization import (
     UserInvitationCrudCommand as UserInvitationCrudCommand,
 )
 from gen_epix.common.domain.command.rbac import (
-    GetOwnPermissionsCommand as GetOwnPermissionsCommand,
+    RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
 from gen_epix.common.domain.command.system import OutageCrudCommand as OutageCrudCommand
 from gen_epix.common.domain.command.system import (
@@ -92,7 +89,6 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         OrganizationSetMemberCrudCommand,
         OrganizationSetOrganizationUpdateAssociationCommand,
         RegisterInvitedUserCommand,
-        RetrieveCompleteUserCommand,
         RetrieveOrganizationContactCommand,
         SiteCrudCommand,
         UpdateUserCommand,
@@ -101,7 +97,7 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         UserInvitationCrudCommand,
     ],
     enum.ServiceType.RBAC: [
-        GetOwnPermissionsCommand,
+        RetrieveOwnPermissionsCommand,
     ],
     enum.ServiceType.SYSTEM: [
         OutageCrudCommand,

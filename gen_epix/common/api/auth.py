@@ -14,7 +14,7 @@ def create_auth_endpoints(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception, LogLevel], NoReturn] | None = None,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     service_type: enum.ServiceType = enum.ServiceType.AUTH,
     **kwargs: Any,
 ) -> None:
