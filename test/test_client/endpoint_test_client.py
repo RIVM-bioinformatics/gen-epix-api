@@ -12,6 +12,7 @@ from httpx import Response
 from jose import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
+from gen_epix.common.domain import model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 
@@ -30,12 +31,16 @@ class EndpointTestClient:
         app: App,
         fast_api: FastAPI,
         app_last_handled_exception: dict,
-        **kwargs: dict,
+        user_class: Type[model.User] = model.User,
+        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
+        **kwargs: Any,
     ):
         register_crud_commands: bool = kwargs.get("register_crud_commands", True)
         self.app = app
         self.fast_api = fast_api
         self.test_client = TestClient(fast_api, raise_server_exceptions=False)
+        self._user_class = user_class
+        self._user_invitation_class = user_invitation_class
         self._handlers: dict[
             Type[Command],
             Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
@@ -56,7 +61,7 @@ class EndpointTestClient:
         cmd: Command,
         return_response: bool = False,
         endpoint_version: EndpointVersion = EndpointVersion.V1,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any:
         route_prefix = self.ENDPOINT_VERSION_PREFIX_MAP[endpoint_version]
         if cmd.user:
@@ -71,7 +76,7 @@ class EndpointTestClient:
             return retval, response
         return retval
 
-    def get_headers(self, cmd: Command, **kwargs: dict) -> dict[str, str] | None:
+    def get_headers(self, cmd: Command, **kwargs: Any) -> dict[str, str] | None:
         if cmd.user:
             assert cmd.user is not None
             headers = self.get_dummy_jwt_header(cmd.user.get_key())

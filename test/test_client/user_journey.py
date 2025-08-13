@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from typing import Any
 
 import pandas as pd
 
@@ -9,7 +10,7 @@ from gen_epix.casedb.domain import command
 
 class UserJourney(abc.ABC):
     @abc.abstractmethod
-    def get_commands(self, **kwargs: dict) -> pd.DataFrame:
+    def get_commands(self, **kwargs: Any) -> pd.DataFrame:
         raise NotImplementedError
 
     @abc.abstractmethod

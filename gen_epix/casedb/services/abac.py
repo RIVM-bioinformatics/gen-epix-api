@@ -46,11 +46,8 @@ class AbacService(BaseAbacService):
         app: App,
         repository: BaseAbacRepository,
         logger: logging.Logger | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
-        kwargs["service_type"] = kwargs.get(
-            "service_type", BaseAbacService.SERVICE_TYPE  # type:ignore[arg-type]
-        )
         super().__init__(app, repository=repository, logger=logger, **kwargs)
         self.repository: BaseAbacRepository
 
@@ -100,32 +97,6 @@ class AbacService(BaseAbacService):
             x.organization_id
             for x in organization_admin_policies
             if x.user_id == user.id and x.is_active
-        )
-
-    def retrieve_complete_user(
-        self, cmd: command.RetrieveCompleteUserCommand
-    ) -> model.CompleteUser:
-        user = cmd.user
-        if user is None:
-            raise exc.UnauthorizedAuthError("Command has no user")
-        # Get organization
-        organization: model.Organization = self.app.handle(  # type: ignore[assignment]
-            command.OrganizationCrudCommand(
-                user=user,
-                obj_ids=user.organization_id,
-                operation=CrudOperation.READ_ONE,
-            )
-        )
-        # Get permissions
-        permissions = self.app.user_manager.retrieve_user_permissions(user)
-        # # Get user case and data collection access
-        # case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        # assert case_abac is not None
-        return model.CompleteUser(
-            **user.model_dump(exclude={"organization"}),
-            organization=organization,
-            permissions=permissions,
-            # case_abac=case_abac,
         )
 
     def retrieve_organization_admin_name_emails(

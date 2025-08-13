@@ -30,8 +30,9 @@ class Model(PydanticBaseModel):
 
 
 class User(Model):
-    id: Hashable = Field(
-        default_factory=uuid.uuid4, description="The ID of the user obj"
+    id: Hashable | None = Field(
+        default_factory=uuid.uuid4,
+        description="The ID of the user. This can be the key of the user (see get_key method), or a separate ID.",
     )
 
     def get_key(self) -> str:
@@ -45,7 +46,7 @@ class User(Model):
 
     # @field_serializer("id")
     # def _serialize_id(self, value: Hashable, _info: Any) -> str:
-    #     return serialize_id(value)  # type: ignore[return-value]
+    #     return str(value)
 
 
 class Permission(PydanticBaseModel, frozen=True):
@@ -89,7 +90,7 @@ class Permission(PydanticBaseModel, frozen=True):
         return f"({self.command_name},{self.permission_type.value})"
 
     @field_serializer("permission_type")
-    def serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
+    def _serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
         return value.value
 
 
@@ -115,7 +116,6 @@ class Policy(abc.ABC):
 
 
 class Command(PydanticBaseModel):
-    SERVICE_TYPE: ClassVar[Hashable | None] = None
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.E
     NAME: ClassVar[str | None] = None
 

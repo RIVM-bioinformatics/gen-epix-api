@@ -39,7 +39,7 @@ def generate_seqs_for_distance_matrix(
     linkage_method: str = "single",
     generation_method: str = "SUB_SEQ_PER_NODE",
     fractional_distance_multiplier: int = 1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], dict[str, Any | None] | None]:
     """
     Create a set of sequences from a distance matrix. The sequences are generated using
@@ -98,7 +98,7 @@ def generate_seqs_for_distance_matrix(
         "linkage_method": linkage_method,
         "generation_method": generation_method,
         "distance_multiplier": distance_multiplier,
-        "has_difference_between_tree_and_seq_distance_matrix": np.any(
+        "has_difference_between_tree_and_initial_distance_matrix": np.any(
             (tree_distance_matrix - distance_multiplier * distance_matrix) != 0
         ),
         "has_difference_between_tree_and_seq_distance_matrix": np.any(
@@ -145,7 +145,7 @@ def generate_seqs_with_sub_seq_per_node(
     int_linkage_result: np.ndarray,
     alphabet: str = "acgt",
     fractional_distance_multiplier: int = 1,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], Any | None]:
     """
     Generate a set of (DNA) sequences of length m and without indels whose hamming
@@ -217,7 +217,7 @@ def generate_seqs_with_differential_evolution(
     tree_distance_matrix: np.ndarray,
     alphabet: str = "acgt",
     seq_length: int | None = None,
-    **kwargs: dict,
+    **kwargs: Any,
 ) -> tuple[list[str], Any | None]:
     """
     Generate a set of (DNA) sequences of length m and without indels whose hamming
@@ -281,7 +281,7 @@ def get_hamming_distance_matrix_from_aligned_seqs(seqs: list[str]) -> np.ndarray
     The sequences are assumed to be aligned and therefore of the same length.
     """
     n_seqs = len(seqs)
-    # Specal case: zero or one sequences
+    # Special case: zero or one sequences
     if n_seqs == 0:
         return np.array([])
     if n_seqs == 1:

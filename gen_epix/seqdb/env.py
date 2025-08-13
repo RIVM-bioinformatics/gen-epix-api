@@ -1,18 +1,12 @@
 # pylint: disable=unused-import-alias
+import copy
 import traceback
 from typing import Any, Callable, Type
 
-from uvicorn.logging import logging
-
 from gen_epix.fastapp import App, BaseService
-from gen_epix.fastapp.repositories import DictRepository, SARepository
 from gen_epix.fastapp.repository import BaseRepository
-from gen_epix.fastapp.services.auth import AuthService
-from gen_epix.fastapp.services.auth import (
-    OIDCClient as OIDCClient,  # pylint: disable=unused-import,useless-import-alias
-)
-from gen_epix.seqdb.domain import DOMAIN, enum
-from gen_epix.seqdb.domain.command.role import RoleGenerator
+from gen_epix.seqdb.domain import DOMAIN, enum, model
+from gen_epix.seqdb.domain.policy import RoleGenerator
 from gen_epix.seqdb.domain.service import ORDERED_SERVICE_TYPES
 from gen_epix.seqdb.repositories import (
     OrganizationDictRepository,
@@ -21,9 +15,11 @@ from gen_epix.seqdb.repositories import (
     SeqSARepository,
     SystemDictRepository,
     SystemSARepository,
+    sa_model,
 )
 from gen_epix.seqdb.services import (
     AbacService,
+    AuthService,
     OrganizationService,
     RbacService,
     SeqService,
@@ -35,7 +31,54 @@ from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):
-    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict):
+    SERVICE_DATA: dict[enum.ServiceType, dict[str, Any]] = {
+        enum.ServiceType.ORGANIZATION: {
+            "service_class": OrganizationService,
+            "repository_class": {
+                enum.RepositoryType.DICT: OrganizationDictRepository,
+                enum.RepositoryType.SA_SQL: OrganizationSARepository,
+            },
+            "kwargs": {
+                "user_class": model.User,
+                "user_invitation_class": model.UserInvitation,
+            },
+            "repository_kwargs": {
+                "user_class": model.User,
+                "user_invitation_class": model.UserInvitation,
+                "sa_user_class": sa_model.User,
+                "sa_user_invitation_class": sa_model.UserInvitation,
+            },
+        },
+        enum.ServiceType.AUTH: {
+            "service_class": AuthService,
+            "kwargs": {},
+        },
+        enum.ServiceType.RBAC: {
+            "service_class": RbacService,
+            "kwargs": {
+                "role_enum": enum.Role,
+            },
+        },
+        enum.ServiceType.SEQ: {
+            "service_class": SeqService,
+            "repository_class": {
+                enum.RepositoryType.DICT: SeqDictRepository,
+                enum.RepositoryType.SA_SQL: SeqSARepository,
+            },
+        },
+        enum.ServiceType.SYSTEM: {
+            "service_class": SystemService,
+            "repository_class": {
+                enum.RepositoryType.DICT: SystemDictRepository,
+                enum.RepositoryType.SA_SQL: SystemSARepository,
+            },
+        },
+        enum.ServiceType.ABAC: {
+            "service_class": AbacService,
+        },
+    }
+
+    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
         data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
         self._app: App = data["app"]
@@ -49,10 +92,11 @@ class AppEnv(BaseAppEnv):
 
     @staticmethod
     def compose_application(
-        app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict
+        app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
     ) -> dict:
-        # Get logger for setup
+
         try:
+            # Get logger for setup
             cfg = app_cfg.cfg
             setup_logger = app_cfg.setup_logger
             app_logger = app_cfg.app_logger
@@ -77,45 +121,16 @@ class AppEnv(BaseAppEnv):
                 logger=app_logger if log_setup else None,
                 id_factory=cfg.service.defaults.id_factory,
             )
-            if not log_setup:
-                app.logger = logging.getLogger(f"seqdb.app")
 
             # Compose data to initialize repositories and services
-            service_data: dict[enum.ServiceType, dict[str, Any]] = {
-                enum.ServiceType.ORGANIZATION: {
-                    "service_class": OrganizationService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: OrganizationDictRepository,
-                        enum.RepositoryType.SA_SQL: OrganizationSARepository,
-                    },
-                },
-                enum.ServiceType.AUTH: {
-                    "service_class": AuthService,
+            service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
+            service_data[enum.ServiceType.AUTH].update(
+                {
                     "kwargs": {
                         "idps_cfg": cfg.IDPS_CONFIG,
                     },
-                },
-                enum.ServiceType.RBAC: {
-                    "service_class": RbacService,
-                },
-                enum.ServiceType.SEQ: {
-                    "service_class": SeqService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: SeqDictRepository,
-                        enum.RepositoryType.SA_SQL: SeqSARepository,
-                    },
-                },
-                enum.ServiceType.SYSTEM: {
-                    "service_class": SystemService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: SystemDictRepository,
-                        enum.RepositoryType.SA_SQL: SystemSARepository,
-                    },
-                },
-                enum.ServiceType.ABAC: {
-                    "service_class": AbacService,
-                },
-            }
+                }
+            )
             for service_type in service_data:
                 if "repository_class" in service_data[service_type]:
                     service_data[service_type]["repository_class"][
@@ -157,31 +172,16 @@ class AppEnv(BaseAppEnv):
                             )
                         )
                     repository_class = data["repository_class"][repository_type]
-                    if repository_type == enum.RepositoryType.DICT:
-                        curr_repository = DictRepository.from_pkl(
-                            repository_class,  # type: ignore
-                            entities,
-                            repository_cfg["file"],
-                            timestamp_factory=timestamp_factory,
-                        )
-                    elif repository_type == enum.RepositoryType.SA_SQLITE:
-                        assert issubclass(repository_class, SARepository)
-                        curr_repository = repository_class.create_sa_repository(
-                            entities,
-                            "sqlite:///" + repository_cfg["file"],
-                            name=service_type.value,
-                            timestamp_factory=timestamp_factory,
-                        )
-                    elif repository_type == enum.RepositoryType.SA_SQL:
-                        assert issubclass(repository_class, SARepository)
-                        curr_repository = repository_class.create_sa_repository(
-                            entities,
-                            repository_cfg["connection_string"],
-                            name=service_type.value,
-                            timestamp_factory=timestamp_factory,
-                        )
-                    else:
-                        raise NotImplementedError()
+                    additional_repository_kwargs: dict = data.get("repository_kwargs", {})  # type: ignore
+                    curr_repository = AppEnv.create_repository(
+                        service_type,
+                        timestamp_factory,
+                        entities,
+                        repository_type,
+                        repository_cfg,
+                        repository_class,
+                        **additional_repository_kwargs,
+                    )
                 else:
                     curr_repository = None
                 # Create service, injecting app, repository, logger and props
@@ -202,7 +202,7 @@ class AppEnv(BaseAppEnv):
                 repositories[service_type] = curr_repository
                 services[service_type] = curr_service
 
-            # Register roles
+            # Set up roles
             service = services[enum.ServiceType.RBAC]
             assert isinstance(service, RbacService)
             service.register_roles(RoleGenerator.ROLE_PERMISSIONS)
@@ -210,6 +210,8 @@ class AppEnv(BaseAppEnv):
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
             app.user_manager = UserManager(
+                model.User,
+                model.UserInvitation,
                 services[enum.ServiceType.ORGANIZATION],  # type: ignore
                 services[enum.ServiceType.RBAC],  # type: ignore
                 cfg.secret.root,
@@ -217,7 +219,9 @@ class AppEnv(BaseAppEnv):
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
-            registered_user_dependency, new_user_dependency, idp_user_dependency = services[enum.ServiceType.AUTH].create_user_dependencies()  # type: ignore
+            registered_user_dependency, new_user_dependency, idp_user_dependency = services[  # type: ignore
+                enum.ServiceType.AUTH
+            ].create_user_dependencies()
 
             # Register security policies with app
             if log_setup:
@@ -237,12 +241,12 @@ class AppEnv(BaseAppEnv):
         except Exception as e:
 
             # Print error for deployment log, in regular log is not shown there
-            print(traceback.print_exc())
+            traceback.print_exc()
             if log_setup:
                 setup_logger.error(
                     App.create_static_log_message(
                         "db960800",
-                        f"Error setting up application: {traceback.print_exc()}",
+                        f"Error setting up application: {e}",
                     )
                 )
             raise e

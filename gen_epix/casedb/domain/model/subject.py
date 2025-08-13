@@ -7,9 +7,9 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.casedb.domain.model.base import Model
-from gen_epix.casedb.domain.model.organization import DataCollection, IdentifierIssuer
+from gen_epix.casedb.domain import enum
+from gen_epix.common.domain.model.base import Model
+from gen_epix.common.domain.model.organization import DataCollection, IdentifierIssuer
 from gen_epix.fastapp.domain import Entity, create_links
 
 _SERVICE_TYPE = enum.ServiceType.SUBJECT
@@ -70,6 +70,3 @@ class SubjectIdentifier(Model):
         default=None, description="The identifier issuer"
     )
     identifier: str = Field(description="The identifier")
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

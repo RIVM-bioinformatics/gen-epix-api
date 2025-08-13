@@ -1,7 +1,9 @@
+from typing import Any
+
 from sqlalchemy import Engine
 
-from gen_epix.casedb.domain.repository.case import BaseCaseRepository
-from gen_epix.casedb.repositories.sa_model.base import (
+from gen_epix.casedb.domain.repository import BaseCaseRepository
+from gen_epix.casedb.repositories.sa_model import (
     DB_METADATA_FIELDS,
     GENERATE_SERVICE_METADATA,
     SERVICE_METADATA_FIELDS,
@@ -10,7 +12,7 @@ from gen_epix.fastapp.repositories import SARepository
 
 
 class CaseSARepository(SARepository, BaseCaseRepository):
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         entities = kwargs.pop("entities", BaseCaseRepository.ENTITIES)
         super().__init__(
             engine,

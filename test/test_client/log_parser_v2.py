@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
 from test.test_client.user_journey_v2 import UserJourneyColumn, V2UserJourney
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 from uuid import UUID
 
 import pandas as pd
@@ -125,7 +125,7 @@ class V2LogParser(LogParser):
             if not Path(log_file).is_file():
                 raise FileNotFoundError(f"Log file not found: {log_file}")
 
-    def parse(self, **kwargs: dict) -> tuple[list[dict], list[str]]:
+    def parse(self, **kwargs: Any) -> tuple[list[dict], list[str]]:
         if self._is_parsed:
             raise ValueError("Log already parsed")
         # Get row filter
@@ -175,7 +175,7 @@ class V2LogParser(LogParser):
         self.log_error_lines = error_lines
         return records, error_lines
 
-    def create_user_journey(self, **kwargs: dict) -> V2UserJourney:
+    def create_user_journey(self, **kwargs: Any) -> V2UserJourney:
         # TODO: add filtering, e.g. for a particular user
         add_command = kwargs.get("add_command", False)
         if not self._is_parsed:

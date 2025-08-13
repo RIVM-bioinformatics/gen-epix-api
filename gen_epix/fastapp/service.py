@@ -31,21 +31,19 @@ class BaseService(abc.ABC):
         repository: BaseRepository | None = None,
         logger: logging.Logger | None = None,
         props: dict[str, Any] | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Parse kwargs
         if props is None:
             props = {}
-        id_factory: Callable[[], Hashable] = kwargs.pop(  # type: ignore
-            "id_factory", app.generate_id
-        )
+        id_factory: Callable[[], Hashable] = kwargs.pop("id_factory", app.generate_id)
         timestamp_factory: Callable[[], datetime.datetime] = kwargs.pop(
             "timestamp_factory", app.generate_timestamp
         )
         register_handlers = kwargs.pop("register_handlers", True)
         # Set input members
         self._id: str = kwargs.pop("id", str(id_factory()))
-        self._service_type: Hashable = kwargs.pop(  # type: ignore
+        self._service_type: Hashable = kwargs.pop(
             "service_type", self.__class__.SERVICE_TYPE
         )
         self._name: str = Domain.get_service_name(self._service_type)
@@ -121,6 +119,21 @@ class BaseService(abc.ABC):
     def register_handlers(self) -> None:
         raise NotImplementedError()
 
+    def register_default_crud_handlers(
+        self, exclude: set[Type[CrudCommand]] | None = None
+    ) -> None:
+        """
+        Register the crud method as the handler for all registered CRUD
+        commands. The exclude parameter can be used to exclude specific CRUD
+        commands from being registered.
+        """
+        for crud_command_class in self.app.domain.get_crud_commands_for_service_type(
+            self.service_type
+        ):
+            if exclude and crud_command_class in exclude:
+                continue
+            self.app.register_handler(crud_command_class, self.crud)
+
     def generate_id(self) -> Hashable:
         return self._id_factory()
 
@@ -134,11 +147,13 @@ class BaseService(abc.ABC):
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
         """
-        Register a listener for a CRUD command class and timing BEFORE or AFTER the CRUD operation is executed.
-        The listener should take the command obj and the return value of the CRUD operation.
-        The listener should return a tuple of the command obj and the return value of the CRUD operation.
-        Listeners registered for BEFORE timing can modify the command obj before the CRUD operation is executed.
-        Listeners registered for AFTER timing can modify the return value of the CRUD operation.
+        Register a listener for a CRUD command class and timing BEFORE or AFTER
+        the CRUD operation is executed. The listener should take the command obj
+        and the return value of the CRUD operation. The listener should return a
+        tuple of the command obj and the return value of the CRUD operation.
+        Listeners registered for BEFORE timing can modify the command obj before
+        the CRUD operation is executed. Listeners registered for AFTER timing
+        can modify the return value of the CRUD operation.
         """
         if timing == EventTiming.DURING:
             raise ValueError("Cannot register listener for DURING timing")
@@ -354,7 +369,7 @@ class BaseService(abc.ABC):
         return retval
 
     def update_association(
-        self, cmd: UpdateAssociationCommand, **kwargs: dict
+        self, cmd: UpdateAssociationCommand, **kwargs: Any
     ) -> list[Hashable] | list[Model] | None:
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -424,7 +439,7 @@ class BaseService(abc.ABC):
         code: str,
         msg: str,
         add_debug_info: bool = True,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> str:
         if add_debug_info:
             service = kwargs.pop("service", {}) | {"id": self.id, "name": self.name}

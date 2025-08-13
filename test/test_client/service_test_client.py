@@ -11,7 +11,8 @@ from time import sleep
 from typing import Any, Hashable, Type, TypeVar
 from uuid import UUID
 
-from gen_epix.fastapp import Command, CrudOperation, Model, User
+from gen_epix.common.domain.model import Model, User, UserInvitation
+from gen_epix.fastapp import Command, CrudOperation
 from util.cfg import BaseAppCfg
 from util.env import BaseAppEnv
 
@@ -35,16 +36,17 @@ class ServiceTestClient:
         roles: set | Enum | None = None,
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[User] = User,
+        user_invitation_class: Type[UserInvitation] = UserInvitation,
         verbose: bool = False,
         log_level: int = logging.ERROR,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         # Set provided parameters
         self.app_cfg = app_cfg
         self.app_env = app_env
         self.test_type = test_type
         self.test_name: str = test_name or get_test_name(test_type)
-        self.test_dir: str = test_dir or get_test_output_dir(self.test_name)
+        self.test_dir: Path = test_dir or get_test_output_dir(self.test_name)
         self.repository_type = (
             RepositoryType(repository_type.value)
             if isinstance(repository_type, Enum)
@@ -56,6 +58,7 @@ class ServiceTestClient:
             {} if role_hierarchy is None else role_hierarchy
         )
         self.user_class = user_class
+        self.user_invitation_class = user_invitation_class
         self.log_level = log_level
         self.verbose = verbose
 
@@ -69,11 +72,11 @@ class ServiceTestClient:
         self.repositories = self.app_env.repositories
         self.db: dict[Hashable, Model] = {}
         self.props: dict = {}
-        self.use_endpoints: bool = kwargs.get("use_endpoints", False)
-        self.endpoint_test_client: EndpointTestClient | None = kwargs.get(
+        self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
+        self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
-        self.app_last_handled_exception: dict | None = kwargs.get(
+        self.app_last_handled_exception: dict | None = kwargs.pop(
             "app_last_handled_exception"
         )
         if self.use_endpoints:
@@ -86,8 +89,17 @@ class ServiceTestClient:
                     "App last handled exception not provided while use_endpoints=True"
                 )
 
+        # Store remainder of kwargs
+        self.props = kwargs
+
     def generate_id(self) -> UUID:
         return self.app.generate_id()
+
+    def get_root_user(self) -> User:
+        return self.user_class(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
 
     def handle(
         self,
@@ -95,7 +107,7 @@ class ServiceTestClient:
         return_response: bool = False,
         endpoint_version: EndpointVersion = EndpointVersion.V1,
         use_endpoint: bool | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any:
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
         if use_endpoint:
@@ -330,7 +342,7 @@ class ServiceTestClient:
         services: set[Hashable],
         repository_type: RepositoryType,
         load_target: str,
-        test_dir: str,
+        test_dir: Path,
     ) -> None:
         for service_type in services:
             service_type_str = (
@@ -352,16 +364,18 @@ class ServiceTestClient:
                     )
                 case RepositoryType.SA_SQLITE:
                     # Copy sqlite files to test output directory
-                    source_file = re.sub(
-                        r"\.[A-Za-z]+\.sqlite",
-                        f".{load_target.lower()}.sqlite",
-                        curr_cfg["file"],
-                        flags=re.IGNORECASE,
+                    source_file = Path(
+                        re.sub(
+                            r"\.[A-Za-z]+\.sqlite",
+                            f".{load_target.lower()}.sqlite",
+                            curr_cfg["file"],
+                            flags=re.IGNORECASE,
+                        )
                     )
-                    if not Path(source_file).is_file():
+                    if not source_file.is_file():
                         continue
-                    target_file = Path(test_dir) / Path(source_file).name
-                    curr_cfg["file"] = target_file
+                    target_file = test_dir / source_file.name
+                    curr_cfg["file"] = str(target_file.absolute())
                     shutil.copyfile(source_file, target_file)
                 case RepositoryType.SA_SQL:
                     # Nothing to do
@@ -511,7 +525,9 @@ class ServiceTestClient:
         set_log_level(app_cfg.app_name.lower(), log_level)
 
     @staticmethod
-    def _verify_updated_obj(in_obj, out_obj, user_id, **kwargs: dict) -> None:
+    def _verify_updated_obj(
+        in_obj: Model, out_obj: Model, user_id: UUID, **kwargs: Any
+    ) -> None:
         # TODO: verifying modified_by and modified_at is no longer possible here as the
         # persistence metadata no longer exists in the object. This should instead
         # be tested through unit tests on the repository in question.

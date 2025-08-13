@@ -34,8 +34,8 @@ from gen_epix.filter.equals_uuid import TypedEqualsUuidFilter as TypedEqualsUuid
 from gen_epix.filter.exists import ExistsFilter as ExistsFilter
 from gen_epix.filter.exists import TypedExistsFilter as TypedExistsFilter
 from gen_epix.filter.hashable_set import (
-    HashableSetFilter as HashableSetFilter,  # TypedValueSetFilter does not exist
-)
+    HashableSetFilter as HashableSetFilter,
+)  # TypedValueSetFilter does not exist
 from gen_epix.filter.no_filter import NoFilter as NoFilter
 from gen_epix.filter.no_filter import TypedNoFilter as TypedNoFilter
 from gen_epix.filter.number_range import NumberRangeFilter as NumberRangeFilter

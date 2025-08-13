@@ -1,6 +1,5 @@
 # pylint: disable=wildcard-import, unused-import
 # because this is a package, and imported as such in other modules
-from __future__ import annotations
 
 from enum import Enum
 

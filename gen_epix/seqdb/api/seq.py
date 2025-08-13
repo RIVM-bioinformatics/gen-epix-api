@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -6,7 +6,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.seqdb.api.base import EXCLUDED_PERMISSIONS
+from gen_epix.fastapp.enum import LogLevel
 from gen_epix.seqdb.domain import command, enum, model
 
 
@@ -32,8 +32,8 @@ def create_seq_endpoints(
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
-    **kwargs: dict,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
+    **kwargs: Any,
 ) -> None:
     assert handle_exception
 
@@ -93,7 +93,6 @@ def create_seq_endpoints(
         app,
         service_type=enum.ServiceType.SEQ,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

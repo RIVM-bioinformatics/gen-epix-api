@@ -10,17 +10,19 @@ from test.fastapp.model import Base1, Base2, Model1_1, Model1_2, Model2_1, Model
 from test.fastapp.service import Service1, Service2
 from test.fastapp.user_manager import UserManager
 from test.fastapp.util import get_test_name, get_test_root_output_dir
-from typing import Hashable, Type
+from typing import Any, Hashable, Type
 from uuid import UUID
 
-from gen_epix.fastapp import Entity, model
-from gen_epix.fastapp.app import App
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.model import Model
+from gen_epix.fastapp import (
+    App,
+    BaseRepository,
+    BaseService,
+    CrudOperation,
+    Domain,
+    model,
+)
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
-from gen_epix.fastapp.repository import BaseRepository
-from gen_epix.fastapp.service import BaseService
 
 
 class ServiceTestClient:
@@ -28,35 +30,28 @@ class ServiceTestClient:
     TEST_CLIENTS = {}
 
     @classmethod
-    def get_test_client(cls, repository_class: Type[BaseRepository], **kwargs: dict):
+    def get_test_client(cls, repository_class: Type[BaseRepository], **kwargs: Any):
         key = (kwargs.get("test_type", repository_class.__name__), repository_class)
         if key not in cls.TEST_CLIENTS:
             cls.TEST_CLIENTS[key] = cls(repository_class, **kwargs)
         return cls.TEST_CLIENTS[key]
 
-    def __init__(self, repository_class: Type[BaseRepository], **kwargs: dict) -> None:
+    def __init__(self, repository_class: Type[BaseRepository], **kwargs: Any) -> None:
         self.test_type = kwargs.get("test_type", repository_class.__name__)
-        self.test_name = kwargs.get("test_name", get_test_name(self.test_type))
-        self.test_dir = Path(get_test_root_output_dir()) / self.test_name
+        self.test_name: str = kwargs.get("test_name", get_test_name(self.test_type))
+        self.test_dir = get_test_root_output_dir() / self.test_name
         self.test_dir.mkdir(parents=True, exist_ok=True)
         self.repository_type = kwargs.get("repository_type", repository_class.__name__)
         self.user_manager = kwargs.pop("user_manager", UserManager())
-        self.app = App(user_manager=self.user_manager, **kwargs)
-        for model_class in [Model1_1, Model1_2, Model2_1, Model2_2]:
-            entity: Entity = model_class.ENTITY
-            if entity.has_model():
-                if entity.model_class is not model_class:
-                    raise ValueError("Model class mismatch")
-            else:
-                entity.set_model_class(model_class)
-            self.app.domain.register_entity(entity)
+        self.domain = kwargs.pop("domain", Domain(self.__class__.__name__))
+        self.app = App(user_manager=self.user_manager, domain=self.domain, **kwargs)
         self.service1 = Service1(self.app, service_type=ServiceType.SERVICE1)
         self.service2 = Service2(self.app, service_type=ServiceType.SERVICE2)
         self.repository1 = self.create_repository(
-            repository_class, self.service1, base=Base1
+            repository_class, ServiceType.SERVICE1, self.service1, base=Base1
         )
         self.repository2 = self.create_repository(
-            repository_class, self.service2, base=Base2
+            repository_class, ServiceType.SERVICE2, self.service2, base=Base2
         )
         self.service1.repository = self.repository1
         self.service2.repository = self.repository2
@@ -83,7 +78,7 @@ class ServiceTestClient:
                 UUID("ff9b7532-5e90-42a8-ba5c-9b413bb5d513"),
             ],
         }
-        self.df: dict[Type[Model], dict[Hashable, Model]] = {}
+        self.df: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.df[Model1_1] = {
             x: Model1_1(id=x, var1=i, var2=f"{i}")
             for i, x in enumerate(model_ids[Model1_1])
@@ -121,13 +116,12 @@ class ServiceTestClient:
     def create_repository(
         self,
         repository_class: Type[BaseRepository],
+        service_type: ServiceType,
         service: BaseService,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> BaseRepository:
         name = service.name
-        entities = service.app.domain.get_dag_sorted_entities(
-            service_type=service.service_type
-        )
+        entities = service.app.domain.get_dag_sorted_entities(service_type=service_type)
         model_classes = [x.model_class for x in entities]
         if issubclass(repository_class, DictRepository):
             repository = DictRepository(entities, {}, missing_data="ignore")
@@ -178,10 +172,10 @@ class ServiceTestClient:
 
     def get_model_instances_for_class(
         self,
-        model_class: Type[Model],
+        model_class: Type[model.Model],
         as_dict: bool = False,
         set_id: bool = True,
-    ) -> Model | dict:
+    ) -> model.Model | dict:
         objs = list(self.df[model_class].values())
         if as_dict:
             objs = [x.model_dump(exclude=None if set_id else "id") for x in objs]
@@ -194,12 +188,12 @@ class ServiceTestClient:
 
     def get_model_instance_for_class(
         self,
-        model_class: Type[Model],
+        model_class: Type[model.Model],
         as_dict: bool = False,
         idx: int = 0,
         set_id: bool = True,
-    ) -> Model | dict:
-        objs: list[Model] = list(self.df[model_class].values())
+    ) -> model.Model | dict:
+        objs: list[model.Model] = list(self.df[model_class].values())
         obj = objs[idx]
         if as_dict:
             obj = obj.model_dump(exclude=None if set_id else "id")

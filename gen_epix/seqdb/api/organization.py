@@ -1,80 +1,31 @@
-from typing import Callable
-from uuid import UUID
+from enum import Enum
 
-from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel, Field
 
-from gen_epix.fastapp import App
-from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.seqdb.api.base import EXCLUDED_PERMISSIONS
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.model import CompleteUser
+from gen_epix.common.api import UpdateUserRequestBody as CommonUpdateUserRequestBody
+from gen_epix.common.api import (
+    UserInvitationRequestBody as CommonUserInvitationRequestBody,
+)
+from gen_epix.fastapp.enum import PermissionType
+from gen_epix.fastapp.model import Permission
+from gen_epix.seqdb.domain import DOMAIN, enum
 
+CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
-class UpdateUserRequestBody(PydanticBaseModel):
-    is_active: bool | None
-    organization_id: UUID | None
-
-
-class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
-    organization_id: UUID
+class ApiPermission(BaseModel, frozen=True):
+    command_name: CommandName = Field(description=Permission.model_fields["command_name"].description) # pyright: ignore[reportInvalidTypeForm] # Dynamic type annotation required
+    permission_type: PermissionType = Field(description=Permission.model_fields["permission_type"].description)
 
 
-def create_organization_endpoints(
-    router: APIRouter | FastAPI,
-    app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
-    **kwargs: dict,
-) -> None:
-
-    assert handle_exception
-
-    @router.get(
-        "/user_me",
-        operation_id="user_me__get_one",
-        name="UserMe",
+class UserInvitationRequestBody(CommonUserInvitationRequestBody):
+    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+        Field(description=CommonUserInvitationRequestBody.model_fields['roles'].description, min_length=1)  # type: ignore[assignment]
     )
-    async def user_me__get_one(
-        user: registered_user_dependency,  # type: ignore
-    ) -> CompleteUser:
-        try:
-            cmd = command.RetrieveCompleteUserCommand(user=user)
-            app_retval: model.CompleteUser = app.handle(cmd)
-            retval = CompleteUser.from_model(app_retval)
-        except Exception as exception:
-            handle_exception("f98b34ec", user, exception)
-        return retval
 
-    @router.put(
-        "/users/{object_id}",
-        operation_id="users__put_one",
-        name="UpdateUser",
-    )
-    async def users__put_one(
-        user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore
-    ) -> model.User:
-        try:
-            cmd = command.UpdateUserCommand(
-                user=user,
-                tgt_user_id=object_id,
-                is_active=request_body.is_active,
-                organization_id=request_body.organization_id,
-            )
-            retval = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("a594ba2b", None, exception)
-        return retval
 
-    # CRUD
-    crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
-        app,
-        service_type=enum.ServiceType.ORGANIZATION,
-        user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
-    )
-    CrudEndpointGenerator.generate_endpoints(
-        router, crud_endpoint_sets, handle_exception
+class UpdateUserRequestBody(CommonUpdateUserRequestBody):
+    roles: set[enum.Role] | None = ( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+        Field(  # type: ignore[assignment]
+            description=CommonUpdateUserRequestBody.model_fields['roles'].description,
+        )
     )

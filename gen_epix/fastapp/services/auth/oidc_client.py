@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Type
+from typing import Any, Type
 
 import httpx
 from fastapi import Request
@@ -31,7 +31,7 @@ class OIDCClient(IDPClient, OpenIdConnect):
         oidc_configuration: OIDCConfiguration,
         logger: logging.Logger | None = None,
         log_item_class: Type[BaseLogItem] = LogItem,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         self._id = kwargs.get("id", uuid.uuid4())
         # Set input properties and initialize some

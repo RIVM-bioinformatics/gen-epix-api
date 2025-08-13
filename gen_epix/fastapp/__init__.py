@@ -1,6 +1,4 @@
 from gen_epix.fastapp.app import App as App
-
-# pylint: disable=useless-import-alias
 from gen_epix.fastapp.domain import Domain as Domain
 from gen_epix.fastapp.domain import Entity as Entity
 from gen_epix.fastapp.domain import Key as Key

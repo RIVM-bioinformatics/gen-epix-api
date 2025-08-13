@@ -10,6 +10,7 @@ from test.casedb.integration.build_db.base import (
     SKIP_RAISE,
 )
 
+import pydantic
 import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
@@ -118,7 +119,11 @@ class TestUpdate:
                         if env.verbose:
                             print(msg)
                         with pytest.raises(
-                            (exc.UnauthorizedAuthError, exc.InvalidArgumentsError)
+                            (
+                                exc.UnauthorizedAuthError,
+                                exc.InvalidArgumentsError,
+                                pydantic.ValidationError,
+                            )
                         ):
                             env.update_user(user, tgt_user, roles=set())
                     for tgt_extra_role in enum.RoleSet.ALL.value:

@@ -220,14 +220,14 @@ class AppCfg(BaseAppCfg):
         settings_dir_envvar: str,
         settings_files: list[str],
     ) -> None:
-        settings_dir = os.environ[
-            AppCfg._prefix_envvar(envvar_prefix, settings_dir_envvar)
-        ]
-        if not Path(settings_dir).is_dir():
+        settings_dir = Path(
+            os.environ[AppCfg._prefix_envvar(envvar_prefix, settings_dir_envvar)]
+        )
+        if not settings_dir.is_dir():
             msg = f"Settings directory does not exist: {settings_dir}"
             self._setup_logger.error(App.create_static_log_message("e0d6f1d2", msg))
             raise FileNotFoundError(msg)
-        settings_full_files = [Path(settings_dir) / x for x in settings_files]
+        settings_full_files = [settings_dir / x for x in settings_files]
         invalid_files = [x for x in settings_full_files if not x.is_file()]
         if invalid_files:
             invalid_files_str = ", ".join(invalid_files)

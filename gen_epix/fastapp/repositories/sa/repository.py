@@ -41,8 +41,9 @@ from gen_epix.filter import (
 
 
 class SARepository(BaseRepository):
+    DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
-    def __init__(self, engine: Engine, **kwargs: dict):
+    def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
         self._id: str = kwargs.get("id", str(uuid.uuid4()))  # type: ignore[assignment]
@@ -83,7 +84,7 @@ class SARepository(BaseRepository):
 
     def uow(
         self,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> BaseUnitOfWork:
         if self._uow_context_stack:
             # Nested within another context -> reuse the session of that context
@@ -112,7 +113,7 @@ class SARepository(BaseRepository):
         self,
         isolation_level: IsolationLevel | None = None,
         expire_on_commit: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Session:
         isolation_level = isolation_level or self._default_isolation_level
         session: Session = self._session_maker_by_isolation_level[isolation_level](
@@ -120,7 +121,7 @@ class SARepository(BaseRepository):
         )
         return session
 
-    def register_mappers(self, **kwargs: dict) -> None:
+    def register_mappers(self, **kwargs: Any) -> None:
         """
         Default implementation to register standard mappers for a list of entities.
         """
@@ -192,7 +193,7 @@ class SARepository(BaseRepository):
         user_id: Hashable | None,
         model_class: Type,
         obj: Any | Iterable[Any],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(obj, model_class):
@@ -200,7 +201,7 @@ class SARepository(BaseRepository):
         return [mapper.dump(user_id, x, **kwargs) for x in obj]
 
     def from_sql(
-        self, model_class: Type, row: Any | Iterable[Any], **kwargs: dict
+        self, model_class: Type, row: Any | Iterable[Any], **kwargs: Any
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(row, Iterable):
@@ -273,7 +274,7 @@ class SARepository(BaseRepository):
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
     def create_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.create_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -282,12 +283,15 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
         return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
         flush = kwargs.get("flush", True)
+        max_batch_size = int(
+            kwargs.get("max_batch_size", self.DEFAULT_MAX_INSERT_BATCH_SIZE)
+        )
         objs = objs if isinstance(objs, list) else list(objs)
         if not objs:
             return []
@@ -300,9 +304,21 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             rows = self.to_sql(user_id, model_class, objs)
-            session.add_all(rows)
-            if flush:
-                session.flush()
+            n_rows = len(rows)
+            n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
+            if not flush and n_batches > 1:
+                raise exc.RepositoryServiceError(
+                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batche while flush={flush}"
+                )
+            for i in range(n_batches):
+                slice_ = slice(
+                    i * max_batch_size,
+                    min((i + 1) * max_batch_size, n_rows),
+                )
+                rows_slice = rows[slice_]
+                session.add_all(rows_slice)
+                if flush:
+                    session.flush()
             if return_id:
                 mapper = self.get_mapper(model_class)
                 get_row_id = mapper.get_row_id
@@ -312,11 +328,11 @@ class SARepository(BaseRepository):
         created_objs = self._execute_sa(session, _execute, kwargs)
         return created_objs  # type: ignore[return-value]
 
-    def read_one(self, model_class: Type, obj_id: Hashable, **kwargs: dict) -> Model:
+    def read_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> Model:
         return self.read_some(model_class, [obj_id], **kwargs)[0]
 
     def read_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: dict
+        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[Model]:
         """
         :param optimize_parameter_handling, optional kwarg:
@@ -365,7 +381,7 @@ class SARepository(BaseRepository):
         return objs
 
     def read_all(
-        self, model_class: Type, filter: Filter | None, **kwargs: dict
+        self, model_class: Type, filter: Filter | None, **kwargs: Any
     ) -> list[Model]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -415,7 +431,7 @@ class SARepository(BaseRepository):
         return objs
 
     def update_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.update_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -424,7 +440,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         # Check arguments
         objs = objs if isinstance(objs, list) else list(objs)
@@ -469,7 +485,7 @@ class SARepository(BaseRepository):
         return updated_objs
 
     def upsert_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.upsert_some(model_class, user_id, [obj], **kwargs)[0]
 
@@ -478,12 +494,12 @@ class SARepository(BaseRepository):
         model_class: Type,
         _user_id: Hashable,
         _objs: Iterable[Model],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Model] | list[Hashable]:
         raise NotImplementedError
 
     def delete_one(
-        self, model_class: Type, user_id: Hashable, row_id: Hashable, **kwargs: dict
+        self, model_class: Type, user_id: Hashable, row_id: Hashable, **kwargs: Any
     ) -> Hashable:
         return self.delete_some(model_class, user_id, [row_id], **kwargs)[0]
 
@@ -492,7 +508,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         row_ids: Iterable[Hashable],
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Hashable]:
         # Check arguments
         row_ids = row_ids if isinstance(row_ids, list) else list(row_ids)
@@ -524,7 +540,7 @@ class SARepository(BaseRepository):
         model_class: Type,
         user_id: Hashable,
         filter: Filter | None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> list[Hashable] | None:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -550,11 +566,11 @@ class SARepository(BaseRepository):
         deleted_row_ids = self._execute_sa(session, _execute, kwargs)
         return deleted_row_ids if return_id else None
 
-    def exists_one(self, model_class: Type, obj_id: Hashable, **kwargs: dict) -> bool:
+    def exists_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> bool:
         return self.exists_some(model_class, [obj_id], **kwargs)[0]
 
     def exists_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: dict
+        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[bool]:
         session: Session = kwargs.get("session")  # type: ignore[assignment]
 
@@ -712,7 +728,7 @@ class SARepository(BaseRepository):
         # Filter cannot be converted
         return None, filter
 
-    def print_db_content(self, model_class: Type[Model], **kwargs: dict) -> None:
+    def print_db_content(self, model_class: Type[Model], **kwargs: Any) -> None:
         """Helper method for debugging"""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
@@ -958,7 +974,7 @@ class SARepository(BaseRepository):
         cls,
         entities: list[Entity],
         connection_string: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> "SARepository":
         # Parse arguments
         echo = kwargs.pop("echo", False)
@@ -968,19 +984,20 @@ class SARepository(BaseRepository):
 
         is_sqlite = str(connection_string).lower().startswith("sqlite:///")
         if is_sqlite:
-            sqlite_file = re.sub(
-                ".*sqlite:///", "", connection_string, flags=re.IGNORECASE
+            sqlite_file = Path(
+                re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
             )
             if recreate_sqlite_file:
                 # Remove existing file
-                if Path(sqlite_file).is_file():
-                    Path(sqlite_file).unlink()
-
+                if sqlite_file.is_file():
+                    sqlite_file.unlink()
                 # Create the file by creating a connection
-                engine = sa.create_engine("sqlite:///" + sqlite_file)
+                engine = sa.create_engine(
+                    f"sqlite:///{sqlite_file.as_posix()}", echo=echo
+                )
                 conn = engine.connect()
                 conn.close()
-            elif not Path(sqlite_file).is_file():
+            elif not sqlite_file.is_file():
                 raise ValueError("Unable to derive file from connection string")
 
             # Filter some warnings
@@ -1047,3 +1064,20 @@ class SARepository(BaseRepository):
         )
 
         return repository
+
+    @classmethod
+    def test_connection(
+        cls,
+        connection_string: str,
+        **kwargs: Any,
+    ) -> BaseException | None:
+        try:
+            connection = sa.create_engine(
+                connection_string,
+                connect_args=kwargs,
+            ).connect()
+            connection.close()
+            return None
+        except BaseException as exception:
+            # Connection failed, skip loading
+            return exception

@@ -2,10 +2,10 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.fastapp import Model as ServiceModel
+from gen_epix.fastapp import Model as FastappModel
 
 
-class Model(ServiceModel):
+class Model(FastappModel):
     id: UUID | None = Field(
         default=None,
         description="The unique identifier for the obj.",

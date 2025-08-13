@@ -17,14 +17,14 @@ def get_test_name(test_type: Enum | str) -> str:
     )
 
 
-def get_test_root_output_dir() -> str:
+def get_test_root_output_dir() -> Path:
     dir = Path(__file__).parent / "data" / "output"
     dir.mkdir(parents=True, exist_ok=True)
     return dir
 
 
-def get_test_output_dir(test_name: str) -> str:
-    output_dir = Path(get_test_root_output_dir()) / test_name
+def get_test_output_dir(test_name: str) -> Path:
+    output_dir = get_test_root_output_dir() / test_name
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 
@@ -56,7 +56,7 @@ def create_root_user_from_claims(cfg: dict, app: App) -> User:
     return user
 
 
-def parse_stats(df: pd.DataFrame, stats: Any, **kwargs: dict) -> None:
+def parse_stats(df: pd.DataFrame, stats: Any, **kwargs: Any) -> None:
     for (
         function_name,
         function_profile,

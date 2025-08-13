@@ -7,7 +7,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
-from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet
@@ -111,10 +111,7 @@ class CaseService(BaseCaseService):
             case_type_id = cmd.cases[0].case_type_id  # type: ignore[union-attr]
             created_in_data_collection_id = cmd.cases[0].created_in_data_collection_id  # type: ignore[union-attr]
 
-        # @ABAC: verify if case set or cases may be created in the given data collection(s):
-        # exactly one private data collection must be provided, and add_case must be true
-        # for all the other data collections
-        # TODO: add checking for equivalent share rights establishing a connected path to these data collections
+        # @ABAC: verify if case set or cases may be created in the given data collection(s)
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
         assert case_abac is not None
         is_allowed = case_abac.is_allowed(
@@ -141,6 +138,7 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
                         objs=cmd.case_set,  # type: ignore[union-attr,arg-type]
+                        props=cmd.props,
                     )
                 )
             else:
@@ -149,6 +147,7 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_SOME,
                         objs=cmd.cases,  # type: ignore[union-attr,arg-type]
+                        props=cmd.props,
                     )
                 )
             # Associate case set/cases with data collections
@@ -1243,7 +1242,7 @@ class CaseService(BaseCaseService):
 
         elif isinstance(cmd, command.CaseCrudCommand):
             # Determine valid case types and data collections
-            case_set_ids = cmd.get_obj_ids()
+            case_ids = cmd.get_obj_ids()
             if is_create | is_read | is_update:
                 # Implemented through separate create case set command
                 raise AssertionError("Unexpected operation")
@@ -2171,7 +2170,7 @@ class CaseService(BaseCaseService):
         return filtered_cases
 
     def _retrieve_case_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseDataCollectionLink]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2183,7 +2182,7 @@ class CaseService(BaseCaseService):
         )
 
     def _retrieve_case_set_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetDataCollectionLink]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2195,7 +2194,7 @@ class CaseService(BaseCaseService):
         )
 
     def _retrieve_case_case_sets_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: dict
+        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetMember]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
@@ -2213,7 +2212,7 @@ class CaseService(BaseCaseService):
         association_class: Type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> tuple[dict[UUID, set[UUID]], list[model.Model]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.

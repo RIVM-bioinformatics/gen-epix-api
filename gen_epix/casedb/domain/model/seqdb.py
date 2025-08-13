@@ -7,12 +7,12 @@ from uuid import UUID
 
 from pydantic import Field, field_serializer
 
-from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.casedb.domain.model.base import Model
+from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.case import (
     GeneticDistanceProtocol,
     TreeAlgorithm,
 )
+from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
 _SERVICE_TYPE = enum.ServiceType.SEQDB
@@ -89,6 +89,3 @@ class PhylogeneticTree(Model):
     newick_repr: str = Field(
         description="The Newick representation of the phylogenetic tree."
     )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

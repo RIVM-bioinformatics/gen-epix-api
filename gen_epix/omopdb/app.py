@@ -2,7 +2,7 @@ from gen_epix.omopdb.app_setup import create_fast_api
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.env import AppEnv
 from util.cfg import AppCfg
-from util.version import get_project_version
+from util.util import get_package_version
 
 APP_NAME = "OMOPDB"
 
@@ -11,7 +11,7 @@ SCHEMA_KWARGS = {
     "title": "BioBase master database",
     "description": "BioBase API",
     "summary": "Summary goes here",
-    "version": get_project_version(),
+    "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",

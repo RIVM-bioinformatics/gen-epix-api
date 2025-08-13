@@ -275,6 +275,55 @@
             "console": "integratedTerminal",
             "justMyCode": true,
         },
+        // etl
+        {
+            "name": "etl.all.load_data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "etl_load_demo_data",
+                "all",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "etl.casedb.load_data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "etl_load_demo_data",
+                "casedb",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "etl.seqdb.load_data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "etl_load_demo_data",
+                "seqdb",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "etl.omopdb.load_data",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "etl_load_demo_data",
+                "omopdb",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
         // test
         {
             "name": "test.all",
@@ -583,6 +632,18 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
+        },
+        {
+            "name": "other.general.generate_uuids",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_uuids",
+                "1000",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         },
         {
             "name": "other.general.run_linters",

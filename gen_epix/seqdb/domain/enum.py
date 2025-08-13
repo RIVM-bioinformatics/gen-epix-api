@@ -35,11 +35,42 @@ class RepositoryType(Enum):
 
 class Role(Enum):
     ROOT = "ROOT"
-    ADMIN = "ADMIN"
-    REFDATA_ADMIN = "REFDATA_ADMIN"
-    DATA_READER = "DATA_READER"
-    DATA_WRITER = "DATA_WRITER"
+    APP_ADMIN = "APP_ADMIN"
+    ORG_ADMIN = "ORG_ADMIN"
+    METADATA_ADMIN = "METADATA_ADMIN"
+    ORG_USER = "ORG_USER"
     GUEST = "GUEST"
+    ROLE1 = "ROLE1"
+
+
+class RoleSet(Enum):
+    ALL = frozenset(
+        {
+            Role.ROOT,
+            Role.APP_ADMIN,
+            Role.ORG_ADMIN,
+            Role.METADATA_ADMIN,
+            Role.ORG_USER,
+            Role.GUEST,
+        }
+    )
+    GE_APP_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN})
+    GE_ORG_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN})
+    GE_METADATA_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.METADATA_ADMIN})
+    GE_ORG_USER = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN, Role.ORG_USER})
+    GE_GUEST = frozenset(
+        {
+            Role.ROOT,
+            Role.APP_ADMIN,
+            Role.ORG_ADMIN,
+            Role.ORG_USER,
+            Role.GUEST,
+        }
+    )
+    APPLICATION = frozenset({Role.APP_ADMIN})
+    ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
+    METADATA = frozenset({Role.METADATA_ADMIN})
+    OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
 
 
 class TreeAlgorithm(Enum):
@@ -127,22 +158,6 @@ class TreeAlgorithmSet(Enum):
             TreeAlgorithm.NJ,
         }
     )
-
-
-class RoleSet(Enum):
-    ALL = frozenset(
-        {
-            Role.ROOT,
-            Role.ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.DATA_READER,
-            Role.DATA_WRITER,
-            Role.GUEST,
-        }
-    )
-    APPLICATION = frozenset({Role.ADMIN})
-    REFDATA = frozenset({Role.REFDATA_ADMIN})
-    OPERATIONAL = frozenset({Role.DATA_READER, Role.DATA_WRITER, Role.GUEST})
 
 
 class ConceptSetType(Enum):
