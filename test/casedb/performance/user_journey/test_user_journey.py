@@ -6,8 +6,7 @@ import re
 import sys
 import test.test_client.util as test_util
 from pathlib import Path
-from test.test_client.enum import \
-    TestType as EnumTestType  # to avoid pytest warning
+from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
 from test.test_client.service_test_client import ServiceTestClient
