@@ -6,7 +6,7 @@ pytest-mock==3.14.*
 pytest-dependency==0.6.*
 pyinstrument==5.0.*
 isort==5.13.*
-black==24.4.*
+black==24.10.*
 pylint==3.1.*
 mypy==1.9.*
 cryptography==43.0.3
