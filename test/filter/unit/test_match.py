@@ -320,7 +320,7 @@ class TestFilterMatch:
         util._test_filter(filter, rows, [True])
 
     def test_simple_filter_pydantic_and_plain_python_class(self) -> None:
-        
+
         class _PydanticModel(BaseModel):
             x: int
 
