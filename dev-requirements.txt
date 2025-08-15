@@ -4,7 +4,7 @@ pytest==8.3.*
 pytest-cov==6.0.*
 pytest-mock==3.14.*
 pytest-dependency==0.6.*
-pyinstrument==5.0.*
+pyinstrument==5.1.*
 isort==5.13.*
 black==24.10.*
 pylint==3.1.*
