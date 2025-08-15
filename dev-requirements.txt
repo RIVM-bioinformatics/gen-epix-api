@@ -7,7 +7,7 @@ pytest-dependency==0.6.*
 pyinstrument==5.0.*
 isort==5.13.*
 black==24.10.*
-pylint==3.1.*
+pylint==3.3.*
 mypy==1.17.*
 cryptography==43.0.3
 
