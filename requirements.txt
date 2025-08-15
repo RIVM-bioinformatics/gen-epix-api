@@ -34,5 +34,5 @@ slowapi==0.1.9
 python-dateutil==2.8.*
 
 ## FIXME run.py imports pytest, but it is not a dependency of the application
-pytest==8.3.*
+pytest==8.4.*
 
