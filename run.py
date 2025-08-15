@@ -406,7 +406,7 @@ class Run:
         # Special case: apply to all apps
         if app_type == AppType.ALL:
             for app_type2 in AppTypeSet.ALL.value:
-                Run.etl_load_demo_data(app_type2)
+                self.etl_load_demo_data(app_type2)
             return
         # Set all environment variables
         Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
