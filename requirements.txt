@@ -21,9 +21,6 @@ ulid-py==1.1.0
 # configuration handling
 fire==0.7.0
 dynaconf==3.2.6
-types-setuptools==80.9.*
-setuptools==80.9.*
-PyYAML==6.0.*
 
 # calculation
 scipy==1.14.1
