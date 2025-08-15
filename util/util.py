@@ -74,6 +74,8 @@ def update_cfg_from_file(
         files = [file_or_dir]
     elif Path(file_or_dir).is_dir():
         files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
+    elif Path(file_or_dir).is_dir():
+        files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
     else:
         raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
 
