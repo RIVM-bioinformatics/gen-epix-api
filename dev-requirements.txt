@@ -13,7 +13,7 @@ cryptography==43.0.3
 
 # stubs
 pandas-stubs==2.3.*
-types-openpyxl==3.1.*
+openpyxl==3.1.*
 types-cachetools==5.5.*
 types-python-jose==3.3.*
 
