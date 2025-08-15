@@ -1,14 +1,14 @@
-from typing import Any, Callable
+from typing import Any, Callable, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
-from gen_epix.casedb.api.base import EXCLUDED_PERMISSIONS
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 
 class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
@@ -67,14 +67,32 @@ class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     props: dict[str, Any] = {}
 
 
+class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
+    case_type_ids: set[UUID] | None = Field(
+        default=None,
+        description="The case type ids to retrieve stats for, if not all.",
+    )
+    datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
+        default=None,
+        description="The datetime range to filter cases by, if any. The key attribute fo the filter should be left empty.",
+    )
+
+
+class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
+    case_set_ids: set[UUID] | None = Field(
+        default=None,
+        description="The case set ids to retrieve stats for, if not all.",
+    )
+
+
 def create_case_endpoints(
     router: APIRouter | FastAPI,
     app: App,
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
-    handle_exception: Callable | None = None,
-    **kwargs: dict,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
+    **kwargs: Any,
 ) -> None:
     assert handle_exception
 
@@ -189,26 +207,33 @@ def create_case_endpoints(
     )
     async def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore
-        request_body: command.RetrieveCaseTypeStatsCommand,
+        request_body: RetrieveCaseTypeStatsRequestBody,
     ) -> list[model.CaseTypeStat]:
         try:
-            cmd = request_body
-            cmd.user = user
+            cmd = command.RetrieveCaseTypeStatsCommand(
+                user=user,
+                case_type_ids=request_body.case_type_ids,
+                datetime_range_filter=request_body.datetime_range_filter,
+            )
             retval: list[model.CaseTypeStat] = app.handle(cmd)
         except Exception as exception:
             handle_exception("80c99f53", user, exception)
         return retval
 
-    @router.get(
+    @router.post(
         "/retrieve/case_set_stats",
         operation_id="retrieve__case_set_stats",
         name="CaseSetStats",
     )
     async def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveCaseSetStatsRequestBody,
     ) -> list[model.CaseSetStat]:
         try:
-            cmd = command.RetrieveCaseSetStatsCommand(user=user)
+            cmd = command.RetrieveCaseSetStatsCommand(
+                user=user,
+                case_set_ids=request_body.case_set_ids,
+            )
             retval: list[model.CaseSetStat] = app.handle(cmd)
         except Exception as exception:
             handle_exception("be54843e", user, exception)
@@ -395,7 +420,6 @@ def create_case_endpoints(
         app,
         service_type=enum.ServiceType.CASE,
         user_dependency=registered_user_dependency,
-        excluded_permissions=EXCLUDED_PERMISSIONS,
     )
     CrudEndpointGenerator.generate_endpoints(
         router, crud_endpoint_sets, handle_exception

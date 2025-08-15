@@ -8,15 +8,15 @@ from gen_epix.casedb.domain.service.geo import BaseGeoService as BaseGeoService
 from gen_epix.casedb.domain.service.ontology import (
     BaseOntologyService as BaseOntologyService,
 )
-from gen_epix.casedb.domain.service.organization import (
-    BaseOrganizationService as BaseOrganizationService,
-)
-from gen_epix.casedb.domain.service.rbac import BaseRbacService as BaseRbacService
 from gen_epix.casedb.domain.service.seqdb import BaseSeqdbService as BaseSeqdbService
 from gen_epix.casedb.domain.service.subject import (
     BaseSubjectService as BaseSubjectService,
 )
-from gen_epix.casedb.domain.service.system import BaseSystemService as BaseSystemService
+from gen_epix.common.domain.service.organization import (
+    BaseOrganizationService as BaseOrganizationService,
+)
+from gen_epix.common.domain.service.rbac import BaseRbacService as BaseRbacService
+from gen_epix.common.domain.service.system import BaseSystemService as BaseSystemService
 from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.services.auth import BaseAuthService as BaseAuthService
 
@@ -34,14 +34,13 @@ ORDERED_SERVICE_TYPES: list[enum.ServiceType] = [
 ]
 
 BASE_SERVICE_CLASS_MAP: dict[enum.ServiceType, Type[BaseService]] = {
-    enum.ServiceType.GEO: BaseGeoService,
+    enum.ServiceType.GEO: BaseGeoService,  # type: ignore[type-abstract] # Abstract class is ok here
     enum.ServiceType.ONTOLOGY: BaseOntologyService,
-    enum.ServiceType.ORGANIZATION: BaseOrganizationService,
-    enum.ServiceType.AUTH: BaseAuthService,
-    enum.ServiceType.SEQDB: BaseSeqdbService,
+    enum.ServiceType.ORGANIZATION: BaseOrganizationService,  # type: ignore[type-abstract] # Abstract class is ok here
+    enum.ServiceType.AUTH: BaseAuthService,  # type: ignore[type-abstract] # Abstract class is ok here
+    enum.ServiceType.SEQDB: BaseSeqdbService,  # type: ignore[type-abstract] # Abstract class is ok here
     enum.ServiceType.SUBJECT: BaseSubjectService,
-    enum.ServiceType.CASE: BaseCaseService,
-    enum.ServiceType.ABAC: BaseAbacService,
-    enum.ServiceType.SYSTEM: BaseSystemService,
-    enum.ServiceType.RBAC: BaseRbacService,
+    enum.ServiceType.CASE: BaseCaseService,  # type: ignore[type-abstract] # Abstract class is ok here
+    enum.ServiceType.ABAC: BaseAbacService,  # type: ignore[type-abstract] # Abstract class is ok here
+    enum.ServiceType.SYSTEM: BaseSystemService,  # type: ignore[type-abstract] # Abstract class is ok here
 }

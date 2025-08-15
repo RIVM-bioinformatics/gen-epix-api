@@ -3,16 +3,10 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.casedb.domain.model.base import Model
+from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.case import CaseTypeColSet, CaseTypeSet
-from gen_epix.casedb.domain.model.organization import (
-    _ENTITY_KWARGS,
-    DataCollection,
-    Organization,
-    User,
-)
-from gen_epix.fastapp import Permission
+from gen_epix.casedb.domain.model.organization import _ENTITY_KWARGS, User
+from gen_epix.common.domain.model import DataCollection, Model, Organization
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 _SERVICE_TYPE = enum.ServiceType.ABAC
@@ -299,25 +293,3 @@ class UserShareCasePolicy(BaseCasePolicy):
         default=None,
         description="The data collection from which the case type set is shared",
     )
-
-
-# Not persistable
-class CompleteUser(User):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_users",
-        persistable=False,
-        **_ENTITY_KWARGS,
-    )
-    organization: Organization = Field(
-        default=None, description="The organization of the user"
-    )
-    roles: set[enum.Role] = Field(description="The roles of the user")
-    permissions: set[Permission] = Field(
-        description="The union of all the permissions of the user"
-    )
-    # case_abac: CaseAbac = Field(
-    #     description="The ABAC rules of the user for case data access rights"
-    # )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

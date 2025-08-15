@@ -1,7 +1,7 @@
 # Variables for debugging purposes
 from gen_epix.casedb.domain import enum
 
-SKIP_ENDPOINTS = False
+SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False

@@ -1,11 +1,11 @@
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.env import AppEnv
 from util.cfg import AppCfg
 from util.version import get_project_version
 
 APP_NAME = "CASEDB"
+
 
 # Data for openAPI schema
 SCHEMA_KWARGS = {
@@ -43,7 +43,7 @@ FAST_API = create_fast_api(
     update_openapi_kwargs={
         "get_openapi_kwargs": SCHEMA_KWARGS,
         "fix_schema": True,
-        "auth_service": APP_ENV.services[ServiceType.AUTH],
+        "auth_service": APP_ENV.services[enum.ServiceType.AUTH],
     },
 )
 

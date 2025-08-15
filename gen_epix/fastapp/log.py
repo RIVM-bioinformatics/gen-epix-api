@@ -11,7 +11,7 @@ class BaseLogItem(abc.ABC):
     to a JSON string that can be inserted in a log.
     """
 
-    def __init__(self, **kwargs: dict) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self.content = kwargs
 
     @abc.abstractmethod
@@ -31,7 +31,7 @@ class BaseLogItem(abc.ABC):
 
 
 class LogItem(BaseLogItem):
-    def __init__(self, **kwargs: dict) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self.code: str | None = kwargs.pop("code", None)  # type: ignore
         self.msg: str | None = kwargs.pop("msg", None)  # type: ignore
         self.content = kwargs if kwargs else None

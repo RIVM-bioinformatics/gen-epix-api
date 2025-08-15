@@ -5,24 +5,20 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, ClassVar
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, RootModel
+from pydantic import Field
 
+from gen_epix.common.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys
-from gen_epix.omopdb.domain import DOMAIN, enum
-from gen_epix.omopdb.domain.model.base import Model
+from gen_epix.omopdb.domain import enum
 
 _SERVICE_TYPE = enum.ServiceType.OMOP
 _ENTITY_KWARGS = {
     "service_type": _SERVICE_TYPE,
     "schema_name": _SERVICE_TYPE.value.lower(),
 }
-
-
-class ModelModel(RootModel[Any]):
-    root: Any
 
 
 class Person(Model):
@@ -2349,6 +2345,8 @@ class CohortDefinition(Model):
     )
 
 
+# Metadata
+# TODO: check OMOP CDM standardized metadata (CDM_source, Metadata) to see if that should (also) be used
 class Provenance(Model):
 
     ENTITY: ClassVar = Entity(
@@ -2414,26 +2412,13 @@ class Source(Model):
     )
 
 
-class Organization(Model):
-
+# Non-persistable models
+class Subject(Model):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="Organizations",
-        table_name="organization",
-        persistable=True,
-        keys=create_keys({}),
+        snake_case_plural_name="subjects",
+        persistable=False,
         **_ENTITY_KWARGS,
     )
-
-    organization_id: UUID = Field(
-        ..., description="organization_id, PRIMARY KEY", title="Organization Id"
-    )
-    provenance_id: UUID = Field(..., description="provenance_id", title="Provenance Id")
-    source_traceback: str = Field(
-        ..., description="source_traceback", title="Source Traceback"
-    )
-
-
-class Subject(Model):
 
     id: int
     person: Person | None = Field(
@@ -2444,6 +2429,3 @@ class Subject(Model):
     measurement_records: list[Measurement]
     drug_exposure_records: list[DrugExposure]
     location_history_records: list[LocationHistory]
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

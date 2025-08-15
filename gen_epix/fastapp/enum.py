@@ -62,6 +62,7 @@ class PermissionTypeSet(Enum):
     R = frozenset({PermissionType.READ})  # Read only
     U = frozenset({PermissionType.UPDATE})
     D = frozenset({PermissionType.DELETE})
+    NONE = frozenset()
 
 
 class CrudOperation(Enum):

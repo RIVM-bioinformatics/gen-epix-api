@@ -1,0 +1,8 @@
+ENTITY: ClassVar = Entity(
+        snake_case_plural_name="{{ snake_case_plural_name }}",
+        table_name="{{ table_name}}",
+        persistable={{ persistable }},
+        keys=create_keys({{ keys_string }}),
+        **_ENTITY_KWARGS,
+    )
+

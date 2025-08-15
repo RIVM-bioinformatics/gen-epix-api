@@ -1,1 +1,7 @@
-from gen_epix.seqdb.domain.policy.system import *
+from gen_epix.common.domain.policy.rbac import (
+    BaseIsPermissionSubsetNewRolePolicy as BaseIsPermissionSubsetNewRolePolicy,
+)
+from gen_epix.common.domain.policy.system import (
+    BaseHasSystemOutagePolicy as BaseHasSystemOutagePolicy,
+)
+from gen_epix.seqdb.domain.policy.permission import RoleGenerator as RoleGenerator

@@ -1,17 +1,23 @@
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
+from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import AuthProtocol, OauthFlowType
+from gen_epix.fastapp.model import Model
 
 
-class IDPUser(PydanticBaseModel):
+class IDPUser(Model):
+    ENTITY: ClassVar = Entity()
+
     issuer: str = Field(description="The issuer of the user")
     sub: str = Field(description="The sub of the user")
 
 
-class IdentityProvider(PydanticBaseModel):
+class IdentityProvider(Model):
+    ENTITY: ClassVar = Entity()
+
     name: str = Field(description="Name of the identity provider")
     label: str = Field(description="Label of the identity provider")
     issuer: str = Field(description="The issuer URL of the identity provider")
@@ -33,7 +39,9 @@ class IdentityProvider(PydanticBaseModel):
     )
 
 
-class Claims(PydanticBaseModel):
+class Claims(Model):
+    ENTITY: ClassVar = Entity()
+
     scheme: str = Field(description="The authorization scheme of the token")
     token: str = Field(description="The original token containing the claims")
     idp_client_id: UUID = Field(
@@ -44,7 +52,9 @@ class Claims(PydanticBaseModel):
     )
 
 
-class OIDCConfiguration(PydanticBaseModel):
+class OIDCConfiguration(Model):
+    ENTITY: ClassVar = Entity()
+
     name: str = Field(description="Service name")
     label: str = Field(description="Service label")
     discovery_url: str = Field(

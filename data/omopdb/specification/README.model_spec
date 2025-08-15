@@ -1,0 +1,38 @@
+This folder contains: 
+
+(1) The CSV files that spec the omopdb data model:
+    fields.csv, tables.csv, common_fields.csv
+These files are used to generate the Pydantic model definitions.
+
+(2) In subdir custom_templates, Jinja templates that are used to format the output file 
+(see below). datamodel-code-generator uses Jinja to template all of its output and we
+have made slight modifications to accommodate our needs.
+
+(3) In subdir generated_outputs, the following outputs will be generated:
+    (a) omop_pydantic_model_defs_{ts}.py.txt: python code containing class defs
+        for the OMOP models that need to be cut/pasted into gen_epix.omopdb.domain.model.omop.
+        In addition a version a json_schema is output, and is used in the process, but 
+        nothing further needs to be done with this file. It can be inspected for fun.
+    (b) omop_crud_command_class_defs_{tx}.py.txt: python code containing CRUD commands
+        that need to be cut/pasted into gen_epix.omopdb.domain.command.crud 
+        (specifically the OMOP section)
+    (c) omop_sqlalchemy_models_{ts}.pt.txt: python code containing SQLAlchemy model 
+        defs for the OMOP models, simply consisting of type hints. The content
+        needs to be cut/pasted to gen_epix.omopdb.repositories.sa_model.omop.
+    (d) omop_dummy_data_{ts}.xlsx: an Excel file that can be copied to 
+        data/gen_epix/omopdb.src.omop.xlsx. This contains super-dumb data
+        (not intended to be meaningful, but conform to data types)
+        just for testing purposes.
+    Here {ts} is a timestamp.
+
+Explanation of the core files containing the OMOP spec.
+
+Input files:
+tables.csv: defines table-level specification; references tables only (no fields).
+fields.csv: defines field-level specification, for all fields in each table.
+common_fields.csv: defines field-level specification for fields that are used across multiple tables (e.g., provenance_id, source_trackback)
+
+More details in comments, see BioBasePydanticModelGenerator.
+
+Note that the code that generates the output files is in omop/omop; there are run
+configurations for all necessary scripts.

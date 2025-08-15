@@ -7,8 +7,8 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.casedb.domain.model.base import Model
+from gen_epix.casedb.domain import enum
+from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 _SERVICE_TYPE = enum.ServiceType.ONTOLOGY
@@ -172,6 +172,3 @@ class Etiology(Model):
     etiological_agent: EtiologicalAgent | None = Field(
         None, description="The etiological agent"
     )
-
-
-DOMAIN.register_locals(locals(), service_type=_SERVICE_TYPE)

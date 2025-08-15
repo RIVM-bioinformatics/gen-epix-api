@@ -27,15 +27,15 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         # Check if invite is allowed according to roles
         if isinstance(cmd, command.InviteUserCommand):
             # Only admin can invite another, except root and admin
-            if enum.Role.ADMIN not in cmd.user.roles:
+            if enum.Role.APP_ADMIN not in cmd.user.roles:
                 return False
-            if enum.Role.ROOT in cmd.roles or enum.Role.ADMIN in cmd.roles:
+            if enum.Role.ROOT in cmd.roles or enum.Role.APP_ADMIN in cmd.roles:
                 return False
 
         # Check if update is allowed according to roles
         if isinstance(cmd, command.UpdateUserCommand):
             # Only admin can update another, except root
-            if enum.Role.ADMIN not in cmd.user.roles:
+            if enum.Role.APP_ADMIN not in cmd.user.roles:
                 return False
             with self.organization_service.repository.uow() as uow:
                 tgt_user: model.User = self.organization_service.repository.crud(

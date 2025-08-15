@@ -776,6 +776,8 @@ class CrudEndpointGenerator:
         ) = _default_validate_query_filter,
     ) -> list[CrudEndpointSet]:
         # Parse exclusions
+        if excluded_permissions is None:
+            excluded_permissions = app.domain.get_model_excluded_permissions()  # type: ignore[assignment] # Unclear why raised
         parsed_excluded_permissions: set[Permission] = set()
         if isinstance(excluded_permissions, dict):
             parsed_excluded_permissions = set()

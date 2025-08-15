@@ -1,7 +1,7 @@
 from typing import Any
 
 from gen_epix.casedb.domain import command, enum, exc
-from gen_epix.casedb.domain.policy.abac import BaseReadSelfResultsOnlyPolicy
+from gen_epix.casedb.domain.policy import BaseReadSelfResultsOnlyPolicy
 from gen_epix.fastapp import Command, CrudOperation, CrudOperationSet
 
 

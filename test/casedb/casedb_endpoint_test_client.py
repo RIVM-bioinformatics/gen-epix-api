@@ -21,7 +21,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
         app: App,
         fast_api: FastAPI,
         app_last_handled_exception: dict,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
         super().__init__(app, fast_api, app_last_handled_exception, **kwargs)
         self.register_handler(
@@ -60,7 +60,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.casedb.api.auth import UserInvitationRequestBody
+        from gen_epix.common.api import UserInvitationRequestBody
 
         request_body = UserInvitationRequestBody(
             email=cmd.email,
@@ -96,7 +96,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.casedb.api.organization import UpdateUserRequestBody
+        from gen_epix.casedb.api import UpdateUserRequestBody
 
         request_body = UpdateUserRequestBody(
             is_active=cmd.is_active,
@@ -121,9 +121,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.casedb.api.organization import (
-            UpdateUserOwnOrganizationRequestBody,
-        )
+        from gen_epix.casedb.api import UpdateUserOwnOrganizationRequestBody
 
         request_body = UpdateUserOwnOrganizationRequestBody(
             organization_id=cmd.organization_id,
@@ -158,7 +156,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.casedb.api.case import CreateCasesRequestBody
+        from gen_epix.casedb.api import CreateCasesRequestBody
 
         request_body = CreateCasesRequestBody(
             cases=cmd.cases,
@@ -180,7 +178,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.casedb.api.case import CreateCaseSetRequestBody
+        from gen_epix.casedb.api import CreateCaseSetRequestBody
 
         request_body = CreateCaseSetRequestBody(
             case_set=cmd.case_set,

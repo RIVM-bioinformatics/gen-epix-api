@@ -5,7 +5,7 @@ from test.fastapp.command import (
     Model2_2CrudCommand,
 )
 from test.fastapp.enum import TestType as EnumTestType  # to avoid PyTest warning
-from test.fastapp.model import Model1_1, Model1_2, Model2_1, Model2_2
+from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient as Env
 
 import pytest
@@ -18,10 +18,14 @@ from gen_epix.fastapp.repositories.sa.repository import SARepository
 def get_test_clients() -> list[Env]:
     envs = [
         Env.get_test_client(
-            DictRepository, test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY
+            DictRepository,
+            domain=DOMAIN,
+            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
         ),
         Env.get_test_client(
-            SARepository, test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY
+            SARepository,
+            domain=DOMAIN,
+            test_type=EnumTestType.SERVICE_SERVICE_UNIT_REPOSITORY,
         ),
     ]
     return envs

@@ -1,9 +1,9 @@
-# pylint: disable=useless-import-alias
+import copy
 import traceback
 from typing import Any, Callable, Type
 
-from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.casedb.domain.command.role import RoleGenerator
+from gen_epix.casedb.domain import DOMAIN, enum, model
+from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.domain.service import ORDERED_SERVICE_TYPES
 
 # TODO: check if sa_model import is needed here to avoid cyclic import
@@ -22,9 +22,11 @@ from gen_epix.casedb.repositories import (
     SubjectSARepository,
     SystemDictRepository,
     SystemSARepository,
+    sa_model,
 )
 from gen_epix.casedb.services import (
     AbacService,
+    AuthService,
     CaseService,
     GeoService,
     OntologyService,
@@ -36,20 +38,95 @@ from gen_epix.casedb.services import (
     UserManager,
 )
 from gen_epix.fastapp import App, BaseService
-from gen_epix.fastapp.repositories import DictRepository, SARepository
 from gen_epix.fastapp.repository import BaseRepository
-from gen_epix.fastapp.services.auth import AuthService
 from gen_epix.seqdb.domain.enum import RepositoryType as SeqdbRepositoryType
 from gen_epix.seqdb.domain.enum import ServiceType as SeqdbServiceType
+from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppEnv as SeqdbAppEnv
 from util.cfg import AppCfg
 from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):
-    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict):
+    SERVICE_DATA: dict[enum.ServiceType, dict[str, Any]] = {
+        enum.ServiceType.GEO: {
+            "service_class": GeoService,
+            "repository_class": {
+                enum.RepositoryType.DICT: GeoDictRepository,
+                enum.RepositoryType.SA_SQL: GeoSARepository,
+            },
+        },
+        enum.ServiceType.ONTOLOGY: {
+            "service_class": OntologyService,
+            "repository_class": {
+                enum.RepositoryType.DICT: OntologyDictRepository,
+                enum.RepositoryType.SA_SQL: OntologySARepository,
+            },
+        },
+        enum.ServiceType.ORGANIZATION: {
+            "service_class": OrganizationService,
+            "repository_class": {
+                enum.RepositoryType.DICT: OrganizationDictRepository,
+                enum.RepositoryType.SA_SQL: OrganizationSARepository,
+            },
+            "kwargs": {
+                "user_class": model.User,
+                "user_invitation_class": model.UserInvitation,
+            },
+            "repository_kwargs": {
+                "user_class": model.User,
+                "user_invitation_class": model.UserInvitation,
+                "sa_user_class": sa_model.User,
+                "sa_user_invitation_class": sa_model.UserInvitation,
+            },
+        },
+        enum.ServiceType.AUTH: {
+            "service_class": AuthService,
+            "kwargs": {},
+        },
+        enum.ServiceType.RBAC: {
+            "service_class": RbacService,
+            "kwargs": {
+                "role_enum": enum.Role,
+            },
+        },
+        enum.ServiceType.SUBJECT: {
+            "service_class": SubjectService,
+            "repository_class": {
+                enum.RepositoryType.DICT: SubjectDictRepository,
+                enum.RepositoryType.SA_SQL: SubjectSARepository,
+            },
+        },
+        enum.ServiceType.SYSTEM: {
+            "service_class": SystemService,
+            "repository_class": {
+                enum.RepositoryType.DICT: SystemDictRepository,
+                enum.RepositoryType.SA_SQL: SystemSARepository,
+            },
+        },
+        enum.ServiceType.CASE: {
+            "service_class": CaseService,
+            "repository_class": {
+                enum.RepositoryType.DICT: CaseDictRepository,
+                enum.RepositoryType.SA_SQL: CaseSARepository,
+            },
+        },
+        enum.ServiceType.ABAC: {
+            "service_class": AbacService,
+            "repository_class": {
+                enum.RepositoryType.DICT: AbacDictRepository,
+                enum.RepositoryType.SA_SQL: AbacSARepository,
+            },
+        },
+        enum.ServiceType.SEQDB: {
+            "service_class": SeqdbService,
+            "kwargs": {},
+        },
+    }
+
+    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
-        data = self.compose_application(app_cfg, log_setup=log_setup)
+        data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
         self._app: App = data["app"]
         self._services: dict[enum.ServiceType, BaseService] = data["services"]
         self._repositories: dict[enum.RepositoryType, BaseRepository] = data[
@@ -61,10 +138,11 @@ class AppEnv(BaseAppEnv):
 
     @staticmethod
     def compose_application(
-        app_cfg: AppCfg, log_setup: bool = True, **kwargs: dict
+        app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
     ) -> dict:
-        # Get logger for setup
+
         try:
+            # Get logger for setup
             cfg = app_cfg.cfg
             setup_logger = app_cfg.setup_logger
             app_logger = app_cfg.app_logger
@@ -91,68 +169,18 @@ class AppEnv(BaseAppEnv):
             )
 
             # Compose data to initialize repositories and services
-            service_data: dict[enum.ServiceType, dict[str, Any]] = {
-                enum.ServiceType.GEO: {
-                    "service_class": GeoService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: GeoDictRepository,
-                        enum.RepositoryType.SA_SQL: GeoSARepository,
-                    },
-                },
-                enum.ServiceType.ONTOLOGY: {
-                    "service_class": OntologyService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: OntologyDictRepository,
-                        enum.RepositoryType.SA_SQL: OntologySARepository,
-                    },
-                },
-                enum.ServiceType.ORGANIZATION: {
-                    "service_class": OrganizationService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: OrganizationDictRepository,
-                        enum.RepositoryType.SA_SQL: OrganizationSARepository,
-                    },
-                },
-                enum.ServiceType.AUTH: {
-                    "service_class": AuthService,
+            service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
+            service_data[enum.ServiceType.AUTH].update(
+                {
                     "kwargs": {
                         "idps_cfg": cfg.IDPS_CONFIG,
                     },
-                },
-                enum.ServiceType.RBAC: {
-                    "service_class": RbacService,
-                },
-                enum.ServiceType.SUBJECT: {
-                    "service_class": SubjectService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: SubjectDictRepository,
-                        enum.RepositoryType.SA_SQL: SubjectSARepository,
-                    },
-                },
-                enum.ServiceType.SYSTEM: {
-                    "service_class": SystemService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: SystemDictRepository,
-                        enum.RepositoryType.SA_SQL: SystemSARepository,
-                    },
-                },
-                enum.ServiceType.CASE: {
-                    "service_class": CaseService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: CaseDictRepository,
-                        enum.RepositoryType.SA_SQL: CaseSARepository,
-                    },
-                },
-                enum.ServiceType.ABAC: {
-                    "service_class": AbacService,
-                    "repository_class": {
-                        enum.RepositoryType.DICT: AbacDictRepository,
-                        enum.RepositoryType.SA_SQL: AbacSARepository,
-                    },
-                },
-                enum.ServiceType.SEQDB: {
-                    "service_class": SeqdbService,
+                }
+            )
+            service_data[enum.ServiceType.SEQDB].update(
+                {
                     "kwargs": {
+                        "ext_app_user": SeqdbUser(**cfg.secret.seqdb.user),
                         "ext_app": SeqdbAppEnv(
                             # TODO: temporary fix to not import seqdb secrets, only keeping the defaults for these
                             # Ideally the namespace for casedb/seqdb/omopdb config should be different
@@ -167,7 +195,7 @@ class AppEnv(BaseAppEnv):
                         ).app,
                     },
                 },
-            }
+            )
             for service_type in service_data:
                 if "repository_class" in service_data[service_type]:
                     service_data[service_type]["repository_class"][
@@ -209,31 +237,16 @@ class AppEnv(BaseAppEnv):
                             )
                         )
                     repository_class = data["repository_class"][repository_type]
-                    if repository_type == enum.RepositoryType.DICT:
-                        curr_repository = DictRepository.from_pkl(
-                            repository_class,  # type: ignore
-                            entities,
-                            repository_cfg["file"],
-                            timestamp_factory=timestamp_factory,
-                        )
-                    elif repository_type == enum.RepositoryType.SA_SQLITE:
-                        assert issubclass(repository_class, SARepository)
-                        curr_repository = repository_class.create_sa_repository(
-                            entities,
-                            "sqlite:///" + repository_cfg["file"],
-                            name=service_type.value,
-                            timestamp_factory=timestamp_factory,
-                        )
-                    elif repository_type == enum.RepositoryType.SA_SQL:
-                        assert issubclass(repository_class, SARepository)
-                        curr_repository = repository_class.create_sa_repository(
-                            entities,
-                            repository_cfg["connection_string"],
-                            name=service_type.value,
-                            timestamp_factory=timestamp_factory,
-                        )
-                    else:
-                        raise NotImplementedError()
+                    additional_repository_kwargs: dict = data.get("repository_kwargs", {})  # type: ignore
+                    curr_repository = AppEnv.create_repository(
+                        service_type,
+                        timestamp_factory,
+                        entities,
+                        repository_type,
+                        repository_cfg,
+                        repository_class,
+                        **additional_repository_kwargs,
+                    )
                 else:
                     curr_repository = None
                 # Create service, injecting app, repository, logger and props
@@ -262,6 +275,8 @@ class AppEnv(BaseAppEnv):
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
             app.user_manager = UserManager(
+                model.User,
+                model.UserInvitation,
                 services[enum.ServiceType.ORGANIZATION],  # type: ignore
                 services[enum.ServiceType.RBAC],  # type: ignore
                 cfg.secret.root,
@@ -269,7 +284,9 @@ class AppEnv(BaseAppEnv):
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
-            registered_user_dependency, new_user_dependency, idp_user_dependency = services[enum.ServiceType.AUTH].create_user_dependencies()  # type: ignore
+            registered_user_dependency, new_user_dependency, idp_user_dependency = services[  # type: ignore
+                enum.ServiceType.AUTH
+            ].create_user_dependencies()
 
             # Register security policies with app
             if log_setup:
@@ -289,12 +306,12 @@ class AppEnv(BaseAppEnv):
         except Exception as e:
 
             # Print error for deployment log, in regular log is not shown there
-            print(traceback.print_exc())
+            traceback.print_exc()
             if log_setup:
                 setup_logger.error(
                     App.create_static_log_message(
                         "db960800",
-                        f"Error setting up application: {traceback.print_exc()}",
+                        f"Error setting up application: {e}",
                     )
                 )
             raise e

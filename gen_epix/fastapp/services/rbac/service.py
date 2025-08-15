@@ -1,6 +1,6 @@
 import abc
 from enum import Enum
-from typing import Hashable, Type
+from typing import Any, Hashable, Type
 
 from gen_epix.fastapp import (
     BaseService,
@@ -28,7 +28,9 @@ class BaseRbacService(BaseService):
     role(s) they have been assigned.
     """
 
-    def __init__(self, *args: list, **kwargs: dict):
+    SERVICE_TYPE = "RBAC"
+
+    def __init__(self, *args: list, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._permissions_without_rbac: set[Permission] = set()
         self._permissions_by_role: dict[Hashable, set[Permission]] = {}
@@ -121,7 +123,7 @@ class BaseRbacService(BaseService):
             Hashable, set[Permission | tuple[type[Command], PermissionType]]
         ],
         root_role: Hashable | None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> None:
         """
         Register multiple roles with the associated permissions. This is a convenience
@@ -279,7 +281,7 @@ class BaseRbacService(BaseService):
             )
         return not self.retrieve_user_permissions(user).issubset(permissions)
 
-    def register_rbac_policies(self, **kwargs: dict) -> None:
+    def register_rbac_policies(self, **kwargs: Any) -> None:
         """
         Register an RBAC policy for every command that is subject to RBAC. In case of
         dynamic roles, i.e. that can be changed at runtime, these policies remain

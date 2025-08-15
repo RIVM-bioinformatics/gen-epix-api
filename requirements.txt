@@ -9,9 +9,9 @@ httpx==0.27.2
 python-jose==3.3.0
 
 #database handling
-sqlalchemy==2.0.36
+sqlalchemy==2.0.43
 sqlalchemy_utils==0.41.2
-sqlmodel==0.0.22
+sqlmodel==0.0.24
 
 # Data models/handling
 pydantic==2.7.*
@@ -20,7 +20,8 @@ ulid-py==1.1.0
 
 # configuration handling
 fire==0.7.0
-dynaconf==3.2.6
+dynaconf==3.2.11
+types-setuptools==80.9.*
 
 # calculation
 scipy==1.14.1
@@ -28,5 +29,10 @@ numpy==2.1.3
 biopython==1.84
 
 # other
-cachetools==5.5.0
+cachetools==5.5.2
 slowapi==0.1.9
+python-dateutil==2.8.*
+
+## FIXME run.py imports pytest, but it is not a dependency of the application
+pytest==8.4.*
+

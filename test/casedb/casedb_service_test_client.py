@@ -1,20 +1,22 @@
 import datetime
 import logging
+from pathlib import Path
 import re
+from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.enum import RepositoryType as TestClientRepositoryType
 from test.test_client.enum import TestType
 from test.test_client.service_test_client import ServiceTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
-from typing import Type, TypeVar
+from typing import Any, Type, TypeVar
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command.role import RoleGenerator
 from gen_epix.casedb.domain.enum import RepositoryType, Role, ServiceType
+from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.fastapp import CrudOperation
@@ -63,10 +65,6 @@ class CasedbServiceTestClient(ServiceTestClient):
         model.CaseTypeCol: "code",
         model.CaseTypeColSet: "name",
         model.DataCollection: "name",
-        model.DataCollectionRelation: (
-            "from_data_collection_id",
-            "to_data_collection_id",
-        ),
         model.Case: "case_date",
         model.CaseSetCategory: "name",
         model.CaseSetStatus: "name",
@@ -128,7 +126,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> "ServiceTestClient":
         """
         Create a test environment for the given test type and repository type. A
@@ -162,7 +160,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
-        test_dir: str | None = None,
+        test_dir: Path | None = None,
         **kwargs: bool | str | int | dict,
     ):
         test_client_repository_type = TestClientRepositoryType(repository_type.value)
@@ -171,7 +169,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         app_cfg = APP_CFG
         cfg = app_cfg.cfg
         test_name = get_test_name(test_type)
-        test_dir: str = test_dir or get_test_output_dir(test_name)
+        test_dir: Path = test_dir or get_test_output_dir(test_name)
 
         # Set and adjust cfg
         app_cfg.cfg.app.debug = True
@@ -228,12 +226,19 @@ class CasedbServiceTestClient(ServiceTestClient):
             roles=enum.Role,
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,
             user_class=model.User,
+            user_invitation_class=model.UserInvitation,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,
             endpoint_test_client=endpoint_test_client,
             app_last_handled_exception=app_last_handled_exception,
             **kwargs,
+        )
+
+    def get_root_user(self) -> model.User:
+        return model.User(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
         )
 
     def create_organization(
@@ -1148,7 +1153,7 @@ class CasedbServiceTestClient(ServiceTestClient):
             col = case_type_col.col
             m = re.match(col_index_pattern, col.code.lower())
             col_index = int(m.group(1))
-            value = ServiceTestClient.DUMMY_VALUES[col.col_type]
+            value = self.DUMMY_VALUES[col.col_type]
             if col.col_type == enum.ColType.TEXT:
                 value = f"{case_index}_{col_index}"
             elif col.col_type in {
@@ -1178,7 +1183,7 @@ class CasedbServiceTestClient(ServiceTestClient):
                         case_type_id=case_type.id,
                         # subject_id=self.generate_id(),
                         created_in_data_collection_id=created_in_data_collection_id,
-                        case_date=ServiceTestClient._convert_case_code_to_date(code),
+                        case_date=self._convert_case_code_to_date(code),
                         content=content,
                     )
                 ],
@@ -1294,7 +1299,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         if cases and isinstance(cases[0], str):
             cases = self._get_obj(
                 model.Case,
-                [ServiceTestClient._convert_case_code_to_date(x) for x in cases],
+                [self._convert_case_code_to_date(x) for x in cases],
             )
             case_ids = [x.id for x in cases]
         else:
@@ -1574,7 +1579,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         if not isinstance(cases, list):
             cases = [cases]
         cases = self._get_obj(
-            model.Case, [ServiceTestClient._convert_case_code_to_date(x) for x in cases]
+            model.Case, [self._convert_case_code_to_date(x) for x in cases]
         )
         data_collections = self._get_obj(model.DataCollection, list(data_collections))
         case_ids = [x.id for x in cases]
@@ -1684,7 +1689,7 @@ class CasedbServiceTestClient(ServiceTestClient):
             user, case_code = key
             user: model.User = self._get_obj(model.User, user)
             full_case = self._get_obj(
-                model.Case, ServiceTestClient._convert_case_code_to_date(case_code)
+                model.Case, self._convert_case_code_to_date(case_code)
             )
             cases = self.handle(
                 command.RetrieveCasesByIdCommand(
@@ -2123,7 +2128,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         table = self.db[model_class]
         if model_class == model.Case:
             if not isinstance(key, datetime.datetime):
-                key = ServiceTestClient._convert_case_code_to_date(key)
+                key = self._convert_case_code_to_date(key)
         if model_class == model.CaseDataCollectionLink:
             dc_id = key[0]
             case_id = key[1]

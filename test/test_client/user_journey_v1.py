@@ -50,7 +50,7 @@ class V1UserJourney(UserJourney):
         self._has_all_commands = True
         return self
 
-    def get_commands(self, **kwargs: dict) -> pd.DataFrame:
+    def get_commands(self, **kwargs: Any) -> pd.DataFrame:
         if not self._has_all_commands:
             self.set_commands()
         return self.df

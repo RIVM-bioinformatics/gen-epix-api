@@ -10,11 +10,9 @@ from typing import Any, Collection, Iterable
 
 import sqlalchemy as sa
 
-from gen_epix.fastapp import BaseRepository
-from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.omopdb.domain.enum import ServiceType
+from gen_epix.fastapp import BaseRepository, Domain
+from gen_epix.omopdb.domain.enum import AnonMethod, AnonStrictness, ServiceType
 from gen_epix.omopdb.domain.model.base import Model
-from gen_epix.omopdb.enum import AnonMethod, AnonStrictness
 
 
 class BaseAnonymizer(ABC):
@@ -36,7 +34,7 @@ class BaseAnonymizer(ABC):
     _MIN_VALUES_REQUIRED = 10  # for categorical replacements, require a value occurs this many times to be a candidate for use
     _ALLOW_FUTURE_DATES = False
 
-    def __init__(self, seed: int | None = None, **kwargs: dict) -> None:
+    def __init__(self, seed: int | None = None, **kwargs: Any) -> None:
 
         self.min_days_offset: int = (
             kwargs.get("min_days_offset") or self._MIN_DAYS_OFFSET
@@ -160,16 +158,14 @@ class ModelAnonymizer(BaseAnonymizer):
     def __init__(
         self,
         domain: Domain,
-        service_type: ServiceType,
         repository: BaseRepository,
         seed: int | None = None,
         strictness_level: AnonStrictness = AnonStrictness.STRICT,
-        **kwargs: dict,
+        **kwargs: Any,
     ) -> None:
         super().__init__(seed, **kwargs)
 
         self.domain = domain
-        self.service_type = service_type
         self.repository = repository
         self.strictness_level = strictness_level
 
@@ -184,7 +180,7 @@ class ModelAnonymizer(BaseAnonymizer):
         as anonymization_method=AnonMethod.CATEGORICAL. For these, load all the data
         available (or NYI: possibly reduced scope) as possible substitutable values
         """
-        model_classes = self.domain._models_for_service_type[self.service_type]
+        model_classes = self.domain.get_dag_sorted_models(service_type=ServiceType.OMOP)
         categorical_locs = []
         for model_class in model_classes:
             for field_name, field in model_class.model_fields.items():

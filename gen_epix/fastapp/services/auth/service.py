@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Type
+from typing import Annotated, Any, Type
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
@@ -14,17 +14,16 @@ from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
 
 
 class AuthService(BaseAuthService):
+    SERVICE_TYPE = "AUTH"
+
     def __init__(
         self,
         app: App,
         logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
         repository: None = None,
-        **kwargs: dict,
+        **kwargs: Any,
     ):
-        kwargs["service_type"] = kwargs.get(
-            "service_type", BaseAuthService.SERVICE_TYPE
-        )
         super().__init__(app, repository=repository, logger=logger, **kwargs)
         self._idp_clients: list[IDPClient] = []
 
