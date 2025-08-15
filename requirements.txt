@@ -11,7 +11,7 @@ python-jose==3.3.0
 #database handling
 sqlalchemy==2.0.43
 sqlalchemy_utils==0.41.2
-sqlmodel==0.0.22
+sqlmodel==0.0.24
 
 # Data models/handling
 pydantic==2.7.*
