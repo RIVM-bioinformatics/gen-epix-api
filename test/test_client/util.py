@@ -4,7 +4,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 
 from gen_epix.fastapp import App, User
 
@@ -56,7 +55,7 @@ def create_root_user_from_claims(cfg: dict, app: App) -> User:
     return user
 
 
-def parse_stats(df: pd.DataFrame, stats: Any, **kwargs: Any) -> None:
+def parse_stats(df: list[dict], stats: Any, **kwargs: Any) -> None:
     for (
         function_name,
         function_profile,

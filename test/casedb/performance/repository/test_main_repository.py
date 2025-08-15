@@ -4,27 +4,26 @@ import pstats
 import sys
 import test.test_client.util as test_util
 from pathlib import Path
+from test.casedb.casedb_service_test_client import CasedbServiceTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
-from test.test_client.service_test_client import ServiceTestClient
 
 import pandas as pd
 
-from gen_epix.casedb.domain import command, enum
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
 
-PERFORMANCE_DF = []
+PERFORMANCE_DF: list[dict] = []
 
 
 class TestRead:
 
-    def test_read_case_sets(self):
+    def test_read_case_sets(self) -> None:
         test_name = sys._getframe().f_code.co_name
-        df = {}
         for repository_type in enum.RepositoryType:
             if repository_type in (enum.RepositoryType.SA_SQL,):
                 continue
             test_util.set_log_level("casedb", logging.ERROR)
-            env = ServiceTestClient.get_test_client(
+            env = CasedbServiceTestClient.get_test_client(
                 test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
                 repository_type=repository_type,
                 log_level=logging.ERROR,
@@ -32,7 +31,9 @@ class TestRead:
             # TODO: set logger
             with cProfile.Profile() as profiler:
 
-                user = test_util.create_root_user_from_claims(env.cfg, env.app)
+                user: model.User = test_util.create_root_user_from_claims(
+                    env.cfg, env.app
+                )
                 for i in range(100):
                     case_sets = env.app.handle(
                         command.CaseSetCrudCommand(
@@ -44,15 +45,17 @@ class TestRead:
             stats = pstats.Stats(profiler)
             stats.sort_stats("tottime")
             # stats.print_stats(5)
-            parse_stats(PERFORMANCE_DF, stats, repository_type=repository_type.value)
+            test_util.parse_stats(
+                PERFORMANCE_DF, stats, repository_type=repository_type.value
+            )
 
-    def test_tear_down(self):
+    def test_tear_down(self) -> None:
         # TODO: tearDownClass should be called by the test framework instead
         TestRead.tearDownClass()
 
     @classmethod
-    def tearDownClass(cls):
-        test_dir = ServiceTestClient.get_test_client(
+    def tearDownClass(cls) -> None:
+        test_dir = CasedbServiceTestClient.get_test_client(
             test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
