@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from gen_epix.casedb.domain import command, exc, model
+from gen_epix.casedb.domain import command, model
+from gen_epix.common.domain import exc
 from gen_epix.fastapp.enum import CrudOperation
 
 
@@ -62,14 +63,6 @@ class CaseAccessSetup:
         self.pickle_file = Path(__file__).parent / "test_case_access.pkl"
         self.case_crud_commands: pd.DataFrame | None = None
         self.retrieve_data_from_file(env)
-
-        # if you use save_db, you manually need to modify the excel in 6 ways:
-        # 1. add =VLOOKUP(C2,Organization!$A:$B,2,0) to all organization-like columns
-        # 2. add a dm. in front of all columns where you add a lookup
-        # 3. change all enums to strings  (ColType.TEXT -> "TEXT")
-        # 4. in User, add =LEFT(B2,FIND("@",B2)-1) to the name column
-        # 5. replace ' to " in the roles columns of User and UserInvitation
-        # self.save_db(env)
 
     def retrieve_data_from_file(self, env: Env) -> None:
         is_loaded_from_pkl = False
