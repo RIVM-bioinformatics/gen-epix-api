@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Hashable, Iterable
 
 import ulid
+from pkg_resources import DistributionNotFound, get_distribution
 
 
 def generate_ulid() -> uuid.UUID:
@@ -74,8 +75,6 @@ def update_cfg_from_file(
         files = [file_or_dir]
     elif Path(file_or_dir).is_dir():
         files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
-    elif Path(file_or_dir).is_dir():
-        files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
     else:
         raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
 
@@ -99,3 +98,24 @@ def update_cfg_from_file(
 
     # Recursively add/replace values in cfg
     _add_value_recursion(cfg, new_cfg, "")
+
+
+# Get version with fallback for development
+def get_package_version() -> str:
+    version: str
+    try:
+        version = get_distribution("Gen-EpiX").version
+    except DistributionNotFound:
+        # Fallback version for development when package is not installed
+        dir = Path(__file__).parent
+        file = dir / "pyproject.toml"
+        while dir.parent != dir:
+            if (file := dir / "pyproject.toml").exists():
+                break
+        if file.exists():
+            raise FileNotFoundError(
+                f"Could not find pyproject.toml in {dir} or its parent directories."
+            )
+        with open(file, "rb") as handle:
+            version: str = tomllib.load(handle)["project"]["version"]
+    return version

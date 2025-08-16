@@ -11,10 +11,11 @@ from time import sleep
 from typing import Any, Hashable, Type, TypeVar
 from uuid import UUID
 
+from gen_epix.common.config import BaseAppCfg
 from gen_epix.common.domain.model import Model, User, UserInvitation
-from gen_epix.fastapp import Command, CrudOperation
-from util.cfg import BaseAppCfg
-from util.env import BaseAppEnv
+from gen_epix.common.env import BaseAppEnv
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.model import Command
 
 BASE_MODEL_TYPE = TypeVar("T", bound=Model)
 
@@ -524,7 +525,6 @@ class ServiceTestClient:
     def _set_log_level(app_cfg: BaseAppCfg, log_level: int) -> None:
         set_log_level(app_cfg.app_name.lower(), log_level)
 
-    @staticmethod
     def _verify_updated_obj(
         in_obj: Model, out_obj: Model, user_id: UUID, **kwargs: Any
     ) -> None:
