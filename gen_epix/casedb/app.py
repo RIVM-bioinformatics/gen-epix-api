@@ -1,8 +1,8 @@
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.env import AppEnv
-from util.cfg import AppCfg
-from util.version import get_project_version
+from gen_epix.common.config import AppCfg
+from gen_epix.common.util import get_package_version
 
 APP_NAME = "CASEDB"
 
@@ -12,7 +12,7 @@ SCHEMA_KWARGS = {
     "title": "Gen-EpiX",
     "summary": "Genomic Epidemiology platform for disease X",
     "description": "Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.",
-    "version": get_project_version(),
+    "version": get_package_version(),
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",
         "url": "https://github.com/RIVM-bioinformatics/gen-epix-api",

@@ -704,49 +704,5 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
-        {
-            "name": "other.seqdb.parse_ncbi_taxonomy",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_seqdb_parse_ncbi_taxonomy",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.seqdb.parse_alleles [deprecated]",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_seqdb_parse_alleles",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.seqdb.parse_allele_profiles",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_seqdb_parse_allele_profiles",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.seq.seq_from_distance_matrix",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_seq_from_distance_matrix"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        }
     ]
 }

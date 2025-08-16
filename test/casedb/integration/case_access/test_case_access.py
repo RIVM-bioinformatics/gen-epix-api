@@ -135,7 +135,6 @@ class CaseAccessSetup:
 
 
 class TestCaseAccess(CaseAccessSetup):
-    VERBOSE = True
 
     def _encode_pairing_function(self, x: int, y: int) -> int:
         """Only for y values < 100, otherwise switch to Cantor's pairing function"""
@@ -194,7 +193,7 @@ class TestCaseAccess(CaseAccessSetup):
             row_operation = row["operation"].upper()
             user = uq_users[row["user.id"]]
             is_allowed = row["is_allowed"]
-            if self.VERBOSE:
+            if env.verbose:
                 print(
                     f"Command {index} (is_allowed={is_allowed}, row_operation={row_operation}, user={user.name}): executing"
                 )
@@ -263,6 +262,6 @@ class TestCaseAccess(CaseAccessSetup):
                     )
                 else:
                     msg = f"Command {index} (allowed={is_allowed}) did not raise (correct) exception: {e}"
-                if self.VERBOSE:
+                if env.verbose:
                     print(f"\t{msg}")
                 raise AssertionError(msg)
