@@ -7,7 +7,11 @@ from gen_epix.common.api.organization import create_organization_endpoints
 from gen_epix.common.api.rbac import create_rbac_endpoints
 from gen_epix.common.api.system import create_system_endpoints
 from gen_epix.fastapp import App
-from gen_epix.seqdb.api.organization import ApiPermission
+from gen_epix.seqdb.api.organization import (
+    ApiPermission,
+    UpdateUserRequestBody,
+    UserInvitationRequestBody,
+)
 from gen_epix.seqdb.api.seq import create_seq_endpoints
 from gen_epix.seqdb.domain import enum, model
 
@@ -22,6 +26,7 @@ def create_routers(
 ) -> list[APIRouter]:
     assert app
     router_data = [
+        # Common routers
         {
             "name": "auth",
             "create_endpoints_function": create_auth_endpoints,
@@ -39,17 +44,20 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
+                "user_invitation_request_body_class": UserInvitationRequestBody,
+                "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,
             },
-        },
-        {
-            "name": "seq",
-            "create_endpoints_function": create_seq_endpoints,
         },
         {
             "name": "system",
             "create_endpoints_function": create_system_endpoints,
             "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
+        },
+        # Specific routers
+        {
+            "name": "seq",
+            "create_endpoints_function": create_seq_endpoints,
         },
     ]
     routers: list[APIRouter] = []

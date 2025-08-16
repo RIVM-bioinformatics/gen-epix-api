@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import Type
 from uuid import UUID
 
-import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.common.repositories.sa_model import (
@@ -14,7 +14,7 @@ from gen_epix.common.repositories.sa_model import (
 )
 from gen_epix.omopdb.domain import DOMAIN, enum, model
 
-Base: Type = sa.orm.declarative_base(name=enum.ServiceType.OMOP.value)
+Base: Type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 # Below here is cut/paste from output of generate_sqlalchemy_models
 # Do not edit piecemail, but replace entire remainder if/when model spec is adjusted

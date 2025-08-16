@@ -72,15 +72,6 @@ class RoleSet(Enum):
     OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
 
 
-class ConceptSetType(Enum):
-    CONTEXT_FREE_GRAMMAR_JSON = "CONTEXT_FREE_GRAMMAR_JSON"
-    CONTEXT_FREE_GRAMMAR_XML = "CONTEXT_FREE_GRAMMAR_XML"
-    REGULAR_LANGUAGE = "REGULAR_LANGUAGE"
-    NOMINAL = "NOMINAL"
-    ORDINAL = "ORDINAL"
-    INTERVAL = "INTERVAL"
-
-
 class AnonStrictness(Enum):
     IGNORE = "ignore"
     WARN = "warn"

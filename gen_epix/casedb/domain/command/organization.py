@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 import gen_epix.common.domain.command as common_command
-from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain import model
 
 
 class UserCrudCommand(common_command.UserCrudCommand):
