@@ -1,7 +1,7 @@
 # python 3.12
 
 # application server
-fastapi[standard]==0.115.5
+fastapi[standard]==0.116.1
 uvicorn==0.32.1
 gunicorn==21.2.*
 starlette==0.41.3
