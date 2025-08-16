@@ -31,7 +31,7 @@ biopython==1.84
 # other
 cachetools==5.5.2
 slowapi==0.1.9
-python-dateutil==2.8.*
+python-dateutil==2.9.*
 
 ## FIXME run.py imports pytest, but it is not a dependency of the application
 pytest==8.4.*
