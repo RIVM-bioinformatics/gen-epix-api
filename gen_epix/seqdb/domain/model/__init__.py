@@ -1,6 +1,11 @@
 from typing import Type
 
 from gen_epix import fastapp
+from gen_epix.common.domain import enum as common_enum
+from gen_epix.common.domain import model as common_model
+from gen_epix.common.domain.model import (
+    SORTED_MODELS_BY_SERVICE as _COMMON_SORTED_MODELS_BY_SERVICE,
+)
 from gen_epix.common.domain.model import Contact as Contact
 from gen_epix.common.domain.model import DataCollection as DataCollection
 from gen_epix.common.domain.model import DataCollectionSet as DataCollectionSet
@@ -69,6 +74,7 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
+from gen_epix.seqdb.domain.model.seq import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
@@ -81,78 +87,83 @@ from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
 
-SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = {
-    enum.ServiceType.AUTH: [
-        IdentityProvider,
-        IDPUser,
-    ],
-    enum.ServiceType.SYSTEM: [
-        Outage,
-    ],
-    enum.ServiceType.ORGANIZATION: [
-        Organization,
-        IdentifierIssuer,
-        Site,
-        Contact,
-        UserNameEmail,
-        DataCollection,
-        User,
-        UserInvitation,
-        OrganizationSet,
-        OrganizationSetMember,
-        DataCollectionSet,
-        DataCollectionSetMember,
-    ],
-    enum.ServiceType.SEQ: [
-        SubtypingScheme,
-        Taxon,
-        TaxonSet,
-        TaxonSetMember,
-        Locus,
-        TaxonLocusLink,
-        LocusSet,
-        LocusSetMember,
-        RefSeq,
-        RefAllele,
-        RefSnp,
-        RefSnpSet,
-        RefSnpSetMember,
-        AlignmentProtocol,
-        AssemblyProtocol,
-        AstProtocol,
-        KmerDetectionProtocol,
-        LibraryPrepProtocol,
-        LocusDetectionProtocol,
-        PcrProtocol,
-        SeqClassificationProtocol,
-        SeqDistanceProtocol,
-        SnpDetectionProtocol,
-        TaxonomyProtocol,
-        TreeAlgorithmClass,
-        TreeAlgorithm,
-        SeqCategorySet,
-        SeqCategory,
-        Sample,
-        RawSeq,
-        ReadSet,
-        Seq,
-        Allele,
-        AlleleProfile,
-        KmerProfile,
-        SnpProfile,
-        AstMeasurement,
-        AstPrediction,
-        PcrMeasurement,
-        SeqAlignment,
-        AlleleAlignment,
-        ContigAlignment,
-        SeqClassification,
-        SeqDistance,
-        SeqTaxonomy,
-    ],
+# List up model classes per service and sorted according to links topology
+SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
+    {  # pyright: ignore[reportAssignmentType]
+        # Common models
+        enum.ServiceType.AUTH: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.AUTH]
+        ),
+        enum.ServiceType.SYSTEM: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.SYSTEM]
+        ),
+        enum.ServiceType.RBAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.RBAC]
+        ),
+        enum.ServiceType.ORGANIZATION: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.ORGANIZATION]
+        ),
+        # Specific models
+        enum.ServiceType.SEQ: [
+            SubtypingScheme,
+            Taxon,
+            TaxonSet,
+            TaxonSetMember,
+            Locus,
+            TaxonLocusLink,
+            LocusSet,
+            LocusSetMember,
+            RefSeq,
+            RefAllele,
+            RefSnp,
+            RefSnpSet,
+            RefSnpSetMember,
+            AlignmentProtocol,
+            AssemblyProtocol,
+            AstProtocol,
+            KmerDetectionProtocol,
+            LibraryPrepProtocol,
+            LocusDetectionProtocol,
+            PcrProtocol,
+            SeqClassificationProtocol,
+            SeqDistanceProtocol,
+            SnpDetectionProtocol,
+            TaxonomyProtocol,
+            TreeAlgorithmClass,
+            TreeAlgorithm,
+            SeqCategorySet,
+            SeqCategory,
+            Sample,
+            RawSeq,
+            ReadSet,
+            Seq,
+            Allele,
+            AlleleProfile,
+            KmerProfile,
+            SnpProfile,
+            AstMeasurement,
+            AstPrediction,
+            PcrMeasurement,
+            SeqAlignment,
+            AlleleAlignment,
+            ContigAlignment,
+            SeqClassification,
+            SeqDistance,
+            SeqTaxonomy,
+        ],
+    }
+)
+SORTED_SERVICES = tuple(SORTED_MODELS_BY_SERVICE.keys())
+
+_COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
+    common_model.User: User,
+    common_model.UserInvitation: UserInvitation,
 }
 for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
-    for model_class in model_classes:
+    for i, model_class in enumerate(model_classes):
+        if model_class in _COMMON_MODEL_MAP:
+            model_classes[i] = _COMMON_MODEL_MAP[model_class]
+            model_class = model_classes[i]
         assert model_class.ENTITY is not None
         DOMAIN.register_entity(
             model_class.ENTITY, model_class=model_class, service_type=service_type

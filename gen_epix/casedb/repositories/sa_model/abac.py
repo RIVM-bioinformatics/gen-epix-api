@@ -1,7 +1,7 @@
 from typing import Type
 from uuid import UUID
 
-import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
@@ -11,7 +11,7 @@ from gen_epix.common.repositories.sa_model import (
     create_table_args,
 )
 
-Base: Type = sa.orm.declarative_base(name=enum.ServiceType.ABAC.value)
+Base: Type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
 
 
 class OrganizationAdminPolicy(Base, RowMetadataMixin):

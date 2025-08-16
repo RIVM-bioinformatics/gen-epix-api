@@ -3,7 +3,7 @@
 from typing import Type
 from uuid import UUID
 
-import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.common.repositories.sa_model import (
@@ -20,7 +20,7 @@ from gen_epix.seqdb.repositories.sa_model.base import (
     SeqMixin,
 )
 
-Base: Type = sa.orm.declarative_base(name=enum.ServiceType.SEQ.value)
+Base: Type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
 # TODO: add SA relationship calls
 

@@ -245,11 +245,15 @@ class Run:
         # Set environment variables
         for name, value in Run.APP_SECRETS_ENV_VARIABLES[app_type].items():
             env_var_name = app_type.value.upper() + "_" + name
+            if isinstance(value, Path):
+                value = str(value.absolute())
             if env_var_name not in os.environ:
                 os.environ[env_var_name] = value
         key = (app_type, idp_config)
         for name, value in Run.APP_IDP_ENV_VARIABLES[key].items():
             env_var_name = app_type.value.upper() + "_" + name
+            if isinstance(value, Path):
+                value = str(value.absolute())
             if env_var_name not in os.environ:
                 os.environ[env_var_name] = value
         os.environ["APP_VERSION"] = "DEVELOPMENT"
