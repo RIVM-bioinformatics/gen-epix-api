@@ -9,8 +9,8 @@ from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.services.auth import AuthService
 from gen_epix.fastapp.services.auth import OIDCClient as OIDCClient
 from gen_epix.omopdb.domain import DOMAIN, enum, model
+from gen_epix.omopdb.domain.model import SORTED_SERVICES
 from gen_epix.omopdb.domain.policy import RoleGenerator
-from gen_epix.omopdb.domain.service import ORDERED_SERVICE_TYPES
 from gen_epix.omopdb.repositories import (
     OmopDictRepository,
     OmopSARepository,
@@ -138,7 +138,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in ORDERED_SERVICE_TYPES:
+            for service_type in SORTED_SERVICES:
                 data = service_data[service_type]
                 props = {
                     x: y
@@ -224,8 +224,9 @@ class AppEnv(BaseAppEnv):
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering security policies")
                 )
-            services[enum.ServiceType.RBAC].register_policies()  # type: ignore
             services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
+            services[enum.ServiceType.RBAC].register_policies()  # type: ignore
+            # services[enum.ServiceType.ABAC].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:

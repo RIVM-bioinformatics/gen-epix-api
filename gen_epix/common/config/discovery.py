@@ -17,7 +17,7 @@ class ConfigDiscovery:
         env_var_substring: str = "",
         extension: str = "",
         verbose: bool = False,
-    ) -> str:
+    ) -> Path:
         """
         Config path picked in the following order:
         1. Environment variable
@@ -51,28 +51,28 @@ class ConfigDiscovery:
     @staticmethod
     def get_config_path_from_env(
         app_type: str, env_var_substring: str, extension: str = ""
-    ) -> str | None:
+    ) -> Path | None:
         """Get config path from environment variable, if not return None."""
         env_var_name = f"{app_type.upper()}_{env_var_substring}"
         if env_var_name in os.environ:
             env_config_path = Path(os.environ[env_var_name])
             if extension:
-                return str(env_config_path / extension)
-            return str(env_config_path)
+                return env_config_path / extension
+            return env_config_path
         return None
 
     @staticmethod
-    def get_config_path_from_local(app_type: str, extension: str = "") -> str | None:
+    def get_config_path_from_local(app_type: str, extension: str = "") -> Path | None:
         """Get config path from local file, if not return None."""
         local_config_path = Path(f"./config/{app_type}")
         if local_config_path.exists():
             if extension:
-                return str(local_config_path / extension)
-            return str(local_config_path)
+                return local_config_path / extension
+            return local_config_path
         return None
 
     @staticmethod
-    def get_config_path_from_package(app_type: str, extension: str = "") -> str | None:
+    def get_config_path_from_package(app_type: str, extension: str = "") -> Path | None:
         """Get config path from package, if not return None."""
         with importlib.resources.as_file(
             importlib.resources.files("gen_epix")
@@ -80,6 +80,6 @@ class ConfigDiscovery:
             package_config_path = package_path / app_type / "config"
         if package_config_path.exists():
             if extension:
-                return str(package_config_path / extension)
-            return str(package_config_path)
+                return package_config_path / extension
+            return package_config_path
         return None

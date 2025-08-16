@@ -3,6 +3,7 @@ from typing import ClassVar, Type
 from uuid import UUID
 
 import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from pydantic import Field
 from sqlalchemy.orm import declarative_mixin
 from sqlalchemy_utils.types.uuid import UUIDType
@@ -109,7 +110,7 @@ class Model2_2(Model):
     model2_1: Model2_1 | None = Field(default=None)
 
 
-Base1: Type = sa.orm.declarative_base(name="SERVICE1")
+Base1: Type = orm.declarative_base(name="SERVICE1")
 
 
 class SAModel1_1(Base1, RowMetadataMixin):
@@ -132,7 +133,7 @@ class SAModel1_2(Base1, RowMetadataMixin):
     model1_1 = sa.orm.relationship("SAModel1_1")
 
 
-Base2: Type = sa.orm.declarative_base(name="SERVICE2")
+Base2: Type = orm.declarative_base(name="SERVICE2")
 
 
 class SAModel2_1(Base2, RowMetadataMixin):

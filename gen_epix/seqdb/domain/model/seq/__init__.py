@@ -88,5 +88,6 @@ from gen_epix.seqdb.domain.model.seq.persistable import SeqDistance as SeqDistan
 from gen_epix.seqdb.domain.model.seq.persistable import (
     SeqDistanceProtocol as SeqDistanceProtocol,
 )
+from gen_epix.seqdb.domain.model.seq.persistable import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq.persistable import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq.persistable import SnpProfile as SnpProfile

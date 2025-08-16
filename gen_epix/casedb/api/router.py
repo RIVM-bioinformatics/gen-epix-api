@@ -30,6 +30,7 @@ def create_routers(
 ) -> list[APIRouter]:
     assert app
     router_data = [
+        # Common routers
         {
             "name": "auth",
             "create_endpoints_function": create_auth_endpoints,
@@ -39,14 +40,6 @@ def create_routers(
             "name": "rbac",
             "create_endpoints_function": create_rbac_endpoints,
             "endpoints_function_kwargs": {"service_type": enum.ServiceType.RBAC},
-        },
-        {
-            "name": "ontology",
-            "create_endpoints_function": create_ontology_endpoints,
-        },
-        {
-            "name": "geo",
-            "create_endpoints_function": create_geo_endpoints,
         },
         {
             "name": "organization",
@@ -61,6 +54,20 @@ def create_routers(
             },
         },
         {
+            "name": "system",
+            "create_endpoints_function": create_system_endpoints,
+            "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
+        },
+        # Specific routers
+        {
+            "name": "ontology",
+            "create_endpoints_function": create_ontology_endpoints,
+        },
+        {
+            "name": "geo",
+            "create_endpoints_function": create_geo_endpoints,
+        },
+        {
             "name": "subject",
             "create_endpoints_function": create_subject_endpoints,
         },
@@ -71,11 +78,6 @@ def create_routers(
         {
             "name": "abac",
             "create_endpoints_function": create_abac_endpoints,
-        },
-        {
-            "name": "system",
-            "create_endpoints_function": create_system_endpoints,
-            "endpoints_function_kwargs": {"service_type": enum.ServiceType.SYSTEM},
         },
     ]
     routers: list[APIRouter] = []

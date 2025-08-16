@@ -3,8 +3,8 @@ import traceback
 from typing import Any, Callable, Type
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
+from gen_epix.casedb.domain.model import SORTED_SERVICES
 from gen_epix.casedb.domain.policy import RoleGenerator
-from gen_epix.casedb.domain.service import ORDERED_SERVICE_TYPES
 
 # TODO: check if sa_model import is needed here to avoid cyclic import
 from gen_epix.casedb.repositories import (
@@ -207,7 +207,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in ORDERED_SERVICE_TYPES:
+            for service_type in SORTED_SERVICES:
                 data = service_data[service_type]
                 props = {
                     x: y
@@ -293,9 +293,9 @@ class AppEnv(BaseAppEnv):
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering security policies")
                 )
+            services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
             services[enum.ServiceType.RBAC].register_policies()  # type: ignore
             services[enum.ServiceType.ABAC].register_policies()  # type: ignore
-            services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:

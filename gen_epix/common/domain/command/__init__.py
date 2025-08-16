@@ -72,37 +72,45 @@ from gen_epix.common.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
 
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
-    enum.ServiceType.AUTH: [
-        GetIdentityProvidersCommand,
-    ],
-    enum.ServiceType.ORGANIZATION: [
-        ContactCrudCommand,
-        DataCollectionCrudCommand,
-        DataCollectionSetCrudCommand,
-        DataCollectionSetDataCollectionUpdateAssociationCommand,
-        DataCollectionSetMemberCrudCommand,
-        IdentifierIssuerCrudCommand,
-        InviteUserCommand,
-        OrganizationCrudCommand,
-        OrganizationSetCrudCommand,
-        OrganizationSetMemberCrudCommand,
-        OrganizationSetOrganizationUpdateAssociationCommand,
-        RegisterInvitedUserCommand,
-        RetrieveOrganizationContactCommand,
-        SiteCrudCommand,
-        UpdateUserCommand,
-        UpdateUserOwnOrganizationCommand,
-        UserCrudCommand,
-        UserInvitationCrudCommand,
-    ],
-    enum.ServiceType.RBAC: [
-        RetrieveOwnPermissionsCommand,
-    ],
-    enum.ServiceType.SYSTEM: [
-        OutageCrudCommand,
-        RetrieveOutagesCommand,
-    ],
+COMMANDS_BY_SERVICE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
+    enum.ServiceType.AUTH: frozenset(
+        {
+            GetIdentityProvidersCommand,
+        }
+    ),
+    enum.ServiceType.ORGANIZATION: frozenset(
+        {
+            ContactCrudCommand,
+            DataCollectionCrudCommand,
+            DataCollectionSetCrudCommand,
+            DataCollectionSetDataCollectionUpdateAssociationCommand,
+            DataCollectionSetMemberCrudCommand,
+            IdentifierIssuerCrudCommand,
+            InviteUserCommand,
+            OrganizationCrudCommand,
+            OrganizationSetCrudCommand,
+            OrganizationSetMemberCrudCommand,
+            OrganizationSetOrganizationUpdateAssociationCommand,
+            RegisterInvitedUserCommand,
+            RetrieveOrganizationContactCommand,
+            SiteCrudCommand,
+            UpdateUserCommand,
+            UpdateUserOwnOrganizationCommand,
+            UserCrudCommand,
+            UserInvitationCrudCommand,
+        }
+    ),
+    enum.ServiceType.RBAC: frozenset(
+        {
+            RetrieveOwnPermissionsCommand,
+        }
+    ),
+    enum.ServiceType.SYSTEM: frozenset(
+        {
+            OutageCrudCommand,
+            RetrieveOutagesCommand,
+        }
+    ),
 }
 
 for service_type, command_classes in COMMANDS_BY_SERVICE.items():
