@@ -9,6 +9,7 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.filter import (
@@ -19,7 +20,6 @@ from gen_epix.filter import (
     StringSetFilter,
     UuidSetFilter,
 )
-from util.util import map_paired_elements
 
 
 class CaseService(BaseCaseService):

@@ -1,8 +1,8 @@
+from gen_epix.common.config import AppCfg
+from gen_epix.common.util import get_package_version
 from gen_epix.seqdb.app_setup import create_fast_api
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.env import AppEnv
-from util.cfg import AppCfg
-from util.version import get_project_version
 
 APP_NAME = "SEQDB"
 
@@ -11,7 +11,7 @@ SCHEMA_KWARGS = {
     "title": "Sequence database",
     "description": "Sequence database API",
     "summary": "Summary goes here",
-    "version": get_project_version(),
+    "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",

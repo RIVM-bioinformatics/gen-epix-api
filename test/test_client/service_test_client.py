@@ -11,10 +11,10 @@ from time import sleep
 from typing import Any, Hashable, Type, TypeVar
 from uuid import UUID
 
+from gen_epix.common.config import BaseAppCfg
 from gen_epix.common.domain.model import Model, User, UserInvitation
+from gen_epix.common.env import BaseAppEnv
 from gen_epix.fastapp import Command, CrudOperation
-from util.cfg import BaseAppCfg
-from util.env import BaseAppEnv
 
 BASE_MODEL_TYPE = TypeVar("T", bound=Model)
 

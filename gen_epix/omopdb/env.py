@@ -2,6 +2,8 @@ import copy
 import traceback
 from typing import Any, Callable, Type
 
+from gen_epix.common.config import AppCfg
+from gen_epix.common.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.services.auth import AuthService
@@ -25,8 +27,6 @@ from gen_epix.omopdb.services import (
     SystemService,
     UserManager,
 )
-from util.cfg import AppCfg
-from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):

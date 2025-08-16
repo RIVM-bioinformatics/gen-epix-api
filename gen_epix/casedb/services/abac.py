@@ -20,6 +20,7 @@ from gen_epix.casedb.policies.read_self_results_only_policy import (
     ReadSelfResultsOnlyPolicy,
 )
 from gen_epix.casedb.policies.update_user_policy import UpdateUserPolicy
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import App, CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.filter import (
@@ -29,7 +30,6 @@ from gen_epix.filter import (
     EqualsUuidFilter,
     UuidSetFilter,
 )
-from util.util import map_paired_elements
 
 
 class AbacService(BaseAbacService):
