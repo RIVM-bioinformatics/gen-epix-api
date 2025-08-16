@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pytest==8.4.*
-pytest-cov==6.0.*
+pytest-cov==6.2.*
 pytest-mock==3.14.*
 pytest-dependency==0.6.*
 pyinstrument==5.1.*
