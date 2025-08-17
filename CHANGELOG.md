@@ -2,6 +2,194 @@
 
 <!-- version list -->
 
+## v2.0.0 (2025-08-16)
+
+### Bug Fixes
+
+- Add correct renovate config ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Add requirements ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Allow command.CaseTypeColSetMemberCrudCommand READ for all users
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Etl_load_demo_data all ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Fix get_project_version ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Fix imports common/api/exc ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Update baseBranche renovate ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **casedb case_access**: Add full access check in CaseAbac model
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency cachetools to v5.5.2
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency dynaconf to v3.2.11
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency sqlalchemy to v2.0.43
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency sqlmodel to v0.0.24
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Chores
+
+- Add version uitil ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Fix in openpyxl requirements ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Merge main into dev to have dev be only ahead of main again
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Remove cicd folder ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Renovate fixes ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Temporarily add pytest to requirements.txt
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **.gitignore**: Update ignored paths for test data and logs
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **config**: Migrate config renovate.json
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency black to ==24.10.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency mypy to ==1.17.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency pandas-stubs to ==2.3.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency pyinstrument to ==5.1.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency pylint to ==3.3.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency pytest to ==8.4.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency pytest-cov to ==6.2.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency python-dateutil to ==2.9.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **deps**: Update dependency types-python-jose to ==3.5.*
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **requirements**: Add types-setuptools to dependencies
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **util**: Minor change from copilot review
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Code Style
+
+- **test**: Remove unnecessary blank line in test_simple_filter_pydantic_and_plain_python_class
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Documentation
+
+- Add version.py doc string ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Features
+
+- Added permissions endpoint and removed complete user endpoint
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Casedb user/me now under ORGANIZATION instead of AUTH service; update_user_own_organization and
+  retrieve_organization_admin_name_emails under ORGANIZATION instead of ABAC
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Seqdb/omopdb config structure adjusted; casedb config now has seqdb app user
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Refactoring
+
+- /util modules moved to /gen_epix/common and /test
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- Replaced os.path with PathLib for file operations in repository.py and run.py,
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **Filter**: Base.py - composite.py - Use getattr() for more efficient and generic filtering
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **test**: Replaced os.path with PathLib in the the test module,
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **test**: Update test utilities and improve type hints
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **util**: Replaced os.path with PathLib in the the util module,
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+### Testing
+
+- Casedb.integration.case_access test fixed; to be expanded with additional tests (WIP)
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **casedb case_access**: Major refactoring of the test, putting scenarios entirely in data
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+- **Filter): test(Filter**: Test_match.py - introduced two unit tests that test the getattr()
+  refactoring of composite.py and base.py on both Pydantic and plain Python classes
+  ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
+  [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
+
+
 ## v1.0.0 (2025-08-15)
 
 ### Bug Fixes
