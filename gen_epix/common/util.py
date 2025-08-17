@@ -1,10 +1,13 @@
 import json
+import tomllib
 import uuid
 from pathlib import Path
-from typing import Any, Hashable, Iterable
+from typing import Any, Hashable, Iterable, Type
 
 import ulid
 from pkg_resources import DistributionNotFound, get_distribution
+
+from gen_epix.fastapp import Command, Domain, Model, exc
 
 
 def generate_ulid() -> uuid.UUID:
@@ -119,3 +122,50 @@ def get_package_version() -> str:
         with open(file, "rb") as handle:
             version: str = tomllib.load(handle)["project"]["version"]
     return version
+
+
+def register_domain_entities(
+    domain: Domain,
+    sorted_service_types: Iterable[Hashable],
+    sorted_models_by_service_type: dict[Hashable, list[Type[Model]]],
+    commands_by_service_type: dict[Hashable, set[Type[Command]]],
+    common_model_impl: dict[Type[Model], Type[Model]] | None = None,
+    common_command_impl: dict[Type[Command], Type[Command]] | None = None,
+) -> None:
+    """
+    Register service types, models and commands with a domain. In case some
+    models or commands are subclassed from another domain and the provides
+    models and commands contain their parent classes, they can be substituted
+    in the input and subsequently be registered as the actual classes, by
+    providing a mapping.
+    """
+    if not common_model_impl:
+        common_model_impl = {}
+    for service_type in sorted_service_types:
+        # Register the service type
+        domain.register_service_type(service_type)
+        # Register the models
+        for i, model_class in enumerate(
+            sorted_models_by_service_type.get(service_type, [])
+        ):
+            if model_class in common_model_impl:
+                # Substitute the model class with its common implementation,
+                # also in the input
+                model_class = common_model_impl[model_class]
+                sorted_models_by_service_type[service_type][i] = model_class
+            if model_class.ENTITY is None:
+                raise exc.InitializationServiceError(
+                    f"Entity for model class {model_class} is not initialized."
+                )
+            domain.register_entity(
+                model_class.ENTITY, model_class=model_class, service_type=service_type
+            )
+        # Register the commands
+        for command_class in commands_by_service_type.get(service_type, []):
+            if common_command_impl and command_class in common_command_impl:
+                # Substitute the command class with its common implementation,
+                # also in the input
+                commands_by_service_type[service_type].remove(command_class)
+                command_class = common_command_impl[command_class]
+                commands_by_service_type[service_type].add(command_class)
+            domain.register_command(command_class, service_type=service_type)

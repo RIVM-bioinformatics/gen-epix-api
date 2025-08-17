@@ -1,7 +1,7 @@
 from typing import Type
 
 from gen_epix import fastapp
-from gen_epix.common.domain import DOMAIN, enum
+from gen_epix.common.domain import enum
 from gen_epix.common.domain.command.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
@@ -72,7 +72,7 @@ from gen_epix.common.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
 
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
     enum.ServiceType.AUTH: frozenset(
         {
             GetIdentityProvidersCommand,
@@ -112,7 +112,3 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = 
         }
     ),
 }
-
-for service_type, command_classes in COMMANDS_BY_SERVICE.items():
-    for command_class in command_classes:
-        DOMAIN.register_command(command_class, service_type=service_type)
