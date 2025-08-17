@@ -158,7 +158,7 @@ class SAModel2_2(Base2, RowMetadataMixin):
     model2_1 = sa.orm.relationship("SAModel2_1")
 
 
-SORTED_MODELS_BY_SERVICE: dict[ServiceType, list[Type[fastapp.Model]]] = {
+SORTED_MODELS_BY_SERVICE_TYPE: dict[ServiceType, list[Type[fastapp.Model]]] = {
     ServiceType.SERVICE1: [
         Model1_1,
         Model1_2,
@@ -168,7 +168,7 @@ SORTED_MODELS_BY_SERVICE: dict[ServiceType, list[Type[fastapp.Model]]] = {
         Model2_2,
     ],
 }
-for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
+for service_type, model_classes in SORTED_MODELS_BY_SERVICE_TYPE.items():
     for model_class in model_classes:
         assert model_class.ENTITY is not None
         DOMAIN.register_entity(

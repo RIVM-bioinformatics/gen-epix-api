@@ -22,7 +22,7 @@ class Model2_2CrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = Model2_2
 
 
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     enum.ServiceType.SERVICE1: {
         Model1_1CrudCommand,
         Model1_2CrudCommand,
@@ -33,6 +33,6 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     },
 }
 
-for service_type, command_classes in COMMANDS_BY_SERVICE.items():
+for service_type, command_classes in COMMANDS_BY_SERVICE_TYPE.items():
     for command_class in command_classes:
         DOMAIN.register_command(command_class, service_type=service_type)
