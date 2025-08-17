@@ -4,7 +4,11 @@ from gen_epix import fastapp
 from gen_epix.common.domain import enum as common_enum
 from gen_epix.common.domain import model as common_model
 from gen_epix.common.domain.model import (
+<<<<<<< HEAD
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
+=======
+    SORTED_MODELS_BY_SERVICE as _COMMON_SORTED_MODELS_BY_SERVICE,
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
 )
 from gen_epix.common.domain.model import Contact as Contact
 from gen_epix.common.domain.model import DataCollection as DataCollection
@@ -73,6 +77,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
     {  # pyright: ignore[reportAssignmentType]
         # Common models
         enum.ServiceType.AUTH: list(
+<<<<<<< HEAD
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.AUTH]
         ),
         enum.ServiceType.SYSTEM: list(
@@ -83,6 +88,18 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
         ),
         enum.ServiceType.ORGANIZATION: list(
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
+=======
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.AUTH]
+        ),
+        enum.ServiceType.SYSTEM: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.SYSTEM]
+        ),
+        enum.ServiceType.RBAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.RBAC]
+        ),
+        enum.ServiceType.ORGANIZATION: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE[common_enum.ServiceType.ORGANIZATION]
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
         ),
         # Specific models
         enum.ServiceType.OMOP: [
@@ -141,10 +158,27 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
         ],
     }
 )
+SORTED_SERVICES = tuple(SORTED_MODELS_BY_SERVICE.keys())
 
+<<<<<<< HEAD
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
 }
+=======
+_COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
+    common_model.User: User,
+    common_model.UserInvitation: UserInvitation,
+}
+for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
+    for i, model_class in enumerate(model_classes):
+        if model_class in _COMMON_MODEL_MAP:
+            model_classes[i] = _COMMON_MODEL_MAP[model_class]
+            model_class = model_classes[i]
+        assert model_class.ENTITY is not None
+        DOMAIN.register_entity(
+            model_class.ENTITY, model_class=model_class, service_type=service_type
+        )
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12

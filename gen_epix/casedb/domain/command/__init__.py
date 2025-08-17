@@ -167,7 +167,11 @@ from gen_epix.casedb.domain.command.subject import (
 from gen_epix.common.domain import command as common_command
 from gen_epix.common.domain import enum as common_enum
 from gen_epix.common.domain.command import (
+<<<<<<< HEAD
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
+=======
+    COMMANDS_BY_SERVICE as _COMMON_COMMANDS_BY_SERVICE,
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
 )
 from gen_epix.common.domain.command import Command as Command
 from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
@@ -225,7 +229,11 @@ from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
 
+<<<<<<< HEAD
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+=======
+COMMANDS_BY_SERVICE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
     # Specific commands
     enum.ServiceType.ABAC: {
         OrganizationAccessCasePolicyCrudCommand,
@@ -297,6 +305,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     },
     # Common commands
     enum.ServiceType.AUTH: set(
+<<<<<<< HEAD
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.AUTH]
     ),
     enum.ServiceType.SYSTEM: set(
@@ -309,6 +318,31 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
     ),
 }
+=======
+        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.AUTH]
+    ),
+    enum.ServiceType.SYSTEM: set(
+        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.SYSTEM]
+    ),
+    enum.ServiceType.RBAC: set(
+        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.RBAC]
+    ),
+    enum.ServiceType.ORGANIZATION: set(
+        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.ORGANIZATION]
+    ),
+}
+
+# Replace common commands with specific implementations
+COMMANDS_BY_SERVICE[enum.ServiceType.ORGANIZATION].difference_update(
+    {common_command.UserCrudCommand, common_command.UserInvitationCrudCommand}
+)
+COMMANDS_BY_SERVICE[enum.ServiceType.ORGANIZATION].update(
+    {
+        UserCrudCommand,
+        UserInvitationCrudCommand,
+    }
+)
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
 
 COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,

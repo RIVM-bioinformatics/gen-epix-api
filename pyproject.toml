@@ -4,7 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Gen-EpiX"
+<<<<<<< HEAD
 version = "0.1.10"
+=======
+version = "3.0.0"
+>>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
 authors = [
     { name="RIVM-bioinformatics", email="ids-bioinformatics@rivm.nl" },
 ]
