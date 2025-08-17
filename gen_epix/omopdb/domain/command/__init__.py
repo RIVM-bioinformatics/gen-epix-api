@@ -4,7 +4,7 @@ from gen_epix import fastapp
 from gen_epix.common.domain import command as common_command
 from gen_epix.common.domain import enum as common_enum
 from gen_epix.common.domain.command import (
-    COMMANDS_BY_SERVICE as _COMMON_COMMANDS_BY_SERVICE,
+    COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
 from gen_epix.common.domain.command import Command as Command
 from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
@@ -61,7 +61,7 @@ from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserComman
 from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
-from gen_epix.omopdb.domain import DOMAIN, enum
+from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.domain.command.omop import (
     CareSiteCrudCommand as CareSiteCrudCommand,
 )
@@ -171,7 +171,7 @@ from gen_epix.omopdb.domain.command.organization import (
     UserInvitationCrudCommand as UserInvitationCrudCommand,
 )
 
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
     enum.ServiceType.OMOP: {
         CareSiteCrudCommand,
@@ -218,30 +218,20 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     },
     # Common commands
     enum.ServiceType.AUTH: set(
-        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.AUTH]
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.AUTH]
     ),
     enum.ServiceType.SYSTEM: set(
-        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.SYSTEM]
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
     ),
     enum.ServiceType.RBAC: set(
-        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.RBAC]
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
     ),
     enum.ServiceType.ORGANIZATION: set(
-        _COMMON_COMMANDS_BY_SERVICE[common_enum.ServiceType.ORGANIZATION]
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
     ),
 }
 
-# Replace common commands with specific implementations
-COMMANDS_BY_SERVICE[enum.ServiceType.ORGANIZATION].difference_update(
-    {common_command.UserCrudCommand, common_command.UserInvitationCrudCommand}
-)
-COMMANDS_BY_SERVICE[enum.ServiceType.ORGANIZATION].update(
-    {
-        UserCrudCommand,
-        UserInvitationCrudCommand,
-    }
-)
-
-for service_type, command_classes in COMMANDS_BY_SERVICE.items():
-    for command_class in command_classes:
-        DOMAIN.register_command(command_class, service_type=service_type)
+COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+    common_command.UserCrudCommand: UserCrudCommand,
+    common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+}

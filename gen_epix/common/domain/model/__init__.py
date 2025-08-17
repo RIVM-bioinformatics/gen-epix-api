@@ -1,7 +1,7 @@
 from typing import Type
 
 import gen_epix.fastapp as fastapp
-from gen_epix.common.domain import DOMAIN, enum
+from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model as Model
 from gen_epix.common.domain.model.organization import Contact as Contact
 from gen_epix.common.domain.model.organization import DataCollection as DataCollection
@@ -27,7 +27,9 @@ from gen_epix.common.domain.model.system import Outage as Outage
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
-SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, tuple[Type[fastapp.Model], ...]] = {
+SORTED_MODELS_BY_SERVICE_TYPE: dict[
+    enum.ServiceType, tuple[Type[fastapp.Model], ...]
+] = {
     enum.ServiceType.AUTH: (
         IdentityProvider,
         IDPUser,
@@ -49,11 +51,5 @@ SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, tuple[Type[fastapp.Model], ...]
     ),
     enum.ServiceType.RBAC: tuple(),
 }
-SORTED_SERVICES = tuple(SORTED_MODELS_BY_SERVICE.keys())
 
-for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
-    for model_class in model_classes:
-        assert model_class.ENTITY is not None
-        DOMAIN.register_entity(
-            model_class.ENTITY, model_class=model_class, service_type=service_type
-        )
+SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

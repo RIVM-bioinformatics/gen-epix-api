@@ -8,7 +8,7 @@ from gen_epix.common.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain import DOMAIN, enum, model
-from gen_epix.seqdb.domain.model import SORTED_SERVICES
+from gen_epix.seqdb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.seqdb.domain.policy import RoleGenerator
 from gen_epix.seqdb.repositories import (
     OrganizationDictRepository,
@@ -142,7 +142,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in SORTED_SERVICES:
+            for service_type in SORTED_SERVICE_TYPES:
                 data = service_data[service_type]
                 props = {
                     x: y
