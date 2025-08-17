@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/RIVM-bioinformatics/gen-epix-api/be6ec13a6f9d39be1e2a6dfbe6ba7b48ad2a2551/docs/assets/Gen-epix-logo.svg" alt="gen-epix-api-logo">
+    <img src="https://github.com/RIVM-bioinformatics/gen-epix-api/docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo">
 </p>
 <p align="center">
     <em>Genomic Epidemiology platform for disease X</em>
