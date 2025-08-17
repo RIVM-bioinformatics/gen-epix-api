@@ -27,13 +27,9 @@ from gen_epix.common.domain.model.system import Outage as Outage
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
-<<<<<<< HEAD
 SORTED_MODELS_BY_SERVICE_TYPE: dict[
     enum.ServiceType, tuple[Type[fastapp.Model], ...]
 ] = {
-=======
-SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, tuple[Type[fastapp.Model], ...]] = {
->>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
     enum.ServiceType.AUTH: (
         IdentityProvider,
         IDPUser,
@@ -55,6 +51,5 @@ SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, tuple[Type[fastapp.Model], ...]
     ),
     enum.ServiceType.RBAC: tuple(),
 }
-SORTED_SERVICES = tuple(SORTED_MODELS_BY_SERVICE.keys())
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

@@ -72,11 +72,7 @@ from gen_epix.common.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
 
-<<<<<<< HEAD
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
-=======
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
->>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
     enum.ServiceType.AUTH: frozenset(
         {
             GetIdentityProvidersCommand,

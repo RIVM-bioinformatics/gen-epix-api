@@ -3,11 +3,7 @@ import traceback
 from typing import Any, Callable, Type
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
-<<<<<<< HEAD
 from gen_epix.casedb.domain.model import SORTED_SERVICE_TYPES
-=======
-from gen_epix.casedb.domain.model import SORTED_SERVICES
->>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
 from gen_epix.casedb.domain.policy import RoleGenerator
 
 # TODO: check if sa_model import is needed here to avoid cyclic import
@@ -211,11 +207,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-<<<<<<< HEAD
             for service_type in SORTED_SERVICE_TYPES:
-=======
-            for service_type in SORTED_SERVICES:
->>>>>>> 0b82ce0b0d10a21343d39c5a21bcb260a3658b12
                 data = service_data[service_type]
                 props = {
                     x: y
