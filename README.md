@@ -2,9 +2,6 @@
     <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo">
 </p>
 <p align="center">
-    <em>Genomic Epidemiology platform for disease X</em>
-</p>
-<p align="center">
     <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
         <img src="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" alt="tests">
     </a>
