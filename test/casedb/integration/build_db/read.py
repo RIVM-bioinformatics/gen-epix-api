@@ -3,9 +3,9 @@ from test.casedb.integration.build_db.base import (
     ALL_USERS,
     DATA_USERS,
     GUEST_USERS,
-    METADATA_ADMIN_OR_ABOVE_USERS,
     NO_DATA_USERS,
     NON_GUEST_USERS,
+    REFDATA_ADMIN_OR_ABOVE_USERS,
     ROOT,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
@@ -27,7 +27,7 @@ class TestRead:
         env.verify_read_all("root1_1", model.User, all_user_ids)
         env.verify_read_all("root2_1", model.User, all_user_ids)
         env.verify_read_all("app_admin1_1", model.User, all_user_ids)
-        # Read subset of users as org_admin, metadata_admin, org_user
+        # Read subset of users as org_admin, refdata_admin, org_user
         for i in range(0, 5):
             i += 1
             for j in range(0, 1):
@@ -39,8 +39,8 @@ class TestRead:
                     model.User,
                     env.get_users_for_org_admin(org_admin_user),
                 )
-                # Organization and metadata admin users can only read themselves
-                for user_type in ["org_user", "metadata_admin"]:
+                # Organization and refdata admin users can only read themselves
+                for user_type in ["org_user", "refdata_admin"]:
                     user = env._get_obj(
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
                     )
@@ -205,7 +205,7 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: R
         - org_user: R
         - guest: -
@@ -216,7 +216,7 @@ class TestRead:
         expected_access = {
             "root1_1": ["1", "2", "3", "4", "5"],
             "app_admin1_1": ["1", "2", "3", "4", "5"],
-            "metadata_admin1_1": ["1", "2", "3", "4", "5"],
+            "refdata_admin1_1": ["1", "2", "3", "4", "5"],
             "org_admin1_1": [],
             "org_user1_1": ["1"],
             "org_user1_2": ["1", "2"],
@@ -236,7 +236,7 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: R
         - org_user: R
         - guest: -
@@ -257,7 +257,7 @@ class TestRead:
         abac_permissions: dict[str, list[str | UUID]] = {
             "root1_1": all_case_type_set_members_ids,
             "app_admin1_1": all_case_type_set_members_ids,
-            "metadata_admin1_1": all_case_type_set_members_ids,
+            "refdata_admin1_1": all_case_type_set_members_ids,
             "org_admin1_1": [],
             "org_user1_1": org_accessed_members_ids,
         }
@@ -272,14 +272,14 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: -
         - org_user: -
         - guest: -
 
         No ABAC restrictions
         """
-        self._general_read_test(env, model.CaseTypeCol, METADATA_ADMIN_OR_ABOVE_USERS)
+        self._general_read_test(env, model.CaseTypeCol, REFDATA_ADMIN_OR_ABOVE_USERS)
 
     @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_col_set(self, env: Env) -> None:
@@ -287,7 +287,7 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: R
         - org_user: R
         - guest: -
@@ -302,7 +302,7 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: -
         - org_user: -
         - guest: -
@@ -310,7 +310,7 @@ class TestRead:
         No ABAC restrictions
         """
         self._general_read_test(
-            env, model.CaseTypeColSetMember, METADATA_ADMIN_OR_ABOVE_USERS
+            env, model.CaseTypeColSetMember, REFDATA_ADMIN_OR_ABOVE_USERS
         )
 
     @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
@@ -319,7 +319,7 @@ class TestRead:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: -
+        - refdata_admin: -
         - org_admin: CRUD
         - org_user: CRUD
         - guest: -
@@ -328,7 +328,7 @@ class TestRead:
         abac_permissions: dict[str, list[str]] = {
             "root1_1": [],
             "app_admin1_1": [],
-            "metadata_admin1_1": [],
+            "refdata_admin1_1": [],
             "org_admin1_1": [],
             "org_user1_1": [
                 "case_set1_1",

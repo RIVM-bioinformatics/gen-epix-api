@@ -4,7 +4,7 @@ from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_METADATA_USERS,
     BELOW_ROOT_USERS,
-    METADATA_ADMIN_OR_ABOVE_USERS,
+    REFDATA_ADMIN_OR_ABOVE_USERS,
     ROOT,
     SKIP_RAISE,
 )
@@ -21,7 +21,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: -
         - org_user: -
         - guest: -
@@ -41,7 +41,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: -
         - org_user: -
         - guest: -
@@ -57,13 +57,13 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: R
         - org_user: R
         - guest: -
         """
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
-        for user in METADATA_ADMIN_OR_ABOVE_USERS:
+        for user in REFDATA_ADMIN_OR_ABOVE_USERS:
             case_type_set_member = env.create_case_type_set_member(
                 ROOT,
                 "case_type_set1",
@@ -93,7 +93,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: -
         - org_user: -
         - guest: -
@@ -121,7 +121,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: R
         - org_user: R
         - guest: -
@@ -157,7 +157,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: -
         - org_user: -
         - guest: -
@@ -166,7 +166,7 @@ class TestDelete:
         case_type_col_set = env.create_case_type_col_set(
             ROOT, "case_type_col_set99", set()
         )
-        for user in METADATA_ADMIN_OR_ABOVE_USERS:
+        for user in REFDATA_ADMIN_OR_ABOVE_USERS:
             case_type_col_set_member = env.create_case_type_col_set_member(
                 ROOT,
                 "case_type_col_set99",
@@ -206,7 +206,7 @@ class TestDelete:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: CRUD
         - org_user: CRUD
         - guest: -

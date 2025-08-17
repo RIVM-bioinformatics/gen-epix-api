@@ -3,7 +3,7 @@ from test.casedb.casedb_service_test_client import CasedbServiceTestClient as En
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
-    METADATA_ADMIN_OR_ABOVE_USERS,
+    REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
@@ -58,23 +58,23 @@ class TestCreate:
         if env.verbose:
             env.print_organizations()
 
-    def test_create_user_metadata_admin(self, env: Env) -> None:
-        # Create metadata_admin as root and app_admin
-        env.invite_and_register_user("root2_1", "metadata_admin1_1")
-        env.invite_and_register_user("app_admin2_1", "metadata_admin1_2")
-        env.invite_and_register_user("app_admin1_1", "metadata_admin2_1")
-        env.invite_and_register_user("app_admin1_2", "metadata_admin2_2")
+    def test_create_user_refdata_admin(self, env: Env) -> None:
+        # Create refdata_admin as root and app_admin
+        env.invite_and_register_user("root2_1", "refdata_admin1_1")
+        env.invite_and_register_user("app_admin2_1", "refdata_admin1_2")
+        env.invite_and_register_user("app_admin1_1", "refdata_admin2_1")
+        env.invite_and_register_user("app_admin1_2", "refdata_admin2_2")
         env.check_user_has_role(
-            "metadata_admin1_1", enum.Role.METADATA_ADMIN, exclusive=True
+            "refdata_admin1_1", enum.Role.REFDATA_ADMIN, exclusive=True
         )
         env.check_user_has_role(
-            "metadata_admin1_2", enum.Role.METADATA_ADMIN, exclusive=True
+            "refdata_admin1_2", enum.Role.REFDATA_ADMIN, exclusive=True
         )
         env.check_user_has_role(
-            "metadata_admin2_1", enum.Role.METADATA_ADMIN, exclusive=True
+            "refdata_admin2_1", enum.Role.REFDATA_ADMIN, exclusive=True
         )
         env.check_user_has_role(
-            "metadata_admin2_2", enum.Role.METADATA_ADMIN, exclusive=True
+            "refdata_admin2_2", enum.Role.REFDATA_ADMIN, exclusive=True
         )
 
     def test_create_user_org_admin(self, env: Env) -> None:
@@ -172,14 +172,14 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("org_admin1_1", "app_admin1_1")
         with pytest.raises(exc.UnauthorizedAuthError):
-            env.invite_and_register_user("org_admin1_1", "metadata_admin1_1")
+            env.invite_and_register_user("org_admin1_1", "refdata_admin1_1")
         for exec_user in ["org_user1_1", "guest1_1"]:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.invite_and_register_user(exec_user, "root2_1")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.invite_and_register_user(exec_user, "app_admin2_1")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "metadata_admin2_1")
+                env.invite_and_register_user(exec_user, "refdata_admin2_1")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.invite_and_register_user(exec_user, "org_admin2_1")
             with pytest.raises(exc.UnauthorizedAuthError):
@@ -196,7 +196,7 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.create_organization("org_admin1_1", "org11")
         with pytest.raises(exc.UnauthorizedAuthError):
-            env.create_organization("metadata_admin1_1", "org11")
+            env.create_organization("refdata_admin1_1", "org11")
         with pytest.raises(exc.UnauthorizedAuthError):
             env.create_organization("org_user1_1", "org11")
         with pytest.raises(exc.UnauthorizedAuthError):
@@ -206,7 +206,7 @@ class TestCreate:
     def test_create_org_admin_policy_raise(self, env: Env) -> None:
         for exec_user in [
             "org_admin1_1",
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "org_user1_1",
             "guest1_1",
         ]:
@@ -215,7 +215,7 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "app_admin2_1", "org1")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_org_admin_policy(exec_user, "metadata_admin2_1", "org1")
+                env.create_org_admin_policy(exec_user, "refdata_admin2_1", "org1")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "org_admin2_1", "org1")
             with pytest.raises(exc.UnauthorizedAuthError):
@@ -233,17 +233,17 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_concept(self, env: Env) -> None:
-        # Create concept as root, app_admin, metadata_admin
+        # Create concept as root, app_admin, refdata_admin
         env.create_concept("root1_1", "category1_1")
         env.create_concept("app_admin1_1", "category1_2")
-        env.create_concept("metadata_admin1_1", "level2_1")
-        env.create_concept("metadata_admin1_2", "level2_2")
-        env.create_concept("metadata_admin2_1", "interval3_1")
-        env.create_concept("metadata_admin2_2", "interval3_2")
-        env.create_concept("metadata_admin1_1", "category4_1")
-        env.create_concept("metadata_admin1_2", "category4_2")
-        env.create_concept("metadata_admin1_1", "category5_1")
-        env.create_concept("metadata_admin1_2", "category5_2")
+        env.create_concept("refdata_admin1_1", "level2_1")
+        env.create_concept("refdata_admin1_2", "level2_2")
+        env.create_concept("refdata_admin2_1", "interval3_1")
+        env.create_concept("refdata_admin2_2", "interval3_2")
+        env.create_concept("refdata_admin1_1", "category4_1")
+        env.create_concept("refdata_admin1_2", "category4_2")
+        env.create_concept("refdata_admin1_1", "category5_1")
+        env.create_concept("refdata_admin1_2", "category5_2")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -255,7 +255,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_concept_set(self, env: Env) -> None:
-        # Create concept_set as root, app_admin, metadata_admin
+        # Create concept_set as root, app_admin, refdata_admin
         env.create_concept_set(
             "root1_1",
             "concept_set1_nominal",
@@ -269,20 +269,20 @@ class TestCreate:
             enum.ConceptSetType.ORDINAL,
         )
         env.create_concept_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "concept_set3_interval",
             ["interval3_1", "interval3_2"],
             enum.ConceptSetType.INTERVAL,
         )
         env.create_concept_set(
-            "metadata_admin1_2",
+            "refdata_admin1_2",
             "concept_set4_regex",
             [],
             enum.ConceptSetType.REGULAR_LANGUAGE,
             regex=r"^ST(\d*)$",
         )
         env.create_concept_set(
-            "metadata_admin2_1",
+            "refdata_admin2_1",
             "concept_set5_context_free_grammar_json",
             [],
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
@@ -304,12 +304,12 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
-        # Create region_set as root, app_admin, metadata_admin
+        # Create region_set as root, app_admin, refdata_admin
         env.create_region_set("root1_1", "region_set1")
         env.create_region_set("app_admin1_1", "region_set2")
-        env.create_region_set("metadata_admin1_1", "region_set3")
-        env.create_region_set("metadata_admin1_2", "region_set4")
-        env.create_region_set("metadata_admin2_1", "region_set5")
+        env.create_region_set("refdata_admin1_1", "region_set3")
+        env.create_region_set("refdata_admin1_2", "region_set4")
+        env.create_region_set("refdata_admin2_1", "region_set5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -321,12 +321,12 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set_shape(self, env: Env) -> None:
-        # Create region_set_shape as root, app_admin, metadata_admin
+        # Create region_set_shape as root, app_admin, refdata_admin
         env.create_region_set_shape("root1_1", "region_set1", 1)
         env.create_region_set_shape("app_admin1_1", "region_set2", 1)
-        env.create_region_set_shape("metadata_admin1_1", "region_set3", 1)
-        env.create_region_set_shape("metadata_admin1_2", "region_set4", 1)
-        env.create_region_set_shape("metadata_admin2_1", "region_set5", 1)
+        env.create_region_set_shape("refdata_admin1_1", "region_set3", 1)
+        env.create_region_set_shape("refdata_admin1_2", "region_set4", 1)
+        env.create_region_set_shape("refdata_admin2_1", "region_set5", 1)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -338,17 +338,17 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region(self, env: Env) -> None:
-        # Create region as root, app_admin, metadata_admin
+        # Create region as root, app_admin, refdata_admin
         env.create_region("root1_1", "region1_1", "region_set1")
         env.create_region("app_admin1_1", "region1_2", "region_set1")
-        env.create_region("metadata_admin1_1", "region2_1", "region_set2")
-        env.create_region("metadata_admin1_2", "region2_2", "region_set2")
-        env.create_region("metadata_admin2_1", "region3_1", "region_set3")
-        env.create_region("metadata_admin2_2", "region3_2", "region_set3")
-        env.create_region("metadata_admin1_1", "region4_1", "region_set4")
-        env.create_region("metadata_admin1_2", "region4_2", "region_set4")
-        env.create_region("metadata_admin1_1", "region5_1", "region_set5")
-        env.create_region("metadata_admin1_2", "region5_2", "region_set5")
+        env.create_region("refdata_admin1_1", "region2_1", "region_set2")
+        env.create_region("refdata_admin1_2", "region2_2", "region_set2")
+        env.create_region("refdata_admin2_1", "region3_1", "region_set3")
+        env.create_region("refdata_admin2_2", "region3_2", "region_set3")
+        env.create_region("refdata_admin1_1", "region4_1", "region_set4")
+        env.create_region("refdata_admin1_2", "region4_2", "region_set4")
+        env.create_region("refdata_admin1_1", "region5_1", "region_set5")
+        env.create_region("refdata_admin1_2", "region5_2", "region_set5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -360,19 +360,19 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_genetic_distance_protocol(self, env: Env) -> None:
-        # Create genetic_distance_protocol as root, app_admin, metadata_admin
+        # Create genetic_distance_protocol as root, app_admin, refdata_admin
         env.create_genetic_distance_protocol("root1_1", "genetic_distance_protocol1")
         env.create_genetic_distance_protocol(
             "app_admin1_1", "genetic_distance_protocol2"
         )
         env.create_genetic_distance_protocol(
-            "metadata_admin1_1", "genetic_distance_protocol3"
+            "refdata_admin1_1", "genetic_distance_protocol3"
         )
         env.create_genetic_distance_protocol(
-            "metadata_admin1_2", "genetic_distance_protocol4"
+            "refdata_admin1_2", "genetic_distance_protocol4"
         )
         env.create_genetic_distance_protocol(
-            "metadata_admin2_1", "genetic_distance_protocol5"
+            "refdata_admin2_1", "genetic_distance_protocol5"
         )
 
     @pytest.mark.skipif(
@@ -387,15 +387,15 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_dim(self, env: Env) -> None:
-        # Create dim as root, app_admin, metadata_admin
+        # Create dim as root, app_admin, refdata_admin
         for i in range(1, 6):
             env.create_dim("root1_1", f"text{i}", enum.DimType.TIME)
             env.create_dim("app_admin1_1", f"number{i}", enum.DimType.NUMBER)
-            env.create_dim("metadata_admin1_1", f"time{i}", enum.DimType.TEXT)
-            env.create_dim("metadata_admin1_1", f"geo{i}", enum.DimType.GEO)
-            env.create_dim("metadata_admin1_1", f"id{i}", enum.DimType.IDENTIFIER)
-            env.create_dim("metadata_admin1_1", f"org{i}", enum.DimType.ORGANIZATION)
-            env.create_dim("metadata_admin1_1", f"other{i}", enum.DimType.OTHER)
+            env.create_dim("refdata_admin1_1", f"time{i}", enum.DimType.TEXT)
+            env.create_dim("refdata_admin1_1", f"geo{i}", enum.DimType.GEO)
+            env.create_dim("refdata_admin1_1", f"id{i}", enum.DimType.IDENTIFIER)
+            env.create_dim("refdata_admin1_1", f"org{i}", enum.DimType.ORGANIZATION)
+            env.create_dim("refdata_admin1_1", f"other{i}", enum.DimType.OTHER)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -407,7 +407,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_col(self, env: Env) -> None:
-        # Create col as root, app_admin, metadata_admin
+        # Create col as root, app_admin, refdata_admin
         for i in range(1, 6):
             # DimType.TEXT can have any column under it
             dim = f"text{i}"
@@ -423,7 +423,7 @@ class TestCreate:
                 j += 1
                 col_type_str = col_type.value.lower()
                 env.create_col(
-                    "metadata_admin1_1",
+                    "refdata_admin1_1",
                     f"{dim}_{j}_{col_type_str}",
                     col_type,
                     concept_set=f"concept_set{j}_{col_type_str}",
@@ -434,12 +434,12 @@ class TestCreate:
             )
             env.create_col("app_admin1_1", f"{dim}_8_time_year", enum.ColType.TIME_YEAR)
             env.create_col(
-                "metadata_admin1_1",
+                "refdata_admin1_1",
                 f"{dim}_9_genetic_distance",
                 enum.ColType.GENETIC_SEQUENCE,
             )
             env.create_col(
-                "metadata_admin1_1",
+                "refdata_admin1_1",
                 f"{dim}_10_genetic_distance",
                 enum.ColType.GENETIC_DISTANCE,
                 genetic_distance_protocol=f"genetic_distance_protocol{i}",
@@ -460,7 +460,7 @@ class TestCreate:
                 j += 1
                 col_type_str = col_type.value.lower()
                 env.create_col(
-                    "metadata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
+                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
                 )
             # DimType.NUMBER can have number columns under it
             dim = f"number{i}"
@@ -478,7 +478,7 @@ class TestCreate:
                 j += 1
                 col_type_str = col_type.value.lower()
                 env.create_col(
-                    "metadata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
+                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
                 )
             # DimType.GEO can have geo columns under it
             dim = f"geo{i}"
@@ -486,7 +486,7 @@ class TestCreate:
                 j += 1
                 region_set = f"region_set{j}"
                 env.create_col(
-                    "metadata_admin1_1",
+                    "refdata_admin1_1",
                     f"{dim}_{j}_{region_set}",
                     enum.ColType.GEO_REGION,
                     region_set=region_set,
@@ -503,14 +503,14 @@ class TestCreate:
                 j += 1
                 col_type_str = col_type.value.lower()
                 env.create_col(
-                    "metadata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
+                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
                 )
             # DimType.ORGANIZATION can have organization columns under it
             dim = f"org{i}"
             for j in range(0, 3):
                 j += 1
                 env.create_col(
-                    "metadata_admin1_1",
+                    "refdata_admin1_1",
                     f"{dim}_{j}_organization",
                     enum.ColType.ORGANIZATION,
                 )
@@ -530,12 +530,12 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_disease(self, env: Env) -> None:
-        # Create disease as root, app_admin, metadata_admin
+        # Create disease as root, app_admin, refdata_admin
         env.create_disease("root1_1", "disease1")
         env.create_disease("app_admin1_1", "disease2")
-        env.create_disease("metadata_admin1_1", "disease3")
-        env.create_disease("metadata_admin1_1", "disease4")
-        env.create_disease("metadata_admin2_1", "disease5")
+        env.create_disease("refdata_admin1_1", "disease3")
+        env.create_disease("refdata_admin1_1", "disease4")
+        env.create_disease("refdata_admin2_1", "disease5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -547,12 +547,12 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_etiological_agent(self, env: Env) -> None:
-        # Create etiological_agent as root, app_admin, metadata_admin
+        # Create etiological_agent as root, app_admin, refdata_admin
         env.create_etiological_agent("root1_1", "etiological_agent1")
         env.create_etiological_agent("app_admin1_1", "etiological_agent2")
-        env.create_etiological_agent("metadata_admin1_1", "etiological_agent3")
-        env.create_etiological_agent("metadata_admin1_2", "etiological_agent4")
-        env.create_etiological_agent("metadata_admin2_1", "etiological_agent5")
+        env.create_etiological_agent("refdata_admin1_1", "etiological_agent3")
+        env.create_etiological_agent("refdata_admin1_2", "etiological_agent4")
+        env.create_etiological_agent("refdata_admin2_1", "etiological_agent5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -564,13 +564,13 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_etiology(self, env: Env) -> None:
-        # Create etiology as root, app_admin, metadata_admin
+        # Create etiology as root, app_admin, refdata_admin
         env.create_etiology("root1_1", "disease1", "etiological_agent1")
         env.create_etiology("app_admin1_1", "disease1", "etiological_agent2")
-        env.create_etiology("metadata_admin1_1", "disease2", "etiological_agent3")
-        env.create_etiology("metadata_admin1_2", "disease3", "etiological_agent3")
-        env.create_etiology("metadata_admin2_1", "disease4", "etiological_agent4")
-        env.create_etiology("metadata_admin2_1", "disease5", "etiological_agent5")
+        env.create_etiology("refdata_admin1_1", "disease2", "etiological_agent3")
+        env.create_etiology("refdata_admin1_2", "disease3", "etiological_agent3")
+        env.create_etiology("refdata_admin2_1", "disease4", "etiological_agent4")
+        env.create_etiology("refdata_admin2_1", "disease5", "etiological_agent5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -601,19 +601,19 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type(self, env: Env) -> None:
-        # Create case_type as root, app_admin, metadata_admin
+        # Create case_type as root, app_admin, refdata_admin
         env.create_case_type("root1_1", "case_type1", "disease1", "etiological_agent1")
         env.create_case_type(
             "app_admin1_1", "case_type2", "disease1", "etiological_agent2"
         )
         env.create_case_type(
-            "metadata_admin1_1", "case_type3", "disease2", "etiological_agent3"
+            "refdata_admin1_1", "case_type3", "disease2", "etiological_agent3"
         )
         env.create_case_type(
-            "metadata_admin1_2", "case_type4", "disease3", "etiological_agent3"
+            "refdata_admin1_2", "case_type4", "disease3", "etiological_agent3"
         )
         env.create_case_type(
-            "metadata_admin2_1", "case_type5", "disease4", "etiological_agent4"
+            "refdata_admin2_1", "case_type5", "disease4", "etiological_agent4"
         )
         if env.verbose:
             env.print_case_types()
@@ -630,18 +630,12 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_set_category(self, env: Env) -> None:
-        # Create case_type_set_category as root, app_admin, metadata_admin
+        # Create case_type_set_category as root, app_admin, refdata_admin
         env.create_case_type_set_category("root1_1", "case_type_set_category1")
         env.create_case_type_set_category("app_admin1_1", "case_type_set_category2")
-        env.create_case_type_set_category(
-            "metadata_admin1_1", "case_type_set_category3"
-        )
-        env.create_case_type_set_category(
-            "metadata_admin1_2", "case_type_set_category4"
-        )
-        env.create_case_type_set_category(
-            "metadata_admin2_1", "case_type_set_category5"
-        )
+        env.create_case_type_set_category("refdata_admin1_1", "case_type_set_category3")
+        env.create_case_type_set_category("refdata_admin1_2", "case_type_set_category4")
+        env.create_case_type_set_category("refdata_admin2_1", "case_type_set_category5")
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -653,7 +647,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_set(self, env: Env) -> None:
-        # Create case_type_set as root, app_admin, metadata_admin
+        # Create case_type_set as root, app_admin, refdata_admin
         env.create_case_type_set(
             "root1_1", "case_type_set1", {"case_type1"}, "case_type_set_category1"
         )
@@ -664,13 +658,13 @@ class TestCreate:
             "app_admin1_1", "case_type_set3", {"case_type3"}, "case_type_set_category3"
         )
         env.create_case_type_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_set4",
             {"case_type1", "case_type2"},
             "case_type_set_category4",
         )
         env.create_case_type_set(
-            "metadata_admin1_2",
+            "refdata_admin1_2",
             "case_type_set5",
             {"case_type2", "case_type3"},
             "case_type_set_category5",
@@ -693,7 +687,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
-        # Create case_type_col as root, app_admin, metadata_admin
+        # Create case_type_col as root, app_admin, refdata_admin
         cols = env.read_all("root1_1", model.Col)
         # Series of case types with only text columns
         for i in range(1, 4):
@@ -715,7 +709,7 @@ class TestCreate:
                         enum.TreeAlgorithmType.SLINK,
                     }
                 case_type_col = env.create_case_type_col(
-                    "metadata_admin1_1", f"case_type{i}_{col.code}", **kwargs
+                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs
                 )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
@@ -759,7 +753,7 @@ class TestCreate:
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col_set(self, env: Env) -> None:
-        # Create case_type_col_set as root, app_admin, metadata_admin
+        # Create case_type_col_set as root, app_admin, refdata_admin
         env.create_case_type_col_set(
             "root1_1",
             "case_type_col_set1",
@@ -771,12 +765,12 @@ class TestCreate:
             {f"case_type2_text{i+1}_6_text" for i in range(0, 5)},
         )
         env.create_case_type_col_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_col_set3",
             {f"case_type3_text{i+1}_6_text" for i in range(0, 5)},
         )
         env.create_case_type_col_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_col_set4",
             {
                 "case_type1_text1_6_text",
@@ -786,7 +780,7 @@ class TestCreate:
             },
         )
         env.create_case_type_col_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_col_set5",
             {
                 "case_type2_text2_6_text",
@@ -986,7 +980,7 @@ class TestCreate:
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
     def test_create_case_set_category_raise(self, env: Env) -> None:
-        for user in ["metadata_admin1_1"] + BELOW_APP_ADMIN_DATA_USERS:
+        for user in ["refdata_admin1_1"] + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_set_category(user, "case_set_category11")
 
@@ -1000,7 +994,7 @@ class TestCreate:
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
     def test_create_case_set_status_raise(self, env: Env) -> None:
-        for user in ["metadata_admin1_1"] + BELOW_APP_ADMIN_DATA_USERS:
+        for user in ["refdata_admin1_1"] + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_set_status(user, "case_set_status11")
 
@@ -1309,18 +1303,18 @@ class TestCreate:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRU
-        - metadata_admin: CRU
+        - refdata_admin: CRU
         - org_admin: R
         - org_user: R
         - guest: -
         """
         env.create_case_type_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_set21",
             set(),
             "case_type_set_category1",
         )
-        for i, exec_user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             i += 1
             env.create_case_type_set_member(
                 exec_user, "case_type_set21", f"case_type{i}"
@@ -1339,17 +1333,17 @@ class TestCreate:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: -
         - org_user: -
         - guest: -
         """
         env.create_case_type_col_set(
-            "metadata_admin1_1",
+            "refdata_admin1_1",
             "case_type_col_set21",
             set(),
         )
-        for i, exec_user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS, start=1):
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
             i += 1
             env.create_case_type_col_set_member(
                 exec_user, "case_type_col_set21", f"case_type1_text{i}_6_text"

@@ -4,7 +4,7 @@ from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
-    METADATA_ADMIN_OR_ABOVE_USERS,
+    REFDATA_ADMIN_OR_ABOVE_USERS,
     ROOT,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
@@ -295,7 +295,7 @@ class TestUpdate:
 
     def test_update_dim(self, env: Env) -> None:
         env.create_dim("root1_1", "text21", enum.DimType.TEXT)
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(user, model.Dim, "text21", {"description": str(i)})
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -306,7 +306,7 @@ class TestUpdate:
 
     def test_update_col(self, env: Env) -> None:
         env.create_col("root1_1", "text21_1_text", enum.ColType.TEXT)
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(user, model.Col, "text21_1_text", {"description": str(i)})
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -319,7 +319,7 @@ class TestUpdate:
 
     def test_update_case_type(self, env: Env) -> None:
         env.create_case_type("root1_1", "case_type21", "disease1", "etiological_agent1")
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user, model.CaseType, "case_type21", {"description": str(i)}
             )
@@ -334,7 +334,7 @@ class TestUpdate:
 
     def test_update_case_type_col(self, env: Env) -> None:
         env.create_case_type_col("root1_1", "case_type21_text21_1_text")
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeCol,
@@ -355,7 +355,7 @@ class TestUpdate:
 
     def test_update_case_type_set_category(self, env: Env) -> None:
         env.create_case_type_set_category("root1_1", "case_type_set_category21")
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeSetCategory,
@@ -379,7 +379,7 @@ class TestUpdate:
         env.create_case_type_set(
             "root1_1", "case_type_set41", {"case_type41"}, "case_type_set_category21"
         )
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user, model.CaseTypeSet, "case_type_set41", {"description": str(i)}
             )
@@ -396,7 +396,7 @@ class TestUpdate:
         env.create_case_type_col_set(
             "root1_1", "case_type_col_set31", {"case_type21_text21_1_text"}
         )
-        for i, user in enumerate(METADATA_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeColSet,
@@ -423,13 +423,13 @@ class TestUpdate:
         RBAC permissions:
         - root: CRUD
         - app_admin: CRUD
-        - metadata_admin: CRUD
+        - refdata_admin: CRUD
         - org_admin: -
         - org_user: -
         - guest: -
         """
         all_case_type_col_set_members = env.read_all(ROOT, model.CaseTypeColSetMember)
-        for user in METADATA_ADMIN_OR_ABOVE_USERS:
+        for user in REFDATA_ADMIN_OR_ABOVE_USERS:
             env.update_case_type_col_set_member(user, all_case_type_col_set_members[-1])
 
     @pytest.mark.skip(
