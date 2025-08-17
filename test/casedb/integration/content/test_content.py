@@ -81,7 +81,7 @@ class TestContent:
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
         )
-        # Get some metadata as org user
+        # Get some refdata as org user
         case_types = app.handle(
             command.CaseTypeCrudCommand(
                 user=org_user,

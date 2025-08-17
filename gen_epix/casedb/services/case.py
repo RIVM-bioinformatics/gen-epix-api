@@ -995,7 +995,7 @@ class CaseService(BaseCaseService):
         """Logic for handling metadata commands"""
         # Metadata admin or above: no @ABAC applied
         assert cmd.user
-        if cmd.user.roles.intersection(enum.RoleSet.GE_METADATA_ADMIN.value):
+        if cmd.user.roles.intersection(enum.RoleSet.GE_REFDATA_ADMIN.value):
             # Metadata admin and above have access to all metadata: no ABAC
             # applied, only RBAC
             return self._crud_metadata_by_admin(uow, cmd)
