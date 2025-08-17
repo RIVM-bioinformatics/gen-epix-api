@@ -123,6 +123,18 @@ class AppEnv(BaseAppEnv):
             "kwargs": {},
         },
     }
+    for data in SERVICE_DATA.values():
+        if "repository_class" not in data:
+            continue
+        if "repository_kwargs" not in data:
+            data["repository_kwargs"] = {}
+        data["repository_kwargs"][
+            "service_metadata_fields"
+        ] = sa_model.SERVICE_METADATA_FIELDS
+        data["repository_kwargs"]["db_metadata_fields"] = sa_model.DB_METADATA_FIELDS
+        data["repository_kwargs"][
+            "generate_service_metadata"
+        ] = sa_model.GENERATE_SERVICE_METADATA
 
     def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
@@ -245,9 +257,6 @@ class AppEnv(BaseAppEnv):
                         repository_type,
                         repository_cfg,
                         repository_class,
-                        service_metadata_fields=sa_model.SERVICE_METADATA_FIELDS,
-                        db_metadata_fields=sa_model.DB_METADATA_FIELDS,
-                        generate_service_metadata=sa_model.GENERATE_SERVICE_METADATA,
                         **additional_repository_kwargs,
                     )
                 else:
