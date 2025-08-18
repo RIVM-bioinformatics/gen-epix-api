@@ -90,7 +90,7 @@ def update_cfg_from_file(
             if key not in curr_cfg:
                 curr_cfg[key] = {}
             curr_cfg = curr_cfg[key]
-        with open(Path(file), "r") as handle:
+        with open(Path(file), "r", encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:
