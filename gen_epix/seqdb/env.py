@@ -192,6 +192,9 @@ class AppEnv(BaseAppEnv):
                         repository_type,
                         repository_cfg,
                         repository_class,
+                        service_metadata_fields=sa_model.SERVICE_METADATA_FIELDS,
+                        db_metadata_fields=sa_model.DB_METADATA_FIELDS,
+                        generate_service_metadata=sa_model.GENERATE_SERVICE_METADATA,
                         **additional_repository_kwargs,
                     )
                 else:
