@@ -2,13 +2,15 @@ import copy
 import traceback
 from typing import Any, Callable, Type
 
+from gen_epix.common.config import AppCfg
+from gen_epix.common.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.services.auth import AuthService
 from gen_epix.fastapp.services.auth import OIDCClient as OIDCClient
 from gen_epix.omopdb.domain import DOMAIN, enum, model
+from gen_epix.omopdb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.omopdb.domain.policy import RoleGenerator
-from gen_epix.omopdb.domain.service import ORDERED_SERVICE_TYPES
 from gen_epix.omopdb.repositories import (
     OmopDictRepository,
     OmopSARepository,
@@ -25,8 +27,6 @@ from gen_epix.omopdb.services import (
     SystemService,
     UserManager,
 )
-from util.cfg import AppCfg
-from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):
@@ -73,6 +73,18 @@ class AppEnv(BaseAppEnv):
             },
         },
     }
+    for data in SERVICE_DATA.values():
+        if "repository_class" not in data:
+            continue
+        if "repository_kwargs" not in data:
+            data["repository_kwargs"] = {}
+        data["repository_kwargs"][
+            "service_metadata_fields"
+        ] = sa_model.SERVICE_METADATA_FIELDS
+        data["repository_kwargs"]["db_metadata_fields"] = sa_model.DB_METADATA_FIELDS
+        data["repository_kwargs"][
+            "generate_service_metadata"
+        ] = sa_model.GENERATE_SERVICE_METADATA
 
     def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
@@ -138,7 +150,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in ORDERED_SERVICE_TYPES:
+            for service_type in SORTED_SERVICE_TYPES:
                 data = service_data[service_type]
                 props = {
                     x: y
@@ -168,7 +180,9 @@ class AppEnv(BaseAppEnv):
                             )
                         )
                     repository_class = data["repository_class"][repository_type]
-                    additional_repository_kwargs: dict = data.get("repository_kwargs", {})  # type: ignore
+                    additional_repository_kwargs: dict = data.get(
+                        "repository_kwargs", {}
+                    )
                     curr_repository = AppEnv.create_repository(
                         service_type,
                         timestamp_factory,
@@ -224,8 +238,9 @@ class AppEnv(BaseAppEnv):
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering security policies")
                 )
-            services[enum.ServiceType.RBAC].register_policies()  # type: ignore
             services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
+            services[enum.ServiceType.RBAC].register_policies()  # type: ignore
+            # services[enum.ServiceType.ABAC].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:

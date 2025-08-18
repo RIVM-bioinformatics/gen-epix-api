@@ -1,6 +1,11 @@
 from typing import Type
 
 from gen_epix import fastapp
+from gen_epix.common.domain import enum as common_enum
+from gen_epix.common.domain import model as common_model
+from gen_epix.common.domain.model import (
+    SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
+)
 from gen_epix.common.domain.model import Contact as Contact
 from gen_epix.common.domain.model import DataCollection as DataCollection
 from gen_epix.common.domain.model import DataCollectionSet as DataCollectionSet
@@ -17,7 +22,7 @@ from gen_epix.common.domain.model import Site as Site
 from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
-from gen_epix.omopdb.domain import DOMAIN, enum
+from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.domain.model.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop import Cohort as Cohort
@@ -64,29 +69,22 @@ from gen_epix.omopdb.domain.model.organization import User as User
 from gen_epix.omopdb.domain.model.organization import UserInvitation as UserInvitation
 
 # List up model classes per service and sorted according to links topology
-SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
+SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
     {  # pyright: ignore[reportAssignmentType]
-        enum.ServiceType.AUTH: [
-            IdentityProvider,
-            IDPUser,
-        ],
-        enum.ServiceType.SYSTEM: [
-            Outage,
-        ],
-        enum.ServiceType.ORGANIZATION: [
-            Organization,
-            OrganizationSet,
-            OrganizationSetMember,
-            DataCollection,
-            DataCollectionSet,
-            DataCollectionSetMember,
-            IdentifierIssuer,
-            Site,
-            Contact,
-            UserNameEmail,
-            User,
-            UserInvitation,
-        ],
+        # Common models
+        enum.ServiceType.AUTH: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.AUTH]
+        ),
+        enum.ServiceType.SYSTEM: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
+        ),
+        enum.ServiceType.RBAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
+        ),
+        enum.ServiceType.ORGANIZATION: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
+        ),
+        # Specific models
         enum.ServiceType.OMOP: [
             # Core vocabulary and reference tables
             Vocabulary,
@@ -144,9 +142,9 @@ SORTED_MODELS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
     }
 )
 
-for service_type, model_classes in SORTED_MODELS_BY_SERVICE.items():
-    for model_class in model_classes:
-        assert model_class.ENTITY is not None
-        DOMAIN.register_entity(
-            model_class.ENTITY, model_class=model_class, service_type=service_type
-        )
+SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
+
+COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
+    common_model.User: User,
+    common_model.UserInvitation: UserInvitation,
+}

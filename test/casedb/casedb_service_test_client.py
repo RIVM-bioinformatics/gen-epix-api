@@ -1,6 +1,5 @@
 import datetime
 import logging
-from pathlib import Path
 import re
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
@@ -19,10 +18,10 @@ from gen_epix.casedb.domain.enum import RepositoryType, Role, ServiceType
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
+from gen_epix.common.config import AppCfg
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
-from util.cfg import AppCfg
-from util.util import map_paired_elements
 
 APP_NAME = "CASEDB"
 APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)

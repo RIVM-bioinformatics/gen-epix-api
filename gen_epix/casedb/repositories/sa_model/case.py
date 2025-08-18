@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Type
 from uuid import UUID
 
-import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
@@ -16,7 +16,7 @@ from gen_epix.common.repositories.sa_model import (
     create_table_args,
 )
 
-Base: Type = sa.orm.declarative_base(name=enum.ServiceType.CASE.value)
+Base: Type = orm.declarative_base(name=enum.ServiceType.CASE.value)
 
 
 class TreeAlgorithmClass(Base, RowMetadataMixin):

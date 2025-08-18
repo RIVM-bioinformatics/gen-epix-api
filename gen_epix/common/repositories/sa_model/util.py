@@ -60,9 +60,12 @@ def create_mapped_column(
         link_entity = None
     ondelete = kwargs.pop("ondelete", None)
     onupdate = kwargs.pop("onupdate", None)
-    sa_field_name = (
-        field_name_map[model_class][field_name] if field_name_map else field_name
-    )
+    if field_name_map is None:
+        field_name_map = {}
+    if model_class not in field_name_map:
+        sa_field_name = field_name
+    else:
+        sa_field_name = field_name_map[model_class].get(field_name, field_name)
     fk_name = kwargs.pop("fk_name", f"fk_{entity.table_name}_{sa_field_name}")
     if link_entity:
         link_model_class = link_entity.model_class
@@ -161,25 +164,27 @@ def set_entity_repository_model_classes(
         entity.set_db_model_class(sa_model_class)
         # Verify that the SA model has exactly the same fields as the model
         field_names = set(entity.get_field_names())
+        relationship_field_names = set(entity.get_relationship_field_names())
         curr_field_name_map = field_name_map.get(model_class)
         if curr_field_name_map:
             field_names = {curr_field_name_map.get(x, x) for x in field_names}
         sa_field_names = (
-            set(sa_model_class.__table__.columns.keys()) - sa_metadata_field_names
+            set(sa_model_class.__table__.columns.keys())
+            - sa_metadata_field_names
+            - relationship_field_names
         )
-        extra_field_names = field_names - sa_field_names
+        extra_field_names = field_names - sa_field_names - relationship_field_names
         extra_field_names = {
             x for x in extra_field_names if f"{x}_id" not in field_names
         }
         if extra_field_names:
-            print(
-                f"TEMPORARY PRINT STATEMENT: Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
+            extra_field_names_str = ", ".join(extra_field_names)
+            raise ValueError(
+                f"Model {model_class.__name__} has fields {extra_field_names_str} that are not in SA model {sa_model_class.__name__}"
             )
-            # raise ValueError(
-            #     f"Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
-            # )
         extra_sa_field_names = sa_field_names - field_names
         if extra_sa_field_names:
-            print(
-                f"TEMPORARY PRINT STATEMENT: Model {model_class.__name__} has fields {extra_field_names} that are not in SA model {sa_model_class.__name__}"
+            extra_field_names_str = ", ".join(extra_sa_field_names)
+            raise ValueError(
+                f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
             )

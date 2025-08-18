@@ -3,8 +3,8 @@ import traceback
 from typing import Any, Callable, Type
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
+from gen_epix.casedb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.casedb.domain.policy import RoleGenerator
-from gen_epix.casedb.domain.service import ORDERED_SERVICE_TYPES
 
 # TODO: check if sa_model import is needed here to avoid cyclic import
 from gen_epix.casedb.repositories import (
@@ -37,14 +37,14 @@ from gen_epix.casedb.services import (
     SystemService,
     UserManager,
 )
+from gen_epix.common.config import AppCfg
+from gen_epix.common.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain.enum import RepositoryType as SeqdbRepositoryType
 from gen_epix.seqdb.domain.enum import ServiceType as SeqdbServiceType
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppEnv as SeqdbAppEnv
-from util.cfg import AppCfg
-from util.env import BaseAppEnv
 
 
 class AppEnv(BaseAppEnv):
@@ -123,6 +123,18 @@ class AppEnv(BaseAppEnv):
             "kwargs": {},
         },
     }
+    for data in SERVICE_DATA.values():
+        if "repository_class" not in data:
+            continue
+        if "repository_kwargs" not in data:
+            data["repository_kwargs"] = {}
+        data["repository_kwargs"][
+            "service_metadata_fields"
+        ] = sa_model.SERVICE_METADATA_FIELDS
+        data["repository_kwargs"]["db_metadata_fields"] = sa_model.DB_METADATA_FIELDS
+        data["repository_kwargs"][
+            "generate_service_metadata"
+        ] = sa_model.GENERATE_SERVICE_METADATA
 
     def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
@@ -207,7 +219,7 @@ class AppEnv(BaseAppEnv):
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in ORDERED_SERVICE_TYPES:
+            for service_type in SORTED_SERVICE_TYPES:
                 data = service_data[service_type]
                 props = {
                     x: y
@@ -293,9 +305,9 @@ class AppEnv(BaseAppEnv):
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering security policies")
                 )
+            services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
             services[enum.ServiceType.RBAC].register_policies()  # type: ignore
             services[enum.ServiceType.ABAC].register_policies()  # type: ignore
-            services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:

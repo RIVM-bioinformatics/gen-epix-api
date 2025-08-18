@@ -1,31 +1,14 @@
-from typing import Any
 from uuid import UUID
 
 import numpy as np
-from sqlalchemy import Engine
 
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
-from gen_epix.seqdb.repositories.sa_model import (
-    DB_METADATA_FIELDS,
-    GENERATE_SERVICE_METADATA,
-    SERVICE_METADATA_FIELDS,
-)
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
-    def __init__(self, engine: Engine, **kwargs: Any):
-        entities = kwargs.pop("entities", BaseSeqRepository.ENTITIES)
-        super().__init__(
-            engine,
-            entities=entities,
-            service_metadata_fields=SERVICE_METADATA_FIELDS,
-            db_metadata_fields=DB_METADATA_FIELDS,
-            generate_service_metadata=GENERATE_SERVICE_METADATA,
-            **kwargs,
-        )
 
     def get_distance_matrix_by_seq_ids(
         self,

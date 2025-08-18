@@ -6,15 +6,12 @@ import re
 import sys
 import test.test_client.util as test_util
 from pathlib import Path
+from test.casedb.casedb_service_test_client import CasedbServiceTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
-from test.test_client.service_test_client import ServiceTestClient
-from test.test_client.user_journey_v1 import \
-    UserJourneyColumn as V1UserJourneyColumn
-from test.test_client.user_journey_v2 import \
-    UserJourneyColumn as V2UserJourneyColumn
-from test.test_client.util import parse_stats
+from test.test_client.user_journey_v1 import UserJourneyColumn as V1UserJourneyColumn
+from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyColumn
 
 import pandas as pd
 import pyinstrument
@@ -25,7 +22,7 @@ PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: dict = {}
 V1_USER_JOURNEY_FILE_PREFIX = "v1.user_journey"
 V2_USER_JOURNEY_FILE_PREFIX = "v2.user_journey"
-USER_JOURNEY_DIR = Path(test_util.__file__).parent
+USER_JOURNEY_DIR = Path(__file__).parent
 
 
 class TestRead:
@@ -35,38 +32,40 @@ class TestRead:
         # TODO: add functionality to get only user journeys for a particular scenario (read, update, etc.)
         if TestRead.USER_JOURNEYS is None:
             TestRead.USER_JOURNEYS = []
-            for file in USER_JOURNEY_DIR.iterdir()::
-                if not re.match(r".*\.log\.txt(\.gz)?$", file, flags=re.IGNORECASE):
+            for file in USER_JOURNEY_DIR.iterdir():
+                if not re.match(
+                    r".*\.log\.txt(\.gz)?$", str(file), flags=re.IGNORECASE
+                ):
                     continue
                 src_file = file
-                pkl_file = Path(str(pkl_file) + ".pkl.gz")
+                pkl_file = Path(str(file) + ".pkl.gz")
                 if pkl_file.is_file():
                     if pkl_file.stat().st_mtime > src_file.stat().st_mtime:
                         TestRead.USER_JOURNEYS.append(pickle.load(open(pkl_file, "rb")))
                         continue
                     else:
                         pkl_file.unlink()
-                if file.startswith(V1_USER_JOURNEY_FILE_PREFIX):
+                if str(file).startswith(V1_USER_JOURNEY_FILE_PREFIX):
                     name = re.sub(
                         V1_USER_JOURNEY_FILE_PREFIX + r".*\.(\w+)\.log\.txt(\.gz)?$",
                         r"V1.\1",
-                        file,
+                        str(file),
                         flags=re.IGNORECASE,
                     )
-                    log_parser = V1LogParser(src_file)
+                    log_parser = V1LogParser(str(src_file))
                     log_parser.parse()
                     user_journey = log_parser.create_user_journey()
                     commands = user_journey.get_commands()[
                         V1UserJourneyColumn.COMMAND_OBJECT
                     ].tolist()
-                elif file.startswith(V2_USER_JOURNEY_FILE_PREFIX):
+                elif str(file).startswith(V2_USER_JOURNEY_FILE_PREFIX):
                     name = re.sub(
                         V2_USER_JOURNEY_FILE_PREFIX + r"^.*\.(\w+)\..*$",
                         r"V2.\1",
-                        file,
+                        str(file),
                         flags=re.IGNORECASE,
                     )
-                    log_parser = V2LogParser(src_file)
+                    log_parser = V2LogParser(str(src_file))
                     log_parser.parse()
                     user_journey = log_parser.create_user_journey()
                     commands = user_journey.get_commands()[
@@ -86,13 +85,6 @@ class TestRead:
 
     def test_journeys(self) -> None:
 
-        from test.test_client.enum import \
-            TestType as EnumTestType  # to avoid pytest warning
-        from test.test_client.service_test_client import ServiceTestClient
-
-        from gen_epix.casedb.domain import enum
-        from gen_epix.casedb.domain.enum import RepositoryType
-
         test_name = sys._getframe().f_code.co_name
         user_journeys = self.get_user_journeys()
         df = {}
@@ -103,7 +95,7 @@ class TestRead:
                 enum.RepositoryType.SA_SQLITE,
             }:
                 test_util.set_log_level("casedb", logging.ERROR)
-                env = ServiceTestClient.get_test_client(
+                env = CasedbServiceTestClient.get_test_client(
                     test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
                     repository_type=repository_type,
                     log_level=logging.ERROR,
@@ -118,7 +110,7 @@ class TestRead:
                             command._policies = []
                     stats = pstats.Stats(profiler)
                     stats.sort_stats("tottime")
-                    parse_stats(
+                    test_util.parse_stats(
                         PERFORMANCE_DF,
                         stats,
                         test_name=test_name,
@@ -142,17 +134,13 @@ class TestRead:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        test_dir = ServiceTestClient.get_test_client(
+        test_dir = CasedbServiceTestClient(
             test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)
-        df.to_csv(
-            Path(test_dir) / f"{cls.__name__}.performance.csv", index=False
-        )
-        df.to_excel(
-            Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False
-        )
+        df.to_csv(Path(test_dir) / f"{cls.__name__}.performance.csv", index=False)
+        df.to_excel(Path(test_dir) / f"{cls.__name__}.performance.xlsx", index=False)
         for key, html_str in PERFORMANCE_HTML.items():
             with open(
                 Path(test_dir) / f"{cls.__name__}.performance.{key}.html", "w"

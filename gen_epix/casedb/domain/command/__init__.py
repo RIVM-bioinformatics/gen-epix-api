@@ -1,7 +1,7 @@
 from typing import Type
 
 from gen_epix import fastapp
-from gen_epix.casedb.domain import DOMAIN, enum
+from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.command.abac import (
     OrganizationAccessCasePolicyCrudCommand as OrganizationAccessCasePolicyCrudCommand,
 )
@@ -164,6 +164,11 @@ from gen_epix.casedb.domain.command.subject import (
 from gen_epix.casedb.domain.command.subject import (
     SubjectIdentifierCrudCommand as SubjectIdentifierCrudCommand,
 )
+from gen_epix.common.domain import command as common_command
+from gen_epix.common.domain import enum as common_enum
+from gen_epix.common.domain.command import (
+    COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
+)
 from gen_epix.common.domain.command import Command as Command
 from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
 from gen_epix.common.domain.command import CrudCommand as CrudCommand
@@ -220,16 +225,17 @@ from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
 
-COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
-    enum.ServiceType.ABAC: [
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+    # Specific commands
+    enum.ServiceType.ABAC: {
         OrganizationAccessCasePolicyCrudCommand,
         OrganizationAdminPolicyCrudCommand,
         OrganizationShareCasePolicyCrudCommand,
         RetrieveOrganizationAdminNameEmailsCommand,
         UserAccessCasePolicyCrudCommand,
         UserShareCasePolicyCrudCommand,
-    ],
-    enum.ServiceType.CASE: [
+    },
+    enum.ServiceType.CASE: {
         CaseCrudCommand,
         CaseDataCollectionLinkCrudCommand,
         CasesCreateCommand,
@@ -264,15 +270,15 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         RetrievePhylogeneticTreeBySequencesCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
-    ],
-    enum.ServiceType.GEO: [
+    },
+    enum.ServiceType.GEO: {
         RegionCrudCommand,
         RegionRelationCrudCommand,
         RegionSetCrudCommand,
         RegionSetShapeCrudCommand,
         RetrieveContainingRegionCommand,
-    ],
-    enum.ServiceType.ONTOLOGY: [
+    },
+    enum.ServiceType.ONTOLOGY: {
         ConceptCrudCommand,
         ConceptSetConceptUpdateAssociationCommand,
         ConceptSetCrudCommand,
@@ -281,46 +287,30 @@ COMMANDS_BY_SERVICE: dict[enum.ServiceType, list[Type[fastapp.Command]]] = {
         DiseaseEtiologicalAgentUpdateAssociationCommand,
         EtiologicalAgentCrudCommand,
         EtiologyCrudCommand,
-    ],
-    enum.ServiceType.SEQDB: [
+    },
+    enum.ServiceType.SEQDB: {
         RetrieveGeneticSequenceByIdCommand,
-    ],
-    enum.ServiceType.SUBJECT: [
+    },
+    enum.ServiceType.SUBJECT: {
         SubjectCrudCommand,
         SubjectIdentifierCrudCommand,
-    ],
-    enum.ServiceType.AUTH: [
-        GetIdentityProvidersCommand,
-    ],
-    enum.ServiceType.ORGANIZATION: [
-        ContactCrudCommand,
-        DataCollectionCrudCommand,
-        DataCollectionSetCrudCommand,
-        DataCollectionSetDataCollectionUpdateAssociationCommand,
-        DataCollectionSetMemberCrudCommand,
-        IdentifierIssuerCrudCommand,
-        InviteUserCommand,
-        OrganizationCrudCommand,
-        OrganizationSetCrudCommand,
-        OrganizationSetMemberCrudCommand,
-        OrganizationSetOrganizationUpdateAssociationCommand,
-        RegisterInvitedUserCommand,
-        RetrieveOrganizationContactCommand,
-        SiteCrudCommand,
-        UpdateUserCommand,
-        UpdateUserOwnOrganizationCommand,
-        UserCrudCommand,
-        UserInvitationCrudCommand,
-    ],
-    enum.ServiceType.RBAC: [
-        RetrieveOwnPermissionsCommand,
-    ],
-    enum.ServiceType.SYSTEM: [
-        OutageCrudCommand,
-        RetrieveOutagesCommand,
-    ],
+    },
+    # Common commands
+    enum.ServiceType.AUTH: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.AUTH]
+    ),
+    enum.ServiceType.SYSTEM: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.SYSTEM]
+    ),
+    enum.ServiceType.RBAC: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.RBAC]
+    ),
+    enum.ServiceType.ORGANIZATION: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
+    ),
 }
 
-for service_type, command_classes in COMMANDS_BY_SERVICE.items():
-    for command_class in command_classes:
-        DOMAIN.register_command(command_class, service_type=service_type)
+COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+    common_command.UserCrudCommand: UserCrudCommand,
+    common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+}

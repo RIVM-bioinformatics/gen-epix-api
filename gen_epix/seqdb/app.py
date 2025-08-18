@@ -1,8 +1,8 @@
+from gen_epix.common.config import AppCfg
+from gen_epix.common.util import get_package_version
 from gen_epix.seqdb.app_setup import create_fast_api
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.env import AppEnv
-from util.cfg import AppCfg
-from util.util import get_package_version
 
 APP_NAME = "SEQDB"
 

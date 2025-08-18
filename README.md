@@ -1,8 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/RIVM-bioinformatics/gen-epix-api/be6ec13a6f9d39be1e2a6dfbe6ba7b48ad2a2551/docs/assets/Gen-epix-logo.svg" alt="gen-epix-api-logo">
-</p>
-<p align="center">
-    <em>Genomic Epidemiology platform for disease X</em>
+    <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo">
 </p>
 <p align="center">
     <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
@@ -46,10 +43,9 @@ Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It
 
 # Installation 
 
-Below is a streamlined installation guide for various platforms:
-
 1. Install ODBC development headers:
    ```console
+   # Linux
    sudo apt-get update
    sudo apt-get install -y unixodbc-dev
    ```
@@ -115,7 +111,7 @@ python run.py [service] [app_type] [env_name] [idp_config]
 - `service`: The service to run (api, etl) 
 - `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
 - `env_name`: Name of the environment.
--  `idp_config`: Which authentication setting to use (idps, mock_idps, no_auth, debug, no_ssl)
+- `idp_config`: Which authentication setting to use (idps, mock_idps, no_auth, debug, no_ssl)
 
 ---
 
@@ -142,9 +138,6 @@ Gen-EpiX relies on several Python packages to provide its functionality:
 
 **Database Connectors**
 * <a href="https://github.com/mkleehammer/pyodbc" target="_blank"><code>pyodbc</code></a> - ODBC database adapter
-
-**API Server**
-* <a href="https://www.uvicorn.org" target="_blank"><code>uvicorn</code></a> - ASGI web server
 
 **Development Tools**
 * <a href="https://docs.pytest.org" target="_blank"><code>pytest</code></a> - Testing framework

@@ -1,32 +1,21 @@
 import abc
-import datetime
 import json
 import logging.config as logging_config
 import os
-import uuid
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
 from typing import Any, Type
 from urllib.parse import quote_plus
 
-import ulid
 import yaml
 from dynaconf import Dynaconf
 from sqlalchemy import URL
 from uvicorn.logging import logging
 
+from gen_epix.common.config.factory import IdFactory, TimestampFactory
+from gen_epix.common.util import update_cfg_from_file
 from gen_epix.fastapp import App
-from util.util import update_cfg_from_file
-
-
-class TimestampFactory(Enum):
-    DATETIME_NOW = lambda: datetime.datetime.now()
-
-
-class IdFactory(Enum):
-    UUID4 = uuid.uuid4
-    ULID = lambda: ulid.api.new().uuid
 
 
 class BaseAppCfg(abc.ABC):

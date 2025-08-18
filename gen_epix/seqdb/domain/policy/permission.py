@@ -22,7 +22,7 @@ class RoleGenerator:
             (command.DataCollectionSetCrudCommand, PermissionTypeSet.CRUD),
             (command.DataCollectionSetMemberCrudCommand, PermissionTypeSet.CRUD),
         },
-        Role.METADATA_ADMIN: {
+        Role.REFDATA_ADMIN: {
             # organization
             # seq.metadata CRUD commands
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.CRU),
@@ -115,16 +115,16 @@ class RoleGenerator:
     ROLE_HIERARCHY: dict[Role, set[Role]] = {
         Role.ROOT: {
             Role.APP_ADMIN,
-            Role.METADATA_ADMIN,
+            Role.REFDATA_ADMIN,
             Role.ORG_USER,
             Role.GUEST,
         },
         Role.APP_ADMIN: {
-            Role.METADATA_ADMIN,
+            Role.REFDATA_ADMIN,
             Role.ORG_USER,
             Role.GUEST,
         },
-        Role.METADATA_ADMIN: {Role.GUEST},
+        Role.REFDATA_ADMIN: {Role.GUEST},
         Role.ORG_USER: {Role.GUEST},
         Role.GUEST: set(),
     }

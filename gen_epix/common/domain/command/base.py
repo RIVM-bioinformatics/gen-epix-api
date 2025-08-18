@@ -8,10 +8,10 @@ from uuid import UUID
 from pydantic import Field, field_serializer
 
 from gen_epix.common.domain import model
+from gen_epix.common.util import generate_ulid
 from gen_epix.fastapp import Command as ServiceCommand
 from gen_epix.fastapp import CrudCommand as ServiceCrudCommand
 from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociationCommand
-from util.util import generate_ulid
 
 
 class Command(ServiceCommand):
