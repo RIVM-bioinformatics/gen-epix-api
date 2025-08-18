@@ -203,6 +203,30 @@ class TestContent:
                         raise ValueError("Sequence IDs should not be returned")
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
+            # Retrieve genetic sequence
+            genetic_sequence_case_type_cols = [
+                case_type_col
+                for case_type_col in complete_case_type.case_type_cols.values()
+                if complete_case_type.cols[case_type_col.col_id].col_type
+                == enum.ColType.GENETIC_SEQUENCE
+            ]
+            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                genetic_sequences: list[model.GeneticSequence] = app.handle(
+                    command.RetrieveGeneticSequenceByCaseCommand(
+                        user=org_user,
+                        case_ids=case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                    )
+                )
+                if not genetic_sequences:
+                    raise ValueError("Genetic sequence should not be empty")
+                for seq in genetic_sequences:
+                    if not seq.id:
+                        raise ValueError("Genetic sequence ID should not be empty")
+                    if not hasattr(seq, "nucleotide_sequence"):
+                        raise ValueError(
+                            "Genetic sequence should have nucleotide_sequence attribute"
+                        )
         for case_set in case_sets:
             case_ids = app.handle(
                 command.RetrieveCasesByQueryCommand(
