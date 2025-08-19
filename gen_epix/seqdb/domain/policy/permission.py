@@ -62,6 +62,7 @@ class RoleGenerator:
             (command.SampleCrudCommand, PermissionTypeSet.CRUD),
             (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqCrudCommand, PermissionTypeSet.CRUD),
+            (command.RawSeqCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleProfileCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqAlignmentCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqTaxonomyCrudCommand, PermissionTypeSet.CRUD),
