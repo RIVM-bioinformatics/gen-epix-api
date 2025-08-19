@@ -82,8 +82,7 @@ class SeqdbService(BaseSeqdbService):
         # Convert raw sequences to model.GeneticSequence
         genetic_sequences = [
             model.GeneticSequence(
-                id=seq.id,
-                nucleotide_sequence=raw_seq.seq,
+                id=seq.id, nucleotide_sequence=raw_seq.seq, distances={}
             )
             for seq, raw_seq in zip(seqs, raw_seqs)
         ]
