@@ -19,7 +19,7 @@ pandas==2.2.3
 ulid-py==1.1.0
 
 # configuration handling
-fire==0.7.0
+fire==0.7.1
 dynaconf==3.2.11
 types-setuptools==80.9.*
 
