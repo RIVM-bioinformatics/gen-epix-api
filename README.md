@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo">
+    <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo" width=600>
 </p>
 <p align="center">
     <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
