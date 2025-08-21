@@ -1,6 +1,9 @@
 import importlib
 import re
+import string
 import tomllib
+
+from cachetools import TTLCache, cached
 
 from gen_epix.common.domain import command, model
 from gen_epix.common.domain.service import BaseSystemService
@@ -42,6 +45,7 @@ class SystemService(BaseSystemService):
         return packages
 
     @staticmethod
+    @cached(cache=TTLCache(maxsize=1000, ttl=60))
     def _parse_and_get_package_metadata() -> list[model.PackageMetadata]:
         """Parse pyproject.toml, extract package names, and get their metadata."""
         pyproject_path = get_project_root() / SystemService.REQUIREMENTS_FILE_NAME
@@ -73,11 +77,22 @@ class SystemService(BaseSystemService):
                 # Get metadata for this package
                 try:
                     metadata = importlib.metadata.metadata(package_name)
+
+                    # Try to get homepage from Home-page field first
+                    homepage = metadata.get("Home-page", "")
+
+                    # If no Home-page, extract from Project-URL using well-known labels
+                    if not homepage:
+                        project_urls = metadata.get("Project-URL", "")
+                        homepage = SystemService._extract_homepage_from_project_urls(
+                            project_urls
+                        )
+
                     package_metadata = model.PackageMetadata(
                         name=metadata.get("Name", package_name),
                         version=metadata.get("Version"),
                         license=metadata.get("License"),
-                        homepage=metadata.get("Home-page"),
+                        homepage=homepage or None,  # Convert empty string to None
                     )
                     packages.append(package_metadata)
                 except importlib.metadata.PackageNotFoundError:
@@ -85,3 +100,45 @@ class SystemService(BaseSystemService):
                     continue
 
         return packages
+
+    @staticmethod
+    def _normalize_project_url_label(label: str) -> str:
+        """Normalize project URL label according to PEP 753."""
+        chars_to_remove = string.punctuation + string.whitespace
+        removal_map = str.maketrans("", "", chars_to_remove)
+        return label.translate(removal_map).lower()
+
+    @staticmethod
+    def _extract_homepage_from_project_urls(project_urls_str: str) -> str:
+        """Extract homepage URL from Project-URL metadata using well-known labels:
+        (https://packaging.python.org/en/latest/specifications/well-known-project-urls/#well-known-labels)
+        """
+        if not project_urls_str:
+            return ""
+
+        # Parse Project-URL entries (format: "label, url")
+        urls = {}
+        for entry in project_urls_str.split("\n"):
+            entry = entry.strip()
+            if ", " in entry:
+                label, url = entry.split(", ", 1)
+                normalized_label = SystemService._normalize_project_url_label(label)
+                urls[normalized_label] = url.strip()
+
+        # Priority order based on well-known labels for homepage
+        priority_labels = [
+            "homepage",
+            "documentation",
+            "docs",
+            "repository",
+            "sourcecode",
+            "github",
+            "source",
+        ]
+
+        for label in priority_labels:
+            if label in urls:
+                return urls[label]
+
+        # If no well-known labels found, return first URL available
+        return next(iter(urls.values())) if urls else ""
