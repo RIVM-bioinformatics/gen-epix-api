@@ -13,6 +13,29 @@ def generate_ulid() -> uuid.UUID:
     return ulid.api.new().uuid
 
 
+def get_project_root() -> Path:
+    """
+    Get the root path of the project by looking for pyproject.toml.
+
+    Searches upward from the current file's directory until it finds
+    a directory containing pyproject.toml, which indicates the project root.
+
+    Returns:
+        Path: The absolute path to the project root directory.
+
+    Raises:
+        FileNotFoundError: If pyproject.toml cannot be found in any parent directory.
+    """
+    current_dir = Path(__file__).parent
+
+    while current_dir != current_dir.parent:
+        if (current_dir / "pyproject.toml").exists():
+            return current_dir.resolve()
+        current_dir = current_dir.parent
+
+    raise FileNotFoundError("Could not find pyproject.toml in any parent directory")
+
+
 def map_paired_elements(
     data: Iterable[tuple[Hashable, Any]], as_set: bool = False, frozen: bool = False
 ) -> (
