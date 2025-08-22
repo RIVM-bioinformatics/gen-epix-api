@@ -1,11 +1,7 @@
-from datetime import datetime, timedelta
-from math import floor
 from test.fastapp.enum import ServiceType
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from test.fastapp.user_manager import UserManager
-from unittest.mock import MagicMock
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jose import jwk

@@ -58,3 +58,12 @@ class UserManager(BaseUserManager):
 
     def retrieve_user_permissions(self, user: User) -> set[Permission]:
         raise NotImplementedError()
+
+    def update_user_from_claims(self, user: User, claims: dict[str, Any]) -> User:
+        raise NotImplementedError()
+
+    def update_user_name(self, user: User, new_name: str) -> User | None:
+        raise NotImplementedError()
+
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
+        raise NotImplementedError()
