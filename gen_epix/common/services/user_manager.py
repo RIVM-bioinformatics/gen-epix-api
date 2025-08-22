@@ -6,9 +6,9 @@ from uuid import UUID
 from gen_epix.common.domain import command, exc, model
 from gen_epix.common.domain.service.organization import BaseOrganizationService
 from gen_epix.common.domain.service.rbac import BaseRbacService
-from gen_epix.fastapp import (BaseUnitOfWork, BaseUserManager, CrudOperation,
-                              Permission)
+from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, CrudOperation, Permission
 from gen_epix.fastapp.services.auth import get_email_from_claims
+from gen_epix.fastapp.services.auth.util import get_name_from_claims
 
 
 class UserManager(BaseUserManager):
@@ -72,6 +72,9 @@ class UserManager(BaseUserManager):
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         return get_email_from_claims(claims)
+
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
+        return get_name_from_claims(claims, self.NAME_CLAIMS)
 
     def get_user_instance_from_claims(
         self, claims: dict[str, Any]
@@ -246,6 +249,7 @@ class UserManager(BaseUserManager):
     ) -> model.User:
         assert self._organization_service.repository
         created_by_user_id: UUID = kwargs["created_by_user_id"]
+
         with self._organization_service.repository.uow() as uow:
             # Verify if create_by_user exists and is active
             is_existing_user = self._organization_service.repository.crud(
@@ -341,6 +345,19 @@ class UserManager(BaseUserManager):
                 CrudOperation.READ_ONE,
             )
         return user
+
+    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:
+        user.name = new_name
+        with self._organization_service.repository.uow() as uow:
+            updated_user: model.User = self._organization_service.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                self._user_class,
+                user,
+                None,
+                CrudOperation.UPDATE_ONE,
+            )
+        return updated_user
 
     def retrieve_user_permissions(self, user: model.User) -> set[Permission]:  # type: ignore[override]
         return self._rbac_service.retrieve_user_permissions(user)
