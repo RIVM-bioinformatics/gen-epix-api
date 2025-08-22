@@ -72,20 +72,26 @@ class SeqdbService(BaseSeqdbService):
                 operation=CrudOperation.READ_SOME,
             )
         )
+        raw_seq_ids = [seq.raw_seq_id for seq in seqs]
         raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
             seqdb_command.RawSeqCrudCommand(
                 user=self.ext_app_user,
-                obj_ids=[seq.raw_seq_id for seq in seqs],
+                obj_ids=list(set(raw_seq_ids)),
                 operation=CrudOperation.READ_SOME,
             )
         )
+        raw_seq_map = {x.id: x for x in raw_seqs}
         # Convert raw sequences to model.GeneticSequence
         genetic_sequences = [
             model.GeneticSequence(
+<<<<<<< Updated upstream
                 id=seq.id,
                 nucleotide_sequence=raw_seq.seq,
+=======
+                id=seq.id, nucleotide_sequence=raw_seq_map[raw_seq_id].seq, distances={}
+>>>>>>> Stashed changes
             )
-            for seq, raw_seq in zip(seqs, raw_seqs)
+            for seq, raw_seq_id in zip(seqs, raw_seq_ids)
         ]
         return genetic_sequences
 
