@@ -32,7 +32,6 @@ dependencies = [
     "sqlalchemy==2.0.43",
     "sqlalchemy_utils==0.41.2",
     "pydantic==2.7.*",
-    "pandas==2.2.3",
     "ulid-py==1.1.0",
     "fire==0.7.0",
     "dynaconf==3.2.11",

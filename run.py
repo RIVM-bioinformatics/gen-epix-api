@@ -321,6 +321,18 @@ class Run:
             dict_repository: DictRepository,
             sa_repository: SARepository,
         ) -> None:
+            # Delete all first in reverse order
+            for entity in entities[::-1]:
+                model_class = entity.model_class
+                with sa_repository.uow() as sa_uow:
+                    sa_repository.crud(
+                        sa_uow,
+                        user_id,
+                        model_class,
+                        None,
+                        None,
+                        CrudOperation.DELETE_ALL,
+                    )
             for entity in entities:
                 model_class = entity.model_class
                 with (

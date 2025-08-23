@@ -107,7 +107,7 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         snake_case_plural_name="read_sets",
         table_name="read_set",
         persistable=True,
-        keys=create_keys({1: "code", 2: ("uri", "uri2")}),
+        keys=create_keys({1: "code"}),
         links=create_links(
             {
                 1: (
@@ -161,12 +161,6 @@ class Seq(Model, CodeMixin, QualityMixin):
         keys=create_keys(
             {
                 1: "code",
-                2: (
-                    "read_set_id",
-                    "read_set2_id",
-                    "assembly_protocol_id",
-                    "raw_seq_id",
-                ),
             }
         ),
         links=create_links(
@@ -640,7 +634,6 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
             {
                 1: "code",
                 2: ("name", "version"),
-                3: ("seq_distance_protocol_type", "locus_set_id", "ref_seq_id"),
             }
         ),
         links=create_links(

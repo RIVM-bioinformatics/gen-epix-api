@@ -1039,10 +1039,10 @@ class SARepository(BaseRepository):
                 if not schema_name:
                     continue
                 with engine.connect() as conn:
-                    print(conn)
+                    # print(conn)
                     result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
                     schemas = [row[0] for row in result]
-                    print(schemas)
+                    # print(schemas)
                     conn.dialect
                     if not conn.dialect.has_schema(conn, schema_name):
                         conn.execute(sa.schema.CreateSchema(schema_name))
