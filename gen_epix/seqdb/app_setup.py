@@ -11,7 +11,6 @@ from slowapi.middleware import SlowAPIMiddleware
 from gen_epix.common.api.exc import generate_handle_exception_function
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
-from gen_epix.fastapp.enum import LogLevel
 from gen_epix.fastapp.middleware import (
     HandleAuthExceptionMiddleware,
     UpdateResponseHeaderMiddleware,
@@ -120,11 +119,11 @@ def create_fast_api(
         update_openapi_kwargs = kwargs.pop("update_openapi_kwargs", {})
         get_open_api_kwargs = update_openapi_kwargs.pop("get_openapi_kwargs", {})
         get_open_api_kwargs.update({"routes": fast_api.routes})
-        custom_openapi_function = create_custom_openapi_function(
+        custom_openapi_fn = create_custom_openapi_function(
             get_open_api_kwargs,
             fix_schema=update_openapi_kwargs.get("fix_schema", False),
             auth_service=update_openapi_kwargs.get("auth_service"),
         )
-        setattr(fast_api, "openapi", custom_openapi_function)
+        setattr(fast_api, "openapi", custom_openapi_fn)
 
     return fast_api

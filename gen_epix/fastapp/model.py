@@ -29,7 +29,7 @@ class Model(PydanticBaseModel):
     ENTITY: ClassVar[Entity | None] = None
 
 
-class User(Model):
+class User(PydanticBaseModel):
     id: Hashable | None = Field(
         default_factory=uuid.uuid4,
         description="The ID of the user. This can be the key of the user (see get_key method), or a separate ID.",

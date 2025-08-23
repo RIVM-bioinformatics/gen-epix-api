@@ -1,3 +1,6 @@
+# Data models/handling
+pandas==2.2.3
+
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pytest==8.4.*

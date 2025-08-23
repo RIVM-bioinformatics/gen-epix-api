@@ -6,9 +6,9 @@ from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator
 
+from gen_epix import fastapp
 from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model
-from gen_epix.fastapp import User as ServiceUser
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 _SERVICE_TYPE = enum.ServiceType.ORGANIZATION
@@ -37,7 +37,7 @@ class Organization(Model):
     )
 
 
-class UserNameEmail(ServiceUser, Model):
+class UserNameEmail(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_name_emails",
         persistable=False,
@@ -52,7 +52,7 @@ class UserNameEmail(ServiceUser, Model):
     email: str = Field(description="The email of the user", max_length=320)
 
 
-class User(ServiceUser, Model):
+class User(fastapp.User, Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="users",
         table_name="user",
