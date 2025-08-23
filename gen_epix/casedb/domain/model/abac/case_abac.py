@@ -140,9 +140,9 @@ class CaseAbac(BaseModel):
         there is the given right. The sets are guaranteed to be non-empty.
         """
         retval = {}
-        has_right_function = self._get_has_right_function(right)
+        has_right_fn = self._get_has_right_function(right)
         for case_type_id, data in self.case_type_access_abacs.items():
-            data_collection_ids = {x for x, y in data.items() if has_right_function(y)}
+            data_collection_ids = {x for x, y in data.items() if has_right_fn(y)}
             if data_collection_ids:
                 retval[case_type_id] = data_collection_ids
         return retval
@@ -153,9 +153,9 @@ class CaseAbac(BaseModel):
         the data collections.
         """
         retval = set()
-        has_right_function = self._get_has_right_function(right)
+        has_right_fn = self._get_has_right_function(right)
         for case_type_id, data in self.case_type_access_abacs.items():
-            has_right = any(has_right_function(x) for x in data.values())
+            has_right = any(has_right_fn(x) for x in data.values())
             if has_right:
                 retval.add(case_type_id)
         return retval
@@ -219,9 +219,9 @@ class CaseAbac(BaseModel):
     #     # Parse input
     #     if right not in enum.CaseAbacRightSet.SHARE.value:
     #         raise ValueError(f"Right {right.value} is not an add or remove right.")
-    #     has_right_function = self._get_has_right_function(right)
-    #     get_from_data_collections_function = (
-    #         self._get_from_data_collections_for_right_function(right)
+    #     has_right_fn = self._get_has_right_fn(right)
+    #     get_from_data_collections_fn = (
+    #         self._get_from_data_collections_for_right_fn(right)
     #     )
     #     if require_private and from_data_collection_ids is not None:
     #         raise ValueError(
@@ -242,7 +242,7 @@ class CaseAbac(BaseModel):
     #                 return False
     #             # Check direct share rights from the provided data collections
     #             if all(
-    #                 get_from_data_collections_function(x).isdisjoint(
+    #                 get_from_data_collections_fn(x).isdisjoint(
     #                     data_collection_ids
     #                 )
     #                 for x in share_data[data_collection_id]
@@ -255,7 +255,7 @@ class CaseAbac(BaseModel):
     #         if access_data[data_collection_id].is_private:
     #             # This data collection is private
     #             n_private += 1
-    #         if not has_right_function(access_data[data_collection_id]):
+    #         if not has_right_fn(access_data[data_collection_id]):
     #             # No access to this data collection
     #             return False
     #     if n_private != 1:
@@ -301,7 +301,7 @@ class CaseAbac(BaseModel):
             return False
 
         # Handle each right
-        has_right_function = self._get_has_right_function(right)
+        has_right_fn = self._get_has_right_function(right)
         if right in CaseRightSet.ADD.value:
             # Check if the case or case set can be added to all the target data collections
             if is_create_or_delete:
@@ -337,7 +337,7 @@ class CaseAbac(BaseModel):
             current_data_collection_ids.add(
                 created_in_data_collection_id  # type:ignore[arg-type]
             )
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 self._get_get_share_from_data_collections_function(right)
             )
             for data_collection_id in remaining_data_collection_ids:
@@ -347,13 +347,13 @@ class CaseAbac(BaseModel):
                 if access_abac[data_collection_id].is_private:
                     # Private data collection different from the created in data collection
                     return False
-                if not has_right_function(access_abac[data_collection_id]):
+                if not has_right_fn(access_abac[data_collection_id]):
                     # No access right in this data collection -> check share rights
                     if (
                         share_abac is None
                         or data_collection_id not in share_abac
                         or not current_data_collection_ids.intersection(
-                            get_share_from_data_collections_function(
+                            get_share_from_data_collections_fn(
                                 share_abac[data_collection_id]
                             )
                         )
@@ -390,7 +390,7 @@ class CaseAbac(BaseModel):
             remaining_data_collection_ids.discard(
                 created_in_data_collection_id  # type:ignore[arg-type]
             )
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 self._get_get_share_from_data_collections_function(right)
             )
             for data_collection_id in remaining_data_collection_ids:
@@ -400,13 +400,13 @@ class CaseAbac(BaseModel):
                 if access_abac[data_collection_id].is_private:
                     # Private data collection different from the created in data collection
                     return False
-                if not has_right_function(access_abac[data_collection_id]):
+                if not has_right_fn(access_abac[data_collection_id]):
                     # No access right in this data collection -> check share rights
                     if (
                         share_abac is None
                         or data_collection_id not in share_abac
                         or not current_data_collection_ids.intersection(
-                            get_share_from_data_collections_function(
+                            get_share_from_data_collections_fn(
                                 share_abac[data_collection_id]
                             )
                         )
@@ -424,9 +424,9 @@ class CaseAbac(BaseModel):
                 raise exc.InvalidArgumentsError(
                     f"tgt_data_collection_ids must be empty for right {right.value}"
                 )
-            has_right_function = self._get_has_right_function(right)
+            has_right_fn = self._get_has_right_function(right)
             for data_collection_id in current_data_collection_ids:
-                if data_collection_id in access_abac and has_right_function(
+                if data_collection_id in access_abac and has_right_fn(
                     access_abac[data_collection_id]
                 ):
                     # Access right in this data collection
@@ -624,69 +624,67 @@ class CaseAbac(BaseModel):
         right: CaseRight,
     ) -> Callable[[CaseTypeAccessAbac | CaseTypeShareAbac], bool]:
         if right == CaseRight.ADD_CASE:
-            has_right_function = lambda x: x.add_case
+            has_right_fn = lambda x: x.add_case
         elif right == CaseRight.REMOVE_CASE:
-            has_right_function = lambda x: x.remove_case
+            has_right_fn = lambda x: x.remove_case
         elif right == CaseRight.READ_CASE:
-            has_right_function = lambda x: len(x.read_case_type_col_ids) > 0
+            has_right_fn = lambda x: len(x.read_case_type_col_ids) > 0
         elif right == CaseRight.WRITE_CASE:
-            has_right_function = lambda x: len(x.write_case_type_col_ids) > 0
+            has_right_fn = lambda x: len(x.write_case_type_col_ids) > 0
         elif right == CaseRight.ADD_CASE_SET:
-            has_right_function = lambda x: x.add_case_set
+            has_right_fn = lambda x: x.add_case_set
         elif right == CaseRight.REMOVE_CASE_SET:
-            has_right_function = lambda x: x.remove_case_set
+            has_right_fn = lambda x: x.remove_case_set
         elif right == CaseRight.READ_CASE_SET:
-            has_right_function = lambda x: x.read_case_set
+            has_right_fn = lambda x: x.read_case_set
         elif right == CaseRight.WRITE_CASE_SET:
-            has_right_function = lambda x: x.write_case_set
+            has_right_fn = lambda x: x.write_case_set
         else:
             raise NotImplementedError(f"Right {right.value} not implemented")
-        return has_right_function
+        return has_right_fn
 
     @staticmethod
     def _get_get_share_from_data_collections_function(
         right: CaseRight,
     ) -> Callable[[CaseTypeShareAbac], set[UUID]]:
         if right == CaseRight.ADD_CASE:
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 lambda x: x.add_case_from_data_collection_ids
             )
         elif right == CaseRight.REMOVE_CASE:
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 lambda x: x.remove_case_from_data_collection_ids
             )
         elif right == CaseRight.ADD_CASE_SET:
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 lambda x: x.add_case_set_from_data_collection_ids
             )
         elif right == CaseRight.REMOVE_CASE_SET:
-            get_share_from_data_collections_function = (
+            get_share_from_data_collections_fn = (
                 lambda x: x.remove_case_set_from_data_collection_ids
             )
         else:
             raise NotImplementedError(f"Right {right.value} not implemented")
-        return get_share_from_data_collections_function
+        return get_share_from_data_collections_fn
 
     @staticmethod
     def _get_from_data_collections_for_right_function(
         right: CaseRight,
     ) -> Callable[[CaseTypeShareAbac], set[UUID]]:
         if right == CaseRight.ADD_CASE:
-            get_from_data_collections_function = (
-                lambda x: x.add_case_from_data_collection_ids
-            )
+            get_from_data_collections_fn = lambda x: x.add_case_from_data_collection_ids
         elif right == CaseRight.REMOVE_CASE:
-            get_from_data_collections_function = (
+            get_from_data_collections_fn = (
                 lambda x: x.remove_case_from_data_collection_ids
             )
         elif right == CaseRight.ADD_CASE_SET:
-            get_from_data_collections_function = (
+            get_from_data_collections_fn = (
                 lambda x: x.add_case_set_from_data_collection_ids
             )
         elif right == CaseRight.REMOVE_CASE_SET:
-            get_from_data_collections_function = (
+            get_from_data_collections_fn = (
                 lambda x: x.remove_case_set_from_data_collection_ids
             )
         else:
             raise NotImplementedError(f"Right {right.value} not implemented")
-        return get_from_data_collections_function
+        return get_from_data_collections_fn

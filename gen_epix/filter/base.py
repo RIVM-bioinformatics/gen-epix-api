@@ -42,7 +42,7 @@ class Filter(BaseModel):
         self,
         value: Any | None,
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
         """
         Check if a value matches the filter.
@@ -50,25 +50,23 @@ class Filter(BaseModel):
         Args:
             value (Any | None): The value to be checked.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
-            map_fun (Callable[[Any], Any] | None, optional): Function to be applied to the value before matching. Defaults to None.
+            map_fn (Callable[[Any], Any] | None, optional): Function to be applied to the value before matching. Defaults to None.
 
         Returns:
             bool: True if the value matches the filter, False otherwise.
         """
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         if na_values is None:
-            return (value is not None and self._match(map_fun(value))) ^ self.invert
+            return (value is not None and self._match(map_fn(value))) ^ self.invert
         else:
-            return (
-                value not in na_values and self._match(map_fun(value))
-            ) ^ self.invert
+            return (value not in na_values and self._match(map_fn(value))) ^ self.invert
 
     def match_column(
         self,
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[bool]:
         """
         Check if each value in a column matches the filter.
@@ -76,16 +74,16 @@ class Filter(BaseModel):
         Args:
             values (Iterable[Any | None]): The values in the column.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
-            map_fun (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Yields:
             bool: True if the value matches the filter, False otherwise.
         """
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         if na_values is None:
             for value in values:
-                yield (value is not None and self._match(map_fun(value))) ^ self.invert
+                yield (value is not None and self._match(map_fn(value))) ^ self.invert
         else:
             for value in values:
                 yield (value not in na_values) ^ self.invert
@@ -94,16 +92,16 @@ class Filter(BaseModel):
         self,
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[Any | None]:
         """
         Analogous to match_column, but yields the values that match the filter instead of a bool.
         """
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         if na_values is None:
             for value in values:
-                if (value is not None and self._match(map_fun(value))) ^ self.invert:
+                if (value is not None and self._match(map_fn(value))) ^ self.invert:
                     yield value
         else:
             for value in values:
@@ -114,7 +112,7 @@ class Filter(BaseModel):
         self,
         row: dict[Hashable, Any | None] | BaseModel,
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> bool:
         """
@@ -123,7 +121,7 @@ class Filter(BaseModel):
         Args:
             row (dict[Hashable, Any | None]): The row to be checked.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
-            map_fun (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Returns:
             bool: True if the row matches the filter, False otherwise.
@@ -131,27 +129,27 @@ class Filter(BaseModel):
         # Match if both key exists, value not null and value matches
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         key = self.key
         if na_values is None:
             return (
                 (is_model or key in row)
                 and self._get_row_value(row, key, is_model) is not None
-                and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                and self._match(map_fn(self._get_row_value(row, key, is_model)))
             ) ^ self.invert
         else:
             return (
                 (is_model or key in row)
                 and self._get_row_value(row, key, is_model) not in na_values
-                and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                and self._match(map_fn(self._get_row_value(row, key, is_model)))
             ) ^ self.invert
 
     def match_rows(
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[bool]:
         """
@@ -160,7 +158,7 @@ class Filter(BaseModel):
         Args:
             rows (Iterable[dict[Hashable, Any | None]]): The collection of rows.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
-            map_fun (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Yields:
             bool: True if the row matches the filter, False otherwise.
@@ -168,29 +166,29 @@ class Filter(BaseModel):
         # Match if both key exists, value not null and value matches
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         key = self.key
         if na_values is None:
             for row in rows:
                 yield (
                     (is_model or key in row)
                     and self._get_row_value(row, key, is_model) is not None
-                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert
         else:
             for row in rows:
                 yield (
                     (is_model or key in row)
                     and self._get_row_value(row, key, is_model) not in na_values
-                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert
 
     def filter_rows(
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[dict[Hashable, Any | None]]:
         """
@@ -199,15 +197,15 @@ class Filter(BaseModel):
         # Match if both key exists, value not null and value matches
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
-        if not map_fun:
-            map_fun = lambda x: x
+        if not map_fn:
+            map_fn = lambda x: x
         key = self.key
         if na_values is None:
             for row in rows:
                 if (
                     (is_model or key in row)
                     and self._get_row_value(row, key, is_model) is not None
-                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert:
                     yield row
         else:
@@ -215,7 +213,7 @@ class Filter(BaseModel):
                 if (
                     (is_model or key in row)
                     and self._get_row_value(row, key, is_model) not in na_values
-                    and self._match(map_fun(self._get_row_value(row, key, is_model)))
+                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
                 ) ^ self.invert:
                     yield row
 
@@ -248,7 +246,7 @@ class Filter(BaseModel):
         data: Iterable[Any],
         axis: int = 1,
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[Any]:
         """
         Apply filter to data.
@@ -257,15 +255,15 @@ class Filter(BaseModel):
             data (Iterable[Any]): The data to be filtered.
             axis (int, optional): The axis along which to apply the filter. 0 for rows, 1 for columns. Defaults to 1.
             na_values (set[Any] | None, optional): Set of values to be considered as NA values. Defaults to None.
-            map_fun (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
+            map_fn (Callable[[Any], Any] | None, optional): Function to be applied to each value before matching. Defaults to None.
 
         Returns:
             Iterable[bool]: An iterable of booleans for each row, True if the data matches the filter, False otherwise.
         """
         if axis == 0:
-            return self.filter_rows(data, na_values=na_values, map_fun=map_fun)
+            return self.filter_rows(data, na_values=na_values, map_fn=map_fn)
         if axis == 1:
-            return self.filter_column(data, na_values=na_values, map_fun=map_fun)
+            return self.filter_column(data, na_values=na_values, map_fn=map_fn)
         raise ValueError("Axis must be 0 or 1.")
 
 
