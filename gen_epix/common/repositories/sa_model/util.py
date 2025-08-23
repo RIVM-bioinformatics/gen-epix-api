@@ -2,14 +2,14 @@ import importlib
 from enum import Enum
 from typing import Any, Callable, Type
 
-import annotated_types
 import sqlalchemy as sa
 from pydantic.fields import FieldInfo
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from gen_epix.common.domain.model import Model
 from gen_epix.fastapp import Domain, Entity
-from gen_epix.fastapp.repositories import get_pydantic_field_sa_type
+from gen_epix.fastapp.repositories import create_sa_type_from_field_info
+from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_info
 
 
 def create_table_args(
@@ -50,10 +50,10 @@ def create_mapped_column(
 ) -> MappedColumn[Any]:
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
-    fieldinfo = model_class.model_fields[field_name]
-    sa_type = get_pydantic_field_sa_type(fieldinfo)
-    nullable = kwargs.get("nullable", fieldinfo.is_required() is False)
-    doc = kwargs.pop("doc", fieldinfo.description)
+    field_info: FieldInfo = model_class.model_fields[field_name]
+    sa_type = create_sa_type_from_field_info(field_info)
+    nullable = kwargs.get("nullable", not field_info.is_required())
+    doc = kwargs.pop("doc", field_info.description)
     link_entity = entity.get_link_entity(field_name)
     if link_entity and domain.get_service_type_for_entity(
         link_entity
@@ -199,51 +199,15 @@ def get_mixin_mapped_column(
     **kwargs: Any,
 ) -> Mapped:
     field_info: FieldInfo = getattr(model_mixin_class, field_name)
+    # Extract SA arguments from mixin class based on sa_type
     kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
         "nullable", not field_info.is_required()
     )
-    override_column_kwargs: dict[str, Any] = kwargs.pop("column_kwargs", {})
-    # Extract column kwargs from field metadata
-    column_kwargs: dict[str, Any] = {}
-    for metadata in field_info.metadata:
-        if isinstance(metadata, annotated_types.MaxLen):
-            column_kwargs["length"] = metadata.max_length
-        elif isinstance(
-            metadata,
-            (
-                annotated_types.MinLen,
-                annotated_types.Ge,
-                annotated_types.Gt,
-                annotated_types.Le,
-                annotated_types.Lt,
-            ),
-        ):
-            # no equivalent
-            pass
-        else:
-            raise NotImplementedError(f"Unsupported metadata type: {type(metadata)}")
-    # Override any column kwargs with the provided ones
-    column_kwargs.update(override_column_kwargs)
-    # Restrict column kwargs to allowed ones for this particular column type
-    allowed_keys: set[str]
-    if issubclass(sa_column_type, sa.String):
-        allowed_keys = {"length", "collation"}
-    elif issubclass(sa_column_type, sa.Integer):
-        allowed_keys = set()
-    elif issubclass(sa_column_type, sa.Float):
-        allowed_keys = {"precision", "asdecimal", "decimal_return_scale"}
-    elif issubclass(sa_column_type, sa.Date):
-        allowed_keys = set()
-    elif issubclass(sa_column_type, sa.LargeBinary):
-        allowed_keys = {"length"}
-    elif issubclass(sa_column_type, sa.JSON):
-        allowed_keys = {"none_as_null"}
-    else:
-        raise NotImplementedError("Unsupported SQLAlchemy column type")
+    sa_column_type_kwargs = kwargs.pop(
+        "sa_column_type_kwargs",
+        get_sa_type_kwargs_from_field_info(sa_column_type, field_info),
+    )
     # Create and return mapped column
     return mapped_column(
-        sa_column_type(
-            **({x: y for x, y in column_kwargs.items() if x in allowed_keys}),
-        ),
-        **kwargs,
+        create_sa_type_from_field_info(field_info, **sa_column_type_kwargs), **kwargs
     )
