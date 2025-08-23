@@ -5,13 +5,35 @@ from pathlib import Path
 from typing import Any, Hashable, Iterable, Type
 
 import ulid
-from pkg_resources import DistributionNotFound, get_distribution
 
 from gen_epix.fastapp import Command, Domain, Model, exc
 
 
 def generate_ulid() -> uuid.UUID:
     return ulid.api.new().uuid
+
+
+def get_project_root() -> Path:
+    """
+    Get the root path of the project by looking for pyproject.toml.
+
+    Searches upward from the current file's directory until it finds
+    a directory containing pyproject.toml, which indicates the project root.
+
+    Returns:
+        Path: The absolute path to the project root directory.
+
+    Raises:
+        FileNotFoundError: If pyproject.toml cannot be found in any parent directory.
+    """
+    current_dir = Path(__file__).parent
+
+    while current_dir != current_dir.parent:
+        if (current_dir / "pyproject.toml").exists():
+            return current_dir.resolve()
+        current_dir = current_dir.parent
+
+    raise FileNotFoundError("Could not find pyproject.toml in any parent directory")
 
 
 def map_paired_elements(
@@ -91,7 +113,7 @@ def update_cfg_from_file(
             if key not in curr_cfg:
                 curr_cfg[key] = {}
             curr_cfg = curr_cfg[key]
-        with open(Path(file), "r") as handle:
+        with open(Path(file), "r", encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:
@@ -105,23 +127,18 @@ def update_cfg_from_file(
 
 # Get version with fallback for development
 def get_package_version() -> str:
-    version: str
-    try:
-        version = get_distribution("Gen-EpiX").version
-    except DistributionNotFound:
-        # Fallback version for development when package is not installed
-        dir = Path(__file__).parent
-        file = dir / "pyproject.toml"
-        while dir.parent != dir:
-            if (file := dir / "pyproject.toml").exists():
-                break
-        if file.exists():
-            raise FileNotFoundError(
-                f"Could not find pyproject.toml in {dir} or its parent directories."
-            )
-        with open(file, "rb") as handle:
-            version: str = tomllib.load(handle)["project"]["version"]
-    return version
+    """Retrieve the project version from the pyproject.toml file.
+    Must be run from the project root directory.
+
+    Returns:
+        str: The version of the project as specified in pyproject.toml.
+    """
+    pyproject_path = "pyproject.toml"
+
+    with open(pyproject_path, "rb") as f:
+        pyproject_data = tomllib.load(f)
+
+    return pyproject_data["project"]["version"]
 
 
 def register_domain_entities(

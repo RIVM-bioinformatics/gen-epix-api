@@ -4,6 +4,9 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.fastapp import App
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.seqdb.domain import command as seqdb_command
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.command import (
     RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
 )
@@ -58,8 +61,32 @@ class SeqdbService(BaseSeqdbService):
         )
         return phylogenetic_tree
 
-    def retrieve_genetic_sequences(self, cmd) -> list[model.GeneticSequence]:
-        raise NotImplementedError()
+    def retrieve_genetic_sequences(
+        self, cmd: command.RetrieveGeneticSequenceByIdCommand
+    ) -> list[model.GeneticSequence]:
+        # naive implementation that retrieves sequences by ID
+        seqs: list[seqdb_model.Seq] = self.ext_app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=self.ext_app_user,
+                obj_ids=cmd.seq_ids,
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
+            seqdb_command.RawSeqCrudCommand(
+                user=self.ext_app_user,
+                obj_ids=[seq.raw_seq_id for seq in seqs],
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        # Convert raw sequences to model.GeneticSequence
+        genetic_sequences = [
+            model.GeneticSequence(
+                id=seq.id, nucleotide_sequence=raw_seq.seq, distances={}
+            )
+            for seq, raw_seq in zip(seqs, raw_seqs)
+        ]
+        return genetic_sequences
 
     # def retrieve_allele_profile(
     #     self,

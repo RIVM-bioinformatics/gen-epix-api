@@ -8,7 +8,6 @@ from gen_epix.common.domain.command.base import (
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.fastapp import PermissionTypeSet
 
 # Non-CRUD commands
 
@@ -70,12 +69,10 @@ class UpdateUserOwnOrganizationCommand(Command):
 
 
 class OrganizationCrudCommand(CrudCommand):
-    PERMISSION_TYPE_SET: ClassVar = PermissionTypeSet.CRU
     MODEL_CLASS: ClassVar = model.Organization
 
 
 class UserCrudCommand(CrudCommand):
-    PERMISSION_TYPE_SET: ClassVar = PermissionTypeSet.CRU
     MODEL_CLASS: ClassVar = model.User
 
 

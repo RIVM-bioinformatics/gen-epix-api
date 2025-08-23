@@ -52,3 +52,20 @@ class Outage(Model):
         default=None,
         description="Whether the system outage is currently visible, this overrides visible_from and visible_to.",
     )
+
+
+class PackageMetadata(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="package_metadatas",
+        persistable=False,
+        **_ENTITY_KWARGS,
+    )
+
+    name: str = Field(description="Name of the package.")
+    version: str = Field(description="Version of the package.")
+    license: str | None = Field(
+        default=None, description="License information for the package."
+    )
+    homepage: str | None = Field(
+        default=None, description="Homepage URL of the package."
+    )
