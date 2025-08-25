@@ -11,11 +11,6 @@ from gen_epix.casedb.domain import enum
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
-_SERVICE_TYPE = enum.ServiceType.ONTOLOGY
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Concept(Model):
     """
@@ -26,7 +21,6 @@ class Concept(Model):
         snake_case_plural_name="concepts",
         table_name="concept",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
     # TODO: consider whether abbreviation (i) should renamed to code and (ii) should be a key
     abbreviation: str = Field(description="The abbreviation for the concept.")
@@ -53,7 +47,6 @@ class ConceptSet(Model):
         table_name="concept_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
@@ -119,7 +112,6 @@ class ConceptSetMember(Model):
                 2: ("concept_id", Concept, "concept"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     concept_set_id: UUID = Field(description="The ID of the concept set. FOREIGN KEY")
     concept_set: ConceptSet | None = Field(default=None, description="The concept set")
@@ -144,7 +136,6 @@ class Disease(Model):
         table_name="disease",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the disease", max_length=255)
     icd_code: str | None = Field(
@@ -164,7 +155,6 @@ class EtiologicalAgent(Model):
         table_name="etiological_agent",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the etiological agent", max_length=255)
     type: str = Field(description="The type of the etiological agent", max_length=255)
@@ -186,7 +176,6 @@ class Etiology(Model):
                 2: ("etiological_agent_id", EtiologicalAgent, "etiological_agent"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     disease_id: UUID = Field(description="The ID of the disease. FOREIGN KEY")
     disease: Disease | None = Field(default=None, description="The disease")

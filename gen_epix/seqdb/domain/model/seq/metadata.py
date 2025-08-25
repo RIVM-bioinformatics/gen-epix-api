@@ -13,12 +13,6 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, SeqMixin
 
-_SERVICE_TYPE = enum.ServiceType.SEQ
-_ENTITY_KWARGS = {
-    "service_type": _SERVICE_TYPE,
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class TreeAlgorithmClass(Model):
     ENTITY: ClassVar = Entity(
@@ -26,7 +20,6 @@ class TreeAlgorithmClass(Model):
         table_name="tree_algorithm_class",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(
         description="The code of the tree algorithm class", max_length=255
@@ -68,7 +61,6 @@ class TreeAlgorithm(Model):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     code: enum.TreeAlgorithm = Field(description="The code of the tree algorithm")
     name: str = Field(description="The name of the tree algorithm", max_length=255)
@@ -94,7 +86,6 @@ class LibraryPrepProtocol(Model, ProtocolMixin):
         table_name="library_prep_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
 
 
@@ -104,7 +95,6 @@ class AssemblyProtocol(Model, ProtocolMixin):
         table_name="assembly_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
     has_manual_curation: bool = Field(
         default=False,
@@ -118,7 +108,6 @@ class LocusDetectionProtocol(Model, ProtocolMixin):
         table_name="locus_detection_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
 
 
@@ -128,7 +117,6 @@ class SnpDetectionProtocol(Model, ProtocolMixin):
         table_name="snp_detection_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
 
 
@@ -138,7 +126,6 @@ class KmerDetectionProtocol(Model, ProtocolMixin):
         table_name="kmer_detection_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
 
 
@@ -148,7 +135,6 @@ class AlignmentProtocol(Model, ProtocolMixin):
         table_name="alignment_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
     is_multiple: bool = Field(
         description="Whether the alignment protocol can be used for more than two sequences"
@@ -161,7 +147,6 @@ class TaxonomyProtocol(Model, ProtocolMixin):
         table_name="taxonomy_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
 
 
@@ -171,7 +156,6 @@ class SeqClassificationProtocol(Model, ProtocolMixin):
         table_name="seq_classification_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
     is_taxonomic: bool = Field(
         description="Whether the category is based on phylogeny or not"
@@ -184,7 +168,6 @@ class PcrProtocol(Model, ProtocolMixin):
         table_name="pcr_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
     target_names: list[str]
 
@@ -201,7 +184,6 @@ class AstProtocol(Model, ProtocolMixin):
         table_name="ast_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
-        **_ENTITY_KWARGS,
     )
     is_predicted: bool
     antimicrobial_names: list[str]
@@ -219,7 +201,6 @@ class SeqCategorySet(Model):
         table_name="seq_category_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the category set", max_length=255)
     name: str = Field(description="The name of the category set", max_length=255)
@@ -240,7 +221,6 @@ class SeqCategory(Model):
                 )
             }
         ),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the category", max_length=255)
     name: str = Field(description="The name of the category", max_length=255)
@@ -256,7 +236,6 @@ class SubtypingScheme(Model):
         table_name="subtyping_scheme",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the subtyping scheme", max_length=255)
     name: str = Field(description="The name of the subtyping scheme", max_length=255)
@@ -276,7 +255,6 @@ class Taxon(Model):
                 1: ("subtyping_scheme_id", SubtypingScheme, "subtyping_scheme"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the taxon", max_length=255)
     name: str = Field(description="The name of the taxon", max_length=255)
@@ -329,7 +307,6 @@ class TaxonSet(Model):
         table_name="taxon_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the taxon set", max_length=255)
     name: str = Field(description="The name of the taxon set", max_length=255)
@@ -347,7 +324,6 @@ class TaxonSetMember(Model):
                 2: ("taxon_id", Taxon, "taxon"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     taxon_set_id: UUID = Field(description="The ID of the taxon set. FOREIGN KEY")
     taxon_set: TaxonSet
@@ -361,7 +337,6 @@ class Locus(Model):
         table_name="locus",
         persistable=True,
         keys=create_keys({1: "code"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the locus.", max_length=255)
     gene_code: str | None = Field(
@@ -382,7 +357,6 @@ class LocusSet(Model):
         table_name="locus_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the locus set.", max_length=255)
     name: str = Field(description="The name of the locus set.", max_length=255)
@@ -419,7 +393,6 @@ class LocusSetMember(Model):
                 2: ("locus_id", Locus, "locus"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     locus_set_id: UUID = Field(
         description="The unique identifier for the locus set. FOREIGN KEY"
@@ -443,7 +416,6 @@ class TaxonLocusLink(Model):
         links=create_links(
             {1: ("taxon_id", Taxon, "taxon"), 2: ("locus_id", Locus, "locus")}
         ),
-        **_ENTITY_KWARGS,
     )
     taxon_id: UUID = Field(
         description="The unique identifier for the taxon. FOREIGN KEY"
@@ -462,7 +434,6 @@ class RefSeq(Model, SeqMixin):
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
         links=create_links({1: ("taxon_id", Taxon, "taxon")}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the reference sequence", max_length=255)
     name: str = Field(description="The name of the reference sequence", max_length=255)
@@ -485,7 +456,6 @@ class RefAllele(Model, SeqMixin):
         persistable=True,
         keys=create_keys({1: ("locus_id", "index")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
-        **_ENTITY_KWARGS,
     )
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
@@ -503,7 +473,6 @@ class RefSnp(Model):
         persistable=True,
         keys=create_keys({1: "code", 2: ("ref_seq_id", "position", "nucleotide")}),
         links=create_links({1: ("ref_seq_id", RefSeq, "ref_seq")}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the reference SNP.", max_length=255)
     ref_seq_id: UUID = Field(
@@ -522,7 +491,6 @@ class RefSnpSet(Model):
         table_name="ref_snp_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the reference SNP set.", max_length=255)
     name: str = Field(description="The name of the reference SNP set.", max_length=255)
@@ -545,7 +513,6 @@ class RefSnpSetMember(Model):
                 2: ("ref_snp_id", RefSnp, "ref_snp"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ref_snp_set_id: UUID = Field(
         description="The unique identifier for the reference SNP set. FOREIGN KEY"

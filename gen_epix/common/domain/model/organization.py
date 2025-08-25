@@ -11,11 +11,6 @@ from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
-_SERVICE_TYPE = enum.ServiceType.ORGANIZATION
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Organization(Model):
     """
@@ -27,7 +22,6 @@ class Organization(Model):
         table_name="organization",
         persistable=True,
         keys=create_keys({1: "name", 2: "legal_entity_code"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(
         description="The name of the organization, UNIQUE", max_length=255
@@ -41,7 +35,6 @@ class UserNameEmail(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_name_emails",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     id: UUID | None = Field(  # pyright: ignore[reportIncompatibleVariableOverride]
         default=None, description="The ID of the user"
@@ -63,7 +56,6 @@ class User(fastapp.User, Model):
                 1: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = Enum
     id: UUID | None = Field(
@@ -117,7 +109,6 @@ class OrganizationSet(Model):
         table_name="organization_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the organization set", max_length=255)
     description: str | None = Field(
@@ -137,7 +128,6 @@ class OrganizationSetMember(Model):
                 2: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_set_id: UUID = Field(
         description="The ID of the organization set. FOREIGN KEY"
@@ -164,7 +154,6 @@ class Site(Model):
                 1: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -188,7 +177,6 @@ class Contact(Model):
                 1: ("site_id", Site, "site"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     # TODO: Temporary implementation, check established models for this
     site_id: UUID | None = Field(
@@ -216,7 +204,6 @@ class IdentifierIssuer(Model):
         snake_case_plural_name="identifier_issuers",
         table_name="identifier_issuer",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the issuer", max_length=255)
 
@@ -231,7 +218,6 @@ class DataCollection(Model):
         table_name="data_collection",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     # TODO: Placeholder
     name: str = Field(
@@ -248,7 +234,6 @@ class DataCollectionSet(Model):
         table_name="data_collection_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the data collection set", max_length=255)
     description: str | None = Field(
@@ -270,7 +255,6 @@ class DataCollectionSetMember(Model):
                 2: ("data_collection_id", DataCollection, "data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     data_collection_set_id: UUID = Field(
         description="The ID of the data collection set. FOREIGN KEY"
@@ -303,7 +287,6 @@ class UserInvitation(Model):
                 2: ("invited_by_user_id", User, "invited_by_user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = Enum
     email: str = Field(description="The email of the user, UNIQUE", max_length=320)

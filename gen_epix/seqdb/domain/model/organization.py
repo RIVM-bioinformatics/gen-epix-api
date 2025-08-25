@@ -7,12 +7,6 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.util import create_links
 from gen_epix.seqdb.domain import enum
 
-_SERVICE_TYPE = enum.ServiceType.ORGANIZATION
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-    "_model_class": None,
-}
-
 assert common_model.User.ENTITY
 assert common_model.UserInvitation.ENTITY
 
@@ -24,9 +18,10 @@ class User(common_model.User):
 
     ENTITY: ClassVar = Entity(
         **common_model.User.ENTITY.model_dump(
-            exclude_unset=True, exclude_defaults=True, exclude={"schema_name"}
+            exclude_unset=True,
+            exclude_defaults=True,
+            exclude={"schema_name", "_model_class"},
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -41,7 +36,9 @@ class UserInvitation(common_model.UserInvitation):
 
     ENTITY: ClassVar = Entity(
         **common_model.UserInvitation.ENTITY.model_dump(
-            exclude_unset=True, exclude_defaults=True, exclude={"schema_name", "links"}
+            exclude_unset=True,
+            exclude_defaults=True,
+            exclude={"schema_name", "links", "_model_class"},
         ),
         links=create_links(
             {
@@ -49,7 +46,6 @@ class UserInvitation(common_model.UserInvitation):
                 2: ("invited_by_user_id", User, "invited_by_user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     # Override invited_by_user to ensure it uses the correct User model

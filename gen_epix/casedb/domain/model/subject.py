@@ -12,11 +12,6 @@ from gen_epix.common.domain.model.base import Model
 from gen_epix.common.domain.model.organization import DataCollection, IdentifierIssuer
 from gen_epix.fastapp.domain import Entity, create_links
 
-_SERVICE_TYPE = enum.ServiceType.SUBJECT
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Subject(Model):
     """
@@ -32,7 +27,6 @@ class Subject(Model):
                 1: ("data_collection_id", DataCollection, "data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     data_collection_id: UUID = Field(
         description="The ID of the data collection. FOREIGN KEY"
@@ -64,7 +58,6 @@ class SubjectIdentifier(Model):
                 2: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     subject_id: UUID = Field(description="The ID of the subject. FOREIGN KEY")
     subject: Subject | None = Field(default=None, description="The subject")

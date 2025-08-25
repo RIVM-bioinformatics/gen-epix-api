@@ -36,12 +36,6 @@ from gen_epix.seqdb.domain.model.seq.metadata import (
     TaxonomyProtocol,
 )
 
-_SERVICE_TYPE = enum.ServiceType.SEQ
-_ENTITY_KWARGS = {
-    "service_type": _SERVICE_TYPE,
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Allele(Model, SeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
@@ -50,7 +44,6 @@ class Allele(Model, SeqMixin, QualityMixin):
         persistable=True,
         keys=create_keys({1: ("locus_id", "seq_hash_sha256")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
-        **_ENTITY_KWARGS,
     )
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
@@ -75,7 +68,6 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ref_allele_id: UUID
     ref_allele: Allele | None = Field(default=None, description="The reference allele.")
@@ -95,7 +87,6 @@ class Sample(Model, CodeMixin):
         table_name="sample",
         persistable=True,
         keys=create_keys({1: "code"}),
-        **_ENTITY_KWARGS,
     )
     props: dict[str, str] = Field(
         default_factory=dict, description="The properties of the sample."
@@ -117,7 +108,6 @@ class ReadSet(Model, CodeMixin, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     uri: str = Field(description="The URI of the read set.")
     uri2: str | None = Field(
@@ -149,7 +139,6 @@ class RawSeq(Model, SeqMixin):
         snake_case_plural_name="raw_seqs",
         table_name="raw_seq",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
 
 
@@ -172,7 +161,6 @@ class Seq(Model, CodeMixin, QualityMixin):
                 5: ("raw_seq_id", RawSeq, "raw_seq"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID | None = Field(
         default=None,
@@ -218,7 +206,6 @@ class ContigAlignment(Model, AlignmentMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="contig_alignments",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     ref_seq_id: UUID = Field(
         description="The unique identifier for the reference sequence. FOREIGN KEY"
@@ -241,7 +228,6 @@ class SeqAlignment(Model):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -277,7 +263,6 @@ class AlleleProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -353,7 +338,6 @@ class SnpProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -416,7 +400,6 @@ class KmerProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -459,7 +442,6 @@ class SeqClassification(Model):
                 3: ("primary_category_id", SeqCategory, "primary_category"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -502,7 +484,6 @@ class SeqTaxonomy(Model):
                 3: ("primary_taxon_id", Taxon, "primary_taxon"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -542,7 +523,6 @@ class PcrMeasurement(Model):
                 2: ("pcr_protocol_id", PcrProtocol, "pcr_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
@@ -574,7 +554,6 @@ class AstMeasurement(Model):
                 2: ("ast_protocol_id", AstProtocol, "ast_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
@@ -606,7 +585,6 @@ class AstPrediction(Model):
                 2: ("ast_protocol_id", AstProtocol, "ast_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -642,7 +620,6 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
                 2: ("ref_seq_id", RefSeq, "ref_seq"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     max_stored_distance: float = Field(description="The maximum distance to be stored")
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
@@ -710,7 +687,6 @@ class SeqDistance(Model):
                 5: ("kmer_profile_id", KmerProfile, "kmer_profile"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"

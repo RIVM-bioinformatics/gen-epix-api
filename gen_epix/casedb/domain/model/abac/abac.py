@@ -3,16 +3,10 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.case import CaseTypeColSet, CaseTypeSet
-from gen_epix.casedb.domain.model.organization import _ENTITY_KWARGS, User
+from gen_epix.casedb.domain.model.organization import User
 from gen_epix.common.domain.model import DataCollection, Model, Organization
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-
-_SERVICE_TYPE = enum.ServiceType.ABAC
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
 
 
 class OrganizationAdminPolicy(Model):
@@ -43,7 +37,6 @@ class OrganizationAdminPolicy(Model):
                 2: ("user_id", User, "user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -124,7 +117,6 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -194,7 +186,6 @@ class UserAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")
@@ -252,7 +243,6 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
                 4: ("from_data_collection_id", DataCollection, "from_data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -298,7 +288,6 @@ class UserShareCasePolicy(BaseCasePolicy):
                 4: ("from_data_collection_id", DataCollection, "from_data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")

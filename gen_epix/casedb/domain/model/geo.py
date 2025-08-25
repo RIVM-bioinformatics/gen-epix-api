@@ -11,11 +11,6 @@ from gen_epix.casedb.domain import enum
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
-_SERVICE_TYPE = enum.ServiceType.GEO
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class RegionSet(Model):
     """
@@ -28,7 +23,6 @@ class RegionSet(Model):
         table_name="region_set",
         persistable=True,
         keys=create_keys({1: "code", 2: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the region set.", max_length=255)
     name: str = Field(
@@ -59,7 +53,6 @@ class RegionSetShape(Model):
                 1: ("region_set_id", RegionSet, "region_set"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     region_set_id: UUID
     region_set: RegionSet | None = None
@@ -88,7 +81,6 @@ class Region(Model):
                 1: ("region_set_id", RegionSet, "region_set"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     region_set_id: UUID = Field(description="The ID of the region set. FOREIGN KEY")
     region_set: RegionSet | None = Field(
@@ -121,7 +113,6 @@ class RegionRelation(Model):
                 2: ("to_region_id", Region, "to_region"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     from_region_id: UUID = Field(description="The ID of the source region. FOREIGN KEY")
     from_region: Region | None = Field(default=None, description="The source region.")

@@ -15,11 +15,6 @@ from gen_epix.casedb.domain.model.case.case import (
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
-_SERVICE_TYPE = enum.ServiceType.SEQDB
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class GeneticSequence(Model):
     """
@@ -28,7 +23,6 @@ class GeneticSequence(Model):
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="genetic_sequences",
-        **_ENTITY_KWARGS,
     )
     nucleotide_sequence: str | None = Field(
         default=None, description="The nucleotide sequence"
@@ -51,7 +45,6 @@ class AlleleProfile(Model):
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="allele_profiles",
-        **_ENTITY_KWARGS,
     )
     # TODO: add link to sequence and gene set
     allele_profile: str | None = Field(default=None, description="The allele profile")
@@ -66,7 +59,6 @@ class PhylogeneticTree(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="phylogenetic_trees",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     tree_algorithm_id: UUID | None = Field(
         default=None, description="The ID of the tree algorithm. FOREIGN KEY"
