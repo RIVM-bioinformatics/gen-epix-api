@@ -575,7 +575,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/omopdb/omopdb/unit/",
+                "test/omopdb/unit/",
             ]
         )
 

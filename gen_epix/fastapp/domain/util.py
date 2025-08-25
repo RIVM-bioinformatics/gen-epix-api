@@ -38,7 +38,7 @@ def _get_type_from_annotation_recursion(
     annotation: Type[Any] | None,
 ) -> Type:
     """
-    Adapted from sqlmodel 0.0.24
+    Adapted from https://github.com/fastapi/sqlmodel v0.0.24
     """
     # Resolve Optional fields
     if annotation is None:
