@@ -298,6 +298,20 @@ class CasedbServiceTestClient(ServiceTestClient):
             )
         )
         tgt_user.name = user_name
+        # Check that the invitation is removed from db after registration
+        invitations = self.handle(
+            command.UserInvitationCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        if any(
+            x.email == tgt_user.email and x.roles == tgt_user.roles for x in invitations
+        ):
+            raise ValueError(
+                f"Invitation for {tgt_user.email} not removed after registration"
+            )
+
         return self._set_obj(tgt_user)
 
     def create_org_admin_policy(

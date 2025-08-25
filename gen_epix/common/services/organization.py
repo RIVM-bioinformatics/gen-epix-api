@@ -180,6 +180,15 @@ class OrganizationService(BaseOrganizationService):
                 created_by_user_id=user_invitation.invited_by_user_id,  # type: ignore[arg-type]
                 roles=user_invitation.roles,  # type: ignore[arg-type]
             )
+            # Delete invitation
+            self.repository.crud(
+                uow,
+                None,
+                self.user_invitation_class,
+                None,
+                user_invitation.id,  # type: ignore[arg-type]
+                CrudOperation.DELETE_ONE,
+            )
         return user_in_db  # type: ignore
 
     def update_user(
