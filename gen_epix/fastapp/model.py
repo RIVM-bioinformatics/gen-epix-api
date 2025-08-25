@@ -44,8 +44,8 @@ class User(PydanticBaseModel):
         """
         return str(self.id)
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: Hashable, _info: Any) -> str:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: Hashable) -> str:
     #     return str(value)
 
 
@@ -89,8 +89,8 @@ class Permission(PydanticBaseModel, frozen=True):
     def __repr__(self) -> str:
         return f"({self.command_name},{self.permission_type.value})"
 
-    @field_serializer("permission_type")
-    def _serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
+    @field_serializer("permission_type", mode="plain")
+    def _serialize_permission_type(self, value: PermissionType) -> str:
         return value.value
 
 
@@ -127,8 +127,8 @@ class Command(PydanticBaseModel):
     user: User | None = None
     _policies: list[Policy] = PrivateAttr(default_factory=list)
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: Hashable, _info: Any) -> str | None:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: Hashable) -> str | None:
     #     return serialize_id(value)
 
 

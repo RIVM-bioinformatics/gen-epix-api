@@ -23,13 +23,11 @@ _ENTITY_KWARGS = {
 
 class GeneticSequence(Model):
     """
-    A class representing a genetic sequence. Temporary implementation.
+    A genetic sequence. Temporary implementation.
     """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="genetic_sequences",
-        table_name="genetic_sequence",  # TODO: temporarily added for extraction of seqdb demo data
-        persistable=False,
         **_ENTITY_KWARGS,
     )
     nucleotide_sequence: str | None = Field(
@@ -39,14 +37,16 @@ class GeneticSequence(Model):
         default=None, description="The distances to other sequences"
     )
 
-    @field_serializer("distances")
-    def serialize_distances(self, value: dict[UUID, float], _info):
-        return {str(x): y for x, y in value.items()}
+    @field_serializer("distances", mode="plain")
+    def _serialize_distances(
+        self, value: dict[UUID, float] | None
+    ) -> dict[str, float] | None:
+        return None if value is None else {str(x): y for x, y in value.items()}
 
 
 class AlleleProfile(Model):
     """
-    A class representing an allele profile. Temporary implementation.
+    An allele profile. Temporary implementation.
     """
 
     ENTITY: ClassVar = Entity(
@@ -58,6 +58,11 @@ class AlleleProfile(Model):
 
 
 class PhylogeneticTree(Model):
+    """
+    A phylogenetic tree, including a description of the leaves and how it was
+    generated.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="phylogenetic_trees",
         persistable=False,

@@ -313,7 +313,7 @@ class CaseTypeSetCategory(Model):
         description="The purpose of the case type set category",
     )
 
-    @field_serializer("purpose")
+    @field_serializer("purpose", mode="plain")
     def _serialize_purpose(self, value: enum.CaseTypeSetCategoryPurpose) -> str:
         return value.value
 
@@ -489,9 +489,9 @@ class CaseTypeCol(Model):  # type: ignore
             return {enum.TreeAlgorithmType[x] for x in json.loads(value)}
         return set(value)
 
-    @field_serializer("tree_algorithm_codes")
-    def serialize_tree_algorithm_codes(
-        self, value: list[enum.TreeAlgorithmType] | None, _info: Any
+    @field_serializer("tree_algorithm_codes", mode="plain")
+    def _serialize_tree_algorithm_codes(
+        self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
         return None if value is None else [x.value for x in value]
 
@@ -587,8 +587,8 @@ class Case(Model):
         description="The column data of the case as {col_id: str_value}"
     )
 
-    @field_serializer("content")
-    def serialize_content(self, value: dict[UUID, str | float | None], _info):
+    @field_serializer("content", mode="plain")
+    def _serialize_content(self, value: dict[UUID, str]) -> dict[str, str]:
         return {str(x): y for x, y in value.items()}
 
 

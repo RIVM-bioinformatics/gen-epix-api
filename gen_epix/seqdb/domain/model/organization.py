@@ -1,9 +1,8 @@
 from enum import Enum
 from typing import ClassVar, Type
 
-from pydantic import Field
-
 import gen_epix.common.domain.model as common_model
+from gen_epix.common.util import copy_model_field
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.util import create_links
 from gen_epix.seqdb.domain import enum
@@ -17,7 +16,12 @@ _ENTITY_KWARGS = {
 assert common_model.User.ENTITY
 assert common_model.UserInvitation.ENTITY
 
+
 class User(common_model.User):
+    """"""
+
+    __doc__ = common_model.User.__doc__
+
     ENTITY: ClassVar = Entity(
         **common_model.User.ENTITY.model_dump(
             exclude_unset=True, exclude_defaults=True, exclude={"schema_name"}
@@ -25,15 +29,16 @@ class User(common_model.User):
         **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[enum.Role] = ( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        Field(  # type: ignore[assignment]
-            description=common_model.User.model_fields["roles"].description,
-            min_length=1,
-        )
+    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
     )
 
 
 class UserInvitation(common_model.UserInvitation):
+    """"""
+
+    __doc__ = common_model.UserInvitation.__doc__
+
     ENTITY: ClassVar = Entity(
         **common_model.UserInvitation.ENTITY.model_dump(
             exclude_unset=True, exclude_defaults=True, exclude={"schema_name", "links"}
@@ -47,11 +52,15 @@ class UserInvitation(common_model.UserInvitation):
         **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    invited_by_user: User | None = Field(
-        default=None,
-        description=common_model.UserInvitation.model_fields["invited_by_user"].description,
+    # Override invited_by_user to ensure it uses the correct User model
+    # fmt: off
+    invited_by_user: User | None = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        copy_model_field(
+            common_model.UserInvitation, "invited_by_user"
+        )
     )
-    roles: set[enum.Role] = Field( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        description=common_model.UserInvitation.model_fields["roles"].description, # type: ignore[assignment]
-        min_length=1,
+    # fmt: on
+    # Override roles to ensure it is a set of enum.Role
+    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
+        copy_model_field(common_model.UserInvitation, "roles")  # type: ignore[assignment]
     )

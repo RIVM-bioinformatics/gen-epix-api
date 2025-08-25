@@ -18,6 +18,10 @@ _ENTITY_KWARGS = {
 
 
 class Concept(Model):
+    """
+    A concept in the ontology.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concepts",
         table_name="concept",
@@ -40,6 +44,10 @@ class Concept(Model):
 
 
 class ConceptSet(Model):
+    """
+    A set of concepts in the ontology.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concept_sets",
         table_name="concept_set",
@@ -96,6 +104,10 @@ class ConceptSet(Model):
 
 
 class ConceptSetMember(Model):
+    """
+    The membership of a concept in a concept set.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concept_set_members",
         table_name="concept_set_member",
@@ -123,6 +135,10 @@ class ConceptSetMember(Model):
 
 
 class Disease(Model):
+    """
+    A disease.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="diseases",
         table_name="disease",
@@ -139,6 +155,10 @@ class Disease(Model):
 
 
 class EtiologicalAgent(Model):
+    """
+    An etiological agent.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiological_agents",
         table_name="etiological_agent",
@@ -151,6 +171,10 @@ class EtiologicalAgent(Model):
 
 
 class Etiology(Model):
+    """
+    The etiology of a disease based on an etiological agent.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiologies",
         table_name="etiology",

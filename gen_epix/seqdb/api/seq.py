@@ -6,7 +6,6 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 from gen_epix.seqdb.domain import command, enum, model
 
 
@@ -38,7 +37,10 @@ def create_seq_endpoints(
     assert handle_exception
 
     @router.post(
-        "/retrieve/phylogenetic_tree", operation_id="retrieve__phylogenetic_tree"
+        "/retrieve/phylogenetic_tree",
+        operation_id="retrieve__phylogenetic_tree",
+        name="RetrievePhylogeneticTree",
+        description=command.RetrievePhylogeneticTreeCommand.__doc__,
     )
     async def retrieve__phylogenetic_tree(
         user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
@@ -57,7 +59,12 @@ def create_seq_endpoints(
             handle_exception("dc71bce0", user, exception, request_ids=request_body.seq_ids)  # type: ignore
         return retval
 
-    @router.post("/retrieve/seq", operation_id="retrieve__seq")
+    @router.post(
+        "/retrieve/seq",
+        operation_id="retrieve__seq",
+        name="RetrieveSeq",
+        description=command.RetrieveCompleteSeqCommand.__doc__,
+    )
     async def retrieve__seq(
         user: registered_user_dependency, request_body: RetrieveSeqRequestBody  # type: ignore
     ) -> list[model.CompleteSeq]:
@@ -72,7 +79,12 @@ def create_seq_endpoints(
             handle_exception("ac218f73", user, exception, request_ids=request_body.seq_ids)  # type: ignore
         return retval
 
-    @router.post("/retrieve/allele_profile", operation_id="retrieve__allele_profile")
+    @router.post(
+        "/retrieve/allele_profile",
+        operation_id="retrieve__allele_profile",
+        name="RetrieveAlleleProfile",
+        description=command.RetrieveCompleteAlleleProfileCommand.__doc__,
+    )
     async def retrieve__allele_profile(
         user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
     ) -> list[model.CompleteAlleleProfile]:

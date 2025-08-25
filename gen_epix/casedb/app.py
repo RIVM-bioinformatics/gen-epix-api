@@ -9,9 +9,9 @@ APP_NAME = "CASEDB"
 
 # Data for openAPI schema
 SCHEMA_KWARGS = {
-    "title": "Gen-EpiX",
-    "summary": "Genomic Epidemiology platform for disease X",
-    "description": "Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.",
+    "title": "Gen-EpiX casedb",
+    "summary": "Genomic Epidemiology platform for disease X, casedb app",
+    "description": "The casedb app manages data of cases of a disease.",
     "version": get_package_version(),
     "contact": {
         "name": "RIVM CIb IDS bioinformatics group",

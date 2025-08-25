@@ -45,6 +45,10 @@ class RegionSet(Model):
 
 
 class RegionSetShape(Model):
+    """
+    Geographical shape representation for a region set.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="region_set_shapes",
         table_name="region_set_shape",
@@ -64,6 +68,10 @@ class RegionSetShape(Model):
 
 
 class Region(Model):
+    """
+    Geographical representation of a region.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="regions",
         table_name="region",
@@ -91,13 +99,17 @@ class Region(Model):
         description="The name of the region.",
         max_length=255,
     )
-    centroid_lat: float
-    centroid_lon: float
-    center_lat: float
-    center_lon: float
+    centroid_lat: float = Field(description="The latitude of the region's centroid.")
+    centroid_lon: float = Field(description="The longitude of the region's centroid.")
+    center_lat: float = Field(description="The latitude of the region's center.")
+    center_lon: float = Field(description="The longitude of the region's center.")
 
 
 class RegionRelation(Model):
+    """
+    Geographical relation between two regions.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="region_relations",
         table_name="region_relation",
@@ -111,8 +123,10 @@ class RegionRelation(Model):
         ),
         **_ENTITY_KWARGS,
     )
-    from_region_id: UUID
-    from_region: Region | None = None
-    to_region_id: UUID
-    to_region: Region | None = None
-    relation: enum.RegionRelationType
+    from_region_id: UUID = Field(description="The ID of the source region. FOREIGN KEY")
+    from_region: Region | None = Field(default=None, description="The source region.")
+    to_region_id: UUID = Field(description="The ID of the target region. FOREIGN KEY")
+    to_region: Region | None = Field(default=None, description="The target region.")
+    relation: enum.RegionRelationType = Field(
+        description="The type of relation between the regions."
+    )

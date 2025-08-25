@@ -104,7 +104,6 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import (
     DrugStrengthCrudCommand as DrugStrengthCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import EtlCrudCommand as EtlCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     FactRelationshipCrudCommand as FactRelationshipCrudCommand,
 )
@@ -116,6 +115,9 @@ from gen_epix.omopdb.domain.command.omop import (
 )
 from gen_epix.omopdb.domain.command.omop import (
     MeasurementCrudCommand as MeasurementCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    MeasurementRelationCrudCommand as MeasurementRelationCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     MetadataCrudCommand as MetadataCrudCommand,
@@ -136,15 +138,11 @@ from gen_epix.omopdb.domain.command.omop import (
     ProcedureOccurrenceCrudCommand as ProcedureOccurrenceCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
-    ProvenanceCrudCommand as ProvenanceCrudCommand,
-)
-from gen_epix.omopdb.domain.command.omop import (
     ProviderCrudCommand as ProviderCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     RelationshipCrudCommand as RelationshipCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import SourceCrudCommand as SourceCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     SourceToConceptMapCrudCommand as SourceToConceptMapCrudCommand,
 )
@@ -192,11 +190,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         DrugEraCrudCommand,
         DrugExposureCrudCommand,
         DrugStrengthCrudCommand,
-        EtlCrudCommand,
         FactRelationshipCrudCommand,
         LocationCrudCommand,
         LocationHistoryCrudCommand,
         MeasurementCrudCommand,
+        MeasurementRelationCrudCommand,
         MetadataCrudCommand,
         NoteCrudCommand,
         NoteNlpCrudCommand,
@@ -205,10 +203,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         PayerPlanPeriodCrudCommand,
         PersonCrudCommand,
         ProcedureOccurrenceCrudCommand,
-        ProvenanceCrudCommand,
         ProviderCrudCommand,
         RelationshipCrudCommand,
-        SourceCrudCommand,
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
         SurveyConductCrudCommand,

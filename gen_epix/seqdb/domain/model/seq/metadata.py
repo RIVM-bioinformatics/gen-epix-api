@@ -318,8 +318,8 @@ class Taxon(Model):
             return [UUID(x) for x in json.loads(value)]
         return value
 
-    @field_serializer("ancestor_taxon_ids")
-    def serialize_ancestor_taxon_ids(self, value: list[UUID], _info):
+    @field_serializer("ancestor_taxon_ids", mode="plain")
+    def _serialize_ancestor_taxon_ids(self, value: list[UUID]) -> list[str]:
         return [str(x) for x in value]
 
 
@@ -402,8 +402,8 @@ class LocusSet(Model):
             return [UUID(x) for x in json.loads(value)]
         return value
 
-    @field_serializer("locus_ids")
-    def serialize_locus_ids(self, value: list[UUID], _info):
+    @field_serializer("locus_ids", mode="plain")
+    def _serialize_locus_ids(self, value: list[UUID]) -> list[str]:
         return [str(x) for x in value]
 
 

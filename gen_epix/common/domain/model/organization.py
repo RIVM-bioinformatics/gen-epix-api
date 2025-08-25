@@ -1,7 +1,7 @@
 import datetime
 import json
 from enum import Enum
-from typing import Any, ClassVar, Type
+from typing import ClassVar, Type
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator
@@ -102,12 +102,12 @@ class User(fastapp.User, Model):
             return {cls.ROLE_ENUM[x] for x in value}
         return value
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: UUID | None, _info: Any) -> UUID | None:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: UUID | None) -> UUID | None:
     #     return value
 
-    @field_serializer("roles")
-    def serialize_roles(self, value: set[Enum], _info: Any) -> list[str]:
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
         return [x.value for x in value]
 
 
@@ -287,6 +287,11 @@ class DataCollectionSetMember(Model):
 
 
 class UserInvitation(Model):
+    """
+    Represents an invitation for a new user of a particular organization and
+    with particular starting properties.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitations",
         table_name="user_invitation",
@@ -306,18 +311,20 @@ class UserInvitation(Model):
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
     )
-    roles: set[Enum] = Field(description="The initial roles of the user", min_length=1)
+    roles: set[Enum] = Field(
+        description="The initial roles that the new user will have", min_length=1
+    )
     invited_by_user_id: UUID = Field(
-        description="The ID of the user who invited the user. FOREIGN KEY"
+        description="The ID of the user who invited the new user. FOREIGN KEY"
     )
     invited_by_user: User | None = Field(
-        default=None, description="The user who invited the user"
+        default=None, description="The user who invited the new user"
     )
     organization_id: UUID = Field(
-        description="The ID of the organization of the user. FOREIGN KEY"
+        description="The ID of the organization that the new user will belong to. FOREIGN KEY"
     )
     organization: Organization | None = Field(
-        default=None, description="The organization of the user"
+        default=None, description="The organization that the new user will belong to"
     )
 
     @field_validator("roles", mode="before")
@@ -333,6 +340,6 @@ class UserInvitation(Model):
             return {cls.ROLE_ENUM[x] for x in value}
         return value
 
-    @field_serializer("roles")
-    def serialize_roles(self, value: set[Enum], _info) -> list[str]:
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
         return [x.value for x in value]

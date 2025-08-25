@@ -319,7 +319,7 @@ class AlleleProfile(Model, QualityMixin):
         sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
         return sha256.digest()
 
-    @field_serializer("allele_profile_format")
+    @field_serializer("allele_profile_format", mode="plain")
     def _serialize_snp_profile_format(
         self, value: str | enum.AlleleProfileFormat
     ) -> str:
@@ -386,7 +386,7 @@ class SnpProfile(Model, QualityMixin):
             value = bytes.fromhex(value)
         return value
 
-    @field_serializer("snp_profile_format")
+    @field_serializer("snp_profile_format", mode="plain")
     def _serialize_snp_profile_format(self, value: str | enum.SnpProfileFormat) -> str:
         if isinstance(value, enum.SnpProfileFormat):
             return value.value
@@ -674,7 +674,7 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
             raise ValueError("ref_seq_id must be provided for snp based type")
         return self
 
-    @field_serializer("seq_distance_protocol_type")
+    @field_serializer("seq_distance_protocol_type", mode="plain")
     def _serialize_seq_format(self, value: str | enum.SeqDistanceProtocolType) -> str:
         if isinstance(value, enum.SeqDistanceProtocolType):
             return value.value
@@ -765,7 +765,7 @@ class SeqDistance(Model):
                 raise ValueError(f"{obj.__class__.__name__} must be None")
         return self
 
-    @field_serializer("distance_format")
+    @field_serializer("distance_format", mode="plain")
     def _serialize_distance_format(self, value: str | enum.SeqDistanceFormat) -> str:
         if isinstance(value, enum.SeqDistanceFormat):
             return value.value
