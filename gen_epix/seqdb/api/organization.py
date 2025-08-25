@@ -12,20 +12,30 @@ from gen_epix.seqdb.domain import DOMAIN, enum
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
+
 class ApiPermission(BaseModel, frozen=True):
-    command_name: CommandName = Field(description=Permission.model_fields["command_name"].description) # pyright: ignore[reportInvalidTypeForm] # Dynamic type annotation required
-    permission_type: PermissionType = Field(description=Permission.model_fields["permission_type"].description)
+    command_name: CommandName = Field(
+        description=Permission.model_fields["command_name"].description
+    )  # pyright: ignore[reportInvalidTypeForm] # Dynamic type annotation required
+    permission_type: PermissionType = Field(
+        description=Permission.model_fields["permission_type"].description
+    )
 
 
 class UserInvitationRequestBody(CommonUserInvitationRequestBody):
-    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        Field(description=CommonUserInvitationRequestBody.model_fields['roles'].description, min_length=1)  # type: ignore[assignment]
-    )
+    # Next line: Enum not subclassable
+    roles: set[
+        enum.Role
+    ] = Field(  # pyright: ignore[reportIncompatibleVariableOverride]
+        description=CommonUserInvitationRequestBody.model_fields["roles"].description,
+        min_length=1,
+    )  # type: ignore[assignment]
 
 
 class UpdateUserRequestBody(CommonUpdateUserRequestBody):
-    roles: set[enum.Role] | None = ( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        Field(  # type: ignore[assignment]
-            description=CommonUpdateUserRequestBody.model_fields['roles'].description,
-        )
+    # Next line: pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+    # fmt: on
+    roles: set[enum.Role] | None = Field(  # type: ignore[assignment]
+        description=CommonUpdateUserRequestBody.model_fields["roles"].description,
     )
+    # fmt: off

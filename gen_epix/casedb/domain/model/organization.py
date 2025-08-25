@@ -17,6 +17,7 @@ _ENTITY_KWARGS = {
 assert common_model.User.ENTITY
 assert common_model.UserInvitation.ENTITY
 
+
 class User(common_model.User):
     ENTITY: ClassVar = Entity(
         **common_model.User.ENTITY.model_dump(
@@ -25,11 +26,10 @@ class User(common_model.User):
         **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[enum.Role] = ( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        Field(  # type: ignore[assignment]
-            description=common_model.User.model_fields["roles"].description,
-            min_length=1,
-        )
+    # Next line: pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+    roles: set[enum.Role] = Field(  # type: ignore[assignment]
+        description=common_model.User.model_fields["roles"].description,
+        min_length=1,
     )
 
 
@@ -49,10 +49,14 @@ class UserInvitation(common_model.UserInvitation):
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     invited_by_user: User | None = Field(
         default=None,
-        description=common_model.UserInvitation.model_fields["invited_by_user"].description,
+        description=common_model.UserInvitation.model_fields[
+            "invited_by_user"
+        ].description,
     )
     # Override roles to ensure it is a set of enum.Role
-    roles: set[enum.Role] = Field( # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        description=common_model.UserInvitation.model_fields["roles"].description, # type: ignore[assignment]
-        min_length=1,
+    roles: set[enum.Role] = (
+        Field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+            description=common_model.UserInvitation.model_fields["roles"].description,  # type: ignore[assignment]
+            min_length=1,
+        )
     )
