@@ -160,13 +160,5 @@ class CohortDefinitionCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CohortDefinition
 
 
-class ProvenanceCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Provenance
-
-
-class EtlCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Etl
-
-
-class SourceCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Source
+class MeasurementRelationCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MeasurementRelation

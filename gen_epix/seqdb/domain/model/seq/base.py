@@ -34,14 +34,14 @@ class SeqMixin:
             value = bytes.fromhex(value)
         return value
 
-    @field_serializer("seq_format")
+    @field_serializer("seq_format", mode="plain")
     def _serialize_seq_format(self, value: str | enum.SeqFormat) -> str:
         if isinstance(value, enum.SeqFormat):
             return value.value
         return value
 
     # TODO: adding the serializer gives issues writing as binary to the database, but not adding it may give other issues
-    # @field_serializer("seq_hash_sha256")
+    # @field_serializer("seq_hash_sha256", mode="plain")
     # def _serialize_seq_hash_sha256(self, value: str | bytes) -> str:
     #     if isinstance(value, bytes):
     #         return value.hex()
@@ -64,7 +64,7 @@ class QualityMixin:
         default=None, description="The quality control result of the sequence."
     )
 
-    @field_serializer("quality")
+    @field_serializer("quality", mode="plain")
     def _serialize_quality(self, value: str | enum.QualityControlResult) -> str:
         if isinstance(value, enum.QualityControlResult):
             return value.value

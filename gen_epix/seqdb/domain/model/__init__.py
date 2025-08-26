@@ -25,6 +25,7 @@ from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.organization import User as User
 from gen_epix.seqdb.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleAlignment as AlleleAlignment
@@ -33,6 +34,7 @@ from gen_epix.seqdb.domain.model.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
+from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import (
     CompleteAlleleProfile as CompleteAlleleProfile,
 )
@@ -56,6 +58,8 @@ from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignme
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
+from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
+from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq import RawSeq as RawSeq
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele

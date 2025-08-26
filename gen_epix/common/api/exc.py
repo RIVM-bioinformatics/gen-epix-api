@@ -3,7 +3,7 @@ import uuid
 from functools import partial
 from typing import Any, Callable, Hashable, NoReturn
 
-from gen_epix.fastapp import App, LogLevel, exc, model
+from gen_epix.fastapp import App, LogLevel, model
 from gen_epix.fastapp.api import exc as api_exc
 from gen_epix.fastapp.exc import (
     AuthException,

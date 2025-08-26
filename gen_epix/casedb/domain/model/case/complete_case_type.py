@@ -9,7 +9,6 @@ from gen_epix.casedb.domain.model.abac.case_abac import (
     CaseTypeShareAbac,
 )
 from gen_epix.casedb.domain.model.case.case import (
-    _ENTITY_KWARGS,
     CaseType,
     CaseTypeCol,
     CaseTypeDim,
@@ -21,18 +20,12 @@ from gen_epix.casedb.domain.model.case.case import (
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.fastapp.domain import Entity
 
-_SERVICE_TYPE = enum.ServiceType.CASE
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class CompleteCaseType(CaseType):
     NAME: ClassVar = "CompleteCaseType"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_case_types",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     etiologies: dict[UUID, Etiology] = Field(
         description="The etiologies used by the case type"

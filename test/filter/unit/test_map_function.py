@@ -10,19 +10,19 @@ from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
 
 
-class TestFilterMapfun:
+class TestFilterMapFunction:
 
-    def test_exists_map_fun(self) -> None:
+    def test_exists_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
             util._test_filter(
-                filter, rows, expected_results, na_values=na_values, map_fun=map_fun
+                filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
         # Match value
         filter = ExistsFilter(key="a")
         rows = [{"a": x} for x in [None, np.nan, "", "null"]]
 
-        map_fun = lambda x: x
+        map_fn = lambda x: x
         _test([False, True, True, True])
         _test([True, True, True, True], na_values=set())
         _test([False, True, True, True], na_values={None})
@@ -30,18 +30,18 @@ class TestFilterMapfun:
         _test([True, True, False, True], na_values={""})
         _test([True, True, True, False], na_values={"null"})
 
-        # map_fun is not applied to check na
-        map_fun = lambda x: None if x in {np.nan} else x
+        # map_fn is not applied to check na
+        map_fn = lambda x: None if x in {np.nan} else x
         _test([True, True, True, True], na_values=set())
         _test([False, True, True, True], na_values={None})
         _test([True, False, True, True], na_values={np.nan})
         _test([True, True, False, True], na_values={""})
         _test([True, True, True, False], na_values={"null"})
 
-    def test_number_range_map_fun(self) -> None:
+    def test_number_range_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
             util._test_filter(
-                filter, rows, expected_results, na_values=na_values, map_fun=map_fun
+                filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
         fixed_args = {
@@ -50,7 +50,7 @@ class TestFilterMapfun:
             "key": "a",
         }
         rows = [{"a": x} for x in ["5", "10.0", 15.5, "20", Decimal(25)]]
-        map_fun = lambda x: float(x) if isinstance(x, str) else x
+        map_fn = lambda x: float(x) if isinstance(x, str) else x
         filter = NumberRangeFilter(**fixed_args)
         _test([False, True, True, False, False])
         filter = NumberRangeFilter(lower_bound_censor=">", **fixed_args)
@@ -64,10 +64,10 @@ class TestFilterMapfun:
         )
         _test([False, False, True, True, False])
 
-    def test_date_range_map_fun(self) -> None:
+    def test_date_range_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
             util._test_filter(
-                filter, rows, expected_results, na_values=na_values, map_fun=map_fun
+                filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
         fixed_args = {
@@ -85,7 +85,7 @@ class TestFilterMapfun:
                 "2021-02-02",
             ]
         ]
-        map_fun = lambda x: datetime.date.fromisoformat(x) if isinstance(x, str) else x
+        map_fn = lambda x: datetime.date.fromisoformat(x) if isinstance(x, str) else x
         filter = DateRangeFilter(**fixed_args)
         _test([False, True, True, False, False])
         filter = DateRangeFilter(lower_bound_censor=">", **fixed_args)
@@ -99,7 +99,7 @@ class TestFilterMapfun:
         )
         _test([False, False, True, True, False])
 
-    def test_composite_map_fun(self) -> None:
+    def test_composite_map_function(self) -> None:
         date_ = datetime.date.fromisoformat("2022-02-01")
         rows = [
             {"a": "2022-04-01", "b": "", "c": 10, "d": None},
@@ -126,7 +126,7 @@ class TestFilterMapfun:
             key="c",
         )
 
-        map_fun = {
+        map_fn = {
             "a": lambda x: datetime.date.fromisoformat(x) if isinstance(x, str) else x,
             "b": lambda x: x.lower() if isinstance(x, str) else x,
             "c": lambda x: float(x) if isinstance(x, str) else x,
@@ -141,7 +141,7 @@ class TestFilterMapfun:
             filter,
             rows,
             [False, False, False, False, False, False, False, True],
-            map_fun=map_fun,
+            map_fn=map_fn,
         )
         # OR
         filter = CompositeFilter(
@@ -152,5 +152,5 @@ class TestFilterMapfun:
             filter,
             rows,
             [False, True, True, True, True, True, True, True, True],
-            map_fun=map_fun,
+            map_fn=map_fn,
         )

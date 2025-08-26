@@ -99,9 +99,9 @@ class OrganizationService(BaseOrganizationService):
                     user.id,
                     self.user_invitation_class,
                     None,
-                    [x.id for x in user_invitations],  # type: ignore
+                    [x.id for x in user_invitations],
                     CrudOperation.DELETE_SOME,
-                )  # type: ignore
+                )
             # Create user invitation
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),

@@ -69,6 +69,9 @@ from gen_epix.common.domain.command.rbac import (
 )
 from gen_epix.common.domain.command.system import OutageCrudCommand as OutageCrudCommand
 from gen_epix.common.domain.command.system import (
+    RetrieveLicensesCommand as RetrieveLicensesCommand,
+)
+from gen_epix.common.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
 
@@ -109,6 +112,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]
         {
             OutageCrudCommand,
             RetrieveOutagesCommand,
+            RetrieveLicensesCommand,
         }
     ),
 }

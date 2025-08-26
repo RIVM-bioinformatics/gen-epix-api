@@ -2,17 +2,34 @@ from enum import Enum
 from typing import ClassVar
 from uuid import UUID
 
+from pydantic import Field
+
 import gen_epix.common.domain.model.organization as model
 from gen_epix.common.domain.command.base import (
     Command,
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.common.util import copy_model_field
 
 # Non-CRUD commands
 
 
 class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationCommand):
+    """
+    Updates the association between an {organization_set}s and {organization}s.
+
+    This command manages the many-to-many relationship by creating or updating
+    {organization_set_member} associations between organization sets and
+    individual organizations.
+    """
+
+    __doc__ = str(__doc__).format(
+        organization_set=model.OrganizationSet.__name__,
+        organization=model.Organization.__name__,
+        organization_set_member=model.OrganizationSetMember.__name__,
+    )
+
     ASSOCIATION_CLASS: ClassVar = model.OrganizationSetMember
     LINK_FIELD_NAME1: ClassVar = "organization_set_id"
     LINK_FIELD_NAME2: ClassVar = "organization_id"
@@ -23,6 +40,20 @@ class OrganizationSetOrganizationUpdateAssociationCommand(UpdateAssociationComma
 
 
 class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationCommand):
+    """
+    Updates the association between {data_collection_set}s and {data_collection}s.
+
+    This command manages the many-to-many relationship by creating or updating
+    {data_collection_set_member} associations between data collection sets and
+    individual data collections.
+    """
+
+    __doc__ = str(__doc__).format(
+        data_collection_set=model.DataCollectionSet.__name__,
+        data_collection=model.DataCollection.__name__,
+        data_collection_set_member=model.DataCollectionSetMember.__name__,
+    )
+
     ASSOCIATION_CLASS: ClassVar = model.DataCollectionSetMember
     LINK_FIELD_NAME1: ClassVar = "data_collection_set_id"
     LINK_FIELD_NAME2: ClassVar = "data_collection_id"
@@ -33,33 +64,85 @@ class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationC
 
 
 class InviteUserCommand(Command):
+    """
+    Creates and returns a {user_invitation} for a new user with a particular
+    email address, organization and initial role(s).
 
-    email: str
-    roles: set[Enum]
-    organization_id: UUID
+    A random unique token is added to the invitation, and to be provided to the
+    new user for consuming the invitation.
+    """
+
+    __doc__ = str(__doc__).format(user_invitation=model.UserInvitation.__name__)
+
+    email: str = copy_model_field(model.UserInvitation, "email")
+    roles: set[Enum] = copy_model_field(model.UserInvitation, "roles")
+    organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
 class RegisterInvitedUserCommand(Command):
+    """
+    Registers (creates) the user of the command. The email and token must match
+    that of an existing {user_invitation}. The newly registered user is assigned
+    the organization and roles from the invitation. The invitation is deleted.
+    """
 
-    token: str
+    __doc__ = str(__doc__).format(user_invitation=model.UserInvitation.__name__)
+
+    token: str = copy_model_field(model.UserInvitation, "token")
 
 
 class RetrieveOrganizationContactCommand(Command):
+    """
+    Retrieves {contact}s associated with organizations, sites, or specific contacts.
 
-    organization_ids: list[UUID] | None = None
-    site_ids: list[UUID] | None = None
-    contact_ids: list[UUID] | None = None
+    Exactly one of organization_ids, site_ids, or contact_ids must be provided.
+    Returns a list of contacts with their associated site and organization data
+    cascaded.
+    """
+
+    __doc__ = str(__doc__).format(contact=model.Contact.__name__)
+
+    organization_ids: list[UUID] | None = Field(
+        default=None, description="List of organization IDs to retrieve contacts for"
+    )
+    site_ids: list[UUID] | None = Field(
+        default=None, description="List of site IDs to retrieve contacts for"
+    )
+    contact_ids: list[UUID] | None = Field(
+        default=None, description="List of contact IDs to retrieve contacts for"
+    )
 
 
 class UpdateUserCommand(Command):
+    """
+    Updates an existing {user} with new properties such as active status,
+    roles, and organization membership.
 
-    tgt_user_id: UUID
-    is_active: bool | None
-    roles: set[Enum] | None
-    organization_id: UUID | None
+    The target user is identified by tgt_user_id. Any field set to None will
+    leave that property unchanged. Roles cannot be set to an empty set.
+    Cache is invalidated after successful update.
+    """
+
+    __doc__ = str(__doc__).format(user=model.User.__name__)
+
+    tgt_user_id: UUID = Field(description="The ID of the user to update")
+    is_active: bool | None = copy_model_field(model.User, "is_active")
+    roles: set[Enum] | None = copy_model_field(model.User, "roles")
+    organization_id: UUID | None = Field(
+        description="The organization ID the user belongs to"
+    )
 
 
 class UpdateUserOwnOrganizationCommand(Command):
+    """
+    Updates the current user's {organization} membership.
+
+    This command allows a user to change their own organization association.
+    The is_new_user flag indicates whether this is part of a new user
+    registration process.
+    """
+
+    __doc__ = str(__doc__).format(organization=model.Organization.__name__)
 
     organization_id: UUID
     is_new_user: bool = False

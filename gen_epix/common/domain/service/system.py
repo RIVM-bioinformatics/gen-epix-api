@@ -18,6 +18,7 @@ class BaseSystemService(BaseService):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(command.RetrieveOutagesCommand, self.retrieve_outages)
+        f(command.RetrieveLicensesCommand, self.retrieve_licenses)
 
     @abc.abstractmethod
     def register_policies(self) -> None:
@@ -27,4 +28,10 @@ class BaseSystemService(BaseService):
     def retrieve_outages(
         self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def retrieve_licenses(
+        self, cmd: command.RetrieveLicensesCommand
+    ) -> list[model.PackageMetadata]:
         raise NotImplementedError
