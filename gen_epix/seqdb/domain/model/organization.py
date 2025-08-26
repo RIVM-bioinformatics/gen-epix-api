@@ -24,9 +24,11 @@ class User(common_model.User):
         ),
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
-        copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
-    )
+    roles: set[
+        enum.Role
+    ] = copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+        common_model.User, "roles"
+    )  # type: ignore[assignment]
 
 
 class UserInvitation(common_model.UserInvitation):
@@ -49,14 +51,14 @@ class UserInvitation(common_model.UserInvitation):
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     # Override invited_by_user to ensure it uses the correct User model
-    # fmt: off
-    invited_by_user: User | None = (  # pyright: ignore[reportIncompatibleVariableOverride]
-        copy_model_field(
+    invited_by_user: User | None = (
+        copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride]
             common_model.UserInvitation, "invited_by_user"
         )
     )
-    # fmt: on
     # Override roles to ensure it is a set of enum.Role
-    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
-        copy_model_field(common_model.UserInvitation, "roles")  # type: ignore[assignment]
-    )
+    roles: set[
+        enum.Role
+    ] = copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
+        common_model.UserInvitation, "roles"
+    )  # type: ignore[assignment]
