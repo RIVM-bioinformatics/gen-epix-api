@@ -3,7 +3,7 @@
 # application server
 fastapi[standard]==0.116.1
 uvicorn==0.32.1
-gunicorn==21.2.*
+gunicorn==23.0.*
 starlette==0.47.2
 httpx==0.28.1
 python-jose==3.3.0
@@ -11,7 +11,6 @@ python-jose==3.3.0
 #database handling
 sqlalchemy==2.0.43
 sqlalchemy_utils==0.41.2
-sqlmodel==0.0.24
 
 # Data models/handling
 pydantic==2.7.*
@@ -35,4 +34,7 @@ python-dateutil==2.9.*
 
 ## FIXME run.py imports pytest, but it is not a dependency of the application
 pytest==8.4.*
+
+## FIXME run.py imports pandas, but it is not a dependency of the application
+pandas==2.2.3
 

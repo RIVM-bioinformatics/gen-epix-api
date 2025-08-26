@@ -8,9 +8,9 @@ APP_NAME = "SEQDB"
 
 # Data for OpenAPI schema
 SCHEMA_KWARGS = {
-    "title": "Sequence database",
-    "description": "Sequence database API",
-    "summary": "Summary goes here",
+    "title": "Gen-EpiX seqdb",
+    "summary": "Genomic Epidemiology platform for disease X, seqdb app",
+    "description": "The seqdb app manages genomic sequencing data.",
     "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {

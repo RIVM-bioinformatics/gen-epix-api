@@ -16,4 +16,6 @@ NO_RBAC_PERMISSIONS: set[tuple[type[Command], PermissionType]] = {
     # Used to update the user's own organization, which does not require RBAC
     # as a special case for development/testing purposes only.
     (command.UpdateUserOwnOrganizationCommand, PermissionType.EXECUTE),
+    # Used to retrieve licenses, which is a public operation.
+    (command.RetrieveLicensesCommand, PermissionType.EXECUTE),
 }

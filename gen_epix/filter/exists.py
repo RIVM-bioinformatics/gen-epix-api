@@ -10,7 +10,7 @@ class ExistsFilter(Filter):
         self,
         value: Any | None,
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
         if na_values is None:
             return (value is not None) ^ self.invert
@@ -20,7 +20,7 @@ class ExistsFilter(Filter):
         self,
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterable[bool]:
         if na_values is None:
             for value in values:
@@ -33,7 +33,7 @@ class ExistsFilter(Filter):
         self,
         row: dict[Hashable, Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> bool:
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
@@ -47,7 +47,7 @@ class ExistsFilter(Filter):
         self,
         rows: Iterable[dict[Hashable, Any | None]],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterable[bool]:
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")

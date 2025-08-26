@@ -100,7 +100,8 @@ def create_case_endpoints(
     @router.put(
         "/case_type_sets/{case_type_set_id}/case_types",
         operation_id="case_type_sets__put__case_types",
-        name="CaseTypeSet_CaseType",
+        name="Update association between CaseTypeSet and CaseType",
+        description=command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__,
     )
     async def case_type_sets__put__case_types(
         user: registered_user_dependency,  # type: ignore
@@ -122,7 +123,8 @@ def create_case_endpoints(
     @router.put(
         "/case_type_col_sets/{case_type_col_set_id}/case_type_cols",
         operation_id="case_type_col_sets__put__case_type_cols",
-        name="CaseTypeColSet_CaseTypeCol",
+        name="Update association between CaseTypeColSet and CaseTypeCol",
+        description=command.CaseTypeColSetCaseTypeColUpdateAssociationCommand.__doc__,
     )
     async def case_type_col_sets__put__case_type_cols(
         user: registered_user_dependency,  # type: ignore
@@ -144,7 +146,8 @@ def create_case_endpoints(
     @router.get(
         "/complete_case_types",
         operation_id="complete_case_types__get_one",
-        name="CompleteCaseType",
+        name="Retrieve complete case type",
+        description=command.RetrieveCompleteCaseTypeCommand.__doc__,
     )
     async def complete_case_types__get_one(
         user: registered_user_dependency,  # type: ignore
@@ -162,7 +165,8 @@ def create_case_endpoints(
     @router.post(
         "/create/cases",
         operation_id="create__cases",
-        name="Cases",
+        name="Create cases",
+        description=command.CasesCreateCommand.__doc__,
     )
     async def create__cases(
         user: registered_user_dependency,  # type: ignore
@@ -182,7 +186,8 @@ def create_case_endpoints(
     @router.post(
         "/create/case_set",
         operation_id="create__case_set",
-        name="CaseSet",
+        name="Create case set",
+        description=command.CaseSetCreateCommand.__doc__,
     )
     async def create__case_set(
         user: registered_user_dependency,  # type: ignore
@@ -203,7 +208,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_type_stats",
         operation_id="retrieve__case_type_stats",
-        name="CaseTypeStats",
+        name="Retrieve case type statistics",
+        description=command.RetrieveCaseTypeStatsCommand.__doc__,
     )
     async def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore
@@ -223,7 +229,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_set_stats",
         operation_id="retrieve__case_set_stats",
-        name="CaseSetStats",
+        name="Retrieve case set statistics",
+        description=command.RetrieveCaseSetStatsCommand.__doc__,
     )
     async def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore
@@ -232,7 +239,11 @@ def create_case_endpoints(
         try:
             cmd = command.RetrieveCaseSetStatsCommand(
                 user=user,
-                case_set_ids=request_body.case_set_ids,
+                case_set_ids=(
+                    None
+                    if not request_body.case_set_ids
+                    else list(request_body.case_set_ids)
+                ),
             )
             retval: list[model.CaseSetStat] = app.handle(cmd)
         except Exception as exception:
@@ -240,7 +251,10 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/case_ids_by_query", operation_id="retrieve__case_ids_by_query"
+        "/retrieve/case_ids_by_query",
+        operation_id="retrieve__case_ids_by_query",
+        name="Retrieve case IDs by query",
+        description=command.RetrieveCasesByQueryCommand.__doc__,
     )
     async def retrieve__case_ids_by_query(
         user: registered_user_dependency,  # type: ignore
@@ -257,7 +271,12 @@ def create_case_endpoints(
             handle_exception("a8f773fe", user, exception)
         return retval
 
-    @router.post("/retrieve/cases_by_ids", operation_id="retrieve__cases_by_ids")
+    @router.post(
+        "/retrieve/cases_by_ids",
+        operation_id="retrieve__cases_by_ids",
+        name="Retrieve cases by IDs",
+        description=command.RetrieveCasesByIdCommand.__doc__,
+    )
     async def retrieve__cases_by_ids(
         user: registered_user_dependency,  # type: ignore
         request_body: list[UUID],
@@ -276,6 +295,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_rights",
         operation_id="retrieve__case_rights",
+        name="Retrieve case rights",
+        description=command.RetrieveCaseRightsCommand.__doc__,
     )
     async def retrieve__case_rights(
         user: registered_user_dependency,  # type: ignore
@@ -295,6 +316,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_set_rights",
         operation_id="retrieve__case_set_rights",
+        name="Retrieve case set rights",
+        description=command.RetrieveCaseSetRightsCommand.__doc__,
     )
     async def retrieve__case_set_rights(
         user: registered_user_dependency,  # type: ignore
@@ -312,29 +335,14 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/case_set_rights",
-        operation_id="retrieve__case_set_rights",
-    )
-    async def retrieve__case_set_rights(
-        user: registered_user_dependency,  # type: ignore
-        request_body: list[UUID],
-    ) -> list[model.CaseSetRights]:
-        try:
-            retval: list[model.CaseSetRights] = app.handle(
-                command.RetrieveCaseSetRightsCommand(
-                    user=user,
-                    case_set_ids=request_body,
-                )
-            )
-        except Exception as e:
-            handle_exception("b9c49fe1", user, e)
-        return retval
-
-    @router.post(
-        "/retrieve/organization_contact", operation_id="retrieve__organization_contact"
+        "/retrieve/organization_contact",
+        operation_id="retrieve__organization_contact",
+        name="Retrieve organization contact",
+        description=command.RetrieveOrganizationContactCommand.__doc__,
     )
     async def retrieve__organization_contact(
-        user: registered_user_dependency, request_body: RetrieveOrganizationContactRequestBody  # type: ignore
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveOrganizationContactRequestBody,
     ) -> list[model.Contact]:
         try:
             retval: list[model.Contact] = app.handle(
@@ -347,7 +355,7 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "b8172f62",
                 user,
                 exception,
@@ -358,7 +366,10 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/phylogenetic_tree", operation_id="retrieve__phylogenetic_tree"
+        "/retrieve/phylogenetic_tree",
+        operation_id="retrieve__phylogenetic_tree",
+        name="Retrieve phylogenetic tree",
+        description=command.RetrievePhylogeneticTreeByCasesCommand.__doc__,
     )
     async def retrieve__phylogenetic_tree(
         user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
@@ -373,13 +384,16 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "45219a88", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
     @router.post(
-        "/retrieve/genetic_sequence", operation_id="retrieve__genetic_sequence"
+        "/retrieve/genetic_sequence",
+        operation_id="retrieve__genetic_sequence",
+        name="Retrieve genetic sequence by case",
+        description=command.RetrieveGeneticSequenceByCaseCommand.__doc__,
     )
     async def retrieve__genetic_sequence(
         user: registered_user_dependency,  # type: ignore
@@ -394,26 +408,33 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "1238afb2", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
-    # @router.post("/retrieve/allele_profile", operation_id="retrieve__allele_profile")
-    # async def retrieve__allele_profile(
-    #     user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    # ) -> list[model.SeqDbAlleleProfile]:
-    #     try:
-    #         retval: list[model.SeqDbAlleleProfile] = app.handle(
-    #             command.RetrieveAlleleProfileCommand(
-    #                 user=user,
-    #                 sequence_ids=request_body.sequence_ids,
-    #                 props=request_body.props,
-    #             )
-    #         )
-    #     except Exception as exception:
-    #         handle_exception("a4c03b54", user, exception, request_ids=request_body.sequence_ids)
-    #     return retval
+    @router.post(
+        "/retrieve/allele_profile",
+        operation_id="retrieve__allele_profile",
+        name="Retrieve allele profile",
+        description=command.RetrieveAlleleProfileCommand.__doc__,
+    )
+    async def retrieve__allele_profile(
+        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
+    ) -> list[model.AlleleProfile]:
+        try:
+            retval: list[model.AlleleProfile] = app.handle(
+                command.RetrieveAlleleProfileCommand(
+                    user=user,
+                    sequence_ids=request_body.sequence_ids,
+                    props=request_body.props,
+                )
+            )
+        except Exception as exception:
+            handle_exception(  # type:ignore[call-arg]
+                "a4c03b54", user, exception, request_ids=request_body.sequence_ids
+            )
+        return retval
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

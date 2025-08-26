@@ -23,13 +23,13 @@ class Command(ServiceCommand):
     user: model.User | None = None
     props: dict[str, Any] = {}
 
-    @field_serializer("created_at")
-    def serialize_created_at(self, value: datetime.datetime, _info: Any) -> str | None:
+    @field_serializer("created_at", mode="plain")
+    def _serialize_created_at(self, value: datetime.datetime) -> str | None:
         return value.isoformat() if value else None
 
-    @field_serializer("props")
-    def serialize_props(self, value: dict, _info: Any) -> dict:
-        return {x: y for x, y in value.items() if not isinstance(y, Callable)}  # type: ignore
+    @field_serializer("props", mode="plain")
+    def _serialize_props(self, value: dict[str, Any]) -> dict[str, Any]:
+        return {x: y for x, y in value.items() if not isinstance(y, Callable)}
 
 
 class CrudCommand(ServiceCrudCommand, Command):

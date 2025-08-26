@@ -7,7 +7,10 @@ from gen_epix.common.domain.command import Command, CrudCommand
 
 
 class RetrieveOrganizationAdminNameEmailsCommand(Command):
-    pass
+    """
+    Retrieve the names and email addresses of all organization admins for the user's
+    organization.
+    """
 
 
 # CRUD

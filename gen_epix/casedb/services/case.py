@@ -696,13 +696,13 @@ class CaseService(BaseCaseService):
 
             # Filter cases by filters
             if case_query.filter:
-                map_funs = CaseService._get_map_funs_for_filters(cols)
+                map_fns = CaseService._get_map_functions_for_filters(cols)
                 cases = [
                     x
                     for x, y in zip(
                         cases,
                         case_query.filter.match_rows(
-                            (x.content for x in cases), map_fun=map_funs  # type: ignore[misc]
+                            (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
                         ),
                     )
                     if y
@@ -2428,15 +2428,15 @@ class CaseService(BaseCaseService):
             )
 
     @staticmethod
-    def _get_map_funs_for_filters(
+    def _get_map_functions_for_filters(
         cols: Iterable[model.Col],
     ) -> list[Callable[[Any], Any]]:
 
-        # Check validity of filter and generate map_funs
-        map_funs = []
+        # Check validity of filter and generate map_fns
+        map_fns = []
         for col in cols:
             if col.col_type == enum.ColType.TIME_DAY:
-                map_funs.append(
+                map_fns.append(
                     lambda x: (
                         datetime.date.fromisoformat(x) if isinstance(x, str) else x
                     )
@@ -2456,9 +2456,9 @@ class CaseService(BaseCaseService):
                 enum.ColType.ORGANIZATION,
                 enum.ColType.OTHER,
             }:
-                map_funs.append(lambda x: x if isinstance(x, str) else str(x))
+                map_fns.append(lambda x: x if isinstance(x, str) else str(x))
             elif col.col_type == enum.ColType.DECIMAL_0:
-                map_funs.append(lambda x: int(x) if isinstance(x, str) else x)
+                map_fns.append(lambda x: int(x) if isinstance(x, str) else x)
             elif col.col_type in {
                 enum.ColType.DECIMAL_1,
                 enum.ColType.DECIMAL_2,
@@ -2467,9 +2467,9 @@ class CaseService(BaseCaseService):
                 enum.ColType.DECIMAL_5,
                 enum.ColType.DECIMAL_6,
             }:
-                map_funs.append(lambda x: Decimal(x) if isinstance(x, str) else x)
+                map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
             elif col.col_type == enum.ColType.GEO_LATLON:
-                map_funs.append(
+                map_fns.append(
                     lambda x: (
                         (float(x.split(",")[0]), float(x.split(",")[1]))
                         if isinstance(x, str)
@@ -2480,7 +2480,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     f"Unsupported column type: {col.col_type}"
                 )
-        return map_funs
+        return map_fns
 
     @staticmethod
     def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
