@@ -22,18 +22,16 @@ class ApiPermission(BaseModel, frozen=True):
 
 
 class UserInvitationRequestBody(CommonUserInvitationRequestBody):
-    roles: set[enum.Role] = (  # pyright: ignore[reportIncompatibleVariableOverride]
-        copy_model_field(
+    roles: set[enum.Role] = (
+        copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
             CommonUserInvitationRequestBody, "roles"
-        )  # type:ignore[assignment]
-    )
+        )
+    )  # type:ignore[assignment]
 
 
 class UpdateUserRequestBody(CommonUpdateUserRequestBody):
-    # fmt: off
-    roles: set[enum.Role] | None = (  # pyright: ignore[reportIncompatibleVariableOverride]
-        copy_model_field(
+    roles: set[enum.Role] | None = (
+        copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
             CommonUpdateUserRequestBody, "roles"
-        )  # type:ignore[assignment]
-    )
-    # fmt: on
+        )
+    )  # type:ignore[assignment]
