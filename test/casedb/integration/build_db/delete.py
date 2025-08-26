@@ -240,3 +240,12 @@ class TestDelete:
                 env.delete_object(user, model.CaseTypeSet, "case_type_set99")
         env.delete_object(ROOT, model.CaseTypeSet, "case_type_set99")
         env.delete_object(ROOT, model.CaseType, "case_type99")
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_delete_link_constraint(self, env: Env) -> None:
+        env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
+        # Create a case col for this case type
+        env.create_case_type_col(ROOT, "case_type99_text1_8_time_year")
+        # Delete the case type
+        with pytest.raises(exc.LinkConstraintViolationError):
+            env.delete_object(ROOT, model.CaseType, "case_type99")
