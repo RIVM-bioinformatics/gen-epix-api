@@ -16,4 +16,5 @@ register_domain_entities(
     COMMANDS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
     common_model_impl=COMMON_MODEL_IMPL,
     common_command_impl=COMMON_COMMAND_IMPL,
+    set_schema_to_service_type=True,
 )

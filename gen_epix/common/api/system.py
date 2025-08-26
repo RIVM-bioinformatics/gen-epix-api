@@ -8,6 +8,7 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.common.api import exc
 from gen_epix.common.domain import command, enum, model
+from gen_epix.common.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
 
@@ -37,6 +38,10 @@ class LogRequestBody(PydanticBaseModel):
     log_items: list[LogItem]
 
 
+class LicensesResponseBody(PydanticBaseModel):
+    packages: list[PackageMetadata]
+
+
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -57,13 +62,37 @@ def create_system_endpoints(
         name="Health",
     )
     async def health() -> HealthReponseBody:
+        """
+        Returns the health status of the service. If no response is received
+        within the timeout period, the service is considered unhealthy.
+        """
         return HealthReponseBody(
             status=HealthStatus.HEALTHY,
         )
 
+    # Licenses endpoint
+    @router.post(
+        "/retrieve/licenses",
+        operation_id="retrieve__licenses",
+        name="Licenses",
+        description=command.RetrieveLicensesCommand.__doc__,
+    )
+    async def licenses(
+        idp_user: idp_user_dependency,  # type: ignore
+    ) -> list[model.PackageMetadata]:
+        try:
+            cmd = command.RetrieveLicensesCommand(user=None)
+            retval: list[model.PackageMetadata] = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("6ba2c4ca", None, exception)
+        return retval
+
     # Log
     @router.post("/log", operation_id="log")
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
+        """
+        Logs the provided log items.
+        """
         try:
             user_id = str(user.id)  # type: ignore[attr-defined]
             for log_item in request_body.log_items:
@@ -87,6 +116,7 @@ def create_system_endpoints(
         "/retrieve/outages",
         operation_id="retrieve__outages",
         name="Outages",
+        description=command.RetrieveOutagesCommand.__doc__,
     )
     async def retrieve__outages(
         idp_user: idp_user_dependency,  # type: ignore

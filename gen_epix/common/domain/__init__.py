@@ -13,4 +13,5 @@ register_domain_entities(
     SORTED_SERVICE_TYPES,
     SORTED_MODELS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
     COMMANDS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
+    set_schema_to_service_type=True,
 )
