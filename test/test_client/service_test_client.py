@@ -5,7 +5,8 @@ import shutil
 from enum import Enum
 from pathlib import Path
 from test.test_client.endpoint_test_client import EndpointTestClient, EndpointVersion
-from test.test_client.enum import RepositoryType, TestType
+from test.test_client.enum import TestType
+from gen_epix.common.test.enum import RepositoryType
 from test.test_client.util import get_test_name, get_test_output_dir, set_log_level
 from time import sleep
 from typing import Any, Hashable, Type, TypeVar
