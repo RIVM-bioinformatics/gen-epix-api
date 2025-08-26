@@ -186,8 +186,8 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 self.user_invitation_class,
                 None,
-                user_invitation.id,  # type: ignore[arg-type]
-                CrudOperation.DELETE_ONE,
+                [x.id for x in user_invitations],  # type: ignore[arg-type]
+                CrudOperation.DELETE_SOME,
             )
         return user_in_db  # type: ignore
 

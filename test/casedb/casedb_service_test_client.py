@@ -3,7 +3,6 @@ import logging
 import re
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
-from test.test_client.enum import RepositoryType as TestClientRepositoryType
 from test.test_client.enum import TestType
 from test.test_client.service_test_client import ServiceTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
@@ -19,6 +18,7 @@ from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.common.config import AppCfg
+from gen_epix.common.test.enum import RepositoryType as RepositoryType
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
@@ -162,7 +162,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         test_dir: Path | None = None,
         **kwargs: bool | str | int | dict,
     ):
-        test_client_repository_type = TestClientRepositoryType(repository_type.value)
+        test_client_repository_type = RepositoryType(repository_type.value)
 
         # Set up test name and directory
         app_cfg = APP_CFG
@@ -305,11 +305,15 @@ class CasedbServiceTestClient(ServiceTestClient):
                 operation=CrudOperation.READ_ALL,
             )
         )
-        if any(
-            x.email == tgt_user.email and x.roles == tgt_user.roles for x in invitations
-        ):
+        if any(x.email == tgt_user.email for x in invitations):
             raise ValueError(
                 f"Invitation for {tgt_user.email} not removed after registration"
+            )
+
+        # Check if tgt_user has correct roles
+        if tgt_user.roles != {role}:
+            raise ValueError(
+                f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
             )
 
         return self._set_obj(tgt_user)
