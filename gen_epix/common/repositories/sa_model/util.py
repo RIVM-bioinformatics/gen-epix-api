@@ -3,11 +3,13 @@ from enum import Enum
 from typing import Any, Callable, Type
 
 import sqlalchemy as sa
-from sqlalchemy.orm import MappedColumn, mapped_column
+from pydantic.fields import FieldInfo
+from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from gen_epix.common.domain.model import Model
 from gen_epix.fastapp import Domain, Entity
-from gen_epix.fastapp.repositories import get_pydantic_field_sa_type
+from gen_epix.fastapp.repositories import create_sa_type_from_field_info
+from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_info
 
 
 def create_table_args(
@@ -48,10 +50,10 @@ def create_mapped_column(
 ) -> MappedColumn[Any]:
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
-    fieldinfo = model_class.model_fields[field_name]
-    sa_type = get_pydantic_field_sa_type(fieldinfo)
-    nullable = kwargs.get("nullable", fieldinfo.is_required() is False)
-    doc = kwargs.pop("doc", fieldinfo.description)
+    field_info: FieldInfo = model_class.model_fields[field_name]
+    sa_type = create_sa_type_from_field_info(field_info)
+    nullable = kwargs.get("nullable", not field_info.is_required())
+    doc = kwargs.pop("doc", field_info.description)
     link_entity = entity.get_link_entity(field_name)
     if link_entity and domain.get_service_type_for_entity(
         link_entity
@@ -188,3 +190,24 @@ def set_entity_repository_model_classes(
             raise ValueError(
                 f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
             )
+
+
+def get_mixin_mapped_column(
+    model_mixin_class: Type,
+    field_name: str,
+    sa_column_type: Type[sa.types.TypeEngine],
+    **kwargs: Any,
+) -> Mapped:
+    field_info: FieldInfo = getattr(model_mixin_class, field_name)
+    # Extract SA arguments from mixin class based on sa_type
+    kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
+        "nullable", not field_info.is_required()
+    )
+    sa_column_type_kwargs = kwargs.pop(
+        "sa_column_type_kwargs",
+        get_sa_type_kwargs_from_field_info(sa_column_type, field_info),
+    )
+    # Create and return mapped column
+    return mapped_column(
+        create_sa_type_from_field_info(field_info, **sa_column_type_kwargs), **kwargs
+    )

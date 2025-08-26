@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 
 
 def create_abac_endpoints(
@@ -23,6 +22,7 @@ def create_abac_endpoints(
         "/retrieve_organization_admin_name_emails",
         operation_id="retrieve_organization_admin_name_emails",
         name="RetrieveOrganizationAdminNameEmailsCommand",
+        description=command.RetrieveOrganizationAdminNameEmailsCommand.__doc__,
     )
     async def retrieve_organization_admin_name_emails(user: registered_user_dependency) -> list[model.UserNameEmail]:  # type: ignore
         try:

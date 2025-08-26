@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Hashable, Type
 
 from gen_epix.fastapp import (
+    App,
     BaseService,
     EventTiming,
     Permission,
@@ -30,8 +31,8 @@ class BaseRbacService(BaseService):
 
     SERVICE_TYPE = "RBAC"
 
-    def __init__(self, *args: list, **kwargs: Any):
-        super().__init__(*args, **kwargs)
+    def __init__(self, app: App, **kwargs: Any):
+        super().__init__(app, **kwargs)
         self._permissions_without_rbac: set[Permission] = set()
         self._permissions_by_role: dict[Hashable, set[Permission]] = {}
         self._roles_by_permission: dict[Permission, set[Hashable]] = {
@@ -191,10 +192,9 @@ class BaseRbacService(BaseService):
         Get the permissions for a command class that are subject to RBAC, i.e. which are
         registered to be subject to RBAC.
         """
-        return (
-            self.app.domain.get_permissions_for_command(command_class)
-            - self._permissions_without_rbac
-        )
+        all_permissions = self.app.domain.get_permissions_for_command(command_class)
+        assert isinstance(all_permissions, set)
+        return all_permissions - self._permissions_without_rbac
 
     def get_command_classes_with_rbac(self) -> set[Type[Command]]:
         """
@@ -298,39 +298,70 @@ class BaseRbacService(BaseService):
         - retrieve_user_is_root
         """
         # Create arguments for the RBAC policy constructor
-        policy_args = [
+        get_permission_for_command = kwargs.get(
             "get_permission_for_command",
-            "get_permission_has_rbac",
-            "get_roles_by_permission",
-            "retrieve_user_roles",
-            "retrieve_user_is_non_rbac_authorized",
-            "retrieve_user_is_root",
-        ]
-        for i, arg_name in enumerate(policy_args):
-            # Get default function
-            match arg_name:
-                case "get_permission_for_command":
-                    default_fun = (
-                        lambda x: self.app.domain.get_permission_for_command_instance(x)
-                    )
-                case "get_permission_has_rbac":
-                    default_fun = lambda x: x not in self._permissions_without_rbac
-                case "get_roles_by_permission":
-                    default_fun = lambda x: self._roles_by_permission[x]
-                case "retrieve_user_roles":
-                    default_fun = lambda x: self.retrieve_user_roles(x)
-                case "retrieve_user_is_non_rbac_authorized":
-                    default_fun = lambda x: self.retrieve_user_is_non_rbac_authorized(x)
-                case "retrieve_user_is_root":
-                    default_fun = lambda x: self.retrieve_user_is_root(x)
-            # Override default function if provided as keyword argument
-            policy_args[i] = kwargs.get(arg_name, default_fun)
-        # Create a single RBAC policy with the provided functions
-        rbac_policy = RbacPolicy(  # type: ignore
-            *policy_args[0:-2],
-            retrieve_user_is_non_rbac_authorized=policy_args[-2],
-            retrieve_user_is_root=policy_args[-1],
+            lambda x: self.app.domain.get_permission_for_command_instance(x),
         )
+        get_permission_has_rbac = kwargs.get(
+            "get_permission_has_rbac", lambda x: x not in self._permissions_without_rbac
+        )
+        get_roles_by_permission = kwargs.get(
+            "get_roles_by_permission", lambda x: self._roles_by_permission[x]
+        )
+        retrieve_user_roles = kwargs.get(
+            "retrieve_user_roles", lambda x: self.retrieve_user_roles(x)
+        )
+        retrieve_user_is_non_rbac_authorized = kwargs.get(
+            "retrieve_user_is_non_rbac_authorized",
+            lambda x: self.retrieve_user_is_non_rbac_authorized(x),
+        )
+        retrieve_user_is_root = kwargs.get(
+            "retrieve_user_is_root", lambda x: self.retrieve_user_is_root(x)
+        )
+        # Create a single RBAC policy with the provided functions
+        rbac_policy = RbacPolicy(
+            get_permission_for_command,
+            get_permission_has_rbac,
+            get_roles_by_permission,
+            retrieve_user_roles,
+            retrieve_user_is_non_rbac_authorized=retrieve_user_is_non_rbac_authorized,
+            retrieve_user_is_root=retrieve_user_is_root,
+        )
+        # policy_args = [
+        #     kwargs.get("get_permission_for_command"),
+        #     "get_permission_has_rbac",
+        #     "get_roles_by_permission",
+        #     "retrieve_user_roles",
+        #     "retrieve_user_is_non_rbac_authorized",
+        #     "retrieve_user_is_root",
+        # ]
+        # default_fn: Callable
+        # for i, arg_name in enumerate(policy_args):
+        #     # Get default function
+        #     match arg_name:
+        #         case "get_permission_for_command":
+        #             default_fn = (
+        #                 lambda x: self.app.domain.get_permission_for_command_instance(x)
+        #             )
+        #         case "get_permission_has_rbac":
+        #             default_fn = lambda x: x not in self._permissions_without_rbac
+        #         case "get_roles_by_permission":
+        #             default_fn = lambda x: self._roles_by_permission[x]
+        #         case "retrieve_user_roles":
+        #             default_fn = lambda x: self.retrieve_user_roles(x)
+        #         case "retrieve_user_is_non_rbac_authorized":
+        #             default_fn = lambda x: self.retrieve_user_is_non_rbac_authorized(x)
+        #         case "retrieve_user_is_root":
+        #             default_fn = lambda x: self.retrieve_user_is_root(x)
+        #     raise NotImplementedError(f"{arg_name} not implemented")
+        #     # Override default function if provided as keyword argument
+        #     policy_args[i] = kwargs.get(arg_name, default_fn)
+        # # Create a single RBAC policy with the provided functions
+        # rbac_policy = RbacPolicy(  # type: ignore
+        #     *policy_args[0:-2],
+        #     retrieve_user_is_non_rbac_authorized=policy_args[-2],
+        #     retrieve_user_is_root=policy_args[-1],
+        # )
         # Register the RBAC policy for all command classes that are subject to RBAC
         for command_class in self.get_command_classes_with_rbac():
             self.app.register_policy(command_class, rbac_policy, EventTiming.BEFORE)
@@ -371,13 +402,17 @@ class BaseRbacService(BaseService):
                 )
             return permissions
 
-        role_permissions_map = {}
+        role_permissions_map: dict[
+            Hashable, set[tuple[type[Command], PermissionType]]
+        ] = {}
         for role in role_hierarchy:
             role_permissions_map[role] = _get_permissions(
                 role_permission_sets.get(role, set())
             )
             if verify_redundant_permissions:
                 orig_role_permissions = role_permissions_map[role].copy()
+            else:
+                orig_role_permissions = set()
             for sub_role in role_hierarchy.get(role, set()):
                 # Add the permissions of the sub-role to the role
                 sub_role_permissions = _get_permissions(

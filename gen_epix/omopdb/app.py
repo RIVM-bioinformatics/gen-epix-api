@@ -8,9 +8,9 @@ APP_NAME = "OMOPDB"
 
 # Data for OpenAPI schema
 SCHEMA_KWARGS = {
-    "title": "BioBase master database",
-    "description": "BioBase API",
-    "summary": "Summary goes here",
+    "title": "Gen-EpiX omopdb",
+    "summary": "Genomic Epidemiology platform for disease X, omopdb app",
+    "description": "The omopdb app manages clinical and epidemiological data of persons or subjects of non-human origin.",
     "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {

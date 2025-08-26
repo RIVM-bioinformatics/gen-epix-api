@@ -923,13 +923,13 @@ class SARepository(BaseRepository):
         return rows, row_ids
 
     def _execute_sa(
-        self, session: Session, execute_fun: Callable, kwargs: dict
+        self, session: Session, execute_fn: Callable, kwargs: dict
     ) -> list[Model] | Model | list[Hashable] | Hashable | list[bool] | bool | None:
         if session:
-            retval = execute_fun(session)
+            retval = execute_fn(session)
         else:
             with self.uow(**kwargs) as uow:
-                retval = execute_fun(uow.session)
+                retval = execute_fn(uow.session)
         return retval
 
     @staticmethod
@@ -1039,10 +1039,10 @@ class SARepository(BaseRepository):
                 if not schema_name:
                     continue
                 with engine.connect() as conn:
-                    print(conn)
+                    # print(conn)
                     result = conn.execute(sa.text("SELECT name FROM sys.schemas"))
                     schemas = [row[0] for row in result]
-                    print(schemas)
+                    # print(schemas)
                     conn.dialect
                     if not conn.dialect.has_schema(conn, schema_name):
                         conn.execute(sa.schema.CreateSchema(schema_name))

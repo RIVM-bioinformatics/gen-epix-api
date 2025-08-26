@@ -107,7 +107,7 @@ class CrudEndpointGenerator:
     def generate_get_all(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(user: route.user_dependency) -> Any:  # type: ignore
             obj_ids = None
@@ -120,7 +120,7 @@ class CrudEndpointGenerator:
                 if route.model_class is not route.read_api_model_class:
                     retval = [route.read_api_model_class.from_model(x) for x in retval]
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "79d26f4f" + route.endpoint_basename,
                     user,
                     exception,
@@ -143,7 +143,7 @@ class CrudEndpointGenerator:
     def generate_get_some(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
         if not batch_route_suffix:
@@ -156,7 +156,7 @@ class CrudEndpointGenerator:
             if invalid_obj_ids:
                 # f-string parsing fails if this is not first passed to a variable
                 error_msg = ", ".join([f'"{x}"' for x in invalid_obj_ids])
-                handle_exception_fun(
+                handle_exception_fn(
                     "a8abf0e3",
                     user,
                     exc.InvalidIdsError(
@@ -177,7 +177,7 @@ class CrudEndpointGenerator:
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "fbc53f5d" + route.endpoint_basename,
                     user,
                     exception,
@@ -200,7 +200,7 @@ class CrudEndpointGenerator:
     def generate_post_query(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         query_route_suffix: str | None = None,
         return_id: bool = False,
         ids_route_suffix: str | None = None,
@@ -242,7 +242,7 @@ class CrudEndpointGenerator:
             ],
         ) -> Any:
             if validate_query_filter and not validate_query_filter(filter):
-                handle_exception_fun(
+                handle_exception_fn(
                     "cee23041" + route.endpoint_basename,
                     user,
                     exc.InvalidArgumentsError("Invalid filter"),
@@ -265,7 +265,7 @@ class CrudEndpointGenerator:
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "ca2591fa" + route.endpoint_basename, user, exception
                 )
             return retval
@@ -284,7 +284,7 @@ class CrudEndpointGenerator:
     def generate_get_one(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(
             user: route.user_dependency,  # type: ignore
@@ -302,7 +302,7 @@ class CrudEndpointGenerator:
 
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "3680417c" + route.endpoint_basename + f"/{object_id}",
                     user,
                     exception,
@@ -325,7 +325,7 @@ class CrudEndpointGenerator:
     def generate_post_one(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(
             user: route.user_dependency, create_obj: route.create_api_model_class  # type: ignore
@@ -353,7 +353,7 @@ class CrudEndpointGenerator:
                     request_ids = [create_obj.id]
                 except:
                     request_ids = None
-                handle_exception_fun(
+                handle_exception_fn(
                     "02c70ca7" + route.endpoint_basename,
                     user,
                     exception,
@@ -377,7 +377,7 @@ class CrudEndpointGenerator:
     def generate_post_some(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
         if not batch_route_suffix:
@@ -412,7 +412,7 @@ class CrudEndpointGenerator:
                     request_ids = [x.id for x in create_objs]
                 except:
                     request_ids = None
-                handle_exception_fun(
+                handle_exception_fn(
                     "e96480ac" + route.endpoint_basename,
                     user,
                     exception,
@@ -440,7 +440,7 @@ class CrudEndpointGenerator:
     def generate_put_one(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(
             user: route.user_dependency,
@@ -467,7 +467,7 @@ class CrudEndpointGenerator:
                 ):
                     retval = route.read_api_model_class.from_model(retval)
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "1459d302" + route.endpoint_basename + f"/{object_id}",
                     user,
                     exception,
@@ -490,7 +490,7 @@ class CrudEndpointGenerator:
     def generate_put_some(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
         if not batch_route_suffix:
@@ -518,7 +518,7 @@ class CrudEndpointGenerator:
                 ):
                     retval = [route.read_api_model_class.from_model(x) for x in retval]
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "b9359ae3" + route.endpoint_basename,
                     user,
                     exception,
@@ -544,7 +544,7 @@ class CrudEndpointGenerator:
     def generate_delete_one(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(user: route.user_dependency, object_id: Any) -> Any:  # type: ignore
             # TODO: distinguish between soft and hard delete through hard_delete:
@@ -557,7 +557,7 @@ class CrudEndpointGenerator:
                 )
                 retval = route.app.handle(cmd)
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "ab4df15f" + route.endpoint_basename + f"/{object_id}",
                     user,
                     exception,
@@ -580,7 +580,7 @@ class CrudEndpointGenerator:
     def generate_delete_all(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
     ) -> None:
         async def endpoint_function(user: route.user_dependency) -> Any:  # type: ignore
             obj_ids = None
@@ -593,7 +593,7 @@ class CrudEndpointGenerator:
                 retval = route.app.handle(cmd)
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "79d26f4f" + route.endpoint_basename,
                     user,
                     exception,
@@ -616,7 +616,7 @@ class CrudEndpointGenerator:
     def generate_delete_some(
         fast_api: FastAPI | APIRouter,
         route: CrudEndpointSet,
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
     ) -> None:
         if not batch_route_suffix:
@@ -632,7 +632,7 @@ class CrudEndpointGenerator:
             if invalid_obj_ids:
                 # f-string parsing fails if this is not first passed to a variable
                 error_msg = ", ".join([f'"{x}"' for x in invalid_obj_ids])
-                handle_exception_fun(
+                handle_exception_fn(
                     "e73f930b",
                     user,
                     exc.InvalidIdsError(
@@ -651,7 +651,7 @@ class CrudEndpointGenerator:
                 retval = route.app.handle(cmd)
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
-                handle_exception_fun(
+                handle_exception_fn(
                     "fce475e1" + route.endpoint_basename,
                     user,
                     exception,
@@ -674,7 +674,7 @@ class CrudEndpointGenerator:
     def _add_route(
         fast_api: FastAPI | APIRouter,
         endpoint: str,
-        endpoint_function: Callable,
+        endpoint_fn: Callable,
         method: HttpMethod,
         response_model: Any | None,
         route: CrudEndpointSet,
@@ -689,10 +689,10 @@ class CrudEndpointGenerator:
 
         fast_api.add_api_route(
             "/" + endpoint,
-            endpoint_function,
+            endpoint_fn,
             methods=[method.value],
             response_model=response_model,
-            name=route.operation_id_basename,
+            name=operation_id,
             description=route.description,
             operation_id=operation_id,
             response_model_exclude_none=bool(route.response_model_exclude_none),
@@ -702,7 +702,7 @@ class CrudEndpointGenerator:
     def generate_endpoints(
         fast_api: FastAPI | APIRouter,
         routes: list[CrudEndpointSet],
-        handle_exception_fun: Callable,
+        handle_exception_fn: Callable,
         batch_route_suffix: str | None = None,
         query_route_suffix: str | None = None,
         ids_route_suffix: str | None = None,
@@ -752,7 +752,7 @@ class CrudEndpointGenerator:
                 elif endpoint_type == CrudEndpointType.DELETE_SOME:
                     extra_args["batch_route_suffix"] = batch_route_suffix
                 function_map[endpoint_type](  # type: ignore
-                    fast_api, route, handle_exception_fun, **extra_args
+                    fast_api, route, handle_exception_fn, **extra_args
                 )
 
     @staticmethod
@@ -889,7 +889,7 @@ class CrudEndpointGenerator:
             crud_command_class=crud_command_class,
             endpoint_types=crud_endpoint_types,
             operation_id_basename=entity.name,
-            description=model_class.__doc__ or default_description,
+            description=crud_command_class.__doc__ or default_description,
             # description=model_class.model_json_schema().get(
             #     "description", default_description
             # ),

@@ -209,30 +209,30 @@ class CompositeFilter(Filter):
 
     def _get_map_fun_list(
         self,
-        map_fun: (
+        map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
             | list[Callable[[Any], Any]]
             | None
         ) = None,
     ) -> list[Callable[[Any], Any]]:
-        if not map_fun:
-            map_fun = [lambda x: x for _ in self.filters]
-        elif isinstance(map_fun, dict):
-            map_fun = [map_fun.get(x.key, lambda x: x) for x in self.filters]
-        elif not isinstance(map_fun, list):
-            map_fun = [map_fun for _ in self.filters]
-        if not isinstance(map_fun, list):
-            raise ValueError("map_fun must be a callable, a list or a dict.")
-        if len(map_fun) != len(self.filters):
-            raise ValueError("map_fun must have the same length as the filters list.")
-        return map_fun
+        if not map_fn:
+            map_fn = [lambda x: x for _ in self.filters]
+        elif isinstance(map_fn, dict):
+            map_fn = [map_fn.get(x.key, lambda x: x) for x in self.filters]
+        elif not isinstance(map_fn, list):
+            map_fn = [map_fn for _ in self.filters]
+        if not isinstance(map_fn, list):
+            raise ValueError("map_fn must be a callable, a list or a dict.")
+        if len(map_fn) != len(self.filters):
+            raise ValueError("map_fn must have the same length as the filters list.")
+        return map_fn
 
     def match_row(
         self,
         row: dict[Hashable, Any | None] | BaseModel,
         na_values: set[Any] | None = None,
-        map_fun: (
+        map_fn: (
             Callable[[Any], Any]
             | dict[Hashable, Callable[[Any], Any]]
             | list[Callable[[Any], Any]]
@@ -245,7 +245,7 @@ class CompositeFilter(Filter):
                 "Key must be set for each filter to apply filter to a row."
             )
         # Match, per filter, if both key exists, value not null and value matches
-        map_fun = self._get_map_fun_list(map_fun)
+        map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
             return (
                 self._match_row(
@@ -256,7 +256,7 @@ class CompositeFilter(Filter):
                             if x._is_composite
                             else y(self._get_row_value(row, x.key, is_model))
                         )
-                        for x, y in zip(self.filters, map_fun)
+                        for x, y in zip(self.filters, map_fn)
                     ),
                 )
                 ^ self.invert
@@ -264,7 +264,7 @@ class CompositeFilter(Filter):
             # yield (
             #     key in row_dict
             #     and row_dict[key] is not None
-            #     and self._match(map_fun(row_dict[key]))
+            #     and self._match(map_fn(row_dict[key]))
             # ) ^ self.invert
         else:
             return (
@@ -276,7 +276,7 @@ class CompositeFilter(Filter):
                             if x._is_composite
                             else y(self._get_row_value(row, x.key, is_model))
                         )
-                        for x, y in zip(self.filters, map_fun)
+                        for x, y in zip(self.filters, map_fn)
                     ),
                 )
                 ^ self.invert
@@ -286,7 +286,7 @@ class CompositeFilter(Filter):
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: (
+        map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
             | list[Callable[[Any], Any]]
@@ -299,7 +299,7 @@ class CompositeFilter(Filter):
             raise ValueError(
                 "Key must be set for each filter to apply filter to a row."
             )
-        map_fun = self._get_map_fun_list(map_fun)
+        map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
             for row in rows:
                 yield (
@@ -311,7 +311,7 @@ class CompositeFilter(Filter):
                                 if x._is_composite
                                 else y(self._get_row_value(row, x.key, is_model))
                             )
-                            for x, y in zip(self.filters, map_fun)
+                            for x, y in zip(self.filters, map_fn)
                         ),
                     )
                     ^ self.invert
@@ -327,7 +327,7 @@ class CompositeFilter(Filter):
                                 if x._is_composite
                                 else y(self._get_row_value(row, x.key, is_model))
                             )
-                            for x, y in zip(self.filters, map_fun)
+                            for x, y in zip(self.filters, map_fn)
                         ),
                     )
                     ^ self.invert
@@ -337,7 +337,7 @@ class CompositeFilter(Filter):
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: (
+        map_fn: (
             dict[Hashable, Callable[[Any], Any]]
             | Callable[[Any], Any]
             | list[Callable[[Any], Any]]
@@ -350,7 +350,7 @@ class CompositeFilter(Filter):
             raise ValueError(
                 "Key must be set for each filter to apply filter to a row."
             )
-        map_fun = self._get_map_fun_list(map_fun)
+        map_fn = self._get_map_fun_list(map_fn)
         if na_values is None:
             for row in rows:
                 if (
@@ -362,7 +362,7 @@ class CompositeFilter(Filter):
                                 if x._is_composite
                                 else y(self._get_row_value(row, x.key, is_model))
                             )
-                            for x, y in zip(self.filters, map_fun)
+                            for x, y in zip(self.filters, map_fn)
                         ),
                     )
                     ^ self.invert
@@ -379,7 +379,7 @@ class CompositeFilter(Filter):
                                 if x._is_composite
                                 else y(self._get_row_value(row, x.key, is_model))
                             )
-                            for x, y in zip(self.filters, map_fun)
+                            for x, y in zip(self.filters, map_fn)
                         ),
                     )
                     ^ self.invert

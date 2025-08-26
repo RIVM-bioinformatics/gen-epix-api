@@ -68,7 +68,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
             organization_id=cmd.organization_id,
         )
         response = self.test_client.post(
-            route_prefix + "/user_invitations",
+            route_prefix + "/invite_user",
             json=json.loads(request_body.model_dump_json()),
             headers=headers,
         )
