@@ -75,7 +75,7 @@ class MethodNotAllowed405HTTPException(HTTPException):
         )
 
 
-class ResourceAlreadyExists409HTTPException(HTTPException):
+class ResourceConflict409HTTPException(HTTPException):
     def __init__(
         self,
         detail: str = (
