@@ -90,6 +90,19 @@ class ResourceAlreadyExists409HTTPException(HTTPException):
         )
 
 
+class ForeignKeyConstraint409HTTPException(HTTPException):
+    def __init__(
+        self,
+        detail: str = (
+            "Conflict: Cannot delete resource as it is referenced by another resource (foreign key constraint)"
+        ),
+        headers: dict[str, str] | None = None,
+    ):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT, detail=detail, headers=headers
+        )
+
+
 class UnprocessableEntity422HTTPException(HTTPException):
     def __init__(
         self,

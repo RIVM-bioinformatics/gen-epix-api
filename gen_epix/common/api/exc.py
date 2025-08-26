@@ -10,6 +10,7 @@ from gen_epix.fastapp.exc import (
     DomainException,
     DuplicateIdsError,
     IdsError,
+    LinkConstraintViolationError,
     ServiceException,
 )
 
@@ -79,6 +80,13 @@ def generate_handle_exception_function(
         # Raise HTTP exception
         if isinstance(exception, DomainException):
             if isinstance(exception, IdsError):
+                # FK constraint violation: geef 409 terug
+                if isinstance(exception, LinkConstraintViolationError):
+                    if logger:
+                        logger.info(log_message)
+                    raise api_exc.ForeignKeyConstraint409HTTPException(
+                        detail=str(exception)
+                    ) from exception
                 invalid_ids = []
                 if request_ids and exception.ids:
                     # Compare ids received in request with those reported
