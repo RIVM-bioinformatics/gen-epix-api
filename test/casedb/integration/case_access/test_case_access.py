@@ -1,7 +1,7 @@
 import logging
 import pickle
 from pathlib import Path
-from test.casedb.casedb_app_test_client import CasedbTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.case_access.base import (
     REPOSITORY_TYPE,
     SKIP_ENDPOINTS,

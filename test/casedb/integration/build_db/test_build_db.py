@@ -1,5 +1,5 @@
 import logging
-from test.casedb.casedb_app_test_client import CasedbTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     REPOSITORY_TYPE,
     SKIP_ENDPOINTS,
