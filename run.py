@@ -485,6 +485,7 @@ class Run:
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/casedb/unit",
                 # "test/seqdb/integration",
             ]
         )
@@ -501,6 +502,7 @@ class Run:
             + [
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/casedb/unit",
             ]
         )
 
