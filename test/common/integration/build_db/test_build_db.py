@@ -9,7 +9,7 @@ from test.test_client.enum import TestType as EnumTestType
 
 import pytest
 
-from gen_epix.common.test.test_client import CommonServiceTestClient as Env
+from gen_epix.common.test.test_client_old import CommonServiceTestClient as Env
 
 # Very basic first setup of the common build_db tests
 # get_test_client() changed in the meantime, so probably rewrite needed

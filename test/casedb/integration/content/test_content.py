@@ -1,10 +1,10 @@
 import logging
-import test.test_client.util as test_util
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_app_test_client import CasedbAppTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 import pytest
 
+import gen_epix.common.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
@@ -13,15 +13,15 @@ from gen_epix.filter import BooleanOperator, TypedCompositeFilter, TypedStringSe
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
-    return Env.get_test_client(
-        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT,
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
         repository_type=enum.RepositoryType.DICT,
         # repository_type=enum.RepositoryType.SA_SQLITE,
-        load_target="full",
         verbose=False,
         log_level=logging.ERROR,
+        use_endpoints=True,
+        data_fixture_name="FULL",
     )
-    # return Env.get_env(test_type=EnumTestType.INTEGRATION_CONTENT, repository_type=enum.RepositoryType.SA_SQLITE, verbose=False, log_level=logging.ERROR)
 
 
 class TestContent:

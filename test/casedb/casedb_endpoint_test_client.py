@@ -1,17 +1,11 @@
 import json
-from enum import Enum
-from test.test_client.endpoint_test_client import EndpointTestClient
 from typing import Any
 
-# import libraries
 from fastapi import FastAPI, Response
 
 from gen_epix.casedb.domain import command, model
+from gen_epix.common.test.endpoint_test_client import EndpointTestClient
 from gen_epix.fastapp.app import App
-
-
-class EndpointVersion(Enum):
-    V1 = "v1"
 
 
 class CasedbEndpointTestClient(EndpointTestClient):

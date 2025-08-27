@@ -478,13 +478,14 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "--cov=gen_epix",
-                "--cov-report=html:test/data/output/coverage.html",
-                "--cov-report=xml:test/data/output/coverage.xml",
+                "--cov-report=html:test/output/coverage.html",
+                "--cov-report=xml:test/output/coverage.xml",
                 "test/filter/unit",
                 "test/fastapp/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/omopdb/unit",
                 # "test/seqdb/integration",
             ]
         )
@@ -501,6 +502,7 @@ class Run:
             + [
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/omopdb/unit",
             ]
         )
 
@@ -756,9 +758,7 @@ class Run:
         df = pd.DataFrame.from_dict(
             {f"uuid{i}": [generate_ulid() for j in range(n_rows)] for i in range(100)}
         )
-        xls_file = (
-            Path(__file__).parent / "test" / "data" / "output" / "generated_uuids.xlsx"
-        )
+        xls_file = Path(__file__).parent / "test" / "generated_uuids.xlsx"
         df.to_excel(xls_file, sheet_name="uuid", index=False)
         print(
             f"Total of {n_rows} uuids times {df.shape[1]} columns generated and written to file {str(xls_file)}"
@@ -767,7 +767,7 @@ class Run:
     def other_general_run_linters(self) -> None:
         from test.linter import Linter
 
-        file_basename = Path(__file__).parent / "test" / "data" / "output" / "linter"
+        file_basename = Path(__file__).parent / "test" / "output" / "linter"
 
         linter = Linter()
         linter.run_all(file_basename=file_basename)
@@ -783,14 +783,10 @@ class Run:
         }
         filter_on_codes = None
 
-        file = Path(__file__).parent / "test" / "data" / "output" / "linter.pylint.txt"
+        file = Path(__file__).parent / "test" / "output" / "linter.pylint.txt"
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         file2 = (
-            Path(__file__).parent
-            / "test"
-            / "data"
-            / "output"
-            / f"linter.{now_str}.pylint.txt"
+            Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
@@ -809,15 +805,9 @@ class Run:
         }
         # filter_on_codes = None
 
-        file = Path(__file__).parent / "test" / "data" / "output" / "linter.mypy.txt"
+        file = Path(__file__).parent / "test" / "output" / "linter.mypy.txt"
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file2 = (
-            Path(__file__).parent
-            / "test"
-            / "data"
-            / "output"
-            / f"linter.{now_str}.mypy.txt"
-        )
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
@@ -836,7 +826,7 @@ class Run:
         if path:
             path_obj = Path(path)
         else:
-            path_obj = Path("test") / "data" / "output" / "log.debug.txt"
+            path_obj = Path("test") / "output" / "log.debug.txt"
         out_log_excel_file = str(path_obj.parent / "log.debug.xlsx")
         out_user_journey_file = str(path_obj.parent / "log.user_journey.pkl.gz")
         path = str(path_obj)
