@@ -477,13 +477,14 @@ class AuthService(BaseAuthService):
             raise exc.UnauthorizedAuthError()
 
         try:
+            # Retrieve existing user
             user = user_manager.retrieve_user_by_key(user_key)
-            # HERE
+            # Retrieve user name from claims and update if necessary
             new_user_name = user_manager.get_user_name_from_claims(claims.claims)
             if new_user_name and new_user_name != getattr(user, "name", None):
-                user = user_manager.update_user_name(user, new_user_name)
-                if user:
-                    return user
+                updated_user = user_manager.update_user_name(user, new_user_name)
+                if updated_user:
+                    return updated_user
             return user
 
         except exc.NoResultsError:
@@ -541,88 +542,3 @@ class AuthService(BaseAuthService):
                         )
                     )
                 raise exc.UnauthorizedAuthError()
-
-    # @staticmethod
-    # async def get_name_from_claims(claims: dict[str, Any]) -> str:
-    #     """
-    #     Extract a user-friendly display name from IdP claims (dict).
-
-    #     Priority:
-    #       1. display_name (displayName)
-    #       2. name (cn)
-    #       3. given_name + family_name (givenName + familyName, gn + sn)
-    #       4. preferred_username (username, upn, eppn)
-    #       5. email (mail)
-    #       6. sub (as last resort)
-
-    #     Handles:
-    #       - Case-insensitive keys and common variants (OIDC/SAML).
-    #       - Values that may be single strings or lists (SAML attribute arrays).
-    #     """
-    #     data: dict[str, Any] = claims or {}
-
-    #     def _first_non_empty_str(val: Any) -> str | None:
-    #         if isinstance(val, list):
-    #             for v in val:
-    #                 if isinstance(v, str) and v.strip():
-    #                     return v.strip()
-    #             return None
-    #         if isinstance(val, str) and val.strip():
-    #             return val.strip()
-    #         return None
-
-    #     def _get_first(keys: list[str]) -> str | None:
-    #         for k in keys:
-    #             variants = {
-    #                 k,
-    #                 k.lower(),
-    #                 k.upper(),
-    #                 k.replace("_", "-"),
-    #                 k.replace("-", "_"),
-    #             }
-    #             for cand in variants:
-    #                 if cand in data:
-    #                     v = _first_non_empty_str(data[cand])
-    #                     if v:
-    #                         return v
-    #         return None
-
-    #     name = _get_first(["display_name", "displayName"])
-    #     if name:
-    #         return name
-
-    #     name = _get_first(["name", "cn"])
-    #     if name:
-    #         return name
-
-    #     given = _get_first(["given_name", "givenName", "gn", "first_name", "firstName"])
-    #     family = _get_first(
-    #         ["family_name", "familyName", "sn", "last_name", "lastName"]
-    #     )
-    #     if given or family:
-    #         full = f"{given or ''} {family or ''}".strip()
-    #         if full:
-    #             return full
-
-    #     name = _get_first(
-    #         [
-    #             "preferred_username",
-    #             "preferredUsername",
-    #             "username",
-    #             "upn",
-    #             "eppn",
-    #             "eduPersonPrincipalName",
-    #         ]
-    #     )
-    #     if name:
-    #         return name
-
-    #     name = _get_first(["email", "mail"])
-    #     if name:
-    #         return name
-
-    #     name = _get_first(["sub"])
-    #     if name:
-    #         return name
-
-    #     raise exc.UnauthorizedAuthError("No valid name found in claims")
