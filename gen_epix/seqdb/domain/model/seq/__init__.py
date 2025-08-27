@@ -1,4 +1,9 @@
 # pylint: disable=useless-import-alias
+from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixin
+from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
+from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin as ProtocolMixin
+from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
+from gen_epix.seqdb.domain.model.seq.base import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq.metadata import (
     AlignmentProtocol as AlignmentProtocol,
 )

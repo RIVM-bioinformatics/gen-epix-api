@@ -3,19 +3,29 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.case import CaseTypeColSet, CaseTypeSet
-from gen_epix.casedb.domain.model.organization import _ENTITY_KWARGS, User
+from gen_epix.casedb.domain.model.organization import User
 from gen_epix.common.domain.model import DataCollection, Model, Organization
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
-_SERVICE_TYPE = enum.ServiceType.ABAC
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class OrganizationAdminPolicy(Model):
+    """
+    Defines whether a user is an admin for an organization. If so, and if the
+    user has the role ORG_ADMIN, they will be able to:
+    1) Invite new users of this organization.
+    2) Manage the case and case set access and share rights of these users.
+
+    The user will not be able to:
+    1) Perform the operations above for any other organization for which there
+       is no corresponding admin policy.
+    2) Set the case and case set access and share case rights for the
+       organization itself. This has to be done by a user with role APP_ADMIN.
+
+    Users with role APP_ADMIN or above do not require an admin policy to perform
+    these actions. They are de facto organization admin for all organizations.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="organization_admin_policies",
         table_name="organization_admin_policy",
@@ -27,7 +37,6 @@ class OrganizationAdminPolicy(Model):
                 2: ("user_id", User, "user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -71,12 +80,12 @@ class BaseCasePolicy(Model):
 class OrganizationAccessCasePolicy(BaseCasePolicy):
     """
     Stores the access rights of an organization to a particular data collection.
-    If an organization does not have a policy to a data collection, it has no access
-    rights to that data collection.
+    If an organization does not have a policy to a data collection, it has no
+    access rights to that data collection.
 
-    The access rights are limited to the case types in the case type set. If a case type
-    is not in the case type set, the organization has no access rights to that data
-    collection for that case type.
+    The access rights are limited to the case types in the case type set. If a
+    case type is not in the case type set, the organization has no access
+    rights to that data collection for that case type.
     """
 
     ENTITY: ClassVar = Entity(
@@ -108,7 +117,6 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -144,9 +152,9 @@ class UserAccessCasePolicy(BaseCasePolicy):
     Stores the maximum access rights of a user to a particular data collection,
     analogous to the organization access case policy.
 
-    The actual access rights of a user are derived as the intersection of their maximum
-    access rights stored here, and the access rights of the organization to which they
-    belong.
+    The actual access rights of a user are derived as the intersection of their
+    maximum access rights stored here, and the access rights of the organization
+    to which they belong.
     """
 
     ENTITY: ClassVar = Entity(
@@ -178,7 +186,6 @@ class UserAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")
@@ -207,12 +214,12 @@ class UserAccessCasePolicy(BaseCasePolicy):
 class OrganizationShareCasePolicy(BaseCasePolicy):
     """
     Stores any additional case or case set share rights of an organization to a
-    particular data collection, if the case or case set is already in a particular
-    other data collection.
+    particular data collection, if the case or case set is already in a
+    particular other data collection.
 
-    The share rights are limited to the case types in the case type set. If a case type
-    is not in the case type set, the organization has no share rights to that data
-    collection for that case type.
+    The share rights are limited to the case types in the case type set. If a
+    case type is not in the case type set, the organization has no share rights
+    to that data collection for that case type.
     """
 
     ENTITY: ClassVar = Entity(
@@ -236,7 +243,6 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
                 4: ("from_data_collection_id", DataCollection, "from_data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -256,9 +262,9 @@ class UserShareCasePolicy(BaseCasePolicy):
     Stores the maximum share rights of a user to a particular data collection,
     analogous to the organization share case policy.
 
-    The actual share rights of a user are derived as the intersection of their maximum
-    share rights stored here, and the share rights of the organization to which they
-    belong.
+    The actual share rights of a user are derived as the intersection of their
+    maximum share rights stored here, and the share rights of the organization
+    to which they belong.
     """
 
     ENTITY: ClassVar = Entity(
@@ -282,7 +288,6 @@ class UserShareCasePolicy(BaseCasePolicy):
                 4: ("from_data_collection_id", DataCollection, "from_data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")

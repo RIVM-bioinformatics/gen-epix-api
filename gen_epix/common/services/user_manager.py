@@ -6,8 +6,7 @@ from uuid import UUID
 from gen_epix.common.domain import command, exc, model
 from gen_epix.common.domain.service.organization import BaseOrganizationService
 from gen_epix.common.domain.service.rbac import BaseRbacService
-from gen_epix.fastapp import (BaseUnitOfWork, BaseUserManager, CrudOperation,
-                              Permission)
+from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, CrudOperation, Permission
 from gen_epix.fastapp.services.auth import get_email_from_claims
 
 
@@ -264,7 +263,8 @@ class UserManager(BaseUserManager):
 
             # Verify if create_by_user made an invitation for this user that is valid
             timestamp = datetime.datetime.now()
-            user_invitations: list[self.user_invitation_class] = ( # pyright: ignore[reportInvalidTypeForm]
+            # Next line: pyright: ignore[reportInvalidTypeForm]
+            user_invitations: list[self.user_invitation_class] = (
                 self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     created_by_user_id,

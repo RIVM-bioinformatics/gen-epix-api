@@ -1,12 +1,12 @@
 # Variables for debugging purposes
 from gen_epix.casedb.domain import enum
 
-SKIP_ENDPOINTS = True
+SKIP_ENDPOINTS = False
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
-# REPOSITORY_TYPE = enum.RepositoryType.DICT
-REPOSITORY_TYPE = enum.RepositoryType.SA_SQLITE
+REPOSITORY_TYPE = enum.RepositoryType.DICT
+# REPOSITORY_TYPE = enum.RepositoryType.SA_SQLITE
 
 # Variables used in tests
 REFDATA_ADMIN_OR_ABOVE_USERS = [
