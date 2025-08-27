@@ -1,7 +1,6 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from enum import Enum
 from typing import Any, Callable, Type
 from uuid import UUID
 
@@ -16,13 +15,8 @@ from gen_epix.common.domain import model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 
-class EndpointVersion(Enum):
-    V1 = "v1"
-
-
 class EndpointTestClient:
 
-    ENDPOINT_VERSION_PREFIX_MAP = {EndpointVersion.V1: "/v1"}
     SECRET_KEY = str(uuid.uuid4())
     ENCRYPTION_ALGORITHM = "HS256"
 
@@ -33,21 +27,22 @@ class EndpointTestClient:
         app_last_handled_exception: dict,
         user_class: Type[model.User] = model.User,
         user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        **kwargs: Any,
+        register_crud_commands: bool = True,
+        route_prefix: str | None = None,
     ):
-        register_crud_commands: bool = kwargs.get("register_crud_commands", True)
         self.app = app
         self.fast_api = fast_api
         self.test_client = TestClient(fast_api, raise_server_exceptions=False)
         self._user_class = user_class
         self._user_invitation_class = user_invitation_class
+        self._route_prefix = route_prefix or ""
         self._handlers: dict[
             Type[Command],
             Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
         ] = {}
         if register_crud_commands:
             for crud_command_class in app.domain.crud_commands:
-                self.register_handler(crud_command_class, self.handle_crud_command)
+                self.register_handler(crud_command_class, self.handle_crud_command)  # type: ignore[arg-type]
 
     def register_handler(
         self,
@@ -60,10 +55,10 @@ class EndpointTestClient:
         self,
         cmd: Command,
         return_response: bool = False,
-        endpoint_version: EndpointVersion = EndpointVersion.V1,
+        route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
-        route_prefix = self.ENDPOINT_VERSION_PREFIX_MAP[endpoint_version]
+        route_prefix = route_prefix or self._route_prefix
         if cmd.user:
             headers = self.get_headers(cmd)
         else:
@@ -123,6 +118,7 @@ class EndpointTestClient:
     ) -> tuple[Any, Response]:
         model_class = cmd.MODEL_CLASS
         entity = model_class.ENTITY
+        assert entity is not None
         route = f"{route_prefix}/{entity.snake_case_plural_name}"
         if cmd.operation == CrudOperation.READ_ALL:
             if cmd.query_filter:
@@ -135,6 +131,7 @@ class EndpointTestClient:
                 response = self.test_client.get(route, headers=headers)
             retval = self._content_to_obj(response, model_class, is_list=True)
         elif cmd.operation == CrudOperation.READ_SOME:
+            assert isinstance(cmd.obj_ids, list)
             ids = json.dumps([str(x) for x in cmd.obj_ids])
             response = self.test_client.get(
                 f"{route}/batch",
@@ -149,6 +146,7 @@ class EndpointTestClient:
             )
             retval = self._content_to_obj(response, model_class)
         elif cmd.operation == CrudOperation.CREATE_ONE:
+            assert isinstance(cmd.objs, model.Model)
             response = self.test_client.post(
                 f"{route}",
                 json=json.loads(cmd.objs.model_dump_json()),
@@ -156,6 +154,7 @@ class EndpointTestClient:
             )
             retval = self._content_to_obj(response, model_class)
         elif cmd.operation == CrudOperation.CREATE_SOME:
+            assert isinstance(cmd.objs, list)
             response = self.test_client.post(
                 f"{route}/batch",
                 json=[json.loads(x.model_dump_json()) for x in cmd.objs],
@@ -163,6 +162,7 @@ class EndpointTestClient:
             )
             retval = self._content_to_obj(response, model_class, is_list=True)
         elif cmd.operation == CrudOperation.UPDATE_ONE:
+            assert isinstance(cmd.objs, model.Model)
             response = self.test_client.put(
                 f"{route}/{cmd.objs.id}",
                 json=json.loads(cmd.objs.model_dump_json()),
@@ -170,6 +170,7 @@ class EndpointTestClient:
             )
             retval = self._content_to_obj(response, model_class)
         elif cmd.operation == CrudOperation.UPDATE_SOME:
+            assert isinstance(cmd.objs, list)
             response = self.test_client.put(
                 f"{route}",
                 json=[json.loads(x.model_dump_json()) for x in cmd.objs],
@@ -177,11 +178,13 @@ class EndpointTestClient:
             )
             retval = self._content_to_obj(response, model_class, is_list=True)
         elif cmd.operation == CrudOperation.DELETE_ONE:
+            assert isinstance(cmd.obj_ids, UUID)
             response = self.test_client.delete(
                 f"{route}/{cmd.obj_ids}", headers=headers
             )
             retval = self._content_to_obj(response, UUID)
         elif cmd.operation == CrudOperation.DELETE_SOME:
+            assert isinstance(cmd.obj_ids, list)
             ids = json.dumps([str(x) for x in cmd.obj_ids])
             response = self.test_client.delete(
                 f"{route}/batch",
