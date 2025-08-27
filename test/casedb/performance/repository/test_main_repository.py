@@ -3,7 +3,7 @@ import logging
 import pstats
 import sys
 from pathlib import Path
-from test.casedb.casedb_app_test_client import CasedbAppTestClient
+from test.casedb.casedb_app_test_client import CasedbTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 import pandas as pd
@@ -23,7 +23,7 @@ class TestRead:
             if repository_type in (enum.RepositoryType.SA_SQL,):
                 continue
             test_util.set_log_level("casedb", logging.ERROR)
-            env = CasedbAppTestClient.get_test_client(
+            env = CasedbTestClient.get_test_client(
                 test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
                 repository_type=repository_type,
                 log_level=logging.ERROR,
@@ -55,7 +55,7 @@ class TestRead:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        test_dir = CasedbAppTestClient.get_test_client(
+        test_dir = CasedbTestClient.get_test_client(
             test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir

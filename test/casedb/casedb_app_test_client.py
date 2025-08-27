@@ -16,7 +16,7 @@ from uuid import UUID
 import gen_epix.casedb.domain.model.case.case
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.enum import RepositoryType, Role, ServiceType
+from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
@@ -38,16 +38,15 @@ class OrganismType(enum.Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class CasedbAppTestClient(TestClient):
+class CasedbTestClient(TestClient):
     TEST_CLIENTS: dict[Hashable, Any] = {}
 
     DEFAULT_DATA_FIXTURE_NAME = "empty"
     DEFAULT_ROUTE_PREFIX = "/v1"
 
-    MODEL_KEY_MAP = {
+    MODEL_KEY_MAP = TestClient.MODEL_KEY_MAP | {
         model.User: "name",
         model.UserInvitation: "email",
-        model.Organization: "name",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.Disease: "name",
         model.EtiologicalAgent: "name",
@@ -63,7 +62,7 @@ class CasedbAppTestClient(TestClient):
         model.RegionSet: "code",
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
-        gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol: "name",
+        model.GeneticDistanceProtocol: "name",
         model.Dim: "code",
         model.Col: "code",
         model.CaseTypeCol: "code",
@@ -238,72 +237,6 @@ class CasedbAppTestClient(TestClient):
             app_last_handled_exception=app_last_handled_exception,
             **kwargs,
         )
-
-    def get_root_user(self) -> model.User:
-        return model.User(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
-        )
-
-    def create_organization(
-        self, user: str | model.User, organization_name: str
-    ) -> model.Organization:
-        user = self._get_obj(model.User, user)
-        organization = self.app.handle(
-            command.OrganizationCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.Organization(
-                    name=organization_name, legal_entity_code=organization_name
-                ),
-            )
-        )
-        return self._set_obj(organization)
-
-    def invite_and_register_user(
-        self,
-        user: str | model.User,
-        user_name: str,
-        # by_admin: bool = False,
-        set_dummy_organization: bool = False,
-        set_dummy_token: bool = False,
-    ) -> model.User:
-        user: model.User = self._get_obj(model.User, user)
-        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
-        if not m:
-            raise ValueError(f"Invalid user name {user_name}")
-        role = [x for x in Role if x.value.lower() == m.group(1).lower()][0]
-        organization_name = "org" + m.group(2)
-        if organization_name not in self.db[model.Organization]:
-            if set_dummy_organization:
-                organization_id = self.generate_id()
-            else:
-                raise ValueError(f"Organization {organization_name} not found")
-        else:
-            organization_id = self.db[model.Organization][organization_name].id
-        cmd_class = command.InviteUserCommand
-        user_invitation = self.handle(
-            cmd_class(
-                user=user,
-                email=f"{user_name}@{organization_name}.org",
-                roles={role},
-                organization_id=organization_id,
-            )
-        )
-        if set_dummy_token:
-            user_invitation.token = str(self.generate_id())
-        tgt_user = self.handle(
-            command.RegisterInvitedUserCommand(
-                user=model.User(
-                    email=f"{user_name}@{organization_name}.org",
-                    organization_id=organization_id,
-                    roles={role},
-                ),
-                token=user_invitation.token,
-            )
-        )
-        tgt_user.name = user_name
-        return self._set_obj(tgt_user)
 
     def create_org_admin_policy(
         self,
@@ -1673,18 +1606,6 @@ class CasedbAppTestClient(TestClient):
         )
         return self._set_obj(updated_case_type_col_set_member, update=True)
 
-    def read_all_users(self) -> list[model.User]:
-        return self.services[ServiceType.ORGANIZATION].crud(
-            command.UserCrudCommand(
-                user=None,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-
-    def read_users_by_role(self, role: enum.Role) -> list[model.User]:
-        users = self.read_all_users()
-        return [x for x in users if role in x.roles]
-
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
@@ -1793,21 +1714,6 @@ class CasedbAppTestClient(TestClient):
             [user] if include_self else []
         )
 
-    def check_user_has_role(
-        self, user: str | model.User, role: Role, exclusive: bool = True
-    ) -> bool:
-        user: model.User = self._get_obj(model.User, user)
-        roles = user.roles
-        if exclusive:
-            return role in roles and len(roles) == 1
-        return role in roles
-
-    def print_organizations(self) -> None:
-        organizations = self.read_all("root1_1", model.Organization, cascade=True)
-        print("\nOrganizations:")
-        for x in sorted(organizations, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
-
     def print_case_data_collection_links(self) -> None:
         cases = self.read_all("root1_1", model.Case, cascade=True)
         data_collections = {
@@ -1839,12 +1745,6 @@ class CasedbAppTestClient(TestClient):
                 case_name = self._convert_case_date_to_code(x.case_date)
 
                 print(f"{case_name}: {data_collection_str} ({x.id})")
-
-    def print_data_collections(self) -> None:
-        data_collections = self.read_all("root1_1", model.DataCollection, cascade=True)
-        print("\nDataCollections:")
-        for x in sorted(data_collections, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
 
     def print_case_types(self) -> None:
         case_types = self.read_all("root1_1", model.CaseType, cascade=True)
@@ -2083,33 +1983,6 @@ class CasedbAppTestClient(TestClient):
             print(
                 f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
-
-    def print_users(self) -> None:
-        user: model.User = self._get_obj(model.User, "root1_1")
-        users = self.read_all(user, model.User)
-        organizations = {x.id: x for x in self.read_all(user, model.Organization)}
-        print("\nUsers:")
-        for x in sorted(
-            users, key=lambda x: (organizations[x.organization_id].name, x.email)
-        ):
-            print(
-                f"{organizations[x.organization_id].name} / {x.email}: "
-                + ", ".join([z for z in sorted(y.name for y in x.roles)])
-                + f" ({x.id})"
-            )
-
-    def print_user_permissions(self, user: str | model.User) -> None:
-        user: model.User = self._get_obj(model.User, user)
-        user_permissions = self.app.user_manager.get_user_permissions(user)
-        command_permissions = map_paired_elements(
-            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
-        )
-        print(
-            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
-        )
-        model.Permission
-        for x in sorted(user_permissions, key=lambda x: x.sort_key):
-            print(f"{x}")
 
     def _get_obj(
         self,

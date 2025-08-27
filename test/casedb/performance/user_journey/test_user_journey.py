@@ -5,7 +5,7 @@ import pstats
 import re
 import sys
 from pathlib import Path
-from test.casedb.casedb_app_test_client import CasedbAppTestClient
+from test.casedb.casedb_app_test_client import CasedbTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
@@ -95,7 +95,7 @@ class TestRead:
                 enum.RepositoryType.SA_SQLITE,
             }:
                 test_util.set_log_level("casedb", logging.ERROR)
-                env = CasedbAppTestClient.get_test_client(
+                env = CasedbTestClient.get_test_client(
                     test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
                     repository_type=repository_type,
                     log_level=logging.ERROR,
@@ -134,7 +134,7 @@ class TestRead:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        test_dir = CasedbAppTestClient(
+        test_dir = CasedbTestClient(
             test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir

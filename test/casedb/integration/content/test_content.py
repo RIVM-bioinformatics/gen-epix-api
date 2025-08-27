@@ -1,5 +1,5 @@
 import logging
-from test.casedb.casedb_app_test_client import CasedbAppTestClient as Env
+from test.casedb.casedb_app_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 import pytest

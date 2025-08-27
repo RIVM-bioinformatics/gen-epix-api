@@ -1,16 +1,19 @@
 import datetime
 import logging
+import re
+from enum import Enum
 from pathlib import Path
 from time import sleep
 from typing import Any, Dict, Hashable, List, Type, TypeVar, Union, cast
 from uuid import UUID
 
 from gen_epix.common.config import BaseAppCfg
-from gen_epix.common.domain import model
+from gen_epix.common.domain import command, model
 from gen_epix.common.domain.model import Model, User, UserInvitation
 from gen_epix.common.env import BaseAppEnv
 from gen_epix.common.test.endpoint_test_client import EndpointTestClient
 from gen_epix.common.test.util import set_log_level
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 
@@ -33,10 +36,7 @@ class TestClient:
         test_dir: Path,
         app_cfg: BaseAppCfg,
         app_env: BaseAppEnv,
-        # test_type: TestType = TestType.UNDEFINED,
-        # repository_type: RepositoryType = RepositoryType.DICT,
-        # load_target: str | None = None,
-        roles: set = None,
+        roles: set[Enum] | None = None,
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[User] = User,
         user_invitation_class: Type[UserInvitation] = UserInvitation,
@@ -49,14 +49,6 @@ class TestClient:
         self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_env = app_env
-        # self.test_type = test_type
-        # self.test_name: str = test_name or get_test_name(test_type)
-        # self.repository_type = (
-        #     RepositoryType(repository_type.value)
-        #     if isinstance(repository_type, Enum)
-        #     else repository_type
-        # )
-        # self.load_target = load_target
         self.roles = set() if roles is None else roles
         self.role_hierarchy: dict[Hashable, set] = (
             {} if role_hierarchy is None else role_hierarchy
@@ -95,16 +87,6 @@ class TestClient:
 
         # Store remainder of kwargs
         self.props = kwargs
-
-    def generate_id(self) -> UUID:
-        # Type cast needed because app.generate_id() returns Hashable
-        return cast(UUID, self.app.generate_id())
-
-    def get_root_user(self) -> User:
-        return self.user_class(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
-        )
 
     def handle(
         self,
@@ -150,7 +132,7 @@ class TestClient:
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
     ) -> Model:
-        user: self.user_class = self._get_obj(self.user_class, user_or_key)  # type: ignore[name-defined]
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: Model = self._get_obj(
             model_class, obj_or_key, copy=True
         )  # type:ignore[assignment]
@@ -165,6 +147,7 @@ class TestClient:
                 objs=obj,
             )
         )
+        assert user.id
         TestClient._verify_updated_obj(obj, updated_obj, user.id)
         return self._set_obj(updated_obj, update=True)
 
@@ -175,7 +158,7 @@ class TestClient:
         obj_or_key: Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
     ) -> UUID:
-        user: self.user_class = self._get_obj(self.user_class, user_or_key)  # type: ignore[name-defined]
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
 
         if not obj and retry_obj:
@@ -207,10 +190,10 @@ class TestClient:
         model_class: Type[Model],
         cascade: bool = False,
     ) -> list[Model]:
-        user_obj: self.user_class = self._get_obj(self.user_class, user_or_key)  # type: ignore[name-defined]
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         retval: list[Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
-                user=user_obj,
+                user=user,
                 operation=CrudOperation.READ_ALL,
                 props={"cascade_read": cascade},
             ),
@@ -225,7 +208,7 @@ class TestClient:
         obj_ids: list[UUID] | set[UUID],
         cascade: bool = False,
     ) -> list[Model]:
-        user: self.user_class = self._get_obj(self.user_class, user_or_key)  # type: ignore[name-defined]
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         retval: list[Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
@@ -275,10 +258,10 @@ class TestClient:
         model_class: Type[Model],
         expected_ids: set[UUID] | list[Model],
     ) -> None:
-        user_obj: self.user_class = self._get_obj(self.user_class, user_or_key)  # type: ignore[name-defined]
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         objs = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
-                user=user_obj, operation=CrudOperation.READ_ALL
+                user=user, operation=CrudOperation.READ_ALL
             )
         )
         actual_ids = {x.id for x in objs}
@@ -300,7 +283,7 @@ class TestClient:
                 for x in missing_ids
             ]
             raise ValueError(
-                f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user_obj.name}. Model: {model_class}"
+                f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user.name}. Model: {model_class}"
             )
 
     def _get_key_for_obj(self, obj: Model) -> Any:
@@ -420,7 +403,6 @@ class TestClient:
         return table[key] if not copy else table[key].model_copy()
 
     def _set_obj(self, obj: Model, update: bool = False) -> Model:
-        # print(f"{.__class__.__name__} {obj} created")
         model_class = type(obj)
         if model_class not in self.db:
             self.db[model_class] = {}
@@ -484,3 +466,147 @@ class TestClient:
         #     raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
         if out_obj != in_obj:
             raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
+
+    def generate_id(self) -> UUID:
+        # Type cast needed because app.generate_id() returns Hashable
+        return cast(UUID, self.app.generate_id())
+
+    def get_root_user(self) -> User:
+        return self.user_class(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
+
+    def create_organization(
+        self, user_or_str: str | model.User, organization_name: str
+    ) -> model.Organization:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        organization = self.app.handle(
+            command.OrganizationCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Organization(
+                    name=organization_name, legal_entity_code=organization_name
+                ),
+            )
+        )
+        retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
+        return retval
+
+    def invite_and_register_user(
+        self,
+        user_or_str: str | model.User,
+        user_name: str,
+        set_dummy_organization: bool = False,
+        set_dummy_token: bool = False,
+    ) -> model.User:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
+        if not m:
+            raise ValueError(f"Invalid user name {user_name}")
+        role = [x for x in self.roles if x.value.lower() == m.group(1).lower()][0]
+        organization_name = "org" + m.group(2)
+        organization_id: UUID
+        if organization_name not in self.db[model.Organization]:
+            if set_dummy_organization:
+                organization_id = self.generate_id()
+            else:
+                raise ValueError(f"Organization {organization_name} not found")
+        else:
+            organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
+        cmd_class = command.InviteUserCommand
+        user_invitation: model.UserInvitation = self.handle(
+            cmd_class(
+                user=user,
+                email=f"{user_name}@{organization_name}.org",
+                roles={role},
+                organization_id=organization_id,
+            )
+        )
+        if set_dummy_token:
+            user_invitation.token = str(self.generate_id())
+        tgt_user: model.User = self.handle(
+            command.RegisterInvitedUserCommand(
+                user=model.User(
+                    email=f"{user_name}@{organization_name}.org",
+                    organization_id=organization_id,
+                    roles={role},
+                ),
+                token=user_invitation.token,
+            )
+        )
+        tgt_user.name = user_name
+        retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
+        return retval
+
+    def read_all_users(self) -> list[model.User]:
+        root_user = self.get_root_user()
+        retval: list[model.User] = self.app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return retval
+
+    def read_users_by_role(self, role: Enum) -> list[model.User]:
+        users = self.read_all_users()
+        return [x for x in users if role in x.roles]
+
+    def check_user_has_role(
+        self, user_or_str: str | model.User, role: Enum, exclusive: bool = True
+    ) -> bool:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        roles = user.roles
+        if exclusive:
+            return role in roles and len(roles) == 1
+        return role in roles
+
+    def print_organizations(self) -> None:
+        organizations: list[model.Organization] = self.read_all(
+            self.get_root_user(), model.Organization, cascade=True
+        )  # type:ignore[assignment]
+        print("\nOrganizations:")
+        for x in sorted(organizations, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_data_collections(self) -> None:
+        data_collections: list[model.DataCollection] = self.read_all(
+            self.get_root_user(), model.DataCollection, cascade=True
+        )  # type:ignore[assignment]
+        print("\nDataCollections:")
+        for x in sorted(data_collections, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_users(self) -> None:
+        root_user: model.User = self.get_root_user()
+        users: list[model.User] = self.read_all(
+            root_user, model.User
+        )  # type:ignore[assignment]
+        organizations: dict[UUID, model.Organization] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_all(root_user, model.Organization)
+        }
+        print("\nUsers:")
+        for x in sorted(
+            users, key=lambda x: (organizations[x.organization_id].name, x.email)
+        ):
+            print(
+                f"{organizations[x.organization_id].name} / {x.email}: "
+                + ", ".join([z for z in sorted(y.name for y in x.roles)])
+                + f" ({x.id})"
+            )
+
+    def print_user_permissions(self, user_or_str: str | model.User) -> None:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user_permissions = self.app.user_manager.retrieve_user_permissions(user)
+        command_permissions = map_paired_elements(
+            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
+        )
+        print(
+            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
+        )
+        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):  # type: ignore[arg-type,return-value]
+            print(f"{x}")
