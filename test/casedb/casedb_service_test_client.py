@@ -309,8 +309,6 @@ class CasedbServiceTestClient(ServiceTestClient):
             raise ValueError(
                 f"Invitation for {tgt_user.email} not removed after registration"
             )
-
-        # Check if tgt_user has correct roles
         if tgt_user.roles != {role}:
             raise ValueError(
                 f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
