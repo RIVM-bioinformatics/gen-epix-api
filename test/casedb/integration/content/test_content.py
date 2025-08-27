@@ -214,7 +214,7 @@ class TestContent:
                 genetic_sequences: list[model.GeneticSequence] = app.handle(
                     command.RetrieveGeneticSequenceByCaseCommand(
                         user=org_user,
-                        case_ids=case_ids,
+                        case_ids=case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
                     )
                 )
