@@ -3,22 +3,26 @@ import logging
 import re
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
-from test.test_client.enum import RepositoryType as TestClientRepositoryType
 from test.test_client.enum import TestType
-from test.test_client.service_test_client import ServiceTestClient
-from test.test_client.util import get_test_name, get_test_output_dir
+from test.test_client.util import (
+    create_data_fixture,
+    get_test_name,
+    get_test_output_dir,
+)
 from time import sleep
-from typing import Any, Type, TypeVar
+from typing import Any, Hashable, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.enum import RepositoryType, Role, ServiceType
+from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.common.config import AppCfg
+from gen_epix.common.test.enum import RepositoryType
+from gen_epix.common.test.test_client import TestClient
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
@@ -27,8 +31,6 @@ APP_NAME = "CASEDB"
 APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
 APP_CFG.setup_logger.setLevel(logging.WARNING)
 
-BASE_MODEL_TYPE = TypeVar("T", bound=model.Model)
-
 
 class OrganismType(enum.Enum):
     ORGANISM = "ORGANISM"
@@ -36,13 +38,15 @@ class OrganismType(enum.Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class CasedbServiceTestClient(ServiceTestClient):
-    DEFAULT_LOAD_TARGET = "empty"
+class CasedbTestClient(TestClient):
+    TEST_CLIENTS: dict[Hashable, Any] = {}
 
-    MODEL_KEY_MAP = {
+    DEFAULT_DATA_FIXTURE_NAME = "empty"
+    DEFAULT_ROUTE_PREFIX = "/v1"
+
+    MODEL_KEY_MAP = TestClient.MODEL_KEY_MAP | {
         model.User: "name",
         model.UserInvitation: "email",
-        model.Organization: "name",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.Disease: "name",
         model.EtiologicalAgent: "name",
@@ -58,7 +62,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         model.RegionSet: "code",
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
-        gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol: "name",
+        model.GeneticDistanceProtocol: "name",
         model.Dim: "code",
         model.Col: "code",
         model.CaseTypeCol: "code",
@@ -119,56 +123,59 @@ class CasedbServiceTestClient(ServiceTestClient):
     @classmethod
     def get_test_client(
         cls,
-        test_type: TestType = TestType.CASEDB_CUSTOM,
+        test_type: str = TestType.CASEDB_CUSTOM.value,
         repository_type: enum.RepositoryType = enum.RepositoryType.DICT,
-        load_target: str = DEFAULT_LOAD_TARGET,
+        data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
+        route_prefix: str = DEFAULT_ROUTE_PREFIX,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
         **kwargs: Any,
-    ) -> "ServiceTestClient":
+    ) -> "TestClient":
         """
         Create a test environment for the given test type and repository type. A
         single environment, with a common test directory, is kept for each test type.
         """
-        key = (test_type, repository_type, load_target)
-        if key not in ServiceTestClient.TEST_CLIENTS:
+        key = (test_type, repository_type, data_fixture_name)
+        if key not in cls.TEST_CLIENTS:
             test_dir = None
-            for stored_key, stored_env in ServiceTestClient.TEST_CLIENTS.items():
-                stored_test_type, _, _ = stored_key
-                if stored_test_type == test_type:
+            for stored_key, stored_env in cls.TEST_CLIENTS.items():
+                stored_test_type, _, _ = stored_key  # type: ignore[misc]
+                if stored_test_type == test_type:  # type: ignore[has-type]
                     test_dir = stored_env.test_dir
                     break
-            ServiceTestClient.TEST_CLIENTS[key] = CasedbServiceTestClient(
+            cls.TEST_CLIENTS[key] = cls(
                 test_type=test_type,
                 repository_type=repository_type,
-                load_target=load_target,
+                data_fixture_name=data_fixture_name,
+                route_prefix=route_prefix,
                 verbose=verbose,
                 log_level=log_level,
                 log_setup=log_setup,
                 test_dir=test_dir,
                 **kwargs,
             )
-        return ServiceTestClient.TEST_CLIENTS[key]
+        return cls.TEST_CLIENTS[key]  # type: ignore[no-any-return]
 
     def __init__(
         self,
-        test_type: TestType = TestType.UNDEFINED,
+        test_type: str = TestType.UNDEFINED.value,
         repository_type: RepositoryType = RepositoryType.DICT,
-        load_target: str = DEFAULT_LOAD_TARGET,
+        data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
         test_dir: Path | None = None,
-        **kwargs: bool | str | int | dict,
+        use_endpoints: bool = False,
+        **kwargs: Any,
     ):
-        test_client_repository_type = TestClientRepositoryType(repository_type.value)
+        test_client_repository_type = RepositoryType(repository_type.value)
 
         # Set up test name and directory
         app_cfg = APP_CFG
         cfg = app_cfg.cfg
         test_name = get_test_name(test_type)
-        test_dir: Path = test_dir or get_test_output_dir(test_name)
+        test_dir = test_dir or get_test_output_dir(test_name)
 
         # Set and adjust cfg
         app_cfg.cfg.app.debug = True
@@ -178,21 +185,20 @@ class CasedbServiceTestClient(ServiceTestClient):
         curr_cfg.organization.name = "org1"
         curr_cfg.user.email = "root1_1@org1.org"
         # Copy any repository files to test directory
-        ServiceTestClient._init_repositories(
+        create_data_fixture(
             app_cfg.cfg.secret.repository[repository_type.value],
             set(ServiceType),
             test_client_repository_type,
-            load_target,
+            data_fixture_name,
             test_dir,
         )
 
         # Create app
-        ServiceTestClient._set_log_level(app_cfg, log_level)
+        TestClient._set_log_level(app_cfg, log_level)
         app_env = AppEnv(app_cfg, log_setup=log_setup, **kwargs)
 
         # Create endpoint test client if endpoints are to be used (including own
         # app_env), otherwise construct app env separately
-        use_endpoints: bool = kwargs.pop("use_endpoints", False)
         endpoint_test_client: CasedbEndpointTestClient | None = None
         app_last_handled_exception: dict | None = None
         if use_endpoints:
@@ -215,15 +221,13 @@ class CasedbServiceTestClient(ServiceTestClient):
 
         # Call base class constructor
         super().__init__(
-            app_env,
+            test_name,
+            test_dir,
             app_cfg,
-            test_type=test_type,
-            test_name=test_name,
-            test_dir=test_dir,
-            repository_type=test_client_repository_type,
-            load_target=load_target,
-            roles=enum.Role,
-            role_hierarchy=RoleGenerator.ROLE_HIERARCHY,
+            app_env,
+            data_fixture_name=data_fixture_name,
+            roles=set(enum.Role),
+            role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
             verbose=verbose,
@@ -233,72 +237,6 @@ class CasedbServiceTestClient(ServiceTestClient):
             app_last_handled_exception=app_last_handled_exception,
             **kwargs,
         )
-
-    def get_root_user(self) -> model.User:
-        return model.User(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
-        )
-
-    def create_organization(
-        self, user: str | model.User, organization_name: str
-    ) -> model.Organization:
-        user = self._get_obj(model.User, user)
-        organization = self.app.handle(
-            command.OrganizationCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.Organization(
-                    name=organization_name, legal_entity_code=organization_name
-                ),
-            )
-        )
-        return self._set_obj(organization)
-
-    def invite_and_register_user(
-        self,
-        user: str | model.User,
-        user_name: str,
-        # by_admin: bool = False,
-        set_dummy_organization: bool = False,
-        set_dummy_token: bool = False,
-    ) -> model.User:
-        user: model.User = self._get_obj(model.User, user)
-        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
-        if not m:
-            raise ValueError(f"Invalid user name {user_name}")
-        role = [x for x in Role if x.value.lower() == m.group(1).lower()][0]
-        organization_name = "org" + m.group(2)
-        if organization_name not in self.db[model.Organization]:
-            if set_dummy_organization:
-                organization_id = self.generate_id()
-            else:
-                raise ValueError(f"Organization {organization_name} not found")
-        else:
-            organization_id = self.db[model.Organization][organization_name].id
-        cmd_class = command.InviteUserCommand
-        user_invitation = self.handle(
-            cmd_class(
-                user=user,
-                email=f"{user_name}@{organization_name}.org",
-                roles={role},
-                organization_id=organization_id,
-            )
-        )
-        if set_dummy_token:
-            user_invitation.token = str(self.generate_id())
-        tgt_user = self.handle(
-            command.RegisterInvitedUserCommand(
-                user=model.User(
-                    email=f"{user_name}@{organization_name}.org",
-                    organization_id=organization_id,
-                    roles={role},
-                ),
-                token=user_invitation.token,
-            )
-        )
-        tgt_user.name = user_name
-        return self._set_obj(tgt_user)
 
     def create_org_admin_policy(
         self,
@@ -1404,7 +1342,7 @@ class CasedbServiceTestClient(ServiceTestClient):
             )
         )
         updated_tgt_user.name = tgt_user.name
-        ServiceTestClient._verify_updated_obj(
+        TestClient._verify_updated_obj(
             tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
         )
         return self._set_obj(updated_tgt_user, update=True)
@@ -1668,18 +1606,6 @@ class CasedbServiceTestClient(ServiceTestClient):
         )
         return self._set_obj(updated_case_type_col_set_member, update=True)
 
-    def read_all_users(self) -> list[model.User]:
-        return self.services[ServiceType.ORGANIZATION].crud(
-            command.UserCrudCommand(
-                user=None,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-
-    def read_users_by_role(self, role: enum.Role) -> list[model.User]:
-        users = self.read_all_users()
-        return [x for x in users if role in x.roles]
-
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
@@ -1788,21 +1714,6 @@ class CasedbServiceTestClient(ServiceTestClient):
             [user] if include_self else []
         )
 
-    def check_user_has_role(
-        self, user: str | model.User, role: Role, exclusive: bool = True
-    ) -> bool:
-        user: model.User = self._get_obj(model.User, user)
-        roles = user.roles
-        if exclusive:
-            return role in roles and len(roles) == 1
-        return role in roles
-
-    def print_organizations(self) -> None:
-        organizations = self.read_all("root1_1", model.Organization, cascade=True)
-        print("\nOrganizations:")
-        for x in sorted(organizations, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
-
     def print_case_data_collection_links(self) -> None:
         cases = self.read_all("root1_1", model.Case, cascade=True)
         data_collections = {
@@ -1834,12 +1745,6 @@ class CasedbServiceTestClient(ServiceTestClient):
                 case_name = self._convert_case_date_to_code(x.case_date)
 
                 print(f"{case_name}: {data_collection_str} ({x.id})")
-
-    def print_data_collections(self) -> None:
-        data_collections = self.read_all("root1_1", model.DataCollection, cascade=True)
-        print("\nDataCollections:")
-        for x in sorted(data_collections, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
 
     def print_case_types(self) -> None:
         case_types = self.read_all("root1_1", model.CaseType, cascade=True)
@@ -2053,8 +1958,7 @@ class CasedbServiceTestClient(ServiceTestClient):
             cases = [
                 x
                 for x in cases
-                if ServiceTestClient._convert_case_date_to_code(x.case_date)
-                in case_codes
+                if TestClient._convert_case_date_to_code(x.case_date) in case_codes
             ]
         case_data_collection_links = self.read_all(user, model.CaseDataCollectionLink)
         data_collections = {x.id: x for x in self.read_all(user, model.DataCollection)}
@@ -2077,35 +1981,8 @@ class CasedbServiceTestClient(ServiceTestClient):
             )
             curr_content = ", ".join([f"{x[0]}={x[1]}" for x in curr_content])
             print(
-                f"{ServiceTestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
+                f"{TestClient._convert_case_date_to_code(x.case_date)}: {curr_content}; {curr_data_collections} ({x.id})"
             )
-
-    def print_users(self) -> None:
-        user: model.User = self._get_obj(model.User, "root1_1")
-        users = self.read_all(user, model.User)
-        organizations = {x.id: x for x in self.read_all(user, model.Organization)}
-        print("\nUsers:")
-        for x in sorted(
-            users, key=lambda x: (organizations[x.organization_id].name, x.email)
-        ):
-            print(
-                f"{organizations[x.organization_id].name} / {x.email}: "
-                + ", ".join([z for z in sorted(y.name for y in x.roles)])
-                + f" ({x.id})"
-            )
-
-    def print_user_permissions(self, user: str | model.User) -> None:
-        user: model.User = self._get_obj(model.User, user)
-        user_permissions = self.app.user_manager.get_user_permissions(user)
-        command_permissions = map_paired_elements(
-            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
-        )
-        print(
-            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
-        )
-        model.Permission
-        for x in sorted(user_permissions, key=lambda x: x.sort_key):
-            print(f"{x}")
 
     def _get_obj(
         self,
@@ -2119,7 +1996,7 @@ class CasedbServiceTestClient(ServiceTestClient):
         ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> BASE_MODEL_TYPE | list[BASE_MODEL_TYPE]:
+    ) -> model.Model | list[model.Model]:
         if isinstance(obj, list):
             return [self._get_obj(model_class, x) for x in obj]
         if model_class not in self.db:

@@ -1,38 +1,42 @@
+import datetime
 import logging
+import re
 from enum import Enum
 from pathlib import Path
-from test.test_client.endpoint_test_client import EndpointTestClient, EndpointVersion
-from test.test_client.enum import TestType
-from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
 from typing import Any, Dict, Hashable, List, Type, TypeVar, Union, cast
 from uuid import UUID
 
 from gen_epix.common.config import BaseAppCfg
+from gen_epix.common.domain import command, model
 from gen_epix.common.domain.model import Model, User, UserInvitation
 from gen_epix.common.env import BaseAppEnv
-from gen_epix.common.test.enum import RepositoryType
+from gen_epix.common.test.endpoint_test_client import EndpointTestClient
+from gen_epix.common.test.util import set_log_level
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 
 BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=Model)
 
 
-class ServiceTestClient:
+class TestClient:
     TEST_CLIENTS: dict[Hashable, Any] = {}
 
-    MODEL_KEY_MAP: dict[Type[Model], Union[str, tuple[str, ...]]] = {}
+    MODEL_KEY_MAP: dict[Type[Model], Union[str, tuple[str, ...]]] = {
+        model.User: "name",
+        model.UserInvitation: "email",
+        model.Organization: "name",
+        model.DataCollection: "name",
+    }
 
     def __init__(
         self,
-        app_env: BaseAppEnv,
+        test_name: str,
+        test_dir: Path,
         app_cfg: BaseAppCfg,
-        test_type: TestType = TestType.UNDEFINED,
-        test_name: str | None = None,
-        test_dir: Path | None = None,
-        repository_type: Hashable | None = RepositoryType.DICT,
-        load_target: str | None = None,
-        roles: set | Enum | None = None,
+        app_env: BaseAppEnv,
+        roles: set[Enum] | None = None,
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[User] = User,
         user_invitation_class: Type[UserInvitation] = UserInvitation,
@@ -41,18 +45,11 @@ class ServiceTestClient:
         **kwargs: Any,
     ):
         # Set provided parameters
+        self.test_name = test_name
+        self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_env = app_env
-        self.test_type = test_type
-        self.test_name: str = test_name or get_test_name(test_type)
-        self.test_dir: Path = test_dir or get_test_output_dir(self.test_name)
-        self.repository_type = (
-            RepositoryType(repository_type.value)
-            if isinstance(repository_type, Enum)
-            else repository_type
-        )
-        self.load_target = load_target
-        self.roles: set | Enum = set() if roles is None else roles
+        self.roles = set() if roles is None else roles
         self.role_hierarchy: dict[Hashable, set] = (
             {} if role_hierarchy is None else role_hierarchy
         )
@@ -62,7 +59,7 @@ class ServiceTestClient:
         self.verbose = verbose
 
         # Set log level
-        ServiceTestClient._set_log_level(app_cfg, log_level)
+        TestClient._set_log_level(app_cfg, log_level)
 
         # Set additional parameters
         self.app = self.app_env.app
@@ -91,22 +88,12 @@ class ServiceTestClient:
         # Store remainder of kwargs
         self.props = kwargs
 
-    def generate_id(self) -> UUID:
-        # Type cast needed because app.generate_id() returns Hashable
-        return cast(UUID, self.app.generate_id())
-
-    def get_root_user(self) -> User:
-        return self.user_class(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
-        )
-
     def handle(
         self,
         cmd: Command,
         return_response: bool = False,
-        endpoint_version: EndpointVersion = EndpointVersion.V1,
         use_endpoint: bool | None = None,
+        route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
         use_endpoint = use_endpoint if use_endpoint is not None else self.use_endpoints
@@ -118,7 +105,7 @@ class ServiceTestClient:
             retval, response = self.endpoint_test_client.handle(
                 cmd,
                 return_response=True,
-                endpoint_version=endpoint_version,
+                route_prefix=route_prefix,
                 **kwargs,
             )
 
@@ -138,15 +125,17 @@ class ServiceTestClient:
 
     def update_object(
         self,
-        user: str | User,
+        user_or_key: str | User,
         model_class: Type[Model],
-        obj: Model | str,
+        obj_or_key: Model | str,
         props: dict[str, Any | None],
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
     ) -> Model:
-        user: self.user_class = self._get_obj(self.user_class, user)
-        obj: Model = self._get_obj(model_class, obj, copy=True)
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: Model = self._get_obj(
+            model_class, obj_or_key, copy=True
+        )  # type:ignore[assignment]
         self._update_object_properties(
             obj, props, set_dummy_link, exclude_none=exclude_none
         )
@@ -158,23 +147,24 @@ class ServiceTestClient:
                 objs=obj,
             )
         )
-        ServiceTestClient._verify_updated_obj(obj, updated_obj, user.id)
+        assert user.id
+        TestClient._verify_updated_obj(obj, updated_obj, user.id)
         return self._set_obj(updated_obj, update=True)
 
     def delete_object(
         self,
-        user: str | User,
+        user_or_key: str | User,
         model_class: Type[Model],
-        obj: Model | str | tuple[UUID, UUID],
+        obj_or_key: Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
-    ) -> list[UUID] | UUID:
-        user: self.user_class = self._get_obj(self.user_class, user)
-        obj: Model = self._get_obj(model_class, obj, copy=True)
+    ) -> UUID:
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
 
         if not obj and retry_obj:
-            obj = self._get_obj(model_class, retry_obj, copy=True)
+            obj = self._get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
 
-        deleted_obj_id = self.handle(
+        deleted_obj_id: UUID = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.DELETE_ONE,
@@ -196,61 +186,65 @@ class ServiceTestClient:
 
     def read_all(
         self,
-        user: str | User,
-        model_class: Type[BASE_MODEL_TYPE],
+        user_or_key: User | str,
+        model_class: Type[Model],
         cascade: bool = False,
-    ) -> list[BASE_MODEL_TYPE]:
-        user_obj: self.user_class = self._get_obj(self.user_class, user)
-        return self.handle(
+    ) -> list[Model]:
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        retval: list[Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
-                user=user_obj,
+                user=user,
                 operation=CrudOperation.READ_ALL,
                 props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
+        return retval
 
     def read_some(
         self,
-        user: str | User,
+        user_or_key: User | str,
         model_class: Type[Model],
         obj_ids: list[UUID] | set[UUID],
         cascade: bool = False,
-    ) -> Model:
-        user: self.user_class = self._get_obj(self.user_class, user)
-        # objs = self.read_all(user, model_class, cascade=cascade)
-        # return [x for x in objs if x.id in obj_ids]
-        return self.handle(
+    ) -> list[Model]:
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        retval: list[Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.READ_SOME,
-                obj_ids=obj_ids,
+                obj_ids=(
+                    list(obj_ids)
+                    if isinstance(obj_ids, set)
+                    else obj_ids  # type:ignore[arg-type]
+                ),
                 props={"cascade_read": cascade},
             ),
             use_endpoint=False,
         )
+        return retval
 
     def read_some_by_property(
         self,
-        user: str | User,
+        user_or_key: User | str,
         model_class: Type[Model],
         name: str,
         value: Any,
         cascade: bool = False,
     ) -> List[Model]:
-        objs = self.read_all(user, model_class, cascade=cascade)
+        objs = self.read_all(user_or_key, model_class, cascade=cascade)
         return [x for x in objs if getattr(x, name) == value]
 
     def read_one_by_property(
         self,
-        user: str | User,
+        user_or_key: User | str,
         model_class: Type[Model],
         name: str,
         value: Any,
         cascade: bool = False,
     ) -> Model:
         objs = self.read_some_by_property(
-            user, model_class, name, value, cascade=cascade
+            user_or_key, model_class, name, value, cascade=cascade
         )
         if len(objs) == 0:
             raise ValueError(f"{model_class} with {name}='{value}' not found")
@@ -260,14 +254,14 @@ class ServiceTestClient:
 
     def verify_read_all(
         self,
-        user: str | User,
+        user_or_key: User | str,
         model_class: Type[Model],
         expected_ids: set[UUID] | list[Model],
     ) -> None:
-        user_obj: self.user_class = self._get_obj(self.user_class, user)
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         objs = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
-                user=user_obj, operation=CrudOperation.READ_ALL
+                user=user, operation=CrudOperation.READ_ALL
             )
         )
         actual_ids = {x.id for x in objs}
@@ -277,14 +271,19 @@ class ServiceTestClient:
             extra_ids = actual_ids - expected_ids
             missing_ids = expected_ids - actual_ids
             extra_names = [
-                self._get_key_for_obj(self._get_obj(model_class, x)) for x in extra_ids
+                self._get_key_for_obj(
+                    self._get_obj(model_class, x)  # type:ignore[arg-type]
+                )
+                for x in extra_ids
             ]
             missing_names = [
-                self._get_key_for_obj(self._get_obj(model_class, x))
+                self._get_key_for_obj(
+                    self._get_obj(model_class, x)  # type:ignore[arg-type]
+                )
                 for x in missing_ids
             ]
             raise ValueError(
-                f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user_obj.name}. Model: {model_class}"
+                f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user.name}. Model: {model_class}"
             )
 
     def _get_key_for_obj(self, obj: Model) -> Any:
@@ -309,10 +308,16 @@ class ServiceTestClient:
         """
         # Parse input
         model_class = obj.__class__
+        assert model_class.ENTITY
         id_field_name = model_class.ENTITY.id_field_name
+        assert id_field_name
         link_map: dict[str, tuple[str, Type[Model]]] = {
-            x.relationship_field_name: (x.link_field_name, x.link_model_class)
+            x.relationship_field_name: (
+                x.link_field_name,
+                x.link_model_class,
+            )  # type:ignore[misc]
             for x in model_class.ENTITY.links.values()
+            if x.relationship_field_name
         }
         default_set_dummy_link = False
         if isinstance(set_dummy_link, bool):
@@ -340,71 +345,26 @@ class ServiceTestClient:
                 continue
             setattr(obj, field_name, value)
 
-    @staticmethod
-    def _init_repositories(
-        repository_cfg: dict,
-        services: set[Hashable],
-        repository_type: RepositoryType,
-        load_target: str,
-        test_dir: Path,
-    ) -> None:
-        for service_type in services:
-            service_type_str = (
-                str(service_type.value)
-                if isinstance(service_type, Enum)
-                else str(service_type)
-            )
-            curr_cfg = repository_cfg[service_type_str]
-            if not curr_cfg:
-                # No repository
-                continue
-            match repository_type:
-                case RepositoryType.DICT:
-                    curr_cfg["file"] = re.sub(
-                        r"\.[A-Za-z]+\.pkl\.gz",
-                        f".{load_target.lower()}.pkl.gz",
-                        curr_cfg["file"],
-                        flags=re.IGNORECASE,
-                    )
-                case RepositoryType.SA_SQLITE:
-                    # Copy sqlite files to test output directory
-                    source_file = Path(
-                        re.sub(
-                            r"\.[A-Za-z]+\.sqlite",
-                            f".{load_target.lower()}.sqlite",
-                            curr_cfg["file"],
-                            flags=re.IGNORECASE,
-                        )
-                    )
-                    if not source_file.is_file():
-                        continue
-                    target_file = test_dir / source_file.name
-                    curr_cfg["file"] = str(target_file.absolute())
-                    shutil.copyfile(source_file, target_file)
-                case RepositoryType.SA_SQL:
-                    # Nothing to do
-                    pass
-                case _:
-                    raise NotImplementedError(
-                        f"repository_type {repository_type} not implemented"
-                    )
-
     def _get_obj_key(
         self,
         table: dict,
         model_class: Type[Model],
         obj: str | UUID | Model | list[str | UUID | Model] | tuple[UUID, UUID],
         on_missing: str,
-    ) -> tuple[UUID, UUID] | UUID:
+    ) -> tuple[UUID, UUID] | UUID | None:
         key_fields = self.MODEL_KEY_MAP[model_class]
+        assert model_class.ENTITY
+        get_obj_id = model_class.ENTITY.get_obj_id
         if not isinstance(key_fields, tuple):
             key_fields = (key_fields,) if len(key_fields) > 1 else key_fields
         if isinstance(obj, str) or isinstance(obj, datetime.datetime):
             key = (obj,)
         elif isinstance(obj, UUID):
-            key = [x for x, y in table.items() if y.id == obj]
+            key = [
+                x for x, y in table.items() if get_obj_id(y) == obj
+            ]  # type:ignore[assignment]
             if key:
-                key = key[0]
+                pass
             elif on_missing == "raise":
                 raise ValueError(f"{model_class.__name__} {obj} not found")
             elif on_missing == "return_none":
@@ -414,11 +374,11 @@ class ServiceTestClient:
         elif isinstance(obj, Model):
             key = tuple(getattr(obj, x) for x in key_fields)
         elif isinstance(obj, tuple):
-            key = obj
+            key = obj  # type:ignore[assignment]
         else:
             raise ValueError(f"Invalid object: {obj}")
-        key = key if len(key) > 1 else key[0]
-        return key
+        key = key if len(key) > 1 else key[0]  # type:ignore[assignment]
+        return key  # type:ignore[return-value]
 
     def _get_obj(
         self,
@@ -426,11 +386,11 @@ class ServiceTestClient:
         obj: str | UUID | Model | list[str | UUID | Model] | tuple[UUID, UUID],
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> BASE_MODEL_TYPE | list[BASE_MODEL_TYPE]:
-        if isinstance(obj, list):
-            return [self._get_obj(model_class, x) for x in obj]
+    ) -> Model | list[Model] | None:
         if model_class not in self.db:
             self.db[model_class] = {}
+        if isinstance(obj, list):
+            return [self._get_obj(model_class, x) for x in obj]  # type: ignore[misc]
         table = self.db[model_class]
         key = self._get_obj_key(table, model_class, obj, on_missing)
         if key not in table:
@@ -443,7 +403,6 @@ class ServiceTestClient:
         return table[key] if not copy else table[key].model_copy()
 
     def _set_obj(self, obj: Model, update: bool = False) -> Model:
-        # print(f"{.__class__.__name__} {obj} created")
         model_class = type(obj)
         if model_class not in self.db:
             self.db[model_class] = {}
@@ -453,13 +412,16 @@ class ServiceTestClient:
             key_fields = (key_fields,) if len(key_fields) > 1 else key_fields
         model_name = model_class.__name__
         key = tuple(getattr(obj, x) for x in key_fields)
-        key = key if len(key) > 1 else key[0]
+        key = (
+            key if len(key) > 1 else key[0]  # pyright: ignore[reportGeneralTypeIssues]
+        )
         if key in table:
             if update:
                 table[key] = obj
             else:
                 raise ValueError(f"{model_name} {obj} already exists")
-        table[key] = obj
+        else:
+            table[key] = obj
         return obj
 
     def _delete_obj(self, model_class: Type[Model], obj_id: UUID) -> Model:
@@ -468,13 +430,13 @@ class ServiceTestClient:
         table = self.db[model_class]
         key = [x for x, y in table.items() if y.id == obj_id]
         if key:
-            key = key[0]
+            key = key[0]  # type:ignore[assignment]
         else:
             raise ValueError(f"{model_class} {obj_id} not found")
-        if key not in table:
+        if key not in table:  # type:ignore[comparison-overlap]
             raise ValueError(f"{model_class} {obj_id} not found")
-        obj = table[key]
-        del table[key]
+        obj = table[key]  # type:ignore[index]
+        del table[key]  # type:ignore[arg-type]
         return obj
 
     @staticmethod
@@ -505,3 +467,147 @@ class ServiceTestClient:
         #     raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
         if out_obj != in_obj:
             raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
+
+    def generate_id(self) -> UUID:
+        # Type cast needed because app.generate_id() returns Hashable
+        return cast(UUID, self.app.generate_id())
+
+    def get_root_user(self) -> User:
+        return self.user_class(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
+
+    def create_organization(
+        self, user_or_str: str | model.User, organization_name: str
+    ) -> model.Organization:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        organization = self.app.handle(
+            command.OrganizationCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Organization(
+                    name=organization_name, legal_entity_code=organization_name
+                ),
+            )
+        )
+        retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
+        return retval
+
+    def invite_and_register_user(
+        self,
+        user_or_str: str | model.User,
+        user_name: str,
+        set_dummy_organization: bool = False,
+        set_dummy_token: bool = False,
+    ) -> model.User:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
+        if not m:
+            raise ValueError(f"Invalid user name {user_name}")
+        role = [x for x in self.roles if x.value.lower() == m.group(1).lower()][0]
+        organization_name = "org" + m.group(2)
+        organization_id: UUID
+        if organization_name not in self.db[model.Organization]:
+            if set_dummy_organization:
+                organization_id = self.generate_id()
+            else:
+                raise ValueError(f"Organization {organization_name} not found")
+        else:
+            organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
+        cmd_class = command.InviteUserCommand
+        user_invitation: model.UserInvitation = self.handle(
+            cmd_class(
+                user=user,
+                email=f"{user_name}@{organization_name}.org",
+                roles={role},
+                organization_id=organization_id,
+            )
+        )
+        if set_dummy_token:
+            user_invitation.token = str(self.generate_id())
+        tgt_user: model.User = self.handle(
+            command.RegisterInvitedUserCommand(
+                user=model.User(
+                    email=f"{user_name}@{organization_name}.org",
+                    organization_id=organization_id,
+                    roles={role},
+                ),
+                token=user_invitation.token,
+            )
+        )
+        tgt_user.name = user_name
+        retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
+        return retval
+
+    def read_all_users(self) -> list[model.User]:
+        root_user = self.get_root_user()
+        retval: list[model.User] = self.app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return retval
+
+    def read_users_by_role(self, role: Enum) -> list[model.User]:
+        users = self.read_all_users()
+        return [x for x in users if role in x.roles]
+
+    def check_user_has_role(
+        self, user_or_str: str | model.User, role: Enum, exclusive: bool = True
+    ) -> bool:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        roles = user.roles
+        if exclusive:
+            return role in roles and len(roles) == 1
+        return role in roles
+
+    def print_organizations(self) -> None:
+        organizations: list[model.Organization] = self.read_all(
+            self.get_root_user(), model.Organization, cascade=True
+        )  # type:ignore[assignment]
+        print("\nOrganizations:")
+        for x in sorted(organizations, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_data_collections(self) -> None:
+        data_collections: list[model.DataCollection] = self.read_all(
+            self.get_root_user(), model.DataCollection, cascade=True
+        )  # type:ignore[assignment]
+        print("\nDataCollections:")
+        for x in sorted(data_collections, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_users(self) -> None:
+        root_user: model.User = self.get_root_user()
+        users: list[model.User] = self.read_all(
+            root_user, model.User
+        )  # type:ignore[assignment]
+        organizations: dict[UUID, model.Organization] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_all(root_user, model.Organization)
+        }
+        print("\nUsers:")
+        for x in sorted(
+            users, key=lambda x: (organizations[x.organization_id].name, x.email)
+        ):
+            print(
+                f"{organizations[x.organization_id].name} / {x.email}: "
+                + ", ".join([z for z in sorted(y.name for y in x.roles)])
+                + f" ({x.id})"
+            )
+
+    def print_user_permissions(self, user_or_str: str | model.User) -> None:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user_permissions = self.app.user_manager.retrieve_user_permissions(user)
+        command_permissions = map_paired_elements(
+            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
+        )
+        print(
+            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
+        )
+        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):  # type: ignore[arg-type,return-value]
+            print(f"{x}")
