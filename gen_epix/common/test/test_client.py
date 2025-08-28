@@ -420,7 +420,8 @@ class TestClient:
                 table[key] = obj
             else:
                 raise ValueError(f"{model_name} {obj} already exists")
-        table[key] = obj
+        else:
+            table[key] = obj
         return obj
 
     def _delete_obj(self, model_class: Type[Model], obj_id: UUID) -> Model:

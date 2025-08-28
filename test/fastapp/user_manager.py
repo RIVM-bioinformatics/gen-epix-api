@@ -14,11 +14,15 @@ class UserManager(BaseUserManager):
     def get_user_instance_from_claims(self, claims: dict[str, Any]) -> User:
         return self.user_class(**claims)
 
-    def is_root_user(self, claims: dict[str, Any]) -> bool:
+    def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
         return self.get_user_key_from_claims(claims) in self.root_users
+
+    def is_root_user(self, user: User) -> bool:
+        return user.id in self.root_users
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> User:
         user = self.create_user_from_claims(claims)
+        assert user.id is not None
         self.root_users[user.id] = user
         return user
 
