@@ -1,11 +1,11 @@
 import logging
-import test.test_client.util as test_util
+from test.test_client.app_test_client import ServiceTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
-from test.test_client.service_test_client import ServiceTestClient as Env
 from uuid import UUID
 
 import pytest
 
+import gen_epix.common.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import (
