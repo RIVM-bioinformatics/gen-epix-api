@@ -1,23 +1,11 @@
-import gzip
-import importlib
 import os
-import pickle
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 
 import fire
-import pandas as pd
-import pytest
-import uvicorn
 
-from gen_epix.common.config import AppCfg, ConfigDiscovery
+from gen_epix.common.config import ConfigDiscovery
 from gen_epix.common.domain.enum import AppConfigType, AppType, AppTypeSet
-from gen_epix.common.util import generate_ulid
-from gen_epix.fastapp import Domain
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.repositories.dict.repository import DictRepository
-from gen_epix.fastapp.repositories.sa.repository import SARepository
 
 
 class Run:
@@ -262,6 +250,8 @@ class Run:
 
     ## api
     def api(self, app_type: str, env_name: str, idp_config: str) -> None:
+        import uvicorn
+
         app_type = AppType[app_type.upper()]
         idp_config = AppConfigType[idp_config.upper()]
         env_name = env_name.upper()
@@ -304,175 +294,33 @@ class Run:
     def etl_load_demo_data(
         self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
     ) -> None:
+        from test.test_client.util import load_demo_data
+
+        # Set all environment variables
+        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
         if isinstance(app_type, str):
             app_type = AppType[app_type.upper()]
         assert isinstance(app_type, AppType)
         # Special case: apply to all apps
         if app_type == AppType.ALL:
             for app_type2 in AppTypeSet.ALL.value:
-                self.etl_load_demo_data(app_type2)
+                module_root: str = Run.ETL_ENV[app_type2]["module_root"]
+                load_demo_data(
+                    app_type2,
+                    module_root,
+                    connect_timeout=connect_timeout,
+                    verbose=verbose,
+                )
             return
-        # Set all environment variables
-        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
-
-        def _create_from_repository(
-            user_id: str,
-            entities: list,
-            dict_repository: DictRepository,
-            sa_repository: SARepository,
-        ) -> None:
-            # Delete all first in reverse order
-            for entity in entities[::-1]:
-                model_class = entity.model_class
-                with sa_repository.uow() as sa_uow:
-                    sa_repository.crud(
-                        sa_uow,
-                        user_id,
-                        model_class,
-                        None,
-                        None,
-                        CrudOperation.DELETE_ALL,
-                    )
-            for entity in entities:
-                model_class = entity.model_class
-                with (
-                    dict_repository.uow() as dict_uow,
-                    sa_repository.uow() as sa_uow,
-                ):
-                    objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
-                        dict_uow,
-                        user_id,
-                        model_class,
-                        None,
-                        None,
-                        CrudOperation.READ_ALL,
-                        return_copy=False,
-                    )
-                    sa_repository.crud(
-                        sa_uow,
-                        user_id,
-                        model_class,
-                        objs,
-                        None,
-                        CrudOperation.CREATE_SOME,
-                    )
-
-        # Get classes and config for the app type
         module_root: str = Run.ETL_ENV[app_type]["module_root"]
-        enum = importlib.import_module(f"{module_root}.domain.enum")
-        model = importlib.import_module(f"{module_root}.domain.model")
-        domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
-        cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
-        service_data: dict[Enum, dict] = importlib.import_module(
-            f"{module_root}.env"
-        ).AppEnv.SERVICE_DATA
-        user_id = cfg.cfg.SECRET.root.user.id
-        for service_type, data in service_data.items():
-            # # TODO: TEMPORARY for debugging, remove later
-            # if service_type.value != "CASE":
-            #     continue
-            if "repository_class" not in data:
-                continue
-            entities = domain.get_dag_sorted_entities(
-                service_type=service_type, persistable=True
-            )
-            # Create dict repository, which is assumed to always be available
-            dict_repository_class: DictRepository = data["repository_class"][
-                enum.RepositoryType.DICT
-            ]
-            repository_cfg = cfg.cfg.SECRET.repository.dict[service_type.value]
-            file = Path(repository_cfg["file"]).absolute()
-            zip_file: str = str(file).replace(".pkl.gz", ".zip")
-            start_time = datetime.now()
-            dict_repository = dict_repository_class.from_json(
-                dict_repository_class, entities, zip_file
-            )
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
-                )
-            # Write empty and demo dict repository to file
-            start_time = datetime.now()
-            with gzip.open(str(file).replace(".full.", ".empty."), "wb") as handle:
-                pickle.dump({x: {} for x in dict_repository._db}, handle)
-            with gzip.open(file, "wb") as handle:
-                pickle.dump(dict_repository._db, handle)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
-                )
-            # Create empty and demo SA_SQLITE repositories
-            repository_cfg = cfg.cfg.SECRET.repository.sa_sqlite[service_type.value]
-            file = Path(repository_cfg["file"]).absolute()
-            connection_string = "sqlite:///" + str(file.as_posix())
-            sa_repository_class: SARepository = data["repository_class"][
-                enum.RepositoryType.SA_SQL
-            ]
-            start_time = datetime.now()
-            # Empty repository
-            sa_repository_class.create_sa_repository(
-                entities,
-                connection_string.replace(".full.", ".empty."),
-                name=service_type.value,
-            )
-            # Full repository
-            sa_repository = sa_repository_class.create_sa_repository(
-                entities,
-                connection_string,
-                name=service_type.value,
-                recreate_sqlite_file=True,
-            )
-            _create_from_repository(user_id, entities, dict_repository, sa_repository)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
-                )
-            # Create empty SA_SQL repository or loaded with demo data
-            repository_cfg = cfg.cfg.SECRET.repository.sa_sql[service_type.value]
-            connection_string = repository_cfg["connection_string"]
-            sa_repository_class: SARepository = data["repository_class"][
-                enum.RepositoryType.SA_SQL
-            ]
-            if "mssql" in connection_string:
-                connect_args = {
-                    "timeout": connect_timeout,
-                    "login_timeout": connect_timeout,
-                }
-            elif "pyodcb" in connection_string:
-                connect_args = {
-                    "connect_timeout": connect_timeout,
-                    "timeout": connect_timeout,
-                }
-            else:
-                connect_args = {}
-            # Skip load if no connection can be made
-            if exception := sa_repository_class.test_connection(
-                connection_string, **connect_args
-            ):
-                if verbose:
-                    print(
-                        # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
-                        f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
-                    )
-                continue
-            start_time = datetime.now()
-            sa_repository = sa_repository_class.create_sa_repository(
-                entities,
-                connection_string,
-                name=service_type.value,
-            )
-            _create_from_repository(user_id, entities, dict_repository, sa_repository)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
-                )
+        load_demo_data(
+            app_type, module_root, connect_timeout=connect_timeout, verbose=verbose
+        )
 
     ## test
     def test_all(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -491,11 +339,15 @@ class Run:
         )
 
     def test_all_incl_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
 
         pytest.main(Run.DEFAULT_PYTEST_ARGS + ["."])
 
     def test_all_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -507,6 +359,8 @@ class Run:
         )
 
     def test_all_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -517,6 +371,8 @@ class Run:
         )
 
     def test_all_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -528,6 +384,8 @@ class Run:
         )
 
     def test_filter_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -537,6 +395,8 @@ class Run:
         )
 
     def test_fastapp_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -546,6 +406,8 @@ class Run:
         )
 
     def test_fastapp_unit_auth(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -555,6 +417,8 @@ class Run:
         )
 
     def test_fastapp_unit_rbac(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -564,6 +428,8 @@ class Run:
         )
 
     def test_fastapp_unit_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -573,6 +439,8 @@ class Run:
         )
 
     def test_omopdb_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -582,6 +450,8 @@ class Run:
         )
 
     def test_fastapp_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -591,6 +461,8 @@ class Run:
         )
 
     def test_fastapp_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -600,6 +472,8 @@ class Run:
         )
 
     def test_casedb_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -611,6 +485,8 @@ class Run:
         )
 
     def test_casedb_integration_build_db(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -620,6 +496,8 @@ class Run:
         )
 
     def test_casedb_integration_case_access(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -629,6 +507,8 @@ class Run:
         )
 
     def test_casedb_integration_content(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -638,6 +518,8 @@ class Run:
         )
 
     def test_casedb_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -649,6 +531,8 @@ class Run:
         )
 
     def test_casedb_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -658,6 +542,8 @@ class Run:
         )
 
     def test_casedb_performance_user_journey(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -667,6 +553,8 @@ class Run:
         )
 
     def test_casedb_performance_startup(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -676,6 +564,8 @@ class Run:
         )
 
     def test_casedb_custom(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -685,6 +575,8 @@ class Run:
         )
 
     def test_seqdb_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -695,6 +587,8 @@ class Run:
         )
 
     def test_seqdb_integration_build_db(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -704,6 +598,8 @@ class Run:
         )
 
     def test_seqdb_integration_content(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -713,6 +609,8 @@ class Run:
         )
 
     def test_seqdb_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -724,6 +622,8 @@ class Run:
         )
 
     def test_seqdb_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -733,6 +633,8 @@ class Run:
         )
 
     def test_seqdb_performance_user_journey(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -742,6 +644,8 @@ class Run:
         )
 
     def test_seqdb_performance_startup(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -752,17 +656,10 @@ class Run:
 
     ## Other
 
-    def other_general_generate_uuids(
-        self, n_rows: int = 1000, n_cols: int = 100
-    ) -> None:
-        df = pd.DataFrame.from_dict(
-            {f"uuid{i}": [generate_ulid() for j in range(n_rows)] for i in range(100)}
-        )
-        xls_file = Path(__file__).parent / "test" / "generated_uuids.xlsx"
-        df.to_excel(xls_file, sheet_name="uuid", index=False)
-        print(
-            f"Total of {n_rows} uuids times {df.shape[1]} columns generated and written to file {str(xls_file)}"
-        )
+    def other_general_generate_uuids(self, n_rows: int = 1000, n_cols: int = 100):
+        from test.test_client.util import generate_uuids
+
+        generate_uuids(n_rows=n_rows, n_cols=n_cols)
 
     def other_general_run_linters(self) -> None:
         from test.linter import Linter
