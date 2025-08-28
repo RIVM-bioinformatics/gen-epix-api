@@ -537,7 +537,25 @@ class TestClient:
             )
         )
         tgt_user.name = user_name
+        
+        # Command UserInvitationCrudCommand is not registered within the common app
+        # The casedb specific command works, but this is not sufficiently ??
+        invitations: list[model.UserInvitation] = self.handle(
+            command.UserInvitationCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        if any(x.email == tgt_user.email for x in invitations):
+            raise ValueError(
+                f"Invitation for {tgt_user.email} not removed after registration"
+            )
+        if tgt_user.roles != {role}:
+            raise ValueError(
+                f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
+            )
         retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
+
         return retval
 
     def read_all_users(self) -> list[model.User]:
