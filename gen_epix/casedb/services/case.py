@@ -987,6 +987,42 @@ class CaseService(BaseCaseService):
 
         return genetic_sequences
 
+    def retrieve_genetic_sequence_fasta(
+        self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+    ) -> Iterable[str]:
+        """Return a streaming iterable of FASTA formatted lines.
+
+        ABAC policies copied from the outer FASTA command to the inner
+        RetrieveGeneticSequenceByCaseCommand (only top-level commands receive
+        policies automatically in current pipeline design).
+        """
+        inner_cmd = command.RetrieveGeneticSequenceByCaseCommand(
+            user=cmd.user,
+            case_ids=cmd.case_ids,
+            genetic_sequence_case_type_col_id=(cmd.genetic_sequence_case_type_col_id),
+        )
+        inner_cmd._policies.extend(cmd._policies)
+        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence(  # type: ignore[arg-type]
+            inner_cmd
+        )
+        return self.fasta_file_generator(sequences)
+
+    def fasta_file_generator(
+        self,
+        sequences: Iterable[model.GeneticSequence],
+        wrap: int | None = 80,
+    ) -> Iterable[str]:
+        for seq in sequences:
+            if seq.id is None:
+                continue
+            yield f">{seq.id}\n"
+            sequence = seq.nucleotide_sequence or ""
+            if wrap and wrap > 0:
+                for i in range(0, len(sequence), wrap):
+                    yield sequence[i : i + wrap] + "\n"
+            else:
+                yield sequence + "\n"
+
     def _crud_metadata(
         self,
         uow: BaseUnitOfWork,

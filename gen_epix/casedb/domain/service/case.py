@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Iterable
 from typing import Type
 from uuid import UUID
 
@@ -76,6 +77,10 @@ class BaseCaseService(BaseService):
             self.retrieve_phylogenetic_tree,
         )
         f(command.RetrieveGeneticSequenceByCaseCommand, self.retrieve_genetic_sequence)
+        f(
+            command.RetrieveGeneticSequenceFastaByCaseCommand,
+            self.retrieve_genetic_sequence_fasta,
+        )
 
     @abc.abstractmethod
     def create_cases_or_set(
@@ -135,4 +140,11 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_genetic_sequence_fasta(
+        self,
+        cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
+    ) -> Iterable[str]:
         raise NotImplementedError()
