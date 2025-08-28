@@ -393,34 +393,24 @@ class TestOmopSpecification:
 
             # Write single model to file
             output_file = (
-                Path(__file__).parent.parent.parent
-                / "data"
-                / "output"
-                / f"{table_name}.py"
+                Path(__file__).parent.parent.parent / "output" / f"{table_name}.py"
             )
             with open(output_file, "w") as f:
                 f.write("\n".join([OMOP_MODULE_HEADER, *code_lines]))
             sa_output_file = (
-                Path(__file__).parent.parent.parent
-                / "data"
-                / "output"
-                / f"{table_name}.sa.py"
+                Path(__file__).parent.parent.parent / "output" / f"{table_name}.sa.py"
             )
             with open(sa_output_file, "w") as f:
                 f.write("\n".join([SA_OMOP_MODULE_HEADER, *sa_code_lines]))
 
         # Write all models to single file
         output_file = (
-            Path(__file__).parent.parent.parent
-            / "data"
-            / "output"
-            / "expected_omop_models.py"
+            Path(__file__).parent.parent.parent / "output" / "expected_omop_models.py"
         )
         with open(output_file, "w") as f:
             f.write("\n".join([OMOP_MODULE_HEADER, *all_code_lines]))
         sa_output_file = (
             Path(__file__).parent.parent.parent
-            / "data"
             / "output"
             / "expected_sa_omop_models.py"
         )

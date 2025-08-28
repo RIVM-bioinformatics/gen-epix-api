@@ -1,5 +1,5 @@
 import logging
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     REPOSITORY_TYPE,
     SKIP_ENDPOINTS,
@@ -18,16 +18,14 @@ import pytest
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
-    return Env.get_test_client(
-        test_type=EnumTestType.CASEDB_INTEGRATION_BUILD_DB,
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=EnumTestType.CASEDB_INTEGRATION_BUILD_DB.value,
         repository_type=REPOSITORY_TYPE,
-        # repository_type=enum.RepositoryType.SA_SQLITE,
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
-        load_target="EMPTY",
+        data_fixture_name="EMPTY",
     )
-    # return Env.get_env(test_type=EnumTestType.INTEGRATION_BUILD_DB, repository_type=enum.RepositoryType.SA_SQLITE, verbose=False, log_level=logging.ERROR)
 
 
 @pytest.mark.dependency()
