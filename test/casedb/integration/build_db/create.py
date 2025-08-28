@@ -1,15 +1,17 @@
-import test.test_client.util as test_util
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
+    REPOSITORY_TYPE,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
+from typing import Any
 
 import pytest
 
+import gen_epix.common.test.util as test_util
 from gen_epix.casedb.domain import enum, exc, model
 
 
@@ -18,8 +20,8 @@ class TestCreate:
 
     def test_create_user_first_root(self, env: Env) -> None:
         # Create a first root user and organization
-        user = test_util.create_root_user_from_claims(env.cfg, env.app)
-        env._set_obj(user)
+        user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)  # type: ignore[assignment]
+        env._set_obj(user)  # type: ignore[arg-type]
         env._set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )
@@ -688,7 +690,9 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin
-        cols = env.read_all("root1_1", model.Col)
+        cols: list[model.Col] = env.read_all(
+            "root1_1", model.Col
+        )  # type:ignore[assignment]
         # Series of case types with only text columns
         for i in range(1, 4):
             case_type = f"case_type{i}"
@@ -698,9 +702,11 @@ class TestCreate:
                     "root1_1", f"{case_type}_{dim}_6_text"
                 )
         for i in range(4, 6):
+            genetic_sequence_case_type_col: model.CaseTypeCol | None = None
             for col in cols:
-                kwargs = {}
+                kwargs: dict[str, Any] = {}
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
+                    assert genetic_sequence_case_type_col is not None
                     kwargs["genetic_sequence_case_type_col_id"] = (
                         genetic_sequence_case_type_col.id
                     )
@@ -732,12 +738,16 @@ class TestCreate:
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
     def test_create_case_type_col_raise(self, env: Env) -> None:
-        cols = env.read_all("root1_1", model.Col)
+        cols: list[model.Col] = env.read_all(
+            "root1_1", model.Col
+        )  # type:ignore[assignment]
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
+                genetic_sequence_case_type_col: model.CaseTypeCol | None = None
                 for col in cols:
-                    kwargs = {}
+                    kwargs: dict[str, Any] = {}
                     if col.col_type == enum.ColType.GENETIC_DISTANCE:
+                        assert genetic_sequence_case_type_col is not None
                         kwargs["genetic_sequence_case_type_col_id"] = (
                             genetic_sequence_case_type_col.id
                         )
@@ -941,35 +951,6 @@ class TestCreate:
         if env.verbose:
             env.print_user_share_case_policies()
 
-    # TODO: remove when ok. Replaced by case access integration test.
-    # @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    # def test_create_case(self, env: Env) -> None:
-    #     # Create case as org_user
-    #     for i in range(1, 4):
-    #         for j in range(1, 4):
-    #             env.create_case(
-    #                 f"org_user{i}_1",
-    #                 f"case{i}_{j}",
-    #                 f"data_collection{i}",
-    #                 col_index_pattern=r"text(\d+)_6_text",
-    #             )
-    #     # Custom cases: (org_user, case, data_collections)
-    #     data = [
-    #         ("1_2", "1_4", ("1", "4")),
-    #         ("2_2", "2_4", ("2", "5")),
-    #         ("3_2", "3_4", ("3", "4")),
-    #         ("3_2", "3_5", ("3", "5")),
-    #     ]
-    #     for x in data:
-    #         env.create_case(
-    #             f"org_user{x[0]}",
-    #             f"case{x[1]}",
-    #             [f"data_collection{y}" for y in x[2]],
-    #             col_index_pattern=r"text(\d+)_6_text",
-    #         )
-    #     if env.verbose:
-    #         env.print_cases()
-
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_set_category(self, env: Env) -> None:
         # Create case_set_category as root, app_admin
@@ -1138,8 +1119,8 @@ class TestCreate:
                     "case_type_set_category1",
                 )
         # CaseTypeCol already exists
-        if not SKIP_CREATE_DATA and env.repository_type.value.upper() not in {
-            "SA_SQLITE"
+        if not SKIP_CREATE_DATA and REPOSITORY_TYPE not in {
+            enum.RepositoryType.SA_SQLITE
         }:
             # sqlite does not enforce unique constraints on nullable columns.
             # CaseTypeCol.occurrence, which is part of a unique constraint, is

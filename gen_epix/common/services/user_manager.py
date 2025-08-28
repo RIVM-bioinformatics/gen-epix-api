@@ -28,6 +28,10 @@ class UserManager(BaseUserManager):
             raise exc.InitializationServiceError(
                 "Root role is not defined in the user model"
             )
+        if "GUEST" not in self._role_enum._member_names_:
+            raise exc.InitializationServiceError(
+                "Guest role is not defined in the user model"
+            )
         self._root_role = self._role_enum["ROOT"]
         self._guest_role = self._role_enum["GUEST"]
         self._organization_service = organization_service
@@ -41,7 +45,7 @@ class UserManager(BaseUserManager):
                 "Root organization ID is not set in the configuration"
             )
         if "roles" not in root_cfg["user"]:
-            root_cfg["user"]["roles"] = [self._root_role.name]
+            root_cfg["user"]["roles"] = [self._root_role.name]  # type:ignore[arg-type]
         self._root["user"] = self._user_class(
             is_active=True,
             organization_id=self._root["organization"].id,
@@ -62,8 +66,8 @@ class UserManager(BaseUserManager):
                 raise exc.InitializationServiceError(
                     "Automatic new user organization ID is not set in the configuration"
                 )
-            self._automatic_new_user["organization"]["id"] = UUID(
-                self._automatic_new_user["organization"]["id"]
+            self._automatic_new_user["organization"]["id"] = (  # type:ignore[arg-type]
+                UUID(self._automatic_new_user["organization"]["id"])
             )
 
     def generate_id(self) -> UUID:
@@ -97,11 +101,16 @@ class UserManager(BaseUserManager):
             organization_id=organization_id,
         )
 
-    def is_root_user(self, claims: dict[str, Any]) -> bool:
+    def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
         user: model.User = self._root["user"]
         return user.email == get_email_from_claims(claims)
 
-    def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:  # type: ignore
+    def is_root_user(self, user: model.User) -> bool:  # type:ignore[assignment]
+        return self._root_role in user.roles
+
+    def create_root_user_from_claims(
+        self, claims: dict[str, Any]
+    ) -> model.User:  # type:ignore[assignment
         assert self._organization_service.repository
         with self._organization_service.repository.uow() as uow:
             # Create root organization if necessary
@@ -263,9 +272,8 @@ class UserManager(BaseUserManager):
 
             # Verify if create_by_user made an invitation for this user that is valid
             timestamp = datetime.datetime.now()
-            # Next line: pyright: ignore[reportInvalidTypeForm]
-            user_invitations: list[self.user_invitation_class] = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
+            user_invitations: list[self.user_invitation_class] = (  # type: ignore[assignment]
+                self._organization_service.repository.crud(
                     uow,
                     created_by_user_id,
                     self._user_invitation_class,
