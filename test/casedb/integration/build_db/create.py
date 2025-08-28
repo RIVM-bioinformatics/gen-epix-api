@@ -29,6 +29,8 @@ class TestCreate:
     def test_create_user_additional_root(self, env: Env) -> None:
         # Create additional root user, including in a different organization
         env.invite_and_register_user("root1_1", "root1_2")
+        # Check if invitation is removed after registration
+        self.check_user_invitation_removed_after_consumed(env, "root1_1")
         env.create_organization("root1_2", "org2")
         env.create_organization("root1_2", "org3")
         env.invite_and_register_user("root1_2", "root2_1")
@@ -36,6 +38,14 @@ class TestCreate:
         env.check_user_has_role("root1_2", enum.Role.ROOT, exclusive=True)
         env.check_user_has_role("root2_1", enum.Role.ROOT, exclusive=True)
         env.check_user_has_role("root2_2", enum.Role.ROOT, exclusive=True)
+
+    def check_user_invitation_removed_after_consumed(
+        self, env: Env, user: str | model.User
+    ) -> None:
+        invitations: list[model.UserInvitation] = env.get_all_user_invitations(user)
+        if any(x.email == "root1_1@org1.org" for x in invitations):
+            raise ValueError("Invitation for not removed after registration")
+        # Role assign check is now done in invite_and_register_user function
 
     def test_create_user_app_admin(self, env: Env) -> None:
         # Create invitations for app_admin as root

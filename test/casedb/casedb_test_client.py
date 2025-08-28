@@ -1347,6 +1347,18 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(updated_tgt_user, update=True)
 
+    def get_all_user_invitations(
+        self, user: str | model.User
+    ) -> list[model.UserInvitation]:
+        user: model.User = self._get_obj(model.User, user)
+        invitations: list[model.UserInvitation] = self.handle(
+            command.UserInvitationCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return invitations
+
     def temp_update_user_own_organization(
         self,
         user: str | model.User,
