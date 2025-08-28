@@ -34,7 +34,7 @@ dependencies = [
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.2.11",
-    "scipy==1.14.1",
+    "scipy==1.16.1",
     "numpy==2.3.2",
     "biopython==1.85",
     "cachetools==5.5.2",
