@@ -21,7 +21,7 @@ dynaconf==3.2.11
 types-setuptools==80.9.*
 
 # calculation
-scipy==1.14.1
+scipy==1.16.1
 numpy==2.3.2
 biopython==1.85
 
