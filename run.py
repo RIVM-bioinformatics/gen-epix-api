@@ -11,6 +11,7 @@ import pandas as pd
 import pytest
 import uvicorn
 
+from docs.erm import generate_erm_diagrams
 from gen_epix.common.config import AppCfg, ConfigDiscovery
 from gen_epix.common.domain.enum import AppConfigType, AppType, AppTypeSet
 from gen_epix.common.util import generate_ulid
@@ -852,8 +853,11 @@ class Run:
         log_parser.to_excel(out_log_excel_file)
         user_journey = log_parser.create_user_journey()
         user_journey.to_pickle(out_user_journey_file)
-
         main()
+
+    def other_general_generate_erm_diagrams(self) -> None:
+        out_dir = Path(__file__).parent / "docs" / "assets"
+        generate_erm_diagrams(out_dir)
 
 
 if __name__ == "__main__":

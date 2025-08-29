@@ -679,6 +679,17 @@
             "justMyCode": true
         },
         {
+            "name": "other.general.generate_erm_diagrams",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_erm_diagrams",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "other.casedb.parse_user_journey_v2",
             "type": "debugpy",
             "request": "launch",
