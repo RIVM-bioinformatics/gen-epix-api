@@ -2,6 +2,9 @@ from typing import Type
 
 from gen_epix import fastapp
 from gen_epix.common.domain import enum
+from gen_epix.common.domain.command.abac import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
 from gen_epix.common.domain.command.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
@@ -48,6 +51,9 @@ from gen_epix.common.domain.command.organization import (
 )
 from gen_epix.common.domain.command.organization import (
     RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
+from gen_epix.common.domain.command.organization import (
+    RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
 )
 from gen_epix.common.domain.command.organization import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
@@ -98,6 +104,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]
             OrganizationSetMemberCrudCommand,
             OrganizationSetOrganizationUpdateAssociationCommand,
             RegisterInvitedUserCommand,
+            RetrieveInviteUserConstraintsCommand,
+            RetrieveOrganizationAdminNameEmailsCommand,
             RetrieveOrganizationContactCommand,
             SiteCrudCommand,
             UpdateUserCommand,
@@ -116,6 +124,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]
             OutageCrudCommand,
             RetrieveOutagesCommand,
             RetrieveLicensesCommand,
+        }
+    ),
+    enum.ServiceType.ABAC: frozenset(
+        {
+            OrganizationAdminPolicyCrudCommand,
         }
     ),
 }

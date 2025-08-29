@@ -34,6 +34,26 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {
+        command.ContactCrudCommand,
+        command.SiteCrudCommand,
+    }
+
+    UPDATE_USER_COMMANDS: set[Type[Command]] = {
+        command.InviteUserCommand,
+        command.UpdateUserCommand,
+    }
+
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
+        command.UserCrudCommand,
+        command.OrganizationAdminPolicyCrudCommand,
+        command.UserInvitationCrudCommand,
+    }
+
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
+        command.UserCrudCommand,
+    }
+
     CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,

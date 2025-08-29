@@ -158,6 +158,15 @@ class RetrieveInviteUserConstraintsCommand(Command):
     pass
 
 
+class RetrieveOrganizationAdminNameEmailsCommand(Command):
+    """
+    Retrieve the names and email addresses of all organization admins for the user's
+    organization.
+    """
+
+    pass
+
+
 # CRUD commands
 
 

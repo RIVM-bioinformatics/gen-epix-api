@@ -2,6 +2,9 @@ from typing import Type
 
 import gen_epix.fastapp as fastapp
 from gen_epix.common.domain import enum
+from gen_epix.common.domain.model.abac import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.common.domain.model.base import Model as Model
 from gen_epix.common.domain.model.organization import Contact as Contact
 from gen_epix.common.domain.model.organization import DataCollection as DataCollection
@@ -55,6 +58,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         UserInvitationConstraints,
     ),
     enum.ServiceType.RBAC: tuple(),
+    enum.ServiceType.ABAC: (OrganizationAdminPolicy,),
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

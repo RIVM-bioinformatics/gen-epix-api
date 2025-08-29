@@ -12,9 +12,6 @@ from gen_epix.casedb.domain.command.abac import (
     OrganizationShareCasePolicyCrudCommand as OrganizationShareCasePolicyCrudCommand,
 )
 from gen_epix.casedb.domain.command.abac import (
-    RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
-)
-from gen_epix.casedb.domain.command.abac import (
     UserAccessCasePolicyCrudCommand as UserAccessCasePolicyCrudCommand,
 )
 from gen_epix.casedb.domain.command.abac import (
@@ -208,6 +205,9 @@ from gen_epix.common.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
 from gen_epix.common.domain.command import (
+    RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
+)
+from gen_epix.common.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
 from gen_epix.common.domain.command import (
@@ -224,17 +224,22 @@ from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserComman
 from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
+from gen_epix.common.domain.command.organization import (
+    RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
-    enum.ServiceType.ABAC: {
-        OrganizationAccessCasePolicyCrudCommand,
-        OrganizationAdminPolicyCrudCommand,
-        OrganizationShareCasePolicyCrudCommand,
-        RetrieveOrganizationAdminNameEmailsCommand,
-        UserAccessCasePolicyCrudCommand,
-        UserShareCasePolicyCrudCommand,
-    },
+    enum.ServiceType.ABAC: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+    ).union(
+        {
+            OrganizationAccessCasePolicyCrudCommand,
+            OrganizationShareCasePolicyCrudCommand,
+            UserAccessCasePolicyCrudCommand,
+            UserShareCasePolicyCrudCommand,
+        }
+    ),
     enum.ServiceType.CASE: {
         CaseCrudCommand,
         CaseDataCollectionLinkCrudCommand,
@@ -313,4 +318,5 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
 COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }
