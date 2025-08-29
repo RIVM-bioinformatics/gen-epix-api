@@ -6,6 +6,7 @@ from cachetools import TTLCache, cached
 from gen_epix.common.domain import command, model
 from gen_epix.common.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
+from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
 
@@ -23,6 +24,35 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: CrudCommand,
     ) -> Any:
+        # ABAC: ROOT may not delete self or own organization
+        if (
+            issubclass(
+                type(cmd), (command.UserCrudCommand, command.OrganizationCrudCommand)
+            )
+            and cmd.operation in CrudOperationSet.DELETE.value
+            and cmd.user
+            and self.app.user_manager.is_root_user(cmd.user)
+        ):
+            user: model.User = cmd.user  # type: ignore[assignment]
+            is_delete_user = issubclass(type(cmd), command.UserCrudCommand)
+            id_ = user.id if is_delete_user else user.organization_id
+            raise_error = False
+            if cmd.operation == CrudOperation.DELETE_ALL:
+                raise_error = True
+            elif cmd.operation == CrudOperation.DELETE_ONE:
+                raise_error = id_ == cmd.obj_ids
+            elif cmd.operation == CrudOperation.DELETE_SOME:
+                raise_error = id_ in cmd.obj_ids  # type: ignore[operator]
+            else:
+                raise NotImplementedError(
+                    f"Unsupported delete operation: {cmd.operation}"
+                )
+            if raise_error:
+                raise exc.UnauthorizedAuthError(
+                    f"Root user may not delete {'self' if is_delete_user else 'own organization'}"
+                )
+            pass
+
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
@@ -104,7 +134,7 @@ class OrganizationService(BaseOrganizationService):
                 )
             # Create user invitation
             user_invitation = self.user_invitation_class(
-                id=self.generate_id(),
+                id=self.generate_id(),  # type: ignore[assignment]
                 email=email,
                 roles=initial_roles,
                 organization_id=organization_id,
@@ -166,9 +196,11 @@ class OrganizationService(BaseOrganizationService):
                     f"No invitation found for token {cmd.token}"
                 )
             # Choose the invitation with the latest expiry date
-            user_invitation: self.user_invitation_class = sorted(
+            user_invitation: self.user_invitation_class = sorted(  # type: ignore[assignment]
                 user_invitations_with_token, key=lambda x: x.expires_at
-            )[-1]
+            )[
+                -1
+            ]
             # Set roles of the user
             new_user.roles = user_invitation.roles
             # Set ID and organization ID of the user
@@ -179,6 +211,15 @@ class OrganizationService(BaseOrganizationService):
                 user_invitation.token,
                 created_by_user_id=user_invitation.invited_by_user_id,  # type: ignore[arg-type]
                 roles=user_invitation.roles,  # type: ignore[arg-type]
+            )
+            # Delete invitation
+            self.repository.crud(
+                uow,
+                None,
+                self.user_invitation_class,
+                None,
+                [x.id for x in user_invitations],  # type: ignore[arg-type]
+                CrudOperation.DELETE_SOME,
             )
         return user_in_db  # type: ignore
 

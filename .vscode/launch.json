@@ -696,7 +696,7 @@
             "program": "run.py",
             "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
-                "./test/data/output/log.debug.txt",
+                "./test/output/log.debug.txt",
                 "2",
             ],
             "console": "integratedTerminal",
@@ -709,7 +709,7 @@
             "program": "run.py",
             "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
-                "./test/data/output/log.debug.txt",
+                "./test/output/log.debug.txt",
                 "1",
             ],
             "console": "integratedTerminal",

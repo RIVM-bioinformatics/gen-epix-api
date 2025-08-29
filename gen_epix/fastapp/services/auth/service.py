@@ -493,7 +493,7 @@ class AuthService(BaseAuthService):
                 )
 
             # Check if this is the root user, if so create it and and its dependencies
-            if user_manager.is_root_user(claims.claims):
+            if user_manager.is_root_user_claims(claims.claims):
                 if self._logger:
                     self._logger.warning(
                         self.create_log_message(

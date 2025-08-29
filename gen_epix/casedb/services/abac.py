@@ -270,11 +270,12 @@ class AbacService(BaseAbacService):
                 )
             )
             # Change the user organization
-            user.organization_id = tgt_organization_id
+            updated_user = user.model_copy()
+            updated_user.organization_id = tgt_organization_id
             user = self.app.handle(
                 command.UserCrudCommand(
                     user=user,
-                    objs=user,
+                    objs=updated_user,
                     operation=CrudOperation.UPDATE_ONE,
                 )
             )
