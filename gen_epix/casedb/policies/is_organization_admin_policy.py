@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy import BaseIsOrganizationAdminPolicy
 from gen_epix.fastapp import Command, CrudCommand, CrudOperation, CrudOperationSet
@@ -8,7 +10,8 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         if cmd.user is None:
             return False
 
-        if cmd.user.roles.intersection(enum.RoleSet.GE_APP_ADMIN.value):
+        user: model.User = cmd.user  # type: ignore[assignment]
+        if user.roles.intersection(enum.RoleSet.GE_APP_ADMIN.value):
             return True
 
         if isinstance(cmd, CrudCommand):
@@ -21,10 +24,11 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
             elif not isinstance(objs, list):
                 objs = [objs]
             # Determine the set of organizations affected
+            organization_ids: set[UUID]
             if isinstance(
                 cmd, command.OrganizationAccessCasePolicyCrudCommand
             ) or isinstance(cmd, command.OrganizationShareCasePolicyCrudCommand):
-                organization_ids = set(x.organization_id for x in objs)  # type: ignore
+                organization_ids = set(x.organization_id for x in objs)  # type: ignore[attr-defined]
             elif isinstance(cmd, command.UserAccessCasePolicyCrudCommand) or isinstance(
                 cmd, command.UserShareCasePolicyCrudCommand
             ):
@@ -33,19 +37,19 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
                         command.UserCrudCommand(
                             user=cmd.user,
                             objs=None,
-                            obj_ids=list(set(x.user_id for x in objs)),
+                            obj_ids=list(set(x.user_id for x in objs)),  # type: ignore[attr-defined]
                             operation=CrudOperation.READ_SOME,
                         )
                     )
                     organization_ids = set(x.organization_id for x in users)
             elif isinstance(cmd, command.SiteCrudCommand):
-                organization_ids = {x.organization_id for x in objs}
+                organization_ids = {x.organization_id for x in objs}  # type: ignore[attr-defined]
             elif isinstance(cmd, command.ContactCrudCommand):
                 contacts = self.abac_service.app.handle(
                     command.ContactCrudCommand(
                         user=cmd.user,
                         objs=None,
-                        obj_ids=list(set(x.contact_id for x in objs)),
+                        obj_ids=list(set(x.contact_id for x in objs)),  # type: ignore[attr-defined]
                         operation=CrudOperation.READ_SOME,
                     )
                 )
@@ -64,7 +68,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
             raise NotImplementedError
         # Check if user is an admin for all of the affected organizations
         user_admin_organization_ids = self.abac_service.get_organizations_under_admin(
-            cmd.user
+            user
         )
         has_permission = organization_ids.issubset(user_admin_organization_ids)
         return has_permission

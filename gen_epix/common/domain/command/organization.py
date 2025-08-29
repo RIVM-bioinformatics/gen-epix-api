@@ -148,6 +148,16 @@ class UpdateUserOwnOrganizationCommand(Command):
     is_new_user: bool = False
 
 
+class RetrieveInviteUserConstraintsCommand(Command):
+    """
+    Retrieves the constraints for inviting a user, such as valid roles and organizations.
+
+    This command is used to gather the necessary information for the user invitation process.
+    """
+
+    pass
+
+
 # CRUD commands
 
 

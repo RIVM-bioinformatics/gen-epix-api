@@ -80,7 +80,7 @@ def create_organization_endpoints(
         name="Invite a user",
         description=command.InviteUserCommand.__doc__,
     )
-    async def user_invitations__post_one(
+    async def invite_user(
         user: registered_user_dependency, user_invitation: user_invitation_request_body_class  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_invitation_class:  # type: ignore
         try:
@@ -94,6 +94,23 @@ def create_organization_endpoints(
             )
         except Exception as exception:
             handle_exception("e088de91", None, exception)
+        return retval
+
+    @router.get(
+        "/invite_user/constraints",
+        operation_id="invite_user__constraints",
+        name="The constraints for inviting a user",
+        description=command.RetrieveInviteUserConstraintsCommand.__doc__,
+    )
+    async def invite_user_constraints(
+        user: registered_user_dependency,
+    ) -> model.UserInvitationConstraints:
+        try:
+            retval: model.UserInvitationConstraints = app.handle(  # type: ignore[valid-type]
+                command.RetrieveInviteUserConstraintsCommand(user=user)
+            )
+        except Exception as exception:
+            handle_exception("cad2509e", None, exception)
         return retval
 
     @router.post(

@@ -22,6 +22,9 @@ from gen_epix.common.domain.model.organization import (
 from gen_epix.common.domain.model.organization import Site as Site
 from gen_epix.common.domain.model.organization import User as User
 from gen_epix.common.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.common.domain.model.organization import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.common.domain.model.organization import UserNameEmail as UserNameEmail
 from gen_epix.common.domain.model.system import Outage as Outage
 from gen_epix.common.domain.model.system import PackageMetadata as PackageMetadata
@@ -49,6 +52,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         UserNameEmail,
         User,
         UserInvitation,
+        UserInvitationConstraints,
     ),
     enum.ServiceType.RBAC: tuple(),
 }
