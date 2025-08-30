@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.abac.case_abac import (
+from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )

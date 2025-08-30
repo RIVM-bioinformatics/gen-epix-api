@@ -1,4 +1,5 @@
 import importlib
+import importlib.metadata
 import re
 import string
 import tomllib
@@ -25,21 +26,23 @@ class SystemService(BaseSystemService):
             self.app.register_policy(command_class, policy, EventTiming.BEFORE)
 
     def retrieve_outages(
-        self, _cmd: command.RetrieveOutagesCommand
+        self, cmd: command.RetrieveOutagesCommand
     ) -> list[model.Outage]:
         with self.repository.uow() as uow:
-            outages = self.repository.crud(
-                uow,
-                None,
-                model.Outage,
-                None,
-                None,
-                CrudOperation.READ_ALL,
+            outages: list[model.Outage] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    None,
+                    model.Outage,
+                    None,
+                    None,
+                    CrudOperation.READ_ALL,
+                )
             )
         return outages
 
     def retrieve_licenses(
-        self, _cmd: command.RetrieveLicensesCommand
+        self, cmd: command.RetrieveLicensesCommand
     ) -> list[model.PackageMetadata]:
         packages = SystemService._parse_and_get_package_metadata()
         return packages
@@ -47,9 +50,11 @@ class SystemService(BaseSystemService):
     @staticmethod
     @cached(cache=TTLCache(maxsize=1000, ttl=60))
     def _parse_and_get_package_metadata() -> list[model.PackageMetadata]:
-        """Parse pyproject.toml, extract package names, and get their metadata."""
+        """
+        Parse pyproject.toml, extract package names, and get their metadata.
+        """
         pyproject_path = get_project_root() / SystemService.REQUIREMENTS_FILE_NAME
-        packages = []
+        packages: list[model.PackageMetadata] = []
 
         if not pyproject_path.exists():
             return packages
@@ -90,7 +95,7 @@ class SystemService(BaseSystemService):
 
                     package_metadata = model.PackageMetadata(
                         name=metadata.get("Name", package_name),
-                        version=metadata.get("Version"),
+                        version=metadata.get("Version", ""),
                         license=metadata.get("License"),
                         homepage=homepage or None,  # Convert empty string to None
                     )
@@ -110,7 +115,8 @@ class SystemService(BaseSystemService):
 
     @staticmethod
     def _extract_homepage_from_project_urls(project_urls_str: str) -> str:
-        """Extract homepage URL from Project-URL metadata using well-known labels:
+        """
+        Extract homepage URL from Project-URL metadata using well-known labels:
         (https://packaging.python.org/en/latest/specifications/well-known-project-urls/#well-known-labels)
         """
         if not project_urls_str:

@@ -215,7 +215,9 @@ class AppEnv(BaseAppEnv):
             # Set up roles
             service = services[enum.ServiceType.RBAC]
             assert isinstance(service, RbacService)
-            service.register_roles(RoleGenerator.ROLE_PERMISSIONS)
+            service.register_roles(
+                RoleGenerator.ROLE_PERMISSIONS, root_role=enum.Role.ROOT
+            )
 
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
