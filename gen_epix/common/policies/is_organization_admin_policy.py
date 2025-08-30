@@ -14,13 +14,13 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         self,
         abac_service: BaseAbacService,
         user_class: Type[model.User] = model.User,
-        no_abac_org_admin_roles: set[Enum] | None = None,
+        app_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         super().__init__(
             abac_service,
             user_class=user_class,
-            no_abac_org_admin_roles=no_abac_org_admin_roles,
+            app_admin_roles=app_admin_roles,
             **kwargs,
         )
         self._get_organization_ids_handler_map: dict[
@@ -37,7 +37,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         user: model.User = cmd.user  # type: ignore[assignment]
 
         # Role is org admin without further ABAC restrictions
-        if user.roles.intersection(self.no_abac_org_admin_roles):
+        if user.roles.intersection(self.app_admin_roles):
             return True
 
         # Policy only applies to write operations for crud commands
@@ -57,26 +57,26 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
 
     def register_retrieve_organization_ids_handler(
         self,
-        cmd_class: Type[command.Command],
+        command_class: Type[command.Command],
         handler: Callable[[command.Command], set[UUID]],
     ) -> None:
-        self._get_organization_ids_handler_map[cmd_class] = handler
+        self._get_organization_ids_handler_map[command_class] = handler
 
     def retrieve_organization_ids(self, cmd: command.Command) -> set[UUID]:
-        cmd_class = type(cmd)
-        handler = self._get_organization_ids_handler_map.get(cmd_class)
+        command_class = type(cmd)
+        handler = self._get_organization_ids_handler_map.get(command_class)
         if handler is None:
             # Check if handler registered for parent class
             for (
-                handler_cmd_class,
+                handler_command_class,
                 handler,
             ) in self._get_organization_ids_handler_map.items():
-                if issubclass(cmd_class, handler_cmd_class):
+                if issubclass(command_class, handler_command_class):
                     # Parent class handler found -> register it for the child class as well for next time
-                    self._get_organization_ids_handler_map[cmd_class] = handler
+                    self._get_organization_ids_handler_map[command_class] = handler
                     return handler(cmd)
             raise exc.InitializationServiceError(
-                f"No handler registered for command: {cmd_class}"
+                f"No handler registered for command: {command_class}"
             )
         return handler(cmd)
 

@@ -515,9 +515,8 @@ class TestClient:
                 raise ValueError(f"Organization {organization_name} not found")
         else:
             organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
-        cmd_class = command.InviteUserCommand
         user_invitation: model.UserInvitation = self.handle(
-            cmd_class(
+            command.InviteUserCommand(
                 user=user,
                 email=f"{user_name}@{organization_name}.org",
                 roles={role},

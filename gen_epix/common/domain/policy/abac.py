@@ -15,18 +15,18 @@ class BaseIsOrganizationAdminPolicy(Policy):
         self,
         abac_service: BaseAbacService,
         user_class: Type[User] = User,
-        no_abac_org_admin_roles: set[Enum] | None = None,
+        app_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
         self.user_class = user_class
-        self.no_abac_org_admin_roles = no_abac_org_admin_roles or set()
+        self.app_admin_roles = app_admin_roles or set()
         self.props = kwargs
 
     @abc.abstractmethod
     def register_retrieve_organization_ids_handler(
         self,
-        cmd_class: Type[Command],
+        command_class: Type[Command],
         handler: Callable[[Command], set[UUID]],
     ) -> None:
         raise NotImplementedError
@@ -37,18 +37,40 @@ class BaseIsOrganizationAdminPolicy(Policy):
 
 
 class BaseReadOrganizationResultsOnlyPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+    def __init__(
+        self,
+        abac_service: BaseAbacService,
+        exempt_roles: set[Enum] | None = None,
+        **kwargs: Any,
+    ):
         self.abac_service = abac_service
+        self.exempt_roles = exempt_roles or set()
         self.props = kwargs
 
 
 class BaseReadSelfResultsOnlyPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+    def __init__(
+        self,
+        abac_service: BaseAbacService,
+        exempt_roles: set[Enum] | None = None,
+        **kwargs: Any,
+    ):
         self.abac_service = abac_service
+        self.exempt_roles = exempt_roles or set()
         self.props = kwargs
 
 
 class BaseUpdateUserPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+    def __init__(
+        self,
+        abac_service: BaseAbacService,
+        root_role: Enum,
+        app_admin_roles: set[Enum] | None = None,
+        org_admin_roles: set[Enum] | None = None,
+        **kwargs: Any,
+    ):
         self.abac_service = abac_service
+        self.root_role = root_role
+        self.app_admin_roles = app_admin_roles or set()
+        self.org_admin_roles = org_admin_roles or set()
         self.props = kwargs

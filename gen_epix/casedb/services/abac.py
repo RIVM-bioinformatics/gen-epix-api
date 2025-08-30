@@ -34,26 +34,6 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {
-        command.ContactCrudCommand,
-        command.SiteCrudCommand,
-    }
-
-    UPDATE_USER_COMMANDS: set[Type[Command]] = {
-        command.InviteUserCommand,
-        command.UpdateUserCommand,
-    }
-
-    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
-        command.OrganizationAdminPolicyCrudCommand,
-        command.UserInvitationCrudCommand,
-    }
-
-    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
-    }
-
     CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
@@ -99,25 +79,29 @@ class AbacService(BaseAbacService):
             self._get_case_abac_cached.cache_clear()  # type:ignore[attr-defined]
         return retval
 
-    def get_organizations_under_admin(self, user: model.User) -> set[UUID]:
-        # TODO: inefficient implementation, retrieving first all objs and then filtering.
-        # To be improved with e.g. CQS.
+    def get_organizations_under_admin(  # type:ignore[override]
+        self, user: model.User
+    ) -> set[UUID]:
+        assert user.id
         with self.repository.uow() as uow:
-            organization_admin_policies: list[
-                model.OrganizationAdminPolicy
-            ] = self.repository.crud(
-                uow,
-                user_id=user.id,
-                model_class=model.OrganizationAdminPolicy,
-                objs=None,
-                obj_ids=None,
-                operation=CrudOperation.READ_ALL,
-            )  # type: ignore
-        return set(
-            x.organization_id
-            for x in organization_admin_policies
-            if x.user_id == user.id and x.is_active
-        )
+            organization_admin_policies: list[model.OrganizationAdminPolicy] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user_id=user.id,
+                    model_class=model.OrganizationAdminPolicy,
+                    objs=None,
+                    obj_ids=None,
+                    operation=CrudOperation.READ_ALL,
+                    filter=CompositeFilter(
+                        operator=BooleanOperator.AND,
+                        filters=[
+                            EqualsUuidFilter(key="user_id", value=user.id),
+                            EqualsBooleanFilter(key="is_active", value=True),
+                        ],
+                    ),
+                )
+            )
+        return set(x.organization_id for x in organization_admin_policies)
 
     def retrieve_organization_admin_name_emails(
         self,
@@ -177,11 +161,11 @@ class AbacService(BaseAbacService):
           the previous organization. Analogous for OrganizationShareCasePolicy and
           UserShareCasePolicy.
         """
-        user = cmd.user
         is_new_user = cmd.is_new_user
         tgt_organization_id = cmd.organization_id
-        assert user is not None and user.id is not None
-        user_id = user.id
+        assert cmd.user is not None
+        user: model.User = cmd.user  # type: ignore[assignment]
+        assert user.id is not None
 
         # Special case: new organization is same as current
         if user.organization_id == tgt_organization_id and not is_new_user:
@@ -197,7 +181,7 @@ class AbacService(BaseAbacService):
                         operation=CrudOperation.READ_ALL,
                         query_filter=EqualsUuidFilter(
                             key="user_id",
-                            value=user_id,
+                            value=user.id,
                         ),
                     )
                 )
@@ -209,7 +193,7 @@ class AbacService(BaseAbacService):
                     operation=CrudOperation.READ_ALL,
                     query_filter=EqualsUuidFilter(
                         key="user_id",
-                        value=user_id,
+                        value=user.id,
                     ),
                 )
             )
@@ -243,13 +227,13 @@ class AbacService(BaseAbacService):
             # Convert target organization policies to new user policies
             new_user_access_case_policies = [
                 model.UserAccessCasePolicy(
-                    user_id=user_id, **x.model_dump(exclude={"id"})
+                    user_id=user.id, **x.model_dump(exclude={"id"})
                 )
                 for x in organization_access_case_policies
             ]
             new_user_share_case_policies = [
                 model.UserShareCasePolicy(
-                    user_id=user_id, **x.model_dump(exclude={"id"})
+                    user_id=user.id, **x.model_dump(exclude={"id"})
                 )
                 for x in organization_share_case_policies
             ]
@@ -301,14 +285,15 @@ class AbacService(BaseAbacService):
             )
 
         # Invalidate cache
-        self._get_user_by_id_cached.cache_clear()
-        self._get_case_abac_cached.cache_clear()
+        # TODO: develop general system for caching and cache invalidation
+        self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
+        self._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
 
         return user
 
     @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
-        user: model.User = self.app.handle(  # type:ignore[assignment]
+        user: model.User = self.app.handle(
             command.UserCrudCommand(
                 user=None,
                 obj_ids=user_id,
@@ -335,7 +320,6 @@ class AbacService(BaseAbacService):
         if is_full_access:
             return model.CaseAbac(
                 is_full_access=True,
-                private_data_collection_ids=set(),
                 case_type_access_abacs={},
                 case_type_share_abacs={},
             )
@@ -419,11 +403,16 @@ class AbacService(BaseAbacService):
                 as_set=True,
             )
             # Retrieve relevant case type set members and case type col set members
-            all_case_policies: list[model.BaseCasePolicy] = (
-                organization_access_case_policies  # type:ignore[assignment]
+            all_case_policies: list[
+                model.OrganizationAccessCasePolicy
+                | model.UserAccessCasePolicy
+                | model.OrganizationShareCasePolicy
+                | model.UserShareCasePolicy
+            ] = (
+                organization_access_case_policies
                 + organization_share_case_policies
                 + user_access_case_policies
-                + user_share_case_policies  # type:ignore[operator]
+                + user_share_case_policies
             )
             case_type_set_ids = frozenset(x.case_type_set_id for x in all_case_policies)
             case_type_set_member_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]

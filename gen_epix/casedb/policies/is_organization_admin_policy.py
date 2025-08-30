@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -15,13 +14,12 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        no_abac_org_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         super().__init__(
             abac_service,
             user_class=model.User,
-            no_abac_org_admin_roles=enum.RoleSet.GE_APP_ADMIN.value,  # type: ignore[arg-type]
+            app_admin_roles=enum.RoleSet.GE_APP_ADMIN.value,  # type: ignore[arg-type]
             **kwargs,
         )
         f = self.register_retrieve_organization_ids_handler
