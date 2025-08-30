@@ -49,8 +49,10 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
 
         organization_ids = self.retrieve_organization_ids(cmd)
         # Check if user is an admin for all of the affected organizations
-        user_admin_organization_ids = self.abac_service.get_organizations_under_admin(
-            user
+        user_admin_organization_ids = (
+            self.abac_service.retrieve_organizations_under_admin(
+                command.RetrieveOrganizationsUnderAdminCommand(user=user)
+            )
         )
         has_permission = organization_ids.issubset(user_admin_organization_ids)
         return has_permission

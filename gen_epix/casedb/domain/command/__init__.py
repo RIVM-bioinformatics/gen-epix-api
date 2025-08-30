@@ -211,6 +211,9 @@ from gen_epix.common.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
 from gen_epix.common.domain.command import (
+    RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
+)
+from gen_epix.common.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
 from gen_epix.common.domain.command import (
@@ -226,6 +229,9 @@ from gen_epix.common.domain.command import (
 )
 from gen_epix.common.domain.command.organization import (
     RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
+from gen_epix.common.domain.command.rbac import (
+    RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {

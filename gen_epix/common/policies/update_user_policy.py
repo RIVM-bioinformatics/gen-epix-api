@@ -9,7 +9,7 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         if user is None or user.id is None:
             return False
         roles = user.roles
-        is_root = self.root_role in roles
+        is_root = self.root_role and self.root_role in roles
 
         tgt_user: model.User
         if isinstance(cmd, command.InviteUserCommand):
@@ -54,8 +54,10 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         if is_organization_update:
             # User cannot update the organization
             return False
-        user_admin_organization_ids = self.abac_service.get_organizations_under_admin(
-            user
+        user_admin_organization_ids = (
+            self.abac_service.retrieve_organizations_under_admin(
+                command.RetrieveOrganizationsUnderAdminCommand(user=user)
+            )
         )
         if tgt_user.organization_id not in user_admin_organization_ids:
             # User is not admin of the organization(s) the target user is part of

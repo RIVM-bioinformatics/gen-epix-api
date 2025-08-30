@@ -34,6 +34,9 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         if not cmd.user or not cmd.user.id:
             raise exc.ServiceException("Command has no user")
         # TODO: replace filter for AFTER with injecting a filter DURING for efficiency
+        if isinstance(cmd, command.RetrieveInviteUserConstraintsCommand):
+            # Already handled DURING
+            return retval
         if not isinstance(cmd, command.CrudCommand):
             raise NotImplementedError
         if cmd.operation not in CrudOperationSet.READ_OR_EXISTS.value:
@@ -47,7 +50,9 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
 
         # Get organizations to filter on: user's own organization plus any
         # organizations they are admin for
-        organization_ids = self.abac_service.get_organizations_under_admin(cmd.user)
+        organization_ids = self.abac_service.retrieve_organizations_under_admin(
+            command.RetrieveOrganizationsUnderAdminCommand(user=cmd.user)
+        )
         if organization_ids:
             organization_ids.add(cmd.user.organization_id)
         else:

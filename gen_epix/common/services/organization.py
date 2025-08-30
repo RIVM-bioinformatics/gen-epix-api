@@ -161,7 +161,14 @@ class OrganizationService(BaseOrganizationService):
     def retrieve_invite_user_constraints(
         self, cmd: command.RetrieveInviteUserConstraintsCommand
     ) -> model.UserInvitationConstraints:
-        raise NotImplementedError
+        sub_cmd = command.RetrieveOrganizationsUnderAdminCommand(user=cmd.user)
+        sub_cmd._policies = cmd._policies
+        organization_ids = self.app.handle(sub_cmd)
+        roles = self.app.handle(command.RetrieveSubRolesCommand(user=cmd.user))
+        return model.UserInvitationConstraints(
+            organization_ids=organization_ids,
+            roles=roles,
+        )
 
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand

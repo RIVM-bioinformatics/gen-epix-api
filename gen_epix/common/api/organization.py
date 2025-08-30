@@ -102,7 +102,7 @@ def create_organization_endpoints(
         name="The constraints for inviting a user",
         description=command.RetrieveInviteUserConstraintsCommand.__doc__,
     )
-    async def invite_user_constraints(
+    async def invite_user__constraints(
         user: registered_user_dependency,
     ) -> model.UserInvitationConstraints:
         try:

@@ -4,23 +4,23 @@ from typing import Type
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.common.domain.command import Command
-from gen_epix.common.domain.service import BaseAbacService as CommonBaseAbacService
+from gen_epix.common.services import AbacService as CommonAbacService
 
 
-class BaseAbacService(CommonBaseAbacService):
+class BaseAbacService(CommonAbacService):
     SERVICE_TYPE = ServiceType.ABAC
 
-    ORGANIZATION_ADMIN_WRITE_COMMANDS = {
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_IMPL.get(x, x)
-        for x in CommonBaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS
+        for x in CommonAbacService.COMMON_ORGANIZATION_ADMIN_WRITE_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
     }
 
-    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS = {
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_IMPL.get(x, x)
-        for x in CommonBaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
+        for x in CommonAbacService.COMMON_READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
     } | {
         command.OrganizationAccessCasePolicyCrudCommand,
         command.OrganizationShareCasePolicyCrudCommand,
@@ -28,13 +28,18 @@ class BaseAbacService(CommonBaseAbacService):
         command.UserShareCasePolicyCrudCommand,
     }
 
-    READ_SELF_RESULTS_ONLY_COMMANDS = {
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_IMPL.get(x, x)
-        for x in CommonBaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS
+        for x in CommonAbacService.COMMON_READ_SELF_RESULTS_ONLY_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
     }
+
+    UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_IMPL.get(x, x)
+        for x in CommonAbacService.COMMON_UPDATE_USER_COMMANDS
+    } | set()
 
     CASE_ABAC_COMMANDS: set[Type[Command]] = {
         command.RetrieveCompleteCaseTypeCommand,
@@ -65,11 +70,6 @@ class BaseAbacService(CommonBaseAbacService):
         command.RetrieveCaseSetStatsCommand,
         command.RetrieveCaseTypeStatsCommand,
     }
-
-    def register_handlers(self) -> None:
-        super().register_handlers()
-        f = self.app.register_handler
-        self.register_default_crud_handlers()
 
     @abc.abstractmethod
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:

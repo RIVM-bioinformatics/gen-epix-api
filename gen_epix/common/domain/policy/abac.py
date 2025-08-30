@@ -64,7 +64,7 @@ class BaseUpdateUserPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        root_role: Enum,
+        root_role: Enum | None = None,
         app_admin_roles: set[Enum] | None = None,
         org_admin_roles: set[Enum] | None = None,
         **kwargs: Any,

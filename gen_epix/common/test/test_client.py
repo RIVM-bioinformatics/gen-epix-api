@@ -9,7 +9,6 @@ from uuid import UUID
 
 from gen_epix.common.config import BaseAppCfg
 from gen_epix.common.domain import command, model
-from gen_epix.common.domain.model import Model, User, UserInvitation
 from gen_epix.common.env import BaseAppEnv
 from gen_epix.common.test.endpoint_test_client import EndpointTestClient
 from gen_epix.common.test.util import set_log_level
@@ -17,13 +16,13 @@ from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 
-BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=Model)
+BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
     TEST_CLIENTS: dict[Hashable, Any] = {}
 
-    MODEL_KEY_MAP: dict[Type[Model], Union[str, tuple[str, ...]]] = {
+    MODEL_KEY_MAP: dict[Type[model.Model], Union[str, tuple[str, ...]]] = {
         model.User: "name",
         model.UserInvitation: "email",
         model.Organization: "name",
@@ -38,8 +37,11 @@ class TestClient:
         app_env: BaseAppEnv,
         roles: set[Enum] | None = None,
         role_hierarchy: dict[Hashable, set] | None = None,
-        user_class: Type[User] = User,
-        user_invitation_class: Type[UserInvitation] = UserInvitation,
+        user_class: Type[model.User] = model.User,
+        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
+        user_crud_command_class: Type[
+            command.UserCrudCommand
+        ] = command.UserCrudCommand,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         **kwargs: Any,
@@ -55,6 +57,7 @@ class TestClient:
         )
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
+        self.user_crud_command_class = user_crud_command_class
         self.log_level = log_level
         self.verbose = verbose
 
@@ -66,7 +69,7 @@ class TestClient:
         self.cfg = self.app_cfg.cfg
         self.services = self.app_env.services
         self.repositories = self.app_env.repositories
-        self.db: Dict[Type[Model], Dict[Hashable, Model]] = {}
+        self.db: Dict[Type[model.Model], Dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
@@ -125,15 +128,15 @@ class TestClient:
 
     def update_object(
         self,
-        user_or_key: str | User,
-        model_class: Type[Model],
-        obj_or_key: Model | str,
+        user_or_key: str | model.User,
+        model_class: Type[model.Model],
+        obj_or_key: model.Model | str,
         props: dict[str, Any | None],
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
-    ) -> Model:
+    ) -> model.Model:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: Model = self._get_obj(
+        obj: model.Model = self._get_obj(
             model_class, obj_or_key, copy=True
         )  # type:ignore[assignment]
         self._update_object_properties(
@@ -153,13 +156,13 @@ class TestClient:
 
     def delete_object(
         self,
-        user_or_key: str | User,
-        model_class: Type[Model],
-        obj_or_key: Model | str | tuple[UUID, UUID],
+        user_or_key: str | model.User,
+        model_class: Type[model.Model],
+        obj_or_key: model.Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
     ) -> UUID:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
+        obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
 
         if not obj and retry_obj:
             obj = self._get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
@@ -186,12 +189,12 @@ class TestClient:
 
     def read_all(
         self,
-        user_or_key: User | str,
-        model_class: Type[Model],
+        user_or_key: model.User | str,
+        model_class: Type[model.Model],
         cascade: bool = False,
-    ) -> list[Model]:
+    ) -> list[model.Model]:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        retval: list[Model] = self.handle(
+        retval: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.READ_ALL,
@@ -203,13 +206,13 @@ class TestClient:
 
     def read_some(
         self,
-        user_or_key: User | str,
-        model_class: Type[Model],
+        user_or_key: model.User | str,
+        model_class: Type[model.Model],
         obj_ids: list[UUID] | set[UUID],
         cascade: bool = False,
-    ) -> list[Model]:
+    ) -> list[model.Model]:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        retval: list[Model] = self.handle(
+        retval: list[model.Model] = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user,
                 operation=CrudOperation.READ_SOME,
@@ -226,23 +229,23 @@ class TestClient:
 
     def read_some_by_property(
         self,
-        user_or_key: User | str,
-        model_class: Type[Model],
+        user_or_key: model.User | str,
+        model_class: Type[model.Model],
         name: str,
         value: Any,
         cascade: bool = False,
-    ) -> List[Model]:
+    ) -> List[model.Model]:
         objs = self.read_all(user_or_key, model_class, cascade=cascade)
         return [x for x in objs if getattr(x, name) == value]
 
     def read_one_by_property(
         self,
-        user_or_key: User | str,
-        model_class: Type[Model],
+        user_or_key: model.User | str,
+        model_class: Type[model.Model],
         name: str,
         value: Any,
         cascade: bool = False,
-    ) -> Model:
+    ) -> model.Model:
         objs = self.read_some_by_property(
             user_or_key, model_class, name, value, cascade=cascade
         )
@@ -254,9 +257,9 @@ class TestClient:
 
     def verify_read_all(
         self,
-        user_or_key: User | str,
-        model_class: Type[Model],
-        expected_ids: set[UUID] | list[Model],
+        user_or_key: model.User | str,
+        model_class: Type[model.Model],
+        expected_ids: set[UUID] | list[model.Model],
     ) -> None:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         objs = self.handle(
@@ -286,7 +289,7 @@ class TestClient:
                 f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user.name}. Model: {model_class}"
             )
 
-    def _get_key_for_obj(self, obj: Model) -> Any:
+    def _get_key_for_obj(self, obj: model.Model) -> Any:
         key_fields = self.MODEL_KEY_MAP[obj.__class__]
         if isinstance(key_fields, str):
             return getattr(obj, key_fields)
@@ -294,7 +297,7 @@ class TestClient:
 
     def _update_object_properties(
         self,
-        obj: Model,
+        obj: model.Model,
         props: dict[str, Any | None],
         set_dummy_link: dict[str, bool] | bool = False,
         exclude_none: bool = True,
@@ -311,7 +314,7 @@ class TestClient:
         assert model_class.ENTITY
         id_field_name = model_class.ENTITY.id_field_name
         assert id_field_name
-        link_map: dict[str, tuple[str, Type[Model]]] = {
+        link_map: dict[str, tuple[str, Type[model.Model]]] = {
             x.relationship_field_name: (
                 x.link_field_name,
                 x.link_model_class,
@@ -348,8 +351,14 @@ class TestClient:
     def _get_obj_key(
         self,
         table: dict,
-        model_class: Type[Model],
-        obj: str | UUID | Model | list[str | UUID | Model] | tuple[UUID, UUID],
+        model_class: Type[model.Model],
+        obj: (
+            str
+            | UUID
+            | model.Model
+            | list[str | UUID | model.Model]
+            | tuple[UUID, UUID]
+        ),
         on_missing: str,
     ) -> tuple[UUID, UUID] | UUID | None:
         key_fields = self.MODEL_KEY_MAP[model_class]
@@ -371,7 +380,7 @@ class TestClient:
                 return None
             else:
                 raise NotImplementedError()
-        elif isinstance(obj, Model):
+        elif isinstance(obj, model.Model):
             key = tuple(getattr(obj, x) for x in key_fields)
         elif isinstance(obj, tuple):
             key = obj  # type:ignore[assignment]
@@ -382,11 +391,17 @@ class TestClient:
 
     def _get_obj(
         self,
-        model_class: Type[Model],
-        obj: str | UUID | Model | list[str | UUID | Model] | tuple[UUID, UUID],
+        model_class: Type[model.Model],
+        obj: (
+            str
+            | UUID
+            | model.Model
+            | list[str | UUID | model.Model]
+            | tuple[UUID, UUID]
+        ),
         copy: bool = False,
         on_missing: str = "raise",
-    ) -> Model | list[Model] | None:
+    ) -> model.Model | list[model.Model] | None:
         if model_class not in self.db:
             self.db[model_class] = {}
         if isinstance(obj, list):
@@ -402,7 +417,7 @@ class TestClient:
                 raise NotImplementedError()
         return table[key] if not copy else table[key].model_copy()
 
-    def _set_obj(self, obj: Model, update: bool = False) -> Model:
+    def _set_obj(self, obj: model.Model, update: bool = False) -> model.Model:
         model_class = type(obj)
         if model_class not in self.db:
             self.db[model_class] = {}
@@ -424,7 +439,7 @@ class TestClient:
             table[key] = obj
         return obj
 
-    def _delete_obj(self, model_class: Type[Model], obj_id: UUID) -> Model:
+    def _delete_obj(self, model_class: Type[model.Model], obj_id: UUID) -> model.Model:
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
@@ -445,7 +460,7 @@ class TestClient:
 
     @staticmethod
     def _verify_updated_obj(
-        in_obj: Model, out_obj: Model, user_id: UUID, **kwargs: Any
+        in_obj: model.Model, out_obj: model.Model, user_id: UUID, **kwargs: Any
     ) -> None:
         # TODO: verifying modified_by and modified_at is no longer possible here as the
         # persistence metadata no longer exists in the object. This should instead
@@ -472,7 +487,7 @@ class TestClient:
         # Type cast needed because app.generate_id() returns Hashable
         return cast(UUID, self.app.generate_id())
 
-    def get_root_user(self) -> User:
+    def get_root_user(self) -> model.User:
         return self.user_class(
             organization_id=self.cfg.secret.root.organization.id,
             **self.cfg.secret.root.user,
@@ -536,13 +551,23 @@ class TestClient:
             )
         )
         tgt_user.name = user_name
+        # Verify against user invitation constraints
+        user_invitation_constraints: model.UserInvitationConstraints = self.handle(
+            command.RetrieveInviteUserConstraintsCommand(
+                user=user,
+            )
+        )
+        if tgt_user.organization_id not in user_invitation_constraints.organization_ids:
+            raise ValueError("User invitation constraints not met for organization_id")
+        if not tgt_user.roles.issubset(user_invitation_constraints.roles):
+            raise ValueError("User invitation constraints not met for roles")
         retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
         return retval
 
     def read_all_users(self) -> list[model.User]:
         root_user = self.get_root_user()
         retval: list[model.User] = self.app.handle(
-            command.UserCrudCommand(
+            self.user_crud_command_class(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )

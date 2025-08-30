@@ -5,6 +5,9 @@ from gen_epix.common.domain import enum
 from gen_epix.common.domain.command.abac import (
     OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
 )
+from gen_epix.common.domain.command.abac import (
+    RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
+)
 from gen_epix.common.domain.command.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
@@ -76,6 +79,9 @@ from gen_epix.common.domain.command.organization import (
 from gen_epix.common.domain.command.rbac import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
+from gen_epix.common.domain.command.rbac import (
+    RetrieveSubRolesCommand as RetrieveSubRolesCommand,
+)
 from gen_epix.common.domain.command.system import OutageCrudCommand as OutageCrudCommand
 from gen_epix.common.domain.command.system import (
     RetrieveLicensesCommand as RetrieveLicensesCommand,
@@ -117,6 +123,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]
     enum.ServiceType.RBAC: frozenset(
         {
             RetrieveOwnPermissionsCommand,
+            RetrieveSubRolesCommand,
         }
     ),
     enum.ServiceType.SYSTEM: frozenset(
@@ -129,6 +136,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]
     enum.ServiceType.ABAC: frozenset(
         {
             OrganizationAdminPolicyCrudCommand,
+            RetrieveOrganizationsUnderAdminCommand,
         }
     ),
 }

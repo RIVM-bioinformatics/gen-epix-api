@@ -230,6 +230,7 @@ class CasedbTestClient(TestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
+            user_crud_command_class=command.UserCrudCommand,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,

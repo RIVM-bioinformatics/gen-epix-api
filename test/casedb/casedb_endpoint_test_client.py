@@ -23,6 +23,10 @@ class CasedbEndpointTestClient(EndpointTestClient):
         )
         self.register_handler(command.InviteUserCommand, self.handle_invite_user)
         self.register_handler(
+            command.RetrieveInviteUserConstraintsCommand,
+            self.handle_retrieve_invite_user_constraints,
+        )
+        self.register_handler(
             command.RegisterInvitedUserCommand, self.handle_register_invited_user
         )
         self.register_handler(command.UpdateUserCommand, self.handle_update_user)
@@ -67,6 +71,19 @@ class CasedbEndpointTestClient(EndpointTestClient):
             headers=headers,
         )
         retval = self._content_to_obj(response, model.UserInvitation)
+        return retval, response
+
+    def handle_retrieve_invite_user_constraints(
+        self,
+        cmd: command.RetrieveInviteUserConstraintsCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.get(
+            route_prefix + "/invite_user/constraints",
+            headers=headers,
+        )
+        retval = self._content_to_obj(response, model.UserInvitationConstraints)
         return retval, response
 
     def handle_register_invited_user(
