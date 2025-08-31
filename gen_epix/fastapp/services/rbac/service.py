@@ -124,6 +124,7 @@ class BaseRbacService(BaseService):
             Hashable, set[Permission | tuple[type[Command], PermissionType]]
         ],
         root_role: Hashable | None = None,
+        on_missing_root_permissions: str = "add",
         **kwargs: Any,
     ) -> None:
         """
@@ -133,8 +134,18 @@ class BaseRbacService(BaseService):
         is optional and is used to check that the root role has all permissions. The
         keyword arguments are passed to the register_role method.
         """
+        on_missing_root_permissions = on_missing_root_permissions.lower()
+        if on_missing_root_permissions not in ("add", "raise"):
+            raise ValueError(
+                f"Invalid value for on_missing_root_permissions: {on_missing_root_permissions}"
+            )
+        all_permissions: set[Permission] = (
+            self.app.domain.permissions  # type:ignore[assignment]
+        )
+        if root_role and root_role not in role_permissions:
+            self.register_role(root_role, all_permissions, **kwargs)
         for role, permissions_or_tuples in role_permissions.items():
-            permissions = {
+            permissions: set[Permission] = {
                 (
                     x
                     if isinstance(x, Permission)
@@ -143,15 +154,22 @@ class BaseRbacService(BaseService):
                 for x in permissions_or_tuples
             }
             if root_role and role == root_role:
-                all_permissions = self.app.domain.permissions
                 missing_permissions = all_permissions - permissions
                 if missing_permissions:
-                    missing_permissions_str = ", ".join(
-                        [str(x) for x in missing_permissions]
-                    )
-                    raise exc.InitializationServiceError(
-                        f"Root role {root_role} is missing permissions: {missing_permissions_str}"
-                    )
+                    if on_missing_root_permissions == "raise":
+                        missing_permissions_str = ", ".join(
+                            [str(x) for x in missing_permissions]
+                        )
+                        raise exc.InitializationServiceError(
+                            f"Root role {root_role} is missing permissions: {missing_permissions_str}"
+                        )
+                    elif on_missing_root_permissions == "add":
+                        # Add all missing permissions
+                        permissions = all_permissions
+                    else:
+                        raise NotImplementedError(
+                            f"Unknown on_missing_root_permissions strategy: {on_missing_root_permissions}"
+                        )
             self.register_role(role, permissions, **kwargs)
 
     def unregister_role(self, role: Hashable) -> None:
@@ -218,6 +236,13 @@ class BaseRbacService(BaseService):
                 if other_permissions < permissions:
                     self._sub_roles_by_role[role].add(other_role)
         return self._sub_roles_by_role[role]
+
+    def get_root_permissions(self) -> set[Permission]:
+        """
+        Get all possible permissions.
+        """
+        permissions: set[Permission] = self.app.domain.get_permissions_for_domain(frozen=False)  # type: ignore[assignment]
+        return permissions
 
     @abc.abstractmethod
     def retrieve_user_roles(self, user: User) -> set[Hashable]:
@@ -327,41 +352,6 @@ class BaseRbacService(BaseService):
             retrieve_user_is_non_rbac_authorized=retrieve_user_is_non_rbac_authorized,
             retrieve_user_is_root=retrieve_user_is_root,
         )
-        # policy_args = [
-        #     kwargs.get("get_permission_for_command"),
-        #     "get_permission_has_rbac",
-        #     "get_roles_by_permission",
-        #     "retrieve_user_roles",
-        #     "retrieve_user_is_non_rbac_authorized",
-        #     "retrieve_user_is_root",
-        # ]
-        # default_fn: Callable
-        # for i, arg_name in enumerate(policy_args):
-        #     # Get default function
-        #     match arg_name:
-        #         case "get_permission_for_command":
-        #             default_fn = (
-        #                 lambda x: self.app.domain.get_permission_for_command_instance(x)
-        #             )
-        #         case "get_permission_has_rbac":
-        #             default_fn = lambda x: x not in self._permissions_without_rbac
-        #         case "get_roles_by_permission":
-        #             default_fn = lambda x: self._roles_by_permission[x]
-        #         case "retrieve_user_roles":
-        #             default_fn = lambda x: self.retrieve_user_roles(x)
-        #         case "retrieve_user_is_non_rbac_authorized":
-        #             default_fn = lambda x: self.retrieve_user_is_non_rbac_authorized(x)
-        #         case "retrieve_user_is_root":
-        #             default_fn = lambda x: self.retrieve_user_is_root(x)
-        #     raise NotImplementedError(f"{arg_name} not implemented")
-        #     # Override default function if provided as keyword argument
-        #     policy_args[i] = kwargs.get(arg_name, default_fn)
-        # # Create a single RBAC policy with the provided functions
-        # rbac_policy = RbacPolicy(  # type: ignore
-        #     *policy_args[0:-2],
-        #     retrieve_user_is_non_rbac_authorized=policy_args[-2],
-        #     retrieve_user_is_root=policy_args[-1],
-        # )
         # Register the RBAC policy for all command classes that are subject to RBAC
         for command_class in self.get_command_classes_with_rbac():
             self.app.register_policy(command_class, rbac_policy, EventTiming.BEFORE)

@@ -62,6 +62,10 @@ def create_system_endpoints(
         name="Health",
     )
     async def health() -> HealthReponseBody:
+        """
+        Returns the health status of the service. If no response is received
+        within the timeout period, the service is considered unhealthy.
+        """
         return HealthReponseBody(
             status=HealthStatus.HEALTHY,
         )
@@ -71,6 +75,7 @@ def create_system_endpoints(
         "/retrieve/licenses",
         operation_id="retrieve__licenses",
         name="Licenses",
+        description=command.RetrieveLicensesCommand.__doc__,
     )
     async def licenses(
         idp_user: idp_user_dependency,  # type: ignore
@@ -85,6 +90,9 @@ def create_system_endpoints(
     # Log
     @router.post("/log", operation_id="log")
     async def log(user: registered_user_dependency, request_body: LogRequestBody) -> None:  # type: ignore
+        """
+        Logs the provided log items.
+        """
         try:
             user_id = str(user.id)  # type: ignore[attr-defined]
             for log_item in request_body.log_items:
@@ -108,6 +116,7 @@ def create_system_endpoints(
         "/retrieve/outages",
         operation_id="retrieve__outages",
         name="Outages",
+        description=command.RetrieveOutagesCommand.__doc__,
     )
     async def retrieve__outages(
         idp_user: idp_user_dependency,  # type: ignore

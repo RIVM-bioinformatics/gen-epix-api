@@ -22,7 +22,7 @@ class RbacService(BaseRbacService):
         **kwargs: Any,
     ):
         kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)
-        super().__init__(app, logger=logger, **kwargs)  # type: ignore[arg-type]
+        super().__init__(app, logger=logger, **kwargs)
         self._role_enum = role_enum
         self._root_role = role_enum["ROOT"]
         self._id_factory: Callable[[], UUID]
@@ -33,11 +33,6 @@ class RbacService(BaseRbacService):
         ) in NO_RBAC_PERMISSIONS:
             permission = self.app.domain.get_permission(command_class, permission_type)
             self.register_permission_without_rbac(permission)
-
-    def register_handlers(self) -> None:
-        f = self.app.register_handler
-        self.register_default_crud_handlers()
-        f(command.RetrieveOwnPermissionsCommand, self.retrieve_own_permissions)
 
     def register_policies(self) -> None:
         self.register_rbac_policies()
@@ -65,3 +60,13 @@ class RbacService(BaseRbacService):
         if not user or not user.id:
             return set()
         return self.retrieve_user_permissions(user)
+
+    def retrieve_sub_roles(self, cmd: command.RetrieveSubRolesCommand) -> set[Enum]:
+        user: model.User | None = cmd.user
+        if not user or not user.id or not user.roles:
+            return set()
+        sub_roles: set[Enum] = set.union(*[self.get_sub_roles(x) for x in user.roles])  # type: ignore[arg-type]
+        # Special case: ROOT is included as its own sub-role
+        if self._root_role in user.roles:
+            sub_roles.add(self._root_role)
+        return sub_roles

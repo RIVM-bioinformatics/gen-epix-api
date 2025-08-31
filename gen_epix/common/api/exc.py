@@ -3,15 +3,8 @@ import uuid
 from functools import partial
 from typing import Any, Callable, Hashable, NoReturn
 
-from gen_epix.fastapp import App, LogLevel, model
+from gen_epix.fastapp import App, LogLevel, exc, model
 from gen_epix.fastapp.api import exc as api_exc
-from gen_epix.fastapp.exc import (
-    AuthException,
-    DomainException,
-    DuplicateIdsError,
-    IdsError,
-    ServiceException,
-)
 
 http_exception_fmap = {
     400: api_exc.BadRequest400HTTPException,
@@ -19,7 +12,7 @@ http_exception_fmap = {
     403: api_exc.Forbidden403HTTPException,
     404: api_exc.ResourceNotFound404HTTPException,
     405: api_exc.MethodNotAllowed405HTTPException,
-    409: api_exc.ResourceAlreadyExists409HTTPException,
+    409: api_exc.ResourceConflict409HTTPException,
     422: api_exc.UnprocessableEntity422HTTPException,
     500: api_exc.InternalServerError500HTTPException,
     503: api_exc.ServiceUnavailableError503HTTPException,
@@ -77,8 +70,13 @@ def generate_handle_exception_function(
             log_message_id, None, user_id=user.id if user else None, exception=exception
         )
         # Raise HTTP exception
-        if isinstance(exception, DomainException):
-            if isinstance(exception, IdsError):
+        if isinstance(exception, exc.DomainException):
+            if isinstance(exception, exc.IdsError):
+                http_status_code = 422
+                if isinstance(
+                    exception, (exc.LinkConstraintViolationError, exc.DuplicateIdsError)
+                ):
+                    http_status_code = 409
                 invalid_ids = []
                 if request_ids and exception.ids:
                     # Compare ids received in request with those reported
@@ -97,7 +95,7 @@ def generate_handle_exception_function(
                     invalid_ids = [x for x in request_ids if x in exception.ids]
                 if invalid_ids:
                     # (Part of the) issue is with id(s). Provide detail on that.
-                    if isinstance(exception, DuplicateIdsError):
+                    if isinstance(exception, exc.DuplicateIdsError):
                         invalid_ids_str = ", ".join(
                             [f'"{x}"' for x in set(invalid_ids)]
                         )
@@ -107,19 +105,21 @@ def generate_handle_exception_function(
                         detail = f"Invalid ids(s) provided: {invalid_ids_str}"
                     if logger:
                         logger.info(log_message)
-                    raise http_exception_fmap[422](detail=detail) from exception
+                    raise http_exception_fmap[http_status_code](
+                        detail=detail
+                    ) from exception
                 # IdsError, but other issue than provided invalid ids.
                 # No further details provided.
                 if logger:
                     logger.info(log_message)
-                raise http_exception_fmap[422]() from exception
-            elif isinstance(exception, AuthException):
+                raise http_exception_fmap[http_status_code]() from exception
+            elif isinstance(exception, exc.AuthException):
                 if logger:
                     logger.info(log_message)
                 raise http_exception_fmap[exception.get_http_status_code()](
                     detail="Access denied", **exception.get_http_other_props()
                 ) from exception
-            elif isinstance(exception, ServiceException):
+            elif isinstance(exception, exc.ServiceException):
                 if logger:
                     logger.error(log_message)
                 raise http_exception_fmap[exception.get_http_status_code()](

@@ -11,11 +11,6 @@ from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
-_SERVICE_TYPE = enum.ServiceType.SYSTEM
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Outage(Model):
     """
@@ -26,7 +21,6 @@ class Outage(Model):
         snake_case_plural_name="outages",
         table_name="outage",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
     description: str | None = Field(
         default=None, description="Description of the system outage."
@@ -58,7 +52,6 @@ class PackageMetadata(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="package_metadatas",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
 
     name: str = Field(description="Name of the package.")

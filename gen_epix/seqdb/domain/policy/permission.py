@@ -130,5 +130,5 @@ class RoleGenerator:
     }
 
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
-        ROLE_HIERARCHY, ROLE_PERMISSION_SETS
+        ROLE_HIERARCHY, ROLE_PERMISSION_SETS  # type: ignore[arg-type]
     )

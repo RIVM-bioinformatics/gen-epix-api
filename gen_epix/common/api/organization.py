@@ -7,17 +7,16 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
 from gen_epix.common.domain import command, enum, model
+from gen_epix.common.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.model import Permission
 
 
 class UserInvitationRequestBody(PydanticBaseModel):
-    email: str
-    roles: set[Enum] = Field(description="The roles of the user", min_length=1)
-    organization_id: UUID = Field(
-        description="The ID of the organization that the invited will belong to"
-    )
+    email: str = copy_model_field(model.UserInvitation, "email")
+    roles: set[Enum] = copy_model_field(model.UserInvitation, "roles")
+    organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
 class UpdateOrganizationSetOrganizationRequestBody(PydanticBaseModel):
@@ -76,11 +75,12 @@ def create_organization_endpoints(
     assert handle_exception
 
     @router.post(
-        "/user_invitations",
-        operation_id="user_invitations__post_one",
-        name="UserInvitations",
+        "/invite_user",
+        operation_id="invite_user",
+        name="Invite a user",
+        description=command.InviteUserCommand.__doc__,
     )
-    async def user_invitations__post_one(
+    async def invite_user(
         user: registered_user_dependency, user_invitation: user_invitation_request_body_class  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_invitation_class:  # type: ignore
         try:
@@ -96,10 +96,28 @@ def create_organization_endpoints(
             handle_exception("e088de91", None, exception)
         return retval
 
+    @router.get(
+        "/invite_user/constraints",
+        operation_id="invite_user__constraints",
+        name="The constraints for inviting a user",
+        description=command.RetrieveInviteUserConstraintsCommand.__doc__,
+    )
+    async def invite_user__constraints(
+        user: registered_user_dependency,
+    ) -> model.UserInvitationConstraints:
+        try:
+            retval: model.UserInvitationConstraints = app.handle(  # type: ignore[valid-type]
+                command.RetrieveInviteUserConstraintsCommand(user=user)
+            )
+        except Exception as exception:
+            handle_exception("cad2509e", None, exception)
+        return retval
+
     @router.post(
         "/user_registrations/{token}",
         operation_id="user_registrations__post_one",
         name="RegisterInvitedUser",
+        description=command.RegisterInvitedUserCommand.__doc__,
     )
     async def user_registrations__post_one(
         user: new_user_dependency, token: str  # type: ignore[valid-type] # Dynamic type annotation
@@ -118,6 +136,7 @@ def create_organization_endpoints(
         "/organization_sets/{organization_set_id}/organizations",
         operation_id="organization_sets__put__organizations",
         name="OrganizationSet_Organization",
+        description=command.OrganizationSetOrganizationUpdateAssociationCommand.__doc__,
     )
     async def organization_sets__put__organizations(
         user: registered_user_dependency,  # type: ignore
@@ -140,6 +159,7 @@ def create_organization_endpoints(
         "/data_collection_sets/{data_collection_set_id}/data_collections",
         operation_id="data_collection_sets__put__data_collections",
         name="DataCollectionSet_DataCollection",
+        description=command.DataCollectionSetDataCollectionUpdateAssociationCommand.__doc__,
     )
     async def data_collection_sets__put__data_collections(
         user: registered_user_dependency,  # type: ignore
@@ -162,6 +182,7 @@ def create_organization_endpoints(
         "/user_me",
         operation_id="user_me__get_one",
         name="UserMe",
+        description=user_class.__doc__,
     )
     async def user_me__get_one(
         user: registered_user_dependency,  # type: ignore
@@ -171,7 +192,8 @@ def create_organization_endpoints(
     @router.get(
         "/user_me/permissions",
         operation_id="user_me__retrieve_permissions",
-        name="UserMe",
+        name="UserMe_Permissions",
+        description=command.RetrieveOwnPermissionsCommand.__doc__,
     )
     async def user_me__retrieve_permissions(
         user: registered_user_dependency,  # type: ignore
@@ -188,6 +210,7 @@ def create_organization_endpoints(
         "/users/{object_id}",
         operation_id="users__put_one",
         name="UpdateUser",
+        description=command.UpdateUserCommand.__doc__,
     )
     async def users__put_one(
         user: registered_user_dependency, object_id: UUID, request_body: update_user_request_body_class  # type: ignore
@@ -208,7 +231,8 @@ def create_organization_endpoints(
     @router.put(
         "/update_user_own_organization",
         operation_id="update_user_own_organization",
-        name="UpdateUserOwnOrganization",
+        name="UpdateUserOwnOrganizationCommand",
+        description=command.UpdateUserCommand.__doc__,
     )
     async def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore

@@ -36,6 +36,10 @@ class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand
 
 
 class CaseSetCreateCommand(Command):
+    """
+    Create a new case set and associate it with the specified data collections and
+    cases.
+    """
 
     case_set: model.CaseSet = Field(description="The case set to create.")
     data_collection_ids: set[UUID] = Field(
@@ -53,6 +57,9 @@ class CaseSetCreateCommand(Command):
 
 
 class CasesCreateCommand(Command):
+    """
+    Create a list of cases and associate them with the specified data collections.
+    """
 
     cases: list[model.Case] = Field(
         description="The cases to create. All cases must have the same case type and created_in_data_collection."
@@ -79,6 +86,9 @@ class CasesCreateCommand(Command):
 
 
 class RetrieveCaseSetStatsCommand(Command):
+    """
+    Retrieve statistics for a set of case sets.
+    """
 
     case_set_ids: list[UUID] | None = Field(
         default=None,
@@ -87,6 +97,9 @@ class RetrieveCaseSetStatsCommand(Command):
 
 
 class RetrieveCaseTypeStatsCommand(Command):
+    """
+    Retrieve statistics for a set of case types.
+    """
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -99,16 +112,25 @@ class RetrieveCaseTypeStatsCommand(Command):
 
 
 class RetrieveCompleteCaseTypeCommand(Command):
+    """
+    Retrieve a complete case type.
+    """
 
-    case_type_id: UUID
+    case_type_id: UUID = Field(description="The ID of the case type to retrieve.")
 
 
 class RetrieveCasesByQueryCommand(Command):
+    """
+    Retrieve cases based on a query.
+    """
 
-    case_query: model.CaseQuery
+    case_query: model.CaseQuery = Field(description="The query to filter cases by.")
 
 
 class RetrieveCasesByIdCommand(Command):
+    """
+    Retrieve cases by their IDs.
+    """
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve cases for. UNIQUE"
@@ -122,6 +144,9 @@ class RetrieveCasesByIdCommand(Command):
 
 
 class RetrieveCaseRightsCommand(Command):
+    """
+    Retrieve access rights for a set of cases.
+    """
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve access for. UNIQUE"
@@ -135,6 +160,9 @@ class RetrieveCaseRightsCommand(Command):
 
 
 class RetrieveCaseSetRightsCommand(Command):
+    """
+    Retrieve access rights for a set of case sets.
+    """
 
     case_set_ids: list[UUID] = Field(
         description="The case set ids to retrieve access for. UNIQUE"
@@ -148,26 +176,65 @@ class RetrieveCaseSetRightsCommand(Command):
 
 
 class RetrievePhylogeneticTreeBySequencesCommand(Command):
-    tree_algorithm_code: enum.TreeAlgorithmType
-    seqdb_seq_distance_protocol_id: UUID
-    sequence_ids: list[UUID]
+    """
+    Calculate a phylogenetic tree based on a set of sequence IDs, a tree algorithm, and
+    a sequence distance protocol.
+    """
+
+    tree_algorithm_code: enum.TreeAlgorithmType = Field(
+        description="The algorithm to use for constructing the phylogenetic tree."
+    )
+    seqdb_seq_distance_protocol_id: UUID = Field(
+        description="The ID of the sequence distance protocol to use."
+    )
+    sequence_ids: list[UUID] = Field(
+        description="The IDs of the sequences to calculate the phylogenetic tree for."
+    )
 
 
 class RetrievePhylogeneticTreeByCasesCommand(Command):
-    tree_algorithm: enum.TreeAlgorithmType
-    genetic_distance_case_type_col_id: UUID
-    case_ids: list[UUID]
+    """
+    Retrieve a phylogenetic tree based on a set of case IDs, a tree algorithm, and
+    a genetic distance case type column.
+    """
+
+    tree_algorithm: enum.TreeAlgorithmType = Field(
+        description="The algorithm to use for constructing the phylogenetic tree."
+    )
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The ID of the genetic distance case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to calculate the phylogenetic tree for."
+    )
 
 
 class RetrieveGeneticSequenceByCaseCommand(Command):
+    """
+    Retrieve a set of genetic sequences based on a set of case IDs and a genetic
+    sequence case type column.
+    """
 
-    genetic_sequence_case_type_col_id: UUID
-    case_ids: list[UUID]
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The ID of the genetic sequence case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve genetic sequences for."
+    )
 
 
 class RetrieveAlleleProfileCommand(Command):
+    """
+    Retrieve a set of allele profiles based on a set of case IDs and a genetic distance
+    case type column.
+    """
 
-    sequence_ids: list[UUID]
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The ID of the genetic distance case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve allele profiles for."
+    )
 
 
 # CRUD

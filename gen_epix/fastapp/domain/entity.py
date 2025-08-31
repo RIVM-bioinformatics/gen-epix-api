@@ -572,7 +572,7 @@ class Entity(BaseModel):
         """
         link_field_names: set[str] = set()
         relationship_field_names: set[str] = set()
-        to_remove_get_link_id = []
+        to_remove_get_link_id = set()
         assert isinstance(self._fields, dict)
         assert isinstance(self._links_by_field_name, dict)
         assert isinstance(self._get_link_id_by_model_class, dict)
@@ -581,7 +581,7 @@ class Entity(BaseModel):
             self._fields[link.link_field_name]["type"] = FieldType.LINK
             self._links_by_field_name[link.link_field_name] = (link_type_id, link)
             if link.link_model_class in self._get_link_id_by_model_class:
-                to_remove_get_link_id.append(link.link_model_class)
+                to_remove_get_link_id.add(link.link_model_class)
             else:
                 self._get_link_id_by_model_class[link.link_model_class] = partial(
                     lambda x, y: getattr(y, x), link.link_field_name

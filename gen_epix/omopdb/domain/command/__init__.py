@@ -29,6 +29,9 @@ from gen_epix.common.domain.command import (
 )
 from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
 from gen_epix.common.domain.command import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
+from gen_epix.common.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
 from gen_epix.common.domain.command import (
@@ -60,6 +63,15 @@ from gen_epix.common.domain.command import (
 from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
+)
+from gen_epix.common.domain.command.abac import (
+    RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
+)
+from gen_epix.common.domain.command.organization import (
+    RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
+from gen_epix.common.domain.command.rbac import (
+    RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.domain.command.omop import (
@@ -104,7 +116,6 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import (
     DrugStrengthCrudCommand as DrugStrengthCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import EtlCrudCommand as EtlCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     FactRelationshipCrudCommand as FactRelationshipCrudCommand,
 )
@@ -116,6 +127,9 @@ from gen_epix.omopdb.domain.command.omop import (
 )
 from gen_epix.omopdb.domain.command.omop import (
     MeasurementCrudCommand as MeasurementCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    MeasurementRelationCrudCommand as MeasurementRelationCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     MetadataCrudCommand as MetadataCrudCommand,
@@ -136,15 +150,11 @@ from gen_epix.omopdb.domain.command.omop import (
     ProcedureOccurrenceCrudCommand as ProcedureOccurrenceCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
-    ProvenanceCrudCommand as ProvenanceCrudCommand,
-)
-from gen_epix.omopdb.domain.command.omop import (
     ProviderCrudCommand as ProviderCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     RelationshipCrudCommand as RelationshipCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import SourceCrudCommand as SourceCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     SourceToConceptMapCrudCommand as SourceToConceptMapCrudCommand,
 )
@@ -192,11 +202,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         DrugEraCrudCommand,
         DrugExposureCrudCommand,
         DrugStrengthCrudCommand,
-        EtlCrudCommand,
         FactRelationshipCrudCommand,
         LocationCrudCommand,
         LocationHistoryCrudCommand,
         MeasurementCrudCommand,
+        MeasurementRelationCrudCommand,
         MetadataCrudCommand,
         NoteCrudCommand,
         NoteNlpCrudCommand,
@@ -205,10 +215,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         PayerPlanPeriodCrudCommand,
         PersonCrudCommand,
         ProcedureOccurrenceCrudCommand,
-        ProvenanceCrudCommand,
         ProviderCrudCommand,
         RelationshipCrudCommand,
-        SourceCrudCommand,
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
         SurveyConductCrudCommand,
@@ -234,4 +242,5 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
 COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }

@@ -3,48 +3,39 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.case import CaseTypeColSet, CaseTypeSet
-from gen_epix.casedb.domain.model.organization import _ENTITY_KWARGS, User
-from gen_epix.common.domain.model import DataCollection, Model, Organization
+from gen_epix.casedb.domain.model.organization import User
+from gen_epix.common.domain import model as common_model
+from gen_epix.common.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
-_SERVICE_TYPE = enum.ServiceType.ABAC
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
 
+class OrganizationAdminPolicy(common_model.OrganizationAdminPolicy):
+    """"""
 
-class OrganizationAdminPolicy(Model):
+    __doc__ = common_model.OrganizationAdminPolicy.__doc__
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="organization_admin_policies",
-        table_name="organization_admin_policy",
-        persistable=True,
-        keys=create_keys({1: ("organization_id", "user_id")}),
+        **common_model.OrganizationAdminPolicy.ENTITY.model_dump(
+            exclude_unset=True,
+            exclude_defaults=True,
+            exclude={"schema_name", "links", "_model_class"},
+        ),
         links=create_links(
             {
-                1: ("organization_id", Organization, "organization"),
+                1: ("organization_id", common_model.Organization, "organization"),
                 2: ("user_id", User, "user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
-    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: Organization | None = Field(
-        default=None, description="The organization"
-    )
-    user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
-    user: User | None = Field(default=None, description="The user")
-    is_active: bool = Field(
-        description="Whether the user is an admin for the organization"
-    )
+    user: User | None = copy_model_field(common_model.OrganizationAdminPolicy, "user")
 
 
-class BaseCasePolicy(Model):
+class BaseCasePolicy(common_model.Model):
     data_collection_id: UUID = Field(
         description="The ID of the data collection. FOREIGN KEY"
     )
-    data_collection: DataCollection | None = Field(
+    data_collection: common_model.DataCollection | None = Field(
         default=None, description="The data collection"
     )
     case_type_set_id: UUID = Field(
@@ -71,12 +62,12 @@ class BaseCasePolicy(Model):
 class OrganizationAccessCasePolicy(BaseCasePolicy):
     """
     Stores the access rights of an organization to a particular data collection.
-    If an organization does not have a policy to a data collection, it has no access
-    rights to that data collection.
+    If an organization does not have a policy to a data collection, it has no
+    access rights to that data collection.
 
-    The access rights are limited to the case types in the case type set. If a case type
-    is not in the case type set, the organization has no access rights to that data
-    collection for that case type.
+    The access rights are limited to the case types in the case type set. If a
+    case type is not in the case type set, the organization has no access
+    rights to that data collection for that case type.
     """
 
     ENTITY: ClassVar = Entity(
@@ -93,8 +84,12 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", Organization, "organization"),
-                2: ("data_collection_id", DataCollection, "data_collection"),
+                1: ("organization_id", common_model.Organization, "organization"),
+                2: (
+                    "data_collection_id",
+                    common_model.DataCollection,
+                    "data_collection",
+                ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "read_case_type_col_set_id",
@@ -108,10 +103,9 @@ class OrganizationAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: Organization | None = Field(
+    organization: common_model.Organization | None = Field(
         default=None, description="The organization"
     )
     is_private: bool = Field(
@@ -144,9 +138,9 @@ class UserAccessCasePolicy(BaseCasePolicy):
     Stores the maximum access rights of a user to a particular data collection,
     analogous to the organization access case policy.
 
-    The actual access rights of a user are derived as the intersection of their maximum
-    access rights stored here, and the access rights of the organization to which they
-    belong.
+    The actual access rights of a user are derived as the intersection of their
+    maximum access rights stored here, and the access rights of the organization
+    to which they belong.
     """
 
     ENTITY: ClassVar = Entity(
@@ -164,7 +158,11 @@ class UserAccessCasePolicy(BaseCasePolicy):
         links=create_links(
             {
                 1: ("user_id", User, "user"),
-                2: ("data_collection_id", DataCollection, "data_collection"),
+                2: (
+                    "data_collection_id",
+                    common_model.DataCollection,
+                    "data_collection",
+                ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
                 4: (
                     "read_case_type_col_set_id",
@@ -178,7 +176,6 @@ class UserAccessCasePolicy(BaseCasePolicy):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")
@@ -207,12 +204,12 @@ class UserAccessCasePolicy(BaseCasePolicy):
 class OrganizationShareCasePolicy(BaseCasePolicy):
     """
     Stores any additional case or case set share rights of an organization to a
-    particular data collection, if the case or case set is already in a particular
-    other data collection.
+    particular data collection, if the case or case set is already in a
+    particular other data collection.
 
-    The share rights are limited to the case types in the case type set. If a case type
-    is not in the case type set, the organization has no share rights to that data
-    collection for that case type.
+    The share rights are limited to the case types in the case type set. If a
+    case type is not in the case type set, the organization has no share rights
+    to that data collection for that case type.
     """
 
     ENTITY: ClassVar = Entity(
@@ -230,22 +227,29 @@ class OrganizationShareCasePolicy(BaseCasePolicy):
         ),
         links=create_links(
             {
-                1: ("organization_id", Organization, "organization"),
-                2: ("data_collection_id", DataCollection, "data_collection"),
+                1: ("organization_id", common_model.Organization, "organization"),
+                2: (
+                    "data_collection_id",
+                    common_model.DataCollection,
+                    "data_collection",
+                ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
-                4: ("from_data_collection_id", DataCollection, "from_data_collection"),
+                4: (
+                    "from_data_collection_id",
+                    common_model.DataCollection,
+                    "from_data_collection",
+                ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: Organization | None = Field(
+    organization: common_model.Organization | None = Field(
         default=None, description="The organization"
     )
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the case type set is shared. FOREIGN KEY"
     )
-    from_data_collection: DataCollection | None = Field(
+    from_data_collection: common_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the case type set is shared",
     )
@@ -256,9 +260,9 @@ class UserShareCasePolicy(BaseCasePolicy):
     Stores the maximum share rights of a user to a particular data collection,
     analogous to the organization share case policy.
 
-    The actual share rights of a user are derived as the intersection of their maximum
-    share rights stored here, and the share rights of the organization to which they
-    belong.
+    The actual share rights of a user are derived as the intersection of their
+    maximum share rights stored here, and the share rights of the organization
+    to which they belong.
     """
 
     ENTITY: ClassVar = Entity(
@@ -277,19 +281,26 @@ class UserShareCasePolicy(BaseCasePolicy):
         links=create_links(
             {
                 1: ("user_id", User, "user"),
-                2: ("data_collection_id", DataCollection, "data_collection"),
+                2: (
+                    "data_collection_id",
+                    common_model.DataCollection,
+                    "data_collection",
+                ),
                 3: ("case_type_set_id", CaseTypeSet, "case_type_set"),
-                4: ("from_data_collection_id", DataCollection, "from_data_collection"),
+                4: (
+                    "from_data_collection_id",
+                    common_model.DataCollection,
+                    "from_data_collection",
+                ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     user_id: UUID = Field(description="The ID of the user. FOREIGN KEY")
     user: User | None = Field(default=None, description="The user")
     from_data_collection_id: UUID = Field(
         description="The ID of the data collection from which the case type set is shared. FOREIGN KEY"
     )
-    from_data_collection: DataCollection | None = Field(
+    from_data_collection: common_model.DataCollection | None = Field(
         default=None,
         description="The data collection from which the case type set is shared",
     )

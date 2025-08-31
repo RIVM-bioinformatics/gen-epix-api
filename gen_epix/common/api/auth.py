@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 from gen_epix.common.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 
 
 def create_auth_endpoints(
@@ -25,6 +24,7 @@ def create_auth_endpoints(
         "/identity_providers",
         operation_id="identity_providers__get_all",
         name="IdentityProvider",
+        description=command.GetIdentityProvidersCommand.__doc__,
     )
     async def identity_providers__get_all() -> list[model.IdentityProvider]:
         try:

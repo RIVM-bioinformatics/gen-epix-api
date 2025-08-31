@@ -692,7 +692,7 @@ class CrudEndpointGenerator:
             endpoint_fn,
             methods=[method.value],
             response_model=response_model,
-            name=route.operation_id_basename,
+            name=operation_id,
             description=route.description,
             operation_id=operation_id,
             response_model_exclude_none=bool(route.response_model_exclude_none),
@@ -889,7 +889,7 @@ class CrudEndpointGenerator:
             crud_command_class=crud_command_class,
             endpoint_types=crud_endpoint_types,
             operation_id_basename=entity.name,
-            description=model_class.__doc__ or default_description,
+            description=crud_command_class.__doc__ or default_description,
             # description=model_class.model_json_schema().get(
             #     "description", default_description
             # ),

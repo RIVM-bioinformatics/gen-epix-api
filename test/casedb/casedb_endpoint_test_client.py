@@ -1,17 +1,11 @@
 import json
-from enum import Enum
-from test.test_client.endpoint_test_client import EndpointTestClient
 from typing import Any
 
-# import libraries
 from fastapi import FastAPI, Response
 
 from gen_epix.casedb.domain import command, model
+from gen_epix.common.test.endpoint_test_client import EndpointTestClient
 from gen_epix.fastapp.app import App
-
-
-class EndpointVersion(Enum):
-    V1 = "v1"
 
 
 class CasedbEndpointTestClient(EndpointTestClient):
@@ -28,6 +22,10 @@ class CasedbEndpointTestClient(EndpointTestClient):
             command.GetIdentityProvidersCommand, self.handle_get_identity_providers
         )
         self.register_handler(command.InviteUserCommand, self.handle_invite_user)
+        self.register_handler(
+            command.RetrieveInviteUserConstraintsCommand,
+            self.handle_retrieve_invite_user_constraints,
+        )
         self.register_handler(
             command.RegisterInvitedUserCommand, self.handle_register_invited_user
         )
@@ -68,11 +66,24 @@ class CasedbEndpointTestClient(EndpointTestClient):
             organization_id=cmd.organization_id,
         )
         response = self.test_client.post(
-            route_prefix + "/user_invitations",
+            route_prefix + "/invite_user",
             json=json.loads(request_body.model_dump_json()),
             headers=headers,
         )
         retval = self._content_to_obj(response, model.UserInvitation)
+        return retval, response
+
+    def handle_retrieve_invite_user_constraints(
+        self,
+        cmd: command.RetrieveInviteUserConstraintsCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.get(
+            route_prefix + "/invite_user/constraints",
+            headers=headers,
+        )
+        retval = self._content_to_obj(response, model.UserInvitationConstraints)
         return retval, response
 
     def handle_register_invited_user(
