@@ -21,7 +21,7 @@ from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.common.config import AppCfg
-from gen_epix.common.test.enum import RepositoryType
+from gen_epix.common.test.enum import RepositoryType as TestClientRepositoryType
 from gen_epix.common.test.test_client import TestClient
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
@@ -169,7 +169,7 @@ class CasedbTestClient(TestClient):
         use_endpoints: bool = False,
         **kwargs: Any,
     ):
-        test_client_repository_type = RepositoryType(repository_type.value)
+        test_client_repository_type = TestClientRepositoryType(repository_type.value)
 
         # Set up test name and directory
         app_cfg = APP_CFG
@@ -230,6 +230,7 @@ class CasedbTestClient(TestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
+            user_crud_command_class=command.UserCrudCommand,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,

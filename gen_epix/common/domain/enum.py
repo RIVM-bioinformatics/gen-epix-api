@@ -6,6 +6,7 @@ class ServiceType(Enum):
     ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
     RBAC = "RBAC"
+    ABAC = "ABAC"
 
 
 class AppType(Enum):

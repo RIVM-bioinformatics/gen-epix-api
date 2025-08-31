@@ -1,3 +1,4 @@
+from gen_epix.common.domain.service.abac import BaseAbacService as BaseAbacService
 from gen_epix.common.domain.service.organization import (
     BaseOrganizationService as BaseOrganizationService,
 )

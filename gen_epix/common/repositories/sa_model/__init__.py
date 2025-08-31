@@ -1,3 +1,6 @@
+from gen_epix.common.repositories.sa_model.abac import (
+    OrganizationAdminPolicyMixin as OrganizationAdminPolicyMixin,
+)
 from gen_epix.common.repositories.sa_model.base import (
     DB_METADATA_FIELDS as DB_METADATA_FIELDS,
 )
