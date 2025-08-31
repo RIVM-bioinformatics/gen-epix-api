@@ -42,6 +42,15 @@ class TestClient:
         user_crud_command_class: Type[
             command.UserCrudCommand
         ] = command.UserCrudCommand,
+        user_invitation_crud_command_class: Type[
+            command.UserInvitationCrudCommand
+        ] = command.UserInvitationCrudCommand,
+        retrieve_invite_user_constraints_class: Type[
+            command.RetrieveInviteUserConstraintsCommand
+        ] = command.RetrieveInviteUserConstraintsCommand,
+        invite_user_command_class: Type[
+            command.InviteUserCommand
+        ] = command.InviteUserCommand,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         **kwargs: Any,
@@ -58,6 +67,11 @@ class TestClient:
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
         self.user_crud_command_class = user_crud_command_class
+        self.user_invitation_crud_command_class = user_invitation_crud_command_class
+        self.retrieve_invite_user_constraints_class = (
+            retrieve_invite_user_constraints_class
+        )
+        self.invite_user_command_class = invite_user_command_class
         self.log_level = log_level
         self.verbose = verbose
 
@@ -516,6 +530,7 @@ class TestClient:
         set_dummy_organization: bool = False,
         set_dummy_token: bool = False,
     ) -> model.User:
+        root_user: model.User = self.get_root_user()
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
         if not m:
@@ -531,7 +546,7 @@ class TestClient:
         else:
             organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
         user_invitation: model.UserInvitation = self.handle(
-            command.InviteUserCommand(
+            self.invite_user_command_class(
                 user=user,
                 email=f"{user_name}@{organization_name}.org",
                 roles={role},
@@ -551,9 +566,14 @@ class TestClient:
             )
         )
         tgt_user.name = user_name
+        # Verify if the right role(s) were assigned
+        if tgt_user.roles != {role}:
+            raise ValueError(
+                f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
+            )
         # Verify against user invitation constraints
         user_invitation_constraints: model.UserInvitationConstraints = self.handle(
-            command.RetrieveInviteUserConstraintsCommand(
+            self.retrieve_invite_user_constraints_class(
                 user=user,
             )
         )
@@ -561,6 +581,18 @@ class TestClient:
             raise ValueError("User invitation constraints not met for organization_id")
         if not tgt_user.roles.issubset(user_invitation_constraints.roles):
             raise ValueError("User invitation constraints not met for roles")
+        # Verify no invitations remain for the user
+        remaining_invitations: list[model.UserInvitation] = self.handle(
+            self.user_invitation_crud_command_class(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+                obj_ids=None,
+            )
+        )
+        if any(x.email == tgt_user.email for x in remaining_invitations):
+            raise ValueError(
+                f"Some user invitations remaining for email {tgt_user.email}"
+            )
         retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
         return retval
 
