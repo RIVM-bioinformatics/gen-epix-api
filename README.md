@@ -52,7 +52,7 @@ Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It
 
 2. Create and activate a conda environment:
    ```console
-   conda create --name gen-epix python=3.12
+   conda create --name gen-epix python=3.13
    conda activate gen-epix
    ```
 
@@ -150,7 +150,7 @@ For a complete list of dependencies, refer to:
 - [dev-requirements.txt](dev-requirements.txt) - Development dependencies
 
 **Python Version**
-Gen-EpiX requires Python 3.12 or higher.
+Gen-EpiX requires Python 3.13 or higher.
 
 ## Funding
 
