@@ -485,6 +485,7 @@ class Run:
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/omopdb/unit",
                 # "test/seqdb/integration",
             ]
         )

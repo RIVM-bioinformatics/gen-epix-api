@@ -14,14 +14,14 @@ license = "EUPL-1.2"
 license-files = ["LICENSE"]
 keywords = ["Genomic Epidemiology", "Disease X", "Bioinformatics"]
 classifiers = [
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]==0.116.1",
     "uvicorn==0.32.1",
@@ -36,7 +36,7 @@ dependencies = [
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.2.11",
-    "scipy==1.14.1",
+    "scipy==1.16.1",
     "numpy==2.3.2",
     "biopython==1.85",
     "cachetools==5.5.2",
