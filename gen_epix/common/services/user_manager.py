@@ -23,8 +23,12 @@ class UserManager(BaseUserManager):
     ):
         self._user_class = user_class
         self._user_invitation_class = user_invitation_class
-        annotation: set[Enum] = user_class.model_fields["roles"].annotation  # type:ignore[assignment]
-        self._role_enum: Type[Enum] = annotation.__args__[0]  # type:ignore[attr-defined]
+        annotation: set[Enum] = user_class.model_fields[
+            "roles"
+        ].annotation  # type:ignore[assignment]
+        self._role_enum: Type[Enum] = annotation.__args__[
+            0
+        ]  # type:ignore[attr-defined]
         if "ROOT" not in self._role_enum._member_names_:
             raise exc.InitializationServiceError(
                 "Root role is not defined in the user model"
@@ -40,7 +44,9 @@ class UserManager(BaseUserManager):
 
         # Generate root model objs
         self._root: dict = {}
-        self._root["organization"] = model.Organization(**root_cfg["organization"])  # type:ignore[arg-type]
+        self._root["organization"] = model.Organization(
+            **root_cfg["organization"]
+        )  # type:ignore[arg-type]
         if self._root["organization"].id is None:
             raise exc.InitializationServiceError(
                 "Root organization ID is not set in the configuration"
@@ -230,7 +236,9 @@ class UserManager(BaseUserManager):
             claims_user.id = self.generate_id()
             user: model.User = (
                 self._organization_service.repository.crud(  # type:ignore[assignment]
-                    uow,claims_user.id,self._user_class,
+                    uow,
+                    claims_user.id,
+                    self._user_class,
                     claims_user,
                     None,
                     CrudOperation.CREATE_ONE,
@@ -316,15 +324,17 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("User already exists")
 
             try:
-                created_user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
-                    uow,
-                    created_by_user_id,
-                    self._user_class,
-                    self._user_class(
-                        **(user.model_dump() | {"id": self.generate_id()})
-                    ),
-                    None,
-                    CrudOperation.CREATE_ONE,
+                created_user: model.User = (
+                    self._organization_service.repository.crud(  # type:ignore[assignment]
+                        uow,
+                        created_by_user_id,
+                        self._user_class,
+                        self._user_class(
+                            **(user.model_dump() | {"id": self.generate_id()})
+                        ),
+                        None,
+                        CrudOperation.CREATE_ONE,
+                    )
                 )
             except:
                 raise exc.UnauthorizedAuthError("Unable to create user")
@@ -343,28 +353,38 @@ class UserManager(BaseUserManager):
 
     def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type:ignore[override]
         with self._organization_service.repository.uow() as uow:
-            user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
-                uow,
-                user_id,
-                self._user_class,
-                None,
-                user_id,
-                CrudOperation.READ_ONE,
+            user: model.User = (
+                self._organization_service.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user_id,
+                    self._user_class,
+                    None,
+                    user_id,
+                    CrudOperation.READ_ONE,
+                )
             )
         return user
 
-    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:  # type:ignore[override]
+    def update_user_name(  # type:ignore[override]
+        self, user: model.User, new_name: str
+    ) -> model.User | None:
+        if user.name == new_name:
+            return user
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
-            updated_user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
-                uow,
-                user.id,
-                self._user_class,
-                user,
-                None,
-                CrudOperation.UPDATE_ONE,
+            updated_user: model.User = (
+                self._organization_service.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user.id,
+                    self._user_class,
+                    user,
+                    None,
+                    CrudOperation.UPDATE_ONE,
+                )
             )
         return updated_user
 
-    def retrieve_user_permissions(self, user: model.User) -> set[Permission]:  # type:ignore[override]
+    def retrieve_user_permissions(  # type:ignore[override]
+        self, user: model.User
+    ) -> set[Permission]:
         return self._rbac_service.retrieve_user_permissions(user)

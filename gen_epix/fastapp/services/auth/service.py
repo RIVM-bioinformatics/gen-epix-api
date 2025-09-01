@@ -482,7 +482,7 @@ class AuthService(BaseAuthService):
             try:
                 # Retrieve user name from claims and update if necessary
                 new_user_name = user_manager.get_user_name_from_claims(claims.claims)
-                if new_user_name and new_user_name != user.name:
+                if new_user_name:
                     updated_user = user_manager.update_user_name(user, new_user_name)
                     if updated_user:
                         return updated_user

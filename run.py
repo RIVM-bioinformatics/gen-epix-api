@@ -441,6 +441,8 @@ class Run:
         )
 
     def test_common_unit_auth(self) -> None:
+        import pytest
+        
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
