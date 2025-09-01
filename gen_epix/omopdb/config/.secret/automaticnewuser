@@ -1,8 +1,9 @@
 {
         "roles": [
-                "DATA_READER"
+                "ORG_USER"
         ],
-        "data_collection_ids": [
-                "01943381-6b44-b0a7-669c-1e481dad6d1f"
-        ]
+        "organization": {
+                "id": "018d074d-ea0c-e942-07db-a3cc0ba1d653",
+                "name": "DUMMY"
+        }
 }

@@ -1,4 +1,4 @@
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
@@ -81,11 +81,13 @@ class TestUpdate:
                         with pytest.raises(exc.UnauthorizedAuthError):
                             env.update_user(user, tgt_user, is_active=True)
                     if is_org_update_allowed:
-                        env.update_user(user, tgt_user, organization=new_tgt_org)
-                        env.update_user(user, tgt_user, organization=tgt_org)
+                        env.update_user(user, tgt_user, organization_or_str=new_tgt_org)
+                        env.update_user(user, tgt_user, organization_or_str=tgt_org)
                     else:
                         with pytest.raises(exc.UnauthorizedAuthError):
-                            env.update_user(user, tgt_user, organization=new_tgt_org)
+                            env.update_user(
+                                user, tgt_user, organization_or_str=new_tgt_org
+                            )
                     with pytest.raises(
                         (exc.UnauthorizedAuthError, exc.InvalidIdsError)
                     ):
@@ -257,10 +259,14 @@ class TestUpdate:
             user = f"{role_str}1_1"
             if env.verbose:
                 print(f"User: {user} -> org2")
-            user = env.temp_update_user_own_organization(user, organization="org2")
+            user = env.temp_update_user_own_organization(
+                user, organization_or_str="org2"
+            )
             if env.verbose:
                 print(f"User: {user} -> org1")
-            user = env.temp_update_user_own_organization(user, organization="org1")
+            user = env.temp_update_user_own_organization(
+                user, organization_or_str="org1"
+            )
             if not SKIP_RAISE:
                 if env.verbose:
                     print(f"User: {user} -> dummy")

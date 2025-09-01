@@ -1,20 +1,14 @@
 import datetime
 import json
 from enum import Enum
-from typing import Any, ClassVar, Type
+from typing import ClassVar, Type
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator
 
-from gen_epix.common.domain import enum
+from gen_epix import fastapp
 from gen_epix.common.domain.model.base import Model
-from gen_epix.fastapp import User as ServiceUser
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-
-_SERVICE_TYPE = enum.ServiceType.ORGANIZATION
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
 
 
 class Organization(Model):
@@ -27,7 +21,6 @@ class Organization(Model):
         table_name="organization",
         persistable=True,
         keys=create_keys({1: "name", 2: "legal_entity_code"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(
         description="The name of the organization, UNIQUE", max_length=255
@@ -37,11 +30,10 @@ class Organization(Model):
     )
 
 
-class UserNameEmail(ServiceUser, Model):
+class UserNameEmail(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_name_emails",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     id: UUID | None = Field(  # pyright: ignore[reportIncompatibleVariableOverride]
         default=None, description="The ID of the user"
@@ -52,7 +44,7 @@ class UserNameEmail(ServiceUser, Model):
     email: str = Field(description="The email of the user", max_length=320)
 
 
-class User(ServiceUser, Model):
+class User(fastapp.User, Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="users",
         table_name="user",
@@ -63,7 +55,6 @@ class User(ServiceUser, Model):
                 1: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = Enum
     id: UUID | None = Field(
@@ -102,12 +93,12 @@ class User(ServiceUser, Model):
             return {cls.ROLE_ENUM[x] for x in value}
         return value
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: UUID | None, _info: Any) -> UUID | None:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: UUID | None) -> UUID | None:
     #     return value
 
-    @field_serializer("roles")
-    def serialize_roles(self, value: set[Enum], _info: Any) -> list[str]:
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
         return [x.value for x in value]
 
 
@@ -117,7 +108,6 @@ class OrganizationSet(Model):
         table_name="organization_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the organization set", max_length=255)
     description: str | None = Field(
@@ -137,7 +127,6 @@ class OrganizationSetMember(Model):
                 2: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_set_id: UUID = Field(
         description="The ID of the organization set. FOREIGN KEY"
@@ -164,7 +153,6 @@ class Site(Model):
                 1: ("organization_id", Organization, "organization"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
     organization: Organization | None = Field(
@@ -188,7 +176,6 @@ class Contact(Model):
                 1: ("site_id", Site, "site"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     # TODO: Temporary implementation, check established models for this
     site_id: UUID | None = Field(
@@ -216,7 +203,6 @@ class IdentifierIssuer(Model):
         snake_case_plural_name="identifier_issuers",
         table_name="identifier_issuer",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the issuer", max_length=255)
 
@@ -231,7 +217,6 @@ class DataCollection(Model):
         table_name="data_collection",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     # TODO: Placeholder
     name: str = Field(
@@ -248,7 +233,6 @@ class DataCollectionSet(Model):
         table_name="data_collection_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the data collection set", max_length=255)
     description: str | None = Field(
@@ -270,7 +254,6 @@ class DataCollectionSetMember(Model):
                 2: ("data_collection_id", DataCollection, "data_collection"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     data_collection_set_id: UUID = Field(
         description="The ID of the data collection set. FOREIGN KEY"
@@ -287,6 +270,11 @@ class DataCollectionSetMember(Model):
 
 
 class UserInvitation(Model):
+    """
+    Represents an invitation for a new user of a particular organization and
+    with particular starting properties.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="user_invitations",
         table_name="user_invitation",
@@ -298,7 +286,6 @@ class UserInvitation(Model):
                 2: ("invited_by_user_id", User, "invited_by_user"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = Enum
     email: str = Field(description="The email of the user, UNIQUE", max_length=320)
@@ -306,18 +293,20 @@ class UserInvitation(Model):
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
     )
-    roles: set[Enum] = Field(description="The initial roles of the user", min_length=1)
+    roles: set[Enum] = Field(
+        description="The initial roles that the new user will have", min_length=1
+    )
     invited_by_user_id: UUID = Field(
-        description="The ID of the user who invited the user. FOREIGN KEY"
+        description="The ID of the user who invited the new user. FOREIGN KEY"
     )
     invited_by_user: User | None = Field(
-        default=None, description="The user who invited the user"
+        default=None, description="The user who invited the new user"
     )
     organization_id: UUID = Field(
-        description="The ID of the organization of the user. FOREIGN KEY"
+        description="The ID of the organization that the new user will belong to. FOREIGN KEY"
     )
     organization: Organization | None = Field(
-        default=None, description="The organization of the user"
+        default=None, description="The organization that the new user will belong to"
     )
 
     @field_validator("roles", mode="before")
@@ -333,6 +322,24 @@ class UserInvitation(Model):
             return {cls.ROLE_ENUM[x] for x in value}
         return value
 
-    @field_serializer("roles")
-    def serialize_roles(self, value: set[Enum], _info) -> list[str]:
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
         return [x.value for x in value]
+
+
+class UserInvitationConstraints(Model):
+    """
+    Represents the constraints for a user invitation.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="user_invitation_constraints",
+        persistable=False,
+    )
+    ROLE_ENUM: ClassVar[Type[Enum]] = Enum
+    roles: set[Enum] = Field(
+        description="The roles that the user may be assigned by the inviting user."
+    )
+    organization_ids: set[UUID] = Field(
+        description="The organizations that the user may be assigned by the inviting user."
+    )

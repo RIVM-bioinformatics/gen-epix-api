@@ -7,7 +7,6 @@ from pydantic import BaseModel as PydanticBaseModel
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 
 
 class UpdateConceptSetConceptRequestBody(PydanticBaseModel):
@@ -33,6 +32,7 @@ def create_ontology_endpoints(
         "/concept_sets/{concept_set_id}/concepts",
         operation_id="concept_sets__put__concepts",
         name="ConceptSet_Concept",
+        description=command.ConceptSetConceptUpdateAssociationCommand.__doc__,
     )
     async def concept_sets__put__concepts(
         user: registered_user_dependency,  # type: ignore
@@ -55,6 +55,7 @@ def create_ontology_endpoints(
         "/diseases/{disease_id}/etiological_agents",
         operation_id="diseases__put__etiological_agents",
         name="Disease_EtiologicalAgent",
+        description=command.DiseaseEtiologicalAgentUpdateAssociationCommand.__doc__,
     )
     async def diseases__put__concepts(
         user: registered_user_dependency,  # type: ignore

@@ -2,6 +2,9 @@ from typing import Type
 
 import gen_epix.fastapp as fastapp
 from gen_epix.common.domain import enum
+from gen_epix.common.domain.model.abac import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.common.domain.model.base import Model as Model
 from gen_epix.common.domain.model.organization import Contact as Contact
 from gen_epix.common.domain.model.organization import DataCollection as DataCollection
@@ -22,8 +25,12 @@ from gen_epix.common.domain.model.organization import (
 from gen_epix.common.domain.model.organization import Site as Site
 from gen_epix.common.domain.model.organization import User as User
 from gen_epix.common.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.common.domain.model.organization import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.common.domain.model.organization import UserNameEmail as UserNameEmail
 from gen_epix.common.domain.model.system import Outage as Outage
+from gen_epix.common.domain.model.system import PackageMetadata as PackageMetadata
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
@@ -34,7 +41,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         IdentityProvider,
         IDPUser,
     ),
-    enum.ServiceType.SYSTEM: (Outage,),
+    enum.ServiceType.SYSTEM: (Outage, PackageMetadata),
     enum.ServiceType.ORGANIZATION: (
         Organization,
         OrganizationSet,
@@ -48,8 +55,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         UserNameEmail,
         User,
         UserInvitation,
+        UserInvitationConstraints,
     ),
     enum.ServiceType.RBAC: tuple(),
+    enum.ServiceType.ABAC: (OrganizationAdminPolicy,),
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())

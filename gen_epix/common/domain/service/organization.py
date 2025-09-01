@@ -40,6 +40,10 @@ class BaseOrganizationService(BaseService):
             self.retrieve_organization_contact,
         )
         f(command.InviteUserCommand, self.invite_user)
+        f(
+            command.RetrieveInviteUserConstraintsCommand,
+            self.retrieve_invite_user_constraints,
+        )
         f(command.RegisterInvitedUserCommand, self.register_invited_user)
         f(command.UpdateUserCommand, self.update_user)
 
@@ -60,6 +64,12 @@ class BaseOrganizationService(BaseService):
         cmd: command.InviteUserCommand,
     ) -> model.UserInvitation:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def retrieve_invite_user_constraints(
+        self, cmd: command.RetrieveInviteUserConstraintsCommand
+    ) -> model.UserInvitationConstraints:
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def register_invited_user(

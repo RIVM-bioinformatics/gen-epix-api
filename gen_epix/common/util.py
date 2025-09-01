@@ -1,16 +1,41 @@
 import json
 import tomllib
 import uuid
+from enum import Enum
 from pathlib import Path
 from typing import Any, Hashable, Iterable, Type
 
 import ulid
+from pydantic import BaseModel, Field
 
 from gen_epix.fastapp import Command, Domain, Model, exc
 
 
 def generate_ulid() -> uuid.UUID:
     return ulid.api.new().uuid
+
+
+def get_project_root() -> Path:
+    """
+    Get the root path of the project by looking for pyproject.toml.
+
+    Searches upward from the current file's directory until it finds
+    a directory containing pyproject.toml, which indicates the project root.
+
+    Returns:
+        Path: The absolute path to the project root directory.
+
+    Raises:
+        FileNotFoundError: If pyproject.toml cannot be found in any parent directory.
+    """
+    current_dir = Path(__file__).parent
+
+    while current_dir != current_dir.parent:
+        if (current_dir / "pyproject.toml").exists():
+            return current_dir.resolve()
+        current_dir = current_dir.parent
+
+    raise FileNotFoundError("Could not find pyproject.toml in any parent directory")
 
 
 def map_paired_elements(
@@ -125,6 +150,7 @@ def register_domain_entities(
     commands_by_service_type: dict[Hashable, set[Type[Command]]],
     common_model_impl: dict[Type[Model], Type[Model]] | None = None,
     common_command_impl: dict[Type[Command], Type[Command]] | None = None,
+    set_schema_to_service_type: bool = False,
 ) -> None:
     """
     Register service types, models and commands with a domain. In case some
@@ -132,12 +158,21 @@ def register_domain_entities(
     models and commands contain their parent classes, they can be substituted
     in the input and subsequently be registered as the actual classes, by
     providing a mapping.
+
+    If `set_schema_to_service_type` is enabled, the schema name of the model
+    will be set to the lower case service name for persistable entities, unless
+    the schema name is already set.
     """
     if not common_model_impl:
         common_model_impl = {}
     for service_type in sorted_service_types:
         # Register the service type
         domain.register_service_type(service_type)
+        schema_name = (
+            str(service_type.value).lower()
+            if isinstance(service_type, Enum)
+            else str(service_type)
+        )
         # Register the models
         for i, model_class in enumerate(
             sorted_models_by_service_type.get(service_type, [])
@@ -151,6 +186,12 @@ def register_domain_entities(
                 raise exc.InitializationServiceError(
                     f"Entity for model class {model_class} is not initialized."
                 )
+            if (
+                set_schema_to_service_type
+                and model_class.ENTITY.persistable
+                and model_class.ENTITY.schema_name is None
+            ):
+                model_class.ENTITY.schema_name = schema_name
             domain.register_entity(
                 model_class.ENTITY, model_class=model_class, service_type=service_type
             )
@@ -163,3 +204,71 @@ def register_domain_entities(
                 command_class = common_command_impl[command_class]
                 commands_by_service_type[service_type].add(command_class)
             domain.register_command(command_class, service_type=service_type)
+
+
+def copy_model_field(
+    from_model: Type[BaseModel], field_name: str, **kwargs: Any
+) -> Any:
+    """
+    Copy a field from a model
+    """
+    field_info_attributes = {
+        "alias": "alias",
+        "alias_priority": "alias_priority",
+        "default": "default",
+        "default_factory": "default_factory",
+        "deprecated": "deprecated",
+        "description": "description",
+        "discriminator": "discriminator",
+        "examples": "examples",
+        "exclude": "exclude",
+        "frozen": "frozen",
+        "init": "init",
+        "init_var": "init_var",
+        "json_schema_extra": "json_schema_extra",
+        "kw_only": "kw_only",
+        "serialization_alias": "serialization_alias",
+        "title": "title",
+    }
+    metadata_attributes = {
+        "allow_inf_nan": "allow_inf_nan",
+        "coerce_numbers_to_str": "coerce_numbers_to_str",
+        "decimal_places": "decimal_places",
+        "ge": "ge",
+        "gt": "gt",
+        "le": "le",
+        "lt": "lt",
+        "max_digits": "max_digits",
+        "max_length": "max_length",
+        "min_length": "min_length",
+        "multiple_of": "multiple_of",
+        "pattern": "pattern",
+    }
+    # Currently unmapped attributes
+    other_attributes = {
+        "fail_fast": "fail_fast",
+        "field_title_generator": "field_title_generator",
+        "repr": "repr",
+        "union_mode": "union_mode",
+        "validate_default": "validate_default",
+        "validation_alias": "validation_alias",
+        "strict": "strict",
+    }
+    # Add field_info attributes
+    field_info = from_model.model_fields[field_name]
+    field_kwargs = {
+        y: getattr(field_info, x)
+        for x, y in field_info_attributes.items()
+        if getattr(field_info, x) is not None
+    }
+    # Special case: always add default
+    field_kwargs["default"] = field_info.default
+    # Add field_info.metadata attributes
+    for metadata in field_info.metadata:
+        for x, y in metadata_attributes.items():
+            if hasattr(metadata, x):
+                field_kwargs[y] = getattr(metadata, x)
+    # Override any attributes provided in kwargs
+    field_kwargs.update(kwargs)
+    # Create field
+    return Field(**field_kwargs)

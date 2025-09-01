@@ -1,3 +1,6 @@
+from gen_epix.common.repositories.sa_model.abac import (
+    OrganizationAdminPolicyMixin as OrganizationAdminPolicyMixin,
+)
 from gen_epix.common.repositories.sa_model.base import (
     DB_METADATA_FIELDS as DB_METADATA_FIELDS,
 )
@@ -48,6 +51,9 @@ from gen_epix.common.repositories.sa_model.util import (
 )
 from gen_epix.common.repositories.sa_model.util import (
     create_table_args as create_table_args,
+)
+from gen_epix.common.repositories.sa_model.util import (
+    get_mixin_mapped_column as get_mixin_mapped_column,
 )
 from gen_epix.common.repositories.sa_model.util import (
     set_entity_repository_model_classes as set_entity_repository_model_classes,

@@ -35,17 +35,18 @@ from gen_epix.omopdb.domain.model.omop import ConceptSynonym as ConceptSynonym
 from gen_epix.omopdb.domain.model.omop import ConditionEra as ConditionEra
 from gen_epix.omopdb.domain.model.omop import ConditionOccurrence as ConditionOccurrence
 from gen_epix.omopdb.domain.model.omop import Cost as Cost
+from gen_epix.omopdb.domain.model.omop import DataLineageMixin as DataLineageMixin
 from gen_epix.omopdb.domain.model.omop import DeviceExposure as DeviceExposure
 from gen_epix.omopdb.domain.model.omop import Domain as Domain
 from gen_epix.omopdb.domain.model.omop import DoseEra as DoseEra
 from gen_epix.omopdb.domain.model.omop import DrugEra as DrugEra
 from gen_epix.omopdb.domain.model.omop import DrugExposure as DrugExposure
 from gen_epix.omopdb.domain.model.omop import DrugStrength as DrugStrength
-from gen_epix.omopdb.domain.model.omop import Etl as Etl
 from gen_epix.omopdb.domain.model.omop import FactRelationship as FactRelationship
 from gen_epix.omopdb.domain.model.omop import Location as Location
 from gen_epix.omopdb.domain.model.omop import LocationHistory as LocationHistory
 from gen_epix.omopdb.domain.model.omop import Measurement as Measurement
+from gen_epix.omopdb.domain.model.omop import MeasurementRelation as MeasurementRelation
 from gen_epix.omopdb.domain.model.omop import Metadata as Metadata
 from gen_epix.omopdb.domain.model.omop import Note as Note
 from gen_epix.omopdb.domain.model.omop import NoteNlp as NoteNlp
@@ -54,17 +55,15 @@ from gen_epix.omopdb.domain.model.omop import ObservationPeriod as ObservationPe
 from gen_epix.omopdb.domain.model.omop import PayerPlanPeriod as PayerPlanPeriod
 from gen_epix.omopdb.domain.model.omop import Person as Person
 from gen_epix.omopdb.domain.model.omop import ProcedureOccurrence as ProcedureOccurrence
-from gen_epix.omopdb.domain.model.omop import Provenance as Provenance
 from gen_epix.omopdb.domain.model.omop import Provider as Provider
 from gen_epix.omopdb.domain.model.omop import Relationship as Relationship
-from gen_epix.omopdb.domain.model.omop import Source as Source
 from gen_epix.omopdb.domain.model.omop import SourceToConceptMap as SourceToConceptMap
 from gen_epix.omopdb.domain.model.omop import Specimen as Specimen
-from gen_epix.omopdb.domain.model.omop import Subject as Subject
 from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
+from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
 from gen_epix.omopdb.domain.model.organization import User as User
 from gen_epix.omopdb.domain.model.organization import UserInvitation as UserInvitation
 
@@ -86,58 +85,56 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
         ),
         # Specific models
         enum.ServiceType.OMOP: [
-            # Core vocabulary and reference tables
+            # Ordered topologically based on foreign key dependencies
+            # Foundation tables (no dependencies)
+            Location,
+            CohortDefinition,
+            Cohort,
+            CdmSource,
+            # Vocabulary system (circular dependencies resolved logically)
             Vocabulary,
             Domain,
             ConceptClass,
-            Relationship,
             Concept,
-            ConceptAncestor,
+            Relationship,
+            # Concept relationships (depend on concept and relationship)
             ConceptRelationship,
+            ConceptAncestor,
             ConceptSynonym,
-            # Source and mapping tables
-            CdmSource,
-            Source,
+            # Reference/mapping tables
+            DrugStrength,
             SourceToConceptMap,
-            # Geographic and organizational tables
-            Location,
+            Metadata,
+            # Care infrastructure
             CareSite,
             Provider,
-            # Person and observation period
-            Subject,
+            # Person and observations
             Person,
             ObservationPeriod,
-            # Visit tables
+            PayerPlanPeriod,
+            # Visits (depend on person, care_site, provider, concept)
             VisitOccurrence,
             VisitDetail,
-            LocationHistory,
-            PayerPlanPeriod,
-            # Clinical event tables
+            # Clinical events (depend on person, visits, providers, concepts)
             ConditionOccurrence,
-            DrugStrength,
+            ProcedureOccurrence,
             DrugExposure,
             DeviceExposure,
-            ProcedureOccurrence,
-            Observation,
             Measurement,
-            Note,
-            NoteNlp,
+            Observation,
             Specimen,
-            # Era tables (depend on clinical events)
+            Note,
+            # Other tables depending at least on person
             ConditionEra,
             DrugEra,
             DoseEra,
-            # Cost and relationship tables
+            NoteNlp,
             Cost,
-            FactRelationship,
-            # Cohort tables
-            Cohort,
-            CohortDefinition,
+            LocationHistory,
             SurveyConduct,
-            # Metadata tables
-            Metadata,
-            Etl,
-            Provenance,
+            # General relationships
+            FactRelationship,
+            MeasurementRelation,
         ],
     }
 )

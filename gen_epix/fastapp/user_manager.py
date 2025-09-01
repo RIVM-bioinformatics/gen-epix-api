@@ -44,7 +44,11 @@ class BaseUserManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def is_root_user(self, claims: dict[str, Any]) -> bool:
+    def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def is_root_user(self, user: model.User) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
