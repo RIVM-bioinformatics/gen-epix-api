@@ -23,8 +23,8 @@ class UserManager(BaseUserManager):
     ):
         self._user_class = user_class
         self._user_invitation_class = user_invitation_class
-        annotation: set[Enum] = user_class.model_fields["roles"].annotation  # type: ignore[assignment]
-        self._role_enum: Type[Enum] = annotation.__args__[0]  # type: ignore[attr-defined]
+        annotation: set[Enum] = user_class.model_fields["roles"].annotation  # type:ignore[assignment]
+        self._role_enum: Type[Enum] = annotation.__args__[0]  # type:ignore[attr-defined]
         if "ROOT" not in self._role_enum._member_names_:
             raise exc.InitializationServiceError(
                 "Root role is not defined in the user model"
@@ -36,7 +36,7 @@ class UserManager(BaseUserManager):
 
         # Generate root model objs
         self._root: dict = {}
-        self._root["organization"] = model.Organization(**root_cfg["organization"])  # type: ignore[arg-type]
+        self._root["organization"] = model.Organization(**root_cfg["organization"])  # type:ignore[arg-type]
         if self._root["organization"].id is None:
             raise exc.InitializationServiceError(
                 "Root organization ID is not set in the configuration"
@@ -46,7 +46,7 @@ class UserManager(BaseUserManager):
         self._root["user"] = self._user_class(
             is_active=True,
             organization_id=self._root["organization"].id,
-            **root_cfg["user"],  # type: ignore[arg-type]
+            **root_cfg["user"],  # type:ignore[arg-type]
         )
 
         # Get automatic new user data
@@ -68,7 +68,7 @@ class UserManager(BaseUserManager):
             )
 
     def generate_id(self) -> UUID:
-        return self._organization_service.generate_id()  # type: ignore[return-value]
+        return self._organization_service.generate_id()  # type:ignore[return-value]
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         return get_email_from_claims(claims)
@@ -105,7 +105,7 @@ class UserManager(BaseUserManager):
         user: model.User = self._root["user"]
         return user.email == get_email_from_claims(claims)
 
-    def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:  # type: ignore
+    def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:  # type:ignore
         assert self._organization_service.repository
         with self._organization_service.repository.uow() as uow:
             # Create root organization if necessary
@@ -221,9 +221,7 @@ class UserManager(BaseUserManager):
             claims_user.id = self.generate_id()
             user: model.User = (
                 self._organization_service.repository.crud(  # type:ignore[assignment]
-                    uow,
-                    claims_user.id,
-                    self._user_class,
+                    uow,claims_user.id,self._user_class,
                     claims_user,
                     None,
                     CrudOperation.CREATE_ONE,
@@ -244,7 +242,7 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_new_user_from_token(  # type: ignore[override]
+    def create_new_user_from_token(  # type:ignore[override]
         self, user: model.User, token: str, **kwargs: Any
     ) -> model.User:
         assert self._organization_service.repository
@@ -269,7 +267,7 @@ class UserManager(BaseUserManager):
             # Verify if create_by_user made an invitation for this user that is valid
             timestamp = datetime.datetime.now()
             user_invitations: list[self.user_invitation_class] = ( # pyright: ignore[reportInvalidTypeForm]
-                self._organization_service.repository.crud(  # type: ignore[assignment]
+                self._organization_service.repository.crud(  # type:ignore[assignment]
                     uow,
                     created_by_user_id,
                     self._user_invitation_class,
@@ -309,7 +307,7 @@ class UserManager(BaseUserManager):
                 raise exc.UnauthorizedAuthError("User already exists")
 
             try:
-                created_user: model.User = self._organization_service.repository.crud(  # type: ignore[assignment]
+                created_user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
                     uow,
                     created_by_user_id,
                     self._user_class,
@@ -334,9 +332,9 @@ class UserManager(BaseUserManager):
     def retrieve_user_by_key(self, user_key: str) -> model.User:
         return self._organization_service.retrieve_user_by_key(user_key)
 
-    def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type: ignore[override]
+    def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type:ignore[override]
         with self._organization_service.repository.uow() as uow:
-            user: model.User = self._organization_service.repository.crud(  # type: ignore[assignment]
+            user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
                 self._user_class,
@@ -346,10 +344,10 @@ class UserManager(BaseUserManager):
             )
         return user
 
-    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:
+    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:  # type:ignore[override]
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
-            updated_user: model.User = self._organization_service.repository.crud(  # type: ignore[assignment]
+            updated_user: model.User = self._organization_service.repository.crud(  # type:ignore[assignment]
                 uow,
                 user.id,
                 self._user_class,
@@ -359,5 +357,5 @@ class UserManager(BaseUserManager):
             )
         return updated_user
 
-    def retrieve_user_permissions(self, user: model.User) -> set[Permission]:  # type: ignore[override]
+    def retrieve_user_permissions(self, user: model.User) -> set[Permission]:  # type:ignore[override]
         return self._rbac_service.retrieve_user_permissions(user)

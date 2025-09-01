@@ -13,10 +13,6 @@ from gen_epix.fastapp.services.auth.util import get_name_from_claims
 class CommonAuthTestClient(AuthTestClient):
 
     pass
-    # def __init__(self) -> None:
-    #     super().__init__()
-    #     # Make sure we have at least one user in our in-memory store
-    #     self.user_manager.create_user_from_claims(MOCK_JWK_TOKEN.payload)
 
 
 @pytest.fixture(scope="module", name="env")
@@ -126,34 +122,9 @@ class TestAuth:
         # No name-like claims present in provided list
         assert get_name_from_claims(claims, ["name"]) is None
 
-    # This is not really possible, since the UserManger used here is a mock for testing
-    # Also, the main logic is not in the UserManager, but in a service class
-    # TODO: refactor this test...
-    @pytest.mark.skip(reason="Not Feasible with mock UserManager")
-    def test_updates_name_on_relogin(self, env: AuthTestClient) -> None:
-        # Use the real in-memory UserManager wired by AuthTestClient
-        um = env.user_manager
-        # Email in mock payload
-        email = "user1@org1.org"
+    def test_create_user_from_claims(self, env: AuthTestClient) -> None:
+        claims1: dict[str, Any] = {"email": "user@org.org", "name": "Alice"}
 
-        # First login with an initial name
-        initial_name = "Original Name"
-        token1 = MOCK_JWK_TOKEN.edit_claim("name", initial_name)
-        response_1 = env.test_client.get(
-            self.CURRENT_USER_ENDPOINT,
-            headers=env.mock_create_token_header(token1),
-        )
-        assert response_1.status_code == 200
-        assert email in um.users
-        # Name stored equals first login name
-        assert getattr(um.users[email], "name", None) == initial_name
-
-        # Second login with changed name should update persisted user.name
-        updated_name = "New Married Name"
-        token2 = MOCK_JWK_TOKEN.edit_claim("name", updated_name)
-        response_2 = env.test_client.get(
-            self.CURRENT_USER_ENDPOINT,
-            headers=env.mock_create_token_header(token2),
-        )
-        assert response_2.status_code == 200
-        assert getattr(um.users[email], "name", None) == updated_name
+        user1 = env.user_manager.create_user_from_claims(claims1)
+        assert user1 is not None
+        assert user1.id == "user@org.org"
