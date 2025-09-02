@@ -1,7 +1,7 @@
-# python 3.12
+# python 3.13
 
 # application server
-fastapi[standard]==0.116.1
+fastapi==0.116.1
 gunicorn==23.0.*
 starlette==0.47.3
 httpx==0.28.1
@@ -12,7 +12,7 @@ sqlalchemy==2.0.43
 sqlalchemy_utils==0.41.2
 
 # Data models/handling
-pydantic==2.11.*
+pydantic==2.11.6 # 2.11.7 has a breaking change that results in FieldInfo.annotation remaining None
 ulid-py==1.1.0
 
 # configuration handling
