@@ -218,6 +218,9 @@ class Domain:
             return None
         return frozenset(entities) if frozen else entities
 
+    def get_service_types(self) -> set[Hashable]:
+        return set(self._service_types)
+
     def get_service_type_for_model(
         self, model_class: Type[Model], verify: bool = False
     ) -> Hashable:
@@ -500,6 +503,7 @@ class Domain:
     def get_dag_sorted_models(
         self,
         service_type: Hashable | None = None,
+        persistable: bool | None = None,
         url_name: str | None = None,
         database_name: str | None = None,
         schema_name: str | None = None,
@@ -510,6 +514,7 @@ class Domain:
             x.model_class  # type: ignore
             for x in self.get_dag_sorted_entities(
                 service_type=service_type,
+                persistable=persistable,
                 url_name=url_name,
                 database_name=database_name,
                 schema_name=schema_name,
