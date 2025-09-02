@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from math import floor
 from test.fastapp.unit.auth.test_auth import MOCK_JWK_TOKEN, AuthTestClient
+from test.fastapp.user_manager import MOCK_USER, MockUser
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -122,9 +123,25 @@ class TestAuth:
         # No name-like claims present in provided list
         assert get_name_from_claims(claims, ["name"]) is None
 
-    def test_create_user_from_claims(self, env: AuthTestClient) -> None:
-        claims1: dict[str, Any] = {"email": "user@org.org", "name": "Alice"}
+    def test_update_user_name_no_change(self, env: AuthTestClient) -> None:
+        user: MockUser | None = env.user_manager.update_user_name(MOCK_USER, "John")
+        assert user == MOCK_USER
+        if user:
+            assert user.name == "John"
 
-        user1 = env.user_manager.create_user_from_claims(claims1)
-        assert user1 is not None
-        assert user1.id == "user@org.org"
+    def test_update_user_name_changed(self, env: AuthTestClient) -> None:
+        user: MockUser | None = env.user_manager.update_user_name(MOCK_USER, "")
+        if user:
+            assert user.name == ""
+
+    def test_update_user_name_real_user(self, env: AuthTestClient) -> None:
+        new_name = "Johnny"
+        user: MockUser | None = env.user_manager.update_user_name(MOCK_USER, new_name)
+        if user:
+            assert user.name == new_name
+
+    def test_update_user_name_real_user_last_name(self, env: AuthTestClient) -> None:
+        new_name = "John Doe"
+        user: MockUser | None = env.user_manager.update_user_name(MOCK_USER, new_name)
+        if user:
+            assert user.name == new_name
