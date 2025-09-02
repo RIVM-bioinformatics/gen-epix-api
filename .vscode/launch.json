@@ -32,32 +32,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.casedb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -67,19 +41,6 @@
                 "casedb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
@@ -111,32 +72,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.seqdb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.seqdb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -146,19 +81,6 @@
                 "seqdb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
@@ -190,32 +112,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.omopdb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.omopdb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -225,19 +121,6 @@
                 "omopdb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
