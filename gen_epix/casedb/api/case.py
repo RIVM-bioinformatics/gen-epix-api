@@ -443,13 +443,12 @@ def create_case_endpoints(
             )
             return StreamingResponse(iter(()), media_type="text/plain")
 
-        headers = {
-            "Content-Disposition": 'attachment; filename="genetic_sequences.fasta"'
-        }
         return StreamingResponse(
             fasta_iterable,
             media_type="text/plain",
-            headers=headers,
+            headers={
+                "Content-Disposition": 'attachment; filename="genetic_sequences.fasta"'
+            },
         )
 
     @router.post(
