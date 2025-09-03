@@ -12,7 +12,7 @@
         <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="coverage">
     </a>
     <br>
-      ![pylint](https://img.shields.io/badge/PyLint-6.57-orange?logo=python&logoColor=whitehttps://img.shields.io/badge/PyLint-6.57-orange?logo=python&logoColor=white)
+    [![pylint](https://img.shields.io/badge/PyLint-6.57-orange?logo=python&logoColor=white)
 </p>
 
 ---
