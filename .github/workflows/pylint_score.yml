@@ -2,12 +2,7 @@ name: Lint Code and Create Badge
 
 on:
   push:
-    branches:
-      - dev
   pull_request:
-    branches:
-      - main
-      - dev
 
 jobs:
   lint:
