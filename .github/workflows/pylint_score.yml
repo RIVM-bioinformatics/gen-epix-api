@@ -1,0 +1,26 @@
+name: Lint Code and Create Badge
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run Pylint
+        uses: Silleellie/pylint-github-action@v2.1
+        with:
+          lint-path: gen_epix
+          python-version: 3.13.5
+          requirements-path: dev-requirements.txt
+          readme-path: README.md
+          pylintrc-path: .pylintrc
+          badge-text: PyLint
+          color-bad-score: red
+          color-ok-score: orange
+          color-good-score: yellow
+          color-perfect-score: brightgreen
