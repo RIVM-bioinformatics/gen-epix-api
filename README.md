@@ -14,7 +14,7 @@
     
 </p>
 
-[![pylint]()](https://redirect/link)
+[![pylint](https://img.shields.io/badge/PyLint-6.57-orange?logo=python&logoColor=whitehttps://img.shields.io/badge/PyLint-6.57-orange?logo=python&logoColor=white)
 
 ---
 
