@@ -1,7 +1,18 @@
 from typing import Any, Hashable, Type
 
+from pydantic import BaseModel
+
 from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, exc
 from gen_epix.fastapp.model import Permission, User
+
+
+class MockUser(BaseModel):
+    id: str
+    name: str
+    email: str
+
+
+MOCK_USER = MockUser(id="u1", name="John", email="info@org.nl")
 
 
 class UserManager(BaseUserManager):
@@ -61,4 +72,16 @@ class UserManager(BaseUserManager):
         raise exc.NoResultsError()
 
     def retrieve_user_permissions(self, user: User) -> set[Permission]:
+        raise NotImplementedError()
+
+    def update_user_name(  # type: ignore[override]
+        self, user: MockUser, new_name: str
+    ) -> MockUser | None:
+        if user.name == new_name:
+            return user
+        user.name = new_name
+        updated_user: MockUser = user
+        return updated_user
+
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
         raise NotImplementedError()

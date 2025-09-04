@@ -87,13 +87,6 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
-        (AppType.CASEDB, AppConfigType.NO_SSL): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
         (AppType.SEQDB, AppConfigType.IDPS): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.SEQDB.value,
@@ -122,13 +115,6 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
-        (AppType.SEQDB, AppConfigType.NO_SSL): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
         (AppType.OMOPDB, AppConfigType.IDPS): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.OMOPDB.value,
@@ -151,13 +137,6 @@ class Run:
             ),
         },
         (AppType.OMOPDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.NO_SSL): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.OMOPDB.value,
                 env_var_substring="IDPS_CONFIG_FILE",
@@ -259,12 +238,8 @@ class Run:
         Run.set_env_variables(app_type, idp_config)
         # Run app
         uri_cfg = Run.APP_URI[app_type]
-        if idp_config not in {AppConfigType.NO_SSL}:
-            ssl_keyfile = Run.APP_SSL_KEYFILE
-            ssl_certfile = Run.APP_SSL_CERTFILE
-        else:
-            ssl_keyfile = None
-            ssl_certfile = None
+        ssl_keyfile = Run.APP_SSL_KEYFILE
+        ssl_certfile = Run.APP_SSL_CERTFILE
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -330,6 +305,7 @@ class Run:
                 "--cov-report=xml:test/output/coverage.xml",
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/common/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
@@ -355,6 +331,7 @@ class Run:
             + [
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/common/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
             ]
@@ -437,6 +414,28 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/fastapp/unit/repository",
+            ]
+        )
+
+    def test_common_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/common/unit/",
+            ]
+        )
+
+    def test_common_unit_auth(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/common/unit/auth/",
             ]
         )
 
