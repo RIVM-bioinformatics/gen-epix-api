@@ -59,8 +59,15 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID
-    case_ids: list[UUID]
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
+    file_name: str = Field(
+        description="The desired filename for the FASTA download.",
+    )
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
@@ -445,9 +452,9 @@ def create_case_endpoints(
 
         return StreamingResponse(
             fasta_iterable,
-            media_type="text/plain",
+            media_type="application/x-fasta",
             headers={
-                "Content-Disposition": 'attachment; filename="genetic_sequences.fasta"'
+                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
             },
         )
 
