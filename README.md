@@ -103,7 +103,7 @@ python run.py [service] [app_type] [env_name] [idp_config]
 - `service`: The service to run (api, etl) 
 - `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
 - `env_name`: Name of the environment.
-- `idp_config`: Which authentication setting to use (idps, mock_idps, no_auth, debug, no_ssl)
+- `idp_config`: Which authentication setting to use (idps, mock_idps, debug)
 
 ---
 
