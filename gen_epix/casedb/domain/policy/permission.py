@@ -80,7 +80,7 @@ class RoleGenerator:
             (command.ConceptSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.DiseaseCrudCommand, PermissionTypeSet.CRU),
             (
-                command.DiseaseEtiologicalAgentUpdateAssociationCommand,  # type: ignore[arg-type]
+                command.DiseaseEtiologicalAgentUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             (command.EtiologicalAgentCrudCommand, PermissionTypeSet.CRU),
@@ -95,6 +95,7 @@ class RoleGenerator:
         Role.ORG_ADMIN: {
             # organization
             (command.InviteUserCommand, PermissionTypeSet.E),
+            (command.RetrieveInviteUserConstraintsCommand, PermissionTypeSet.E),
             (command.UpdateUserCommand, PermissionTypeSet.E),
             (command.UserInvitationCrudCommand, PermissionTypeSet.CRD),
             # abac
@@ -163,6 +164,8 @@ class RoleGenerator:
         Role.GUEST: {
             # organization
             (command.RetrieveOwnPermissionsCommand, PermissionTypeSet.E),
+            # rbac
+            (command.RetrieveSubRolesCommand, PermissionTypeSet.E),
             # system
             (command.RetrieveOutagesCommand, PermissionTypeSet.E),
         },

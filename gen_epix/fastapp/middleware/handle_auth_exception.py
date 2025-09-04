@@ -35,7 +35,6 @@ class HandleAuthExceptionMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
             return response
         except* AuthException as exception_group:
-            # above except* notation is supported since python 3.11
             if self._logger:
                 for exception in exception_group.exceptions:
                     self._log_exception(exception)

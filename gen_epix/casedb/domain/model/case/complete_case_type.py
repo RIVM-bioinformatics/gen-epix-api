@@ -1,10 +1,10 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.abac.case_abac import (
+from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
@@ -56,3 +56,15 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
+
+    @model_validator(mode="after")
+    def derive_case_type_col_order(self) -> "CompleteCaseType":
+        ordered: list[UUID] = []
+        seen: set[UUID] = set()
+        for dim in self.case_type_dims:
+            for cid in dim.case_type_col_order:
+                if cid not in seen:
+                    ordered.append(cid)
+                    seen.add(cid)
+        self.case_type_col_order = ordered
+        return self
