@@ -25,7 +25,6 @@ class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
             return response
         for endpoints, headers in self._exception_headers:
             if request["path"] in endpoints:
-                response = await call_next(request)
                 response.headers.update(headers)
                 return response
         response.headers.update(self._general_headers)
