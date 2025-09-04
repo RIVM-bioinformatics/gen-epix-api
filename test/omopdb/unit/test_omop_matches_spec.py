@@ -8,6 +8,10 @@ from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
 
+WRITE_MODELS: bool = (
+    False  # Set to True to write models out to file, to facilitate debugging
+)
+
 TABLE_METADATA_FILE = (
     Path(__file__).parent.parent.parent.parent
     / "data"
@@ -392,30 +396,36 @@ class TestOmopSpecification:
             all_sa_code_lines.extend(sa_code_lines)
 
             # Write single model to file
-            output_file = (
-                Path(__file__).parent.parent.parent / "output" / f"{table_name}.py"
-            )
-            with open(output_file, "w") as f:
-                f.write("\n".join([OMOP_MODULE_HEADER, *code_lines]))
-            sa_output_file = (
-                Path(__file__).parent.parent.parent / "output" / f"{table_name}.sa.py"
-            )
-            with open(sa_output_file, "w") as f:
-                f.write("\n".join([SA_OMOP_MODULE_HEADER, *sa_code_lines]))
+            if WRITE_MODELS:
+                output_file = (
+                    Path(__file__).parent.parent.parent / "output" / f"{table_name}.py"
+                )
+                with open(output_file, "w") as f:
+                    f.write("\n".join([OMOP_MODULE_HEADER, *code_lines]))
+                sa_output_file = (
+                    Path(__file__).parent.parent.parent
+                    / "output"
+                    / f"{table_name}.sa.py"
+                )
+                with open(sa_output_file, "w") as f:
+                    f.write("\n".join([SA_OMOP_MODULE_HEADER, *sa_code_lines]))
 
         # Write all models to single file
-        output_file = (
-            Path(__file__).parent.parent.parent / "output" / "expected_omop_models.py"
-        )
-        with open(output_file, "w") as f:
-            f.write("\n".join([OMOP_MODULE_HEADER, *all_code_lines]))
-        sa_output_file = (
-            Path(__file__).parent.parent.parent
-            / "output"
-            / "expected_sa_omop_models.py"
-        )
-        with open(sa_output_file, "w") as f:
-            f.write("\n".join([SA_OMOP_MODULE_HEADER, *all_sa_code_lines]))
+        if WRITE_MODELS:
+            output_file = (
+                Path(__file__).parent.parent.parent
+                / "output"
+                / "expected_omop_models.py"
+            )
+            with open(output_file, "w") as f:
+                f.write("\n".join([OMOP_MODULE_HEADER, *all_code_lines]))
+            sa_output_file = (
+                Path(__file__).parent.parent.parent
+                / "output"
+                / "expected_sa_omop_models.py"
+            )
+            with open(sa_output_file, "w") as f:
+                f.write("\n".join([SA_OMOP_MODULE_HEADER, *all_sa_code_lines]))
 
         if error_messages:
             for msg in error_messages:

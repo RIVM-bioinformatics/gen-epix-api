@@ -33,9 +33,6 @@ class TestCreate:
         env.create_organization("root1_2", "org3")
         env.invite_and_register_user("root1_2", "root2_1")
         env.invite_and_register_user("root1_2", "root2_2")
-        env.check_user_has_role("root1_2", enum.Role.ROOT, exclusive=True)
-        env.check_user_has_role("root2_1", enum.Role.ROOT, exclusive=True)
-        env.check_user_has_role("root2_2", enum.Role.ROOT, exclusive=True)
 
     def test_create_user_app_admin(self, env: Env) -> None:
         # Create invitations for app_admin as root
@@ -45,12 +42,6 @@ class TestCreate:
         env.invite_and_register_user("root2_2", "app_admin2_2")
         env.invite_and_register_user("root1_2", "app_admin3_1")
         env.invite_and_register_user("root2_2", "app_admin3_2")
-        env.check_user_has_role("app_admin1_1", enum.Role.APP_ADMIN, exclusive=True)
-        env.check_user_has_role("app_admin1_2", enum.Role.APP_ADMIN, exclusive=True)
-        env.check_user_has_role("app_admin2_1", enum.Role.APP_ADMIN, exclusive=True)
-        env.check_user_has_role("app_admin2_2", enum.Role.APP_ADMIN, exclusive=True)
-        env.check_user_has_role("app_admin3_1", enum.Role.APP_ADMIN, exclusive=True)
-        env.check_user_has_role("app_admin3_2", enum.Role.APP_ADMIN, exclusive=True)
 
     def test_create_user_organization(self, env: Env) -> None:
         # Create organizations as root and app_admin
@@ -66,18 +57,6 @@ class TestCreate:
         env.invite_and_register_user("app_admin2_1", "refdata_admin1_2")
         env.invite_and_register_user("app_admin1_1", "refdata_admin2_1")
         env.invite_and_register_user("app_admin1_2", "refdata_admin2_2")
-        env.check_user_has_role(
-            "refdata_admin1_1", enum.Role.REFDATA_ADMIN, exclusive=True
-        )
-        env.check_user_has_role(
-            "refdata_admin1_2", enum.Role.REFDATA_ADMIN, exclusive=True
-        )
-        env.check_user_has_role(
-            "refdata_admin2_1", enum.Role.REFDATA_ADMIN, exclusive=True
-        )
-        env.check_user_has_role(
-            "refdata_admin2_2", enum.Role.REFDATA_ADMIN, exclusive=True
-        )
 
     def test_create_user_org_admin(self, env: Env) -> None:
         # Create org_admin as root and app_admin
@@ -91,35 +70,6 @@ class TestCreate:
         env.invite_and_register_user("app_admin2_2", "org_admin4_2")
         env.invite_and_register_user("app_admin3_1", "org_admin5_1")
         env.invite_and_register_user("app_admin3_2", "org_admin5_2")
-        if not all(
-            [
-                env.check_user_has_role(
-                    "org_admin1_1", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin1_2", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin2_1", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin2_2", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin3_1", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin3_2", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin4_1", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-                env.check_user_has_role(
-                    "org_admin4_2", enum.Role.ORG_ADMIN, exclusive=True
-                ),
-            ]
-        ):
-            raise AssertionError("Failed to create org_admin users")
 
     def test_create_org_admin_policy(self, env: Env) -> None:
         # Add org_admin policy

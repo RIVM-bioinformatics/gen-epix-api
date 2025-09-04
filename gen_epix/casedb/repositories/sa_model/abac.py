@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
 from gen_epix.common.repositories.sa_model import (
+    OrganizationAdminPolicyMixin,
     RowMetadataMixin,
     create_mapped_column,
     create_table_args,
@@ -14,18 +15,8 @@ from gen_epix.common.repositories.sa_model import (
 Base: Type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
 
 
-class OrganizationAdminPolicy(Base, RowMetadataMixin):
+class OrganizationAdminPolicy(Base, OrganizationAdminPolicyMixin):
     __tablename__, __table_args__ = create_table_args(model.OrganizationAdminPolicy)
-
-    organization_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationAdminPolicy, "organization_id"
-    )
-    user_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationAdminPolicy, "user_id"
-    )
-    is_active: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.OrganizationAdminPolicy, "is_active"
-    )
 
 
 class OrganizationAccessCasePolicy(Base, RowMetadataMixin):

@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import Field, field_serializer, field_validator
 
 from gen_epix import fastapp
-from gen_epix.common.domain import enum
 from gen_epix.common.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
@@ -326,3 +325,21 @@ class UserInvitation(Model):
     @field_serializer("roles", mode="plain")
     def _serialize_roles(self, value: set[Enum]) -> list[str]:
         return [x.value for x in value]
+
+
+class UserInvitationConstraints(Model):
+    """
+    Represents the constraints for a user invitation.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="user_invitation_constraints",
+        persistable=False,
+    )
+    ROLE_ENUM: ClassVar[Type[Enum]] = Enum
+    roles: set[Enum] = Field(
+        description="The roles that the user may be assigned by the inviting user."
+    )
+    organization_ids: set[UUID] = Field(
+        description="The organizations that the user may be assigned by the inviting user."
+    )
