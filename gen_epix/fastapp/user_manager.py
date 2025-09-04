@@ -16,6 +16,14 @@ class BaseUserManager(abc.ABC):
     a JWT token.
     """
 
+    NAME_CLAIMS: list[str | list[str]] = [
+        "name",
+        ["first_name", "last_name"],
+        "preferred_username",
+        "preferredUsername",
+        "username",
+    ]
+
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         """
         Get the user key, which uniquely identifies the user across systems, from the
@@ -80,5 +88,21 @@ class BaseUserManager(abc.ABC):
     def retrieve_user_permissions(self, user: model.User) -> set[model.Permission]:
         """
         Retrieve the permissions for a user instance.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
+        """
+        Extract a user-friendly display name from raw claims (dict),
+        mirroring the AuthService.get_name_from_claims priority and handling
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:
+        """
+        Update the user's name in the user manager.
+        This method should be implemented to update the user's name in the user manager.
         """
         raise NotImplementedError()
