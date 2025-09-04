@@ -6,6 +6,7 @@ class ServiceType(Enum):
     ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
     RBAC = "RBAC"
+    ABAC = "ABAC"
 
 
 class AppType(Enum):
@@ -24,4 +25,3 @@ class AppConfigType(Enum):
     MOCK_IDPS = "mock_idps"
     NO_AUTH = "no_auth"
     DEBUG = "debug"
-    NO_SSL = "no_ssl"

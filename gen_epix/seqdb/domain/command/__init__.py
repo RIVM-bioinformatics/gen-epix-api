@@ -29,6 +29,9 @@ from gen_epix.common.domain.command import (
 )
 from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
 from gen_epix.common.domain.command import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
+from gen_epix.common.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
 from gen_epix.common.domain.command import (
@@ -60,6 +63,15 @@ from gen_epix.common.domain.command import (
 from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.common.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
+)
+from gen_epix.common.domain.command.abac import (
+    RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
+)
+from gen_epix.common.domain.command.organization import (
+    RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
+from gen_epix.common.domain.command.rbac import (
+    RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.command.organization import (
@@ -281,4 +293,5 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
 COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }

@@ -1,8 +1,7 @@
-# python 3.12
+# python 3.13
 
 # application server
 fastapi[standard]==0.116.1
-uvicorn==0.32.1
 gunicorn==23.0.*
 starlette==0.47.3
 httpx==0.28.1
@@ -13,17 +12,17 @@ sqlalchemy==2.0.43
 sqlalchemy_utils==0.41.2
 
 # Data models/handling
-pydantic==2.11.*
-pandas==2.3.2
+pydantic==2.11.6 # 2.11.7 has a breaking change that results in FieldInfo.annotation remaining None
 ulid-py==1.1.0
 
 # configuration handling
 fire==0.7.1
 dynaconf==3.2.11
+PyYAML==6.0.2
 types-setuptools==80.9.*
 
 # calculation
-scipy==1.14.1
+scipy==1.16.1
 numpy==2.3.2
 biopython==1.85
 
@@ -31,10 +30,3 @@ biopython==1.85
 cachetools==5.5.2
 slowapi==0.1.9
 python-dateutil==2.9.*
-
-## FIXME run.py imports pytest, but it is not a dependency of the application
-pytest==8.4.*
-
-## FIXME run.py imports pandas, but it is not a dependency of the application
-pandas==2.3.2
-

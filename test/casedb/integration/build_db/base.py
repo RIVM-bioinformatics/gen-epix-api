@@ -90,3 +90,12 @@ REFDATA_ADMIN = "refdata_admin1_1"
 ORG_ADMIN = "org_admin1_1"
 ORG_USER = "org_user1_1"
 GUEST = "guest1_1"
+
+USER_NAME_ROOTS = {
+    "root",
+    "app_admin",
+    "refdata_admin",
+    "org_admin",
+    "org_user",
+    "guest",
+}

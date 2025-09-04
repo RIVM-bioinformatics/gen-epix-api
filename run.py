@@ -1,23 +1,11 @@
-import gzip
-import importlib
 import os
-import pickle
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 
 import fire
-import pandas as pd
-import pytest
-import uvicorn
 
-from gen_epix.common.config import AppCfg, ConfigDiscovery
+from gen_epix.common.config import ConfigDiscovery
 from gen_epix.common.domain.enum import AppConfigType, AppType, AppTypeSet
-from gen_epix.common.util import generate_ulid
-from gen_epix.fastapp import Domain
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.repositories.dict.repository import DictRepository
-from gen_epix.fastapp.repositories.sa.repository import SARepository
 
 
 class Run:
@@ -99,13 +87,6 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
-        (AppType.CASEDB, AppConfigType.NO_SSL): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
         (AppType.SEQDB, AppConfigType.IDPS): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.SEQDB.value,
@@ -134,13 +115,6 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
-        (AppType.SEQDB, AppConfigType.NO_SSL): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
         (AppType.OMOPDB, AppConfigType.IDPS): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.OMOPDB.value,
@@ -163,13 +137,6 @@ class Run:
             ),
         },
         (AppType.OMOPDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.NO_SSL): {
             "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
                 app_type=AppType.OMOPDB.value,
                 env_var_substring="IDPS_CONFIG_FILE",
@@ -262,6 +229,8 @@ class Run:
 
     ## api
     def api(self, app_type: str, env_name: str, idp_config: str) -> None:
+        import uvicorn
+
         app_type = AppType[app_type.upper()]
         idp_config = AppConfigType[idp_config.upper()]
         env_name = env_name.upper()
@@ -269,12 +238,8 @@ class Run:
         Run.set_env_variables(app_type, idp_config)
         # Run app
         uri_cfg = Run.APP_URI[app_type]
-        if idp_config not in {AppConfigType.NO_SSL}:
-            ssl_keyfile = Run.APP_SSL_KEYFILE
-            ssl_certfile = Run.APP_SSL_CERTFILE
-        else:
-            ssl_keyfile = None
-            ssl_certfile = None
+        ssl_keyfile = Run.APP_SSL_KEYFILE
+        ssl_certfile = Run.APP_SSL_CERTFILE
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -304,207 +269,77 @@ class Run:
     def etl_load_demo_data(
         self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
     ) -> None:
+        from test.test_client.util import load_demo_data
+
+        # Set all environment variables
+        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
         if isinstance(app_type, str):
             app_type = AppType[app_type.upper()]
         assert isinstance(app_type, AppType)
         # Special case: apply to all apps
         if app_type == AppType.ALL:
             for app_type2 in AppTypeSet.ALL.value:
-                self.etl_load_demo_data(app_type2)
+                module_root: str = Run.ETL_ENV[app_type2]["module_root"]
+                load_demo_data(
+                    app_type2,
+                    module_root,
+                    connect_timeout=connect_timeout,
+                    verbose=verbose,
+                )
             return
-        # Set all environment variables
-        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
-
-        def _create_from_repository(
-            user_id: str,
-            entities: list,
-            dict_repository: DictRepository,
-            sa_repository: SARepository,
-        ) -> None:
-            # Delete all first in reverse order
-            for entity in entities[::-1]:
-                model_class = entity.model_class
-                with sa_repository.uow() as sa_uow:
-                    sa_repository.crud(
-                        sa_uow,
-                        user_id,
-                        model_class,
-                        None,
-                        None,
-                        CrudOperation.DELETE_ALL,
-                    )
-            for entity in entities:
-                model_class = entity.model_class
-                with (
-                    dict_repository.uow() as dict_uow,
-                    sa_repository.uow() as sa_uow,
-                ):
-                    objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
-                        dict_uow,
-                        user_id,
-                        model_class,
-                        None,
-                        None,
-                        CrudOperation.READ_ALL,
-                        return_copy=False,
-                    )
-                    sa_repository.crud(
-                        sa_uow,
-                        user_id,
-                        model_class,
-                        objs,
-                        None,
-                        CrudOperation.CREATE_SOME,
-                    )
-
-        # Get classes and config for the app type
         module_root: str = Run.ETL_ENV[app_type]["module_root"]
-        enum = importlib.import_module(f"{module_root}.domain.enum")
-        model = importlib.import_module(f"{module_root}.domain.model")
-        domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
-        cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
-        service_data: dict[Enum, dict] = importlib.import_module(
-            f"{module_root}.env"
-        ).AppEnv.SERVICE_DATA
-        user_id = cfg.cfg.SECRET.root.user.id
-        for service_type, data in service_data.items():
-            # # TODO: TEMPORARY for debugging, remove later
-            # if service_type.value != "CASE":
-            #     continue
-            if "repository_class" not in data:
-                continue
-            entities = domain.get_dag_sorted_entities(
-                service_type=service_type, persistable=True
-            )
-            # Create dict repository, which is assumed to always be available
-            dict_repository_class: DictRepository = data["repository_class"][
-                enum.RepositoryType.DICT
-            ]
-            repository_cfg = cfg.cfg.SECRET.repository.dict[service_type.value]
-            file = Path(repository_cfg["file"]).absolute()
-            zip_file: str = str(file).replace(".pkl.gz", ".zip")
-            start_time = datetime.now()
-            dict_repository = dict_repository_class.from_json(
-                dict_repository_class, entities, zip_file
-            )
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
-                )
-            # Write empty and demo dict repository to file
-            start_time = datetime.now()
-            with gzip.open(str(file).replace(".full.", ".empty."), "wb") as handle:
-                pickle.dump({x: {} for x in dict_repository._db}, handle)
-            with gzip.open(file, "wb") as handle:
-                pickle.dump(dict_repository._db, handle)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
-                )
-            # Create empty and demo SA_SQLITE repositories
-            repository_cfg = cfg.cfg.SECRET.repository.sa_sqlite[service_type.value]
-            file = Path(repository_cfg["file"]).absolute()
-            connection_string = "sqlite:///" + str(file.as_posix())
-            sa_repository_class: SARepository = data["repository_class"][
-                enum.RepositoryType.SA_SQL
-            ]
-            start_time = datetime.now()
-            # Empty repository
-            sa_repository_class.create_sa_repository(
-                entities,
-                connection_string.replace(".full.", ".empty."),
-                name=service_type.value,
-            )
-            # Full repository
-            sa_repository = sa_repository_class.create_sa_repository(
-                entities,
-                connection_string,
-                name=service_type.value,
-                recreate_sqlite_file=True,
-            )
-            _create_from_repository(user_id, entities, dict_repository, sa_repository)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
-                )
-            # Create empty SA_SQL repository or loaded with demo data
-            repository_cfg = cfg.cfg.SECRET.repository.sa_sql[service_type.value]
-            connection_string = repository_cfg["connection_string"]
-            sa_repository_class: SARepository = data["repository_class"][
-                enum.RepositoryType.SA_SQL
-            ]
-            if "mssql" in connection_string:
-                connect_args = {
-                    "timeout": connect_timeout,
-                    "login_timeout": connect_timeout,
-                }
-            elif "pyodcb" in connection_string:
-                connect_args = {
-                    "connect_timeout": connect_timeout,
-                    "timeout": connect_timeout,
-                }
-            else:
-                connect_args = {}
-            # Skip load if no connection can be made
-            if exception := sa_repository_class.test_connection(
-                connection_string, **connect_args
-            ):
-                if verbose:
-                    print(
-                        # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
-                        f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
-                    )
-                continue
-            start_time = datetime.now()
-            sa_repository = sa_repository_class.create_sa_repository(
-                entities,
-                connection_string,
-                name=service_type.value,
-            )
-            _create_from_repository(user_id, entities, dict_repository, sa_repository)
-            end_time = datetime.now()
-            if verbose:
-                print(
-                    f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
-                )
+        load_demo_data(
+            app_type, module_root, connect_timeout=connect_timeout, verbose=verbose
+        )
 
     ## test
     def test_all(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "--cov=gen_epix",
-                "--cov-report=html:test/data/output/coverage.html",
-                "--cov-report=xml:test/data/output/coverage.xml",
+                "--cov-report=html:test/output/coverage.html",
+                "--cov-report=xml:test/output/coverage.xml",
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/common/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/casedb/unit",
+                "test/omopdb/unit",
                 # "test/seqdb/integration",
             ]
         )
 
     def test_all_incl_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
 
         pytest.main(Run.DEFAULT_PYTEST_ARGS + ["."])
 
     def test_all_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/filter/unit",
                 "test/fastapp/unit",
+                "test/common/unit",
+                "test/casedb/unit",
+                "test/omopdb/unit",
             ]
         )
 
     def test_all_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -515,6 +350,8 @@ class Run:
         )
 
     def test_all_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -526,6 +363,8 @@ class Run:
         )
 
     def test_filter_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -535,6 +374,8 @@ class Run:
         )
 
     def test_fastapp_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -544,6 +385,8 @@ class Run:
         )
 
     def test_fastapp_unit_auth(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -553,6 +396,8 @@ class Run:
         )
 
     def test_fastapp_unit_rbac(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -562,6 +407,8 @@ class Run:
         )
 
     def test_fastapp_unit_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -570,7 +417,31 @@ class Run:
             ]
         )
 
+    def test_common_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/common/unit/",
+            ]
+        )
+
+    def test_common_unit_auth(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/common/unit/auth/",
+            ]
+        )
+
     def test_omopdb_unit(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -580,6 +451,8 @@ class Run:
         )
 
     def test_fastapp_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -589,6 +462,8 @@ class Run:
         )
 
     def test_fastapp_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -598,6 +473,8 @@ class Run:
         )
 
     def test_casedb_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -609,6 +486,8 @@ class Run:
         )
 
     def test_casedb_integration_build_db(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -618,6 +497,8 @@ class Run:
         )
 
     def test_casedb_integration_case_access(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -627,6 +508,8 @@ class Run:
         )
 
     def test_casedb_integration_content(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -636,6 +519,8 @@ class Run:
         )
 
     def test_casedb_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -647,6 +532,8 @@ class Run:
         )
 
     def test_casedb_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -656,6 +543,8 @@ class Run:
         )
 
     def test_casedb_performance_user_journey(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -665,6 +554,8 @@ class Run:
         )
 
     def test_casedb_performance_startup(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -674,6 +565,8 @@ class Run:
         )
 
     def test_casedb_custom(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -683,6 +576,8 @@ class Run:
         )
 
     def test_seqdb_integration(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -693,6 +588,8 @@ class Run:
         )
 
     def test_seqdb_integration_build_db(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -702,6 +599,8 @@ class Run:
         )
 
     def test_seqdb_integration_content(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -711,6 +610,8 @@ class Run:
         )
 
     def test_seqdb_performance(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -722,6 +623,8 @@ class Run:
         )
 
     def test_seqdb_performance_repository(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -731,6 +634,8 @@ class Run:
         )
 
     def test_seqdb_performance_user_journey(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -740,6 +645,8 @@ class Run:
         )
 
     def test_seqdb_performance_startup(self) -> None:
+        import pytest
+
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
@@ -750,24 +657,15 @@ class Run:
 
     ## Other
 
-    def other_general_generate_uuids(
-        self, n_rows: int = 1000, n_cols: int = 100
-    ) -> None:
-        df = pd.DataFrame.from_dict(
-            {f"uuid{i}": [generate_ulid() for j in range(n_rows)] for i in range(100)}
-        )
-        xls_file = (
-            Path(__file__).parent / "test" / "data" / "output" / "generated_uuids.xlsx"
-        )
-        df.to_excel(xls_file, sheet_name="uuid", index=False)
-        print(
-            f"Total of {n_rows} uuids times {df.shape[1]} columns generated and written to file {str(xls_file)}"
-        )
+    def other_general_generate_uuids(self, n_rows: int = 1000, n_cols: int = 100):
+        from test.test_client.util import generate_uuids
+
+        generate_uuids(n_rows=n_rows, n_cols=n_cols)
 
     def other_general_run_linters(self) -> None:
         from test.linter import Linter
 
-        file_basename = Path(__file__).parent / "test" / "data" / "output" / "linter"
+        file_basename = Path(__file__).parent / "test" / "output" / "linter"
 
         linter = Linter()
         linter.run_all(file_basename=file_basename)
@@ -783,14 +681,10 @@ class Run:
         }
         filter_on_codes = None
 
-        file = Path(__file__).parent / "test" / "data" / "output" / "linter.pylint.txt"
+        file = Path(__file__).parent / "test" / "output" / "linter.pylint.txt"
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         file2 = (
-            Path(__file__).parent
-            / "test"
-            / "data"
-            / "output"
-            / f"linter.{now_str}.pylint.txt"
+            Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
@@ -809,15 +703,9 @@ class Run:
         }
         # filter_on_codes = None
 
-        file = Path(__file__).parent / "test" / "data" / "output" / "linter.mypy.txt"
+        file = Path(__file__).parent / "test" / "output" / "linter.mypy.txt"
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file2 = (
-            Path(__file__).parent
-            / "test"
-            / "data"
-            / "output"
-            / f"linter.{now_str}.mypy.txt"
-        )
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
@@ -836,7 +724,7 @@ class Run:
         if path:
             path_obj = Path(path)
         else:
-            path_obj = Path("test") / "data" / "output" / "log.debug.txt"
+            path_obj = Path("test") / "output" / "log.debug.txt"
         out_log_excel_file = str(path_obj.parent / "log.debug.xlsx")
         out_user_journey_file = str(path_obj.parent / "log.user_journey.pkl.gz")
         path = str(path_obj)

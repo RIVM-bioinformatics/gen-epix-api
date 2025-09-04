@@ -36,7 +36,11 @@ class BaseUserManager(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def is_root_user(self, claims: dict[str, Any]) -> bool:
+    def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def is_root_user(self, user: model.User) -> bool:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -76,5 +80,21 @@ class BaseUserManager(abc.ABC):
     def retrieve_user_permissions(self, user: model.User) -> set[model.Permission]:
         """
         Retrieve the permissions for a user instance.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
+        """
+        Extract a user-friendly display name from raw claims (dict),
+        mirroring the AuthService.get_name_from_claims priority and handling
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def update_user_name(self, user: model.User, new_name: str) -> model.User | None:
+        """
+        Update the user's name in the user manager.
+        This method should be implemented to update the user's name in the user manager.
         """
         raise NotImplementedError()

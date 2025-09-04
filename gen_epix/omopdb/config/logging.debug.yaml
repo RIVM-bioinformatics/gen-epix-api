@@ -13,7 +13,7 @@ handlers:
     class: logging.handlers.TimedRotatingFileHandler
     level: DEBUG
     formatter: simple
-    filename: ./test/data/output/log.debug.txt
+    filename: ./test/output/log.debug.txt
     when: 'midnight'
     backupCount: 1
     utc: True

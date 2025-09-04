@@ -6,6 +6,7 @@ from cachetools import TTLCache, cached
 from gen_epix.common.domain import command, model
 from gen_epix.common.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
+from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
 
@@ -23,6 +24,35 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: CrudCommand,
     ) -> Any:
+        # ABAC: ROOT may not delete self or own organization
+        if (
+            issubclass(
+                type(cmd), (command.UserCrudCommand, command.OrganizationCrudCommand)
+            )
+            and cmd.operation in CrudOperationSet.DELETE.value
+            and cmd.user
+            and self.app.user_manager.is_root_user(cmd.user)
+        ):
+            user: model.User = cmd.user  # type: ignore[assignment]
+            is_delete_user = issubclass(type(cmd), command.UserCrudCommand)
+            id_ = user.id if is_delete_user else user.organization_id
+            raise_error = False
+            if cmd.operation == CrudOperation.DELETE_ALL:
+                raise_error = True
+            elif cmd.operation == CrudOperation.DELETE_ONE:
+                raise_error = id_ == cmd.obj_ids
+            elif cmd.operation == CrudOperation.DELETE_SOME:
+                raise_error = id_ in cmd.obj_ids  # type: ignore[operator]
+            else:
+                raise NotImplementedError(
+                    f"Unsupported delete operation: {cmd.operation}"
+                )
+            if raise_error:
+                raise exc.UnauthorizedAuthError(
+                    f"Root user may not delete {'self' if is_delete_user else 'own organization'}"
+                )
+            pass
+
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
@@ -104,7 +134,7 @@ class OrganizationService(BaseOrganizationService):
                 )
             # Create user invitation
             user_invitation = self.user_invitation_class(
-                id=self.generate_id(),
+                id=self.generate_id(),  # type: ignore[arg-type]
                 email=email,
                 roles=initial_roles,
                 organization_id=organization_id,
@@ -118,7 +148,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 ),
             )
-            user_invitation_in_db: self.user_invitation_class = self.repository.crud(  # type: ignore[assignment]
+            user_invitation_in_db: model.UserInvitation = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id,
                 self.user_invitation_class,
@@ -127,6 +157,18 @@ class OrganizationService(BaseOrganizationService):
                 CrudOperation.CREATE_ONE,
             )
         return user_invitation_in_db
+
+    def retrieve_invite_user_constraints(
+        self, cmd: command.RetrieveInviteUserConstraintsCommand
+    ) -> model.UserInvitationConstraints:
+        sub_cmd = command.RetrieveOrganizationsUnderAdminCommand(user=cmd.user)
+        sub_cmd._policies = cmd._policies
+        organization_ids = self.app.handle(sub_cmd)
+        roles = self.app.handle(command.RetrieveSubRolesCommand(user=cmd.user))
+        return model.UserInvitationConstraints(
+            organization_ids=organization_ids,
+            roles=roles,
+        )
 
     def register_invited_user(
         self, cmd: command.RegisterInvitedUserCommand
@@ -140,7 +182,7 @@ class OrganizationService(BaseOrganizationService):
 
         with self.repository.uow() as uow:
             # Get possible user invitations
-            user_invitations: list[self.user_invitation_class] = self.repository.crud(  # type: ignore
+            user_invitations: list[model.UserInvitation] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 None,
                 self.user_invitation_class,
@@ -166,7 +208,7 @@ class OrganizationService(BaseOrganizationService):
                     f"No invitation found for token {cmd.token}"
                 )
             # Choose the invitation with the latest expiry date
-            user_invitation: self.user_invitation_class = sorted(
+            user_invitation = sorted(
                 user_invitations_with_token, key=lambda x: x.expires_at
             )[-1]
             # Set roles of the user
@@ -174,30 +216,39 @@ class OrganizationService(BaseOrganizationService):
             # Set ID and organization ID of the user
             new_user.organization_id = user_invitation.organization_id
             # Create user
-            user_in_db = self.app.user_manager.create_new_user_from_token(
+            user_in_db: model.User = self.app.user_manager.create_new_user_from_token(  # type: ignore[assignment]
                 new_user,
                 user_invitation.token,
-                created_by_user_id=user_invitation.invited_by_user_id,  # type: ignore[arg-type]
-                roles=user_invitation.roles,  # type: ignore[arg-type]
+                created_by_user_id=user_invitation.invited_by_user_id,
+                roles=user_invitation.roles,
             )
-        return user_in_db  # type: ignore
+            # Delete invitation
+            self.repository.crud(
+                uow,
+                None,
+                self.user_invitation_class,
+                None,
+                [x.id for x in user_invitations],
+                CrudOperation.DELETE_SOME,
+            )
+        return user_in_db
 
     def update_user(
         self,
         cmd: command.UpdateUserCommand,
     ) -> model.User:
+        assert cmd.user
         if cmd.roles is not None and len(cmd.roles) == 0:
             raise exc.InvalidArgumentsError("Roles cannot be empty")
         with self.repository.uow() as uow:
-            tgt_user = self.repository.crud(
+            tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
                 uow,
-                cmd.user,
+                cmd.user.id,
                 self.user_class,
                 None,
                 cmd.tgt_user_id,
                 CrudOperation.READ_ONE,
             )
-            assert isinstance(tgt_user, self.user_class)
             is_active = tgt_user.is_active if cmd.is_active is None else cmd.is_active
             roles = tgt_user.roles if cmd.roles is None else cmd.roles
             organization_id = (
@@ -216,7 +267,7 @@ class OrganizationService(BaseOrganizationService):
             if tgt_user.organization_id != organization_id:
                 self.repository.crud(
                     uow,
-                    cmd.user,
+                    cmd.user.id,
                     model.Organization,
                     None,
                     organization_id,
@@ -226,19 +277,18 @@ class OrganizationService(BaseOrganizationService):
             tgt_user.is_active = is_active
             tgt_user.roles = roles
             tgt_user.organization_id = organization_id
-            tgt_user = self.repository.crud(
+            updated_tgt_user: model.User = self.repository.crud(  # type: ignore[assignment]
                 uow,
-                cmd.user,
+                cmd.user.id,
                 self.user_class,
                 tgt_user,
                 None,
                 CrudOperation.UPDATE_ONE,
             )
-            assert isinstance(tgt_user, self.user_class)
 
         # Invalidate cache for the user
-        self.retrieve_user_by_key.cache_clear()
-        return tgt_user
+        self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
+        return updated_tgt_user
 
     def retrieve_organization_contact(
         self,
@@ -271,7 +321,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     cmd.organization_ids,
                     CrudOperation.READ_SOME,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
                 sites = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -280,7 +330,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -289,7 +339,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,  # type: ignore[arg-type]
+                    cascade_read=False,
                 )
                 organization_ids = set(cmd.organization_ids)
                 sites = [x for x in sites if x.organization_id in organization_ids]
@@ -303,7 +353,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     cmd.site_ids,
                     CrudOperation.READ_SOME,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
                 organizations = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -312,7 +362,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     list({x.organization_id for x in sites}),
                     CrudOperation.READ_SOME,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -321,7 +371,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,  # type: ignore[arg-type]
+                    cascade_read=False,
                 )
                 site_ids = {x.id for x in sites}
                 contacts = [x for x in contacts if x.site_id in site_ids]
@@ -334,7 +384,7 @@ class OrganizationService(BaseOrganizationService):
                         None,
                         cmd.contact_ids,
                         CrudOperation.READ_ALL,
-                        cascade_read=True,  # type: ignore[arg-type]
+                        cascade_read=True,
                         links=self.app.domain.get_model_links(
                             model.Contact,
                             service_type=self.app.domain.get_service_type_for_model(
@@ -350,7 +400,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     list({x.site_id for x in contacts}),
                     CrudOperation.READ_SOME,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
                 organizations = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -359,7 +409,7 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     list({x.organization_id for x in sites}),
                     CrudOperation.READ_SOME,
-                    cascade_read=True,  # type: ignore[arg-type]
+                    cascade_read=True,
                 )
             else:
                 raise AssertionError

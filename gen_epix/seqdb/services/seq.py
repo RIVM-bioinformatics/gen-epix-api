@@ -283,7 +283,7 @@ class SeqService(BaseSeqService):
         )
         # profiler.stop()
         # profiler.write_html(
-        #     "./test/data/output/profile_retrieve_phylogenetic_tree.html"
+        #     "./test/output/profile_retrieve_phylogenetic_tree.html"
         # )
         return phylogenetic_tree
 

@@ -8,10 +8,10 @@ from gen_epix.filter.range import RangeFilter
 
 
 class DatetimeRangeFilter(RangeFilter):
-    lower_bound: datetime.datetime = Field(
+    lower_bound: datetime.datetime | None = Field(
         default=None, description="The lower bound of the range.", frozen=True
     )
-    upper_bound: datetime.datetime = Field(
+    upper_bound: datetime.datetime | None = Field(
         default=None, description="The upper bound of the range.", frozen=True
     )
 
