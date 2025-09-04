@@ -1,19 +1,11 @@
 <p align="center">
     <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo" width=600>
 </p>
-<p align="center">
-    <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
-        <img src="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" alt="tests">
-    </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="sonarqube">
-    </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="coverage">
-    </a>
-</p>
+<div align="center">
 
+[![tests](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg)](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml) [![sonarqube](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) [![coverage](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) ![pylint](https://img.shields.io/badge/PyLint-6.57-yellow?logo=python&logoColor=white)
 
+</div>
 
 ---
 
