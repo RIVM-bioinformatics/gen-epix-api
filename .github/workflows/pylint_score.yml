@@ -23,6 +23,6 @@ jobs:
           pylintrc-path: ''
           badge-text: PyLint
           color-bad-score: red
-          color-ok-score: orange
-          color-good-score: yellow
+          color-ok-score: yellow
+          color-good-score: green
           color-perfect-score: brightgreen
