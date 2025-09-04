@@ -1,7 +1,7 @@
 from typing import Any
 
-from gen_epix.fastapp.app import App
 from gen_epix.fastapp import exc
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.fastapp.services.auth.idp_client import IDPClient
 from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
@@ -43,7 +43,7 @@ def get_name_from_claims(
                 return str(claims[name_claim])
         else:
             # Check if every subclaim exists and if so return space concatenated string
-            values = [claims.get(x) for x in name_claim]
+            values = [claims[x] for x in name_claim if x in claims]
             if len(values) == len(name_claim):
                 return " ".join(str(x) for x in values)
     return None
