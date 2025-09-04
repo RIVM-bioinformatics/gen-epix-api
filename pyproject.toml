@@ -27,7 +27,7 @@ dependencies = [
     "gunicorn==23.0.*",
     "starlette==0.47.3",
     "httpx==0.28.1",
-    "python-jose==3.4.0",
+    "python-jose==3.5.0",
     "sqlalchemy==2.0.43",
     "sqlalchemy_utils==0.41.2",
     "pydantic==2.11.*",
