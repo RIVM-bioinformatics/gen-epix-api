@@ -16,14 +16,6 @@ class BaseUserManager(abc.ABC):
     a JWT token.
     """
 
-    NAME_CLAIMS: list[str | list[str]] = [
-        "name",
-        ["first_name", "last_name"],
-        "preferred_username",
-        "preferredUsername",
-        "username",
-    ]
-
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         """
         Get the user key, which uniquely identifies the user across systems, from the

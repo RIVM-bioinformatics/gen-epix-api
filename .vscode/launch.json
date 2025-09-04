@@ -451,6 +451,17 @@
             "justMyCode": true
         },
         {
+            "name": "test.common.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_common_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.common.unit.auth",
             "type": "debugpy",
             "request": "launch",
