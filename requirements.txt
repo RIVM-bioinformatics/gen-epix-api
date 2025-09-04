@@ -9,7 +9,7 @@ python-jose==3.5.0
 
 #database handling
 sqlalchemy==2.0.43
-sqlalchemy_utils==0.41.2
+sqlalchemy_utils==0.42.0
 
 # Data models/handling
 pydantic==2.11.6 # 2.11.7 has a breaking change that results in FieldInfo.annotation remaining None
