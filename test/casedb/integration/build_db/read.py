@@ -14,7 +14,7 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.casedb.domain import exc, model
+from gen_epix.casedb.domain import enum, exc, model
 
 
 class TestRead:
@@ -230,7 +230,6 @@ class TestRead:
         }
         env.verify_case_type_access(expected_access)
 
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -241,30 +240,71 @@ class TestRead:
         - org_user: R
         - guest: -
         """
+        _ = env.read_all("root1_1", model.CaseTypeSetMember)
 
-        # Members have no name field so we have to use the ids
-        all_case_type_set_members: list[model.CaseTypeSetMember] = env.read_all(
-            ROOT, model.CaseTypeSetMember
-        )
-        all_case_type_set_members_ids = [x.id for x in all_case_type_set_members]
+        def _derive_allowed_case_type_set_members_ids(
+            env: Env, user: model.User
+        ) -> set[UUID]:
+            if (
+                enum.Role.ROOT in user.roles
+                or enum.Role.APP_ADMIN in user.roles
+                or enum.Role.REFDATA_ADMIN in user.roles
+            ):
+                return {x.id for x in env.db.get(model.CaseTypeSetMember, {}).values()}
+            if enum.Role.GUEST in user.roles:
+                return set()
+            if not (
+                enum.Role.ORG_USER in user.roles or enum.Role.ORG_ADMIN in user.roles
+            ):
+                return set()
 
-        # TODO: find a way to find which case_type_set_members are accessible by org_user1_1
-        # They are generated randomly so we can't know them in advance, and they have no name field
-        org_accessed_members: list[model.CaseTypeSetMember] = env.read_all(
-            "org_user1_1", model.CaseTypeSetMember
-        )
-        org_accessed_members_ids = [x.id for x in org_accessed_members]
-        abac_permissions: dict[str, list[str | UUID]] = {
-            "root1_1": all_case_type_set_members_ids,
-            "app_admin1_1": all_case_type_set_members_ids,
-            "refdata_admin1_1": all_case_type_set_members_ids,
-            "org_admin1_1": [],
-            "org_user1_1": org_accessed_members_ids,
-        }
+            org_policies = [
+                x
+                for x in env.db.get(model.OrganizationAccessCasePolicy, {}).values()
+                if x.is_active and x.organization_id == user.organization_id
+            ]
+            user_policies = [
+                x
+                for x in env.db.get(model.UserAccessCasePolicy, {}).values()
+                if x.is_active and x.user_id == user.id
+            ]
 
-        self._general_read_test(
-            env, model.CaseTypeSetMember, NON_GUEST_USERS, abac_permissions
-        )
+            # case_type_set_ids = {p.case_type_set_id for p in org_policies} | {
+            #     x.case_type_set_id for x in user_policies
+            # }
+
+            share_policies = [
+                x
+                for x in env.db.get(model.UserShareCasePolicy, {}).values()
+                if x.is_active and x.user_id == user.id
+            ]
+            case_type_set_ids = (
+                {p.case_type_set_id for p in org_policies}
+                | {p.case_type_set_id for p in user_policies}
+                | {p.case_type_set_id for p in share_policies}
+            )
+
+            if not case_type_set_ids:
+                return set()
+
+            members = env.db.get(model.CaseTypeSetMember, {}).values()
+            return {x.id for x in members if x.case_type_set_id in case_type_set_ids}
+
+        users = [
+            "root1_1",
+            "app_admin1_1",
+            "refdata_admin1_1",
+            "org_admin1_1",
+            "org_user1_1",
+        ]
+        expected_mapping = {}
+        for user_name in users:
+            user = env._get_obj(model.User, user_name)
+            expected_mapping[user_name] = _derive_allowed_case_type_set_members_ids(
+                env, user
+            )
+
+        print("Here")
 
     @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_col(self, env: Env) -> None:
