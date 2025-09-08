@@ -9,5 +9,10 @@ class TimeUnit(Enum):
     DAY = "DAY"
 
 
+class TimeUnitTransformStrategy(Enum):
+    EXACT_ONLY = "EXACT_ONLY"
+    LARGEST_OVERLAP = "LARGEST_OVERLAP"
+
+
 class TransformType(Enum):
-    BASE = "base"
+    BASE = "BASE"

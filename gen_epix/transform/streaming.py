@@ -4,7 +4,7 @@ Advanced streaming pipeline with backpressure handling and async support.
 
 import asyncio
 from collections import deque
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Iterator
 
 from gen_epix.transform.pipeline import TransformerPipeline
 from gen_epix.transform.result import TransformResult
@@ -29,8 +29,8 @@ class StreamingPipeline:
     def process_stream_async(
         self,
         stream: Iterator[Any],
-        on_success: Optional[Callable[[TransformResult], None]] = None,
-        on_error: Optional[Callable[[TransformResult], None]] = None,
+        on_success: Callable[[TransformResult], None] | None = None,
+        on_error: Callable[[TransformResult], None] | None = None,
     ) -> Iterator[TransformResult]:
         """Process stream asynchronously with callbacks."""
 

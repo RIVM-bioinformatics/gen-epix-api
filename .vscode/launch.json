@@ -484,23 +484,23 @@
             "justMyCode": true,
         },
         {
-            "name": "test.common.unit.transform",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_common_unit_transform"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
             "name": "test.filter.unit",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "test_filter_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.transform.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_transform_unit"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

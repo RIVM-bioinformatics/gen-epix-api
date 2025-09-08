@@ -4,7 +4,7 @@ Transform result types for tracking success/failure in transformation pipelines.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class TransformResultType(Enum):
@@ -21,10 +21,10 @@ class TransformResult:
 
     success: bool
     original_object: Any
-    transformed_object: Optional[Any] = None
-    error: Optional[Exception] = None
-    transformer_name: Optional[str] = None
-    stage: Optional[str] = None
+    transformed_object: Any | None = None
+    error: Exception | None = None
+    transformer_name: str | None = None
+    stage: str | None = None
 
     @property
     def result_type(self) -> TransformResultType:

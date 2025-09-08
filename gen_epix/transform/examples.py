@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from gen_epix.transform import (
     ConditionalTransformer,
-    CoreTransformer,
     FieldTransformer,
     ObjectAdapter,
     StreamingPipeline,
@@ -14,6 +13,7 @@ from gen_epix.transform import (
     ValidationTransformer,
     register_transformer,
 )
+from gen_epix.transform.transformer import Transformer
 
 
 class Person(BaseModel):
@@ -25,7 +25,7 @@ class Person(BaseModel):
 
 
 @register_transformer("string_upper")
-class StringUpperTransformer(CoreTransformer):
+class StringUpperTransformer(Transformer):
     """Example custom transformer."""
 
     def __init__(self, name: str = "StringUpperTransformer"):
@@ -36,7 +36,7 @@ class StringUpperTransformer(CoreTransformer):
         return obj
 
 
-def example_usage():
+def example_usage() -> None:
     """Demonstrate basic usage of the transformer framework."""
 
     # Sample data - mix of dict and Pydantic models
@@ -78,7 +78,7 @@ def example_usage():
         print(f"Error: {error}")
 
 
-def example_conditional_transformation():
+def example_conditional_transformation() -> None:
     """Demonstrate conditional transformation."""
 
     data = [

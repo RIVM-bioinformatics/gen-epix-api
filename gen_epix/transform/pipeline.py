@@ -4,9 +4,9 @@ Pipeline for chaining transformers with error tracking and recovery mechanisms.
 
 import logging
 import time
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Iterator
 
-from gen_epix.transform.core import Transformer
+from gen_epix.transform.transformer import Transformer
 from gen_epix.transform.result import TransformResult
 from gen_epix.transform.stream import StreamProcessor
 
@@ -14,7 +14,7 @@ from gen_epix.transform.stream import StreamProcessor
 class TransformerPipeline(StreamProcessor):
     """Chainable pipeline of transformers with comprehensive error handling."""
 
-    def __init__(self, transformers: Optional[list[Transformer]] = None):
+    def __init__(self, transformers: list[Transformer] | None = None):
         self.transformers = transformers or []
         self.error_handlers: dict[str, Callable[[TransformResult], None]] = {}
         self.logger = logging.getLogger(__name__)
@@ -91,14 +91,14 @@ class RetryTransformer(Transformer):
         transformer: Transformer,
         max_retries: int = 3,
         backoff_factor: float = 1.0,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         super().__init__(name or f"Retry_{transformer.name}")
         self.transformer = transformer
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
 
-    def transform(self, obj):
+    def transform(self, obj: Any) -> Any:
         """Transform with retry logic."""
         last_exception = None
 
@@ -119,13 +119,13 @@ class FallbackTransformer(Transformer):
     """Use fallback transformer if primary fails."""
 
     def __init__(
-        self, primary: Transformer, fallback: Transformer, name: Optional[str] = None
+        self, primary: Transformer, fallback: Transformer, name: str | None = None
     ):
         super().__init__(name)
         self.primary = primary
         self.fallback = fallback
 
-    def transform(self, obj):
+    def transform(self, obj: Any) -> Any:
         """Transform with fallback on failure."""
         try:
             return self.primary.transform(obj)

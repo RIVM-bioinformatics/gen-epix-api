@@ -304,6 +304,7 @@ class Run:
                 "--cov-report=html:test/output/coverage.html",
                 "--cov-report=xml:test/output/coverage.xml",
                 "test/filter/unit",
+                "test/transform/unit",
                 "test/fastapp/unit",
                 "test/common/unit",
                 "test/casedb/integration/build_db",
@@ -331,6 +332,7 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/filter/unit",
+                "test/transform/unit",
                 "test/fastapp/unit",
                 "test/common/unit",
                 "test/casedb/unit",
@@ -371,6 +373,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/filter/unit/",
+            ]
+        )
+
+    def test_transform_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/transform/unit",
             ]
         )
 
@@ -437,17 +450,6 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/common/unit/auth/",
-            ]
-        )
-
-    def test_common_unit_transform(self) -> None:
-        import pytest
-
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/common/unit/transform/",
             ]
         )
 

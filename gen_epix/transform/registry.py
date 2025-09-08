@@ -4,7 +4,7 @@ Transformer registry for managing and creating transformer instances.
 
 from typing import Any, Callable, Type, TypeVar
 
-from gen_epix.transform.core import Transformer
+from gen_epix.transform.transformer import Transformer
 
 T = TypeVar("T", bound=Transformer)
 
@@ -47,7 +47,7 @@ class TransformerRegistry:
         """Decorator for registering transformer classes."""
 
         def wrapper(transformer_class: Type[T]) -> Type[T]:
-            cls.register(name, transformer_class)  # type: ignore[arg-type]
+            cls.register(name, transformer_class)
             return transformer_class
 
         return wrapper
@@ -59,7 +59,7 @@ class TransformerRegistry:
         """Decorator for registering factory functions."""
 
         def wrapper(factory_fn: Callable[..., T]) -> Callable[..., T]:
-            cls.register_factory(name, factory_fn)  # type: ignore[arg-type]
+            cls.register_factory(name, factory_fn)
             return factory_fn
 
         return wrapper
