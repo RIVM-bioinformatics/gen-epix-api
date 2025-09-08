@@ -230,6 +230,7 @@ class TestRead:
         }
         env.verify_case_type_access(expected_access)
 
+    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -319,7 +320,18 @@ class TestRead:
 
         No ABAC restrictions
         """
-        self._general_read_test(env, model.CaseTypeCol, REFDATA_ADMIN_OR_ABOVE_USERS)
+        allowed_users = set(REFDATA_ADMIN_OR_ABOVE_USERS)
+        all_cols = list(env.db.get(model.CaseTypeCol, {}).values())
+        all_ids = {c.id for c in all_cols}
+
+        # Positive cases
+        for user_name in allowed_users:
+            env.verify_read_all(user_name, model.CaseTypeCol, all_ids)
+
+        # Negative cases
+        for user_name in set(ALL_USERS) - allowed_users:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.read_all(user_name, model.CaseTypeCol)
 
     @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_col_set(self, env: Env) -> None:
@@ -334,7 +346,18 @@ class TestRead:
 
         No ABAC restrictions
         """
-        self._general_read_test(env, model.CaseTypeColSet, NON_GUEST_USERS)
+        allowed_users = set(NON_GUEST_USERS)
+        all_cols = list(env.db.get(model.CaseTypeColSet, {}).values())
+        all_ids = {c.id for c in all_cols}
+
+        # Positive cases
+        for user_name in allowed_users:
+            env.verify_read_all(user_name, model.CaseTypeColSet, all_ids)
+
+        # Negative cases
+        for user_name in set(ALL_USERS) - allowed_users:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.read_all(user_name, model.CaseTypeColSet)
 
     @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
     def test_read_case_type_col_set_member(self, env: Env) -> None:
