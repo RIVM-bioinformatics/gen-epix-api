@@ -117,7 +117,6 @@ def update_cfg_from_file(
             curr_cfg = curr_cfg[key]
         path = Path(file)
         if not path.is_file():
-            # overslaan als het geen regulier bestand is
             continue
         
         with open(path, "r", encoding="utf-8") as handle:
