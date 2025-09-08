@@ -230,6 +230,10 @@ class CasedbTestClient(TestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
+            user_crud_command_class=command.UserCrudCommand,
+            user_invitation_crud_command_class=command.UserInvitationCrudCommand,
+            retrieve_invite_user_constraints_class=command.RetrieveInviteUserConstraintsCommand,
+            invite_user_command_class=command.InviteUserCommand,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,
@@ -240,15 +244,21 @@ class CasedbTestClient(TestClient):
 
     def create_org_admin_policy(
         self,
-        user: str | model.User,
-        tgt_user: str | model.User,
-        organization: str | model.Organization,
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
+        organization_or_str: str | model.Organization,
         is_active: bool = True,
     ) -> model.OrganizationAdminPolicy:
-        user = self._get_obj(model.User, user)
-        tgt_user = self._get_obj(model.User, tgt_user)
-        organization = self._get_obj(model.Organization, organization)
-        organization_admin_policy = self.app.handle(
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        tgt_user: model.User = self._get_obj(
+            model.User, tgt_user_or_str
+        )  # type:ignore[assignment]
+        organization: model.Organization = self._get_obj(
+            model.Organization, organization_or_str
+        )  # type:ignore[assignment]
+        organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
             command.OrganizationAdminPolicyCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
@@ -259,14 +269,16 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(organization_admin_policy)
+        return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
 
     def create_concept(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         abbreviation: str,
     ) -> model.Concept:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         concept = self.handle(
             command.ConceptCrudCommand(
                 user=user,
@@ -276,11 +288,11 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(concept)
+        return self._set_obj(concept)  # type:ignore[return-value]
 
     def create_concept_set(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         concepts: set[str | model.Concept],
         concept_set_type: enum.ConceptSetType,
@@ -289,7 +301,9 @@ class CasedbTestClient(TestClient):
         schema_uri: str | None = None,
         set_dummy_concepts: bool = False,
     ) -> model.ConceptSet:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         concept_set = self.handle(
             command.ConceptSetCrudCommand(
                 user=user,
@@ -313,7 +327,7 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_SOME,
                 objs=[
-                    model.ConceptSetMember(
+                    model.ConceptSetMember(  # type:ignore[call-arg]
                         concept_set_id=concept_set.id,
                         concept_id=x,
                         rank=(
@@ -330,14 +344,16 @@ class CasedbTestClient(TestClient):
                 ],
             )
         )
-        return self._set_obj(concept_set)
+        return self._set_obj(concept_set)  # type:ignore[return-value]
 
     def create_region_set(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
     ) -> model.RegionSet:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         region_set = self.handle(
             command.RegionSetCrudCommand(
                 user=user,
@@ -349,16 +365,18 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(region_set)
+        return self._set_obj(region_set)  # type:ignore[return-value]
 
     def create_region_set_shape(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         region_set: str | model.RegionSet,
         scale: float,
         set_dummy_region_set: bool = False,
     ) -> model.RegionSetShape:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         region_set_shape = self.handle(
             command.RegionSetShapeCrudCommand(
                 user=user,
@@ -374,16 +392,18 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(region_set_shape)
+        return self._set_obj(region_set_shape)  # type:ignore[return-value]
 
     def create_region(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         region_set: str | model.RegionSet,
         set_dummy_region_set: bool = False,
     ) -> model.Region:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         region = self.handle(
             command.RegionCrudCommand(
                 user=user,
@@ -403,16 +423,18 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(region)
+        return self._set_obj(region)  # type:ignore[return-value]
 
     def create_genetic_distance_protocol(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
         min_scale_unit: float = 1,
     ) -> gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         seqdb_seq_distance_protocol_id = (
             self.generate_id()
             if not seqdb_seq_distance_protocol_id
@@ -429,15 +451,17 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(genetic_distance_protocol)
+        return self._set_obj(genetic_distance_protocol)  # type:ignore[return-value]
 
     def create_dim(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         dim_type: enum.DimType,
     ) -> model.Dim:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         dim = self.handle(
             command.DimCrudCommand(
                 user=user,
@@ -449,11 +473,11 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(dim)
+        return self._set_obj(dim)  # type:ignore[return-value]
 
     def create_col(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         col_type: enum.ColType,
         concept_set: str | model.ConceptSet | None = None,
@@ -466,7 +490,9 @@ class CasedbTestClient(TestClient):
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
     ) -> model.Col:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_?(.*)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
@@ -521,12 +547,14 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(col)
+        return self._set_obj(col)  # type:ignore[return-value]
 
     def create_disease(
-        self, user: str | model.User, disease_name: str
+        self, user_or_str: str | model.User, disease_name: str
     ) -> model.Disease:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         disease = self.handle(
             command.DiseaseCrudCommand(
                 user=user,
@@ -534,12 +562,14 @@ class CasedbTestClient(TestClient):
                 objs=model.Disease(name=disease_name),
             )
         )
-        return self._set_obj(disease)
+        return self._set_obj(disease)  # type:ignore[return-value]
 
     def create_etiological_agent(
-        self, user: str | model.User, etiological_agent_name: str
+        self, user_or_str: str | model.User, etiological_agent_name: str
     ) -> model.EtiologicalAgent:
-        user = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         etiological_agent = self.app.handle(
             command.EtiologicalAgentCrudCommand(
                 user=user,
@@ -549,24 +579,26 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(etiological_agent)
+        return self._set_obj(etiological_agent)  # type:ignore[return-value]
 
     def create_etiology(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         disease: str | model.Disease | None,
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
     ) -> model.Etiology:
-        user = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         etiology = self.app.handle(
             command.EtiologyCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Etiology(
+                objs=model.Etiology(  # type:ignore[call-arg]
                     disease_id=(
-                        self.generate_id()
+                        self.generate_id()  # type:ignore[arg-type]
                         if set_dummy_disease
                         else (
                             None
@@ -575,7 +607,7 @@ class CasedbTestClient(TestClient):
                         )
                     ),
                     etiological_agent_id=(
-                        self.generate_id()
+                        self.generate_id()  # type:ignore[arg-type]
                         if set_dummy_etiological_agent
                         else (
                             None
@@ -588,14 +620,16 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(etiology)
+        return self._set_obj(etiology)  # type:ignore[return-value]
 
     def create_data_collection(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str,
     ) -> model.DataCollection:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         data_collection = self.handle(
             command.DataCollectionCrudCommand(
                 user=user,
@@ -605,18 +639,20 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(data_collection)
+        return self._set_obj(data_collection)  # type:ignore[return-value]
 
     def create_case_type(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         case_type: str | model.CaseType,
         disease: str | model.Disease | None,
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
         set_dummy_etiological_agent: bool = False,
     ) -> model.CaseType:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_type = self.handle(
             command.CaseTypeCrudCommand(
                 user=user,
@@ -646,17 +682,19 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type)
+        return self._set_obj(case_type)  # type:ignore[return-value]
 
     def create_case_type_set_member(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         case_type_set: str | model.CaseTypeSet,
         case_type: str | model.CaseType,
         set_dummy_case_type_set: bool = False,
         set_dummy_case_type: bool = False,
     ) -> model.CaseTypeSetMember:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         if set_dummy_case_type_set:
             case_type_set_id = self.generate_id()
         else:
@@ -676,15 +714,17 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_set_member)
+        return self._set_obj(case_type_set_member)  # type:ignore[return-value]
 
     def create_case_type_set_category(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         case_type_set_category: str | model.CaseTypeSetCategory,
         rank: int = 0,
     ) -> model.CaseTypeSetCategory:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_type_set_category = self.handle(
             command.CaseTypeSetCategoryCrudCommand(
                 user=user,
@@ -695,31 +735,33 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_set_category)
+        return self._set_obj(case_type_set_category)  # type:ignore[return-value]
 
     def create_case_type_set(
         self,
-        user: str | model.User,
-        case_type_set: str | model.CaseTypeSet,
+        user_or_str: str | model.User,
+        case_type_set_name: str | model.CaseTypeSet,
         case_types: set[str | model.CaseType],
-        case_type_set_category: str | model.CaseTypeSetCategory | None,
+        case_type_set_category_or_str: str | model.CaseTypeSetCategory | None,
         rank: int = 0,
         set_dummy_case_type_set_category: bool = False,
         set_dummy_case_types: bool = False,
     ) -> model.CaseTypeSet:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         if set_dummy_case_type_set_category:
             case_type_set_category_id = self.generate_id()
         else:
             case_type_set_category_id = self._get_obj(
-                model.CaseTypeSetCategory, case_type_set_category
+                model.CaseTypeSetCategory, case_type_set_category_or_str
             ).id
-        case_type_set = self.handle(
+        case_type_set: model.CaseTypeSet = self.handle(
             command.CaseTypeSetCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeSet(
-                    name=case_type_set,
+                    name=case_type_set_name,
                     case_type_set_category_id=case_type_set_category_id,
                     rank=rank,
                 ),
@@ -734,7 +776,7 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_SOME,
                 objs=[
-                    model.CaseTypeSetMember(
+                    model.CaseTypeSetMember(  # type:ignore[call-arg]
                         case_type_set_id=case_type_set.id,
                         case_type_id=x,
                     )
@@ -744,11 +786,11 @@ class CasedbTestClient(TestClient):
         )
         for case_type_set_member in case_type_set_members:
             self._set_obj(case_type_set_member)
-        return self._set_obj(case_type_set)
+        return self._set_obj(case_type_set)  # type:ignore[return-value]
 
     def create_case_type_col(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         genetic_sequence_case_type_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
@@ -757,7 +799,9 @@ class CasedbTestClient(TestClient):
         set_dummy_case_type: bool = False,
         set_dummy_col: bool = False,
     ) -> model.CaseTypeCol:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
@@ -788,16 +832,18 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_col)
+        return self._set_obj(case_type_col)  # type:ignore[return-value]
 
     def create_case_type_col_set(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         case_type_col_set: str | model.CaseTypeColSet,
         case_type_cols: set[str | model.CaseTypeCol],
         set_dummy_case_type_cols: bool = False,
     ) -> model.CaseTypeColSet:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_type_col_set = self.handle(
             command.CaseTypeColSetCrudCommand(
                 user=user,
@@ -827,15 +873,17 @@ class CasedbTestClient(TestClient):
                 ],
             )
         )
-        return self._set_obj(case_type_col_set)
+        return self._set_obj(case_type_col_set)  # type:ignore[return-value]
 
     def create_case_type_col_set_member(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         case_type_col_set: str | model.CaseTypeColSet,
         case_type_col: str | model.CaseTypeCol,
     ) -> model.CaseTypeColSetMember:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_type_col_set: model.CaseTypeColSet = self._get_obj(
             model.CaseTypeColSet, case_type_col_set
         )
@@ -853,11 +901,11 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(case_type_col_set_member)
+        return self._set_obj(case_type_col_set_member)  # type:ignore[return-value]
 
     def create_organization_access_case_policy(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str,
         case_type_set: str | model.CaseTypeSet,
         is_active: bool = True,
@@ -871,7 +919,9 @@ class CasedbTestClient(TestClient):
         read_case_set: bool = True,
         write_case_set: bool = True,
     ) -> model.OrganizationAccessCasePolicy:
-        user = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+.*)$", name.lower())
         if not m:
             raise ValueError(f"Invalid code {name}")
@@ -914,14 +964,16 @@ class CasedbTestClient(TestClient):
         # print(
         #     f"Created organization_case_policy: {organization.name}, {data_collection.name}, {case_type_col_set.name} ({organization_case_policy.organization_id}, {organization_case_policy.data_collection_id}, {organization_case_policy.case_type_col_set_id})"
         # )
-        return self._set_obj(organization_access_case_policy)
+        return self._set_obj(
+            organization_access_case_policy
+        )  # type:ignore[return-value]
 
     def create_user_access_case_policy(
         self,
-        user: str | model.User,
-        tgt_user: str | model.User,
-        data_collection: str | model.DataCollection,
-        case_type_set: str | model.CaseTypeSet,
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
+        data_collection_or_str: str | model.DataCollection,
+        case_type_set_or_str: str | model.CaseTypeSet,
         is_active: bool = True,
         add_case: bool = True,
         remove_case: bool = True,
@@ -932,10 +984,12 @@ class CasedbTestClient(TestClient):
         read_case_set: bool = True,
         write_case_set: bool = True,
     ) -> model.UserAccessCasePolicy:
-        user: model.User = self._get_obj(model.User, user)
-        tgt_user: model.User = self._get_obj(model.User, tgt_user)
-        case_type_set = self._get_obj(model.CaseTypeSet, case_type_set)
-        data_collection = self._get_obj(model.DataCollection, data_collection)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        tgt_user: model.User = self._get_obj(model.User, tgt_user_or_str)
+        data_collection = self._get_obj(model.DataCollection, data_collection_or_str)
+        case_type_set = self._get_obj(model.CaseTypeSet, case_type_set_or_str)
         read_case_type_col_set_id = (
             self._get_obj(model.CaseTypeColSet, read_case_type_col_set).id
             if read_case_type_col_set
@@ -966,11 +1020,11 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(user_access_case_policy)
+        return self._set_obj(user_access_case_policy)  # type:ignore[return-value]
 
     def create_organization_share_case_policy(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str,
         case_type_set: str | model.CaseTypeSet,
         is_active: bool = True,
@@ -979,7 +1033,9 @@ class CasedbTestClient(TestClient):
         add_case_set: bool = True,
         remove_case_set: bool = True,
     ) -> model.OrganizationShareCasePolicy:
-        user = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", name.lower())
         if not m:
             raise ValueError(f"Invalid code {name}")
@@ -1011,12 +1067,14 @@ class CasedbTestClient(TestClient):
         # print(
         #     f"Created organization_data_collection_policy: {organization.name}, {data_collection.name}, {source_data_collection.name}"
         # )
-        return self._set_obj(organization_share_case_policy)
+        return self._set_obj(
+            organization_share_case_policy
+        )  # type:ignore[return-value]
 
     def create_user_share_case_policy(
         self,
-        user: str | model.User,
-        tgt_user: str | model.User,
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
         data_collection: str | model.DataCollection,
         from_data_collection: str | model.DataCollection,
         case_type_set: str | model.CaseTypeSet,
@@ -1026,8 +1084,10 @@ class CasedbTestClient(TestClient):
         add_case_set: bool = True,
         remove_case_set: bool = True,
     ) -> model.UserShareCasePolicy:
-        user: model.User = self._get_obj(model.User, user)
-        tgt_user: model.User = self._get_obj(model.User, tgt_user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        tgt_user: model.User = self._get_obj(model.User, tgt_user_or_str)
         data_collection = self._get_obj(model.DataCollection, data_collection)
         from_data_collection = self._get_obj(model.DataCollection, from_data_collection)
         case_type_set = self._get_obj(model.CaseTypeSet, case_type_set)
@@ -1048,18 +1108,20 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(user_share_case_policy)
+        return self._set_obj(user_share_case_policy)  # type:ignore[return-value]
 
     def create_case(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         data_collections: (
             str | model.DataCollection | list[str] | list[model.DataCollection]
         ),
         col_index_pattern: str | None = None,
     ) -> model.Case:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         if not isinstance(data_collections, list):
             data_collections = [data_collections]
         data_collections = self._get_obj(model.DataCollection, data_collections)
@@ -1149,7 +1211,7 @@ class CasedbTestClient(TestClient):
         }
         if stored_data_collection_ids != set(data_collection_ids):
             raise ValueError(f"Data collection associations mismatch")
-        return self._set_obj(case)
+        return self._set_obj(case)  # type:ignore[return-value]
 
     def create_case_data_collection_link(
         self,
@@ -1171,14 +1233,16 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
             )
         )
-        return self._set_obj(case_data_collection_link)
+        return self._set_obj(case_data_collection_link)  # type:ignore[return-value]
 
     def create_case_set_category(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str | model.CaseSetCategory,
     ) -> model.CaseSetCategory:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_set_category = self.handle(
             command.CaseSetCategoryCrudCommand(
                 user=user,
@@ -1186,14 +1250,16 @@ class CasedbTestClient(TestClient):
                 objs=model.CaseSetCategory(name=name, description=name),
             )
         )
-        return self._set_obj(case_set_category)
+        return self._set_obj(case_set_category)  # type:ignore[return-value]
 
     def create_case_set_status(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         name: str | model.CaseSetStatus,
     ) -> model.CaseSetStatus:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         case_set_status = self.handle(
             command.CaseSetStatusCrudCommand(
                 user=user,
@@ -1201,11 +1267,11 @@ class CasedbTestClient(TestClient):
                 objs=model.CaseSetStatus(name=name, description=name),
             )
         )
-        return self._set_obj(case_set_status)
+        return self._set_obj(case_set_status)  # type:ignore[return-value]
 
     def create_case_set(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         code: str,
         case_set_category: str | model.CaseSetCategory,
         case_set_status: str | model.CaseSetStatus,
@@ -1214,7 +1280,9 @@ class CasedbTestClient(TestClient):
         ),
         cases: list[model.Case] | list[str] | None = None,
     ) -> model.Case:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         root_user: model.User = self._get_obj(model.User, "root1_1")
         # Get the data collections
         if not isinstance(data_collections, list):
@@ -1257,7 +1325,7 @@ class CasedbTestClient(TestClient):
                 case_ids=case_ids,
             )
         )
-        case_set = self._set_obj(case_set)
+        case_set: model.CaseSet = self._set_obj(case_set)  # type:ignore[return-value]
         # Get the data collection associations
         stored_case_set_data_collection_links = self.handle(
             command.CaseSetDataCollectionLinkCrudCommand(
@@ -1303,16 +1371,20 @@ class CasedbTestClient(TestClient):
 
     def update_user(
         self,
-        user: str | model.User,
-        tgt_user: str | model.User,
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
         is_active: bool | None = None,
         roles: set[enum.Role] | None = None,
-        organization: str | None = None,
+        organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
-        user = self._get_obj(model.User, user)
-        tgt_user = self._get_obj(model.User, tgt_user, copy=True)
-        if not organization:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        tgt_user: model.User = self._get_obj(
+            model.User, tgt_user_or_str, copy=True
+        )  # type:ignore[assignment]
+        if not organization_or_str:
             if set_dummy_organization:
                 organization_id = self.generate_id()
             else:
@@ -1320,7 +1392,7 @@ class CasedbTestClient(TestClient):
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization).id
+            organization_id = self._get_obj(model.Organization, organization_or_str).id
         has_updates = False
         if is_active is not None and tgt_user.is_active != is_active:
             has_updates = True
@@ -1345,18 +1417,36 @@ class CasedbTestClient(TestClient):
         TestClient._verify_updated_obj(
             tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
         )
-        return self._set_obj(updated_tgt_user, update=True)
+        return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
+
+    def get_all_user_invitations(
+        self, user_or_str: str | model.User
+    ) -> list[model.UserInvitation]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        invitations: list[model.UserInvitation] = self.handle(
+            command.UserInvitationCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return invitations
 
     def temp_update_user_own_organization(
         self,
-        user: str | model.User,
-        organization: str | None = None,
+        user_or_str: str | model.User,
+        organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
-        user: model.User = self._get_obj(model.User, user)
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         orig_organization_id = user.organization_id
-        if not organization:
+        if not organization_or_str:
             if set_dummy_organization:
                 organization_id = self.generate_id()
             else:
@@ -1366,7 +1456,7 @@ class CasedbTestClient(TestClient):
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization).id
+            organization_id = self._get_obj(model.Organization, organization_or_str).id
         # Get current policies
         prev_user_access_case_policies = self.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -1421,11 +1511,11 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"User case policies not updated")
         if new_user_share_case_policy_ids.intersection(prev_user_share_case_policy_ids):
             raise ValueError(f"User data collection policies not updated")
-        return self._set_obj(user, update=True)
+        return self._set_obj(user, update=True)  # type:ignore[return-value]
 
     # def update_user_access_case_policy(
     #     self,
-    #     user: str | model.User,
+    #     user_or_str: str | model.User,
     #     props: dict[str, Any | None],
     #     set_dummy_link: dict[str, bool] | bool = False,
     #     exclude_none: bool = True,
@@ -1442,7 +1532,7 @@ class CasedbTestClient(TestClient):
     #     new_write_case_set: bool | None = None,
     # ) -> model.UserAccessCasePolicy:
     #     root_user: model.User = self._get_obj(model.User, "root1_1")
-    #     user: model.User = self._get_obj(model.User, user)
+    #     user: model.User = self._get_obj(model.User, user_or_str)  # type:ignore[assignment]
     #     tgt_user: model.User = self._get_obj(model.User, props["tgt_user"])
     #     data_collection: model.DataCollection = self._get_obj(
     #         model.DataCollection, props["data_collection"]
@@ -1507,11 +1597,13 @@ class CasedbTestClient(TestClient):
 
     def update_association_case_data_collection(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         cases: str | model.Case | list[str | model.Case],
         data_collections: set[str | model.DataCollection],
     ) -> list[model.CaseDataCollectionLink]:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         root_user: model.User = self._get_obj(model.User, "root1_1")
         if not isinstance(cases, list):
             cases = [cases]
@@ -1563,15 +1655,17 @@ class CasedbTestClient(TestClient):
             )
         )
         # Verify associations
-        resulting_case_data_collection_links = self.handle(
-            command.CaseDataCollectionLinkCrudCommand(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=TypedUuidSetFilter(
-                    type=FilterType.UUID_SET.value,
-                    key="case_id",
-                    members=case_ids,
-                ),
+        resulting_case_data_collection_links: list[model.CaseDataCollectionLink] = (
+            self.handle(
+                command.CaseDataCollectionLinkCrudCommand(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    query_filter=TypedUuidSetFilter(
+                        type=FilterType.UUID_SET.value,
+                        key="case_id",
+                        members=case_ids,
+                    ),
+                )
             )
         )
         expected_case_data_collections = {
@@ -1604,7 +1698,9 @@ class CasedbTestClient(TestClient):
                 objs=case_type_col_set_member,
             ),
         )
-        return self._set_obj(updated_case_type_col_set_member, update=True)
+        return self._set_obj(
+            updated_case_type_col_set_member, update=True
+        )  # type:ignore[return-value]
 
     def verify_case_content_access(
         self,
@@ -1612,7 +1708,9 @@ class CasedbTestClient(TestClient):
     ) -> None:
         for key, expected_case_content in expected_access.items():
             user, case_code = key
-            user: model.User = self._get_obj(model.User, user)
+            user: model.User = self._get_obj(
+                model.User, user_or_str
+            )  # type:ignore[assignment]
             full_case = self._get_obj(
                 model.Case, self._convert_case_code_to_date(case_code)
             )
@@ -1649,8 +1747,10 @@ class CasedbTestClient(TestClient):
         self,
         expected_access: dict[str, list[str]],
     ) -> None:
-        for user, expected_case_types in expected_access.items():
-            user: model.User = self._get_obj(model.User, user)
+        for user_str, expected_case_types in expected_access.items():
+            user: model.User = self._get_obj(
+                model.User, user_str
+            )  # type:ignore[assignment]
             case_types = self.handle(
                 command.CaseTypeCrudCommand(
                     user=user,
@@ -1669,12 +1769,14 @@ class CasedbTestClient(TestClient):
 
     def get_org_ids_for_org_admin(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         include_self: bool = False,
         on_no_admin: str = "raise",
     ) -> list[model.Organization]:
-        user: model.User = self._get_obj(model.User, user)
-        org_admin_policies = [
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [
             x
             for x in self.db[model.OrganizationAdminPolicy].values()
             if x.user_id == user.id
@@ -1691,11 +1793,13 @@ class CasedbTestClient(TestClient):
 
     def get_users_for_org_admin(
         self,
-        user: str | model.User,
+        user_or_str: str | model.User,
         include_self: bool = False,
         on_no_admin: str = "raise",
     ) -> list[model.User]:
-        user: model.User = self._get_obj(model.User, user)
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
         org_admin_policies = [
             x
             for x in self.db[model.OrganizationAdminPolicy].values()
@@ -1709,7 +1813,7 @@ class CasedbTestClient(TestClient):
         organization_ids = {x.organization_id for x in org_admin_policies}
         if include_self:
             organization_ids.add(user.organization_id)
-        tgt_users = list(self.db[model.User].values())
+        tgt_users: list[model.User] = list(self.db[model.User].values())
         return [x for x in tgt_users if x.organization_id in organization_ids] + (
             [user] if include_self else []
         )

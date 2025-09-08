@@ -304,6 +304,16 @@ class Domain:
             return frozenset(self._permissions_for_service_type[service_type])
         return set(self._permissions_for_service_type[service_type])
 
+    def get_permissions_for_domain(
+        self, frozen: bool = True
+    ) -> set[Permission] | frozenset[Permission]:
+        """
+        Get permissions for all the commands in the domain.
+        """
+        if frozen:
+            return frozenset(self._permissions)
+        return set(self._permissions)
+
     def get_model_excluded_permissions(self) -> dict[Type[Model], PermissionTypeSet]:
         """
         For all registered CRUD commands, return a dict where the key is the

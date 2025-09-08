@@ -1,6 +1,6 @@
 import abc
 
-from gen_epix.fastapp import BaseService
+from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.services.auth import model
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 

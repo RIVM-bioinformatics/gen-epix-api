@@ -1,16 +1,9 @@
 from typing import ClassVar
 
-import gen_epix.casedb.domain.model.abac as model
-from gen_epix.common.domain.command import Command, CrudCommand
+import gen_epix.casedb.domain.model as model
+from gen_epix.common.domain.command import CrudCommand
 
 # Non-CRUD
-
-
-class RetrieveOrganizationAdminNameEmailsCommand(Command):
-    """
-    Retrieve the names and email addresses of all organization admins for the user's
-    organization.
-    """
 
 
 # CRUD

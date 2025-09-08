@@ -477,8 +477,29 @@ class AuthService(BaseAuthService):
             raise exc.UnauthorizedAuthError()
 
         try:
+            # Retrieve existing user
             user = user_manager.retrieve_user_by_key(user_key)
+            try:
+                # Retrieve user name from claims and update if necessary
+                new_user_name = user_manager.get_user_name_from_claims(claims.claims)
+                if new_user_name:
+                    updated_user = user_manager.update_user_name(user, new_user_name)
+                    if updated_user:
+                        return updated_user
+            except exc.DomainException as exception:
+                if self._logger:
+                    self._logger.error(
+                        self.create_log_message(
+                            "a7d93f8c",
+                            "Failed to update user name from claims",
+                            issuer=issuer,
+                            sub=sub,
+                            user_key=user_key,
+                            exception=exception,
+                        )
+                    )
             return user
+
         except exc.NoResultsError:
             # User does not exist
             if self._logger:

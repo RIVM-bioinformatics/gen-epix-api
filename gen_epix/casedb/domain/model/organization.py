@@ -24,11 +24,9 @@ class User(common_model.User):
         ),
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[
-        enum.Role
-    ] = copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        common_model.User, "roles"
-    )  # type: ignore[assignment]
+    # fmt: off
+    roles: set[enum.Role] = copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
+    # fmt: on
 
 
 class UserInvitation(common_model.UserInvitation):
@@ -51,14 +49,27 @@ class UserInvitation(common_model.UserInvitation):
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     # Override invited_by_user to ensure it uses the correct User model
-    invited_by_user: User | None = (
-        copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride]
-            common_model.UserInvitation, "invited_by_user"
-        )
-    )
+    # fmt: off
+    invited_by_user: User | None = copy_model_field(common_model.UserInvitation, "invited_by_user")  # type: ignore[assignment]
+    # fmt: on
     # Override roles to ensure it is a set of enum.Role
-    roles: set[
-        enum.Role
-    ] = copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
-        common_model.UserInvitation, "roles"
-    )  # type: ignore[assignment]
+    # fmt: off
+    roles: set[enum.Role] = copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
+    # fmt: on
+
+
+class UserInvitationConstraints(common_model.UserInvitationConstraints):
+    """"""
+
+    __doc__ = common_model.UserInvitationConstraints.__doc__
+
+    ENTITY: ClassVar = Entity(
+        **common_model.UserInvitationConstraints.ENTITY.model_dump(
+            exclude_unset=True,
+            exclude_defaults=True,
+            exclude={"schema_name", "_model_class"},
+        ),
+    )
+    # fmt: off
+    roles: set[enum.Role] = copy_model_field(common_model.UserInvitationConstraints, "roles")  # type: ignore[assignment]
+    # fmt: on

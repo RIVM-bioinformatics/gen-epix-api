@@ -66,6 +66,9 @@ from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as Etiologica
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
 from gen_epix.casedb.domain.model.organization import User as User
 from gen_epix.casedb.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.casedb.domain.model.organization import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
@@ -162,9 +165,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseRights,
             CaseSetRights,
         ],
-        enum.ServiceType.ABAC: [
+        enum.ServiceType.ABAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+        )
+        + [
             OrganizationAccessCasePolicy,
-            OrganizationAdminPolicy,
             OrganizationShareCasePolicy,
             UserAccessCasePolicy,
             UserShareCasePolicy,
@@ -176,4 +181,6 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
+    common_model.UserInvitationConstraints: UserInvitationConstraints,
+    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
