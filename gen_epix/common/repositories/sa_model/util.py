@@ -198,7 +198,8 @@ def get_mixin_mapped_column(
     sa_column_type: Type[sa.types.TypeEngine],
     **kwargs: Any,
 ) -> Mapped:
-    field_info: FieldInfo = getattr(model_mixin_class, field_name)
+    
+    field_info: FieldInfo = model_mixin_class.model_fields[field_name]
     # Extract SA arguments from mixin class based on sa_type
     kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
         "nullable", not field_info.is_required()

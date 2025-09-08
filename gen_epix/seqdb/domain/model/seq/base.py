@@ -1,7 +1,7 @@
 import json
 import uuid
 
-from pydantic import Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from gen_epix.seqdb.domain import enum
 
@@ -10,7 +10,7 @@ def str_uuid4() -> str:
     return str(uuid.uuid4())
 
 
-class SeqMixin:
+class SeqMixin(BaseModel):
     seq: str = Field(
         description="The sequence in the representation defined by seq_format"
     )
@@ -48,7 +48,7 @@ class SeqMixin:
     #     return value
 
 
-class CodeMixin:
+class CodeMixin(BaseModel):
     code: str = Field(
         default_factory=str_uuid4,
         description="A unique code for the instance, e.g. for external reference. Defaults to a UUID4.",
@@ -56,7 +56,7 @@ class CodeMixin:
     )
 
 
-class QualityMixin:
+class QualityMixin(BaseModel):
     quality_score: float | None = Field(
         default=None, description="The quality of the sequence, as a numerical value."
     )
@@ -71,7 +71,7 @@ class QualityMixin:
         return value
 
 
-class AlignmentMixin:
+class AlignmentMixin(BaseModel):
     aln: str = Field(
         description="The alignment in the representation defined by alignment_format"
     )
@@ -86,7 +86,7 @@ class AlignmentMixin:
     )
 
 
-class ProtocolMixin:
+class ProtocolMixin(BaseModel):
     code: str = Field(description="The code of the protocol", max_length=255)
     name: str = Field(description="The name of the protocol", max_length=255)
     version: str | None = Field(

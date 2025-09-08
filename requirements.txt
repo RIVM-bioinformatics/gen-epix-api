@@ -12,7 +12,7 @@ sqlalchemy==2.0.43
 sqlalchemy_utils==0.42.0
 
 # Data models/handling
-pydantic==2.11.6 # 2.11.7 has a breaking change that results in FieldInfo.annotation remaining None
+pydantic==2.11.7 # 2.11.7 has a breaking change that results in FieldInfo.annotation remaining None
 ulid-py==1.1.0
 
 # configuration handling
