@@ -1,11 +1,11 @@
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
+    ALL_USERS,
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
-    ROOT,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
@@ -421,9 +421,7 @@ class TestUpdate:
                     {"description": str(-i)},
                 )
 
-    @pytest.mark.skip(
-        reason="To be adjusted to similar structure as e.g test_update_case_type_col_set_member"
-    )
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -434,16 +432,15 @@ class TestUpdate:
         - org_user: -
         - guest: -
         """
-        all_case_type_col_set_members = env.read_all(ROOT, model.CaseTypeColSetMember)
-        for user in REFDATA_ADMIN_OR_ABOVE_USERS:
+        allowed_users = set(REFDATA_ADMIN_OR_ABOVE_USERS)
+        all_case_type_col_set_members = list(
+            env.db.get(model.CaseTypeColSetMember, {}).values()
+        )
+        # Positive cases
+        for user in allowed_users:
             env.update_case_type_col_set_member(user, all_case_type_col_set_members[-1])
-
-    @pytest.mark.skip(
-        reason="To be adjusted to similar structure as e.g test_update_case_type_col_set_member"
-    )
-    def test_update_case_type_col_set_member_raise(self, env: Env) -> None:
-        all_case_type_col_set_members = env.read_all(ROOT, model.CaseTypeColSetMember)
-        for user in BELOW_APP_ADMIN_DATA_USERS:
+        # Negative cases
+        for user in set(ALL_USERS) - allowed_users:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_case_type_col_set_member(
                     user, all_case_type_col_set_members[-1]
