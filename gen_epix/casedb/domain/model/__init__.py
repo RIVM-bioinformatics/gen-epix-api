@@ -23,6 +23,7 @@ from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.domain.model.case import CaseForCreateUpdate as CaseForCreateUpdate
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case import CaseSet as CaseSet
@@ -46,6 +47,9 @@ from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
+from gen_epix.casedb.domain.model.case import (
+    CaseValidationReport as CaseValidationReport,
+)
 from gen_epix.casedb.domain.model.case import Col as Col
 from gen_epix.casedb.domain.model.case import CompleteCaseType as CompleteCaseType
 from gen_epix.casedb.domain.model.case import Dim as Dim
@@ -152,6 +156,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseTypeColSetMember,
             CompleteCaseType,
             Case,
+            CaseForCreateUpdate,
             CaseSetCategory,
             CaseSetStatus,
             CaseSet,
@@ -164,6 +169,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseSetQuery,
             CaseRights,
             CaseSetRights,
+            CaseValidationReport,
         ],
         enum.ServiceType.ABAC: list(
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]

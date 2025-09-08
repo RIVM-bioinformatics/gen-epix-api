@@ -10,6 +10,7 @@ from gen_epix.common.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.common.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 # Non-CRUD
@@ -35,7 +36,7 @@ class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand
     association_objs: list[model.CaseTypeColSetMember]
 
 
-class CaseSetCreateCommand(Command):
+class CreateCaseSetCommand(Command):
     """
     Create a new case set and associate it with the specified data collections and
     cases.
@@ -56,33 +57,37 @@ class CaseSetCreateCommand(Command):
         return self
 
 
-class CasesCreateCommand(Command):
+class ValidateCasesCommand(Command):
     """
-    Create a list of cases and associate them with the specified data collections.
+    Validate case data and return a validation report.
     """
 
-    cases: list[model.Case] = Field(
-        description="The cases to create. All cases must have the same case type and created_in_data_collection."
+    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
+    created_in_data_collection_id: UUID = copy_model_field(
+        model.CaseValidationReport, "created_in_data_collection_id"
     )
-    data_collection_ids: set[UUID] = Field(
-        description="The data collections to associate with the cases, other than the created_in_data_collection. The latter will be removed from the set if present."
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        model.CaseValidationReport, "cases"
+    )
+    data_collection_ids: set[UUID] = copy_model_field(
+        model.CaseValidationReport, "data_collection_ids"
     )
 
     @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if len(set(x.case_type_id for x in self.cases)) > 1:
-            raise ValueError("Not all cases have the same case type.")
-        case_ids = set()
-        for i, case in enumerate(self.cases):
-            if case.id in case_ids:
-                raise ValueError(f"Duplicate case id: {case.id}")
-            if case.id is not None:
-                case_ids.add(case.id)
-        if self.cases:
-            self.data_collection_ids.discard(
-                self.cases[0].created_in_data_collection_id
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
             )
         return self
+
+
+class CreateCasesCommand(ValidateCasesCommand):
+    """
+    Create the corresponding cases and return them.
+    """
+
+    pass
 
 
 class RetrieveCaseSetStatsCommand(Command):

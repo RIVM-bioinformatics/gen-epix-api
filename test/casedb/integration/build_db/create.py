@@ -368,7 +368,7 @@ class TestCreate:
                     enum.ColType.NOMINAL,
                     enum.ColType.ORDINAL,
                     enum.ColType.INTERVAL,
-                    enum.ColType.REGEX,
+                    enum.ColType.REGULAR_LANGUAGE,
                     enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
                 ]
             ):

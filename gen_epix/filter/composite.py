@@ -111,50 +111,50 @@ class CompositeFilter(Filter):
                 x
             )
             self._match_row = lambda x, y: all(x) and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
+                next(y)
             ) != self.filters[
                 1
             ]._match(
-                next(y)  # type: ignore
+                next(y)
             )
         elif self.operator == enum.BooleanOperator.NAND:
             self._match = lambda x: not (  # type: ignore
                 self.filters[0]._match(x) and self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and not (  # type: ignore
-                self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))  # type: ignore
+                self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))
             )
         elif self.operator == enum.BooleanOperator.NOR:
             self._match = lambda x: not (  # type: ignore
                 self.filters[0]._match(x) or self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and not (  # type: ignore
-                self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
+                self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))
             )
         elif self.operator == enum.BooleanOperator.XNOR:
             self._match = lambda x: self.filters[0]._match(x) == self.filters[1]._match(  # type: ignore
                 x
             )
             self._match_row = lambda x, y: all(x) and self.filters[0]._match(  # type: ignore
-                next(y)  # type: ignore
+                next(y)
             ) == self.filters[
                 1
             ]._match(
-                next(y)  # type: ignore
+                next(y)
             )
         elif self.operator == enum.BooleanOperator.IMPLIES:
             self._match = lambda x: (  # type: ignore
                 not self.filters[0]._match(x) or self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and (  # type: ignore
-                not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
+                not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))
             )
         elif self.operator == enum.BooleanOperator.NIMPLIES:
             self._match = lambda x: (  # type: ignore
                 self.filters[0]._match(x) and not self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and (  # type: ignore
-                self.filters[0]._match(next(y)) and not self.filters[1]._match(next(y))  # type: ignore
+                self.filters[0]._match(next(y)) and not self.filters[1]._match(next(y))
             )
 
         return self
@@ -172,7 +172,7 @@ class CompositeFilter(Filter):
     def _not_none_row_iterator(
         self, row: dict[Hashable, Any | None] | BaseModel, is_model: bool = False
     ) -> Generator:
-        for filter in self.filters:  # type: ignore
+        for filter in self.filters:
             if filter._is_composite:
                 yield all(filter._not_none_row_iterator(row, is_model))
             else:
@@ -187,7 +187,7 @@ class CompositeFilter(Filter):
         na_values: set[Any],
         is_model: bool = False,
     ) -> Generator:
-        for filter in self.filters:  # type: ignore
+        for filter in self.filters:
             if filter._is_composite:
                 yield all(filter._not_na_row_iterator(row, na_values, is_model))
             else:
@@ -258,6 +258,7 @@ class CompositeFilter(Filter):
                         )
                         for x, y in zip(self.filters, map_fn)
                     ),
+                    is_model,
                 )
                 ^ self.invert
             )
@@ -278,6 +279,7 @@ class CompositeFilter(Filter):
                         )
                         for x, y in zip(self.filters, map_fn)
                     ),
+                    is_model,
                 )
                 ^ self.invert
             )
@@ -313,6 +315,7 @@ class CompositeFilter(Filter):
                             )
                             for x, y in zip(self.filters, map_fn)
                         ),
+                        is_model,
                     )
                     ^ self.invert
                 )
@@ -329,6 +332,7 @@ class CompositeFilter(Filter):
                             )
                             for x, y in zip(self.filters, map_fn)
                         ),
+                        is_model,
                     )
                     ^ self.invert
                 )
@@ -344,7 +348,7 @@ class CompositeFilter(Filter):
             | None
         ) = None,
         is_model: bool = False,
-    ) -> Iterator[dict[Hashable, Any | None]]:
+    ) -> Iterator[dict[Hashable, Any | None] | BaseModel]:
         # Match, per row and filter, if both key exists, value not null and value matches
         if not self._all_subfilters_have_key():
             raise ValueError(
@@ -364,6 +368,7 @@ class CompositeFilter(Filter):
                             )
                             for x, y in zip(self.filters, map_fn)
                         ),
+                        is_model,
                     )
                     ^ self.invert
                 ):
@@ -381,6 +386,7 @@ class CompositeFilter(Filter):
                             )
                             for x, y in zip(self.filters, map_fn)
                         ),
+                        is_model,
                     )
                     ^ self.invert
                 ):

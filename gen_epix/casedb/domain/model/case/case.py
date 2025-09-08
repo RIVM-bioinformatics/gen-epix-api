@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Iterable, Self
 from uuid import UUID
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix import fastapp
@@ -15,6 +16,7 @@ from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
 from gen_epix.casedb.domain.model.subject import Subject
 from gen_epix.common.domain.model import DataCollection, Model
+from gen_epix.common.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
 
@@ -232,7 +234,7 @@ class Col(Model):
             enum.ColType.NOMINAL,
             enum.ColType.ORDINAL,
             enum.ColType.INTERVAL,
-            enum.ColType.REGEX,
+            enum.ColType.REGULAR_LANGUAGE,
             enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
             enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
         }:
@@ -574,6 +576,29 @@ class Case(Model):
         return {str(x): y for x, y in value.items()}
 
 
+class CaseForCreateUpdate(Model):
+    """
+    A class representing a case to be created or updated.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="cases_for_create_update",
+        persistable=False,
+    )
+    subject_id: UUID | None = copy_model_field(Case, "subject_id")
+    count: int | None = copy_model_field(Case, "count")
+    case_date: datetime = copy_model_field(Case, "case_date")
+    content: dict[UUID, str | None] = Field(
+        description="The column data of the case as {col_id: str_value}. If None and the model is used for update, then any existing value will be deleted."
+    )
+
+    @field_serializer("content", mode="plain")
+    def _serialize_content(
+        self, value: dict[UUID, str | None]
+    ) -> dict[str, str | None]:
+        return {str(x): y for x, y in value.items()}
+
+
 class CaseDataCollectionLink(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_data_collection_links",
@@ -873,4 +898,38 @@ class CaseSetRights(BaseCaseRights):
     )
     write_case_set: bool = Field(
         description="Whether the case set is allowed to be written",
+    )
+
+
+class CaseColDataIssue(PydanticBaseModel):
+    case_id: UUID = Field(description="The ID of the case")
+    case_type_col_id: UUID = Field(description="The ID of the case type column")
+    value: str | None = Field(
+        default=None, description="The value of the case type column"
+    )
+    new_value: str | None = Field(
+        default=None,
+        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
+    )
+    data_rule: enum.CaseColDataRule = Field(description="The type of validation issue")
+    details: str | None = Field(description="The details of the data issue")
+
+
+class CaseValidationReport(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_validation_reports",
+        persistable=False,
+    )
+    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
+    created_in_data_collection_id: UUID = Field(
+        description="The data collection ID in which the cases would be created."
+    )
+    cases: list[CaseForCreateUpdate] = Field(
+        description="The cases to create or update."
+    )
+    data_collection_ids: set[UUID] = Field(
+        description="The additional data collections that the cases would be put in, other than the created_in_data_collection."
+    )
+    data_issues: list[CaseColDataIssue] = Field(
+        description="The list of data issues found in the cases."
     )

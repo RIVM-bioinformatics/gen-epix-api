@@ -309,6 +309,7 @@ class Run:
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/casedb/integration/case_validation",
                 "test/casedb/unit",
                 "test/omopdb/unit",
                 # "test/seqdb/integration",
@@ -439,6 +440,17 @@ class Run:
             ]
         )
 
+    def test_common_unit_transform(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/common/unit/transform/",
+            ]
+        )
+
     def test_omopdb_unit(self) -> None:
         import pytest
 
@@ -481,6 +493,7 @@ class Run:
             + [
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/case_access",
+                "test/casedb/integration/case_validation",
                 "test/casedb/integration/content",
             ]
         )
@@ -504,6 +517,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/casedb/integration/case_access",
+            ]
+        )
+
+    def test_casedb_integration_case_validation(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/case_validation",
             ]
         )
 
