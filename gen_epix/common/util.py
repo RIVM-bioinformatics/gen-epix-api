@@ -118,7 +118,7 @@ def update_cfg_from_file(
         path = Path(file)
         if not path.is_file():
             continue
-        
+        #required for aks 
         with open(path, "r", encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
