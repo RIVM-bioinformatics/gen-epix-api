@@ -1,3 +1,6 @@
+import hashlib
+import json
+import pickle
 import re
 from pathlib import Path
 
@@ -19,7 +22,7 @@ def generate_erm_diagrams(out_dir: Path) -> None:
     Parameters
     ----------
     out_dir : Path
-        The base directory where the ERM diagrams will be saved. Subdirectories for each domain will be created under this path.
+        The base directory where the ERM diagrams will be saved.
 
     Returns
     -------
@@ -37,8 +40,17 @@ def generate_erm_diagrams(out_dir: Path) -> None:
         Path.mkdir(out_dir / "erm")
 
     for name, domain in domains.items():
-        generate_erm_diagrams_for_domain(domain, out_dir / "erm" / name)
-        generate_erm_diagrams_for_service(domain, out_dir / "erm" / name)
+        file_path_with_prefix = out_dir / "erm" / name
+        generate_erm_diagrams_for_domain(domain, file_path_with_prefix)
+        generate_erm_diagrams_for_service(domain, file_path_with_prefix)
+
+    sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
+    pickle_file_path = out_dir / "erm" / "temp_domain_pickle_file.pkl"
+    create_domain_pickle_file(sorted_model_classes, pickle_file_path)
+    domain_pickle_hash = create_sha256_hash(pickle_file_path)
+    hash_dict = create_hash_dict(domain_pickle_hash)
+    create_hash_json_file(hash_dict, out_dir / "erm" / "erm.json")
+    remove_file(pickle_file_path)
 
 
 def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path):
@@ -120,3 +132,95 @@ def camelcase_to_snakecase(name: str) -> str:
     file = pattern.sub("_", file).replace(".", "_").lower()
     name = f"{file}.{extension}"
     return name
+
+
+def create_domain_pickle_file(sorted_model_classes: list, file_path: Path):
+    """
+    Saves a list of sorted model classes to a pickle file.
+
+    Parameters
+    ----------
+    sorted_model_classes : list
+        A list containing sorted model class objects to be saved.
+    file_path : Path
+        The path to the file where the pickle data will be written.
+
+    Returns
+    -------
+    None
+        This function does not return anything. It writes the data to the specified file.
+    """
+    with open(file_path, "wb") as file:
+        pickle.dump(sorted_model_classes, file)
+
+
+def create_sha256_hash(filename: Path) -> str:
+    """
+    Generates a SHA-256 hash for the contents of a given file.
+
+    Parameters
+    ----------
+    filename : Path
+        The path to the file whose contents will be hashed.
+
+    Returns
+    -------
+    str
+        The SHA-256 hash of the file's contents as a hexadecimal string.
+    """
+    with open(filename, "rb") as file:
+        return hashlib.file_digest(file, "sha256").hexdigest()
+
+
+def create_hash_dict(hash: str) -> dict:
+    """
+    Create a dictionary containing the provided hash under the key 'Domain model classes'.
+
+    Parameters
+    ----------
+    hash : str
+        The hash string to be stored in the dictionary.
+
+    Returns
+    -------
+    dict
+        A dictionary with a single key 'Domain model classes' and the provided hash as its value.
+    """
+    return {"Domain model classes": hash}
+
+
+def create_hash_json_file(hash_dict: dict, file_path: Path):
+    """
+    Creates a JSON file from a given dictionary of hashes.
+
+    Parameters
+    ----------
+    hash_dict : dict
+        Dictionary containing hash values to be stored in the JSON file.
+    file_path : Path
+        Path object specifying the location where the JSON file will be created.
+
+    Returns
+    -------
+    None
+        This function does not return anything. It writes the hash dictionary to a JSON file at the specified path.
+    """
+    with open(file_path, "w") as file:
+        json.dump(hash_dict, file)
+
+
+def remove_file(file_path: Path):
+    """
+    Removes the specified file from the filesystem.
+
+    Parameters
+    ----------
+    file_path : Path
+        The path to the file to be removed.
+
+    Notes
+    -----
+    If the specified path does not point to a file, no action is taken.
+    """
+    if file_path.is_file():
+        file_path.unlink()
