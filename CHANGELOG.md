@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v6.0.0 (2025-09-08)
+
+### Bug Fixes
+
+- Add encoding to open method
+  ([`3d4b3e8`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/3d4b3e8d2147e8ef5b63ad584d5f572517e91892))
+
+- Fix merge problem AGAIN, fix metadata_admin references
+  ([`dd91d80`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/dd91d80669ad18e78fbd3ad29e34afc1671b4d76))
+
+- **deps**: Remove comments
+  ([`2441bc2`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2441bc257c51c4b53ecf847f118d53803b4b3ed2))
+
+
 ## v5.0.0 (2025-08-17)
 
 ### Bug Fixes
