@@ -65,6 +65,15 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve genetic sequences for.",
     )
+
+
+class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
     file_name: str = Field(
         description="The desired filename for the FASTA download.",
     )
@@ -429,7 +438,7 @@ def create_case_endpoints(
     )
     async def retrieve__genetic_sequence_fasta(
         user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveGeneticSequenceRequestBody,
+        request_body: RetrieveGeneticSequenceFastaRequestBody,
     ) -> StreamingResponse:
         try:
             fasta_iterable = app.handle(
