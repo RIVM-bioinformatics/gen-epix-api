@@ -144,7 +144,6 @@ Gen-EpiX requires Python 3.13 or higher.
 
 This work was funded by the European Union under the EU4Health Programme (EU4H), project IDs 101102070 (UNITED4Surveillance) and 101113520 (NLWGSHERA2).
 
-| ![EU Funding Logo](./docs/assets/cofunded_EU_logo.png) |
-|:--:|
+![EU Funding Logo](./docs/assets/cofunded_EU_logo.png)
 
 *Disclaimer: Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or Health and Digital Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.*
