@@ -14,8 +14,9 @@ from uuid import UUID
 import pandas as pd
 import pytest
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.common.domain import exc
+from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 
 
@@ -135,22 +136,51 @@ class TestCaseValidation(CaseValidationSetup):
         )
 
         # Get unique users
+        root_user = env.get_root_user()
         uq_user_ids = {x["user.id"] for x in rows if x["user.id"] is not None}
         uq_users_list: list[model.User] = env.app.handle(
             command.UserCrudCommand(
-                user=env.get_root_user(),
+                user=root_user,
                 operation=CrudOperation.READ_SOME,
                 obj_ids=list(uq_user_ids),
             )
         )
         uq_users = {str(x.id): x for x in uq_users_list}
+        for user in uq_users.values():
+            env._set_obj(user)
+        env._set_obj(root_user, update=True)
+
+        # Get policies and case type col ids
+        organization_access_case_policies: dict[
+            tuple[UUID, UUID], model.OrganizationAccessCasePolicy
+        ] = {
+            (x.organization_id, x.data_collection_id): x  # type: ignore[attr-defined,misc]
+            for x in env.read_all(root_user, model.OrganizationAccessCasePolicy)
+        }
+        user_access_case_policies: dict[
+            tuple[UUID, UUID], model.UserAccessCasePolicy
+        ] = {
+            (x.user_id, x.data_collection_id): x  # type: ignore[attr-defined,misc]
+            for x in env.read_all(root_user, model.UserAccessCasePolicy)
+        }
+        case_type_col_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
+            [
+                (x.case_type_col_set_id, x.case_type_col_id)  # type: ignore[attr-defined]
+                for x in env.read_all(root_user, model.CaseTypeColSetMember)
+            ],
+            as_set=True,
+        )
+        all_case_type_col_ids = set.union(set(), *case_type_col_ids.values())
 
         # Create and execute each command
         command_idx_to_test = None
         # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
         n_cases = 1
         for row in rows:
-            index = row["index"]
+            index = float(row["index"])
+            case_type_id = UUID(row["case_type_id"])
+            created_in_data_collection_id = UUID(row["created_in_data_collection_id"])
+            is_update = bool(row["is_update"])
             case_ids = [
                 UUID(row[f"case_id{i+1}"])
                 for i in range(n_cases)
@@ -160,20 +190,64 @@ class TestCaseValidation(CaseValidationSetup):
                 # For debugging, skip any commands not in the list
                 continue
             user = uq_users[row["user.id"]]
+            assert user.id is not None
+
+            # Get writable case type col ids
+            if user.roles.intersection(enum.RoleSet.GE_APP_ADMIN.value):
+                write_case_type_col_ids = all_case_type_col_ids
+            else:
+                org_policy: model.OrganizationAccessCasePolicy | None = (
+                    organization_access_case_policies.get(
+                        (user.organization_id, created_in_data_collection_id)
+                    )
+                )
+                write_case_type_col_ids = set()
+                if (
+                    org_policy
+                    and org_policy.is_active
+                    and org_policy.is_private
+                    and org_policy.add_case
+                    and org_policy.write_case_type_col_set_id is not None
+                ):
+                    user_policy: model.UserAccessCasePolicy | None = (
+                        user_access_case_policies.get(
+                            (user.id, created_in_data_collection_id)
+                        )
+                    )
+                    if (
+                        user_policy
+                        and user_policy.is_active
+                        and user_policy.add_case
+                        and user_policy.write_case_type_col_set_id
+                    ):
+                        write_case_type_col_ids = case_type_col_ids[
+                            org_policy.write_case_type_col_set_id
+                        ].intersection(
+                            case_type_col_ids[user_policy.write_case_type_col_set_id]
+                        )
+
             if env.verbose:
                 print(f"Command {index}, user={user.name}): executing")
+
             # Create cases and expected new cases
             cases = [all_cases[x].model_copy() for x in case_ids]
             expected_validated_cases = [
                 all_validated_cases[x].model_copy() for x in case_ids
             ]
+            for expected_validated_case in expected_validated_cases:
+                # Keep only writable case type cols in expected validated case
+                expected_validated_case.content = {
+                    x: y
+                    for x, y in expected_validated_case.content.items()
+                    if x in write_case_type_col_ids
+                }
+
             # Create command
-            cmd: command.Command
             cmd = command.ValidateCasesCommand(
                 user=user,
-                case_type_id=row["case_type_id"],
-                created_in_data_collection_id=row["created_in_data_collection_id"],
-                is_update=row["is_update"],
+                case_type_id=case_type_id,
+                created_in_data_collection_id=created_in_data_collection_id,
+                is_update=is_update,
                 cases=cases,
                 data_collection_ids=set(),
             )

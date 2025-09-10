@@ -434,7 +434,7 @@ class AbacService(BaseAbacService):
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
                     dict_[case_type_id] = {}
-                all_case_type_col_ids = case_type_col_map[case_type_id]
+                all_case_type_col_ids = case_type_col_map.get(case_type_id, set())
                 case_type_access_abac = model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
                     data_collection_id=x.data_collection_id,

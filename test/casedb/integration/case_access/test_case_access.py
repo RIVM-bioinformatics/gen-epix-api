@@ -183,7 +183,8 @@ class TestCaseAccess(CaseAccessSetup):
                     created_in_data_collection_id=row[
                         "case.created_in_data_collection_id"
                     ],
-                    cases=[_create_case(row, for_create_upload=True)],
+                    is_update=False,
+                    cases=[_create_case(row, for_create_upload=True)],  # type: ignore[list-item]
                     data_collection_ids=set(),
                     props={"id_present": "keep"},
                 )

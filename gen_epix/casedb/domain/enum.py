@@ -338,5 +338,6 @@ class ColTypeSet(Enum):
 class CaseColDataRule(Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
+    UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"

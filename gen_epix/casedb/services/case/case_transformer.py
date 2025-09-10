@@ -195,6 +195,24 @@ class CaseTransformer(Transformer):
                     continue
                 updated_content[case_type_col_id] = new_value
 
+        # Add any other case type cols present as data issue
+        for i, content in enumerate(contents):
+            for case_type_col_id in content.keys():
+                if case_type_col_id in self.complete_case_type.case_type_cols:
+                    continue
+                # Unknown case type col
+                case_validation_report.validated_cases[i].data_issues.append(
+                    model.CaseDataIssue(
+                        case_type_col_id=case_type_col_id,
+                        original_value=content[case_type_col_id],
+                        updated_value=None,
+                        data_rule=CaseColDataRule.UNAUTHORIZED,
+                        details="Unknown case type column",
+                    )
+                )
+
+        # TODO: merge with existing content in case of update
+
         # TODO: Add derived values: per case type dim, go over all pairs of case type cols and derive values
         # for case_type_dim in self.complete_case_type.case_type_dims:
         #     case_type_col_ids = case_type_dim.case_type_col_order
@@ -409,7 +427,7 @@ class CaseTransformer(Transformer):
                             members=frozenset(regions.keys()),
                         ),
                     ],
-                    operator=LogicalOperator.OR,
+                    operator=LogicalOperator.AND,
                 ),
             )
         )
