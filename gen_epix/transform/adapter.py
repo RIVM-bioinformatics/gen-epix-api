@@ -2,7 +2,7 @@
 Object adapters for providing unified interface across different object types.
 """
 
-from typing import Any, Hashable, Iterator, Protocol, Union, runtime_checkable
+from typing import Any, Hashable, Iterator, Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -111,13 +111,13 @@ class ObjectAdapter:
     Supports dict, Pydantic models, and Polars objects.
     """
 
-    def __init__(self, obj: Union[dict, BaseModel, Any]):
+    def __init__(self, obj: dict | BaseModel | Any):
         self._obj = obj
         self._adapter = self._create_adapter(obj)
 
     def _create_adapter(
         self, obj: Any
-    ) -> Union[DictAdapter, PydanticAdapter, PolarsAdapter]:
+    ) -> DictAdapter | PydanticAdapter | PolarsAdapter:
         """Factory method to create appropriate adapter for object type."""
         if isinstance(obj, dict):
             return DictAdapter(obj)

@@ -6,12 +6,12 @@ import logging
 import time
 from typing import Any, Callable, Iterator
 
+from gen_epix.transform.stream_processer import StreamProcessor
+from gen_epix.transform.transform_result import TransformResult
 from gen_epix.transform.transformer import Transformer
-from gen_epix.transform.result import TransformResult
-from gen_epix.transform.stream import StreamProcessor
 
 
-class TransformerPipeline(StreamProcessor):
+class Pipeline(StreamProcessor):
     """Chainable pipeline of transformers with comprehensive error handling."""
 
     def __init__(self, transformers: list[Transformer] | None = None):
@@ -19,18 +19,18 @@ class TransformerPipeline(StreamProcessor):
         self.error_handlers: dict[str, Callable[[TransformResult], None]] = {}
         self.logger = logging.getLogger(__name__)
 
-    def add(self, transformer: Transformer) -> "TransformerPipeline":
+    def add(self, transformer: Transformer) -> "Pipeline":
         """Add transformer to pipeline."""
         self.transformers.append(transformer)
         return self
 
-    def __or__(self, other: Transformer) -> "TransformerPipeline":
+    def __or__(self, other: Transformer) -> "Pipeline":
         """Enable chaining with | operator."""
         return self.add(other)
 
-    def on_error(
+    def register_error_handler(
         self, transformer_name: str, handler: Callable[[TransformResult], None]
-    ) -> "TransformerPipeline":
+    ) -> "Pipeline":
         """Register error handler for specific transformer."""
         self.error_handlers[transformer_name] = handler
         return self

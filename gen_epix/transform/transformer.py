@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.result import TransformResult
+from gen_epix.transform.transform_result import TransformResult
 
 
 class Transformer(ABC):

@@ -14,7 +14,7 @@ from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import BooleanOperator, CompositeFilter, Filter
+from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 
 class DictRepository(BaseRepository):
@@ -287,7 +287,7 @@ class DictRepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter")
         if filter and obj_filter:
             query_filter = CompositeFilter(
-                filters=[filter, obj_filter], operator=BooleanOperator.AND  # type: ignore[list-item]
+                filters=[filter, obj_filter], operator=LogicalOperator.AND  # type: ignore[list-item]
             )
         elif filter:
             query_filter = filter
@@ -508,7 +508,7 @@ class DictRepository(BaseRepository):
         obj_filter: Filter | None = kwargs.get("obj_filter")
         if filter and obj_filter:
             query_filter = CompositeFilter(
-                filters=[filter, obj_filter], operator=BooleanOperator.AND  # type: ignore[list-item]
+                filters=[filter, obj_filter], operator=LogicalOperator.AND  # type: ignore[list-item]
             )
         elif filter:
             query_filter = filter

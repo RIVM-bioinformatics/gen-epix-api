@@ -38,7 +38,7 @@ class CompleteCaseType(CaseType):
     case_type_dims: list[CaseTypeDim] = Field(
         description="The ordered list of case type dimensions"
     )
-    case_type_cols: dict[UUID, CaseTypeCol] = Field(  # type: ignore
+    case_type_cols: dict[UUID, CaseTypeCol] = Field(
         description="The case type columns for the case type"
     )
     case_type_col_order: list[UUID] = Field(

@@ -228,7 +228,7 @@ class TestCreate:
         )
         env.create_concept_set(
             "refdata_admin1_2",
-            "concept_set4_regex",
+            "concept_set4_regular_language",
             [],
             enum.ConceptSetType.REGULAR_LANGUAGE,
             regex=r"^ST(\d*)$",

@@ -321,6 +321,18 @@ class ColTypeSet(Enum):
     )
     ORGANIZATION = frozenset({ColType.ORGANIZATION})
     OTHER = frozenset({ColType.OTHER})
+    HAS_CONCEPT_SET = frozenset(
+        {
+            ColType.NOMINAL,
+            ColType.ORDINAL,
+            ColType.INTERVAL,
+            ColType.REGULAR_LANGUAGE,
+            ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            ColType.CONTEXT_FREE_GRAMMAR_XML,
+        }
+    )
+    HAS_REGION_SET = frozenset({ColType.GEO_REGION})
+    HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
 class CaseColDataRule(Enum):

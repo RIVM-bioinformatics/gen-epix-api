@@ -8,7 +8,7 @@ import gen_epix.common.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import BooleanOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 
 
 @pytest.fixture(scope="module", name="env")
@@ -193,7 +193,7 @@ class TestContent:
                             TypedCompositeFilter(
                                 type="COMPOSITE",
                                 filters=filters,
-                                operator=BooleanOperator.OR,
+                                operator=LogicalOperator.OR,
                             )
                             if filters
                             else None

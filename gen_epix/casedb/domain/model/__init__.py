@@ -23,6 +23,7 @@ from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseForCreateUpdate as CaseForCreateUpdate
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
@@ -58,6 +59,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
+from gen_epix.casedb.domain.model.case import ValidatedCase as ValidatedCase
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet

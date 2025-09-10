@@ -12,7 +12,7 @@ class Filter(BaseModel):
 
     Attributes:
         invert (bool): Whether to invert the filter.
-        key (Union[Hashable, None]): The column key to apply the filter to, when applied to a row. If None, the filter cannot be applied to a row, only to a column.
+        key (Hashable | None): The column key to apply the filter to, when applied to a row. If None, the filter cannot be applied to a row, only to a column.
     """
 
     invert: bool = Field(default=False, description="Whether to invert the filter.")

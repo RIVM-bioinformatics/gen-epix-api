@@ -230,24 +230,17 @@ class Col(Model):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
-        if self.col_type in {
-            enum.ColType.NOMINAL,
-            enum.ColType.ORDINAL,
-            enum.ColType.INTERVAL,
-            enum.ColType.REGULAR_LANGUAGE,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
-        }:
+        if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No concept_set_id provided for col_type {self.col_type.value}"
                 )
-        if self.col_type == enum.ColType.GEO_REGION:
+        if self.col_type in enum.ColTypeSet.HAS_REGION_SET.value:
             if self.region_set_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No region_set_id provided for col_type {self.col_type.value}"
                 )
-        if self.col_type == enum.ColType.GENETIC_DISTANCE:
+        if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
             if self.genetic_distance_protocol_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
@@ -901,18 +894,21 @@ class CaseSetRights(BaseCaseRights):
     )
 
 
-class CaseColDataIssue(PydanticBaseModel):
-    case_id: UUID = Field(description="The ID of the case")
+class CaseDataIssue(PydanticBaseModel):
     case_type_col_id: UUID = Field(description="The ID of the case type column")
-    value: str | None = Field(
-        default=None, description="The value of the case type column"
-    )
-    new_value: str | None = Field(
-        default=None,
+    original_value: str | None = Field(description="The value of the case type column")
+    updated_value: str | None = Field(
         description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
     )
     data_rule: enum.CaseColDataRule = Field(description="The type of validation issue")
     details: str | None = Field(description="The details of the data issue")
+
+
+class ValidatedCase(PydanticBaseModel):
+    case: CaseForCreateUpdate = Field(description="The case with validated content.")
+    data_issues: list[CaseDataIssue] = Field(
+        description="The data issues found for the case."
+    )
 
 
 class CaseValidationReport(Model):
@@ -924,12 +920,12 @@ class CaseValidationReport(Model):
     created_in_data_collection_id: UUID = Field(
         description="The data collection ID in which the cases would be created."
     )
-    cases: list[CaseForCreateUpdate] = Field(
-        description="The cases to create or update."
+    is_update: bool = Field(
+        description="Whether the cases are intended to be updated or newly created."
     )
     data_collection_ids: set[UUID] = Field(
         description="The additional data collections that the cases would be put in, other than the created_in_data_collection."
     )
-    data_issues: list[CaseColDataIssue] = Field(
-        description="The list of data issues found in the cases."
+    validated_cases: list[ValidatedCase] = Field(
+        description="The cases containing validated content and any data issues found during validation."
     )

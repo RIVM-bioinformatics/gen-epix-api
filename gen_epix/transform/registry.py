@@ -9,7 +9,7 @@ from gen_epix.transform.transformer import Transformer
 T = TypeVar("T", bound=Transformer)
 
 
-class TransformerRegistry:
+class Registry:
     """Central registry for transformer types and factory methods."""
 
     _transformers: dict[str, Type[Transformer]] = {}
@@ -74,9 +74,9 @@ class TransformerRegistry:
 # Convenience decorators
 def register_transformer(name: str) -> Callable[[Type[T]], Type[T]]:
     """Decorator to register a transformer class."""
-    return TransformerRegistry.decorator(name)
+    return Registry.decorator(name)
 
 
 def register_factory(name: str) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator to register a transformer factory function."""
-    return TransformerRegistry.factory_decorator(name)
+    return Registry.factory_decorator(name)

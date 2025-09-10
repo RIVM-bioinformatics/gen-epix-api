@@ -129,8 +129,9 @@ class TestCaseValidation(CaseValidationSetup):
         if df is None:
             raise ValueError("Case CRUD commands DataFrame is not set.")
         # sort by index to have correct order and convert to rows
-        rows: list[dict[Hashable, Any]] = df.sort_values(by="index", axis=0).to_dict(
-            orient="records"
+        mask = df["dm.is_active"] == True
+        rows: list[dict[Hashable, Any]] = (
+            df.loc[mask, :].sort_values(by="index", axis=0).to_dict(orient="records")
         )
 
         # Get unique users
@@ -172,6 +173,7 @@ class TestCaseValidation(CaseValidationSetup):
                 user=user,
                 case_type_id=row["case_type_id"],
                 created_in_data_collection_id=row["created_in_data_collection_id"],
+                is_update=row["is_update"],
                 cases=cases,
                 data_collection_ids=set(),
             )
@@ -196,25 +198,22 @@ class TestCaseValidation(CaseValidationSetup):
                 raise AssertionError(msg)
             if validation_report is not None:
                 # Compare cases to new cases
-                actual_validated_cases = validation_report.cases
-                if any(
-                    x != y
-                    for x, y in zip(actual_validated_cases, expected_validated_cases)
+                actual_validated_cases = [
+                    x.case for x in validation_report.validated_cases
+                ]
+                case_differences = set()
+                for actual_case, expected_case in zip(
+                    actual_validated_cases, expected_validated_cases
                 ):
-                    case_differences = set()
-                    for actual_case, expected_case in zip(
-                        actual_validated_cases, expected_validated_cases
-                    ):
-                        actual_content = actual_case.content
-                        expected_content = expected_case.content
-                        keys = set(actual_content.keys()).union(expected_content.keys())
-                        for key in keys:
-                            actual_value = actual_content.get(key)
-                            expected_value = expected_content.get(key)
-                            if actual_value != expected_value:
-                                case_differences.add(
-                                    (key, actual_value, expected_value)
-                                )
+                    actual_content = actual_case.content
+                    expected_content = expected_case.content
+                    keys = set(actual_content.keys()).union(expected_content.keys())
+                    for key in keys:
+                        actual_value = actual_content.get(key)
+                        expected_value = expected_content.get(key)
+                        if actual_value != expected_value:
+                            case_differences.add((key, actual_value, expected_value))
+                if case_differences:
                     case_differences_str = ", ".join(
                         sorted(f"{x}:{y}!={z}" for x, y, z in case_differences)
                     )

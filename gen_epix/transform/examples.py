@@ -8,8 +8,8 @@ from gen_epix.transform import (
     ConditionalTransformer,
     FieldTransformer,
     ObjectAdapter,
+    Pipeline,
     StreamingPipeline,
-    TransformerPipeline,
     ValidationTransformer,
     register_transformer,
 )
@@ -62,7 +62,7 @@ def example_usage() -> None:
     )
 
     # Create pipeline
-    pipeline = TransformerPipeline([age_validator, name_normalizer, email_normalizer])
+    pipeline = Pipeline([age_validator, name_normalizer, email_normalizer])
 
     # Process data
     streaming_pipeline = StreamingPipeline(pipeline)
@@ -95,7 +95,7 @@ def example_conditional_transformation() -> None:
         name="USPhoneNormalizer",
     )
 
-    pipeline = TransformerPipeline([us_phone_normalizer])
+    pipeline = Pipeline([us_phone_normalizer])
 
     for result in pipeline.process_stream(iter(data)):
         if result.success:

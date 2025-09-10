@@ -105,7 +105,9 @@ class TestCaseAccess(CaseAccessSetup):
         uq_users = {str(x.id): x for x in uq_users_list}
 
         # Function to create a case
-        def _create_case(row: dict[str, Any]) -> model.Case:
+        def _create_case(
+            row: dict[str, Any], for_create_upload: bool = False
+        ) -> model.Case | model.CaseForCreateUpdate:
             case_content = {}
             for i in range(1, n_case_type_cols):
                 case_type_col_id = row[f"case.content.case_type_col_id{i}"]
@@ -113,6 +115,13 @@ class TestCaseAccess(CaseAccessSetup):
                     continue
                 value = row[f"case.content.case_type_col_value{i}"]
                 case_content[case_type_col_id] = value
+            if for_create_upload:
+                return model.CaseForCreateUpdate(
+                    id=row["case.id"],
+                    subject_id=row["case.subject_id"],
+                    case_date=row["case.case_date"],
+                    content=case_content,
+                )
             return model.Case(
                 id=row["case.id"],
                 case_type_id=row["case.case_type_id"],
@@ -174,7 +183,7 @@ class TestCaseAccess(CaseAccessSetup):
                     created_in_data_collection_id=row[
                         "case.created_in_data_collection_id"
                     ],
-                    cases=[_create_case(row)],
+                    cases=[_create_case(row, for_create_upload=True)],
                     data_collection_ids=set(),
                     props={"id_present": "keep"},
                 )

@@ -14,10 +14,10 @@ from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import App, CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     EqualsBooleanFilter,
     EqualsUuidFilter,
+    LogicalOperator,
     UuidSetFilter,
 )
 
@@ -254,14 +254,14 @@ class AbacService(BaseAbacService):
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="organization_id", value=organization_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
         user_filter = CompositeFilter(
             filters=[
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="user_id", value=user_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
 
         # Retrieve all the policies as well as the case type set members and case type col set members

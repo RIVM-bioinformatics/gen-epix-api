@@ -5,7 +5,7 @@ Stream processing interfaces and base classes.
 from abc import ABC, abstractmethod
 from typing import Any, Iterator
 
-from gen_epix.transform.result import TransformResult
+from gen_epix.transform.transform_result import TransformResult
 
 
 class StreamProcessor(ABC):

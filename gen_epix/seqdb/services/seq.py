@@ -12,10 +12,10 @@ from scipy.cluster.hierarchy import ClusterNode
 
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     EqualsUuidFilter,
     Filter,
+    LogicalOperator,
     UuidSetFilter,
 )
 from gen_epix.seqdb.domain import command, enum, exc, model
@@ -45,7 +45,7 @@ class SeqService(BaseSeqService):
                     UuidSetFilter(key=key, members=frozenset(ids))
                     for key, ids in key_and_ids
                 ],
-                operator=BooleanOperator.AND,
+                operator=LogicalOperator.AND,
             )
 
         # Initialise some
@@ -155,7 +155,7 @@ class SeqService(BaseSeqService):
                                 value=seq_distance_protocol_id,
                             ),
                         ],
-                        operator=BooleanOperator.AND,
+                        operator=LogicalOperator.AND,
                     ),
                 )
                 seq_distances = {x.seq_id: x for x in seq_distances_}

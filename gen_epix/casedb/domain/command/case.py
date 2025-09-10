@@ -66,12 +66,11 @@ class ValidateCasesCommand(Command):
     created_in_data_collection_id: UUID = copy_model_field(
         model.CaseValidationReport, "created_in_data_collection_id"
     )
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        model.CaseValidationReport, "cases"
-    )
     data_collection_ids: set[UUID] = copy_model_field(
         model.CaseValidationReport, "data_collection_ids"
     )
+    is_update: bool = Field(description="Whether this is an update operation.")
+    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -79,6 +78,8 @@ class ValidateCasesCommand(Command):
             raise ValueError(
                 "The created in data collection ID may not be in the additional data collection IDs."
             )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
         return self
 
 

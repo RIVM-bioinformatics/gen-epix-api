@@ -3,16 +3,9 @@ Transform result types for tracking success/failure in transformation pipelines.
 """
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any
 
-
-class TransformResultType(Enum):
-    """Enum for different types of transformation results."""
-
-    SUCCESS = "success"
-    ERROR = "error"
-    SKIPPED = "skipped"
+from gen_epix.transform.enum import TransformResultType
 
 
 @dataclass
