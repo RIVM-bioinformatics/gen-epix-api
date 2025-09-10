@@ -104,6 +104,8 @@ class RoleGenerator:
         },
         Role.ORG_USER: {
             # case
+            (command.CaseTypeColCrudCommand, PermissionTypeSet.R),
+            (command.ColCrudCommand, PermissionTypeSet.R),
             (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.R),

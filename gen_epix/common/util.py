@@ -115,7 +115,11 @@ def update_cfg_from_file(
             if key not in curr_cfg:
                 curr_cfg[key] = {}
             curr_cfg = curr_cfg[key]
-        with open(Path(file), "r", encoding="utf-8") as handle:
+        path = Path(file)
+        if not path.is_file():
+            continue
+        #required for aks 
+        with open(path, "r", encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:
