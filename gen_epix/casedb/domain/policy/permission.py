@@ -133,6 +133,7 @@ class RoleGenerator:
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
+            (command.ValidateCasesCommand, PermissionTypeSet.E),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),
             (command.ConceptSetCrudCommand, PermissionTypeSet.R),
