@@ -9,6 +9,7 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService
+from gen_epix.casedb.services.case.case_transformer import CaseTransformer
 from gen_epix.casedb.services.case.read_association_with_valid_ids import (
     case_service_read_association_with_valid_ids,
 )
@@ -22,7 +23,6 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
     case_service_retrieve_case_type_stats,
 )
-from gen_epix.casedb.services.case.validate_cases import CaseTransformer
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet

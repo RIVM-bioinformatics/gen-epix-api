@@ -33,6 +33,32 @@ class CaseTransformer(Transformer):
         ColType.DECIMAL_6: 6,
     }
 
+    TIME_YEAR_PATTERN = re.compile(r"^\d{4}$")
+    TIME_QUARTER_PATTERN = re.compile(r"^\d{4}-Q[1-4]$")
+    TIME_MONTH_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+    TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
+    TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+
+    TIME_MATCHERS = {
+        ColType.TIME_YEAR: lambda x: (
+            x if x is None or CaseTransformer.TIME_YEAR_PATTERN.match(x) else NoReturn
+        ),
+        ColType.TIME_QUARTER: lambda x: (
+            x
+            if x is None or CaseTransformer.TIME_QUARTER_PATTERN.match(x)
+            else NoReturn
+        ),
+        ColType.TIME_MONTH: lambda x: (
+            x if x is None or CaseTransformer.TIME_MONTH_PATTERN.match(x) else NoReturn
+        ),
+        ColType.TIME_WEEK: lambda x: (
+            x if x is None or CaseTransformer.TIME_WEEK_PATTERN.match(x) else NoReturn
+        ),
+        ColType.TIME_DAY: lambda x: (
+            x if x is None or CaseTransformer.TIME_DAY_PATTERN.match(x) else NoReturn
+        ),
+    }
+
     @staticmethod
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
@@ -128,8 +154,10 @@ class CaseTransformer(Transformer):
                 )
                 msg_template = "{orig_value} cannot be mapped to region"
             elif col.col_type in ColTypeSet.TIME.value:
-                # TODO: check if value matches ISO8601 regex
-                transform_fn = lambda x: x
+                transform_fn = self.TIME_MATCHERS[col.col_type]
+                msg_template = (
+                    "{orig_value} is not a valid " + col.col_type.value + " value"
+                )
             elif col.col_type in ColTypeSet.NUMBER.value:
                 n_decimals = self.N_DECIMALS[col.col_type]
                 transform_fn = lambda x: CaseTransformer._transform_decimal(
@@ -168,6 +196,11 @@ class CaseTransformer(Transformer):
                 updated_content[case_type_col_id] = new_value
 
         # TODO: Add derived values: per case type dim, go over all pairs of case type cols and derive values
+        # for case_type_dim in self.complete_case_type.case_type_dims:
+        #     case_type_col_ids = case_type_dim.case_type_col_order
+        #     case_type_cols = [self.complete_case_type.case_type_cols[x] for x in case_type_col_ids]
+        #     cols = [self.complete_case_type.cols[x.col_id] for x in case_type_cols]
+        #     for case_type_col_id, col in zip(case_type_col_ids, cols):
 
         return TransformResult(
             success=True, original_object=obj, transformed_object=case_validation_report
@@ -383,109 +416,8 @@ class CaseTransformer(Transformer):
 
         return regions, region_set_regions_map, region_relations
 
-        # for case_type_dim in self.complete_case_type.case_type_dims:
-        #     case_type_col_ids = case_type_dim.case_type_col_order
-        #     case_type_cols = [self.complete_case_type.case_type_cols[x] for x in case_type_col_ids]
-        #     cols = [self.complete_case_type.cols[x.col_id] for x in case_type_cols]
-        #     for case_type_col_id, col in zip(case_type_col_ids, cols):
 
-
-# def tfm_time_to_str(
-#     values: list[str | datetime.datetime | datetime.date | pd.Timestamp | None],
-#     is_date: bool = False,
-# ) -> tuple[list[str | None], list[Any]]:
-#     # ISO8601 pattern taken from
-#     # https://www.myintervals.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
-#     iso_pattern = re.compile(
-#         (
-#             r"^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?"
-#             r"|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6]"
-#             r")))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0"
-#             r"-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$"
-#         )
-#     )
-#     new_values = [None] * len(values)
-#     invalid_values = []
-#     for i, value in enumerate(values):
-#         if pd.isnull(value):
-#             continue
-#         if isinstance(value, str):
-#             # Check if correctly formatted
-#             if not iso_pattern.match(value):
-#                 invalid_values.append(value)
-#             else:
-#                 if is_date:
-#                     new_values[i] = value[0 : min(len(value), 10)]
-#                 else:
-#                     new_values[i] = value
-#         elif isinstance(value, datetime.datetime):
-#             if is_date:
-#                 new_values[i] = datetime.date.isoformat(value)
-#             else:
-#                 new_values[i] = datetime.datetime.isoformat(value)
-#         elif isinstance(value, datetime.date):
-#             new_values[i] = datetime.date.isoformat(value)
-#         elif isinstance(value, pd.Timestamp):
-#             if is_date:
-#                 new_values[i] = datetime.date.isoformat(value.date)
-#             else:
-#                 new_values[i] = datetime.datetime.isoformat(value.date)
-#         else:
-#             invalid_values.append(value)
-#     return new_values, invalid_values
-
-
-# def tfm_code_to_id(
-#     code_to_id: dict[str, str], values: list[Any | None]
-# ) -> tuple[list[str | None], list[Any]]:
-#     new_values: list[str | None] = [None] * len(values)
-#     invalid_values = []
-#     for i, value in enumerate(values):
-#         if pd.isnull(value) or value == "":
-#             continue
-#         new_value = None
-#         if isinstance(value, str):
-#             new_value = code_to_id.get(value.upper())
-#         elif isinstance(value, float):
-#             new_value = code_to_id.get(str(int(value)))
-#         elif isinstance(value, int):
-#             new_value = code_to_id.get(str(value))
-#         if not new_value:
-#             invalid_values.append(value)
-#         new_values[i] = new_value
-#     return new_values, invalid_values
-
-
-# def tfm_str_to_int(
-#     values: list[str | None],
-# ) -> tuple[list[int | None], list[str | None]]:
-#     new_values: list[int | None] = [None] * len(values)
-#     invalid_values: list[str | None] = []
-#     for i, value in enumerate(values):
-#         if pd.isnull(value):
-#             continue
-#         try:
-#             new_values[i] = int(float(value))
-#         except (ValueError, TypeError):
-#             invalid_values.append(value)
-#     return new_values, invalid_values
-
-
-# def tfm_str_to_float(
-#     values: list[str | None],
-# ) -> tuple[list[float | None], list[str | None]]:
-#     new_values: list[float | None] = [None] * len(values)
-#     invalid_values: list[str | None] = []
-#     for i, value in enumerate(values):
-#         if pd.isnull(value):
-#             continue
-#         try:
-#             new_values[i] = float(value)
-#         except (ValueError, TypeError):
-#             invalid_values.append(value)
-#     return new_values, invalid_values
-
-
+# TODO: for reference, remove when no longer needed
 # def tfm_geo_resolution(
 #     region_id_contained_in: dict[tuple[str, str], str],
 #     values1: Iterable[str | None],

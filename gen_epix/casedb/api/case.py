@@ -171,6 +171,7 @@ def create_case_endpoints(
                 user=user,
                 case_type_id=request_body.case_type_id,
                 created_in_data_collection_id=request_body.created_in_data_collection_id,
+                is_update=request_body.is_update,
                 cases=request_body.cases,
                 data_collection_ids=request_body.data_collection_ids,
             )

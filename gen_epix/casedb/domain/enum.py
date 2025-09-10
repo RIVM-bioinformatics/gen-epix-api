@@ -339,3 +339,4 @@ class CaseColDataRule(Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
     CONFLICT = "CONFLICT"
+    DERIVED = "DERIVED"
