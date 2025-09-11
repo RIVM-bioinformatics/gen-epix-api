@@ -138,9 +138,9 @@ def set_entity_repository_model_classes(
 ) -> None:
     if field_name_map is None:
         field_name_map = {}
-    sa_metadata_field_names = set(
-        row_metadata_mixin_class.__dict__["__annotations__"].keys()
-    ) - {"id"}
+    sa_metadata_field_names = set(row_metadata_mixin_class.__annotations__.keys()) - {
+        "id"
+    }
     sa_model_name_class_map = {}
     for service_type in service_type_enum:
         try:
