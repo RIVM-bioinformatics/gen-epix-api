@@ -2,6 +2,7 @@ import json
 import tomllib
 import uuid
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Hashable, Iterable, Type
 
@@ -115,7 +116,11 @@ def update_cfg_from_file(
             if key not in curr_cfg:
                 curr_cfg[key] = {}
             curr_cfg = curr_cfg[key]
-        with open(Path(file), "r", encoding="utf-8") as handle:
+        path = Path(file)
+        if not path.is_file():
+            continue
+        # required for aks
+        with open(path, "r", encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:
@@ -128,6 +133,7 @@ def update_cfg_from_file(
 
 
 # Get version with fallback for development
+@lru_cache(maxsize=1)
 def get_package_version() -> str:
     """Retrieve the project version from the pyproject.toml file.
     Must be run from the project root directory.
