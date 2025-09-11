@@ -1820,13 +1820,9 @@ class CasedbTestClient(TestClient):
     def update_case_type_col_set_member(
         self,
         user_in: str | model.User,
-        case_type_col_set_member_in: str | model.CaseTypeColSetMember,
+        case_type_col_set_member: model.CaseTypeColSetMember,
     ) -> model.CaseTypeColSetMember:
         user = self._get_obj(model.User, user_in)
-        case_type_col_set_member = self._get_obj(
-            model.CaseTypeColSetMember, case_type_col_set_member_in
-        )
-        sleep(0.000000001)
         updated_case_type_col_set_member = self.handle(
             command.CaseTypeColSetMemberCrudCommand(
                 user=user,
