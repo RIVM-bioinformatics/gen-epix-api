@@ -15,7 +15,7 @@ from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.types import DateTime, TypeEngine
 from sqlalchemy_utils.types.uuid import UUIDType
 
-from gen_epix.fastapp.domain.util import get_type_from_field_info
+from gen_epix.fastapp.domain.util import get_type_from_annotation
 
 PYTHON_SQL_TYPE_MAP = {
     str: sa.String,  # sa.Text, sa.Unicode, sa.UnicodeText can be chosen
@@ -130,11 +130,13 @@ def sqlite_utc_current_time(
     return "CURRENT_TIMESTAMP"
 
 
-def create_sa_type_from_field_info(field_info: FieldInfo, **kwargs: dict) -> TypeEngine:
+def create_sa_type_from_field_info(
+    field_info: FieldInfo, annotation: Type[Any] | None, **kwargs: dict
+) -> TypeEngine:
     """
     Return a suitable SQLAlchemy type for a Pydantic field.
     """
-    type_ = get_type_from_field_info(field_info)
+    type_ = get_type_from_annotation(annotation)
 
     def _create_sa_type(sa_type_class: Type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
