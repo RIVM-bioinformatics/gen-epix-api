@@ -51,7 +51,7 @@ def create_mapped_column(
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
     field_info: FieldInfo = model_class.model_fields[field_name]
-    sa_type = create_sa_type_from_field_info(field_info)
+    sa_type = create_sa_type_from_field_info(field_info, field_info.annotation)
     nullable = kwargs.get("nullable", not field_info.is_required())
     doc = kwargs.pop("doc", field_info.description)
     link_entity = entity.get_link_entity(field_name)
@@ -198,7 +198,9 @@ def get_mixin_mapped_column(
     sa_column_type: Type[sa.types.TypeEngine],
     **kwargs: Any,
 ) -> Mapped:
+
     field_info: FieldInfo = getattr(model_mixin_class, field_name)
+    annotation = model_mixin_class.__annotations__[field_name]
     # Extract SA arguments from mixin class based on sa_type
     kwargs["nullable"] = kwargs.get(  # pyright: ignore[reportArgumentType]
         "nullable", not field_info.is_required()
@@ -209,5 +211,6 @@ def get_mixin_mapped_column(
     )
     # Create and return mapped column
     return mapped_column(
-        create_sa_type_from_field_info(field_info, **sa_column_type_kwargs), **kwargs
+        create_sa_type_from_field_info(field_info, annotation, **sa_column_type_kwargs),
+        **kwargs,
     )
