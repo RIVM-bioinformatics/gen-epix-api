@@ -39,21 +39,24 @@ def generate_erm_diagrams(out_dir: Path) -> None:
     if not Path(out_dir / "erm").is_dir():
         Path.mkdir(out_dir / "erm")
 
+    combined_sorted_model_classes = []
     for name, domain in domains.items():
         file_path_with_prefix = out_dir / "erm" / name
-        generate_erm_diagrams_for_domain(domain, file_path_with_prefix)
+        sorted_model_classes = generate_erm_diagrams_for_domain(
+            domain, file_path_with_prefix
+        )
         generate_erm_diagrams_for_service(domain, file_path_with_prefix)
+        combined_sorted_model_classes.extend(sorted_model_classes)
 
-    sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
     pickle_file_path = out_dir / "erm" / "temp_domain_pickle_file.pkl"
-    create_domain_pickle_file(sorted_model_classes, pickle_file_path)
+    create_domain_pickle_file(combined_sorted_model_classes, pickle_file_path)
     domain_pickle_hash = create_sha256_hash(pickle_file_path)
     hash_dict = create_hash_dict(domain_pickle_hash)
     create_hash_json_file(hash_dict, out_dir / "erm" / "erm.json")
     remove_file(pickle_file_path)
 
 
-def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path):
+def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path) -> list:
     """
     Generates and saves an Entity-Relationship Model (ERM) diagram for all persistable models in the given domain.
 
@@ -66,8 +69,8 @@ def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path):
 
     Returns
     -------
-    None
-        This function does not return a value. It saves the ERM diagram as a PNG file.
+    list
+        A list of sorted model class objects included in the ERM diagram.
 
     Notes
     -----
@@ -81,6 +84,7 @@ def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path):
         out=output_file,
         limit_search_models_to=[x.__name__ for x in sorted_model_classes],
     )
+    return sorted_model_classes
 
 
 def generate_erm_diagrams_for_service(domain: Domain, file_root: Path):
