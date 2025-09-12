@@ -334,7 +334,6 @@ class TestRead:
         all_case_sets: list[model.CaseSet] = env.read_all("root1_1", model.CaseSet)
         for user_name in NO_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                print(user_name)
                 env.read_all(user_name, model.CaseSet)
 
         for user_name in ALL_USERS:
