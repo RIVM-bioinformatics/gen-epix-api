@@ -2,7 +2,8 @@
 Tuple map transformer implementation.
 """
 
-from typing import Any, Hashable
+from collections.abc import Hashable
+from typing import Any
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.transformer import Transformer

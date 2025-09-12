@@ -1,8 +1,9 @@
 import re
 import uuid
 import warnings
+from collections.abc import Hashable
 from pathlib import Path
-from typing import Any, Callable, Hashable, Iterable, Self, Sequence, Type
+from typing import Any, Callable, Iterable, Self, Sequence, Type
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, select

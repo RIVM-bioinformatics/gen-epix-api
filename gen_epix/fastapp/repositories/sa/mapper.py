@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Callable, Hashable, Iterable, Type
+from collections.abc import Hashable
+from typing import Any, Callable, Iterable, Type
 
 from sqlalchemy import Row
 from sqlalchemy.orm import MappedColumn

@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Hashable
 from typing import (
     Annotated,
     Any,
     Callable,
     Generator,
-    Hashable,
     Iterable,
     Iterator,
     Literal,

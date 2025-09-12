@@ -4,9 +4,9 @@ import importlib
 import pickle
 import re
 import shutil
+from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
-from typing import Hashable
 
 import pandas as pd
 

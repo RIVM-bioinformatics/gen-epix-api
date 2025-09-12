@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.case_access.base import (
@@ -8,7 +9,7 @@ from test.casedb.integration.case_access.base import (
 )
 from test.common.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
-from typing import Any, Hashable, Type
+from typing import Any, Type
 from uuid import UUID
 
 import pandas as pd

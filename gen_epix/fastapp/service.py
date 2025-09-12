@@ -3,7 +3,8 @@ from __future__ import annotations
 import abc
 import datetime
 import logging
-from typing import Any, Callable, Hashable, Iterable, Type
+from collections.abc import Hashable
+from typing import Any, Callable, Iterable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App

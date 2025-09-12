@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Hashable
+from collections.abc import Hashable
+from typing import Any
 
 from gen_epix.fastapp import model
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
