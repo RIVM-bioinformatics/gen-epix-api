@@ -1369,7 +1369,7 @@ class CasedbTestClient(TestClient):
                 raise ValueError(f"Case associations mismatch")
         return case_set
 
-    def get_organization_access_case_policies_with_any_right(
+    def read_organization_access_case_policies_with_any_right(
         self,
         user_or_str: str | model.User,
     ) -> list[model.OrganizationAccessCasePolicy]:
@@ -1427,24 +1427,6 @@ class CasedbTestClient(TestClient):
             )
         ]
 
-    def read_user_share_case_policies(
-        self,
-        user_or_str: str | model.User,
-    ) -> list[model.UserShareCasePolicy]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(
-            model.User, "root1_1"
-        )  # type:ignore[assignment]
-        policies: list[model.UserShareCasePolicy] = self.app.handle(
-            command.UserShareCasePolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        return [x for x in policies if x.is_active and x.user_id == user.id]
-
     def read_organization_share_case_policies(
         self,
         user_or_str: str | model.User,
@@ -1466,6 +1448,24 @@ class CasedbTestClient(TestClient):
             for x in policies
             if x.is_active and x.organization_id == user.organization_id
         ]
+
+    def read_user_share_case_policies(
+        self,
+        user_or_str: str | model.User,
+    ) -> list[model.UserShareCasePolicy]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        policies: list[model.UserShareCasePolicy] = self.app.handle(
+            command.UserShareCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return [x for x in policies if x.is_active and x.user_id == user.id]
 
     def read_case_types_with_any_right(
         self,

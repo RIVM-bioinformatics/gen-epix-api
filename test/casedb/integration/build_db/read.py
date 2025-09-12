@@ -306,9 +306,9 @@ class TestRead:
             if user_name in REFDATA_ADMIN_OR_ABOVE_USERS:
                 # User is a refdata admin or above and should have read access to case type col set members
                 expected_member_ids = {
-                    m.id
-                    for m in all_case_type_col_set_members
-                    if col_case_type_map.get(m.case_type_col_id)
+                    x.id
+                    for x in all_case_type_col_set_members
+                    if col_case_type_map.get(x.case_type_col_id)
                     in expected_case_type_ids
                 }
                 env.verify_read_all(

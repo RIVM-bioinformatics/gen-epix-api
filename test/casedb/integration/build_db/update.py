@@ -443,9 +443,9 @@ class TestUpdate:
                 user_name
             )
             expected_member_ids = {
-                m.id
-                for m in all_case_type_col_set_members
-                if col_case_type_map.get(m.case_type_col_id) in expected_case_type_ids
+                x.id
+                for x in all_case_type_col_set_members
+                if col_case_type_map.get(x.case_type_col_id) in expected_case_type_ids
             }
             for member in expected_member_ids:
                 member_obj = next(
