@@ -1,7 +1,6 @@
 from types import NoneType, UnionType
 from typing import Any, Callable, Type, Union
 
-from pydantic.fields import FieldInfo
 from typing_extensions import Annotated, get_args, get_origin
 
 from gen_epix.fastapp.domain.key import Key
@@ -34,7 +33,7 @@ def create_links(
     return retval
 
 
-def _get_type_from_annotation_recursion(
+def get_type_from_annotation(
     annotation: Type[Any] | None,
 ) -> Type:
     """
@@ -47,7 +46,7 @@ def _get_type_from_annotation_recursion(
     if origin is None:
         return annotation
     elif origin is Annotated:
-        return _get_type_from_annotation_recursion(get_args(annotation)[0])
+        return get_type_from_annotation(get_args(annotation)[0])
     if origin is UnionType or origin is Union:
         bases = get_args(annotation)
         if len(bases) > 2:
@@ -58,9 +57,5 @@ def _get_type_from_annotation_recursion(
             raise ValueError("Field type is a non-optional union")
         # Optional unions are allowed
         use_type = bases[0] if bases[0] is not NoneType else bases[1]
-        return _get_type_from_annotation_recursion(use_type)
+        return get_type_from_annotation(use_type)
     return origin  # type:ignore[no-any-return]
-
-
-def get_type_from_field_info(field_info: FieldInfo) -> Type:
-    return _get_type_from_annotation_recursion(field_info.annotation)
