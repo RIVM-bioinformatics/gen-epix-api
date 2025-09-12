@@ -9,17 +9,28 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService
+from gen_epix.casedb.services.case.case_transformer import CaseTransformer
+from gen_epix.casedb.services.case.read_association_with_valid_ids import (
+    case_service_read_association_with_valid_ids,
+)
+from gen_epix.casedb.services.case.retrieve_complete_case_type import (
+    case_service_retrieve_complete_case_type,
+)
+from gen_epix.casedb.services.case.retrieve_phylogenetic_tree import (
+    case_service_retrieve_phylogenetic_tree,
+)
+from gen_epix.casedb.services.case.retrieve_stats import (
+    case_service_retrieve_case_set_stats,
+    case_service_retrieve_case_type_stats,
+)
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet
-from gen_epix.filter import (
-    BooleanOperator,
-    CompositeFilter,
-    DatetimeRangeFilter,
-    Filter,
-    StringSetFilter,
-    UuidSetFilter,
-)
+from gen_epix.filter import Filter, UuidSetFilter
+from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
+from gen_epix.filter.enum import LogicalOperator
+from gen_epix.filter.string_set import StringSetFilter
 
 
 class CaseService(BaseCaseService):
@@ -87,36 +98,18 @@ class CaseService(BaseCaseService):
                     f"Unexpected command {cmd.__class__.__name__} with operation {cmd.operation.value}"
                 )
 
-    def create_cases_or_set(
-        self, cmd: command.CaseSetCreateCommand | command.CasesCreateCommand
-    ) -> model.CaseSet | list[model.Case] | None:
-        if isinstance(cmd, command.CaseSetCreateCommand):
-            is_case_set = True
-        elif isinstance(cmd, command.CasesCreateCommand):
-            is_case_set = False
-        else:
-            raise AssertionError(
-                f"Unexpected command {cmd.__class__.__name__} with operation {cmd.operation.value}"
-            )
-
-        # Special case: zero cases to be created
-        if not is_case_set and len(cmd.cases) == 0:  # type: ignore[union-attr]
-            return []
-
-        # Get case type and created_in data collection IDs
-        if is_case_set:
-            case_type_id = cmd.case_set.case_type_id  # type: ignore[union-attr]
-            created_in_data_collection_id = cmd.case_set.created_in_data_collection_id  # type: ignore[union-attr]
-        else:
-            case_type_id = cmd.cases[0].case_type_id  # type: ignore[union-attr]
-            created_in_data_collection_id = cmd.cases[0].created_in_data_collection_id  # type: ignore[union-attr]
+    def validate_cases(
+        self, cmd: command.ValidateCasesCommand
+    ) -> model.CaseValidationReport:
+        case_type_id = cmd.case_type_id
+        created_in_data_collection_id = cmd.created_in_data_collection_id
 
         # @ABAC: verify if case set or cases may be created in the given data collection(s)
         case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
         assert case_abac is not None
         is_allowed = case_abac.is_allowed(
             case_type_id,
-            (enum.CaseRight.ADD_CASE_SET if is_case_set else enum.CaseRight.ADD_CASE),
+            enum.CaseRight.ADD_CASE,
             True,
             created_in_data_collection_id=created_in_data_collection_id,
             tgt_data_collection_ids=cmd.data_collection_ids,
@@ -127,486 +120,179 @@ class CaseService(BaseCaseService):
                 f"User {cmd.user.id} is not allowed to create a case set/cases in the given data collection(s)"
             )
 
-        # Create case set/cases, case set/case data collection links, and optionally
+        # TODO: merge data with existing cases when updating
+        curr_cmd = command.RetrieveCompleteCaseTypeCommand(
+            user=cmd.user, case_type_id=case_type_id
+        )
+        curr_cmd._policies.extend(cmd._policies)
+        complete_case_type = case_service_retrieve_complete_case_type(self, curr_cmd)
+        transformer = CaseTransformer(self, complete_case_type)
+        transform_result = transformer(cmd)
+        if not transform_result.success:
+            raise exc.DataException(f"Failed to transform case data")
+        case_validation_report: model.CaseValidationReport = (
+            transform_result.transformed_object
+        )  # type:ignore[assignment]
+
+        return case_validation_report
+
+    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+        # Special case: zero cases to be created
+        if not cmd.cases:
+            return []
+
+        # Get case type and created_in data collection IDs
+        case_type_id = cmd.case_type_id
+        created_in_data_collection_id = cmd.created_in_data_collection_id
+
+        # @ABAC: verify if case set or cases may be created in the given data collection(s)
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+        is_allowed = case_abac.is_allowed(
+            case_type_id,
+            enum.CaseRight.ADD_CASE,
+            True,
+            created_in_data_collection_id=created_in_data_collection_id,
+            tgt_data_collection_ids=cmd.data_collection_ids,
+        )
+        if not is_allowed:
+            assert cmd.user is not None
+            raise exc.UnauthorizedAuthError(
+                f"User {cmd.user.id} is not allowed to create cases in the given data collection(s)"
+            )
+
+        # Convert cases for create update to cases
+        # TODO: validate content and add derived values
+        cases: list[model.Case] = [
+            model.Case(
+                id=x.id,
+                case_type_id=cmd.case_type_id,
+                subject_id=x.subject_id,
+                created_in_data_collection_id=cmd.created_in_data_collection_id,
+                case_date=x.case_date,
+                content={y: z for y, z in x.content.items() if z is not None},
+            )
+            for x in cmd.cases
+        ]
+
+        # Create cases and case data collection links
+        with self.repository.uow() as uow:
+            # Create cases, using the parent class method to avoid ABAC
+            # restrictions
+            cases = super().crud(  # type: ignore[assignment]
+                command.CaseCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.CREATE_SOME,
+                    objs=cases,  # type: ignore[arg-type]
+                    props=cmd.props,
+                )
+            )
+            # Associate cases with data collections
+            curr_cmd = command.CaseDataCollectionLinkCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=[
+                    model.CaseDataCollectionLink(
+                        case_id=x.id, data_collection_id=y  # type: ignore[arg-type]
+                    )
+                    for x in cases
+                    for y in cmd.data_collection_ids
+                ],
+            )
+            curr_cmd._policies.extend(cmd._policies)
+            case_data_collection_links = self.crud(curr_cmd)
+        return cases
+
+    def create_case_set(
+        self, cmd: command.CreateCaseSetCommand
+    ) -> model.CaseSet | None:
+        # Get case type and created_in data collection IDs
+        case_type_id = cmd.case_set.case_type_id
+        created_in_data_collection_id = cmd.case_set.created_in_data_collection_id
+
+        # @ABAC: verify if case set or cases may be created in the given data collection(s)
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+        is_allowed = case_abac.is_allowed(
+            case_type_id,
+            enum.CaseRight.ADD_CASE_SET,
+            True,
+            created_in_data_collection_id=created_in_data_collection_id,
+            tgt_data_collection_ids=cmd.data_collection_ids,
+        )
+        if not is_allowed:
+            assert cmd.user is not None
+            raise exc.UnauthorizedAuthError(
+                f"User {cmd.user.id} is not allowed to create a case set in the given data collection(s)"
+            )
+
+        # Create case set, case set data collection links, and optionally
         # case set members
         with self.repository.uow() as uow:
-            # Create case set/cases, using the parent class method to avoid ABAC
+            # Create case set, using the parent class method to avoid ABAC
             # restrictions
-            if is_case_set:
-                case_set: model.CaseSet = super().crud(  # type: ignore[assignment]
-                    command.CaseSetCrudCommand(
-                        user=cmd.user,
-                        operation=CrudOperation.CREATE_ONE,
-                        objs=cmd.case_set,  # type: ignore[union-attr,arg-type]
-                        props=cmd.props,
-                    )
+            case_set: model.CaseSet = super().crud(  # type: ignore[assignment]
+                command.CaseSetCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.CREATE_ONE,
+                    objs=cmd.case_set,  # type: ignore[assignment]
+                    props=cmd.props,
                 )
-            else:
-                cases: list[model.Case] = super().crud(  # type: ignore[assignment]
-                    command.CaseCrudCommand(
-                        user=cmd.user,
-                        operation=CrudOperation.CREATE_SOME,
-                        objs=cmd.cases,  # type: ignore[union-attr,arg-type]
-                        props=cmd.props,
-                    )
-                )
+            )
             # Associate case set/cases with data collections
-            if is_case_set:
-                assert case_set.id is not None
-                curr_cmd: command.CaseSetDataCollectionLinkCrudCommand = (
-                    command.CaseSetDataCollectionLinkCrudCommand(
-                        user=cmd.user,
-                        operation=CrudOperation.CREATE_SOME,
-                        objs=[
-                            model.CaseSetDataCollectionLink(
-                                case_set_id=case_set.id, data_collection_id=x
-                            )
-                            for x in cmd.data_collection_ids
-                        ],
+            assert case_set.id is not None
+            curr_cmd = command.CaseSetDataCollectionLinkCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=[
+                    model.CaseSetDataCollectionLink(
+                        case_set_id=case_set.id, data_collection_id=x
                     )
-                )
-            else:
-                curr_cmd: command.CaseDataCollectionLinkCrudCommand = (  # type: ignore[no-redef]
-                    command.CaseDataCollectionLinkCrudCommand(
-                        user=cmd.user,
-                        operation=CrudOperation.CREATE_SOME,
-                        objs=[
-                            model.CaseDataCollectionLink(
-                                case_id=x.id, data_collection_id=y  # type: ignore[arg-type]
-                            )
-                            for x in cases
-                            for y in cmd.data_collection_ids
-                        ],
-                    )
-                )
+                    for x in cmd.data_collection_ids
+                ],
+            )
             curr_cmd._policies.extend(cmd._policies)
-            cases_or_set_data_collection_links = self.crud(curr_cmd)
+            case_set_data_collection_links = self.crud(curr_cmd)
             # Associate case set with cases if necessary
-            if is_case_set and cmd.case_ids:  # type: ignore[union-attr]
+            if cmd.case_ids:
                 curr_cmd2: command.CaseSetMemberCrudCommand = (
                     command.CaseSetMemberCrudCommand(
                         user=cmd.user,
                         operation=CrudOperation.CREATE_SOME,
                         objs=[
-                            model.CaseSetMember(case_set_id=case_set.id, case_id=x)  # type: ignore[arg-type]
-                            for x in cmd.case_ids  # type: ignore[union-attr]
+                            model.CaseSetMember(case_set_id=case_set.id, case_id=x)
+                            for x in cmd.case_ids
                         ],
-                        _policies=cmd._policies,
                     )
                 )
                 curr_cmd2._policies.extend(cmd._policies)
                 case_set_members = self.crud(curr_cmd2)
-        return case_set if is_case_set else cases
+        return case_set
 
     def retrieve_complete_case_type(
-        self,
+        self: BaseCaseService,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
-        # TODO: many calls are inefficient,
-        # retrieving first all objs and then filtering.
-        # To be improved with e.g. CQS.
-        user, repository = self._get_user_and_repository(cmd)
-
-        with repository.uow() as uow:
-            # Get case type
-            case_type_id = cmd.case_type_id
-            case_type: model.CaseType = self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.CaseType,
-                None,
-                case_type_id,
-                CrudOperation.READ_ONE,
-            )
-
-            # @ABAC
-            # Get allowed case type columns with any CRUD permission
-            case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-            assert case_abac is not None
-            case_type_access_abacs: dict[UUID, model.CaseTypeAccessAbac] = (
-                case_abac.case_type_access_abacs.get(case_type_id, {})
-            )
-            case_type_share_abacs: dict[UUID, model.CaseTypeShareAbac] = (
-                case_abac.case_type_share_abacs.get(case_type_id, {})
-            )
-
-            abac_case_type_col_ids: set[UUID]
-            if case_abac.is_full_access:
-                # Special case: full access -> all rights for all data collections for
-                # this case type
-                # TODO: consider if it should be limited to the union of all the
-                # organization rights instead. A root user e.g. may then still have
-                # full access by using the CRUD methods
-                abac_case_type_col_ids = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.CaseTypeCol,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                    filter=UuidSetFilter(
-                        key="case_type_id",
-                        members=frozenset({case_type_id}),
-                    ),
-                    return_id=True,
-                )
-                data_collection_ids: list[UUID] = self.app.handle(
-                    command.DataCollectionCrudCommand(
-                        user=user,
-                        operation=CrudOperation.READ_ALL,
-                        props={"return_id": True},
-                    )
-                )
-                case_type_access_abacs = {
-                    x: model.CaseTypeAccessAbac(
-                        case_type_id=case_type_id,
-                        data_collection_id=x,
-                        is_private=True,
-                        add_case=True,
-                        remove_case=True,
-                        read_case_type_col_ids=abac_case_type_col_ids,
-                        write_case_type_col_ids=abac_case_type_col_ids,
-                        add_case_set=True,
-                        remove_case_set=True,
-                        read_case_set=True,
-                        write_case_set=True,
-                    )
-                    for x in data_collection_ids
-                }
-                # case_type_share_abacs can be empty since all rights are already in
-                # case_type_access_abacs
-                case_type_share_abacs = {}
-            else:
-                abac_case_type_col_ids = set()
-                for x in case_type_access_abacs.values():
-                    abac_case_type_col_ids.update(x.read_case_type_col_ids)
-                    abac_case_type_col_ids.update(x.write_case_type_col_ids)
-
-            # Get etiologies
-            if case_type.disease_id:
-                etiologies = self.app.handle(
-                    command.EtiologyCrudCommand(
-                        user=user,
-                        operation=CrudOperation.READ_ALL,
-                    )
-                )
-                etiologies = {
-                    x.id: x for x in etiologies if x.disease_id == case_type.disease_id
-                }
-            else:
-                etiologies = {}
-
-            # Get etiological agents
-            if etiologies:
-                etiological_agent_ids = list(
-                    x.etiological_agent_id for x in etiologies.values()
-                )
-                etiological_agents = self.app.handle(
-                    command.EtiologicalAgentCrudCommand(
-                        user=user,
-                        operation=CrudOperation.READ_SOME,
-                        obj_ids=etiological_agent_ids,
-                    )
-                )
-                etiological_agents = {x.id: x for x in etiological_agents}
-            else:
-                etiological_agents = {}
-
-            # Get allowed case_type_cols
-            case_type_col_ids = list(abac_case_type_col_ids)
-            case_type_cols_: list[model.CaseTypeCol] = repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.CaseTypeCol,
-                None,
-                case_type_col_ids,
-                CrudOperation.READ_SOME,
-            )
-            case_type_cols: dict[UUID, model.CaseTypeCol] = {
-                x.id: x for x in case_type_cols_  # type: ignore[misc]
-            }
-
-            # # Special case: no case_type_cols
-            # if not case_type_cols:
-            #     return model.CompleteCaseType(
-            #         **case_type.model_dump(),
-            #         etiologies=etiologies,
-            #         etiological_agents=etiological_agents,
-            #         dims={},
-            #         cols={},
-            #         case_type_dims=[],
-            #         case_type_cols={},
-            #         case_type_col_order=[],
-            #         genetic_distance_protocols={},
-            #         tree_algorithms={},
-            #         case_type_access_abacs=case_type_access_abacs,
-            #     )
-
-            # Get cols
-            col_ids = list({x.col_id for x in case_type_cols.values()})
-            cols_: list[model.Col] = repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.Col,
-                None,
-                col_ids,
-                CrudOperation.READ_SOME,
-            )
-            cols: dict[UUID, model.Col] = {x.id: x for x in cols_}  # type: ignore[misc]
-
-            # Get dims
-            dim_ids = list({x.dim_id for x in cols.values()})
-            dims_: list[model.Dim] = repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.Dim,
-                None,
-                dim_ids,
-                CrudOperation.READ_SOME,
-            )
-            dims: dict[UUID, model.Dim] = {x.id: x for x in dims_}  # type: ignore[misc]
-
-            # Get case_type_col_order
-            # TODO: to be tested
-            max_dim_rank = max([0] + [x.rank for x in dims.values() if x.rank])
-            max_col_rank_in_dim = max(
-                [0] + [x.rank_in_dim for x in cols.values() if x.rank_in_dim]
-            )
-            max_case_type_col_rank = max(
-                [0] + [x.rank for x in case_type_cols.values() if x.rank]
-            )
-            max_case_type_col_occurrence = max(
-                [0] + [x.occurrence for x in case_type_cols.values() if x.occurrence]
-            )
-            case_type_col_keys: dict[UUID, tuple[int, int, int]] = {
-                x.id: (  # type: ignore[misc]
-                    x.rank if x.rank else max_case_type_col_rank,
-                    (
-                        dims[cols[x.col_id].dim_id].rank
-                        if dims[cols[x.col_id].dim_id].rank
-                        else max_dim_rank
-                    ),
-                    (
-                        cols[x.col_id].rank_in_dim
-                        if cols[x.col_id].rank_in_dim
-                        else max_col_rank_in_dim
-                    ),
-                    x.occurrence if x.occurrence else max_case_type_col_occurrence,
-                )
-                for x in case_type_cols.values()
-            }
-            case_type_col_order = list(case_type_col_keys.keys())
-            case_type_col_order.sort(key=lambda x: case_type_col_keys[x])
-
-            # Get case_type_dims as the list ordered by the (dim, occurrence)
-            # that occurs first in case_type_col_order
-            dict_: dict[tuple[UUID, int | None], list] = {}
-            # dict[tuple[dim_id, occurrence], list[rank, [tuple[case_type_col_id, col.rank_in_dim]]]]
-            for case_type_col_id in case_type_col_order:
-                # Add to dict_
-                case_type_col = case_type_cols[case_type_col_id]
-                col = cols[case_type_col.col_id]
-                tuple_ = (col.dim_id, case_type_col.occurrence)
-                if tuple_ in dict_:
-                    dict_[tuple_][1].append((case_type_col_id, col.rank_in_dim))
-                    continue
-                dict_[tuple_] = [len(dict_), [(case_type_col_id, col.rank_in_dim)]]
-            case_type_dim_order = list(dict_.keys())
-            case_type_dim_order.sort(key=lambda x: dict_[x][0])
-            case_type_dims = [
-                model.CaseTypeDim(
-                    id=x[0],
-                    dim_id=x[0],
-                    occurrence=x[1],
-                    rank=i + 1,
-                    case_type_col_order=[],
-                )
-                for i, x in enumerate(case_type_dim_order)
-            ]
-            for case_type_dim in case_type_dims:
-                # Fill in id and case_type_col_order
-                tuples = dict_[(case_type_dim.dim_id, case_type_dim.occurrence)][1]
-                tuples.sort(key=lambda x: 1 if x[1] is None else x[1])
-                case_type_dim.case_type_col_order = [x[0] for x in tuples]
-                case_type_dim.id = case_type_dim.case_type_col_order[0]
-
-            # Get genetic distance protocols
-            genetic_distance_protocols = self.app.handle(
-                command.GeneticDistanceProtocolCrudCommand(
-                    user=user,
-                    operation=CrudOperation.READ_SOME,
-                    obj_ids=list(
-                        {
-                            x.genetic_distance_protocol_id
-                            for x in cols.values()
-                            if x.genetic_distance_protocol_id
-                        }
-                    ),
-                )
-            )
-            genetic_distance_protocols = {x.id: x for x in genetic_distance_protocols}
-
-            # Get tree algorithms
-            tree_algorithm_codes = set.union(
-                set(),
-                *[
-                    x.tree_algorithm_codes
-                    for x in case_type_cols.values()
-                    if x.tree_algorithm_codes
-                ],
-            )
-            tree_algorithms = self.app.handle(
-                command.TreeAlgorithmCrudCommand(
-                    user=user,
-                    operation=CrudOperation.READ_ALL,
-                )
-            )
-            tree_algorithms = {
-                x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
-            }
-
-        # Compose complete case type and return
-        return model.CompleteCaseType(
-            **case_type.model_dump(),
-            etiologies=etiologies,
-            etiological_agents=etiological_agents,
-            dims=dims,
-            cols=cols,
-            case_type_dims=case_type_dims,
-            case_type_cols=case_type_cols,
-            case_type_col_order=case_type_col_order,
-            genetic_distance_protocols=genetic_distance_protocols,
-            tree_algorithms=tree_algorithms,
-            case_type_access_abacs=case_type_access_abacs,
-            case_type_share_abacs=case_type_share_abacs,
-        )
+        return case_service_retrieve_complete_case_type(self, cmd)
 
     def retrieve_case_type_stats(
         self,
         cmd: command.RetrieveCaseTypeStatsCommand,
     ) -> list[model.CaseTypeStat]:
-        user, repository = self._get_user_and_repository(cmd)
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        assert case_abac is not None
-        case_type_ids = cmd.case_type_ids
-        with repository.uow() as uow:
-            cases: list[model.Case] = self._retrieve_cases_with_content_right(
-                uow,
-                user.id,
-                case_abac,
-                # user_case_access,
-                enum.CaseRight.READ_CASE,
-                datetime_range_filter=cmd.datetime_range_filter,
-                filter_content=False,
-            )
-            if case_type_ids is not None:
-                cases = [x for x in cases if x.case_type_id in case_type_ids]
-            else:
-                case_type_ids = {x.case_type_id for x in cases}
-            # Derive stats
-            empty_stat = {
-                "n_cases": 0,
-                "first_case_month": None,
-                "last_case_month": None,
-            }
-            stats = {x: dict(empty_stat) for x in case_type_ids}
-            for case in cases:
-                case_type_id = case.case_type_id
-                date_ = case.case_date
-                stat = stats[case_type_id]
-                if stat["n_cases"] == 0:
-                    stat["n_cases"] = 1
-                    stat["first_case_month"] = date_  # type: ignore[assignment]
-                    stat["last_case_month"] = date_  # type: ignore[assignment]
-                else:
-                    stat["n_cases"] += 1
-                    stat["first_case_month"] = min(stat["first_case_month"], date_)  # type: ignore[type-var,assignment]
-                    stat["last_case_month"] = max(stat["last_case_month"], date_)  # type: ignore[type-var,assignment]
-            # Convert first/last date to month only
-            for stat in stats.values():
-                for key in ("first_case_month", "last_case_month"):
-                    stat[key] = stat[key].isoformat()[0:7]  # type: ignore[union-attr]
-            # Get case type stats
-            case_type_stats = [
-                model.CaseTypeStat(case_type_id=x, **stats[x]) for x in case_type_ids  # type: ignore[arg-type]
-            ]
-        return case_type_stats
+        return case_service_retrieve_case_type_stats(self, cmd)
 
     def retrieve_case_set_stats(
         self,
         cmd: command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseSetStat]:
-        user, repository = self._get_user_and_repository(cmd)
-        case_set_ids = cmd.case_set_ids
-        # Create filter, even if no case_set_ids are provided, to avoid unallowed read
-        # all without filter
-        query_filter: Filter | None = None
-        if case_set_ids:
-            query_filter = UuidSetFilter(
-                key="case_set_id", members=cmd.case_set_ids  # type: ignore[arg-type]
-            )
-        with self.repository.uow() as uow:
-            curr_cmd = command.CaseSetMemberCrudCommand(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=query_filter,
-            )
-            curr_cmd._policies.extend(cmd._policies)
-            case_set_members: list[model.CaseSetMember] = self.crud(curr_cmd)  # type: ignore[assignment]
-            case_set_case_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
-                ((x.case_set_id, x.case_id) for x in case_set_members), as_set=True
-            )
-            if not case_set_ids:
-                case_set_ids = list(case_set_case_ids.keys())
-            # Get cases
-            # @ABAC: case_set_case_ids is already filtered on cases with access, no
-            # need to apply here again
-            cases_: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.Case,
-                None,
-                list(set.union(set(), *list(case_set_case_ids.values()))),
-                CrudOperation.READ_SOME,
-            )
-            cases = {x.id: x for x in cases_}
-            # Create case set stats
-            case_set_stats = []
-            case_dates = {x.id: x.case_date for x in cases.values()}
-            all_case_ids = set(cases.keys())
-            for case_set_id in case_set_ids:
-                case_ids = case_set_case_ids.get(case_set_id, set()).intersection(
-                    all_case_ids
-                )
-                # TODO: calculate n_own_cases as the number of cases with a created_in data collection that is associated with the user
-                n_own_cases = 0
-                first_case_month = (
-                    min(case_dates[x] for x in case_ids).isoformat()[0:7]
-                    if case_ids
-                    else None
-                )
-                last_case_month = (
-                    max(case_dates[x] for x in case_ids).isoformat()[0:7]
-                    if case_ids
-                    else None
-                )
-                case_set_stats.append(
-                    model.CaseSetStat(
-                        case_set_id=case_set_id,
-                        n_cases=len(case_ids),
-                        n_own_cases=n_own_cases,
-                        first_case_month=first_case_month,
-                        last_case_month=last_case_month,
-                    )
-                )
-
-        return case_set_stats
+        return case_service_retrieve_case_set_stats(self, cmd)
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> list[UUID]:
         # TODO: This is an inefficient call first loading all cases, then filtering them and then keeping only the ids. To be replaced by optimized query.
         user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
         case_query = cmd.case_query
         case_set_ids = case_query.case_set_ids
         case_type_ids = case_query.case_type_ids
@@ -691,12 +377,12 @@ class CaseService(BaseCaseService):
                     x
                     for x in cases
                     if x.id in case_case_sets
-                    and case_case_sets[x.id].intersection(case_set_ids)
+                    and case_case_sets[x.id].intersection(case_set_ids)  # type: ignore[arg-type]
                 ]
 
             # Filter cases by filters
             if case_query.filter:
-                map_fns = CaseService._get_map_functions_for_filters(cols)
+                map_fns = CaseService._get_map_functions_for_filters(cols)  # type: ignore[assignment]
                 cases = [
                     x
                     for x, y in zip(
@@ -720,6 +406,7 @@ class CaseService(BaseCaseService):
     ) -> list[model.Case]:
         case_ids = cmd.case_ids
         user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
         if not case_ids:
             return []
         # @ABAC: get case abac
@@ -777,9 +464,9 @@ class CaseService(BaseCaseService):
                 None,
                 None,
                 CrudOperation.READ_ALL,
-                filter=UuidSetFilter(  # type: ignore[arg-type]
+                filter=UuidSetFilter(
                     key=key,
-                    members=frozenset(case_or_set_ids),  # type: ignore[arg-type]
+                    members=frozenset(case_or_set_ids),
                 ),
             )
 
@@ -799,7 +486,7 @@ class CaseService(BaseCaseService):
             data_collection_ids = case_or_set_data_collections.get(
                 case_or_set.id, set()
             )
-            data_collection_ids.add(case_or_set.created_in_data_collection_id)  # type: ignore[union-attr]
+            data_collection_ids.add(case_or_set.created_in_data_collection_id)
             args: tuple = (
                 case_or_set.id,
                 case_or_set.case_type_id,
@@ -813,149 +500,16 @@ class CaseService(BaseCaseService):
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
-        dist_case_type_col_id = cmd.genetic_distance_case_type_col_id
-        tree_algorithm_code = cmd.tree_algorithm
-        case_ids = cmd.case_ids
-        user: model.User
-        user, repository = self._get_user_and_repository(cmd)  # type: ignore[assignment]
-        assert user.id is not None
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        assert case_abac is not None
+        return case_service_retrieve_phylogenetic_tree(self, cmd)
 
-        with repository.uow() as uow:
-            # Get distance column data
-            dist_case_type_col: model.CaseTypeCol = repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.CaseTypeCol,
-                None,
-                dist_case_type_col_id,
-                CrudOperation.READ_ONE,
-            )
-            case_type_id = dist_case_type_col.case_type_id
-            dist_col: model.Col = repository.crud(  # type: ignore[assignment]
-                uow,
-                user.id,
-                model.Col,
-                None,
-                dist_case_type_col.col_id,
-                CrudOperation.READ_ONE,
-            )
-            if dist_col.col_type != enum.ColType.GENETIC_DISTANCE:
-                raise exc.InvalidArgumentsError(
-                    f"Case type column {dist_case_type_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
-                )
-            # Get sequence column data
-            seq_case_type_col_id = dist_case_type_col.genetic_sequence_case_type_col_id
-            if not seq_case_type_col_id:
-                raise exc.InvalidArgumentsError(
-                    f"Case type column {dist_case_type_col_id} has no associated sequence column"
-                )
-
-            # @ABAC
-            assert dist_case_type_col.tree_algorithm_codes is not None
-            if tree_algorithm_code not in dist_case_type_col.tree_algorithm_codes:
-                raise exc.UnauthorizedAuthError(
-                    f"User {user.id} has no read access to tree algorithm {tree_algorithm_code}"
-                )
-
-            # Get genetic distance protocol
-            genetic_distance_protocol: model.GeneticDistanceProtocol = (
-                self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.GeneticDistanceProtocol,
-                    None,
-                    dist_col.genetic_distance_protocol_id,
-                    CrudOperation.READ_ONE,
-                )
-            )
-            seqdb_seq_distance_protocol_id = (
-                genetic_distance_protocol.seqdb_seq_distance_protocol_id
-            )
-
-            # Special case: zero case_ids
-            if not case_ids:
-                retval: model.PhylogeneticTree = self.app.handle(
-                    command.RetrievePhylogeneticTreeBySequencesCommand(
-                        user=user,
-                        tree_algorithm_code=tree_algorithm_code,
-                        seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                        sequence_ids=[],
-                    )
-                )
-                retval.genetic_distance_protocol_id = genetic_distance_protocol.id
-                return retval
-
-            # Create temporary case_abac only for this case type and the
-            # seq_case_type_col_id having the same rights as the dist_case_type_col
-            temp_case_abac = model.CaseAbac(
-                is_full_access=case_abac.is_full_access,
-                case_type_access_abacs={},
-                case_type_share_abacs={},
-            )
-            for data_collection_id, x in case_abac.case_type_access_abacs.get(
-                case_type_id, {}
-            ).items():
-                if dist_case_type_col_id not in x.read_case_type_col_ids:
-                    continue
-                if case_type_id not in temp_case_abac.case_type_access_abacs:
-                    temp_case_abac.case_type_access_abacs[case_type_id] = {}
-                temp_case_abac.case_type_access_abacs[case_type_id][
-                    data_collection_id
-                ] = model.CaseTypeAccessAbac(
-                    read_case_type_col_ids={seq_case_type_col_id},
-                    **x.model_dump(exclude={"read_case_type_col_ids"}),
-                )
-
-            # @ABAC: Get cases
-            cases = self._retrieve_cases_with_content_right(
-                uow,
-                user.id,
-                temp_case_abac,
-                enum.CaseRight.READ_CASE,
-                case_ids=case_ids,
-                case_type_ids={case_type_id},
-                filter_content=True,
-            )
-
-            # Get sequence_ids from seq_case_type_col
-            case_sequence_map = {}
-            for case in cases:
-                sequence_id = case.content.get(seq_case_type_col_id)
-                if sequence_id:
-                    case_sequence_map[case.id] = UUID(sequence_id)
-
-            # Retrieve tree and remove sequence_ids to avoid leaking information
-            sequence_ids = list(case_sequence_map.values())
-            sequence_case_map = {y: x for x, y in case_sequence_map.items()}
-            phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
-                command.RetrievePhylogeneticTreeBySequencesCommand(
-                    user=cmd.user,
-                    tree_algorithm_code=tree_algorithm_code,
-                    seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                    sequence_ids=sequence_ids,
-                    props={
-                        "leaf_id_mapper": lambda x: sequence_case_map[x],
-                    },
-                )
-            )
-            phylogenetic_tree.genetic_distance_protocol_id = (
-                genetic_distance_protocol.id
-            )
-            phylogenetic_tree.sequence_ids = None
-
-        return phylogenetic_tree
-
-    def retrieve_genetic_sequence(
+    def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
         seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
         case_ids = cmd.case_ids
-        user: model.User
         user, repository = self._get_user_and_repository(cmd)
-        assert user.id is not None
+        assert isinstance(user, model.User) and user.id is not None
 
         # Special case: zero case_ids
         if not case_ids:
@@ -986,6 +540,47 @@ class CaseService(BaseCaseService):
             )
 
         return genetic_sequences
+
+    def retrieve_genetic_sequence_fasta_by_case(
+        self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+    ) -> Iterable[str]:
+        """Return a streaming iterable of FASTA formatted lines.
+
+        ABAC policies copied from the outer FASTA command to the inner
+        RetrieveGeneticSequenceByCaseCommand (only top-level commands receive
+        policies automatically in current pipeline design).
+        """
+        inner_cmd = command.RetrieveGeneticSequenceByCaseCommand(
+            user=cmd.user,
+            case_ids=cmd.case_ids,
+            genetic_sequence_case_type_col_id=(cmd.genetic_sequence_case_type_col_id),
+        )
+        inner_cmd._policies.extend(cmd._policies)
+        # TODO: this implementation loads all sequences in memory first and then
+        # streams them. Replace this by a RetrieveGeneticSequenceFastaByIdCommand
+        # command in the seq service, and a RetrieveSeqFasta command in seqdb.
+        # The latter returns the fasta StreamingResponse which is then forwarded
+        # to the caller.
+        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence_by_case(  # type: ignore[arg-type]
+            inner_cmd
+        )
+        return self.fasta_file_generator(sequences)
+
+    def fasta_file_generator(
+        self,
+        sequences: Iterable[model.GeneticSequence],
+        wrap: int | None = 80,
+    ) -> Iterable[str]:
+        for seq in sequences:
+            if seq.id is None:
+                continue
+            yield f">{seq.id}\n"
+            sequence = seq.nucleotide_sequence or ""
+            if wrap and wrap > 0:
+                for i in range(0, len(sequence), wrap):
+                    yield sequence[i : i + wrap] + "\n"
+            else:
+                yield sequence + "\n"
 
     def _crud_metadata(
         self,
@@ -1033,7 +628,6 @@ class CaseService(BaseCaseService):
             raise AssertionError("Unexpected operation")
 
         if isinstance(cmd, command.CaseTypeCrudCommand):
-            case_abac
             valid_case_type_ids = case_abac.get_case_types_with_any_rights()
             access_filter = CaseService._compose_id_filter(("id", valid_case_type_ids))
             # No cascade delete to force conscious decision to delete from other models
@@ -1057,7 +651,7 @@ class CaseService(BaseCaseService):
                     match_all2=is_delete,  # delete requires all case types
                     return_type="ids1",
                     uow=uow,
-                    user=cmd.user,
+                    user=cmd.user,  # type: ignore[arg-type]
                 )
             )
             access_filter = CaseService._compose_id_filter(
@@ -1093,7 +687,7 @@ class CaseService(BaseCaseService):
                     match_all2=is_delete,  # delete requires all case type cols
                     return_type="ids1",
                     uow=uow,
-                    user=cmd.user,
+                    user=cmd.user,  # type: ignore[arg-type]
                 )
             )
             access_filter = CaseService._compose_id_filter(
@@ -1172,7 +766,7 @@ class CaseService(BaseCaseService):
                 raise AssertionError("Unexpected operation")
             elif is_read:
                 # At least one data collection with read access is required
-                retval = self._retrieve_case_sets_with_content_right(  # type:ignore[return-value]
+                retval = self._retrieve_case_sets_with_content_right(
                     uow,
                     cmd.user.id,
                     case_abac,
@@ -1181,18 +775,18 @@ class CaseService(BaseCaseService):
                     filter=cmd.query_filter,
                 )
                 return (
-                    retval[0] if cmd.operation == CrudOperation.READ_ONE else retval
-                )  # type:ignore[arg-type]
+                    retval[0] if cmd.operation == CrudOperation.READ_ONE else retval  # type: ignore[return-value]
+                )
             elif is_update:
                 # At least one data collection with write access is required
-                case_sets = self._retrieve_case_sets_with_content_right(  # type:ignore[return-value]
+                case_sets = self._retrieve_case_sets_with_content_right(
                     uow,
                     cmd.user.id,
                     case_abac,
                     enum.CaseRight.WRITE_CASE_SET,
                     case_set_ids=case_set_ids,  # type:ignore[arg-type]
                 )
-                return super().crud(cmd)
+                return super().crud(cmd)  # type: ignore[return-value]
             elif is_delete:
                 # All linked data collections have remove right
                 if is_delete_all:
@@ -1214,7 +808,7 @@ class CaseService(BaseCaseService):
                     self._retrieve_case_set_data_collections_map(
                         uow,
                         cmd.user.id,
-                        obj_ids1=case_set_ids,  # type:ignore[arg-type]
+                        obj_ids1=case_set_ids,
                     )
                 )
                 # Check if the user has access to all data collections of all requested
@@ -1266,7 +860,7 @@ class CaseService(BaseCaseService):
                 case_data_collection_map, _ = self._retrieve_case_data_collections_map(
                     uow,
                     cmd.user.id,
-                    obj_ids1=case_ids,  # type:ignore[arg-type]
+                    obj_ids1=case_ids,
                 )
                 # Check if the user has access to all data collections of all requested
                 # cases
@@ -1351,7 +945,7 @@ class CaseService(BaseCaseService):
                 cmd.user.id,
                 case_abac,
                 enum.CaseRight.READ_CASE_SET,
-                case_set_ids=list(case_set_ids),
+                case_set_ids=list(case_set_ids),  # type: ignore[arg-type]
                 on_invalid_case_set_id="ignore",
             )
             if is_delete and not case_set_ids.issubset({x.id for x in case_sets}):
@@ -1362,7 +956,7 @@ class CaseService(BaseCaseService):
                     cmd.user.id,
                     case_abac,
                     enum.CaseRight.WRITE_CASE_SET,
-                    case_set_ids=list(case_set_ids),
+                    case_set_ids=list(case_set_ids),  # type: ignore[arg-type]
                     on_invalid_case_set_id="ignore",
                 )
 
@@ -1446,14 +1040,9 @@ class CaseService(BaseCaseService):
                 raise AssertionError("Unexpected operation")
 
             # Go over each case and check if the user has the required rights to it
-            case_data_collection_map: dict[UUID, set[UUID]] = (
-                map_paired_elements(  # type:ignore[assignment]
-                    (
-                        (x.case_id, x.data_collection_id)
-                        for x in case_data_collection_links
-                    ),
-                    as_set=True,
-                )
+            case_data_collection_map = map_paired_elements(  # type: ignore[assignment]
+                ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
+                as_set=True,
             )
             case_ids = set(case_data_collection_map.keys())
             cases = self.repository.crud(  # type:ignore[assignment]
@@ -1534,6 +1123,7 @@ class CaseService(BaseCaseService):
         elif isinstance(cmd, command.CaseSetDataCollectionLinkCrudCommand):
             # Read all without filter and delete all not allowed due to potential large
             # number of case set data collection links
+            has_access: dict[UUID, set[UUID]] = {}
             if (is_read_all and not cmd.query_filter) or is_delete_all or is_update:
                 raise exc.UnauthorizedAuthError(
                     f"Operation {cmd.operation.value} not allowed for case set data collection links for this user"
@@ -1692,7 +1282,9 @@ class CaseService(BaseCaseService):
             # No cascade delete: nothing to do
             return
         assert cmd.user is not None and cmd.user.id is not None
-        obj_ids: set[UUID] | None = cmd.get_obj_ids(as_set=True)
+        obj_ids: set[UUID] | None = cmd.get_obj_ids(
+            as_set=True
+        )  # type:ignore[assignment]
         # Go over each link_model_class and delete all instances that are linked to
         # the instances in cmd
         for link_model_class in link_model_classes:
@@ -1746,7 +1338,7 @@ class CaseService(BaseCaseService):
             if cmd.access_filter:
                 cmd.access_filter = CompositeFilter(
                     filters=[access_filter, cmd.access_filter],  # type: ignore[list-item]
-                    operator=BooleanOperator.AND,
+                    operator=LogicalOperator.AND,
                 )
             else:
                 cmd.access_filter = access_filter
@@ -1769,139 +1361,19 @@ class CaseService(BaseCaseService):
         uow: BaseUnitOfWork | None = None,
         user: model.User | None = None,
     ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
-        # TODO: this can be a generic service/repository method (ids should be Hashable instead of UUID)
-        # Parse arguments
-        if return_type not in {"objects", "ids1", "ids2", "id_map12", "id_map21"}:
-            raise ValueError(f"Invalid return_type: {return_type}")
-        if match_all1 and match_all2:
-            raise ValueError("match_all1 and match_all2 cannot both be True")
-        id_map12 = return_type == "id_map12"
-        id_map21 = return_type == "id_map21"
-        if id_map12 and match_all1:
-            raise ValueError("match_all1 must be False if id_map12 is True")
-        if id_map21 and match_all2:
-            raise ValueError("match_all2 must be False if id_map21 is True")
-        if return_type == "ids1" and match_all1:
-            raise ValueError("match_all1 must be False if return_type is ids1")
-        if return_type == "ids2" and match_all2:
-            raise ValueError("match_all2 must be False if return_type is ids2")
-        # Create filter
-        filter: Filter | None
-        if valid_ids1 is not None:
-            if not isinstance(valid_ids1, frozenset):
-                valid_ids1 = frozenset(valid_ids1)
-            if not valid_ids1:
-                # Empty set of valid values -> no matches
-                if return_type in {"id_map12", "id_map21"}:
-                    return dict()
-                return []
-            if valid_ids2 is not None:
-                if not valid_ids2:
-                    # Empty set of valid values -> no matches
-                    if return_type in {"id_map12", "id_map21"}:
-                        return dict()
-                    return []
-                if not isinstance(valid_ids2, frozenset):
-                    valid_ids2 = frozenset(valid_ids2)
-                filter = CompositeFilter(
-                    filters=[
-                        UuidSetFilter(key=field_name1, members=valid_ids1),
-                        UuidSetFilter(key=field_name2, members=valid_ids2),
-                    ],
-                    operator=BooleanOperator.AND,
-                )
-            else:
-                if match_all2:
-                    raise ValueError("match_all2 must be False if valid_ids2 is None")
-                if not isinstance(valid_ids1, frozenset):
-                    valid_ids2 = frozenset(valid_ids2)
-                filter = UuidSetFilter(key=field_name1, members=valid_ids1)
-        elif valid_ids2 is not None:
-            if not valid_ids2:
-                # Empty set of valid values -> no matches
-                if return_type in {"id_map12", "id_map21"}:
-                    return dict()
-                return []
-            if match_all1:
-                raise ValueError("match_all1 must be False if valid_ids1 is None")
-            if not isinstance(valid_ids2, frozenset):
-                valid_ids2 = frozenset(valid_ids2)
-            filter = UuidSetFilter(key=field_name2, members=valid_ids2)
-        else:
-            if match_all1 or match_all2:
-                raise ValueError(
-                    "match_all1 and match_all2 must be False if valid_ids1 and valid_ids2 are None"
-                )
-            filter = None
-        # Query repository
-        cmd = command_class(
-            user=user, operation=CrudOperation.READ_ALL, query_filter=filter
+        return case_service_read_association_with_valid_ids(
+            self,
+            command_class,
+            field_name1,
+            field_name2,
+            valid_ids1=valid_ids1,
+            valid_ids2=valid_ids2,
+            match_all1=match_all1,
+            match_all2=match_all2,
+            return_type=return_type,
+            uow=uow,
+            user=user,
         )
-        objs: list[model.Model]
-        if uow:
-            objs = self.crud_repository(uow, cmd)  # type: ignore[assignment]
-        else:
-            with self.repository.uow() as uow:
-                objs = self.crud_repository(uow, cmd)  # type: ignore[assignment]
-        ids1 = [getattr(x, field_name1) for x in objs]
-        ids2 = [getattr(x, field_name2) for x in objs]
-        # Apply id_map12/id_map21 and match_all1/match_all2 if necessary
-        if id_map12 or id_map21 or match_all1 or match_all2:
-            id_map: dict[UUID, set[UUID]] = {}
-            if id_map12 or match_all2:
-                # Create dict[id1, set[id2]]
-                for id1, id2 in zip(ids1, ids2):
-                    if id1 in id_map:
-                        id_map[id1].add(id2)
-                    else:
-                        id_map[id1] = {id2}
-                if match_all2:
-                    # Keep only ids1 linked to all valid ids2
-                    id_map = {
-                        x: y for x, y in id_map.items() if len(y) == len(valid_ids2)  # type: ignore[arg-type]
-                    }
-                    if id_map12:
-                        return id_map
-                    elif return_type == "objects":
-                        return [x for x, y in zip(objs, ids1) if y in id_map]
-                    elif return_type == "ids1":
-                        return list(id_map.keys())
-                elif id_map12:
-                    return id_map
-                else:
-                    raise AssertionError("Unexpected case")
-            elif id_map21 or match_all1:
-                # Create dict[id2, set[id1]]
-                for id1, id2 in zip(ids1, ids2):
-                    if id2 in id_map:
-                        id_map[id2].add(id1)
-                    else:
-                        id_map[id2] = {id1}
-                if match_all1:
-                    # Keep only ids2 linked to all valid ids1
-                    id_map = {
-                        x: y for x, y in id_map.items() if len(y) == len(valid_ids1)  # type: ignore[arg-type]
-                    }
-                    if id_map21:
-                        return id_map
-                    elif return_type == "objects":
-                        return [x for x, y in zip(objs, ids2) if y in id_map]
-                    elif return_type == "ids2":
-                        return list(id_map.keys())
-                elif id_map21:
-                    return id_map
-                else:
-                    raise AssertionError("Unexpected case")
-            else:
-                raise AssertionError("Unexpected case")
-        # Return objs or ids for remaining cases
-        if return_type == "objects":
-            return objs
-        if return_type == "ids1":
-            return ids1
-        if return_type == "ids2":
-            return ids2
-        raise AssertionError(f"Unexpected return_type: {return_type}")
 
     def _retrieve_case_sets_with_content_right(
         self,
@@ -1995,8 +1467,8 @@ class CaseService(BaseCaseService):
                 continue
             # Check if user has access to any of the data collections of the case set
             data_collection_ids = case_set_data_collections.get(
-                case_set.id, set()
-            )  # type:ignore[arg-type]
+                case_set.id, set()  # type:ignore[arg-type]
+            )
             data_collection_ids.add(case_set.created_in_data_collection_id)
             if not data_collection_ids.intersection(has_access[case_type_id]):
                 if case_set_ids:
@@ -2120,8 +1592,8 @@ class CaseService(BaseCaseService):
                 continue
             # Check if user has access to any data collection of the case
             data_collection_ids = case_data_collections.get(
-                case.id, set()
-            )  # type:ignore[index]
+                case.id, set()  # type:ignore[arg-type]
+            )
             data_collection_ids.add(case.created_in_data_collection_id)
             if not data_collection_ids.intersection(has_access[case_type_id]):
                 if case_ids:
@@ -2217,12 +1689,8 @@ class CaseService(BaseCaseService):
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
         """
-        obj_ids1: frozenset[UUID] | None = kwargs.pop(  # type:ignore[assignment]
-            "obj_ids1", None
-        )
-        obj_ids2: frozenset[UUID] | None = kwargs.pop(  # type:ignore[assignment]
-            "obj_ids2", None
-        )
+        obj_ids1: frozenset[UUID] | None = kwargs.pop("obj_ids1", None)
+        obj_ids2: frozenset[UUID] | None = kwargs.pop("obj_ids2", None)
         # Create a filter to restrict the association objs if necessary
         filter: Filter | None
         if obj_ids1:
@@ -2235,7 +1703,7 @@ class CaseService(BaseCaseService):
             filter2 = None
         if filter1 and filter2:
             filter = CompositeFilter(
-                filters=[filter1, filter2], operator=BooleanOperator.AND
+                filters=[filter1, filter2], operator=LogicalOperator.AND
             )
         elif filter1:
             filter = filter1
@@ -2320,14 +1788,15 @@ class CaseService(BaseCaseService):
         cols_ = {x.id: x for x in cols}
         cols = [cols_[x.col_id] for x in filter_case_type_cols]
         # Verify filter validity
-        concept_valid_values = {}
-        region_valid_values = {}
+        concept_valid_values: dict[UUID, set[str]] = {}
+        region_valid_values: dict[UUID, set[str]] = {}
         for case_type_col, col, filter in zip(  # type:ignore[assignment]
             filter_case_type_cols, cols, filter.filters
         ):
             if col.concept_set_id or col.region_set_id:
                 if isinstance(filter, StringSetFilter):
-                    if col.concept_set_id:
+                    valid_values = None
+                    if col.concept_set_id is not None:
                         # Get valid region set values
                         if col.concept_set_id not in concept_valid_values:
                             concept_set_members: list[model.ConceptSetMember] = (
@@ -2337,7 +1806,7 @@ class CaseService(BaseCaseService):
                                         operation=CrudOperation.READ_ALL,
                                         query_filter=UuidSetFilter(
                                             key="concept_set_id",
-                                            members={col.concept_set_id},  # type: ignore[arg-type]
+                                            members=frozenset({col.concept_set_id}),
                                         ),
                                     )
                                 )
@@ -2353,7 +1822,7 @@ class CaseService(BaseCaseService):
                                 [str(x.id).lower() for x in concepts]
                             )
                         valid_values = concept_valid_values[col.concept_set_id]
-                    elif col.region_set_id:
+                    elif col.region_set_id is not None:
                         # Get valid region set values
                         if col.region_set_id not in region_valid_values:
                             regions: list[model.Region] = self.app.handle(
@@ -2362,7 +1831,7 @@ class CaseService(BaseCaseService):
                                     operation=CrudOperation.READ_ALL,
                                     query_filter=UuidSetFilter(
                                         key="region_set_id",
-                                        members={col.region_set_id},  # type: ignore[arg-type]
+                                        members=frozenset({col.region_set_id}),
                                     ),
                                 )
                             )
@@ -2371,16 +1840,17 @@ class CaseService(BaseCaseService):
                             )
                         valid_values = region_valid_values[col.region_set_id]
                     # Handle invalid values
-                    invalid_values = [
-                        str(x)
-                        for x in filter.members
-                        if str(x).lower() not in valid_values
-                    ]
-                    if len(invalid_values):
-                        invalid_values_str = ", ".join(invalid_values)
-                        raise exc.InvalidArgumentsError(
-                            f"Column {case_type_col.id}: invalid {filter.__class__.__name__} filter members: {invalid_values_str}"
-                        )
+                    if valid_values is not None:
+                        invalid_values = [
+                            str(x)
+                            for x in filter.members
+                            if str(x).lower() not in valid_values
+                        ]
+                        if len(invalid_values):
+                            invalid_values_str = ", ".join(invalid_values)
+                            raise exc.InvalidArgumentsError(
+                                f"Column {case_type_col.id}: invalid {filter.__class__.__name__} filter members: {invalid_values_str}"
+                            )
                 else:
                     raise exc.InvalidArgumentsError(
                         f"Column {case_type_col.id}: invalid filter type: {filter.__class__.__name__}"
@@ -2492,5 +1962,5 @@ class CaseService(BaseCaseService):
                 UuidSetFilter(key=key, members=ids)  # type: ignore[arg-type]
                 for key, ids in key_and_ids
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )

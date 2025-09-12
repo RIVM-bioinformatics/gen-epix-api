@@ -9,8 +9,8 @@ import gen_epix.common.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import (
-    BooleanOperator,
     FilterType,
+    LogicalOperator,
     TypedCompositeFilter,
     TypedStringSetFilter,
 )
@@ -78,7 +78,7 @@ class TestManual:
                                 members=["018eff72-39aa-ff2a-110c-fff954f3dc56"],
                             )
                         ],
-                        operator=BooleanOperator.AND,
+                        operator=LogicalOperator.AND,
                     ),
                 ),
             )

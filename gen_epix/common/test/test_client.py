@@ -4,7 +4,7 @@ import re
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Hashable, List, Type, TypeVar, Union, cast
+from typing import Any, Dict, Hashable, List, Type, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.common.config import BaseAppCfg
@@ -22,7 +22,7 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 class TestClient:
     TEST_CLIENTS: dict[Hashable, Any] = {}
 
-    MODEL_KEY_MAP: dict[Type[model.Model], Union[str, tuple[str, ...]]] = {
+    MODEL_KEY_MAP: dict[Type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
         model.UserInvitation: "email",
         model.Organization: "name",

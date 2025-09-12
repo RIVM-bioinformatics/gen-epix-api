@@ -93,7 +93,7 @@ class CasedbTestClient(TestClient):
         enum.ColType.TEXT: "TEXT",
         enum.ColType.CONTEXT_FREE_GRAMMAR_JSON: '{"key": "value"}',
         enum.ColType.CONTEXT_FREE_GRAMMAR_XML: "<tag>value</tag>",
-        enum.ColType.REGEX: ".*",
+        enum.ColType.REGULAR_LANGUAGE: ".*",
         enum.ColType.NOMINAL: None,
         enum.ColType.ORDINAL: None,
         enum.ColType.INTERVAL: None,
@@ -1175,7 +1175,7 @@ class CasedbTestClient(TestClient):
             content[case_type_col.id] = str(value)
         # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
         cases = self.handle(
-            command.CasesCreateCommand(
+            command.CreateCasesCommand(
                 user=user,
                 cases=[
                     model.Case(
@@ -1311,7 +1311,7 @@ class CasedbTestClient(TestClient):
             case_ids = None
         # Create the case set
         case_set = self.handle(
-            command.CaseSetCreateCommand(
+            command.CreateCaseSetCommand(
                 user=user,
                 case_set=model.CaseSet(
                     case_type_id=case_type.id,

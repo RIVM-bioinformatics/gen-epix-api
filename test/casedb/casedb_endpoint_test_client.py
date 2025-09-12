@@ -37,8 +37,8 @@ class CasedbEndpointTestClient(EndpointTestClient):
         self.register_handler(
             command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
         )
-        self.register_handler(command.CasesCreateCommand, self.handle_cases_create)
-        self.register_handler(command.CaseSetCreateCommand, self.handle_case_set_create)
+        self.register_handler(command.CreateCasesCommand, self.handle_cases_create)
+        self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
 
     def handle_get_identity_providers(
         self,
@@ -161,7 +161,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
 
     def handle_cases_create(
         self,
-        cmd: command.CasesCreateCommand,
+        cmd: command.CreateCasesCommand,
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
@@ -183,7 +183,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
 
     def handle_case_set_create(
         self,
-        cmd: command.CaseSetCreateCommand,
+        cmd: command.CreateCaseSetCommand,
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:

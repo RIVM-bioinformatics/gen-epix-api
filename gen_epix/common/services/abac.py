@@ -14,10 +14,10 @@ from gen_epix.common.policies.read_organization_results_only_policy import (
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.model import Command, CrudCommand
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     EqualsBooleanFilter,
     EqualsUuidFilter,
+    LogicalOperator,
 )
 
 
@@ -64,7 +64,7 @@ class AbacService(BaseAbacService):
                     obj_ids=None,
                     operation=CrudOperation.READ_ALL,
                     filter=CompositeFilter(
-                        operator=BooleanOperator.AND,
+                        operator=LogicalOperator.AND,
                         filters=[
                             EqualsUuidFilter(key="user_id", value=cmd.user.id),
                             EqualsBooleanFilter(key="is_active", value=True),

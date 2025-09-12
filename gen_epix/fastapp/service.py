@@ -19,7 +19,7 @@ from gen_epix.fastapp.model import (
 )
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import BooleanOperator, CompositeFilter
+from gen_epix.filter import CompositeFilter, LogicalOperator
 
 
 class BaseService(abc.ABC):
@@ -308,7 +308,7 @@ class BaseService(abc.ABC):
             if query_filter and access_filter:
                 query_filter = CompositeFilter(
                     filters=[query_filter, access_filter],
-                    operator=BooleanOperator.AND,
+                    operator=LogicalOperator.AND,
                 )
             elif not query_filter:
                 query_filter = access_filter

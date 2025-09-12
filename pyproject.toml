@@ -30,7 +30,7 @@ dependencies = [
     "python-jose==3.5.0",
     "sqlalchemy==2.0.43",
     "sqlalchemy_utils==0.42.0",
-    "pydantic==2.11.*",
+    "pydantic==2.11.7",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.2.11",
