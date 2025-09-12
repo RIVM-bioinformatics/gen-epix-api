@@ -1376,7 +1376,9 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         policies: list[model.OrganizationAccessCasePolicy] = self.app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(  # type:ignore[assignment]
                 user=root_user,
@@ -1403,7 +1405,9 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         policies: list[model.UserAccessCasePolicy] = self.app.handle(
             command.UserAccessCasePolicyCrudCommand(
                 user=root_user,
@@ -1430,7 +1434,9 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         policies: list[model.UserShareCasePolicy] = self.app.handle(
             command.UserShareCasePolicyCrudCommand(
                 user=root_user,
@@ -1446,7 +1452,9 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         policies: list[model.OrganizationShareCasePolicy] = self.app.handle(
             command.OrganizationShareCasePolicyCrudCommand(
                 user=root_user,
@@ -1466,7 +1474,9 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(model.User, "root1_1")
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
         # Admin users have access to all case type set members
         if (
             enum.Role.ROOT in user.roles

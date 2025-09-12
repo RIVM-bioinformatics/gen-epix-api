@@ -422,6 +422,7 @@ class TestUpdate:
                     {"description": str(-i)},
                 )
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_set_member(self, env: Env) -> None:
         """
         RBAC permissions:

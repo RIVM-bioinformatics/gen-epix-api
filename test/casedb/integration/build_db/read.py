@@ -139,6 +139,7 @@ class TestRead:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(exec_user, policy_class)
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -165,6 +166,7 @@ class TestRead:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(user_name, model.CaseType)
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -200,7 +202,7 @@ class TestRead:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(user_name, model.CaseTypeSetMember)
 
-    @pytest.mark.skip("Skip for now")
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_col(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -277,6 +279,7 @@ class TestRead:
                 continue
                 # TODO: NEGATIVE CASES
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_col_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -317,6 +320,7 @@ class TestRead:
                 continue
                 # TODO: NEGATIVE CASES
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_set(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -351,5 +355,4 @@ class TestRead:
                 )
             else:
                 with pytest.raises(exc.UnauthorizedAuthError):
-                    print(user_name)
                     env.read_all(user_name, model.CaseSet)
