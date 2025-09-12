@@ -67,6 +67,7 @@ class BaseAbacService(CommonAbacService):
         command.DataCollectionCrudCommand,
         command.RetrievePhylogeneticTreeByCasesCommand,
         command.RetrieveGeneticSequenceByCaseCommand,
+        command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseSetStatsCommand,
         command.RetrieveCaseTypeStatsCommand,
     }

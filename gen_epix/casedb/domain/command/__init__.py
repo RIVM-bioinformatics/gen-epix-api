@@ -98,6 +98,9 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveGeneticSequenceByCaseCommand as RetrieveGeneticSequenceByCaseCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    RetrieveGeneticSequenceFastaByCaseCommand as RetrieveGeneticSequenceFastaByCaseCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeByCasesCommand as RetrievePhylogeneticTreeByCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -279,6 +282,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         RetrieveGeneticSequenceByCaseCommand,
         RetrievePhylogeneticTreeByCasesCommand,
         RetrievePhylogeneticTreeBySequencesCommand,
+        RetrieveGeneticSequenceFastaByCaseCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
     },

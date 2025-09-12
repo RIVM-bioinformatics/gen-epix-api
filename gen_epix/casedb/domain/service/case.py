@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Iterable
 from typing import Type
 from uuid import UUID
 
@@ -70,12 +71,22 @@ class BaseCaseService(BaseService):
         f(command.RetrieveCasesByIdCommand, self.retrieve_cases_by_id)
         f(command.RetrieveCaseRightsCommand, self.retrieve_case_or_set_rights)
         f(command.RetrieveCaseSetRightsCommand, self.retrieve_case_or_set_rights)
-        f(command.RetrieveGeneticSequenceByCaseCommand, self.retrieve_genetic_sequence)
+        f(
+            command.RetrieveGeneticSequenceByCaseCommand,
+            self.retrieve_genetic_sequence_by_case,
+        )
         f(
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(command.RetrieveGeneticSequenceByCaseCommand, self.retrieve_genetic_sequence)
+        f(
+            command.RetrieveGeneticSequenceByCaseCommand,
+            self.retrieve_genetic_sequence_by_case,
+        )
+        f(
+            command.RetrieveGeneticSequenceFastaByCaseCommand,
+            self.retrieve_genetic_sequence_fasta_by_case,
+        )
 
     @abc.abstractmethod
     def create_cases_or_set(
@@ -131,8 +142,15 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_genetic_sequence(
+    def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_genetic_sequence_fasta_by_case(
+        self,
+        cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
+    ) -> Iterable[str]:
         raise NotImplementedError()

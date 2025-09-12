@@ -2,6 +2,7 @@ from typing import Any, Callable, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
@@ -58,8 +59,24 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID
-    case_ids: list[UUID]
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
+
+
+class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
+    file_name: str = Field(
+        description="The desired filename for the FASTA download.",
+    )
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
@@ -412,6 +429,44 @@ def create_case_endpoints(
                 "1238afb2", user, exception, request_ids=request_body.case_ids
             )
         return retval
+
+    @router.post(
+        "/retrieve/genetic_sequence_fasta",
+        operation_id="retrieve__genetic_sequence_fasta",
+        name="Retrieve genetic sequence FASTA (streaming)",
+        description="Streams FASTA content line-by-line.",
+    )
+    async def retrieve__genetic_sequence_fasta(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveGeneticSequenceFastaRequestBody,
+    ) -> StreamingResponse:
+        try:
+            fasta_iterable = app.handle(
+                command.RetrieveGeneticSequenceFastaByCaseCommand(
+                    user=user,
+                    genetic_sequence_case_type_col_id=(
+                        request_body.genetic_sequence_case_type_col_id
+                    ),
+                    case_ids=request_body.case_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception(  # type:ignore[call-arg]
+                "d4c2e1b1",
+                user,
+                exception,
+                request_ids=request_body.case_ids,
+            )
+            # TODO: next line should be deleted since handle_exception always raises (returns NoReturn)
+            return StreamingResponse(iter(()), media_type="text/plain")
+
+        return StreamingResponse(
+            fasta_iterable,
+            media_type="application/x-fasta",
+            headers={
+                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
+            },
+        )
 
     @router.post(
         "/retrieve/allele_profile",

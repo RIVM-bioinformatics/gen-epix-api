@@ -947,7 +947,7 @@ class CaseService(BaseCaseService):
 
         return phylogenetic_tree
 
-    def retrieve_genetic_sequence(
+    def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
@@ -986,6 +986,47 @@ class CaseService(BaseCaseService):
             )
 
         return genetic_sequences
+
+    def retrieve_genetic_sequence_fasta_by_case(
+        self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+    ) -> Iterable[str]:
+        """Return a streaming iterable of FASTA formatted lines.
+
+        ABAC policies copied from the outer FASTA command to the inner
+        RetrieveGeneticSequenceByCaseCommand (only top-level commands receive
+        policies automatically in current pipeline design).
+        """
+        inner_cmd = command.RetrieveGeneticSequenceByCaseCommand(
+            user=cmd.user,
+            case_ids=cmd.case_ids,
+            genetic_sequence_case_type_col_id=(cmd.genetic_sequence_case_type_col_id),
+        )
+        inner_cmd._policies.extend(cmd._policies)
+        # TODO: this implementation loads all sequences in memory first and then
+        # streams them. Replace this by a RetrieveGeneticSequenceFastaByIdCommand
+        # command in the seq service, and a RetrieveSeqFasta command in seqdb.
+        # The latter returns the fasta StreamingResponse which is then forwarded
+        # to the caller.
+        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence_by_case(  # type: ignore[arg-type]
+            inner_cmd
+        )
+        return self.fasta_file_generator(sequences)
+
+    def fasta_file_generator(
+        self,
+        sequences: Iterable[model.GeneticSequence],
+        wrap: int | None = 80,
+    ) -> Iterable[str]:
+        for seq in sequences:
+            if seq.id is None:
+                continue
+            yield f">{seq.id}\n"
+            sequence = seq.nucleotide_sequence or ""
+            if wrap and wrap > 0:
+                for i in range(0, len(sequence), wrap):
+                    yield sequence[i : i + wrap] + "\n"
+            else:
+                yield sequence + "\n"
 
     def _crud_metadata(
         self,
