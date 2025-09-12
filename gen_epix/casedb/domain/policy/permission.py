@@ -160,6 +160,7 @@ class RoleGenerator:
             # seq
             (command.RetrieveAlleleProfileCommand, PermissionTypeSet.E),
             (command.RetrieveGeneticSequenceByCaseCommand, PermissionTypeSet.E),
+            (command.RetrieveGeneticSequenceFastaByCaseCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeBySequencesCommand, PermissionTypeSet.E),
         },

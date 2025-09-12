@@ -255,6 +255,23 @@ class TestContent:
                         raise ValueError(
                             "Genetic sequence should have nucleotide_sequence attribute"
                         )
+            # Retrieve genetic sequences in FASTA format
+            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                fasta_str = app.handle(
+                    command.RetrieveGeneticSequenceFastaByCaseCommand(
+                        user=org_user,
+                        case_ids=case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                    )
+                )
+                if not fasta_str:
+                    raise ValueError("FASTA string should not be empty")
+                # fasta_str is a generator, convert to string
+                fasta_str = "".join(list(fasta_str))
+                if not fasta_str.startswith(">"):
+                    raise ValueError("FASTA string should start with '>'")
+                if "\n" not in fasta_str:
+                    raise ValueError("FASTA string should contain new lines")
         for case_set in case_sets:
             case_ids = app.handle(
                 command.RetrieveCasesByQueryCommand(
