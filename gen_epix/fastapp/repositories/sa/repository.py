@@ -20,7 +20,6 @@ from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import (
-    BooleanOperator,
     ComparisonOperator,
     CompositeFilter,
     DateRangeFilter,
@@ -32,6 +31,7 @@ from gen_epix.filter import (
     EqualsUuidFilter,
     ExistsFilter,
     Filter,
+    LogicalOperator,
     NumberRangeFilter,
     NumberSetFilter,
     RangeFilter,
@@ -606,9 +606,9 @@ class SARepository(BaseRepository):
             args = []
             for sub_filter in filter.filters:
                 args.append(self.get_where_clause_from_filter(row_class, sub_filter))
-            if filter.operator == BooleanOperator.AND:
+            if filter.operator == LogicalOperator.AND:
                 return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
-            if filter.operator == BooleanOperator.OR:
+            if filter.operator == LogicalOperator.OR:
                 return sa.or_(*args) if not invert else sa.not_(sa.or_(*args))
             raise exc.InvalidArgumentsError(
                 f"Unsupported filter operator: {filter.operator.value}"
@@ -667,7 +667,7 @@ class SARepository(BaseRepository):
         if isinstance(filter, CompositeFilter):
             where_clause_filters = []
             remainder_filters = []
-            if filter.operator == BooleanOperator.OR:
+            if filter.operator == LogicalOperator.OR:
                 # Split only when all sub-filters can fully be converted into a where
                 # clause
                 for sub_filter in filter.filters:
@@ -681,11 +681,11 @@ class SARepository(BaseRepository):
                     where_clause_filters.append(where_clause_filter)
                 return (
                     CompositeFilter(
-                        filters=where_clause_filters, operator=BooleanOperator.OR
+                        filters=where_clause_filters, operator=LogicalOperator.OR
                     ),
                     None,
                 )
-            if filter.operator == BooleanOperator.AND:
+            if filter.operator == LogicalOperator.AND:
                 # Split all sub-filters
                 for sub_filter in filter.filters:
                     where_clause_filter, remainder_filter = (
@@ -702,7 +702,7 @@ class SARepository(BaseRepository):
                     where_clause_filter = where_clause_filters[0]
                 else:
                     where_clause_filter = CompositeFilter(
-                        filters=where_clause_filters, operator=BooleanOperator.AND
+                        filters=where_clause_filters, operator=LogicalOperator.AND
                     )
                 if len(remainder_filters) == 0:
                     remainder_filter = None
@@ -710,7 +710,7 @@ class SARepository(BaseRepository):
                     remainder_filter = remainder_filters[0]
                 else:
                     remainder_filter = CompositeFilter(
-                        filters=remainder_filters, operator=BooleanOperator.AND
+                        filters=remainder_filters, operator=LogicalOperator.AND
                     )
                 return where_clause_filter, remainder_filter
             # Filter cannot be converted due to unsupported operator

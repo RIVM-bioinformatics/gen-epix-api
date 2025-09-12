@@ -14,10 +14,10 @@ from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import App, CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     EqualsBooleanFilter,
     EqualsUuidFilter,
+    LogicalOperator,
     UuidSetFilter,
 )
 
@@ -254,14 +254,14 @@ class AbacService(BaseAbacService):
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="organization_id", value=organization_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
         user_filter = CompositeFilter(
             filters=[
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="user_id", value=user_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
 
         # Retrieve all the policies as well as the case type set members and case type col set members
@@ -434,7 +434,7 @@ class AbacService(BaseAbacService):
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
                     dict_[case_type_id] = {}
-                all_case_type_col_ids = case_type_col_map[case_type_id]
+                all_case_type_col_ids = case_type_col_map.get(case_type_id, set())
                 case_type_access_abac = model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
                     data_collection_id=x.data_collection_id,

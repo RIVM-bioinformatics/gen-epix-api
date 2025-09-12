@@ -308,6 +308,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.integration.case_validation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_integration_case_validation"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration.content",
             "type": "debugpy",
             "request": "launch",
@@ -479,6 +490,17 @@
             "program": "run.py",
             "args": [
                 "test_filter_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.transform.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_transform_unit"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

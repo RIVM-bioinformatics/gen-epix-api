@@ -28,7 +28,7 @@ class RoleGenerator:
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.D),
             (command.CaseTypeSetCrudCommand, PermissionTypeSet.D),
             (
-                command.DataCollectionSetDataCollectionUpdateAssociationCommand,  # type: ignore[arg-type]
+                command.DataCollectionSetDataCollectionUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             # abac
@@ -41,7 +41,7 @@ class RoleGenerator:
             # organization
             (command.OrganizationCrudCommand, PermissionTypeSet.CU),
             (
-                command.OrganizationSetOrganizationUpdateAssociationCommand,  # type: ignore[arg-type]
+                command.OrganizationSetOrganizationUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             (command.DataCollectionCrudCommand, PermissionTypeSet.CU),
@@ -63,9 +63,9 @@ class RoleGenerator:
             (command.CaseTypeColSetCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),  # type: ignore[arg-type]
+            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
             (
-                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,  # type: ignore[arg-type]
+                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.CRU),
@@ -75,7 +75,7 @@ class RoleGenerator:
             (command.DimCrudCommand, PermissionTypeSet.CRU),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.CRU),
-            (command.ConceptSetConceptUpdateAssociationCommand, PermissionTypeSet.E),  # type: ignore[arg-type]
+            (command.ConceptSetConceptUpdateAssociationCommand, PermissionTypeSet.E),
             (command.ConceptSetCrudCommand, PermissionTypeSet.CRU),
             (command.ConceptSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.DiseaseCrudCommand, PermissionTypeSet.CRU),
@@ -122,8 +122,8 @@ class RoleGenerator:
                 command.CaseDataCollectionLinkCrudCommand,
                 PermissionTypeSet.CRUD,
             ),
-            (command.CaseSetCreateCommand, PermissionTypeSet.E),
-            (command.CasesCreateCommand, PermissionTypeSet.E),
+            (command.CreateCaseSetCommand, PermissionTypeSet.E),
+            (command.CreateCasesCommand, PermissionTypeSet.E),
             (command.CaseSetCrudCommand, PermissionTypeSet.RUD),
             (command.CaseSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.RetrieveCaseSetStatsCommand, PermissionTypeSet.E),
@@ -133,6 +133,7 @@ class RoleGenerator:
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
+            (command.ValidateCasesCommand, PermissionTypeSet.E),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),
             (command.ConceptSetCrudCommand, PermissionTypeSet.R),

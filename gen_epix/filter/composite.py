@@ -57,8 +57,8 @@ class CompositeFilter(Filter):
         | CompositeFilter
     ] = Field(description="The list of filters.", min_length=1, frozen=True)
     key: str | None = Field(default=None)
-    operator: enum.BooleanOperator = Field(
-        default=enum.BooleanOperator.AND,
+    operator: enum.LogicalOperator = Field(
+        default=enum.LogicalOperator.AND,
         description="The boolean operator for the composite filter.",
         frozen=True,
     )
@@ -76,21 +76,21 @@ class CompositeFilter(Filter):
     def _validate_state(self) -> Self:
         if len(self.filters) == 0:
             raise AssertionError("At least one filter must be set.")
-        if self.operator == enum.BooleanOperator.NOT and len(self.filters) != 1:
+        if self.operator == enum.LogicalOperator.NOT and len(self.filters) != 1:
             raise AssertionError("Only one filter may be set for NOT operator.")
         if len(self.filters) > 2 and self.operator not in {
-            enum.BooleanOperator.AND,
-            enum.BooleanOperator.OR,
+            enum.LogicalOperator.AND,
+            enum.LogicalOperator.OR,
         }:
             raise AssertionError("operator must be AND or OR for more than 2 filters.")
         # Generate the function to check if a value matches the composite filter
         # The function is generated instead of defined to be able to optimize the check
         # Analogously, generate the function to check if a separate value for each
         # filter
-        if self.operator == enum.BooleanOperator.NOT:
+        if self.operator == enum.LogicalOperator.NOT:
             self._match = lambda x: not self.filters[0]._match(x)  # type: ignore
             self._match_row = lambda x, y: x and not self.filters[0]._match(next(y))  # type: ignore
-        elif self.operator == enum.BooleanOperator.AND:
+        elif self.operator == enum.LogicalOperator.AND:
             self._match = lambda x: all(filter._match(x) for filter in self.filters)  # type: ignore
             # TODO: improve performance by not using filter.match_row for nested composite filter
             self._match_row = lambda x, y: all(  # type: ignore
@@ -98,7 +98,7 @@ class CompositeFilter(Filter):
                 and (filter.match_row(b) if filter._is_composite else filter._match(b))
                 for a, b, filter in zip(x, y, self.filters)
             )
-        elif self.operator == enum.BooleanOperator.OR:
+        elif self.operator == enum.LogicalOperator.OR:
             self._match = lambda x: any(filter._match(x) for filter in self.filters)  # type: ignore
             # TODO: improve performance by not using filter.match_row for nested composite filter
             self._match_row = lambda x, y: any(  # type: ignore
@@ -106,7 +106,7 @@ class CompositeFilter(Filter):
                 and (filter.match_row(b) if filter._is_composite else filter._match(b))
                 for a, b, filter in zip(x, y, self.filters)
             )
-        elif self.operator == enum.BooleanOperator.XOR:
+        elif self.operator == enum.LogicalOperator.XOR:
             self._match = lambda x: self.filters[0]._match(x) != self.filters[1]._match(  # type: ignore
                 x
             )
@@ -117,21 +117,21 @@ class CompositeFilter(Filter):
             ]._match(
                 next(y)  # type: ignore
             )
-        elif self.operator == enum.BooleanOperator.NAND:
+        elif self.operator == enum.LogicalOperator.NAND:
             self._match = lambda x: not (  # type: ignore
                 self.filters[0]._match(x) and self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and not (  # type: ignore
                 self.filters[0]._match(next(y)) and self.filters[1]._match(next(y))  # type: ignore
             )
-        elif self.operator == enum.BooleanOperator.NOR:
+        elif self.operator == enum.LogicalOperator.NOR:
             self._match = lambda x: not (  # type: ignore
                 self.filters[0]._match(x) or self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and not (  # type: ignore
                 self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
             )
-        elif self.operator == enum.BooleanOperator.XNOR:
+        elif self.operator == enum.LogicalOperator.XNOR:
             self._match = lambda x: self.filters[0]._match(x) == self.filters[1]._match(  # type: ignore
                 x
             )
@@ -142,14 +142,14 @@ class CompositeFilter(Filter):
             ]._match(
                 next(y)  # type: ignore
             )
-        elif self.operator == enum.BooleanOperator.IMPLIES:
+        elif self.operator == enum.LogicalOperator.IMPLIES:
             self._match = lambda x: (  # type: ignore
                 not self.filters[0]._match(x) or self.filters[1]._match(x)
             )
             self._match_row = lambda x, y: all(x) and (  # type: ignore
                 not self.filters[0]._match(next(y)) or self.filters[1]._match(next(y))  # type: ignore
             )
-        elif self.operator == enum.BooleanOperator.NIMPLIES:
+        elif self.operator == enum.LogicalOperator.NIMPLIES:
             self._match = lambda x: (  # type: ignore
                 self.filters[0]._match(x) and not self.filters[1]._match(x)
             )

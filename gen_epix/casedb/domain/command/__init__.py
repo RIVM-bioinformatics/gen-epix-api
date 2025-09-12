@@ -21,12 +21,8 @@ from gen_epix.casedb.domain.command.case import CaseCrudCommand as CaseCrudComma
 from gen_epix.casedb.domain.command.case import (
     CaseDataCollectionLinkCrudCommand as CaseDataCollectionLinkCrudCommand,
 )
-from gen_epix.casedb.domain.command.case import CasesCreateCommand as CasesCreateCommand
 from gen_epix.casedb.domain.command.case import (
     CaseSetCategoryCrudCommand as CaseSetCategoryCrudCommand,
-)
-from gen_epix.casedb.domain.command.case import (
-    CaseSetCreateCommand as CaseSetCreateCommand,
 )
 from gen_epix.casedb.domain.command.case import CaseSetCrudCommand as CaseSetCrudCommand
 from gen_epix.casedb.domain.command.case import (
@@ -66,6 +62,10 @@ from gen_epix.casedb.domain.command.case import (
     CaseTypeSetMemberCrudCommand as CaseTypeSetMemberCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import ColCrudCommand as ColCrudCommand
+from gen_epix.casedb.domain.command.case import CreateCasesCommand as CreateCasesCommand
+from gen_epix.casedb.domain.command.case import (
+    CreateCaseSetCommand as CreateCaseSetCommand,
+)
 from gen_epix.casedb.domain.command.case import DimCrudCommand as DimCrudCommand
 from gen_epix.casedb.domain.command.case import (
     GeneticDistanceProtocolCrudCommand as GeneticDistanceProtocolCrudCommand,
@@ -111,6 +111,9 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    ValidateCasesCommand as ValidateCasesCommand,
 )
 from gen_epix.casedb.domain.command.geo import RegionCrudCommand as RegionCrudCommand
 from gen_epix.casedb.domain.command.geo import (
@@ -252,9 +255,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     enum.ServiceType.CASE: {
         CaseCrudCommand,
         CaseDataCollectionLinkCrudCommand,
-        CasesCreateCommand,
+        CreateCasesCommand,
         CaseSetCategoryCrudCommand,
-        CaseSetCreateCommand,
+        CreateCaseSetCommand,
         CaseSetCrudCommand,
         CaseSetDataCollectionLinkCrudCommand,
         CaseSetMemberCrudCommand,
@@ -285,6 +288,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         RetrieveGeneticSequenceFastaByCaseCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
+        ValidateCasesCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,
