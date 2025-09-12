@@ -947,7 +947,7 @@ class CaseService(BaseCaseService):
 
         return phylogenetic_tree
 
-    def retrieve_genetic_sequence(
+    def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
@@ -987,7 +987,7 @@ class CaseService(BaseCaseService):
 
         return genetic_sequences
 
-    def retrieve_genetic_sequence_fasta(
+    def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
         """Return a streaming iterable of FASTA formatted lines.
@@ -1002,7 +1002,12 @@ class CaseService(BaseCaseService):
             genetic_sequence_case_type_col_id=(cmd.genetic_sequence_case_type_col_id),
         )
         inner_cmd._policies.extend(cmd._policies)
-        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence(  # type: ignore[arg-type]
+        # TODO: this implementation loads all sequences in memory first and then
+        # streams them. Replace this by a RetrieveGeneticSequenceFastaByIdCommand
+        # command in the seq service, and a RetrieveSeqFasta command in seqdb.
+        # The latter returns the fasta StreamingResponse which is then forwarded
+        # to the caller.
+        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence_by_case(  # type: ignore[arg-type]
             inner_cmd
         )
         return self.fasta_file_generator(sequences)
