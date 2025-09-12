@@ -3,8 +3,9 @@ import gzip
 import json
 import pickle
 import zipfile
+from collections.abc import Hashable
 from functools import partial
-from typing import Any, Callable, Hashable, Iterable, Type
+from typing import Any, Callable, Iterable, Type
 from uuid import UUID
 
 from gen_epix.fastapp import exc

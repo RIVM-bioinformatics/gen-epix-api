@@ -1,4 +1,5 @@
-from typing import Any, Callable, Hashable
+from collections.abc import Hashable
+from typing import Any, Callable
 
 from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter

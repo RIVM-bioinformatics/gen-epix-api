@@ -1,5 +1,6 @@
 import logging
 import uuid
+from collections.abc import Hashable
 from enum import Enum
 from test.fastapp.command import (
     Model1_1CrudCommand,
@@ -11,7 +12,7 @@ from test.fastapp.enum import ServiceType
 from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient
 from test.fastapp.user_manager import UserManager
-from typing import Any, Hashable, Type
+from typing import Any, Type
 
 import pytest
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Hashable
 from datetime import datetime
-from typing import Any, Callable, Hashable, Type
+from typing import Any, Callable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain import Domain

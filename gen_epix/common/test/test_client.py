@@ -1,10 +1,11 @@
 import datetime
 import logging
 import re
+from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Hashable, List, Type, TypeVar, cast
+from typing import Any, Dict, List, Type, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.common.config import BaseAppCfg

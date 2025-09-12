@@ -1,6 +1,7 @@
 import datetime
 import logging
 import re
+from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.enum import TestType
@@ -10,7 +11,7 @@ from test.test_client.util import (
     get_test_output_dir,
 )
 from time import sleep
-from typing import Any, Hashable, Type
+from typing import Any, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case

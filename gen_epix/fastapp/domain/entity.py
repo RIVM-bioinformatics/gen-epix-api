@@ -1,8 +1,9 @@
 import re
 import uuid
+from collections.abc import Hashable
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, ClassVar, Hashable, Mapping, Self, Type
+from typing import Any, Callable, ClassVar, Mapping, Self, Type
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator

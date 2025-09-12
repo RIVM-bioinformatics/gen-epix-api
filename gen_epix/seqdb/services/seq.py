@@ -1,7 +1,8 @@
 import hashlib
 import json
 import sys
-from typing import Callable, Hashable, Iterable
+from collections.abc import Hashable
+from typing import Callable, Iterable
 from uuid import UUID
 
 import numpy as np
