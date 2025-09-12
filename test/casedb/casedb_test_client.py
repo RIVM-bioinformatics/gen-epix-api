@@ -1369,6 +1369,166 @@ class CasedbTestClient(TestClient):
                 raise ValueError(f"Case associations mismatch")
         return case_set
 
+    def read_organization_access_case_policies_with_any_right(
+        self,
+        user_or_str: str | model.User,
+    ) -> list[model.OrganizationAccessCasePolicy]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        policies: list[model.OrganizationAccessCasePolicy] = self.app.handle(
+            command.OrganizationAccessCasePolicyCrudCommand(  # type:ignore[assignment]
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return [
+            x
+            for x in policies
+            if x.is_active
+            and x.organization_id == user.organization_id
+            and (
+                x.read_case_type_col_set_id
+                or x.write_case_type_col_set_id
+                or x.read_case_set
+                or x.write_case_set
+            )
+        ]
+
+    def read_user_access_case_policies_with_any_right(
+        self,
+        user_or_str: str | model.User,
+    ) -> list[model.UserAccessCasePolicy]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        policies: list[model.UserAccessCasePolicy] = self.app.handle(
+            command.UserAccessCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return [
+            x
+            for x in policies
+            if x.is_active
+            and x.user_id == user.id
+            and (
+                x.read_case_type_col_set_id
+                or x.write_case_type_col_set_id
+                or x.read_case_set
+                or x.write_case_set
+            )
+        ]
+
+    def read_organization_share_case_policies(
+        self,
+        user_or_str: str | model.User,
+    ) -> list[model.OrganizationShareCasePolicy]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        policies: list[model.OrganizationShareCasePolicy] = self.app.handle(
+            command.OrganizationShareCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return [
+            x
+            for x in policies
+            if x.is_active and x.organization_id == user.organization_id
+        ]
+
+    def read_user_share_case_policies(
+        self,
+        user_or_str: str | model.User,
+    ) -> list[model.UserShareCasePolicy]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        policies: list[model.UserShareCasePolicy] = self.app.handle(
+            command.UserShareCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return [x for x in policies if x.is_active and x.user_id == user.id]
+
+    def read_case_types_with_any_right(
+        self,
+        user_or_str: str | model.User,
+    ) -> set[UUID]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        # Admin users have access to all case type set members
+        if (
+            enum.Role.ROOT in user.roles
+            or enum.Role.APP_ADMIN in user.roles
+            or enum.Role.REFDATA_ADMIN in user.roles
+        ):
+            policies: list[model.CaseType] = self.app.handle(
+                command.CaseTypeCrudCommand(
+                    user=root_user,
+                    operation=CrudOperation.READ_ALL,
+                )
+            )
+            return {x.id for x in policies}  # type:ignore
+        case_type_set_ids = (
+            {
+                x.case_type_set_id
+                for x in self.read_organization_share_case_policies(user)
+            }
+            | {
+                x.case_type_set_id
+                for x in self.read_user_access_case_policies_with_any_right(user)
+            }
+            | {x.case_type_set_id for x in self.read_user_share_case_policies(user)}
+            | {
+                x.case_type_set_id
+                for x in self.read_user_access_case_policies_with_any_right(user)
+            }
+        )
+        members: list[model.CaseTypeSetMember] = self.app.handle(
+            command.CaseTypeSetMemberCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return {
+            x.case_type_id for x in members if x.case_type_set_id in case_type_set_ids
+        }
+
+    def read_all_user_invitations(
+        self, user_or_str: str | model.User
+    ) -> list[model.UserInvitation]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        invitations: list[model.UserInvitation] = self.handle(
+            command.UserInvitationCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return invitations
+
     def update_user(
         self,
         user_or_str: str | model.User,
@@ -1418,20 +1578,6 @@ class CasedbTestClient(TestClient):
             tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
         )
         return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
-
-    def get_all_user_invitations(
-        self, user_or_str: str | model.User
-    ) -> list[model.UserInvitation]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        invitations: list[model.UserInvitation] = self.handle(
-            command.UserInvitationCrudCommand(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        return invitations
 
     def temp_update_user_own_organization(
         self,
@@ -1684,13 +1830,9 @@ class CasedbTestClient(TestClient):
     def update_case_type_col_set_member(
         self,
         user_in: str | model.User,
-        case_type_col_set_member_in: str | model.CaseTypeColSetMember,
+        case_type_col_set_member: model.CaseTypeColSetMember,
     ) -> model.CaseTypeColSetMember:
         user = self._get_obj(model.User, user_in)
-        case_type_col_set_member = self._get_obj(
-            model.CaseTypeColSetMember, case_type_col_set_member_in
-        )
-        sleep(0.000000001)
         updated_case_type_col_set_member = self.handle(
             command.CaseTypeColSetMemberCrudCommand(
                 user=user,
