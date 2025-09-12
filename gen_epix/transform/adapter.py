@@ -2,7 +2,8 @@
 Object adapters for providing unified interface across different object types.
 """
 
-from typing import Any, Hashable, Iterator, Protocol, runtime_checkable
+from collections.abc import Hashable
+from typing import Any, Iterator, Protocol, runtime_checkable
 
 from pydantic import BaseModel
 

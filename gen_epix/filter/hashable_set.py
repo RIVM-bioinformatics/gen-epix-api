@@ -1,4 +1,4 @@
-from typing import Hashable
+from collections.abc import Hashable
 
 from pydantic import Field
 

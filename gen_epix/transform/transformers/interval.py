@@ -3,9 +3,9 @@ Number to interval transformer implementation.
 """
 
 import math
+from collections.abc import Hashable
 from decimal import Decimal
-from typing import Hashable, NoReturn
-
+from typing import NoReturn
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import NoMatchStrategy

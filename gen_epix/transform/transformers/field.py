@@ -2,7 +2,8 @@
 Field transformer implementation.
 """
 
-from typing import Any, Callable, Hashable
+from collections.abc import Hashable
+from typing import Any, Callable
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.transformer import Transformer

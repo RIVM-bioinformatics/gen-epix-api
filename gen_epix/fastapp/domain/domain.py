@@ -1,5 +1,6 @@
+from collections.abc import Hashable
 from enum import Enum
-from typing import Hashable, Type
+from typing import Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity

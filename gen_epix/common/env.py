@@ -1,6 +1,7 @@
 import abc
+from collections.abc import Hashable
 from enum import Enum
-from typing import Any, Callable, Hashable, Type
+from typing import Any, Callable, Type
 
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.domain.entity import Entity

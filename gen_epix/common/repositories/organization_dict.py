@@ -1,4 +1,5 @@
-from typing import Any, Hashable, Iterable, Type
+from collections.abc import Hashable
+from typing import Any, Iterable, Type
 
 from gen_epix.common.domain import model
 from gen_epix.common.domain.model import Model

@@ -1,10 +1,11 @@
 import json
 import tomllib
 import uuid
+from collections.abc import Hashable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Hashable, Iterable, Type
+from typing import Any, Iterable, Type
 
 import ulid
 from pydantic import BaseModel, Field

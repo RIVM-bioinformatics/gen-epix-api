@@ -1,6 +1,7 @@
 import itertools
 import json
-from typing import Annotated, Any, Callable, Hashable, Type
+from collections.abc import Hashable
+from typing import Annotated, Any, Callable, Type
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
