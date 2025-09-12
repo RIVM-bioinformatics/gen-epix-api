@@ -46,8 +46,8 @@ class SARepository(BaseRepository):
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
-        self._id: str = kwargs.get("id", str(uuid.uuid4()))  # type: ignore[assignment]
-        self._name: str = kwargs.get("name", self._id)  # type: ignore[assignment]
+        self._id: str = kwargs.get("id", str(uuid.uuid4()))
+        self._name: str = kwargs.get("name", self._id)
         self._engine = engine
 
         # Create a session maker per isolation level
@@ -389,9 +389,9 @@ class SARepository(BaseRepository):
         mapper = self.get_mapper(model_class)
         row_class = mapper.row_class
         get_row_id = mapper.get_row_id
-        cascade_read: bool = kwargs.get("cascade_read", False)  # type: ignore[assignment]
-        return_id: bool = kwargs.get("return_id", False)  # type: ignore[assignment]
-        obj_filter: Filter | None = kwargs.get("obj_filter", None)  # type: ignore[assignment]
+        cascade_read: bool = kwargs.get("cascade_read", False)
+        return_id: bool = kwargs.get("return_id", False)
+        obj_filter: Filter | None = kwargs.get("obj_filter", None)
 
         def _execute(session: Session) -> list[Model] | list[Hashable]:
             # Get either rows or row_ids
@@ -591,6 +591,32 @@ class SARepository(BaseRepository):
             return is_existing_obj
 
         return self._execute_sa(session, _execute, kwargs)
+
+    def read_fields(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: Type[Model],
+        field_names: list[str],
+        filter: Filter | None = None,
+        **kwargs: Any,
+    ) -> Iterable[tuple]:
+        if not isinstance(uow, SAUnitOfWork):
+            raise exc.RepositoryServiceError(f"Invalid UnitOfWork: {uow}")
+        mapper = self.get_mapper(model_class)
+        field_name_map = mapper.get_field_name_map()
+        row_field_names = [field_name_map[x] for x in field_names]
+        row_class = mapper.row_class
+
+        def _execute(session: Session) -> Iterable[tuple]:
+            stmt = select(*[getattr(row_class, x) for x in row_field_names])
+            if filter:
+                # Convert filter to where clause and add to statement
+                stmt = stmt.where(self.get_where_clause_from_filter(row_class, filter))
+            for row in session.execute(stmt):
+                yield row
+
+        return self._execute_sa(uow.session, _execute, kwargs)
 
     def split_filter(
         self, model_class: Type, filter: Filter | None
@@ -922,9 +948,7 @@ class SARepository(BaseRepository):
         SARepository._in_session_verify_retrieved_ids(mapper, obj_ids, row_ids)
         return rows, row_ids
 
-    def _execute_sa(
-        self, session: Session, execute_fn: Callable, kwargs: dict
-    ) -> list[Model] | Model | list[Hashable] | Hashable | list[bool] | bool | None:
+    def _execute_sa(self, session: Session, execute_fn: Callable, kwargs: dict) -> Any:
         if session:
             retval = execute_fn(session)
         else:

@@ -82,18 +82,24 @@ class AbacService(BaseAbacService):
             raise exc.ServiceException(
                 "Command has no or wrong user type: {cmd.user.__class__.__name__}"
             )
-        organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-            self.app.handle(
-                command.OrganizationAdminPolicyCrudCommand(
-                    user=cmd.user,
+        with self.repository.uow() as uow:
+            organization_admin_policies: list[model.OrganizationAdminPolicy] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user_id=cmd.user.id,
+                    model_class=self.organization_admin_policy_model_class,
+                    objs=None,
+                    obj_ids=None,
                     operation=CrudOperation.READ_ALL,
+                    filter=EqualsUuidFilter(
+                        key="organization_id", value=cmd.user.organization_id
+                    ),
                 )
             )
-        )
         organization_admin_user_ids = {
             x.user_id
             for x in organization_admin_policies
-            if x.organization_id == cmd.user.organization_id
+            if x.organization_id == cmd.user.organization_id and x.is_active
         }
         users = self.app.handle(
             self.user_crud_command_class(
