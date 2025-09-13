@@ -22,7 +22,7 @@ PyYAML==6.0.2
 types-setuptools==80.9.*
 
 # calculation
-scipy==1.16.1
+scipy==1.16.2
 numpy==2.3.3
 biopython==1.85
 
