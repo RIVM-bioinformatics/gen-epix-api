@@ -246,6 +246,23 @@ class DictRepository(BaseRepository):
             case _:
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
+    def read_fields(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: Type[Model],
+        field_names: list[str],
+        filter: Filter | None = None,
+        **kwargs: Any,
+    ) -> Iterable[tuple]:
+        all_objs_iterable = self._db[model_class].values()
+        if filter:
+            for obj in filter.match_rows(all_objs_iterable, is_model=True):
+                yield tuple(getattr(obj, x) for x in field_names)
+        else:
+            for obj in all_objs_iterable:
+                yield tuple(getattr(obj, x) for x in field_names)
+
     def uow(self, **kwargs: Any) -> BaseUnitOfWork:
         return DictUnitOfWork()
 

@@ -1530,6 +1530,17 @@ class CasedbTestClient(TestClient):
         )
         return invitations
 
+    def read_organization_admin_name_emails(
+        self, user_or_str: str | model.User
+    ) -> list[model.UserNameEmail]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        user_name_emails: list[model.UserNameEmail] = self.app.handle(
+            command.RetrieveOrganizationAdminNameEmailsCommand(user=user)
+        )
+        return user_name_emails
+
     def update_user(
         self,
         user_or_str: str | model.User,

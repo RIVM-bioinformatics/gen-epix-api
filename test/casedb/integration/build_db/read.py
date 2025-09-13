@@ -55,6 +55,45 @@ class TestRead:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.read_all(exec_user, model.User)
 
+    def test_read_organization_admin_emails(self, env: Env) -> None:
+        # Read all organization admin emails
+        all_users: dict[UUID, model.User] = {
+            x.id: x for x in env.read_all("root1_1", model.User)  # type:ignore[misc]
+        }
+        all_org_admin_policies: list[model.OrganizationAdminPolicy] = env.read_all(
+            "root1_1", model.OrganizationAdminPolicy
+        )  # type:ignore[assignment]
+        org_admin_users_by_org: dict[UUID, set[UUID]] = {}
+        for policy in all_org_admin_policies:
+            org_admin_users_by_org.setdefault(policy.organization_id, set()).add(
+                policy.user_id
+            )
+        for user_or_str in DATA_USERS:
+            user: model.User = env._get_obj(
+                model.User, user_or_str
+            )  # type:ignore[assignment]
+            user_name_emails = sorted(
+                env.read_organization_admin_name_emails(user),
+                key=lambda x: (x.name, x.email),
+            )
+            expected_users = sorted(
+                [
+                    all_users[x]
+                    for x in org_admin_users_by_org.get(user.organization_id, set())
+                ],
+                key=lambda x: (x.name, x.email),
+            )
+            assert all(
+                x.name == y.name and x.email == y.email
+                for x, y in zip(user_name_emails, expected_users)
+            )
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_read_organization_admin_emails_raise(self, env: Env) -> None:
+        for exec_user in NO_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.read_organization_admin_name_emails(exec_user)
+
     def test_read_organization_access_or_share_case_policy(self, env: Env) -> None:
         # Read all organization policies as root, app_admin, org_admin is restricted by rights
         for policy_class in [

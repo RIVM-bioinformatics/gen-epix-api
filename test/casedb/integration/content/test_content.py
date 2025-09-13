@@ -26,6 +26,10 @@ def get_test_client() -> Env:
 
 class TestContent:
     def test_content(self, env: Env) -> None:
+
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
+
         app = env.app
         # Get root user
         root_user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)
@@ -300,3 +304,7 @@ class TestContent:
                     operation=CrudOperation.READ_ALL,
                 )
             )
+
+        # profiler.stop()
+        # with open(env.test_dir / f"content.performance.html", "w") as f:
+        #     f.write("".join(profiler.output_html()))

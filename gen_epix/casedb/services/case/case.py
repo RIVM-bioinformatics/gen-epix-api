@@ -372,7 +372,7 @@ class CaseService(BaseCaseService):
 
             # Filter cases by case sets
             if case_set_ids:
-                case_case_sets, _ = self._retrieve_case_case_sets_map(uow, user.id)
+                case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
                 cases = [
                     x
                     for x in cases
@@ -804,7 +804,7 @@ class CaseService(BaseCaseService):
                     case_set_ids,
                     CrudOperation.READ_SOME,
                 )
-                case_set_data_collection_map, _ = (
+                case_set_data_collection_map = (
                     self._retrieve_case_set_data_collections_map(
                         uow,
                         cmd.user.id,
@@ -857,7 +857,7 @@ class CaseService(BaseCaseService):
                     case_ids,
                     CrudOperation.READ_SOME,
                 )
-                case_data_collection_map, _ = self._retrieve_case_data_collections_map(
+                case_data_collection_map = self._retrieve_case_data_collections_map(
                     uow,
                     cmd.user.id,
                     obj_ids1=case_ids,
@@ -1444,7 +1444,7 @@ class CaseService(BaseCaseService):
             return case_sets
 
         # @ABAC: filter case sets to which the user has read access
-        case_set_data_collections, _ = self._retrieve_case_set_data_collections_map(
+        case_set_data_collections = self._retrieve_case_set_data_collections_map(
             uow, user_id
         )
         has_access = case_abac.get_combinations_with_access_right(right)
@@ -1569,9 +1569,7 @@ class CaseService(BaseCaseService):
 
         # @ABAC: filter cases to which the user has read access, and optionally also
         # the content (case type cols)
-        case_data_collections, _ = self._retrieve_case_data_collections_map(
-            uow, user_id
-        )
+        case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
         has_access = case_abac.get_combinations_with_access_right(right)
         filtered_cases = []
         for case in cases:
@@ -1643,7 +1641,7 @@ class CaseService(BaseCaseService):
 
     def _retrieve_case_data_collections_map(
         self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
-    ) -> tuple[dict[UUID, set[UUID]], list[model.CaseDataCollectionLink]]:
+    ) -> dict[UUID, set[UUID]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
             user_id,
@@ -1655,7 +1653,7 @@ class CaseService(BaseCaseService):
 
     def _retrieve_case_set_data_collections_map(
         self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
-    ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetDataCollectionLink]]:
+    ) -> dict[UUID, set[UUID]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
             user_id,
@@ -1667,7 +1665,7 @@ class CaseService(BaseCaseService):
 
     def _retrieve_case_case_sets_map(
         self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
-    ) -> tuple[dict[UUID, set[UUID]], list[model.CaseSetMember]]:
+    ) -> dict[UUID, set[UUID]]:
         return self._retrieve_association_map(  # type:ignore[return-value]
             uow,
             user_id,
@@ -1685,7 +1683,7 @@ class CaseService(BaseCaseService):
         link_field_name1: str,
         link_field_name2: str,
         **kwargs: Any,
-    ) -> tuple[dict[UUID, set[UUID]], list[model.Model]]:
+    ) -> dict[UUID, set[UUID]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
         """
@@ -1712,26 +1710,16 @@ class CaseService(BaseCaseService):
         else:
             filter = None
         # Retrieve association objs and convert to map
-        association_objs: list = self.repository.crud(  # type:ignore[assignment]
-            uow,
-            user_id,
-            association_class,
-            None,
-            None,
-            CrudOperation.READ_ALL,
+        value_pairs_iterable: Iterable[tuple[UUID, UUID]] = self.repository.read_fields(
+            uow=uow,
+            user_id=user_id,
+            model_class=association_class,
+            field_names=[link_field_name1, link_field_name2],
             filter=filter,
         )
-        association_map: dict[UUID, set[UUID]] = (
-            map_paired_elements(  # type:ignore[assignment]
-                (
-                    (getattr(x, link_field_name1), getattr(x, link_field_name2))
-                    for x in association_objs
-                ),
-                as_set=True,
-            )
-        )
+        association_map = map_paired_elements(value_pairs_iterable, as_set=True)
 
-        return association_map, association_objs
+        return association_map
 
     def _retrieve_sequence_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
