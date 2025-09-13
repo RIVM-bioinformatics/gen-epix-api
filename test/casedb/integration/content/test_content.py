@@ -33,6 +33,7 @@ class TestContent:
         app = env.app
         # Get root user
         root_user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)
+        env._set_obj(root_user)
         root_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
