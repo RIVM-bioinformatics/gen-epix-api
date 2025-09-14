@@ -1,4 +1,4 @@
-from gen_epix.common.api import (
+from gen_epix.commondb.api import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
 )
 from gen_epix.seqdb.api.seq import (

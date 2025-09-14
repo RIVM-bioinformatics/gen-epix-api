@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.common.domain.model import Model
+from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
     DrugExposure,

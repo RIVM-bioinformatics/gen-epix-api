@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-import gen_epix.common.domain.command as common_command
+import gen_epix.commondb.domain.command as common_command
 from gen_epix.omopdb.domain import model
 
 

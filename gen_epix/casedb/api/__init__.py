@@ -35,6 +35,6 @@ from gen_epix.casedb.api.organization import (
 from gen_epix.casedb.api.organization import (
     UserInvitationRequestBody as UserInvitationRequestBody,
 )
-from gen_epix.common.api import (
+from gen_epix.commondb.api import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
 )

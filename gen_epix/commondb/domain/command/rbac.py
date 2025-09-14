@@ -1,4 +1,4 @@
-from gen_epix.common.domain.command.base import Command
+from gen_epix.commondb.domain.command.base import Command
 
 # Non-CRUD commands
 

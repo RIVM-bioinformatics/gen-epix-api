@@ -1,7 +1,7 @@
 import abc
 from enum import Enum
 
-from gen_epix.common.domain import command, enum
+from gen_epix.commondb.domain import command, enum
 from gen_epix.fastapp.model import Permission
 from gen_epix.fastapp.services.rbac import BaseRbacService as ServiceBaseRbacService
 

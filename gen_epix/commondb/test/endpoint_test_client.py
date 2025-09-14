@@ -11,7 +11,7 @@ from httpx import Response
 from jose import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.common.domain import model
+from gen_epix.commondb.domain import model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 

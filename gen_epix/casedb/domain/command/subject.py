@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 import gen_epix.casedb.domain.model.subject as model
-from gen_epix.common.domain.command import CrudCommand
+from gen_epix.commondb.domain.command import CrudCommand
 
 # Non-CRUD
 

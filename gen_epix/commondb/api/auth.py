@@ -2,7 +2,7 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter, FastAPI
 
-from gen_epix.common.domain import command, enum, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 
