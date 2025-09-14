@@ -36,6 +36,11 @@ class BaseAbacService(CommonAbacService):
         command.UserShareCasePolicyCrudCommand,
     }
 
+    READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_IMPL.get(x, x)
+        for x in CommonAbacService.COMMON_READ_USER_COMMANDS
+    } | set()
+
     UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_IMPL.get(x, x)
         for x in CommonAbacService.COMMON_UPDATE_USER_COMMANDS

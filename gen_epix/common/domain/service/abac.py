@@ -20,6 +20,10 @@ class BaseAbacService(BaseService):
         command.SiteCrudCommand,
     }
 
+    COMMON_READ_USER_COMMANDS: set[Type[Command]] = {
+        command.UserCrudCommand,
+    }
+
     COMMON_UPDATE_USER_COMMANDS: set[Type[Command]] = {
         command.InviteUserCommand,
         command.UpdateUserCommand,
@@ -32,9 +36,7 @@ class BaseAbacService(BaseService):
         command.RetrieveInviteUserConstraintsCommand,
     }
 
-    COMMON_READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
-    }
+    COMMON_READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = set()
 
     def __init__(
         self,
@@ -49,6 +51,7 @@ class BaseAbacService(BaseService):
         is_organization_admin_policy_class: Type[Policy] = Policy,
         read_organization_results_only_policy_class: Type[Policy] = Policy,
         read_self_results_only_policy_class: Type[Policy] = Policy,
+        read_user_policy_class: Type[Policy] = Policy,
         update_user_policy_class: Type[Policy] = Policy,
         logger: logging.Logger | None = None,
         **kwargs: Any,
@@ -64,6 +67,7 @@ class BaseAbacService(BaseService):
             read_organization_results_only_policy_class
         )
         self.read_self_results_only_policy_class = read_self_results_only_policy_class
+        self.read_user_policy_class = read_user_policy_class
         self.update_user_policy_class = update_user_policy_class
 
     # Property overridden to provide narrower return value to support linter
@@ -93,6 +97,7 @@ class BaseAbacService(BaseService):
         organization_admin_write_commands: set[
             Type[Command]
         ] = COMMON_ORGANIZATION_ADMIN_WRITE_COMMANDS,
+        read_user_commands: set[Type[Command]] = COMMON_READ_USER_COMMANDS,
         update_user_commands: set[Type[Command]] = COMMON_UPDATE_USER_COMMANDS,
         read_organization_results_only_commands: set[
             Type[Command]
@@ -107,6 +112,9 @@ class BaseAbacService(BaseService):
         policy = self.is_organization_admin_policy_class(self)  # type:ignore[call-arg]
         for command_class in organization_admin_write_commands:
             f(command_class, policy, EventTiming.BEFORE)
+        policy = self.read_user_policy_class(self)  # type:ignore[call-arg]
+        for command_class in read_user_commands:
+            f(command_class, policy, EventTiming.AFTER)
         policy = self.update_user_policy_class(self)  # type:ignore[call-arg]
         for command_class in update_user_commands:
             f(command_class, policy, EventTiming.BEFORE)

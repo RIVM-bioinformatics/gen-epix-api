@@ -1945,6 +1945,21 @@ class CasedbTestClient(TestClient):
             organization_ids.add(user.organization_id)
         return organization_ids
 
+    def get_users_for_org(
+        self,
+        user_or_str: str | model.User,
+        on_no_admin: str = "raise",
+    ) -> list[model.User]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        user = self._get_obj(model.User, user_or_str)  # type:ignore[assignment]
+        return [
+            x
+            for x in self.db[model.User].values()
+            if x.organization_id == user.organization_id
+        ]
+
     def get_users_for_org_admin(
         self,
         user_or_str: str | model.User,

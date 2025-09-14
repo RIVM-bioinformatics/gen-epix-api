@@ -60,6 +60,22 @@ class BaseReadSelfResultsOnlyPolicy(Policy):
         self.props = kwargs
 
 
+class BaseReadUserPolicy(Policy):
+    def __init__(
+        self,
+        abac_service: BaseAbacService,
+        root_role: Enum | None = None,
+        app_admin_roles: set[Enum] | None = None,
+        org_admin_roles: set[Enum] | None = None,
+        **kwargs: Any,
+    ):
+        self.abac_service = abac_service
+        self.root_role = root_role
+        self.app_admin_roles = app_admin_roles or set()
+        self.org_admin_roles = org_admin_roles or set()
+        self.props = kwargs
+
+
 class BaseUpdateUserPolicy(Policy):
     def __init__(
         self,

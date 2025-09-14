@@ -10,6 +10,7 @@ from gen_epix.common.policies.read_organization_results_only_policy import (
 from gen_epix.common.policies.read_self_results_only_policy import (
     ReadSelfResultsOnlyPolicy as ReadSelfResultsOnlyPolicy,
 )
+from gen_epix.common.policies.read_user_policy import ReadUserPolicy as ReadUserPolicy
 from gen_epix.common.policies.update_user_policy import (
     UpdateUserPolicy as UpdateUserPolicy,
 )

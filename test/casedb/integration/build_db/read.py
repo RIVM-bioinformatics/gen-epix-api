@@ -46,7 +46,7 @@ class TestRead:
                     env.verify_read_all(
                         user,
                         model.User,
-                        {user.id},
+                        env.get_users_for_org(user),
                     )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
