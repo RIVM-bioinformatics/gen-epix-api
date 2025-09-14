@@ -26,7 +26,7 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
     def _is_permitted(self, tgt_user: model.User) -> bool:
         return (
             self.outage_update_permission
-            in self.system_service.app.user_manager.retrieve_user_permissions(tgt_user)  # type: ignore[arg-type]
+            in self.system_service.app.user_manager.retrieve_user_permissions(tgt_user)
         )
 
     @cached(cache=TTLCache(maxsize=10, ttl=10))

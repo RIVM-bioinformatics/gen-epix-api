@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Callable, Type
 from uuid import UUID
 
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseIsOrganizationAdminPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import CrudOperation, CrudOperationSet, exc
@@ -13,14 +13,15 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
     def __init__(
         self,
         abac_service: BaseAbacService,
+        role_map: dict[Enum, Enum] | None = None,
         user_class: Type[model.User] = model.User,
         app_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         super().__init__(
             abac_service,
+            role_map=role_map,
             user_class=user_class,
-            app_admin_roles=app_admin_roles,
             **kwargs,
         )
         self._get_organization_ids_handler_map: dict[
@@ -31,13 +32,13 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         f(command.SiteCrudCommand, self._get_organization_ids_for_site)
         f(command.ContactCrudCommand, self._get_organization_ids_for_contact)
 
-    def is_allowed(self, cmd: command.Command) -> bool:  # type: ignore[arg-type]
+    def is_allowed(self, cmd: command.Command) -> bool:  # type: ignore[override]
         if cmd.user is None:
             return False
-        user: model.User = cmd.user  # type: ignore[assignment]
+        user: model.User = cmd.user
 
         # Role is org admin without further ABAC restrictions
-        if user.roles.intersection(self.app_admin_roles):
+        if user.roles.intersection(self.role_set_map[enum.RoleSet.GE_ORG_ADMIN]):
             return True
 
         # Policy only applies to write operations for crud commands

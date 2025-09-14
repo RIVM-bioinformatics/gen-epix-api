@@ -2,8 +2,18 @@ from typing import Type
 
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role
+from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.services.rbac import BaseRbacService
+
+COMMON_ROLE_MAP = {
+    Role.ROOT: CommonRole.ROOT,
+    Role.APP_ADMIN: CommonRole.APP_ADMIN,
+    Role.REFDATA_ADMIN: CommonRole.REFDATA_ADMIN,
+    Role.ORG_ADMIN: CommonRole.ORG_ADMIN,
+    Role.ORG_USER: CommonRole.ORG_USER,
+    Role.GUEST: CommonRole.GUEST,
+}
 
 
 class RoleGenerator:

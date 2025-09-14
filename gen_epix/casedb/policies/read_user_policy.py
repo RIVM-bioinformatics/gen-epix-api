@@ -1,7 +1,8 @@
 from typing import Any
 
-from gen_epix.casedb.domain import command, enum
-from gen_epix.casedb.domain.service.abac import BaseAbacService
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain.policy import COMMON_ROLE_MAP
+from gen_epix.casedb.domain.service import BaseAbacService
 from gen_epix.commondb.policies import ReadUserPolicy as CommonReadUserPolicy
 
 
@@ -13,9 +14,7 @@ class ReadUserPolicy(CommonReadUserPolicy):
     ):
         super().__init__(
             abac_service,
-            root_role=enum.Role.ROOT,
-            app_admin_roles=enum.RoleSet.GE_APP_ADMIN.value,  # type:ignore[arg-type]
-            org_admin_roles=enum.RoleSet.GE_ORG_ADMIN.value,  # type:ignore[arg-type]
+            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
             organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
             **kwargs,
         )

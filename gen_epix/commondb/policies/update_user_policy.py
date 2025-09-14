@@ -9,7 +9,9 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         if user is None or user.id is None:
             return False
         roles = user.roles
-        is_root = self.root_role and self.root_role in roles
+        is_root = (
+            len(roles.intersection(self.role_set_map[model.enum.RoleSet.ROOT])) > 0
+        )
 
         tgt_user: model.User
         if isinstance(cmd, command.InviteUserCommand):
@@ -38,12 +40,15 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
             # Root user can invite/update anyone with any permissions
             return True
         tgt_user.roles = tgt_roles_union
-        if len(roles.intersection(self.app_admin_roles)) > 0:
+        if (
+            len(roles.intersection(self.role_set_map[model.enum.RoleSet.GE_APP_ADMIN]))
+            > 0
+        ):
             # APP_ADMIN users and above can invite/update anyone with less permissions
             # (so not another APP_ADMIN), and only if the new set of permissions is also
             # less than their own permissions
             return self._has_more_permissions(user, tgt_user)
-        if not roles.intersection(self.org_admin_roles):
+        if not roles.intersection(self.role_set_map[model.enum.RoleSet.GE_ORG_ADMIN]):
             # Only ORG_ADMIN users and above can invite/update users
             return False
 

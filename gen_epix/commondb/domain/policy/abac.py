@@ -4,8 +4,10 @@ from enum import Enum
 from typing import Any, Type
 from uuid import UUID
 
+from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.command import Command, OrganizationAdminPolicyCrudCommand
 from gen_epix.commondb.domain.model import User
+from gen_epix.commondb.domain.policy.util import get_role_set_map
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp.model import CrudCommand, Policy
 
@@ -14,13 +16,14 @@ class BaseIsOrganizationAdminPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
+        role_map: dict[Enum, Enum] | None = None,
         user_class: Type[User] = User,
-        app_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
         self.user_class = user_class
-        self.app_admin_roles = app_admin_roles or set()
+        self.role_map = role_map or {x: x for x in enum.Role}
+        self.role_set_map = get_role_set_map(self.role_map)
         self.props = kwargs
 
     @abc.abstractmethod
@@ -40,11 +43,12 @@ class BaseReadOrganizationResultsOnlyPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        exempt_roles: set[Enum] | None = None,
+        role_map: dict[Enum, Enum] | None = None,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
-        self.exempt_roles = exempt_roles or set()
+        self.role_map = role_map or {x: x for x in enum.Role}
+        self.role_set_map = get_role_set_map(self.role_map)
         self.props = kwargs
 
 
@@ -52,11 +56,12 @@ class BaseReadSelfResultsOnlyPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        exempt_roles: set[Enum] | None = None,
+        role_map: dict[Enum, Enum] | None = None,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
-        self.exempt_roles = exempt_roles or set()
+        self.role_map = role_map or {x: x for x in enum.Role}
+        self.role_set_map = get_role_set_map(self.role_map)
         self.props = kwargs
 
 
@@ -64,18 +69,15 @@ class BaseReadUserPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        root_role: Enum | None = None,
-        app_admin_roles: set[Enum] | None = None,
-        org_admin_roles: set[Enum] | None = None,
+        role_map: dict[Enum, Enum] | None = None,
         organization_admin_policy_crud_command_class: Type[
             CrudCommand
         ] = OrganizationAdminPolicyCrudCommand,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
-        self.root_role = root_role
-        self.app_admin_roles = app_admin_roles or set()
-        self.org_admin_roles = org_admin_roles or set()
+        self.role_map = role_map or {x: x for x in enum.Role}
+        self.role_set_map = get_role_set_map(self.role_map)
         self.organization_admin_policy_crud_command_class = (
             organization_admin_policy_crud_command_class
         )
@@ -86,13 +88,10 @@ class BaseUpdateUserPolicy(Policy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        root_role: Enum | None = None,
-        app_admin_roles: set[Enum] | None = None,
-        org_admin_roles: set[Enum] | None = None,
+        role_map: dict[Enum, Enum] | None = None,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
-        self.root_role = root_role
-        self.app_admin_roles = app_admin_roles or set()
-        self.org_admin_roles = org_admin_roles or set()
+        self.role_map = role_map or {x: x for x in enum.Role}
+        self.role_set_map = get_role_set_map(self.role_map)
         self.props = kwargs

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from gen_epix.commondb.domain import command, exc
+from gen_epix.commondb.domain import command, enum, exc
 from gen_epix.commondb.domain.policy import BaseReadSelfResultsOnlyPolicy
 from gen_epix.commondb.domain.service.abac import BaseAbacService
 from gen_epix.fastapp import Command, CrudOperation, CrudOperationSet
@@ -12,12 +12,12 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
     def __init__(
         self,
         abac_service: BaseAbacService,
-        exempt_roles: set[Enum] | None = None,
+        role_map: dict[Enum, Enum] | None = None,
         **kwargs: Any,
     ):
         super().__init__(
             abac_service,
-            exempt_roles=exempt_roles,
+            role_map=role_map,
             **kwargs,
         )
         self.id_attr_by_command_class = {
@@ -36,7 +36,14 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
             return retval
 
         # Roles exempt from this policy
-        is_exempt = len(cmd.user.roles.intersection(self.exempt_roles)) > 0
+        is_exempt = (
+            len(
+                cmd.user.roles.intersection(
+                    self.role_set_map[enum.RoleSet.GE_ORG_ADMIN]
+                )
+            )
+            > 0
+        )
         if is_exempt:
             return retval
 

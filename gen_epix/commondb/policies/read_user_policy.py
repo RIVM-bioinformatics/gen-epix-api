@@ -26,15 +26,27 @@ class ReadUserPolicy(BaseReadUserPolicy):
         user: model.User | None = cmd.user
         if user is None or user.id is None:
             raise AssertionError("User must be authenticated")
-        is_no_abac_user = (self.root_role and self.root_role in user.roles) or len(
-            user.roles.intersection(self.app_admin_roles)
-        ) > 0
+        is_no_abac_user = (
+            len(
+                user.roles.intersection(
+                    self.role_set_map[model.enum.RoleSet.GE_APP_ADMIN]
+                )
+            )
+            > 0
+        )
         if is_no_abac_user:
             return results
 
         organization_ids: set[UUID]
         org_admin_policies: list[model.OrganizationAdminPolicy]
-        is_org_admin = len(user.roles.intersection(self.org_admin_roles)) > 0
+        is_org_admin = (
+            len(
+                user.roles.intersection(
+                    self.role_set_map[model.enum.RoleSet.GE_ORG_ADMIN]
+                )
+            )
+            > 0
+        )
         if is_org_admin:
             # User is organization admin: can read all users (active or not) of all
             # organizations they are admin of, plus all organization admins of those

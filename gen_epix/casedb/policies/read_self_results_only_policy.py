@@ -1,7 +1,8 @@
 from typing import Any
 
-from gen_epix.casedb.domain import command, enum
-from gen_epix.commondb.domain.service.abac import BaseAbacService
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain.policy import COMMON_ROLE_MAP
+from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies import (
     ReadSelfResultsOnlyPolicy as CommonReadSelfResultsOnlyPolicy,
 )
@@ -15,7 +16,7 @@ class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):
     ):
         super().__init__(
             abac_service,
-            exempt_roles=enum.RoleSet.GE_ORG_ADMIN.value,  # type: ignore[arg-type]
+            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
             **kwargs,
         )
         self.id_attr_by_command_class = {

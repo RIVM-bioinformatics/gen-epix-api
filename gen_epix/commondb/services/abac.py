@@ -6,7 +6,7 @@ from uuid import UUID
 from cachetools import TTLCache, cached
 
 from gen_epix.commondb import policies as policies
-from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain import command, enum, exc, model
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy,
@@ -41,7 +41,12 @@ class AbacService(BaseAbacService):
         for policy in cmd._policies:
             if isinstance(policy, ReadOrganizationResultsOnlyPolicy):
                 is_all_organizations = (
-                    len(cmd.user.roles.intersection(policy.exempt_roles)) > 0
+                    len(
+                        cmd.user.roles.intersection(
+                            policy.role_set_map[enum.RoleSet.GE_APP_ADMIN]
+                        )
+                    )
+                    > 0
                 )
                 break
         if is_all_organizations:
