@@ -10,9 +10,11 @@ from gen_epix.casedb.domain.service.seqdb import BaseSeqdbService as BaseSeqdbSe
 from gen_epix.casedb.domain.service.subject import (
     BaseSubjectService as BaseSubjectService,
 )
-from gen_epix.common.domain.service.organization import (
+from gen_epix.commondb.domain.service.organization import (
     BaseOrganizationService as BaseOrganizationService,
 )
-from gen_epix.common.domain.service.rbac import BaseRbacService as BaseRbacService
-from gen_epix.common.domain.service.system import BaseSystemService as BaseSystemService
+from gen_epix.commondbdb.domain.service.rbac import BaseRbacService as BaseRbacService
+from gen_epix.commondbdb.domain.service.system import (
+    BaseSystemService as BaseSystemService,
+)
 from gen_epix.fastapp.services.auth import BaseAuthService as BaseAuthService

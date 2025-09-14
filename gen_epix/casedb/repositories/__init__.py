@@ -21,11 +21,13 @@ from gen_epix.casedb.repositories.subject_dict import (
 from gen_epix.casedb.repositories.subject_sa import (
     SubjectSARepository as SubjectSARepository,
 )
-from gen_epix.common.repositories import (
+from gen_epix.commondb.repositories import (
     OrganizationDictRepository as OrganizationDictRepository,
 )
-from gen_epix.common.repositories import SystemDictRepository as SystemDictRepository
-from gen_epix.common.repositories import SystemSARepository as SystemSARepository
-from gen_epix.common.repositories.organization_sa import (
+from gen_epix.commondbdb.repositories import (
+    SystemDictRepository as SystemDictRepository,
+)
+from gen_epix.commondbdb.repositories import SystemSARepository as SystemSARepository
+from gen_epix.commondbdb.repositories.organization_sa import (
     OrganizationSARepository as OrganizationSARepository,
 )

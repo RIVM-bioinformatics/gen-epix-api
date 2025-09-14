@@ -1,5 +1,5 @@
-from gen_epix.common.config import AppCfg
-from gen_epix.common.util import get_package_version
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondbdb.util import get_package_version
 from gen_epix.omopdb.app_setup import create_fast_api
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.env import AppEnv

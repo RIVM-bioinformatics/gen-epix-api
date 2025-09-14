@@ -6,10 +6,10 @@ import tomllib
 
 from cachetools import TTLCache, cached
 
-from gen_epix.common.domain import command, model
-from gen_epix.common.domain.service import BaseSystemService
-from gen_epix.common.policies.has_system_outage_policy import HasSystemOutagePolicy
-from gen_epix.common.util import get_project_root
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondbdb.domain.service import BaseSystemService
+from gen_epix.commondbdb.policies.has_system_outage_policy import HasSystemOutagePolicy
+from gen_epix.commondbdb.util import get_project_root
 from gen_epix.fastapp import CrudOperation, EventTiming
 
 

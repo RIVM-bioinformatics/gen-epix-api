@@ -167,76 +167,76 @@ from gen_epix.casedb.domain.command.subject import (
 from gen_epix.casedb.domain.command.subject import (
     SubjectIdentifierCrudCommand as SubjectIdentifierCrudCommand,
 )
-from gen_epix.common.domain import command as common_command
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain import command as common_command
+from gen_epix.commondbdb.domain import enum as common_enum
+from gen_epix.commondbdb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.command import Command as Command
-from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
-from gen_epix.common.domain.command import CrudCommand as CrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import Command as Command
+from gen_epix.commondbdb.domain.command import ContactCrudCommand as ContactCrudCommand
+from gen_epix.commondbdb.domain.command import CrudCommand as CrudCommand
+from gen_epix.commondbdb.domain.command import (
     DataCollectionCrudCommand as DataCollectionCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     DataCollectionSetCrudCommand as DataCollectionSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     DataCollectionSetDataCollectionUpdateAssociationCommand as DataCollectionSetDataCollectionUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
-from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import InviteUserCommand as InviteUserCommand
+from gen_epix.commondbdb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     OrganizationSetMemberCrudCommand as OrganizationSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     OrganizationSetOrganizationUpdateAssociationCommand as OrganizationSetOrganizationUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import OutageCrudCommand as OutageCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import OutageCrudCommand as OutageCrudCommand
+from gen_epix.commondbdb.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
-from gen_epix.common.domain.command import SiteCrudCommand as SiteCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import SiteCrudCommand as SiteCrudCommand
+from gen_epix.commondbdb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondbdb.domain.command import UpdateUserCommand as UpdateUserCommand
+from gen_epix.commondbdb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
-from gen_epix.common.domain.command.organization import (
+from gen_epix.commondbdb.domain.command.organization import (
     RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
 )
-from gen_epix.common.domain.command.rbac import (
+from gen_epix.commondbdb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 

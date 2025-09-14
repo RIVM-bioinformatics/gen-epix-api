@@ -3,8 +3,8 @@ from typing import Type
 
 from cachetools import TTLCache, cached
 
-from gen_epix.common.domain import command, exc, model
-from gen_epix.common.domain.policy.system import BaseHasSystemOutagePolicy
+from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondbdb.domain.policy.system import BaseHasSystemOutagePolicy
 from gen_epix.fastapp import Command, CrudOperation
 
 

@@ -4,9 +4,9 @@
 
 from sqlalchemy.orm import declarative_mixin
 
-from gen_epix.common.domain import DOMAIN, model
-from gen_epix.common.repositories.sa_model.base import RowMetadataMixin
-from gen_epix.common.repositories.sa_model.util import create_mapped_column
+from gen_epix.commondb.domain import DOMAIN, model
+from gen_epix.commondbdb.repositories.sa_model.base import RowMetadataMixin
+from gen_epix.commondbdb.repositories.sa_model.util import create_mapped_column
 
 
 @declarative_mixin

@@ -5,8 +5,8 @@ from pydantic import Field
 
 from gen_epix.casedb.domain.model.case.case import CaseTypeColSet, CaseTypeSet
 from gen_epix.casedb.domain.model.organization import User
-from gen_epix.common.domain import model as common_model
-from gen_epix.common.util import copy_model_field
+from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondbdb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 

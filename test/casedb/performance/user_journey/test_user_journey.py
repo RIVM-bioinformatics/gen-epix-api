@@ -15,7 +15,7 @@ from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyC
 import pandas as pd
 import pyinstrument
 
-import gen_epix.common.test.util as test_util
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum
 
 PERFORMANCE_DF: list = []

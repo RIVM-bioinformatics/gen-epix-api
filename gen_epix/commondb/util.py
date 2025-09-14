@@ -185,7 +185,7 @@ def register_domain_entities(
             sorted_models_by_service_type.get(service_type, [])
         ):
             if model_class in common_model_impl:
-                # Substitute the model class with its common implementation,
+                # Substitute the model class with its commondb implementation,
                 # also in the input
                 model_class = common_model_impl[model_class]
                 sorted_models_by_service_type[service_type][i] = model_class
@@ -205,7 +205,7 @@ def register_domain_entities(
         # Register the commands
         for command_class in commands_by_service_type.get(service_type, []):
             if common_command_impl and command_class in common_command_impl:
-                # Substitute the command class with its common implementation,
+                # Substitute the command class with its commondb implementation,
                 # also in the input
                 commands_by_service_type[service_type].remove(command_class)
                 command_class = common_command_impl[command_class]

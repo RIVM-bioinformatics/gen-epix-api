@@ -3,8 +3,8 @@ from typing import Type
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
-from gen_epix.common.domain.command import Command
-from gen_epix.common.services import AbacService as CommonAbacService
+from gen_epix.commondb.domain.command import Command
+from gen_epix.commondbdb.services import AbacService as CommonAbacService
 
 
 class BaseAbacService(CommonAbacService):

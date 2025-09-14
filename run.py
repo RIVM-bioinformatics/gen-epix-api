@@ -4,8 +4,8 @@ from pathlib import Path
 
 import fire
 
-from gen_epix.common.config import ConfigDiscovery
-from gen_epix.common.domain.enum import AppConfigType, AppType, AppTypeSet
+from gen_epix.commondb.config import ConfigDiscovery
+from gen_epix.commondb.domain.enum import AppConfigType, AppType, AppTypeSet
 
 
 class Run:
@@ -306,7 +306,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/common/unit",
+                "test/commondb/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
@@ -334,7 +334,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/common/unit",
+                "test/commondb/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
             ]
@@ -438,7 +438,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/common/unit/",
+                "test/commondb/unit/",
             ]
         )
 
@@ -449,7 +449,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/common/unit/auth/",
+                "test/commondb/unit/auth/",
             ]
         )
 

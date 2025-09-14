@@ -7,9 +7,9 @@ from enum import Enum
 from typing import Any, Callable, Type
 from uuid import UUID
 
-from gen_epix.common.domain import command, model
-from gen_epix.common.domain.policy import NO_RBAC_PERMISSIONS
-from gen_epix.common.domain.service import BaseRbacService
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondbdb.domain.policy import NO_RBAC_PERMISSIONS
+from gen_epix.commondbdb.domain.service import BaseRbacService
 from gen_epix.fastapp import App, Command, Permission
 
 

@@ -1,7 +1,7 @@
 from typing import ClassVar
 
-import gen_epix.common.domain.model.system as model
-from gen_epix.common.domain.command.base import Command, CrudCommand
+import gen_epix.commondb.domain.model.system as model
+from gen_epix.commondbdb.domain.command.base import Command, CrudCommand
 
 # Non-CRUD commands
 

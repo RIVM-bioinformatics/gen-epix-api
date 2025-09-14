@@ -20,11 +20,11 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
-from gen_epix.common.api.exc import LAST_HANDLED_EXCEPTION
-from gen_epix.common.config import AppCfg
-from gen_epix.common.test.enum import RepositoryType as TestClientRepositoryType
-from gen_epix.common.test.test_client import TestClient
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.test.enum import RepositoryType as TestClientRepositoryType
+from gen_epix.commondb.test.test_client import TestClient
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
 

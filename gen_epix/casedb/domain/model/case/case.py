@@ -15,8 +15,8 @@ from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
 from gen_epix.casedb.domain.model.subject import Subject
-from gen_epix.common.domain.model import DataCollection, Model
-from gen_epix.common.util import copy_model_field
+from gen_epix.commondb.domain.model import DataCollection, Model
+from gen_epix.commondbdb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
 

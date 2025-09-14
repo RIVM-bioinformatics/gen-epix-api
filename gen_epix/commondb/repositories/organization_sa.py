@@ -2,9 +2,11 @@ from typing import Any, Type
 
 from sqlalchemy import Engine, select
 
-from gen_epix.common.domain import model
-from gen_epix.common.domain.repository.organization import BaseOrganizationRepository
-from gen_epix.common.repositories import sa_model
+from gen_epix.commondb.domain import model
+from gen_epix.commondbdb.domain.repository.organization import (
+    BaseOrganizationRepository,
+)
+from gen_epix.commondbdb.repositories import sa_model
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, exc
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork

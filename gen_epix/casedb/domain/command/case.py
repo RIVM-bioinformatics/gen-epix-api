@@ -5,12 +5,12 @@ from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model.case as model
 from gen_epix.casedb.domain import enum
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     Command,
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.common.util import copy_model_field
+from gen_epix.commondbdb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 # Non-CRUD

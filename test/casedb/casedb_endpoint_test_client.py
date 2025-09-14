@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI, Response
 
 from gen_epix.casedb.domain import command, model
-from gen_epix.common.test.endpoint_test_client import EndpointTestClient
+from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.fastapp.app import App
 
 
@@ -58,7 +58,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_ENV is not created
         # before the cfg is updated, since the APP_ENV is imported in the routers
-        from gen_epix.common.api import UserInvitationRequestBody
+        from gen_epix.commondb.api import UserInvitationRequestBody
 
         request_body = UserInvitationRequestBody(
             email=cmd.email,

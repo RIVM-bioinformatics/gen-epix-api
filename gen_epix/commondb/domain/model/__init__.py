@@ -1,36 +1,42 @@
 from typing import Type
 
 import gen_epix.fastapp as fastapp
-from gen_epix.common.domain import enum
-from gen_epix.common.domain.model.abac import (
+from gen_epix.commondb.domain import enum
+from gen_epix.commondbdb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.common.domain.model.base import Model as Model
-from gen_epix.common.domain.model.organization import Contact as Contact
-from gen_epix.common.domain.model.organization import DataCollection as DataCollection
-from gen_epix.common.domain.model.organization import (
+from gen_epix.commondbdb.domain.model.base import Model as Model
+from gen_epix.commondbdb.domain.model.organization import Contact as Contact
+from gen_epix.commondbdb.domain.model.organization import (
+    DataCollection as DataCollection,
+)
+from gen_epix.commondbdb.domain.model.organization import (
     DataCollectionSet as DataCollectionSet,
 )
-from gen_epix.common.domain.model.organization import (
+from gen_epix.commondbdb.domain.model.organization import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.common.domain.model.organization import (
+from gen_epix.commondbdb.domain.model.organization import (
     IdentifierIssuer as IdentifierIssuer,
 )
-from gen_epix.common.domain.model.organization import Organization as Organization
-from gen_epix.common.domain.model.organization import OrganizationSet as OrganizationSet
-from gen_epix.common.domain.model.organization import (
+from gen_epix.commondbdb.domain.model.organization import Organization as Organization
+from gen_epix.commondbdb.domain.model.organization import (
+    OrganizationSet as OrganizationSet,
+)
+from gen_epix.commondbdb.domain.model.organization import (
     OrganizationSetMember as OrganizationSetMember,
 )
-from gen_epix.common.domain.model.organization import Site as Site
-from gen_epix.common.domain.model.organization import User as User
-from gen_epix.common.domain.model.organization import UserInvitation as UserInvitation
-from gen_epix.common.domain.model.organization import (
+from gen_epix.commondbdb.domain.model.organization import Site as Site
+from gen_epix.commondbdb.domain.model.organization import User as User
+from gen_epix.commondbdb.domain.model.organization import (
+    UserInvitation as UserInvitation,
+)
+from gen_epix.commondbdb.domain.model.organization import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
-from gen_epix.common.domain.model.organization import UserNameEmail as UserNameEmail
-from gen_epix.common.domain.model.system import Outage as Outage
-from gen_epix.common.domain.model.system import PackageMetadata as PackageMetadata
+from gen_epix.commondbdb.domain.model.organization import UserNameEmail as UserNameEmail
+from gen_epix.commondbdb.domain.model.system import Outage as Outage
+from gen_epix.commondbdb.domain.model.system import PackageMetadata as PackageMetadata
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 

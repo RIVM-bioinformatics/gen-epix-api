@@ -7,8 +7,8 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from gen_epix.common.domain import enum
-from gen_epix.common.domain.model.base import Model
+from gen_epix.commondb.domain import enum
+from gen_epix.commondbdb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
 

@@ -3,9 +3,9 @@ import logging
 import uuid
 from typing import Any, Type
 
-from gen_epix.common.domain import command, model
-from gen_epix.common.domain.enum import ServiceType
-from gen_epix.common.domain.repository import BaseAbacRepository
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondbdb.domain.enum import ServiceType
+from gen_epix.commondbdb.domain.repository import BaseAbacRepository
 from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import EventTiming

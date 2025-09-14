@@ -1,5 +1,5 @@
-from gen_epix.common.domain import command, model
-from gen_epix.common.domain.policy import BaseUpdateUserPolicy
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondbdb.domain.policy import BaseUpdateUserPolicy
 from gen_epix.fastapp import Command
 
 

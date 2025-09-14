@@ -1,12 +1,12 @@
-from gen_epix.common.domain.command import COMMANDS_BY_SERVICE_TYPE
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain.command import COMMANDS_BY_SERVICE_TYPE
+from gen_epix.commondbdb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,
     SORTED_SERVICE_TYPES,
 )
-from gen_epix.common.util import register_domain_entities
+from gen_epix.commondbdb.util import register_domain_entities
 from gen_epix.fastapp import Domain
 
-DOMAIN = Domain("common")
+DOMAIN = Domain("commondb")
 
 register_domain_entities(
     DOMAIN,

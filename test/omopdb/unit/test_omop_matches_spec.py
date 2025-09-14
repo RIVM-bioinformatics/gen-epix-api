@@ -137,7 +137,7 @@ from typing import ClassVar
 from uuid import UUID
 from pydantic import Field
 
-from gen_epix.common.domain.model import Model
+from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
 """
@@ -150,7 +150,7 @@ from uuid import UUID
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_mapped_column,
     create_table_args,

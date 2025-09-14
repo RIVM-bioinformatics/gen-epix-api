@@ -37,8 +37,8 @@ from gen_epix.casedb.services import (
     SystemService,
     UserManager,
 )
-from gen_epix.common.config import AppCfg
-from gen_epix.common.env import BaseAppEnv
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondbdb.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain.enum import RepositoryType as SeqdbRepositoryType

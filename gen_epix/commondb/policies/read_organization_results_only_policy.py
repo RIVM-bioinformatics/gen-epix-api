@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import Any, Type
 
-from gen_epix.common.domain import command, model
-from gen_epix.common.domain.policy import BaseReadOrganizationResultsOnlyPolicy
-from gen_epix.common.domain.service import BaseAbacService
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondbdb.domain.policy import BaseReadOrganizationResultsOnlyPolicy
+from gen_epix.commondbdb.domain.service import BaseAbacService
 from gen_epix.fastapp import CrudOperation, CrudOperationSet, exc
 
 

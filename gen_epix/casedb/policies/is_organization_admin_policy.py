@@ -2,8 +2,8 @@ from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.common.domain.service import BaseAbacService
-from gen_epix.common.policies import (
+from gen_epix.commondb.domain.service import BaseAbacService
+from gen_epix.commondbdb.policies import (
     IsOrganizationAdminPolicy as CommonIsOrganizationAdminPolicy,
 )
 from gen_epix.fastapp import CrudOperation

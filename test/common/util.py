@@ -7,8 +7,8 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 
-from gen_epix.common.domain import model
-from gen_epix.common.test.test_client import TestClient
+from gen_epix.commondb.domain import model
+from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp.enum import CrudOperation
 
 

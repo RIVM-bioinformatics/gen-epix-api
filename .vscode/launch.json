@@ -462,7 +462,7 @@
             "justMyCode": true
         },
         {
-            "name": "test.common.unit",
+            "name": "test.commondb.unit",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
@@ -473,7 +473,7 @@
             "justMyCode": true,
         },
         {
-            "name": "test.common.unit.auth",
+            "name": "test.commondb.unit.auth",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",

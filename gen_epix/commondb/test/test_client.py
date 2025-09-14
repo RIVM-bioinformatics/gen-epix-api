@@ -8,12 +8,12 @@ from time import sleep
 from typing import Any, Dict, List, Type, TypeVar, cast
 from uuid import UUID
 
-from gen_epix.common.config import BaseAppCfg
-from gen_epix.common.domain import command, model
-from gen_epix.common.env import BaseAppEnv
-from gen_epix.common.test.endpoint_test_client import EndpointTestClient
-from gen_epix.common.test.util import set_log_level
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.config import BaseAppCfg
+from gen_epix.commondbdb.domain import command, model
+from gen_epix.commondbdb.env import BaseAppEnv
+from gen_epix.commondbdb.test.endpoint_test_client import EndpointTestClient
+from gen_epix.commondbdb.test.util import set_log_level
+from gen_epix.commondbdb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 
