@@ -30,7 +30,6 @@ class BaseAbacService(BaseService):
     }
 
     COMMON_READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
         command.OrganizationAdminPolicyCrudCommand,
         command.UserInvitationCrudCommand,
         command.RetrieveInviteUserConstraintsCommand,

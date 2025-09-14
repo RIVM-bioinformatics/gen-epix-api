@@ -4,10 +4,10 @@ from enum import Enum
 from typing import Any, Type
 from uuid import UUID
 
-from gen_epix.common.domain.command import Command
+from gen_epix.common.domain.command import Command, OrganizationAdminPolicyCrudCommand
 from gen_epix.common.domain.model import User
 from gen_epix.common.domain.service import BaseAbacService
-from gen_epix.fastapp.model import Policy
+from gen_epix.fastapp.model import CrudCommand, Policy
 
 
 class BaseIsOrganizationAdminPolicy(Policy):
@@ -67,12 +67,18 @@ class BaseReadUserPolicy(Policy):
         root_role: Enum | None = None,
         app_admin_roles: set[Enum] | None = None,
         org_admin_roles: set[Enum] | None = None,
+        organization_admin_policy_crud_command_class: Type[
+            CrudCommand
+        ] = OrganizationAdminPolicyCrudCommand,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
         self.root_role = root_role
         self.app_admin_roles = app_admin_roles or set()
         self.org_admin_roles = org_admin_roles or set()
+        self.organization_admin_policy_crud_command_class = (
+            organization_admin_policy_crud_command_class
+        )
         self.props = kwargs
 
 

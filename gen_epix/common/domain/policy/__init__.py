@@ -7,6 +7,7 @@ from gen_epix.common.domain.policy.abac import (
 from gen_epix.common.domain.policy.abac import (
     BaseReadSelfResultsOnlyPolicy as BaseReadSelfResultsOnlyPolicy,
 )
+from gen_epix.common.domain.policy.abac import BaseReadUserPolicy as BaseReadUserPolicy
 from gen_epix.common.domain.policy.abac import (
     BaseUpdateUserPolicy as BaseUpdateUserPolicy,
 )

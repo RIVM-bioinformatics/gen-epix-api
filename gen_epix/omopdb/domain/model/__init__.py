@@ -23,6 +23,9 @@ from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.omopdb.domain import enum
+from gen_epix.omopdb.domain.model.abac import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.omopdb.domain.model.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop import Cohort as Cohort
@@ -144,4 +147,5 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
+    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
