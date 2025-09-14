@@ -2,7 +2,7 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
-from gen_epix.casedb.domain.service import BaseCaseService
+from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter import UuidSetFilter
 

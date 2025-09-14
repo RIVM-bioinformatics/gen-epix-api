@@ -10,7 +10,7 @@ from gen_epix.casedb.domain.enum import (
     ColTypeSet,
     RegionRelationType,
 )
-from gen_epix.casedb.domain.service import BaseCaseService
+from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.common.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
