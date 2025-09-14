@@ -5,8 +5,8 @@ from typing import Any, Type
 from uuid import UUID
 
 from gen_epix.commondb.domain.command import Command, OrganizationAdminPolicyCrudCommand
-from gen_epix.commondbdb.domain.model import User
-from gen_epix.commondbdb.domain.service import BaseAbacService
+from gen_epix.commondb.domain.model import User
+from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp.model import CrudCommand, Policy
 
 

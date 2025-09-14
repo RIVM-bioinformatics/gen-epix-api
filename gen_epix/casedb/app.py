@@ -2,7 +2,7 @@ from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.env import AppEnv
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondbdb.util import get_package_version
+from gen_epix.commondb.util import get_package_version
 
 APP_NAME = "CASEDB"
 

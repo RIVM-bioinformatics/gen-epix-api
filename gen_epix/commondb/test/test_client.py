@@ -9,11 +9,11 @@ from typing import Any, Dict, List, Type, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.commondb.config import BaseAppCfg
-from gen_epix.commondbdb.domain import command, model
-from gen_epix.commondbdb.env import BaseAppEnv
-from gen_epix.commondbdb.test.endpoint_test_client import EndpointTestClient
-from gen_epix.commondbdb.test.util import set_log_level
-from gen_epix.commondbdb.util import map_paired_elements
+from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.env import BaseAppEnv
+from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
+from gen_epix.commondb.test.util import set_log_level
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
 

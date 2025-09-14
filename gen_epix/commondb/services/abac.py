@@ -6,9 +6,9 @@ from uuid import UUID
 from cachetools import TTLCache, cached
 
 from gen_epix.commondb import policies as policies
-from gen_epix.commondbdb.domain import command, exc, model
-from gen_epix.commondbdb.domain.service import BaseAbacService
-from gen_epix.commondbdb.policies.read_organization_results_only_policy import (
+from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain.service import BaseAbacService
+from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy,
 )
 from gen_epix.fastapp import CrudOperation

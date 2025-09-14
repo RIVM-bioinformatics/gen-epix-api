@@ -10,7 +10,7 @@ from gen_epix.commondb.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.commondbdb.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 # Non-CRUD

@@ -7,8 +7,8 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
-from gen_epix.commondbdb.domain import command, enum, model
-from gen_epix.commondbdb.domain.model.system import PackageMetadata
+from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
 

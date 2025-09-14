@@ -14,7 +14,7 @@ from sqlalchemy import URL
 from uvicorn.logging import logging
 
 from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
-from gen_epix.commondbdb.util import update_cfg_from_file
+from gen_epix.commondb.util import update_cfg_from_file
 from gen_epix.fastapp import App
 
 

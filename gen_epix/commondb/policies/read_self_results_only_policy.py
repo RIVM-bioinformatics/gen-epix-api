@@ -2,8 +2,8 @@ from enum import Enum
 from typing import Any
 
 from gen_epix.commondb.domain import command, exc
-from gen_epix.commondbdb.domain.policy import BaseReadSelfResultsOnlyPolicy
-from gen_epix.commondbdb.domain.service.abac import BaseAbacService
+from gen_epix.commondb.domain.policy import BaseReadSelfResultsOnlyPolicy
+from gen_epix.commondb.domain.service.abac import BaseAbacService
 from gen_epix.fastapp import Command, CrudOperation, CrudOperationSet
 
 

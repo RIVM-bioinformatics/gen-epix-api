@@ -14,9 +14,9 @@ from gen_epix.casedb.api.organization import (
 from gen_epix.casedb.api.subject import create_subject_endpoints
 from gen_epix.casedb.domain import enum, model
 from gen_epix.commondb.api.auth import create_auth_endpoints
-from gen_epix.commondbdb.api.organization import create_organization_endpoints
-from gen_epix.commondbdb.api.rbac import create_rbac_endpoints
-from gen_epix.commondbdb.api.system import create_system_endpoints
+from gen_epix.commondb.api.organization import create_organization_endpoints
+from gen_epix.commondb.api.rbac import create_rbac_endpoints
+from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.fastapp import App
 
 

@@ -1,5 +1,5 @@
 from gen_epix.commondb.domain import command
-from gen_epix.commondbdb.domain.command import Command
+from gen_epix.commondb.domain.command import Command
 from gen_epix.fastapp.enum import PermissionType
 
 # Permissions on which no RBAC is required

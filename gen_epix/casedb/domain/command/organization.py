@@ -2,7 +2,7 @@ from typing import ClassVar
 
 import gen_epix.commondb.domain.command as common_command
 from gen_epix.casedb.domain import enum, model
-from gen_epix.commondbdb.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 
 
 # Non-CRUD commands

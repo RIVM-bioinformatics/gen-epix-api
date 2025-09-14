@@ -3,7 +3,7 @@ import traceback
 from typing import Any, Callable, Type
 
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondbdb.env import BaseAppEnv
+from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.services.auth import AuthService

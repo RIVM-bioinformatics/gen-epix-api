@@ -3,12 +3,12 @@ from gen_epix.casedb.domain.policy.permission import RoleGenerator as RoleGenera
 from gen_epix.commondb.domain.policy import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,
 )
-from gen_epix.commondbdb.domain.policy.abac import (
+from gen_epix.commondb.domain.policy.abac import (
     BaseReadOrganizationResultsOnlyPolicy as BaseReadOrganizationResultsOnlyPolicy,
 )
-from gen_epix.commondbdb.domain.policy.abac import (
+from gen_epix.commondb.domain.policy.abac import (
     BaseReadSelfResultsOnlyPolicy as BaseReadSelfResultsOnlyPolicy,
 )
-from gen_epix.commondbdb.domain.policy.abac import (
+from gen_epix.commondb.domain.policy.abac import (
     BaseUpdateUserPolicy as BaseUpdateUserPolicy,
 )

@@ -2,7 +2,7 @@ from typing import Any
 
 from gen_epix.casedb.domain import command, enum
 from gen_epix.commondb.domain.service.abac import BaseAbacService
-from gen_epix.commondbdb.policies import (
+from gen_epix.commondb.policies import (
     ReadSelfResultsOnlyPolicy as CommonReadSelfResultsOnlyPolicy,
 )
 

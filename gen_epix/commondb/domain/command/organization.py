@@ -5,12 +5,12 @@ from uuid import UUID
 from pydantic import Field
 
 import gen_epix.commondb.domain.model.organization as model
-from gen_epix.commondbdb.domain.command.base import (
+from gen_epix.commondb.domain.command.base import (
     Command,
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.commondbdb.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 
 # Non-CRUD commands
 

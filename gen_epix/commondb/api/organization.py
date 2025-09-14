@@ -7,7 +7,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
 from gen_epix.commondb.domain import command, enum, model
-from gen_epix.commondbdb.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.model import Permission

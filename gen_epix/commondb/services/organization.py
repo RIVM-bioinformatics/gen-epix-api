@@ -4,7 +4,7 @@ from typing import Any, Type
 from cachetools import TTLCache, cached
 
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondbdb.domain.service.organization import BaseOrganizationService
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
 from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand

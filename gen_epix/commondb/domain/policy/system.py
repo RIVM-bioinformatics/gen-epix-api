@@ -1,7 +1,7 @@
 from typing import Any
 
 from gen_epix.commondb.domain import command
-from gen_epix.commondbdb.domain.service.system import BaseSystemService
+from gen_epix.commondb.domain.service.system import BaseSystemService
 from gen_epix.fastapp import PermissionType, Policy
 
 

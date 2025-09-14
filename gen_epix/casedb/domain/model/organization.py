@@ -3,7 +3,7 @@ from typing import ClassVar, Type
 
 import gen_epix.commondb.domain.model as common_model
 from gen_epix.casedb.domain import enum
-from gen_epix.commondbdb.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.util import create_links
 
