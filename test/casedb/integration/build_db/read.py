@@ -29,14 +29,18 @@ class TestRead:
             i += 1
             for j in range(0, 1):
                 j += 1
-                # Organization admins can only read users in their organization, as well as themselves
+                # Organization admins can only read users in their organization,
+                # as well as themselves and other org admins that are admins of
+                # some of their organizations
                 org_admin_user = env._get_obj(model.User, f"org_admin{i}_{j}")
                 env.verify_read_all(
                     org_admin_user,
                     model.User,
-                    env.get_users_for_org_admin(org_admin_user),
+                    env.get_users_for_org_admin(
+                        org_admin_user, include_self=True, include_other_org_admins=True
+                    ),
                 )
-                # Organization and refdata admin users can only read themselves
+                # Organization and refdata admin users can only read themselves and organization admins of their organization
                 for user_type in ["org_user", "refdata_admin"]:
                     user = env._get_obj(
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
@@ -46,7 +50,7 @@ class TestRead:
                     env.verify_read_all(
                         user,
                         model.User,
-                        {user.id},
+                        env.get_own_org_admin_users(user, include_self=True),
                     )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")

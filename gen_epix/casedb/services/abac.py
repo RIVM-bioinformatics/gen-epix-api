@@ -46,6 +46,7 @@ class AbacService(BaseAbacService):
             is_organization_admin_policy_class=policies.IsOrganizationAdminPolicy,
             read_organization_results_only_policy_class=policies.ReadOrganizationResultsOnlyPolicy,
             read_self_results_only_policy_class=policies.ReadSelfResultsOnlyPolicy,
+            read_user_policy_class=policies.ReadUserPolicy,
             update_user_policy_class=policies.UpdateUserPolicy,
             logger=logger,
             **kwargs,
@@ -57,6 +58,7 @@ class AbacService(BaseAbacService):
         organization_admin_write_commands: set[
             Type[Command]
         ] = BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS,  # type: ignore[assignment]
+        read_user_commands: set[Type[Command]] = BaseAbacService.READ_USER_COMMANDS,  # type: ignore[assignment]
         update_user_commands: set[Type[Command]] = BaseAbacService.UPDATE_USER_COMMANDS,  # type: ignore[assignment]
         read_organization_results_only_commands: set[
             Type[Command]
@@ -67,6 +69,7 @@ class AbacService(BaseAbacService):
     ) -> None:
         super().register_policies(
             organization_admin_write_commands=organization_admin_write_commands,
+            read_user_commands=read_user_commands,
             update_user_commands=update_user_commands,
             read_organization_results_only_commands=read_organization_results_only_commands,
             read_self_results_only_commands=read_self_results_only_commands,

@@ -29,9 +29,6 @@ from gen_epix.common.domain.command import (
 )
 from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
 from gen_epix.common.domain.command import (
-    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
-)
-from gen_epix.common.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
 from gen_epix.common.domain.command import (
@@ -74,6 +71,9 @@ from gen_epix.common.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.omopdb.domain import enum
+from gen_epix.omopdb.domain.command.abac import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import (
     CareSiteCrudCommand as CareSiteCrudCommand,
 )

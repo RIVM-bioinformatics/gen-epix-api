@@ -2,8 +2,7 @@ from typing import Any
 
 from gen_epix.common.domain import command
 from gen_epix.common.domain.service.system import BaseSystemService
-from gen_epix.fastapp import PermissionType
-from gen_epix.fastapp.model import Policy
+from gen_epix.fastapp import PermissionType, Policy
 
 
 class BaseHasSystemOutagePolicy(Policy):

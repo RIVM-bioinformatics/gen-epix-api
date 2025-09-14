@@ -1945,32 +1945,80 @@ class CasedbTestClient(TestClient):
             organization_ids.add(user.organization_id)
         return organization_ids
 
-    def get_users_for_org_admin(
+    def get_own_org_admin_users(
         self,
         user_or_str: str | model.User,
         include_self: bool = False,
+    ) -> list[model.Organization]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+            x
+            for x in self.db[model.OrganizationAdminPolicy].values()
+            if x.organization_id == user.organization_id and x.is_active
+        ]
+        user_ids = {x.user_id for x in org_admin_policies}
+        if include_self:
+            user_ids.add(user.id)
+        return [
+            x for x in self.db[model.User].values() if x.id in user_ids and x.is_active
+        ]
+
+    def get_users_for_org(
+        self,
+        user_or_str: str | model.User,
         on_no_admin: str = "raise",
     ) -> list[model.User]:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        org_admin_policies = [
+        user = self._get_obj(model.User, user_or_str)  # type:ignore[assignment]
+        return [
             x
-            for x in self.db[model.OrganizationAdminPolicy].values()
-            if x.user_id == user.id
+            for x in self.db[model.User].values()
+            if x.organization_id == user.organization_id
         ]
+
+    def get_users_for_org_admin(
+        self,
+        user_or_str: str | model.User,
+        include_self: bool = False,
+        include_other_org_admins: bool = False,
+        on_no_admin: str = "raise",
+    ) -> list[model.User]:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = (
+            [  # type:ignore[assignment]
+                x
+                for x in self.db[model.OrganizationAdminPolicy].values()
+                if x.user_id == user.id and x.is_active
+            ]
+        )
         if not org_admin_policies:
             if on_no_admin == "raise":
                 raise ValueError(f"User {user.name} is not an organization admin")
             elif on_no_admin == "return":
                 return []
         organization_ids = {x.organization_id for x in org_admin_policies}
-        if include_self:
-            organization_ids.add(user.organization_id)
+        user_ids = {user.id} if include_self else set()
+        if include_other_org_admins:
+            other_org_admin_policies: list[model.OrganizationAdminPolicy] = (
+                [  # type:ignore[assignment]
+                    x
+                    for x in self.db[model.OrganizationAdminPolicy].values()
+                    if x.organization_id in organization_ids and x.is_active
+                ]
+            )
+            user_ids.update({x.user_id for x in other_org_admin_policies})
         tgt_users: list[model.User] = list(self.db[model.User].values())
-        return [x for x in tgt_users if x.organization_id in organization_ids] + (
-            [user] if include_self else []
-        )
+        return [
+            x
+            for x in tgt_users
+            if x.id in user_ids or x.organization_id in organization_ids
+        ]
 
     def print_case_data_collection_links(self) -> None:
         cases = self.read_all("root1_1", model.Case, cascade=True)

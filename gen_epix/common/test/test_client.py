@@ -272,11 +272,11 @@ class TestClient:
 
     def verify_read_all(
         self,
-        user_or_key: model.User | str,
+        user_or_str: model.User | str,
         model_class: Type[model.Model],
         expected_ids: set[UUID] | list[model.Model],
     ) -> None:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         objs = self.handle(
             self.app.domain.get_crud_command_for_model(model_class)(
                 user=user, operation=CrudOperation.READ_ALL
