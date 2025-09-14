@@ -329,7 +329,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
     common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,

@@ -20,7 +20,10 @@ from gen_epix.omopdb.repositories import (
     SystemSARepository,
     sa_model,
 )
+from gen_epix.omopdb.repositories.abac_dict import AbacDictRepository
+from gen_epix.omopdb.repositories.abac_sa import AbacSARepository
 from gen_epix.omopdb.services import (
+    AbacService,
     OmopService,
     OrganizationService,
     RbacService,
@@ -70,6 +73,13 @@ class AppEnv(BaseAppEnv):
             "repository_class": {
                 enum.RepositoryType.DICT: SystemDictRepository,
                 enum.RepositoryType.SA_SQL: SystemSARepository,
+            },
+        },
+        enum.ServiceType.ABAC: {
+            "service_class": AbacService,
+            "repository_class": {
+                enum.RepositoryType.DICT: AbacDictRepository,
+                enum.RepositoryType.SA_SQL: AbacSARepository,
             },
         },
     }

@@ -113,6 +113,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
         ),
         # Specific models
+        enum.ServiceType.ABAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+        )
+        + [],
         enum.ServiceType.SEQ: [
             SubtypingScheme,
             Taxon,

@@ -10,5 +10,9 @@ from gen_epix.commondb.repositories.system_dict import (
 from gen_epix.commondb.repositories.system_sa import (
     SystemSARepository as SystemSARepository,
 )
+from gen_epix.seqdb.repositories.abac_dict import (
+    AbacDictRepository as AbacDictRepository,
+)
+from gen_epix.seqdb.repositories.abac_sa import AbacSARepository as AbacSARepository
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository as SeqDictRepository
 from gen_epix.seqdb.repositories.seq_sa import SeqSARepository as SeqSARepository

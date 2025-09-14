@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Type
 
 from gen_epix.commondb.domain import command
@@ -115,3 +116,29 @@ class RoleGenerator:
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
         ROLE_HIERARCHY, ROLE_PERMISSION_SETS  # type: ignore[arg-type]
     )
+
+
+def map_common_role_permission_sets(
+    role_map: dict[Enum, Enum],
+    command_map: dict[Type, Type],
+) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
+    role_permission_sets = RoleGenerator.ROLE_PERMISSION_SETS
+    mapped_role_permission_sets: dict[Enum, set[tuple[type, PermissionTypeSet]]] = {}
+    for role, permission_tuples in role_permission_sets.items():
+        mapped_role = role_map[role]
+        mapped_role_permission_sets.setdefault(mapped_role, set())
+        mapped_role_permission_sets[mapped_role].update(
+            {(command_map.get(x, x), y) for (x, y) in permission_tuples}
+        )
+    return mapped_role_permission_sets
+
+
+def map_common_role_hierarchy(
+    role_map: dict[Enum, Enum],
+) -> dict[Enum, set[Enum]]:
+    mapped_role_hierarchy: dict[Enum, set[Enum]] = {}
+    for role, sub_roles in RoleGenerator.ROLE_HIERARCHY.items():
+        mapped_role = role_map[role]
+        mapped_role_hierarchy.setdefault(mapped_role, set())
+        mapped_role_hierarchy[mapped_role].update({role_map[x] for x in sub_roles})
+    return mapped_role_hierarchy

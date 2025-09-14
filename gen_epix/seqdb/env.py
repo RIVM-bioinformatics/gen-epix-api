@@ -19,6 +19,8 @@ from gen_epix.seqdb.repositories import (
     SystemSARepository,
     sa_model,
 )
+from gen_epix.seqdb.repositories.abac_dict import AbacDictRepository
+from gen_epix.seqdb.repositories.abac_sa import AbacSARepository
 from gen_epix.seqdb.services import (
     AbacService,
     AuthService,
@@ -75,6 +77,10 @@ class AppEnv(BaseAppEnv):
         },
         enum.ServiceType.ABAC: {
             "service_class": AbacService,
+            "repository_class": {
+                enum.RepositoryType.DICT: AbacDictRepository,
+                enum.RepositoryType.SA_SQL: AbacSARepository,
+            },
         },
     }
     for data in SERVICE_DATA.values():

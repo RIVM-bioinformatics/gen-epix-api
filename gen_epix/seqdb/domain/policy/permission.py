@@ -1,39 +1,37 @@
 from typing import Type
 
 from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.policy import (
+    map_common_role_hierarchy,
+    map_common_role_permission_sets,
+)
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.services.rbac import BaseRbacService
 from gen_epix.seqdb.domain import command
 from gen_epix.seqdb.domain.enum import Role
 
 COMMON_ROLE_MAP = {
-    Role.ROOT: CommonRole.ROOT,
-    Role.APP_ADMIN: CommonRole.APP_ADMIN,
-    Role.REFDATA_ADMIN: CommonRole.REFDATA_ADMIN,
-    Role.ORG_ADMIN: CommonRole.ORG_ADMIN,
-    Role.ORG_USER: CommonRole.ORG_USER,
-    Role.GUEST: CommonRole.GUEST,
+    CommonRole.ROOT: Role.ROOT,
+    CommonRole.APP_ADMIN: Role.APP_ADMIN,
+    CommonRole.REFDATA_ADMIN: Role.REFDATA_ADMIN,
+    CommonRole.ORG_ADMIN: Role.ORG_ADMIN,
+    CommonRole.ORG_USER: Role.ORG_USER,
+    CommonRole.GUEST: Role.GUEST,
 }
 
 
 class RoleGenerator:
 
+    COMMON_ROLE_PERMISSION_SETS = map_common_role_permission_sets(
+        COMMON_ROLE_MAP, command.COMMON_COMMAND_MAP  # type: ignore[arg-type]
+    )
+
     ROLE_PERMISSION_SETS: dict[
         Role, set[tuple[Type[command.Command], PermissionTypeSet]]
     ] = {
-        Role.APP_ADMIN: {
-            (command.IdentifierIssuerCrudCommand, PermissionTypeSet.CU),
-            (command.UserCrudCommand, PermissionTypeSet.R),
-            (command.UserInvitationCrudCommand, PermissionTypeSet.CRD),
-            (command.InviteUserCommand, PermissionTypeSet.E),
-            (command.UpdateUserCommand, PermissionTypeSet.E),
-            (command.OutageCrudCommand, PermissionTypeSet.CRUD),
-            (command.DataCollectionCrudCommand, PermissionTypeSet.CU),
-            (command.DataCollectionSetCrudCommand, PermissionTypeSet.CRUD),
-            (command.DataCollectionSetMemberCrudCommand, PermissionTypeSet.CRUD),
-        },
-        Role.REFDATA_ADMIN: {
-            # organization
+        Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
+        Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
+        | {
             # seq.metadata CRUD commands
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.AssemblyProtocolCrudCommand, PermissionTypeSet.CRU),
@@ -63,9 +61,9 @@ class RoleGenerator:
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.CRU),
             (command.TaxonomyProtocolCrudCommand, PermissionTypeSet.CRU),
         },
-        Role.ORG_USER: {
-            # organization
-            (command.DataCollectionCrudCommand, PermissionTypeSet.R),
+        Role.ORG_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.ORG_ADMIN] | set(),
+        Role.ORG_USER: COMMON_ROLE_PERMISSION_SETS[Role.ORG_USER]
+        | {
             # seq.persistable CRUD commands
             (command.AlleleCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CRUD),
@@ -117,27 +115,10 @@ class RoleGenerator:
             (command.RetrieveCompleteSampleCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteSeqCommand, PermissionTypeSet.E),
         },
-        Role.GUEST: set(),
+        Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }
 
-    # Tree hierarchy of roles: each role can do everything the roles below it can do.
-    # Hierarchy described here per role with union of all roles below it.
-    ROLE_HIERARCHY: dict[Role, set[Role]] = {
-        Role.ROOT: {
-            Role.APP_ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        },
-        Role.APP_ADMIN: {
-            Role.REFDATA_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        },
-        Role.REFDATA_ADMIN: {Role.GUEST},
-        Role.ORG_USER: {Role.GUEST},
-        Role.GUEST: set(),
-    }
+    ROLE_HIERARCHY: dict[Role, set[Role]] = map_common_role_hierarchy(COMMON_ROLE_MAP)  # type: ignore[assignment,arg-type]
 
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
         ROLE_HIERARCHY, ROLE_PERMISSION_SETS  # type: ignore[arg-type]

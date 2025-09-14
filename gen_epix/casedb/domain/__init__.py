@@ -1,4 +1,4 @@
-from gen_epix.casedb.domain.command import COMMANDS_BY_SERVICE_TYPE, COMMON_COMMAND_IMPL
+from gen_epix.casedb.domain.command import COMMANDS_BY_SERVICE_TYPE, COMMON_COMMAND_MAP
 from gen_epix.casedb.domain.model import (
     COMMON_MODEL_IMPL,
     SORTED_MODELS_BY_SERVICE_TYPE,
@@ -15,6 +15,6 @@ register_domain_entities(
     SORTED_MODELS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
     COMMANDS_BY_SERVICE_TYPE,  # type: ignore[arg-type]
     common_model_impl=COMMON_MODEL_IMPL,
-    common_command_impl=COMMON_COMMAND_IMPL,
+    common_command_impl=COMMON_COMMAND_MAP,
     set_schema_to_service_type=True,
 )

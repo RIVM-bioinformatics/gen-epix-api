@@ -183,6 +183,10 @@ from gen_epix.omopdb.domain.command.organization import (
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
+    enum.ServiceType.ABAC: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+    )
+    | set(),
     enum.ServiceType.OMOP: {
         CareSiteCrudCommand,
         CdmSourceCrudCommand,
@@ -239,7 +243,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
     common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
