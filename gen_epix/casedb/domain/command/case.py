@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
-import gen_epix.casedb.domain.model.case as model
+import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
     Command,
