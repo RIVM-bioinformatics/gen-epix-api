@@ -212,9 +212,9 @@ def create_hash_dict(hash: str) -> dict:
     Returns
     -------
     dict
-        A dictionary with a single key 'Domain model classes' and the provided hash as its value.
+        A dictionary with a single key 'models_hash' and the provided hash as its value.
     """
-    return {"Domain model classes": hash}
+    return {"models_hash": hash}
 
 
 def create_hash_json_file(hash_dict: dict, file_path: Path):
