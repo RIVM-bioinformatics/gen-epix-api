@@ -65,8 +65,8 @@ class CaseValidationSetup:
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
-        self.excel_file = Path(__file__).parent / "test_case_validation.xlsx"
-        self.pickle_file = Path(__file__).parent / "test_case_validation.pkl"
+        self.excel_file = Path(__file__).parent / "test_casedb_case_validation.xlsx"
+        self.pickle_file = Path(__file__).parent / "test_casedb_case_validation.pkl"
         self.case_crud_commands: pd.DataFrame | None = None
         self.retrieve_data_from_file(env)
 
