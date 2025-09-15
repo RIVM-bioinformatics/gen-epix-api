@@ -5,7 +5,7 @@ import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicyMixin,
     RowMetadataMixin,
     create_mapped_column,

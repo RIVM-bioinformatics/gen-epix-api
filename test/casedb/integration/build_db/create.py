@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-import gen_epix.common.test.util as test_util
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum, exc, model
 
 
@@ -228,7 +228,7 @@ class TestCreate:
         )
         env.create_concept_set(
             "refdata_admin1_2",
-            "concept_set4_regex",
+            "concept_set4_regular_language",
             [],
             enum.ConceptSetType.REGULAR_LANGUAGE,
             regex=r"^ST(\d*)$",
@@ -368,7 +368,7 @@ class TestCreate:
                     enum.ColType.NOMINAL,
                     enum.ColType.ORDINAL,
                     enum.ColType.INTERVAL,
-                    enum.ColType.REGEX,
+                    enum.ColType.REGULAR_LANGUAGE,
                     enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
                 ]
             ):

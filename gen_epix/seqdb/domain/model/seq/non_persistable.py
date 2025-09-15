@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.common.domain.model import Model
+from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp import Entity
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.metadata import RefSnp

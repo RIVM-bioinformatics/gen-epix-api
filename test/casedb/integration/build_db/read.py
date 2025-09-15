@@ -6,8 +6,6 @@ from test.casedb.integration.build_db.base import (
     NO_DATA_USERS,
     NON_GUEST_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
-    ROOT,
-    SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
 from uuid import UUID
@@ -18,7 +16,6 @@ from gen_epix.casedb.domain import exc, model
 
 
 class TestRead:
-    # READ tests
 
     def test_read_user(self, env: Env) -> None:
         # Read all users as root, app_admin
@@ -32,14 +29,18 @@ class TestRead:
             i += 1
             for j in range(0, 1):
                 j += 1
-                # Organization admins can only read users in their organization, as well as themselves
+                # Organization admins can only read users in their organization,
+                # as well as themselves and other org admins that are admins of
+                # some of their organizations
                 org_admin_user = env._get_obj(model.User, f"org_admin{i}_{j}")
                 env.verify_read_all(
                     org_admin_user,
                     model.User,
-                    env.get_users_for_org_admin(org_admin_user),
+                    env.get_users_for_org_admin(
+                        org_admin_user, include_self=True, include_other_org_admins=True
+                    ),
                 )
-                # Organization and refdata admin users can only read themselves
+                # Organization and refdata admin users can only read themselves and organization admins of their organization
                 for user_type in ["org_user", "refdata_admin"]:
                     user = env._get_obj(
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
@@ -49,7 +50,7 @@ class TestRead:
                     env.verify_read_all(
                         user,
                         model.User,
-                        {user.id},
+                        env.get_own_org_admin_users(user, include_self=True),
                     )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -57,6 +58,45 @@ class TestRead:
         for exec_user in GUEST_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.read_all(exec_user, model.User)
+
+    def test_read_organization_admin_emails(self, env: Env) -> None:
+        # Read all organization admin emails
+        all_users: dict[UUID, model.User] = {
+            x.id: x for x in env.read_all("root1_1", model.User)  # type:ignore[misc]
+        }
+        all_org_admin_policies: list[model.OrganizationAdminPolicy] = env.read_all(
+            "root1_1", model.OrganizationAdminPolicy
+        )  # type:ignore[assignment]
+        org_admin_users_by_org: dict[UUID, set[UUID]] = {}
+        for policy in all_org_admin_policies:
+            org_admin_users_by_org.setdefault(policy.organization_id, set()).add(
+                policy.user_id
+            )
+        for user_or_str in DATA_USERS:
+            user: model.User = env._get_obj(
+                model.User, user_or_str
+            )  # type:ignore[assignment]
+            user_name_emails = sorted(
+                env.read_organization_admin_name_emails(user),
+                key=lambda x: (x.name, x.email),
+            )
+            expected_users = sorted(
+                [
+                    all_users[x]
+                    for x in org_admin_users_by_org.get(user.organization_id, set())
+                ],
+                key=lambda x: (x.name, x.email),
+            )
+            assert all(
+                x.name == y.name and x.email == y.email
+                for x, y in zip(user_name_emails, expected_users)
+            )
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_read_organization_admin_emails_raise(self, env: Env) -> None:
+        for exec_user in NO_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.read_organization_admin_name_emails(exec_user)
 
     def test_read_organization_access_or_share_case_policy(self, env: Env) -> None:
         # Read all organization policies as root, app_admin, org_admin is restricted by rights
@@ -142,64 +182,7 @@ class TestRead:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(exec_user, policy_class)
 
-    # TODO: remove when ok. Replaced by case access integration test.
-    # @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    # def test_read_case_access(self, env: Env) -> None:
-    #     # TODO: add tests for when either/or org/user case policy is inactive
-    #     # Verify case data access
-    #     # Format: dict[tuple(org_user, case), list[col_content]]
-    #     # Access to some data
-    #     expected_access = {
-    #         # org_user1_2 can access case1_4, dimension4 column1 and column2
-    #         ("org_user1_1", "1_1"): ["1_1", "1_2", "1_3", "1_4", "1_5"],
-    #         ("org_user1_1", "1_2"): ["2_1", "2_2", "2_3", "2_4", "2_5"],
-    #         ("org_user1_1", "1_3"): ["3_1", "3_2", "3_3", "3_4", "3_5"],
-    #         ("org_user2_1", "2_1"): ["1_1", "1_2", "1_3", "1_4", "1_5"],
-    #         ("org_user2_1", "2_2"): ["2_1", "2_2", "2_3", "2_4", "2_5"],
-    #         ("org_user2_1", "2_3"): ["3_1", "3_2", "3_3", "3_4", "3_5"],
-    #         ("org_user3_1", "3_1"): ["1_1", "1_2", "1_3", "1_4", "1_5"],
-    #         ("org_user3_1", "3_2"): ["2_1", "2_2", "2_3", "2_4", "2_5"],
-    #         ("org_user3_1", "3_3"): ["3_1", "3_2", "3_3", "3_4", "3_5"],
-    #         # Custom cases
-    #         ("org_user1_2", "1_4"): ["4_1", "4_2"],
-    #         ("org_user2_2", "2_4"): ["4_2", "4_3"],
-    #         ("org_user2_2", "3_5"): ["5_2", "5_3"],
-    #         ("org_user3_2", "1_4"): ["4_1", "4_2"],
-    #         ("org_user3_2", "2_4"): ["4_2", "4_3"],
-    #         ("org_user3_2", "3_5"): ["5_2", "5_3"],
-    #     }
-    #     env.verify_case_content_access(expected_access)
-    #     # No access
-    #     no_access = [
-    #         # org_user1_1 has no access to case1_4
-    #         ("org_user1_1", "2_1"),
-    #         ("org_user1_1", "3_1"),
-    #         ("org_user1_2", "1_1"),
-    #         ("org_user1_2", "2_1"),
-    #         ("org_user1_2", "3_1"),
-    #         ("org_user2_1", "1_1"),
-    #         ("org_user2_1", "3_1"),
-    #         ("org_user2_2", "1_1"),
-    #         ("org_user2_2", "2_1"),
-    #         ("org_user2_2", "3_1"),
-    #         ("org_user3_1", "1_1"),
-    #         ("org_user3_1", "2_1"),
-    #         ("org_user3_2", "1_1"),
-    #         ("org_user3_2", "2_1"),
-    #         ("org_user3_2", "3_1"),
-    #     ]
-    #     for tuple_ in no_access:
-    #         if not SKIP_RAISE:
-    #             with pytest.raises(exc.UnauthorizedAuthError):
-    #                 try:
-    #                     env.verify_case_content_access({tuple_: []})
-    #                 except exc.UnauthorizedAuthError as exception:
-    #                     raise exception
-    #                 except Exception as exception:
-    #                     if env.verbose:
-    #                         print(f"Case access not denied: {tuple_}")
-
-    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -212,25 +195,21 @@ class TestRead:
 
         org_admin has no ABAC permissions, so the result should be empty without raising an error
         """
-        # Naming scheme: dict[user: list[case_type{case_type_id}]
-        expected_access = {
-            "root1_1": ["1", "2", "3", "4", "5"],
-            "app_admin1_1": ["1", "2", "3", "4", "5"],
-            "refdata_admin1_1": ["1", "2", "3", "4", "5"],
-            "org_admin1_1": [],
-            "org_user1_1": ["1"],
-            "org_user1_2": ["1", "2"],
-            "org_user1_3": ["1"],
-            "org_user2_1": ["2"],
-            "org_user2_2": ["2", "3"],
-            "org_user2_3": ["2"],
-            "org_user3_1": ["3"],
-            "org_user3_2": ["1", "2", "3"],
-            "org_user3_3": ["3"],
-        }
-        env.verify_case_type_access(expected_access)
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in NON_GUEST_USERS:
+                # User is not a guest and should have read access to case types
+                # verify that the expected case type IDs (ABAC) match
+                env.verify_read_all(user_name, model.CaseType, expected_case_type_ids)
+            else:
+                # User is a guest and should not have access to any case types
+                assert expected_case_type_ids == set()
+                with pytest.raises(exc.UnauthorizedAuthError):
+                    env.read_all(user_name, model.CaseType)
 
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -241,32 +220,32 @@ class TestRead:
         - org_user: R
         - guest: -
         """
-
-        # Members have no name field so we have to use the ids
         all_case_type_set_members: list[model.CaseTypeSetMember] = env.read_all(
-            ROOT, model.CaseTypeSetMember
+            "root1_1", model.CaseTypeSetMember
         )
-        all_case_type_set_members_ids = [x.id for x in all_case_type_set_members]
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in NON_GUEST_USERS:
+                # User is not a guest and should have read access to case type set members
+                expected_member_ids = {
+                    x.id
+                    for x in all_case_type_set_members
+                    if x.case_type_id in expected_case_type_ids
+                }
+                env.verify_read_all(
+                    user_name,
+                    model.CaseTypeSetMember,
+                    expected_member_ids,
+                )
+            else:
+                # User is a guest and should not have access to any case type set members
+                assert expected_case_type_ids == set()
+                with pytest.raises(exc.UnauthorizedAuthError):
+                    env.read_all(user_name, model.CaseTypeSetMember)
 
-        # TODO: find a way to find which case_type_set_members are accessible by org_user1_1
-        # They are generated randomly so we can't know them in advance, and they have no name field
-        org_accessed_members: list[model.CaseTypeSetMember] = env.read_all(
-            "org_user1_1", model.CaseTypeSetMember
-        )
-        org_accessed_members_ids = [x.id for x in org_accessed_members]
-        abac_permissions: dict[str, list[str | UUID]] = {
-            "root1_1": all_case_type_set_members_ids,
-            "app_admin1_1": all_case_type_set_members_ids,
-            "refdata_admin1_1": all_case_type_set_members_ids,
-            "org_admin1_1": [],
-            "org_user1_1": org_accessed_members_ids,
-        }
-
-        self._general_read_test(
-            env, model.CaseTypeSetMember, NON_GUEST_USERS, abac_permissions
-        )
-
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_col(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -279,9 +258,30 @@ class TestRead:
 
         No ABAC restrictions
         """
-        self._general_read_test(env, model.CaseTypeCol, REFDATA_ADMIN_OR_ABOVE_USERS)
+        all_case_type_cols: list[model.CaseTypeCol] = env.read_all(
+            "root1_1", model.CaseTypeCol
+        )
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in REFDATA_ADMIN_OR_ABOVE_USERS:
+                # User is a refdata admin or above and should have read access to case type columns
+                expected_member_ids = {
+                    x.id
+                    for x in all_case_type_cols
+                    if x.case_type_id in expected_case_type_ids
+                }
+                env.verify_read_all(
+                    user_name,
+                    model.CaseTypeCol,
+                    expected_member_ids,
+                )
+            else:
+                continue
+                # TODO: NEGATIVE CASES
 
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
+    @pytest.mark.skip("CaseTypeColSet has commented out fields, see TODO comment")
     def test_read_case_type_col_set(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -294,9 +294,35 @@ class TestRead:
 
         No ABAC restrictions
         """
-        self._general_read_test(env, model.CaseTypeColSet, NON_GUEST_USERS)
+        # read all CaseTypeColSets to map case_type_id to CaseTypeColSet
+        all_case_type_col_sets: list[model.CaseTypeColSet] = env.read_all(
+            "root1_1", model.CaseTypeColSet
+        )
 
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in NON_GUEST_USERS:
+                # User is not a guest and should have read access to case type col sets
+                # TODO: Fix model.CaseTypeColSet
+                # Fields: case_type and case_type_id are commented out in CaseTypeColSet
+                # therefore no mapping possible at the moment
+                expected_member_ids = {
+                    x.id
+                    for x in all_case_type_col_sets
+                    if x.case_type_id in expected_case_type_ids
+                }
+                env.verify_read_all(
+                    user_name,
+                    model.CaseTypeColSet,
+                    expected_member_ids,
+                )
+            else:
+                continue
+                # TODO: NEGATIVE CASES
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_type_col_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -309,11 +335,35 @@ class TestRead:
 
         No ABAC restrictions
         """
-        self._general_read_test(
-            env, model.CaseTypeColSetMember, REFDATA_ADMIN_OR_ABOVE_USERS
+        # Create a mapping, to facilitate:
+        # expected_case_type_ids -> case_type_col_ids -> case_type_col_set_member_ids
+        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
+            "root1_1", model.CaseTypeColSetMember
         )
+        all_cols: list[model.CaseTypeCol] = env.read_all("root1_1", model.CaseTypeCol)
+        col_case_type_map = {c.id: c.case_type_id for c in all_cols}
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in REFDATA_ADMIN_OR_ABOVE_USERS:
+                # User is a refdata admin or above and should have read access to case type col set members
+                expected_member_ids = {
+                    x.id
+                    for x in all_case_type_col_set_members
+                    if col_case_type_map.get(x.case_type_col_id)
+                    in expected_case_type_ids
+                }
+                env.verify_read_all(
+                    user_name,
+                    model.CaseTypeColSetMember,
+                    expected_member_ids,
+                )
+            else:
+                continue
+                # TODO: NEGATIVE CASES
 
-    @pytest.mark.skip(reason="Test to be completed analogous to test_read_case_type")
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_set(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -324,57 +374,27 @@ class TestRead:
         - org_user: CRUD
         - guest: -
         """
-
-        abac_permissions: dict[str, list[str]] = {
-            "root1_1": [],
-            "app_admin1_1": [],
-            "refdata_admin1_1": [],
-            "org_admin1_1": [],
-            "org_user1_1": [
-                "case_set1_1",
-                "case_set1_2",
-                "case_set1_3",
-                "case_set1_4",
-                "case_set1_5",
-            ],
-            "guest1_1": [],
-        }
-
-        self._general_read_test(
-            env, model.CaseSet, DATA_USERS, abac_permissions, root_not_full_access=True
-        )
-
-    def _general_read_test(
-        self,
-        env: Env,
-        model_class: type,
-        has_rbac_users: list[str],
-        expected_abac_permissions: dict[str, list[str]] | None = None,
-        root_not_full_access: bool = False,
-    ) -> None:
-        if not root_not_full_access:
-            all_objects = env.read_all(ROOT, model_class)
-
-        has_no_rbac_users = [x for x in ALL_USERS if x not in has_rbac_users]
-        for exec_user in has_no_rbac_users:
+        all_case_sets: list[model.CaseSet] = env.read_all("root1_1", model.CaseSet)
+        for user_name in NO_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(exec_user, model_class)
+                env.read_all(user_name, model.CaseSet)
 
-        if expected_abac_permissions:
-            for exec_user in has_rbac_users:
-                if root_not_full_access:
-                    all_objects = env.read_all(exec_user, model_class)
-
-                permissions = expected_abac_permissions[exec_user]
-                if not permissions:
-                    expected_ids = set()
-                elif isinstance(permissions[0], UUID):
-                    expected_ids = set(permissions)
-                else:
-                    expected_ids = {x.id for x in all_objects if x.name in permissions}
-                env.verify_read_all(exec_user, model_class, expected_ids)
-
-        else:
-            expected_ids = {x.id for x in all_objects}
-            for exec_user in has_rbac_users:
-                env.verify_read_all(exec_user, model_class, expected_ids)
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            if user_name in DATA_USERS:
+                # User is a data user and should have read access to case sets
+                expected_member_ids = {
+                    x.id
+                    for x in all_case_sets
+                    if x.case_type_id in expected_case_type_ids
+                }
+                env.verify_read_all(
+                    user_name,
+                    model.CaseSet,
+                    expected_member_ids,
+                )
+            else:
+                with pytest.raises(exc.UnauthorizedAuthError):
+                    env.read_all(user_name, model.CaseSet)

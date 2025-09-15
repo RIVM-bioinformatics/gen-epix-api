@@ -1,4 +1,5 @@
-from typing import Callable, Hashable
+from collections.abc import Hashable
+from typing import Callable
 
 from gen_epix.fastapp.domain import Domain
 from gen_epix.fastapp.model import Command, Permission, Policy, User

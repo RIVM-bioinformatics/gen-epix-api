@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.common.domain.command import Command
+from gen_epix.commondb.domain.command import Command
 
 # Non-CRUD
 

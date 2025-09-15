@@ -4,9 +4,8 @@ from pathlib import Path
 
 import fire
 
-from docs.erm import generate_erm_diagrams
-from gen_epix.common.config import ConfigDiscovery
-from gen_epix.common.domain.enum import AppConfigType, AppType, AppTypeSet
+from gen_epix.commondb.config import ConfigDiscovery
+from gen_epix.commondb.domain.enum import AppConfigType, AppType, AppTypeSet
 
 
 class Run:
@@ -305,12 +304,13 @@ class Run:
                 "--cov-report=html:test/output/coverage.html",
                 "--cov-report=xml:test/output/coverage.xml",
                 "test/filter/unit",
+                "test/transform/unit",
                 "test/fastapp/unit",
-                "test/docs/unit",
                 "test/common/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
+                "test/casedb/integration/case_validation",
                 "test/casedb/unit",
                 "test/omopdb/unit",
                 # "test/seqdb/integration",
@@ -332,8 +332,8 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/filter/unit",
+                "test/transform/unit",
                 "test/fastapp/unit",
-                "test/docs/unit",
                 "test/common/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
@@ -373,6 +373,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/filter/unit/",
+            ]
+        )
+
+    def test_transform_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/transform/unit",
             ]
         )
 
@@ -438,7 +449,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/common/unit/",
+                "test/commondb/unit/",
             ]
         )
 
@@ -449,7 +460,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/common/unit/auth/",
+                "test/commondb/unit/auth/",
             ]
         )
 
@@ -495,6 +506,7 @@ class Run:
             + [
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/case_access",
+                "test/casedb/integration/case_validation",
                 "test/casedb/integration/content",
             ]
         )
@@ -518,6 +530,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/casedb/integration/case_access",
+            ]
+        )
+
+    def test_casedb_integration_case_validation(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/case_validation",
             ]
         )
 
@@ -757,6 +780,8 @@ class Run:
         main()
 
     def other_general_generate_erm_diagrams(self) -> None:
+        from docs.erm import generate_erm_diagrams
+
         out_dir = Path(__file__).parent / "docs" / "assets"
         generate_erm_diagrams(out_dir)
 

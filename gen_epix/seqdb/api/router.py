@@ -2,10 +2,10 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter
 
-from gen_epix.common.api.auth import create_auth_endpoints
-from gen_epix.common.api.organization import create_organization_endpoints
-from gen_epix.common.api.rbac import create_rbac_endpoints
-from gen_epix.common.api.system import create_system_endpoints
+from gen_epix.commondb.api.auth import create_auth_endpoints
+from gen_epix.commondb.api.organization import create_organization_endpoints
+from gen_epix.commondb.api.rbac import create_rbac_endpoints
+from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.fastapp import App
 from gen_epix.seqdb.api.organization import (
     ApiPermission,

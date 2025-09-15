@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Iterable, Self
 from uuid import UUID
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix import fastapp
@@ -14,7 +15,8 @@ from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
 from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
 from gen_epix.casedb.domain.model.subject import Subject
-from gen_epix.common.domain.model import DataCollection, Model
+from gen_epix.commondb.domain.model import DataCollection, Model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
 
@@ -228,24 +230,17 @@ class Col(Model):
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
-        if self.col_type in {
-            enum.ColType.NOMINAL,
-            enum.ColType.ORDINAL,
-            enum.ColType.INTERVAL,
-            enum.ColType.REGEX,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-            enum.ColType.CONTEXT_FREE_GRAMMAR_XML,
-        }:
+        if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No concept_set_id provided for col_type {self.col_type.value}"
                 )
-        if self.col_type == enum.ColType.GEO_REGION:
+        if self.col_type in enum.ColTypeSet.HAS_REGION_SET.value:
             if self.region_set_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No region_set_id provided for col_type {self.col_type.value}"
                 )
-        if self.col_type == enum.ColType.GENETIC_DISTANCE:
+        if self.col_type in enum.ColTypeSet.HAS_GENETIC_DISTANCE_PROTOCOL.value:
             if self.genetic_distance_protocol_id is None:
                 raise exc.InvalidArgumentsError(
                     f"No genetic_distance_protocol_id provided for col_type {self.col_type.value}"
@@ -574,6 +569,29 @@ class Case(Model):
         return {str(x): y for x, y in value.items()}
 
 
+class CaseForCreateUpdate(Model):
+    """
+    A class representing a case to be created or updated.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="cases_for_create_update",
+        persistable=False,
+    )
+    subject_id: UUID | None = copy_model_field(Case, "subject_id")
+    count: int | None = copy_model_field(Case, "count")
+    case_date: datetime = copy_model_field(Case, "case_date")
+    content: dict[UUID, str | None] = Field(
+        description="The column data of the case as {col_id: str_value}. If None and the model is used for update, then any existing value will be deleted."
+    )
+
+    @field_serializer("content", mode="plain")
+    def _serialize_content(
+        self, value: dict[UUID, str | None]
+    ) -> dict[str, str | None]:
+        return {str(x): y for x, y in value.items()}
+
+
 class CaseDataCollectionLink(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_data_collection_links",
@@ -873,4 +891,41 @@ class CaseSetRights(BaseCaseRights):
     )
     write_case_set: bool = Field(
         description="Whether the case set is allowed to be written",
+    )
+
+
+class CaseDataIssue(PydanticBaseModel):
+    case_type_col_id: UUID = Field(description="The ID of the case type column")
+    original_value: str | None = Field(description="The value of the case type column")
+    updated_value: str | None = Field(
+        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
+    )
+    data_rule: enum.CaseColDataRule = Field(description="The type of validation issue")
+    details: str | None = Field(description="The details of the data issue")
+
+
+class ValidatedCase(PydanticBaseModel):
+    case: CaseForCreateUpdate = Field(description="The case with validated content.")
+    data_issues: list[CaseDataIssue] = Field(
+        description="The data issues found for the case."
+    )
+
+
+class CaseValidationReport(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_validation_reports",
+        persistable=False,
+    )
+    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
+    created_in_data_collection_id: UUID = Field(
+        description="The data collection ID in which the cases would be created."
+    )
+    is_update: bool = Field(
+        description="Whether the cases are intended to be updated or newly created."
+    )
+    data_collection_ids: set[UUID] = Field(
+        description="The additional data collections that the cases would be put in, other than the created_in_data_collection."
+    )
+    validated_cases: list[ValidatedCase] = Field(
+        description="The cases containing validated content and any data issues found during validation."
     )

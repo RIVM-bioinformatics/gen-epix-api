@@ -1,8 +1,9 @@
 from typing import Any
 
-from gen_epix.casedb.domain import command, enum
-from gen_epix.casedb.domain.service.abac import BaseAbacService
-from gen_epix.common.policies import (
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain.policy import COMMON_ROLE_MAP
+from gen_epix.casedb.domain.service import BaseAbacService
+from gen_epix.commondb.policies import (
     ReadOrganizationResultsOnlyPolicy as CommonReadOrganizationResultsOnlyPolicy,
 )
 
@@ -15,7 +16,7 @@ class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy)
     ):
         super().__init__(
             abac_service,
-            exempt_roles=enum.RoleSet.GE_APP_ADMIN.value,  # type: ignore[arg-type]
+            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
             **kwargs,
         )
         self.user_crud_command_class = command.UserCrudCommand

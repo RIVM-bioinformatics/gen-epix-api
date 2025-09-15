@@ -11,9 +11,9 @@ from gen_epix.filter.datetime_range import (
 )
 
 # Import relevant enums
-from gen_epix.filter.enum import BooleanOperator as BooleanOperator
 from gen_epix.filter.enum import ComparisonOperator as ComparisonOperator
 from gen_epix.filter.enum import FilterType as FilterType
+from gen_epix.filter.enum import LogicalOperator as LogicalOperator
 
 # Import all filter classes, part 2
 from gen_epix.filter.equals import EqualsFilter as EqualsFilter

@@ -2,5 +2,5 @@ from test.test_client.util import get_test_name as get_test_name
 from test.test_client.util import get_test_output_dir as get_test_output_dir
 from test.test_client.util import get_test_root_output_dir as get_test_root_output_dir
 
-from gen_epix.common.test.util import parse_stats as parse_stats
-from gen_epix.common.test.util import set_log_level as set_log_level
+from gen_epix.commondb.test.util import parse_stats as parse_stats
+from gen_epix.commondb.test.util import set_log_level as set_log_level

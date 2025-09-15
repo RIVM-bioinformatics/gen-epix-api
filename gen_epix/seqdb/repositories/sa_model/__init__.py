@@ -2,7 +2,7 @@ from gen_epix.casedb.repositories.sa_model.organization import User as User
 from gen_epix.casedb.repositories.sa_model.organization import (
     UserInvitation as UserInvitation,
 )
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_field_metadata,
     set_entity_repository_model_classes,

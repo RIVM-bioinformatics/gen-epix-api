@@ -12,7 +12,7 @@ from gen_epix.casedb.domain.model.case.case import (
     GeneticDistanceProtocol,
     TreeAlgorithm,
 )
-from gen_epix.common.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
 

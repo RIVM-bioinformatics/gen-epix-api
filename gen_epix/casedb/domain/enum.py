@@ -5,16 +5,16 @@ from enum import Enum
 
 
 class ServiceType(Enum):
+    AUTH = "AUTH"
+    ORGANIZATION = "ORGANIZATION"
+    SYSTEM = "SYSTEM"
+    RBAC = "RBAC"
+    ABAC = "ABAC"
     GEO = "GEO"
     ONTOLOGY = "ONTOLOGY"
-    ORGANIZATION = "ORGANIZATION"
-    AUTH = "AUTH"
-    RBAC = "RBAC"
     SEQDB = "SEQDB"
     SUBJECT = "SUBJECT"
     CASE = "CASE"
-    ABAC = "ABAC"
-    SYSTEM = "SYSTEM"
 
 
 class RepositoryType(Enum):
@@ -210,7 +210,7 @@ class ColType(Enum):
     TEXT = "TEXT"
     CONTEXT_FREE_GRAMMAR_JSON = "CONTEXT_FREE_GRAMMAR_JSON"
     CONTEXT_FREE_GRAMMAR_XML = "CONTEXT_FREE_GRAMMAR_XML"
-    REGEX = "REGEX"
+    REGULAR_LANGUAGE = "REGULAR_LANGUAGE"
     NOMINAL = "NOMINAL"
     ORDINAL = "ORDINAL"
     INTERVAL = "INTERVAL"
@@ -231,83 +231,113 @@ class ColType(Enum):
     DECIMAL_4 = "DECIMAL_4"
     DECIMAL_5 = "DECIMAL_5"
     DECIMAL_6 = "DECIMAL_6"
+    GENETIC_READS = "GENETIC_READS"
     GENETIC_SEQUENCE = "GENETIC_SEQUENCE"
+    GENETIC_PROFILE = "GENETIC_PROFILE"
     GENETIC_DISTANCE = "GENETIC_DISTANCE"
     ORGANIZATION = "ORGANIZATION"
     OTHER = "OTHER"
 
 
 class ColTypeSet(Enum):
-    ID = [ColType.ID_DIRECT, ColType.ID_PSEUDONYMISED]
-    LANGUAGE = [
-        ColType.CONTEXT_FREE_GRAMMAR_JSON,
-        ColType.CONTEXT_FREE_GRAMMAR_XML,
-        ColType.REGEX,
-    ]
-    CONTEXT_FREE_GRAMMAR = [
-        ColType.CONTEXT_FREE_GRAMMAR_JSON,
-        ColType.CONTEXT_FREE_GRAMMAR_XML,
-        ColType.GENETIC_SEQUENCE,
-        ColType.GENETIC_DISTANCE,
-        ColType.ORGANIZATION,
-    ]
-    ENTITY = [
-        ColType.GENETIC_SEQUENCE,
-        ColType.GENETIC_DISTANCE,
-        ColType.ORGANIZATION,
-    ]
-    REGULAR_LANGUAGE = [
-        ColType.REGEX,
-        ColType.NOMINAL,
-        ColType.ORDINAL,
-        ColType.INTERVAL,
-        ColType.TIME_DAY,
-        ColType.TIME_WEEK,
-        ColType.TIME_MONTH,
-        ColType.TIME_QUARTER,
-        ColType.TIME_YEAR,
-        ColType.GEO_LATLON,
-        ColType.GEO_REGION,
-        ColType.DECIMAL_0,
-        ColType.DECIMAL_1,
-        ColType.DECIMAL_2,
-        ColType.DECIMAL_3,
-        ColType.DECIMAL_4,
-        ColType.DECIMAL_5,
-        ColType.DECIMAL_6,
-    ]
-    STRING_SET = [
-        ColType.NOMINAL,
-        ColType.ORDINAL,
-        ColType.INTERVAL,
-    ]
-    TIME = [
-        ColType.TIME_DAY,
-        ColType.TIME_WEEK,
-        ColType.TIME_MONTH,
-        ColType.TIME_QUARTER,
-        ColType.TIME_YEAR,
-    ]
-    GEO = [ColType.GEO_LATLON, ColType.GEO_REGION]
-    NUMBER = [
-        ColType.DECIMAL_0,
-        ColType.DECIMAL_1,
-        ColType.DECIMAL_2,
-        ColType.DECIMAL_3,
-        ColType.DECIMAL_4,
-        ColType.DECIMAL_5,
-        ColType.DECIMAL_6,
-    ]
-    GENETIC = [ColType.GENETIC_SEQUENCE, ColType.GENETIC_DISTANCE]
-    ORGANIZATION = [ColType.ORGANIZATION]
-    OTHER = [ColType.OTHER]
+    ID = frozenset({ColType.ID_DIRECT, ColType.ID_PSEUDONYMISED, ColType.ID_ANONYMISED})
+    LANGUAGE = frozenset(
+        {
+            ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            ColType.CONTEXT_FREE_GRAMMAR_XML,
+            ColType.REGULAR_LANGUAGE,
+        }
+    )
+    CONTEXT_FREE_GRAMMAR = frozenset(
+        {
+            ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            ColType.CONTEXT_FREE_GRAMMAR_XML,
+        }
+    )
+    ENTITY = frozenset(
+        {
+            ColType.GENETIC_SEQUENCE,
+            ColType.GENETIC_DISTANCE,
+            ColType.ORGANIZATION,
+        }
+    )
+    REGULAR_LANGUAGE = frozenset(
+        {
+            ColType.REGULAR_LANGUAGE,
+            ColType.NOMINAL,
+            ColType.ORDINAL,
+            ColType.INTERVAL,
+            ColType.TIME_DAY,
+            ColType.TIME_WEEK,
+            ColType.TIME_MONTH,
+            ColType.TIME_QUARTER,
+            ColType.TIME_YEAR,
+            ColType.GEO_LATLON,
+            ColType.GEO_REGION,
+            ColType.DECIMAL_0,
+            ColType.DECIMAL_1,
+            ColType.DECIMAL_2,
+            ColType.DECIMAL_3,
+            ColType.DECIMAL_4,
+            ColType.DECIMAL_5,
+            ColType.DECIMAL_6,
+        }
+    )
+    STRING_SET = frozenset(
+        {
+            ColType.NOMINAL,
+            ColType.ORDINAL,
+            ColType.INTERVAL,
+        }
+    )
+    TIME = frozenset(
+        {
+            ColType.TIME_DAY,
+            ColType.TIME_WEEK,
+            ColType.TIME_MONTH,
+            ColType.TIME_QUARTER,
+            ColType.TIME_YEAR,
+        }
+    )
+    GEO = frozenset({ColType.GEO_LATLON, ColType.GEO_REGION})
+    NUMBER = frozenset(
+        {
+            ColType.DECIMAL_0,
+            ColType.DECIMAL_1,
+            ColType.DECIMAL_2,
+            ColType.DECIMAL_3,
+            ColType.DECIMAL_4,
+            ColType.DECIMAL_5,
+            ColType.DECIMAL_6,
+        }
+    )
+    GENETIC = frozenset(
+        {
+            ColType.GENETIC_READS,
+            ColType.GENETIC_SEQUENCE,
+            ColType.GENETIC_PROFILE,
+            ColType.GENETIC_DISTANCE,
+        }
+    )
+    ORGANIZATION = frozenset({ColType.ORGANIZATION})
+    OTHER = frozenset({ColType.OTHER})
+    HAS_CONCEPT_SET = frozenset(
+        {
+            ColType.NOMINAL,
+            ColType.ORDINAL,
+            ColType.INTERVAL,
+            ColType.REGULAR_LANGUAGE,
+            ColType.CONTEXT_FREE_GRAMMAR_JSON,
+            ColType.CONTEXT_FREE_GRAMMAR_XML,
+        }
+    )
+    HAS_REGION_SET = frozenset({ColType.GEO_REGION})
+    HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
-class DimColTypes(Enum):
-    TEXT = list(ColType)
-    TIME = ColTypeSet.TIME
-    GEO = ColTypeSet.GEO
-    ORGANIZATION = ColTypeSet.ORGANIZATION
-    NUMBER = ColTypeSet.NUMBER
-    IDENTIFIER = ColTypeSet.ID
-    OTHER = ColTypeSet.OTHER
+class CaseColDataRule(Enum):
+    MISSING = "MISSING"
+    INVALID = "INVALID"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    CONFLICT = "CONFLICT"
+    DERIVED = "DERIVED"

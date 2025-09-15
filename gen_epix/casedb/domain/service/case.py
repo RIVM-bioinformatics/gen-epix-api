@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Iterable
 from typing import Type
 from uuid import UUID
 
@@ -35,6 +36,7 @@ class BaseCaseService(BaseService):
         command.CaseSetMemberCrudCommand,
         command.CaseDataCollectionLinkCrudCommand,
         command.CaseSetDataCollectionLinkCrudCommand,
+        command.ValidateCasesCommand,
     }
     CASCADE_DELETE_MODEL_CLASSES: dict[
         Type[model.Model], tuple[Type[model.Model], ...]
@@ -61,8 +63,9 @@ class BaseCaseService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         self.register_default_crud_handlers()
-        f(command.CaseSetCreateCommand, self.create_cases_or_set)
-        f(command.CasesCreateCommand, self.create_cases_or_set)
+        f(command.ValidateCasesCommand, self.validate_cases)
+        f(command.CreateCasesCommand, self.create_cases)
+        f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
         f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_type_stats)
         f(command.RetrieveCaseSetStatsCommand, self.retrieve_case_set_stats)
@@ -70,17 +73,37 @@ class BaseCaseService(BaseService):
         f(command.RetrieveCasesByIdCommand, self.retrieve_cases_by_id)
         f(command.RetrieveCaseRightsCommand, self.retrieve_case_or_set_rights)
         f(command.RetrieveCaseSetRightsCommand, self.retrieve_case_or_set_rights)
-        f(command.RetrieveGeneticSequenceByCaseCommand, self.retrieve_genetic_sequence)
+        f(
+            command.RetrieveGeneticSequenceByCaseCommand,
+            self.retrieve_genetic_sequence_by_case,
+        )
         f(
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(command.RetrieveGeneticSequenceByCaseCommand, self.retrieve_genetic_sequence)
+        f(
+            command.RetrieveGeneticSequenceByCaseCommand,
+            self.retrieve_genetic_sequence_by_case,
+        )
+        f(
+            command.RetrieveGeneticSequenceFastaByCaseCommand,
+            self.retrieve_genetic_sequence_fasta_by_case,
+        )
 
     @abc.abstractmethod
-    def create_cases_or_set(
-        self, cmd: command.CaseSetCreateCommand | command.CasesCreateCommand
-    ) -> model.CaseSet | list[model.Case] | None:
+    def validate_cases(
+        self, cmd: command.ValidateCasesCommand
+    ) -> model.CaseValidationReport:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_case_set(
+        self, cmd: command.CreateCaseSetCommand
+    ) -> model.CaseSet | None:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -131,8 +154,15 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_genetic_sequence(
+    def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_genetic_sequence_fasta_by_case(
+        self,
+        cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
+    ) -> Iterable[str]:
         raise NotImplementedError()

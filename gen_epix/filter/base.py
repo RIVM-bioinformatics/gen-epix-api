@@ -1,5 +1,6 @@
 import abc
-from typing import Annotated, Any, Callable, Hashable, Iterable, Iterator, Literal, Self
+from collections.abc import Hashable
+from typing import Annotated, Any, Callable, Iterable, Iterator, Literal, Self
 
 from pydantic import BaseModel, Field, WithJsonSchema
 
@@ -12,7 +13,7 @@ class Filter(BaseModel):
 
     Attributes:
         invert (bool): Whether to invert the filter.
-        key (Union[Hashable, None]): The column key to apply the filter to, when applied to a row. If None, the filter cannot be applied to a row, only to a column.
+        key (Hashable | None): The column key to apply the filter to, when applied to a row. If None, the filter cannot be applied to a row, only to a column.
     """
 
     invert: bool = Field(default=False, description="Whether to invert the filter.")
@@ -190,7 +191,7 @@ class Filter(BaseModel):
         na_values: set[Any] | None = None,
         map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
-    ) -> Iterator[dict[Hashable, Any | None]]:
+    ) -> Iterator[dict[Hashable, Any | None] | BaseModel]:
         """
         Analogous to match_rows, but yields the rows that match the filter instead of a bool.
         """

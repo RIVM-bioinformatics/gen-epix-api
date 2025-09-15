@@ -2,32 +2,34 @@ from typing import Type
 
 import sqlalchemy.orm as orm
 
-from gen_epix.common.repositories.sa_model import ContactMixin as ContactMixin
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import ContactMixin as ContactMixin
+from gen_epix.commondb.repositories.sa_model import (
     DataCollectionMixin as DataCollectionMixin,
 )
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMemberMixin as DataCollectionSetMemberMixin,
 )
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMixin as DataCollectionSetMixin,
 )
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     IdentifierIssuerMixin as IdentifierIssuerMixin,
 )
-from gen_epix.common.repositories.sa_model import OrganizationMixin as OrganizationMixin
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationMixin as OrganizationMixin,
+)
+from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMemberMixin as OrganizationSetMemberMixin,
 )
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMixin as OrganizationSetMixin,
 )
-from gen_epix.common.repositories.sa_model import SiteMixin as SiteMixin
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import SiteMixin as SiteMixin
+from gen_epix.commondb.repositories.sa_model import (
     UserInvitationMixin as UserInvitationMixin,
 )
-from gen_epix.common.repositories.sa_model import UserMixin as UserMixin
-from gen_epix.common.repositories.sa_model import create_table_args
+from gen_epix.commondb.repositories.sa_model import UserMixin as UserMixin
+from gen_epix.commondb.repositories.sa_model import create_table_args
 from gen_epix.omopdb.domain import enum, model
 
 Base: Type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)

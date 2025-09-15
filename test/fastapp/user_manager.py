@@ -1,4 +1,5 @@
-from typing import Any, Hashable, Type
+from collections.abc import Hashable
+from typing import Any, Type
 
 from pydantic import BaseModel
 

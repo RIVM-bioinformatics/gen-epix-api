@@ -23,6 +23,8 @@ from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
+from gen_epix.casedb.domain.model.case import CaseForCreateUpdate as CaseForCreateUpdate
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case import CaseSet as CaseSet
@@ -46,6 +48,9 @@ from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
+from gen_epix.casedb.domain.model.case import (
+    CaseValidationReport as CaseValidationReport,
+)
 from gen_epix.casedb.domain.model.case import Col as Col
 from gen_epix.casedb.domain.model.case import CompleteCaseType as CompleteCaseType
 from gen_epix.casedb.domain.model.case import Dim as Dim
@@ -54,6 +59,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
+from gen_epix.casedb.domain.model.case import ValidatedCase as ValidatedCase
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
@@ -74,25 +80,27 @@ from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequenc
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain import model as common_model
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.model import Contact as Contact
-from gen_epix.common.domain.model import DataCollection as DataCollection
-from gen_epix.common.domain.model import DataCollectionSet as DataCollectionSet
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain.model import Contact as Contact
+from gen_epix.commondb.domain.model import DataCollection as DataCollection
+from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
+from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.common.domain.model import IdentifierIssuer as IdentifierIssuer
-from gen_epix.common.domain.model import Model as Model
-from gen_epix.common.domain.model import Organization as Organization
-from gen_epix.common.domain.model import OrganizationSet as OrganizationSet
-from gen_epix.common.domain.model import OrganizationSetMember as OrganizationSetMember
-from gen_epix.common.domain.model import Outage as Outage
-from gen_epix.common.domain.model import Site as Site
-from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
+from gen_epix.commondb.domain.model import Model as Model
+from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
+from gen_epix.commondb.domain.model import (
+    OrganizationSetMember as OrganizationSetMember,
+)
+from gen_epix.commondb.domain.model import Outage as Outage
+from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
@@ -152,6 +160,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseTypeColSetMember,
             CompleteCaseType,
             Case,
+            CaseForCreateUpdate,
             CaseSetCategory,
             CaseSetStatus,
             CaseSet,
@@ -164,6 +173,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseSetQuery,
             CaseRights,
             CaseSetRights,
+            CaseValidationReport,
         ],
         enum.ServiceType.ABAC: list(
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]

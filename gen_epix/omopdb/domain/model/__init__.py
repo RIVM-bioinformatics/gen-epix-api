@@ -1,28 +1,33 @@
 from typing import Type
 
 from gen_epix import fastapp
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain import model as common_model
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.model import Contact as Contact
-from gen_epix.common.domain.model import DataCollection as DataCollection
-from gen_epix.common.domain.model import DataCollectionSet as DataCollectionSet
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain.model import Contact as Contact
+from gen_epix.commondb.domain.model import DataCollection as DataCollection
+from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
+from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.common.domain.model import IdentifierIssuer as IdentifierIssuer
-from gen_epix.common.domain.model import Model as Model
-from gen_epix.common.domain.model import Organization as Organization
-from gen_epix.common.domain.model import OrganizationSet as OrganizationSet
-from gen_epix.common.domain.model import OrganizationSetMember as OrganizationSetMember
-from gen_epix.common.domain.model import Outage as Outage
-from gen_epix.common.domain.model import Site as Site
-from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
+from gen_epix.commondb.domain.model import Model as Model
+from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
+from gen_epix.commondb.domain.model import (
+    OrganizationSetMember as OrganizationSetMember,
+)
+from gen_epix.commondb.domain.model import Outage as Outage
+from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.omopdb.domain import enum
+from gen_epix.omopdb.domain.model.abac import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.omopdb.domain.model.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop import Cohort as Cohort
@@ -84,6 +89,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ORGANIZATION]
         ),
         # Specific models
+        enum.ServiceType.ABAC: list(
+            _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+        )
+        + [],
         enum.ServiceType.OMOP: [
             # Ordered topologically based on foreign key dependencies
             # Foundation tables (no dependencies)
@@ -144,4 +153,5 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
+    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }

@@ -3,8 +3,8 @@ import copy
 import traceback
 from typing import Any, Callable, Type
 
-from gen_epix.common.config import AppCfg
-from gen_epix.common.env import BaseAppEnv
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain import DOMAIN, enum, model
@@ -19,6 +19,8 @@ from gen_epix.seqdb.repositories import (
     SystemSARepository,
     sa_model,
 )
+from gen_epix.seqdb.repositories.abac_dict import AbacDictRepository
+from gen_epix.seqdb.repositories.abac_sa import AbacSARepository
 from gen_epix.seqdb.services import (
     AbacService,
     AuthService,
@@ -75,6 +77,10 @@ class AppEnv(BaseAppEnv):
         },
         enum.ServiceType.ABAC: {
             "service_class": AbacService,
+            "repository_class": {
+                enum.RepositoryType.DICT: AbacDictRepository,
+                enum.RepositoryType.SA_SQL: AbacSARepository,
+            },
         },
     }
     for data in SERVICE_DATA.values():

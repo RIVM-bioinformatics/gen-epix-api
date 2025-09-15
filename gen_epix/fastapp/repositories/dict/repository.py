@@ -3,8 +3,9 @@ import gzip
 import json
 import pickle
 import zipfile
+from collections.abc import Hashable
 from functools import partial
-from typing import Any, Callable, Hashable, Iterable, Type
+from typing import Any, Callable, Iterable, Type
 from uuid import UUID
 
 from gen_epix.fastapp import exc
@@ -14,7 +15,7 @@ from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import BooleanOperator, CompositeFilter, Filter
+from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 
 class DictRepository(BaseRepository):
@@ -32,7 +33,7 @@ class DictRepository(BaseRepository):
             with open(pkl_file, "rb") as handle:
                 db = pickle.load(handle)
         # TODO: check validity of db
-        repository = repository_class(entities, db, **kwargs)
+        repository = repository_class(entities, db, **kwargs)  # type: ignore[call-arg]
         assert isinstance(repository, DictRepository)
         return repository
 
@@ -63,10 +64,10 @@ class DictRepository(BaseRepository):
                 with zip_handle.open(json_file) as handle:
                     id_field_name = entity.id_field_name
                     db[model_class] = {
-                        getattr(y, id_field_name): y
+                        getattr(y, id_field_name): y  # type: ignore[arg-type]
                         for y in (model_class(**x) for x in json.load(handle))
                     }
-        repository = repository_class(entities, db, **kwargs)
+        repository = repository_class(entities, db, **kwargs)  # type: ignore[call-arg]
         assert isinstance(repository, DictRepository)
         return repository
 
@@ -87,7 +88,10 @@ class DictRepository(BaseRepository):
         self._db = dict(db.items())
         self._timestamp_factory = timestamp_factory
         self._entities = set(entities)
-        self._links = {}
+        self._links: dict[
+            Type[Model],
+            list[tuple[str, Type[Model], str, int, dict[Hashable, Model] | None]],
+        ] = {}
         self._get_id: dict[Type[Model], Callable[[Model], Hashable]] = {}
         self._back_links: dict[Type[Model], list[tuple[Type[Model], str]]] = {}
         self._value_field_names: dict[type[Model], list[str]] = {}
@@ -111,7 +115,7 @@ class DictRepository(BaseRepository):
                 self._value_field_names[model_class].extend(
                     entity.get_field_names(field_type=field_type)
                 )
-            self._keys_generators[model_class] = entity.get_keys_generator()
+            self._keys_generators[model_class] = entity.get_keys_generator()  # type: ignore[assignment]
             if entity.persistable and model_class not in db:
                 if missing_data == "ignore":
                     self._db[model_class] = {}
@@ -172,14 +176,14 @@ class DictRepository(BaseRepository):
             case CrudOperation.READ_ALL:
                 return self.read_all(model_class, filter, **kwargs)
             case CrudOperation.READ_ONE:
-                return self.read_one(model_class, obj_ids, **kwargs)
+                return self.read_one(model_class, obj_ids, **kwargs)  # type: ignore[arg-type]
             case CrudOperation.READ_SOME:
-                return self.read_some(model_class, obj_ids, **kwargs)
+                return self.read_some(model_class, obj_ids, **kwargs)  # type: ignore[arg-type]
             case CrudOperation.CREATE_ONE:
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=True,
                     raise_on_missing=False,
                     **kwargs,
@@ -188,7 +192,7 @@ class DictRepository(BaseRepository):
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=True,
                     raise_on_missing=False,
                     **kwargs,
@@ -197,7 +201,7 @@ class DictRepository(BaseRepository):
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=False,
                     raise_on_missing=True,
                     **kwargs,
@@ -206,7 +210,7 @@ class DictRepository(BaseRepository):
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=False,
                     raise_on_missing=True,
                     **kwargs,
@@ -215,7 +219,7 @@ class DictRepository(BaseRepository):
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=False,
                     raise_on_missing=False,
                     **kwargs,
@@ -224,7 +228,7 @@ class DictRepository(BaseRepository):
                 return self.upsert_some(
                     user_id,
                     model_class,
-                    objs,
+                    objs,  # type: ignore[arg-type]
                     raise_on_present=False,
                     raise_on_missing=False,
                     **kwargs,
@@ -236,11 +240,28 @@ class DictRepository(BaseRepository):
             case CrudOperation.DELETE_ALL:
                 return self.delete_all(model_class, filter, **kwargs)
             case CrudOperation.EXISTS_ONE:
-                return self.exists_one(model_class, obj_ids)
+                return self.exists_one(model_class, obj_ids)  # type: ignore[arg-type]
             case CrudOperation.EXISTS_SOME:
-                return self.exists_some(model_class, obj_ids)
+                return self.exists_some(model_class, obj_ids)  # type: ignore[arg-type]
             case _:
                 raise NotImplementedError(f"Operation {operation} not implemented")
+
+    def read_fields(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: Type[Model],
+        field_names: list[str],
+        filter: Filter | None = None,
+        **kwargs: Any,
+    ) -> Iterable[tuple]:
+        all_objs_iterable = self._db[model_class].values()
+        if filter:
+            for obj in filter.match_rows(all_objs_iterable, is_model=True):
+                yield tuple(getattr(obj, x) for x in field_names)
+        else:
+            for obj in all_objs_iterable:
+                yield tuple(getattr(obj, x) for x in field_names)
 
     def uow(self, **kwargs: Any) -> BaseUnitOfWork:
         return DictUnitOfWork()
@@ -276,14 +297,15 @@ class DictRepository(BaseRepository):
         cascade_read: bool = False,
         return_id: bool = False,
         **kwargs: Any,
-    ) -> list[Model]:
+    ) -> list[Model] | list[Hashable]:
         return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         # Get any query filter
-        obj_filter = kwargs.get("obj_filter")
+        query_filter: Filter | None = None
+        obj_filter: Filter | None = kwargs.get("obj_filter")
         if filter and obj_filter:
             query_filter = CompositeFilter(
-                filters=[filter, obj_filter], operator=BooleanOperator.AND
+                filters=[filter, obj_filter], operator=LogicalOperator.AND  # type: ignore[list-item]
             )
         elif filter:
             query_filter = filter
@@ -292,6 +314,7 @@ class DictRepository(BaseRepository):
         else:
             query_filter = None
         # Get matching objects
+        objs: list[Model] | list[Hashable]
         if query_filter:
             if return_id:
                 objs = [
@@ -302,17 +325,17 @@ class DictRepository(BaseRepository):
                     if y
                 ]
             else:
-                objs = list(query_filter.filter_rows(df.values(), is_model=True))
+                objs = list(query_filter.filter_rows(df.values(), is_model=True))  # type: ignore[assignment]
         elif return_id:
-            objs: list[Hashable] = list(df.keys())
+            objs = list(df.keys())
         else:
-            objs: list[Model] = list(df.values())
+            objs = list(df.values())
         # Make copy of objects for returning if necessary
         if not return_id and return_copy:
-            objs = [x.model_copy() for x in objs if x]
+            objs = [x.model_copy() for x in objs if x]  # type: ignore[attr-defined]
         # Cascade read linked objects if necessary
         if cascade_read and not return_id:
-            self._cascade_read(model_class, objs, return_copy)
+            self._cascade_read(model_class, objs, return_copy)  # type: ignore[arg-type]
         return objs
 
     def read_one(
@@ -323,7 +346,7 @@ class DictRepository(BaseRepository):
         return_id: bool = False,
         allow_duplicate_ids: bool = False,
         **kwargs: Any,
-    ) -> Model:
+    ) -> Model | Hashable:
         return self.read_some(
             model_class,
             [obj_id],
@@ -341,31 +364,32 @@ class DictRepository(BaseRepository):
         return_id: bool = False,
         allow_duplicate_ids: bool = False,
         **kwargs: Any,
-    ) -> list[Model]:
+    ) -> list[Model] | list[Hashable]:
         return_copy = kwargs.get("return_copy", True)
         df = self._db[model_class]
         # Read some or one
+        objs: list[Model] | list[Hashable]
         if return_id:
-            objs: list[Hashable] = list(obj_ids)
+            objs = list(obj_ids)
             invalid_obj_ids = [x for x in objs if x not in df]
             if invalid_obj_ids:
                 DictRepository._raise_invalid_ids(model_class, invalid_obj_ids)
             if not allow_duplicate_ids:
                 DictRepository._verify_duplicate_ids(model_class, obj_ids)
         else:
-            objs: list[Model] = [df.get(x) for x in obj_ids]
+            objs = [df.get(x) for x in obj_ids]  # type:ignore[assignment]
             # Verify input
-            DictRepository._verify_valid_ids(model_class, obj_ids, objs)
+            DictRepository._verify_valid_ids(model_class, obj_ids, objs)  # type: ignore[arg-type]
             if not allow_duplicate_ids:
                 DictRepository._verify_duplicate_ids(model_class, obj_ids)
 
         # Make copy of objects for returning
         if not return_id and return_copy:
-            objs = [x.model_copy() for x in objs if x]
+            objs = [x.model_copy() for x in objs if x]  # type: ignore[attr-defined]
 
         # Cascade read linked objects if necessary
         if cascade_read and not return_id:
-            self._cascade_read(model_class, objs, return_copy)
+            self._cascade_read(model_class, objs, return_copy)  # type: ignore[arg-type]
         return objs
 
     def upsert_some(
@@ -382,7 +406,7 @@ class DictRepository(BaseRepository):
         df = self._db[model_class]
         get_id = self._get_id[model_class]
         is_iterable, objs = DictRepository._to_iterable(objs)
-        obj_ids: list[Hashable] = [get_id(x) for x in objs]  # type: ignore
+        obj_ids: list[Hashable] = [get_id(x) for x in objs]
         df_objs: list[Model | None] = [df.get(x) for x in obj_ids]
         # Verify input
         DictRepository._verify_duplicate_ids(model_class, obj_ids)
@@ -396,13 +420,12 @@ class DictRepository(BaseRepository):
             raise_on_missing,
         )
         DictRepository._verify_duplicate_keys(
-            get_id, self._keys_generators[model_class], model_class, objs, df.values()
+            get_id, self._keys_generators[model_class], model_class, objs, df.values()  # type: ignore[arg-type]
         )
 
         # Upsert objects
         value_field_names = self._value_field_names[model_class]
-        links = self._links[model_class]
-        links = [tuple([x[0], x[2], x[4]]) for x in links]
+        links = [tuple([x[0], x[2], x[4]]) for x in self._links[model_class]]
         current_time = self._timestamp_factory()
         for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
             if df_obj:
@@ -412,10 +435,10 @@ class DictRepository(BaseRepository):
                     setattr(df_obj, field_name, getattr(obj, field_name))
                 for link_field_name, relationship_field_name, linked_df in links:
                     # Verify and update link
-                    linked_obj_id = getattr(obj, link_field_name)
+                    linked_obj_id = getattr(obj, link_field_name)  # type: ignore[arg-type]
                     if not linked_obj_id:
-                        setattr(df_obj, link_field_name, None)
-                        setattr(df_obj, relationship_field_name, None)
+                        setattr(df_obj, link_field_name, None)  # type: ignore[arg-type]
+                        setattr(df_obj, relationship_field_name, None)  # type: ignore[arg-type]
                         continue
                     if linked_df is not None and linked_obj_id not in linked_df:
                         raise exc.InvalidIdsError(
@@ -425,8 +448,8 @@ class DictRepository(BaseRepository):
                             ),
                             ids=[linked_obj_id],
                         )
-                    setattr(df_obj, link_field_name, linked_obj_id)
-                    linked_obj = getattr(obj, relationship_field_name)
+                    setattr(df_obj, link_field_name, linked_obj_id)  # type: ignore[arg-type]
+                    linked_obj = getattr(obj, relationship_field_name)  # type: ignore[arg-type]
                     if not linked_obj:
                         continue
                     get_link_id = self._get_id[linked_obj.__class__]
@@ -441,18 +464,18 @@ class DictRepository(BaseRepository):
                         )
             else:
                 # New -> insert copy of obj
-                df_obj: Model = obj.model_copy()  # type: ignore
-                df[get_id(df_obj)] = df_obj  # type: ignore
-                df_objs[i] = df_obj
+                new_df_obj: Model = obj.model_copy()
+                df[get_id(new_df_obj)] = new_df_obj
+                df_objs[i] = new_df_obj
         if return_id:
             return obj_ids if is_iterable else obj_ids[0]
         if return_copy:
             return (
-                [x.model_copy() for x in df_objs]
+                [x.model_copy() for x in df_objs if x is not None]
                 if is_iterable
-                else df_objs[0].model_copy()
+                else df_objs[0].model_copy() if df_objs[0] is not None else None
             )
-        return df_objs if is_iterable else df_objs[0]
+        return df_objs if is_iterable else df_objs[0]  # type: ignore[return-value]
 
     def delete_some(
         self,
@@ -499,10 +522,11 @@ class DictRepository(BaseRepository):
     ) -> list[Hashable]:
         df = self._db[model_class]
         # Get any query filter
-        obj_filter = kwargs.get("obj_filter")
+        query_filter: Filter | None = None
+        obj_filter: Filter | None = kwargs.get("obj_filter")
         if filter and obj_filter:
             query_filter = CompositeFilter(
-                filters=[filter, obj_filter], operator=BooleanOperator.AND
+                filters=[filter, obj_filter], operator=LogicalOperator.AND  # type: ignore[list-item]
             )
         elif filter:
             query_filter = filter
@@ -555,10 +579,10 @@ class DictRepository(BaseRepository):
                     link_model_class,
                     relationship_field_name,
                     link_type_id,
-                    self._db.get(link_model_class),
+                    self._db.get(link_model_class),  # type: ignore[arg-type]
                 )
             )
-        return links
+        return links  # type: ignore[return-value]
 
     def _cascade_read(
         self,
@@ -607,7 +631,7 @@ class DictRepository(BaseRepository):
         if raise_on_present:
             present_ids = [get_id(x) for x in df_objs if x is not None]
             if present_ids:
-                present_ids_str = ", ".join(['"{x}"' for x in present_ids])
+                present_ids_str = ", ".join([f'"{x}"' for x in present_ids])
                 raise exc.AlreadyExistingIdsError(
                     f"{model_class} object(s) already exist: {present_ids_str}",
                     ids=present_ids,
@@ -646,7 +670,7 @@ class DictRepository(BaseRepository):
         model_class: Type[Model], obj_ids: Iterable[Hashable]
     ) -> None:
         set_ = set()
-        duplicate_ids = [x for x in obj_ids if x in set_ or set_.add(x)]
+        duplicate_ids = [x for x in obj_ids if x in set_ or set_.add(x)]  # type: ignore[func-returns-value]
         if duplicate_ids:
             DictRepository._raise_duplicate_ids(model_class, duplicate_ids)
 
@@ -677,7 +701,7 @@ class DictRepository(BaseRepository):
             return
         key_ids = list(keys.keys())
 
-        def get_keys(obj):
+        def get_keys(obj: Any) -> Any:
             keys = keys_generator(obj)
             return tuple(keys[x] for x in key_ids)
 
@@ -691,7 +715,7 @@ class DictRepository(BaseRepository):
             if len(curr_obj_keys) < len(curr_obj_keys_list):
                 seen = set()
                 uq_obj_keys = set(
-                    x for x in curr_obj_keys_list if x not in seen and not seen.add(x)  # type: ignore
+                    x for x in curr_obj_keys_list if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
                 )
                 duplicate_obj_keys = curr_obj_keys - uq_obj_keys
                 duplicate_objs += [
@@ -731,7 +755,7 @@ class DictRepository(BaseRepository):
     @staticmethod
     def _to_iterable(
         obj: Any | Iterable[Any],
-    ) -> tuple[bool, list[Any]]:
+    ) -> tuple[bool, list[Any] | set[Any] | frozenset[Any]]:
         # TODO: take model_class as argument, and derive id field class from it to use for check
         if isinstance(obj, (list, set, frozenset)):
             return True, obj
