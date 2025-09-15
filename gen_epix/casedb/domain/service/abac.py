@@ -3,15 +3,15 @@ from typing import Type
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
-from gen_epix.common.domain.command import Command
-from gen_epix.common.services import AbacService as CommonAbacService
+from gen_epix.commondb.domain.command import Command
+from gen_epix.commondb.services import AbacService as CommonAbacService
 
 
 class BaseAbacService(CommonAbacService):
     SERVICE_TYPE = ServiceType.ABAC
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
-        command.COMMON_COMMAND_IMPL.get(x, x)
+        command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.COMMON_ORGANIZATION_ADMIN_WRITE_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
@@ -19,7 +19,7 @@ class BaseAbacService(CommonAbacService):
     }
 
     READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
-        command.COMMON_COMMAND_IMPL.get(x, x)
+        command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.COMMON_READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
     } | {
         command.OrganizationAccessCasePolicyCrudCommand,
@@ -29,7 +29,7 @@ class BaseAbacService(CommonAbacService):
     }
 
     READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
-        command.COMMON_COMMAND_IMPL.get(x, x)
+        command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.COMMON_READ_SELF_RESULTS_ONLY_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
@@ -37,12 +37,12 @@ class BaseAbacService(CommonAbacService):
     }
 
     READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
-        command.COMMON_COMMAND_IMPL.get(x, x)
+        command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.COMMON_READ_USER_COMMANDS
     } | set()
 
     UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
-        command.COMMON_COMMAND_IMPL.get(x, x)
+        command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.COMMON_UPDATE_USER_COMMANDS
     } | set()
 

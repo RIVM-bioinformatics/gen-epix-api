@@ -3,11 +3,11 @@ from enum import Enum
 from pydantic import BaseModel
 
 from gen_epix.casedb.domain import DOMAIN, enum
-from gen_epix.common.api import UpdateUserRequestBody as CommonUpdateUserRequestBody
-from gen_epix.common.api import (
+from gen_epix.commondb.api import UpdateUserRequestBody as CommonUpdateUserRequestBody
+from gen_epix.commondb.api import (
     UserInvitationRequestBody as CommonUserInvitationRequestBody,
 )
-from gen_epix.common.util import copy_model_field
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
 

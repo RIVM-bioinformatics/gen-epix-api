@@ -80,25 +80,27 @@ from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequenc
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain import model as common_model
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.model import Contact as Contact
-from gen_epix.common.domain.model import DataCollection as DataCollection
-from gen_epix.common.domain.model import DataCollectionSet as DataCollectionSet
-from gen_epix.common.domain.model import (
+from gen_epix.commondb.domain.model import Contact as Contact
+from gen_epix.commondb.domain.model import DataCollection as DataCollection
+from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
+from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.common.domain.model import IdentifierIssuer as IdentifierIssuer
-from gen_epix.common.domain.model import Model as Model
-from gen_epix.common.domain.model import Organization as Organization
-from gen_epix.common.domain.model import OrganizationSet as OrganizationSet
-from gen_epix.common.domain.model import OrganizationSetMember as OrganizationSetMember
-from gen_epix.common.domain.model import Outage as Outage
-from gen_epix.common.domain.model import Site as Site
-from gen_epix.common.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
+from gen_epix.commondb.domain.model import Model as Model
+from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
+from gen_epix.commondb.domain.model import (
+    OrganizationSetMember as OrganizationSetMember,
+)
+from gen_epix.commondb.domain.model import Outage as Outage
+from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 

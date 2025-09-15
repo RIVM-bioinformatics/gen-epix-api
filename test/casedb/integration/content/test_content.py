@@ -4,7 +4,7 @@ from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest wa
 
 import pytest
 
-import gen_epix.common.test.util as test_util
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission

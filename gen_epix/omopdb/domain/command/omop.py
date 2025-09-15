@@ -4,7 +4,7 @@
 
 from typing import ClassVar
 
-from gen_epix.common.domain.command import CrudCommand
+from gen_epix.commondb.domain.command import CrudCommand
 from gen_epix.omopdb.domain import model
 
 

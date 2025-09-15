@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pyinstrument
 
-from gen_epix.common.test.util import parse_stats
+from gen_epix.commondb.test.util import parse_stats
 
 PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: list = []

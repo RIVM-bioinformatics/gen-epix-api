@@ -5,7 +5,7 @@ import numpy as np
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.seqdb.domain import model
-from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
+from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):

@@ -11,7 +11,7 @@ from gen_epix.casedb.domain.enum import (
     RegionRelationType,
 )
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter

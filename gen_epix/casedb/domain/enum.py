@@ -5,16 +5,16 @@ from enum import Enum
 
 
 class ServiceType(Enum):
+    AUTH = "AUTH"
+    ORGANIZATION = "ORGANIZATION"
+    SYSTEM = "SYSTEM"
+    RBAC = "RBAC"
+    ABAC = "ABAC"
     GEO = "GEO"
     ONTOLOGY = "ONTOLOGY"
-    ORGANIZATION = "ORGANIZATION"
-    AUTH = "AUTH"
-    RBAC = "RBAC"
     SEQDB = "SEQDB"
     SUBJECT = "SUBJECT"
     CASE = "CASE"
-    ABAC = "ABAC"
-    SYSTEM = "SYSTEM"
 
 
 class RepositoryType(Enum):

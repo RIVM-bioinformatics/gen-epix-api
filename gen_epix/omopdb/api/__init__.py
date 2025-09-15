@@ -1,3 +1,3 @@
-from gen_epix.common.api import (
+from gen_epix.commondb.api import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
 )

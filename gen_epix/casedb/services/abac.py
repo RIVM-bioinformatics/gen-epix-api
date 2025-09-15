@@ -10,7 +10,7 @@ from gen_epix.casedb import policies as policies
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.repository import BaseAbacRepository
 from gen_epix.casedb.domain.service.abac import BaseAbacService
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import App, CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
 from gen_epix.filter import (

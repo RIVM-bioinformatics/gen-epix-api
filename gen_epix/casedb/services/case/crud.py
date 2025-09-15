@@ -5,7 +5,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
 from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 

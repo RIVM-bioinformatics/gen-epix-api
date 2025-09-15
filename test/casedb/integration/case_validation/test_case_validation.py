@@ -7,7 +7,7 @@ from test.casedb.integration.case_access.base import (
     SKIP_ENDPOINTS,
     VERBOSE,
 )
-from test.common.util import retrieve_db_data_from_file
+from test.commondb.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
 from typing import Any, Type
 from uuid import UUID
@@ -16,8 +16,8 @@ import pandas as pd
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.common.domain import exc
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.domain import exc
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 
 

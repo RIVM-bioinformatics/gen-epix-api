@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from gen_epix.casedb.api.router import create_routers
-from gen_epix.common.api.exc import generate_handle_exception_function
+from gen_epix.commondb.api.exc import generate_handle_exception_function
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
 from gen_epix.fastapp.middleware import (

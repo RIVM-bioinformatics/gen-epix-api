@@ -25,7 +25,7 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
     case_service_retrieve_case_type_stats,
 )
-from gen_epix.common.util import map_paired_elements
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter

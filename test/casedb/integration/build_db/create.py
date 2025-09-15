@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-import gen_epix.common.test.util as test_util
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum, exc, model
 
 

@@ -1,73 +1,73 @@
 from typing import Type
 
 from gen_epix import fastapp
-from gen_epix.common.domain import command as common_command
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain import command as common_command
+from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.command import Command as Command
-from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
-from gen_epix.common.domain.command import CrudCommand as CrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import Command as Command
+from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
+from gen_epix.commondb.domain.command import CrudCommand as CrudCommand
+from gen_epix.commondb.domain.command import (
     DataCollectionCrudCommand as DataCollectionCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetCrudCommand as DataCollectionSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetDataCollectionUpdateAssociationCommand as DataCollectionSetDataCollectionUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
-from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
+from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetMemberCrudCommand as OrganizationSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetOrganizationUpdateAssociationCommand as OrganizationSetOrganizationUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import OutageCrudCommand as OutageCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import OutageCrudCommand as OutageCrudCommand
+from gen_epix.commondb.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
-from gen_epix.common.domain.command import SiteCrudCommand as SiteCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
+from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
+from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
-from gen_epix.common.domain.command.abac import (
+from gen_epix.commondb.domain.command.abac import (
     RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
 )
-from gen_epix.common.domain.command.organization import (
+from gen_epix.commondb.domain.command.organization import (
     RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
 )
-from gen_epix.common.domain.command.rbac import (
+from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.seqdb.domain import enum
@@ -220,6 +220,10 @@ from gen_epix.seqdb.domain.command.seq import (
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
+    enum.ServiceType.ABAC: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+    )
+    | set(),
     enum.ServiceType.SEQ: {
         AlignmentProtocolCrudCommand,
         AlleleAlignmentCrudCommand,
@@ -290,7 +294,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
     common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,

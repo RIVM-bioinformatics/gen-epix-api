@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped
 
-from gen_epix.common.repositories.sa_model import get_mixin_mapped_column
+from gen_epix.commondb.repositories.sa_model import get_mixin_mapped_column
 from gen_epix.seqdb.domain import model
 
 

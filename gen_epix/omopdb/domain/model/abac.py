@@ -1,8 +1,7 @@
 from typing import ClassVar
 
-
-from gen_epix.common.domain import model as common_model
-from gen_epix.common.util import copy_model_field
+from gen_epix.commondb.domain import model as common_model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.organization import User
 

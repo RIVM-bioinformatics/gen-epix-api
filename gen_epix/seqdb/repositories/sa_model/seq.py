@@ -6,7 +6,7 @@ from uuid import UUID
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
-from gen_epix.common.repositories.sa_model import (
+from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_mapped_column,
     create_table_args,

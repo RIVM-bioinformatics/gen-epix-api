@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-import gen_epix.common.test.util as test_util
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import (

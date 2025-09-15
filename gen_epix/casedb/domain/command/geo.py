@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import Field
 
 import gen_epix.casedb.domain.model.geo as model
-from gen_epix.common.domain.command import Command, CrudCommand
+from gen_epix.commondb.domain.command import Command, CrudCommand
 
 # Non-CRUD
 

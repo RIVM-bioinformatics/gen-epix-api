@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import model_validator
 
-from gen_epix.common.domain.command import Command, CrudCommand
+from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.seqdb.domain import enum, model
 
 # Non-CRUD commands
