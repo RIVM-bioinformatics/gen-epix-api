@@ -155,8 +155,8 @@ def register_domain_entities(
     sorted_service_types: Iterable[Hashable],
     sorted_models_by_service_type: dict[Hashable, list[Type[Model]]],
     commands_by_service_type: dict[Hashable, set[Type[Command]]],
-    common_model_impl: dict[Type[Model], Type[Model]] | None = None,
-    common_command_impl: dict[Type[Command], Type[Command]] | None = None,
+    common_model_map: dict[Type[Model], Type[Model]] | None = None,
+    common_command_map: dict[Type[Command], Type[Command]] | None = None,
     set_schema_to_service_type: bool = False,
 ) -> None:
     """
@@ -170,8 +170,8 @@ def register_domain_entities(
     will be set to the lower case service name for persistable entities, unless
     the schema name is already set.
     """
-    if not common_model_impl:
-        common_model_impl = {}
+    if not common_model_map:
+        common_model_map = {}
     for service_type in sorted_service_types:
         # Register the service type
         domain.register_service_type(service_type)
@@ -184,10 +184,10 @@ def register_domain_entities(
         for i, model_class in enumerate(
             sorted_models_by_service_type.get(service_type, [])
         ):
-            if model_class in common_model_impl:
+            if model_class in common_model_map:
                 # Substitute the model class with its commondb implementation,
                 # also in the input
-                model_class = common_model_impl[model_class]
+                model_class = common_model_map[model_class]
                 sorted_models_by_service_type[service_type][i] = model_class
             if model_class.ENTITY is None:
                 raise exc.InitializationServiceError(
@@ -204,11 +204,11 @@ def register_domain_entities(
             )
         # Register the commands
         for command_class in commands_by_service_type.get(service_type, []):
-            if common_command_impl and command_class in common_command_impl:
+            if common_command_map and command_class in common_command_map:
                 # Substitute the command class with its commondb implementation,
                 # also in the input
                 commands_by_service_type[service_type].remove(command_class)
-                command_class = common_command_impl[command_class]
+                command_class = common_command_map[command_class]
                 commands_by_service_type[service_type].add(command_class)
             domain.register_command(command_class, service_type=service_type)
 

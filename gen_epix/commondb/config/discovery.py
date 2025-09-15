@@ -16,6 +16,7 @@ class ConfigDiscovery:
         app_type: str,
         env_var_substring: str = "",
         extension: str = "",
+        root_dir: str = ".",
         verbose: bool = False,
     ) -> Path:
         """
@@ -32,7 +33,9 @@ class ConfigDiscovery:
             if verbose:
                 print(f"Config path found in environment variable: {path}")
             return path
-        path = ConfigDiscovery.get_config_path_from_local(app_type, extension=extension)
+        path = ConfigDiscovery.get_config_path_from_local(
+            app_type, extension=extension, root_dir=root_dir
+        )
         if path:
             if verbose:
                 print(f"Config path found in local file: {path}")
@@ -62,9 +65,11 @@ class ConfigDiscovery:
         return None
 
     @staticmethod
-    def get_config_path_from_local(app_type: str, extension: str = "") -> Path | None:
+    def get_config_path_from_local(
+        app_type: str, extension: str = "", root_dir: str = "."
+    ) -> Path | None:
         """Get config path from local file, if not return None."""
-        local_config_path = Path(f"./config/{app_type}")
+        local_config_path = Path(root_dir) / f"{app_type.lower()}" / "config"
         if local_config_path.exists():
             if extension:
                 return local_config_path / extension
