@@ -42,12 +42,9 @@ def generate_erm_diagrams(out_dir: Path) -> None:
     combined_sorted_model_classes = []
     for name, domain in domains.items():
         file_path_with_prefix = out_dir / "erm" / name
-        sorted_model_classes = generate_erm_diagrams_for_domain(
-            domain, file_path_with_prefix
-        )
+        generate_erm_diagrams_for_domain(domain, file_path_with_prefix)
         generate_erm_diagrams_for_service(domain, file_path_with_prefix)
-        combined_sorted_model_classes.extend(sorted_model_classes)
-
+    combined_sorted_model_classes = get_sorted_model_classes(domains)
     pickle_file_path = out_dir / "erm" / "temp_domain_pickle_file.pkl"
     create_domain_pickle_file(combined_sorted_model_classes, pickle_file_path)
     domain_pickle_hash = create_sha256_hash(pickle_file_path)
@@ -56,7 +53,35 @@ def generate_erm_diagrams(out_dir: Path) -> None:
     remove_file(pickle_file_path)
 
 
-def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path) -> list:
+def get_sorted_model_classes(domains: Domain) -> list:
+    """
+    Returns a combined list of model classes sorted in DAG order from multiple domains.
+
+    Parameters
+    ----------
+    domains : Domain
+        A mapping of domain names to domain objects. Each domain object must implement
+        the `get_dag_sorted_models(persistable=True)` method, which returns a list of
+        model classes sorted in DAG order.
+
+    Returns
+    -------
+    list
+        A combined list of model classes from all domains, sorted in DAG order.
+
+    Notes
+    -----
+    The function iterates over each domain, retrieves its sorted model classes, and
+    combines them into a single list.
+    """
+    combined_sorted_model_classes = []
+    for name, domain in domains.items():
+        sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
+        combined_sorted_model_classes.extend(sorted_model_classes)
+    return combined_sorted_model_classes
+
+
+def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path) -> None:
     """
     Generates and saves an Entity-Relationship Model (ERM) diagram for all persistable models in the given domain.
 
@@ -69,8 +94,8 @@ def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path) -> list:
 
     Returns
     -------
-    list
-        A list of sorted model class objects included in the ERM diagram.
+    None
+        This function does not return any value. It generates the ERM diagrams.
 
     Notes
     -----
@@ -84,7 +109,6 @@ def generate_erm_diagrams_for_domain(domain: Domain, file_root: Path) -> list:
         out=output_file,
         limit_search_models_to=[x.__name__ for x in sorted_model_classes],
     )
-    return sorted_model_classes
 
 
 def generate_erm_diagrams_for_service(domain: Domain, file_root: Path):
