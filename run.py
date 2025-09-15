@@ -306,7 +306,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/commondb/unit",
+                "test/common/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
@@ -334,7 +334,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/commondb/unit",
+                "test/common/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
             ]
@@ -428,6 +428,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/fastapp/unit/repository",
+            ]
+        )
+
+    def test_docs_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/docs/unit/",
             ]
         )
 
@@ -766,8 +777,13 @@ class Run:
         log_parser.to_excel(out_log_excel_file)
         user_journey = log_parser.create_user_journey()
         user_journey.to_pickle(out_user_journey_file)
-
         main()
+
+    def other_general_generate_erm_diagrams(self) -> None:
+        from docs.erm import generate_erm_diagrams
+
+        out_dir = Path(__file__).parent / "docs" / "assets"
+        generate_erm_diagrams(out_dir)
 
 
 if __name__ == "__main__":
