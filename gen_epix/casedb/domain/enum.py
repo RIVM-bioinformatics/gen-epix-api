@@ -196,6 +196,11 @@ class ConceptSetType(Enum):
     INTERVAL = "INTERVAL"
 
 
+class ConceptRelationType(Enum):
+    IS_CONTAINED_IN = "IS_CONTAINED_IN"
+    CONTAINS = "CONTAINS"
+
+
 class DimType(Enum):
     TEXT = "TEXT"
     IDENTIFIER = "IDENTIFIER"

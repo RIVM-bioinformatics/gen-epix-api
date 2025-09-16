@@ -213,6 +213,7 @@ class TestCreate:
             "concept_set1_nominal",
             ["category1_1", "category1_2"],
             enum.ConceptSetType.NOMINAL,
+            set_dummy_concepts=True,
         )
         env.create_concept_set(
             "app_admin1_1",

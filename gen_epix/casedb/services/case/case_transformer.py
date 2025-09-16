@@ -342,7 +342,7 @@ class CaseTransformer(Transformer):
         dict[UUID, model.ConceptSet],
         dict[UUID, set[UUID]],
         dict[UUID, model.Concept],
-        list,  # TODO: change to list[model.ConceptRelation] once implemented
+        list[model.ConceptRelation],
     ]:
         app = self.case_service.app
         # Retrieve relevant concept sets
@@ -355,33 +355,32 @@ class CaseTransformer(Transformer):
                 )
             )
         }
-        # TODO: remove once ConceptSet-Concept is one-to-many
-        concept_set_members: list[model.ConceptSetMember] = app.handle(
-            command.ConceptSetMemberCrudCommand(
+
+        concept_list: list[model.Concept] = app.handle(
+            command.ConceptCrudCommand(
                 operation=CrudOperation.READ_ALL,
                 query_filter=UuidSetFilter(
-                    key="concept_set_id", members=frozenset(self.concept_set_ids)
+                    key="concept_set_id",
+                    members=frozenset(self.concept_set_ids),
                 ),
             )
         )
+        concepts: dict[UUID, model.Concept] = {x.id: x for x in concept_list}
+
         concept_set_concepts_map: dict[UUID, set[UUID]] = (
             map_paired_elements(  # type:ignore[assignment]
-                [(x.concept_set_id, x.concept_id) for x in concept_set_members],
+                [(x.concept_set_id, x.concept_id) for x in concept_list],
                 as_set=True,
             )
         )
         # Retrieve relevant concepts
-        concept_ids = {x.concept_id for x in concept_set_members}
-        concepts: dict[UUID, model.Concept] = {
-            x.id: x
-            for x in app.handle(
-                command.ConceptCrudCommand(
-                    obj_ids=list(concept_ids), operation=CrudOperation.READ_SOME
-                )
+        concept_relations: list[model.ConceptRelation] = app.handle(
+            command.ConceptRelationCrudCommand(
+                operation=CrudOperation.READ_ALL,
+                # add filters when needed
             )
-        }
-        # TODO: Retrieve relevant concept contains/is-contained-in relations once ConceptSet-Concept is one-to-many (for now no relations)
-        concept_relations: list = []
+        )
+
         return concept_sets, concept_set_concepts_map, concepts, concept_relations
 
     def _retrieve_region_data(self) -> tuple[

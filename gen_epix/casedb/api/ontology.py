@@ -9,10 +9,6 @@ from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 
 
-class UpdateConceptSetConceptRequestBody(PydanticBaseModel):
-    concept_set_members: list[model.ConceptSetMember]
-
-
 class UpdateDiseaseEtiologicalAgentRequestBody(PydanticBaseModel):
     etiologies: list[model.Etiology]
 
@@ -27,29 +23,6 @@ def create_ontology_endpoints(
     **kwargs: Any,
 ) -> None:
     assert handle_exception
-
-    @router.put(
-        "/concept_sets/{concept_set_id}/concepts",
-        operation_id="concept_sets__put__concepts",
-        name="ConceptSet_Concept",
-        description=command.ConceptSetConceptUpdateAssociationCommand.__doc__,
-    )
-    async def concept_sets__put__concepts(
-        user: registered_user_dependency,  # type: ignore
-        concept_set_id: UUID,
-        request_body: UpdateConceptSetConceptRequestBody,
-    ) -> list[model.ConceptSetMember]:
-        try:
-            cmd = command.ConceptSetConceptUpdateAssociationCommand(
-                user=user,
-                obj_id1=concept_set_id,
-                association_objs=request_body.concept_set_members,
-                props={"return_id": False},
-            )
-            retval: list[model.ConceptSetMember] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("da821eb5", user, exception)
-        return retval
 
     @router.put(
         "/diseases/{disease_id}/etiological_agents",

@@ -963,28 +963,19 @@ class CaseService(BaseCaseService):
                     if col.concept_set_id is not None:
                         # Get valid region set values
                         if col.concept_set_id not in concept_valid_values:
-                            concept_set_members: list[model.ConceptSetMember] = (
-                                self.app.handle(
-                                    command.ConceptSetMemberCrudCommand(
-                                        user=user,
-                                        operation=CrudOperation.READ_ALL,
-                                        query_filter=UuidSetFilter(
-                                            key="concept_set_id",
-                                            members=frozenset({col.concept_set_id}),
-                                        ),
-                                    )
-                                )
-                            )
-                            concepts = self.app.handle(
+                            concepts: list[model.Concept] = self.app.handle(
                                 command.ConceptCrudCommand(
                                     user=user,
-                                    operation=CrudOperation.READ_SOME,
-                                    obj_ids=[x.concept_id for x in concept_set_members],
+                                    operation=CrudOperation.READ_ALL,
+                                    query_filter=UuidSetFilter(
+                                        key="concept_set_id",
+                                        members=frozenset({col.concept_set_id}),
+                                    ),
                                 )
                             )
-                            concept_valid_values[col.concept_set_id] = set(
-                                [str(x.id).lower() for x in concepts]
-                            )
+                            concept_valid_values[col.concept_set_id] = {
+                                str(x.id).lower() for x in concepts
+                            }
                         valid_values = concept_valid_values[col.concept_set_id]
                     elif col.region_set_id is not None:
                         # Get valid region set values

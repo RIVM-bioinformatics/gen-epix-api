@@ -65,8 +65,8 @@ from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
 from gen_epix.casedb.domain.model.geo import RegionSetShape as RegionSetShape
 from gen_epix.casedb.domain.model.ontology import Concept as Concept
+from gen_epix.casedb.domain.model.ontology import ConceptRelation as ConceptRelation
 from gen_epix.casedb.domain.model.ontology import ConceptSet as ConceptSet
-from gen_epix.casedb.domain.model.ontology import ConceptSetMember as ConceptSetMember
 from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
@@ -122,9 +122,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
         ),
         # Specific models
         enum.ServiceType.ONTOLOGY: [
-            Concept,
             ConceptSet,
-            ConceptSetMember,
+            Concept,
+            ConceptRelation,
             Disease,
             EtiologicalAgent,
             Etiology,
