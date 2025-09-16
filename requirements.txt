@@ -30,4 +30,3 @@ biopython==1.85
 cachetools==5.5.2
 slowapi==0.1.9
 python-dateutil==2.9.*
-erdantic==1.1.1
