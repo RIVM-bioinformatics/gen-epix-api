@@ -73,7 +73,7 @@ def create_fast_api(
     if not debug:
         fast_api.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],  # FIXME: Read from config
+            allow_origins=[cfg.api.cors.allow_origins],
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
