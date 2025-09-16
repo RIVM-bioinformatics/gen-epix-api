@@ -3,6 +3,7 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -68,6 +69,15 @@ def create_fast_api(
         ),
         lifespan=lifespan,
     )
+
+    if not debug:
+        fast_api.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],  # FIXME: Read from config
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
     # Add middleware
     # Rate limiting
