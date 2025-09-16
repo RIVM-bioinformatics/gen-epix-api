@@ -50,6 +50,14 @@ class RetrievePhylogeneticTreeCommand(Command):
         return self
 
 
+class RetrieveSeqFastaCommand(Command):
+
+    seq_ids: list[UUID]
+    wrap: int | None = 80
+
+    @
+
+
 class RetrieveMultipleAlignmentCommand(Command):
     pass
 

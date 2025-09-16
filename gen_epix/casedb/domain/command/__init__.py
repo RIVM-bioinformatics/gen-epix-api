@@ -161,6 +161,9 @@ from gen_epix.casedb.domain.command.organization import (
 from gen_epix.casedb.domain.command.seqdb import (
     RetrieveGeneticSequenceByIdCommand as RetrieveGeneticSequenceByIdCommand,
 )
+from gen_epix.casedb.domain.command.seqdb import (
+    RetrieveGeneticSequenceFastaByIdCommand as RetrieveGeneticSequenceFastaByIdCommand,
+)
 from gen_epix.casedb.domain.command.subject import (
     SubjectCrudCommand as SubjectCrudCommand,
 )
@@ -309,6 +312,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     },
     enum.ServiceType.SEQDB: {
         RetrieveGeneticSequenceByIdCommand,
+        RetrieveGeneticSequenceFastaByIdCommand,
     },
     enum.ServiceType.SUBJECT: {
         SubjectCrudCommand,

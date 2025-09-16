@@ -486,27 +486,24 @@ class CaseService(BaseCaseService):
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
-        """Return a streaming iterable of FASTA formatted lines.
-
-        ABAC policies copied from the outer FASTA command to the inner
-        RetrieveGeneticSequenceByCaseCommand (only top-level commands receive
-        policies automatically in current pipeline design).
-        """
-        inner_cmd = command.RetrieveGeneticSequenceByCaseCommand(
-            user=cmd.user,
-            case_ids=cmd.case_ids,
-            genetic_sequence_case_type_col_id=(cmd.genetic_sequence_case_type_col_id),
-        )
-        inner_cmd._policies.extend(cmd._policies)
+        """Return a streaming iterable of FASTA formatted lines"""
         # TODO: this implementation loads all sequences in memory first and then
         # streams them. Replace this by a RetrieveGeneticSequenceFastaByIdCommand
         # command in the seq service, and a RetrieveSeqFasta command in seqdb.
         # The latter returns the fasta StreamingResponse which is then forwarded
         # to the caller.
-        sequences: list[model.GeneticSequence] = self.retrieve_genetic_sequence_by_case(
-            inner_cmd
+        generator: Iterable[str] = self.app.handle(
+            command.RetrieveGeneticSequenceFastaByIdCommand(
+                user=cmd.user,
+                # Replace by real seq IDs
+                seq_ids=[
+                    UUID("018d074d-e9fc-224e-1124-7442d8c06019"),
+                    UUID("018d074d-e9fc-857b-2aa4-bc8e160df6b4"),
+                    UUID("018d074d-e9fc-d9ea-8ccb-778185f291b9"),
+                ],
+            )
         )
-        return self.fasta_file_generator(sequences)
+        return generator
 
     def fasta_file_generator(
         self,

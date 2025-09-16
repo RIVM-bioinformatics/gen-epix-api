@@ -17,4 +17,19 @@ class RetrieveGeneticSequenceByIdCommand(Command):
     )
 
 
+class RetrieveGeneticSequenceFastaByIdCommand(Command):
+    """
+    Retrieve a set of genetic sequences in FASTA format based on a set of sequence IDs.
+    An iterator is returned that yields the FASTA lines.
+    """
+
+    seq_ids: list[UUID] = Field(
+        description="The IDs of the genetic sequences to retrieve."
+    )
+    wrap: int = Field(
+        default=80,
+        description="The line length to wrap sequences at, or 0 for no wrapping.",
+    )
+
+
 # CRUD

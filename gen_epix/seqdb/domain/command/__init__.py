@@ -165,6 +165,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
+)
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     SeqAlignmentCrudCommand as SeqAlignmentCrudCommand,
@@ -258,6 +261,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         RetrieveCompleteSnpProfileCommand,
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
+        RetrieveSeqFastaCommand,
         SampleCrudCommand,
         SeqAlignmentCrudCommand,
         SeqCategoryCrudCommand,
