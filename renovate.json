@@ -17,25 +17,20 @@
             "labels": [
                 "dependencies",
                 "major"
-            ]
+            ],
+            "automerge": false
         },
         {
             "matchUpdateTypes": [
-                "minor"
-            ],
-            "labels": [
-                "dependencies",
-                "minor"
-            ]
-        },
-        {
-            "matchUpdateTypes": [
+                "minor",
                 "patch"
             ],
             "labels": [
-                "dependencies",
-                "patch"
-            ]
+                "dependencies"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "automergeStrategy": "auto"
         }
     ]
 }
