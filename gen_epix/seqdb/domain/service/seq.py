@@ -29,7 +29,7 @@ class BaseSeqService(BaseService):
         )
         f(
             command.RetrieveSeqFastaCommand,
-            self.retrieve_fasta_seq,
+            self.retrieve_seq_fasta,
         )
 
     @abc.abstractmethod
@@ -74,5 +74,5 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_fasta_seq(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+    def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()

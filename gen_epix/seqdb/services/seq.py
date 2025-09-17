@@ -319,31 +319,21 @@ class SeqService(BaseSeqService):
     ) -> model.CompleteSeq | list[model.CompleteSeq]:
         raise NotImplementedError()
 
-    def retrieve_fasta_seq(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+    def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
 
         def generator() -> Iterable[str]:
-            for record in self.repository.retrieve_seq_fasta(cmd.seq_ids):
-                seq_id = getattr(record, "id", getattr(record, "seq_id", None))
-                if seq_id is None:
-                    continue
-                yield f">{seq_id}\n"
-                seq = getattr(record, "seq", getattr(record, "sequence", ""))
-                if cmd.wrap and cmd.wrap > 0:
-                    for i in range(0, len(seq), cmd.wrap):
-                        yield seq[i : i + cmd.wrap] + "\n"
-                else:
-                    yield seq + "\n"
+            with self.repository.uow() as uow:
+                for seq_id, raw_seq in self.repository.retrieve_seq_fasta(
+                    uow, cmd.seq_ids
+                ):
+                    yield f">{seq_id}\n"
+                    if cmd.wrap and cmd.wrap > 0:
+                        for i in range(0, len(raw_seq), cmd.wrap):
+                            yield raw_seq[i : i + cmd.wrap] + "\n"
+                    else:
+                        yield raw_seq + "\n"
 
         return generator()
-
-        # HTTP client
-        # -> casedb endpoint
-        # -> casedb service calls ext_app (seqdb) with RetrieveSeqFastaCommand
-        # -> seqdb service asks its repository (dict or SQLAlchemy implementation) to stream Seq rows
-        # -> seqdb service converts rows to FASTA lines on the fly
-        # -> returns an iterator
-        # -> casedb just forwards that iterator
-        # -> FastAPI wraps it in a StreamingResponse.
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(
