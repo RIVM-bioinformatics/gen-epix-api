@@ -1,6 +1,7 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from typing import Iterable
 
 import pytest
 
@@ -262,20 +263,20 @@ class TestContent:
                         )
             # Retrieve genetic sequences in FASTA format
             for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
-                fasta_str = app.handle(
+                generator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
                         case_ids=case_ids[0:1],
-                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
                     )
                 )
-                if not fasta_str:
-                    raise ValueError("FASTA string should not be empty")
-                # fasta_str is a generator, convert to string
-                fasta_str = "".join(list(fasta_str))
-                if not fasta_str.startswith(">"):
+                if not generator:
+                    raise ValueError("generator should not be empty")
+                # convert generator to string
+                generator = "".join(list(generator))
+                if not generator.startswith(">"):
                     raise ValueError("FASTA string should start with '>'")
-                if "\n" not in fasta_str:
+                if "\n" not in generator:
                     raise ValueError("FASTA string should contain new lines")
         for case_set in case_sets:
             case_ids = app.handle(
