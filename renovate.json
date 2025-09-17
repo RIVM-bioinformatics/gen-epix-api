@@ -11,6 +11,9 @@
     ],
     "packageRules": [
         {
+            "matchFiles": [
+                "requirements.txt"
+            ],
             "matchUpdateTypes": [
                 "major"
             ],
@@ -21,12 +24,32 @@
             "automerge": false
         },
         {
+            "matchFiles": [
+                "requirements.txt"
+            ],
             "matchUpdateTypes": [
                 "minor",
                 "patch"
             ],
             "labels": [
                 "dependencies"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "automergeStrategy": "auto"
+        },
+        {
+            "matchFiles": [
+                "dev-requirements.txt"
+            ],
+            "matchUpdateTypes": [
+                "major",
+                "minor",
+                "patch"
+            ],
+            "labels": [
+                "dependencies",
+                "dev"
             ],
             "automerge": true,
             "automergeType": "pr",
