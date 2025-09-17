@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Tuple
 from uuid import UUID
 
 import numpy as np
@@ -35,34 +35,13 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-        wrap: int | None = 80,
-    ) -> Iterable[str]:
+    ) -> Iterable[Tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
-        seqs = self.read_some(model.Seq, seq_ids)
-        for seq in seqs:
-            yield (seq.id, seq.nucleotide_sequence)
 
-        # some reference code for refining the above implementation
-        #
-        # seqs: list[seqdb_model.Seq] = self.ext_app.handle(
-        #     seqdb_command.SeqCrudCommand(
-        #         user=self.ext_app_user,
-        #         obj_ids=seq_ids,
-        #         operation=CrudOperation.READ_SOME,
-        #     )
-        # )
-        # raw_seq_map = {x.id: x for x in raw_seqs}
-        # raw_seq_ids = [seq.raw_seq_id for seq in seqs]
-        # raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
-        #     seqdb_command.RawSeqCrudCommand(
-        #         user=self.ext_app_user,
-        #         obj_ids=raw_seq_ids,
-        #         operation=CrudOperation.READ_SOME,
-        #     )
-        # )
-        # genetic_sequences = [
-        #     model.GeneticSequence(
-        #         id=seq.id, nucleotide_sequence=raw_seq_map[raw_seq_id].seq, distances={}
-        #     )
-        #     for seq, raw_seq_id in zip(seqs, raw_seq_ids)
-        # ]
+        for seq_id in seq_ids:
+            seq: model.Seq = self.read_one(model.Seq, seq_id)  # type: ignore[assignment]
+            raw_seq: model.RawSeq = self.read_one(  # type: ignore[assignment]
+                model.RawSeq,
+                seq.raw_seq_id,
+            )
+            yield (seq.id, raw_seq.seq)  # type: ignore[misc]

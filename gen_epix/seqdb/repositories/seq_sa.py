@@ -1,3 +1,4 @@
+from typing import Iterable, Tuple
 from uuid import UUID
 
 import numpy as np
@@ -37,3 +38,28 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                 distance_matrix[id_to_idx_map[id_], i] = distance
             distance_matrix[i, i] = 0
         return distance_matrix
+
+    def retrieve_seq_fasta(
+        self,
+        uow: BaseUnitOfWork,
+        seq_ids: list[UUID],
+    ) -> Iterable[Tuple[str, str]]:
+        self.raise_on_duplicate_ids(seq_ids)
+        for seq_id in seq_ids:
+            seq: model.Seq = self.crud(  # type: ignore[assignment]
+                uow,
+                None,
+                model.Seq,
+                seq_id,  # type: ignore[arg-type]
+                None,
+                CrudOperation.READ_ONE,
+            )
+            raw_seq: model.RawSeq = self.crud(  # type: ignore[assignment]
+                uow,
+                None,
+                model.RawSeq,
+                seq.raw_seq_id,  # type: ignore[arg-type]
+                None,
+                CrudOperation.READ_ONE,
+            )
+            yield (seq.id, raw_seq.seq)  # type: ignore[misc]
