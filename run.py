@@ -154,12 +154,12 @@ class Run:
         AppType.SEQDB: {
             "app": "gen_epix.seqdb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8001,
         },
         AppType.OMOPDB: {
             "app": "gen_epix.omopdb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8002,
         },
     }
 
@@ -689,6 +689,18 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/performance/startup",
+            ]
+        )
+
+    def test_integration_content(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/content",
+                # "test/seqdb/integration/content",
             ]
         )
 

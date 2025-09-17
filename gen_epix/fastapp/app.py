@@ -5,7 +5,7 @@ import logging
 import uuid
 from collections.abc import Hashable
 from datetime import datetime
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, cast
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain import Domain
@@ -353,7 +353,7 @@ class App:
             if is_initial_command:
                 self.pdp.apply(cmd, EventTiming.DURING)
             # Execute command
-            retval = handler(cmd)
+            retval = self.apply_handler(cmd, handler)
             # Policy Enforcement Point 3: apply policies from PDP, resulting in
             # updating the return value. Only applied to the initial command:
             # subsequent commands are expected to have these policies applied
@@ -397,6 +397,10 @@ class App:
             elif is_initial_command:
                 self._logger.info(msg)
         self._command_stack.pop()
+        return retval
+
+    def apply_handler(self, cmd: Command, handler: Callable) -> Any:
+        retval = cast(Any, handler(cmd))
         return retval
 
     def create_log_message(

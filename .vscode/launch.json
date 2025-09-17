@@ -572,6 +572,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.integration.content",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_integration_content"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",

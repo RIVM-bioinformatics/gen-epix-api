@@ -6,6 +6,7 @@ from typing import Any, Callable, Type
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
+from gen_epix.fastapp.remote_app import RemoteApp
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.domain.model import SORTED_SERVICE_TYPES
@@ -133,12 +134,22 @@ class AppEnv(BaseAppEnv):
                 )
 
             # Initialize app
-            app = App(
-                name="main",
-                domain=kwargs.get("domain", DOMAIN),
-                logger=app_logger if log_setup else None,
-                id_factory=cfg.service.defaults.id_factory,
-            )
+            app: App | RemoteApp
+            if kwargs.get("remote", False):
+                app = RemoteApp(
+                    domain=kwargs.get("domain", DOMAIN),
+                    default_route_prefix=f"{cfg.app.host}:{cfg.app.port}",
+                    default_jwt=cfg.secret.seqdb.user.jwt,
+                    logger=app_logger if log_setup else None,
+                    id_factory=cfg.service.defaults.id_factory,
+                )
+            else:
+                app = App(
+                    name="main",
+                    domain=kwargs.get("domain", DOMAIN),
+                    logger=app_logger if log_setup else None,
+                    id_factory=cfg.service.defaults.id_factory,
+                )
 
             # Compose data to initialize repositories and services
             service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
