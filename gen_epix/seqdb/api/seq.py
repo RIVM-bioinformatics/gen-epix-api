@@ -1,8 +1,10 @@
-from typing import Any, Callable, NoReturn
+from typing import Any, Callable, Iterable, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
 
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -18,6 +20,17 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 class RetrieveSeqRequestBody(PydanticBaseModel):
     seq_ids: list[UUID]
+
+
+class RetrieveSeqFastaRequestBody(PydanticBaseModel):
+
+    seq_ids: list[UUID] = Field(
+        description="List of sequence IDs to retrieve in FASTA format.",
+    )
+
+    file_name: str = Field(
+        description="The desired filename for the FASTA download.",
+    )
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
@@ -80,20 +93,48 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
+        "/retrieve/seq_fasta",
+        operation_id="retrieve__seq_fasta",
+        name="RetrieveSeqFasta",
+        description=command.RetrieveSeqFastaCommand.__doc__,
+    )
+    async def retrieve__seq_fasta(
+        user: registered_user_dependency, request_body: RetrieveSeqFastaRequestBody
+    ) -> StreamingResponse:
+        try:
+            fasta_iterable: Iterable[str] = app.handle(
+                command.RetrieveSeqFastaCommand(
+                    user=user,
+                    seq_ids=request_body.seq_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception(
+                "e4f3b8c1", user, exception, request_ids=request_body.seq_ids
+            )
+
+        return StreamingResponse(
+            fasta_iterable,
+            media_type="application/x-fasta",
+            headers={
+                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
+            },
+        )
+
+    @router.post(
         "/retrieve/allele_profile",
         operation_id="retrieve__allele_profile",
         name="RetrieveAlleleProfile",
         description=command.RetrieveCompleteAlleleProfileCommand.__doc__,
     )
     async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
+        user: registered_user_dependency, request_body: RetrieveSeqFastaRequestBody  # type: ignore
     ) -> list[model.CompleteAlleleProfile]:
         try:
             retval: list[model.CompleteAlleleProfile] = app.handle(
                 command.RetrieveCompleteAlleleProfileCommand(
                     user=user,
                     seq_ids=request_body.seq_ids,
-                    locus_set_id=request_body.locus_set_id,
                 )
             )
         except Exception as exception:
