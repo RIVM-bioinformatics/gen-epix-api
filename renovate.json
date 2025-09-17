@@ -11,7 +11,7 @@
     ],
     "packageRules": [
         {
-            "matchFiles": [
+            "matchFileNames": [
                 "requirements.txt"
             ],
             "matchUpdateTypes": [
@@ -24,7 +24,7 @@
             "automerge": false
         },
         {
-            "matchFiles": [
+            "matchFileNames": [
                 "requirements.txt"
             ],
             "matchUpdateTypes": [
@@ -39,7 +39,7 @@
             "automergeStrategy": "auto"
         },
         {
-            "matchFiles": [
+            "matchFileNames": [
                 "dev-requirements.txt"
             ],
             "matchUpdateTypes": [
