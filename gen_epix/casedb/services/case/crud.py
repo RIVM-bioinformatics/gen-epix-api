@@ -115,7 +115,7 @@ def _crud_metadata_by_non_admin(
         )
         access_filter = self._compose_id_filter(("id", valid_case_type_set_ids))
         # No cascade delete to force conscious decision to delete from other models
-        return _crud_with_access_filter(selfuow, cmd, access_filter)
+        return _crud_with_access_filter(self, uow, cmd, access_filter)
 
     elif isinstance(cmd, command.CaseTypeColCrudCommand):
         valid_case_type_col_ids = case_abac.get_case_type_cols_with_any_rights()

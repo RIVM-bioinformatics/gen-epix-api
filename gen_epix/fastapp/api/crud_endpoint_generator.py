@@ -1,13 +1,13 @@
 import itertools
 import json
 from collections.abc import Hashable
-from typing import Annotated, Any, Callable, Type
+from typing import Any, Callable, Type
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
-from pydantic import Field
 
 from gen_epix.fastapp import exc, model
+from gen_epix.fastapp.api import exc as api_exc
 from gen_epix.fastapp.api.crud_endpoint_set import CrudEndpointSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.entity import Entity
@@ -223,7 +223,7 @@ class CrudEndpointGenerator:
 
         async def endpoint_function(
             user: route.user_dependency,  # type: ignore
-            filter: Annotated[
+            filter: (
                 TypedExistsFilter
                 | TypedEqualsBooleanFilter
                 | TypedEqualsNumberFilter
@@ -238,9 +238,8 @@ class CrudEndpointGenerator:
                 | TypedStringSetFilter
                 | TypedUuidSetFilter
                 | TypedNoFilter
-                | TypedCompositeFilter,
-                Field(discriminator="type"),
-            ],
+                | TypedCompositeFilter
+            ),
         ) -> Any:
             if validate_query_filter and not validate_query_filter(filter):
                 handle_exception_fn(
@@ -449,7 +448,7 @@ class CrudEndpointGenerator:
             update_obj: route.create_api_model_class,  # type: ignore
         ) -> Any:
             if update_obj.id != object_id:
-                raise exc.BadRequest400HTTPException()
+                raise api_exc.BadRequest400HTTPException()
             try:
                 cmd = route.crud_command_class(
                     user=user,

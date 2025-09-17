@@ -306,7 +306,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/common/unit",
+                "test/commondb/unit",
                 "test/casedb/integration/build_db",
                 "test/casedb/integration/content",
                 "test/casedb/integration/case_access",
@@ -334,7 +334,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
-                "test/common/unit",
+                "test/commondb/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",
             ]

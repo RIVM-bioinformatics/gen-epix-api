@@ -1,12 +1,13 @@
-from typing import Any, Callable, NoReturn
+from typing import Any, Callable, NoReturn, Self
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
@@ -20,12 +21,52 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     case_type_col_set_members: list[model.CaseTypeColSetMember]
 
 
-class ValidateCasesRequestBody(command.ValidateCasesCommand):
-    pass
+class ValidateCasesRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(command.ValidateCasesCommand, "case_type_id")
+    created_in_data_collection_id: UUID = copy_model_field(
+        command.ValidateCasesCommand, "created_in_data_collection_id"
+    )
+    data_collection_ids: set[UUID] = copy_model_field(
+        command.ValidateCasesCommand, "data_collection_ids"
+    )
+    is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.ValidateCasesCommand, "cases"
+    )
+
+    @model_validator(mode="after")
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
+            )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
+        return self
 
 
-class CreateCasesRequestBody(command.CreateCasesCommand):
-    pass
+class CreateCasesRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(command.CreateCasesCommand, "case_type_id")
+    created_in_data_collection_id: UUID = copy_model_field(
+        command.CreateCasesCommand, "created_in_data_collection_id"
+    )
+    data_collection_ids: set[UUID] = copy_model_field(
+        command.CreateCasesCommand, "data_collection_ids"
+    )
+    is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.CreateCasesCommand, "cases"
+    )
+
+    @model_validator(mode="after")
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
+            )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
+        return self
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
@@ -212,6 +253,9 @@ def create_case_endpoints(
                 user=user,
                 cases=request_body.cases,
                 data_collection_ids=request_body.data_collection_ids,
+                case_type_id=request_body.case_type_id,
+                created_in_data_collection_id=request_body.created_in_data_collection_id,
+                is_update=request_body.is_update,
             )
             retval: list[model.Case] = app.handle(cmd)
         except Exception as exception:
