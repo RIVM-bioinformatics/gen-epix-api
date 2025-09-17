@@ -1,4 +1,6 @@
-# pylint: disable=useless-import-alias
+from gen_epix.seqdb.domain.repository.abac import (
+    BaseAbacRepository as BaseAbacRepository,
+)
 from gen_epix.seqdb.domain.repository.organization import (
     BaseOrganizationRepository as BaseOrganizationRepository,
 )

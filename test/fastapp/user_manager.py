@@ -1,7 +1,19 @@
-from typing import Any, Hashable, Type
+from collections.abc import Hashable
+from typing import Any, Type
+
+from pydantic import BaseModel
 
 from gen_epix.fastapp import BaseUnitOfWork, BaseUserManager, exc
 from gen_epix.fastapp.model import Permission, User
+
+
+class MockUser(BaseModel):
+    id: str
+    name: str
+    email: str
+
+
+MOCK_USER = MockUser(id="u1", name="John", email="info@org.nl")
 
 
 class UserManager(BaseUserManager):
@@ -14,11 +26,15 @@ class UserManager(BaseUserManager):
     def get_user_instance_from_claims(self, claims: dict[str, Any]) -> User:
         return self.user_class(**claims)
 
-    def is_root_user(self, claims: dict[str, Any]) -> bool:
+    def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
         return self.get_user_key_from_claims(claims) in self.root_users
+
+    def is_root_user(self, user: User) -> bool:
+        return user.id in self.root_users
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> User:
         user = self.create_user_from_claims(claims)
+        assert user.id is not None
         self.root_users[user.id] = user
         return user
 
@@ -57,4 +73,16 @@ class UserManager(BaseUserManager):
         raise exc.NoResultsError()
 
     def retrieve_user_permissions(self, user: User) -> set[Permission]:
+        raise NotImplementedError()
+
+    def update_user_name(  # type: ignore[override]
+        self, user: MockUser, new_name: str
+    ) -> MockUser | None:
+        if user.name == new_name:
+            return user
+        user.name = new_name
+        updated_user: MockUser = user
+        return updated_user
+
+    def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
         raise NotImplementedError()

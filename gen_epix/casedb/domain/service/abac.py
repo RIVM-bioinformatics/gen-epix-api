@@ -1,28 +1,50 @@
 import abc
-import uuid
 from typing import Type
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
-from gen_epix.casedb.domain.repository import BaseAbacRepository
-from gen_epix.fastapp import BaseService
-from gen_epix.fastapp.model import Command
+from gen_epix.commondb.domain.command import Command
+from gen_epix.commondb.services import AbacService as CommonAbacService
 
 
-class BaseAbacService(BaseService):
+class BaseAbacService(CommonAbacService):
     SERVICE_TYPE = ServiceType.ABAC
 
-    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {
-        command.ContactCrudCommand,
-        command.SiteCrudCommand,
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.COMMON_ORGANIZATION_ADMIN_WRITE_COMMANDS
+    } | {
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
     }
 
-    UPDATE_USER_COMMANDS: set[Type[Command]] = {
-        command.InviteUserCommand,
-        command.UpdateUserCommand,
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.COMMON_READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
+    } | {
+        command.OrganizationAccessCasePolicyCrudCommand,
+        command.OrganizationShareCasePolicyCrudCommand,
+        command.UserAccessCasePolicyCrudCommand,
+        command.UserShareCasePolicyCrudCommand,
     }
+
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.COMMON_READ_SELF_RESULTS_ONLY_COMMANDS
+    } | {
+        command.UserAccessCasePolicyCrudCommand,
+        command.UserShareCasePolicyCrudCommand,
+    }
+
+    READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.COMMON_READ_USER_COMMANDS
+    } | set()
+
+    UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.COMMON_UPDATE_USER_COMMANDS
+    } | set()
 
     CASE_ABAC_COMMANDS: set[Type[Command]] = {
         command.RetrieveCompleteCaseTypeCommand,
@@ -40,8 +62,8 @@ class BaseAbacService(BaseService):
         command.CaseTypeColSetMemberCrudCommand,
         command.CaseCrudCommand,
         # command.CaseDataCollectionUpdateAssociationCommand,
-        command.CaseSetCreateCommand,
-        command.CasesCreateCommand,
+        command.CreateCaseSetCommand,
+        command.CreateCasesCommand,
         command.CaseSetCrudCommand,
         # command.CaseSetCaseUpdateAssociationCommand,
         # command.CaseSetDataCollectionUpdateAssociationCommand,
@@ -50,65 +72,12 @@ class BaseAbacService(BaseService):
         command.DataCollectionCrudCommand,
         command.RetrievePhylogeneticTreeByCasesCommand,
         command.RetrieveGeneticSequenceByCaseCommand,
+        command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseSetStatsCommand,
         command.RetrieveCaseTypeStatsCommand,
+        command.ValidateCasesCommand,
     }
-
-    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
-        command.OrganizationAdminPolicyCrudCommand,
-        command.OrganizationAccessCasePolicyCrudCommand,
-        command.OrganizationShareCasePolicyCrudCommand,
-        command.UserAccessCasePolicyCrudCommand,
-        command.UserShareCasePolicyCrudCommand,
-        command.UserInvitationCrudCommand,
-    }
-
-    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
-        command.UserCrudCommand,
-        command.UserAccessCasePolicyCrudCommand,
-        command.UserShareCasePolicyCrudCommand,
-    }
-
-    # Property overridden to provide narrower return value to support linter
-    @property  # type: ignore
-    def repository(self) -> BaseAbacRepository:  # type: ignore
-        return super().repository  # type: ignore
-
-    def register_handlers(self) -> None:
-        f = self.app.register_handler
-        self.register_default_crud_handlers()
-        f(
-            command.RetrieveOrganizationAdminNameEmailsCommand,
-            self.retrieve_organization_admin_name_emails,
-        )
-        f(
-            command.UpdateUserOwnOrganizationCommand,
-            self.temp_update_user_own_organization,
-        )
-
-    @abc.abstractmethod
-    def register_policies(self) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def retrieve_organization_admin_name_emails(
-        self,
-        cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
-    ) -> list[model.UserNameEmail]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def temp_update_user_own_organization(
-        self,
-        cmd: command.UpdateUserOwnOrganizationCommand,
-    ) -> model.User:
-        raise NotImplementedError
 
     @abc.abstractmethod
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_organizations_under_admin(self, user: model.User) -> set[uuid.UUID]:
         raise NotImplementedError

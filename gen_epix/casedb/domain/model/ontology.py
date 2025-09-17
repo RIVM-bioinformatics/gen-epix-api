@@ -8,21 +8,19 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
-from gen_epix.common.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-
-_SERVICE_TYPE = enum.ServiceType.ONTOLOGY
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
 
 
 class Concept(Model):
+    """
+    A concept in the ontology.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concepts",
         table_name="concept",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
     # TODO: consider whether abbreviation (i) should renamed to code and (ii) should be a key
     abbreviation: str = Field(description="The abbreviation for the concept.")
@@ -40,12 +38,15 @@ class Concept(Model):
 
 
 class ConceptSet(Model):
+    """
+    A set of concepts in the ontology.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concept_sets",
         table_name="concept_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     code: str = Field(description="The code of the concept set", max_length=255)
     name: str = Field(description="The name of the concept set", max_length=255)
@@ -96,6 +97,10 @@ class ConceptSet(Model):
 
 
 class ConceptSetMember(Model):
+    """
+    The membership of a concept in a concept set.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="concept_set_members",
         table_name="concept_set_member",
@@ -107,7 +112,6 @@ class ConceptSetMember(Model):
                 2: ("concept_id", Concept, "concept"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     concept_set_id: UUID = Field(description="The ID of the concept set. FOREIGN KEY")
     concept_set: ConceptSet | None = Field(default=None, description="The concept set")
@@ -123,12 +127,15 @@ class ConceptSetMember(Model):
 
 
 class Disease(Model):
+    """
+    A disease.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="diseases",
         table_name="disease",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the disease", max_length=255)
     icd_code: str | None = Field(
@@ -139,18 +146,25 @@ class Disease(Model):
 
 
 class EtiologicalAgent(Model):
+    """
+    An etiological agent.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiological_agents",
         table_name="etiological_agent",
         persistable=True,
         keys=create_keys({1: "name"}),
-        **_ENTITY_KWARGS,
     )
     name: str = Field(description="The name of the etiological agent", max_length=255)
     type: str = Field(description="The type of the etiological agent", max_length=255)
 
 
 class Etiology(Model):
+    """
+    The etiology of a disease based on an etiological agent.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="etiologies",
         table_name="etiology",
@@ -162,7 +176,6 @@ class Etiology(Model):
                 2: ("etiological_agent_id", EtiologicalAgent, "etiological_agent"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     disease_id: UUID = Field(description="The ID of the disease. FOREIGN KEY")
     disease: Disease | None = Field(default=None, description="The disease")

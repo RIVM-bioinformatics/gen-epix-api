@@ -5,7 +5,7 @@ import numpy as np
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import model
-from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository
+from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
 class SeqDictRepository(DictRepository, BaseSeqRepository):

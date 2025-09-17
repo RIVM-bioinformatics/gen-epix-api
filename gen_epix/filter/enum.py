@@ -22,7 +22,7 @@ class FilterType(Enum):
     NO_FILTER = "NO_FILTER"
 
 
-class BooleanOperator(Enum):
+class LogicalOperator(Enum):
     AND = "AND"
     OR = "OR"
     NOT = "NOT"

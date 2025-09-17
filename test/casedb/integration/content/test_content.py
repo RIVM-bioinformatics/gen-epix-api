@@ -1,34 +1,39 @@
 import logging
-import test.test_client.util as test_util
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 import pytest
 
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import BooleanOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
-    return Env.get_test_client(
-        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT,
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
         repository_type=enum.RepositoryType.DICT,
         # repository_type=enum.RepositoryType.SA_SQLITE,
-        load_target="full",
         verbose=False,
         log_level=logging.ERROR,
+        use_endpoints=True,
+        data_fixture_name="FULL",
     )
-    # return Env.get_env(test_type=EnumTestType.INTEGRATION_CONTENT, repository_type=enum.RepositoryType.SA_SQLITE, verbose=False, log_level=logging.ERROR)
 
 
 class TestContent:
     def test_content(self, env: Env) -> None:
+
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
+
         app = env.app
         # Get root user
-        root_user = test_util.create_root_user_from_claims(env.cfg, env.app)
+        root_user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)
+        env._set_obj(root_user)
         root_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
@@ -60,18 +65,20 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
-        org_admin_user = [x for x in users if x.id == org_admin_policies[0].user_id][0]
+        org_admin_user: model.User = [
+            x for x in users if x.id == org_admin_policies[0].user_id
+        ][0]
         org_admin_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_admin_user)
         )
         # Get org user
-        user_access_case_policies = app.handle(
+        user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
             command.UserAccessCasePolicyCrudCommand(
                 user=org_admin_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        org_user = [
+        org_user: model.User = [
             x
             for x in users
             if x.id in {y.user_id for y in user_access_case_policies}
@@ -80,6 +87,32 @@ class TestContent:
         ][0]
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
+        )
+        # Invite an org user as org admin user
+        new_user = model.User(
+            email="new_user@example.com",
+            organization_id=org_admin_user.organization_id,
+            roles={enum.Role.ORG_USER},
+        )
+        new_user_invitation: model.UserInvitation = app.handle(
+            command.InviteUserCommand(
+                user=org_admin_user,
+                email=new_user.email,
+                organization_id=new_user.organization_id,
+                roles=new_user.roles,
+            )
+        )
+        new_user_in_db: model.User = app.handle(
+            command.RegisterInvitedUserCommand(
+                user=new_user,
+                token=new_user_invitation.token,
+            )
+        )
+        # Get constraints on user invitation
+        user_invitation_constraints = app.handle(
+            command.RetrieveInviteUserConstraintsCommand(
+                user=org_admin_user,
+            )
         )
         # Get some refdata as org user
         case_types = app.handle(
@@ -165,7 +198,7 @@ class TestContent:
                             TypedCompositeFilter(
                                 type="COMPOSITE",
                                 filters=filters,
-                                operator=BooleanOperator.OR,
+                                operator=LogicalOperator.OR,
                             )
                             if filters
                             else None
@@ -203,6 +236,47 @@ class TestContent:
                         raise ValueError("Sequence IDs should not be returned")
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
+            # Retrieve genetic sequence
+            genetic_sequence_case_type_cols = [
+                case_type_col
+                for case_type_col in complete_case_type.case_type_cols.values()
+                if complete_case_type.cols[case_type_col.col_id].col_type
+                == enum.ColType.GENETIC_SEQUENCE
+            ]
+            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                genetic_sequences: list[model.GeneticSequence] = app.handle(
+                    command.RetrieveGeneticSequenceByCaseCommand(
+                        user=org_user,
+                        case_ids=case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                    )
+                )
+                if not genetic_sequences:
+                    raise ValueError("Genetic sequence should not be empty")
+                for seq in genetic_sequences:
+                    if not seq.id:
+                        raise ValueError("Genetic sequence ID should not be empty")
+                    if not hasattr(seq, "nucleotide_sequence"):
+                        raise ValueError(
+                            "Genetic sequence should have nucleotide_sequence attribute"
+                        )
+            # Retrieve genetic sequences in FASTA format
+            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                fasta_str = app.handle(
+                    command.RetrieveGeneticSequenceFastaByCaseCommand(
+                        user=org_user,
+                        case_ids=case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                    )
+                )
+                if not fasta_str:
+                    raise ValueError("FASTA string should not be empty")
+                # fasta_str is a generator, convert to string
+                fasta_str = "".join(list(fasta_str))
+                if not fasta_str.startswith(">"):
+                    raise ValueError("FASTA string should start with '>'")
+                if "\n" not in fasta_str:
+                    raise ValueError("FASTA string should contain new lines")
         for case_set in case_sets:
             case_ids = app.handle(
                 command.RetrieveCasesByQueryCommand(
@@ -231,3 +305,7 @@ class TestContent:
                     operation=CrudOperation.READ_ALL,
                 )
             )
+
+        # profiler.stop()
+        # with open(env.test_dir / f"content.performance.html", "w") as f:
+        #     f.write("".join(profiler.output_html()))

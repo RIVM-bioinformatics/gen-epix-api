@@ -1,36 +1,34 @@
 import logging
-import pickle
 from pathlib import Path
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.case_access.base import (
     REPOSITORY_TYPE,
     SKIP_ENDPOINTS,
     VERBOSE,
 )
+from test.commondb.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
 from typing import Any, Type
 from uuid import UUID
 
-import numpy as np
 import pandas as pd
 import pytest
 
 from gen_epix.casedb.domain import command, model
-from gen_epix.common.domain import exc
+from gen_epix.commondb.domain import exc
 from gen_epix.fastapp.enum import CrudOperation
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
-    return Env.get_test_client(
-        test_type=EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS,
+    return Env.get_test_client(  # type: ignore[return-value]
+        test_type=EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS.value,
         repository_type=REPOSITORY_TYPE,
         verbose=VERBOSE,
         log_level=logging.ERROR,
-        use_endpoints=SKIP_ENDPOINTS,
-        load_target="EMPTY",
+        use_endpoints=not SKIP_ENDPOINTS,
+        data_fixture_name="EMPTY",
     )
-    # return Env.get_env(test_type=EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS, repository_type=enum.RepositoryType.SA_SQLITE, verbose=False, log_level=logging.ERROR)
 
 
 class CaseAccessSetup:
@@ -65,66 +63,13 @@ class CaseAccessSetup:
         self.retrieve_data_from_file(env)
 
     def retrieve_data_from_file(self, env: Env) -> None:
-        is_loaded_from_pkl = False
-        db: dict[Type[model.Model] | str, dict[UUID, model.Model] | pd.DataFrame] = {}
-        # Load from pickle if possible
-        if (
-            self.pickle_file.exists()
-            and self.pickle_file.stat().st_mtime > self.excel_file.stat().st_mtime
-        ):
-            with open(self.pickle_file, "rb") as f:
-                db = pickle.load(f)
-            is_loaded_from_pkl = True
-
-        # Load from excel if necessary
-        if not is_loaded_from_pkl:
-            for model_class, sheet_name in self.ORDERED_MODEL_TO_SHEET_MAP.items():
-                df = pd.read_excel(self.excel_file, sheet_name=sheet_name)
-                df.replace({np.nan: None}, inplace=True)
-                df = df.map(lambda x: {} if x == "{}" else x)
-                objs = [model_class(**x) for x in df.to_dict(orient="records")]  # type: ignore[misc]
-                db[model_class] = {x.id: x for x in objs}  # type: ignore[misc]
-            df = pd.read_excel(self.excel_file, sheet_name="CaseCrudCommand")
-            df.replace({np.nan: None}, inplace=True)
-            db["case_crud_command"] = df
-            with self.pickle_file.open("wb") as file_handle:
-                pickle.dump(db, file_handle)
-
-        # Populate the environment with the loaded data
-        root_user = env.get_root_user()
-        for model_class, df in db.items():
-            if model_class not in self.ORDERED_MODEL_TO_SHEET_MAP:
-                continue
-            objs = list(df.values())
-            if model_class == model.Organization:
-                # Update the root organization
-                cmd = env.app.domain.get_crud_command_for_model(model_class)(
-                    user=root_user,
-                    operation=CrudOperation.UPDATE_ONE,
-                    objs=[x for x in objs if x.id == root_user.organization_id][0],
-                )
-                env.app.handle(cmd)
-                # Remove root organization from objs to create
-                objs = [x for x in objs if x.id != root_user.organization_id]
-            if model_class == model.User:
-                # Update the root user
-                cmd = env.app.domain.get_crud_command_for_model(model_class)(
-                    user=root_user,
-                    operation=CrudOperation.UPDATE_ONE,
-                    objs=[x for x in objs if x.id == root_user.id][0],
-                )
-                env.app.handle(cmd)
-                # Remove root user from objs to create
-                objs = [x for x in objs if x.id != root_user.id]
-            # Create the objects
-            cmd = env.app.domain.get_crud_command_for_model(model_class)(
-                user=root_user,
-                operation=CrudOperation.CREATE_SOME,
-                objs=objs,
-                props={"id_present": "keep"},
-            )
-            env.app.handle(cmd)
-        env.props["case_crud_commands"] = db["case_crud_command"]
+        retrieve_db_data_from_file(
+            test_client=env,
+            ordered_model_to_sheet_map=self.ORDERED_MODEL_TO_SHEET_MAP,
+            excel_file=self.excel_file,
+            pickle_file=self.pickle_file,
+            extra_table_to_sheet_map={"case_crud_command": "CaseCrudCommand"},
+        )
 
 
 class TestCaseAccess(CaseAccessSetup):
@@ -140,9 +85,10 @@ class TestCaseAccess(CaseAccessSetup):
         """
         Execute all case CRUD and similar commands in case_crud_commands
         """
-        df = env.props["case_crud_commands"]
+        df = env.props["case_crud_command"]
         if df is None:
             raise ValueError("Case CRUD commands DataFrame is not set.")
+        df = df.loc[df["dm.is_active"] == True, :]
         command_idx_to_test = None
         # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
         n_case_type_cols = 3
@@ -160,7 +106,9 @@ class TestCaseAccess(CaseAccessSetup):
         uq_users = {str(x.id): x for x in uq_users_list}
 
         # Function to create a case
-        def _create_case(row: dict[str, Any]) -> model.Case:
+        def _create_case(
+            row: dict[str, Any], for_create_upload: bool = False
+        ) -> model.Case | model.CaseForCreateUpdate:
             case_content = {}
             for i in range(1, n_case_type_cols):
                 case_type_col_id = row[f"case.content.case_type_col_id{i}"]
@@ -168,6 +116,13 @@ class TestCaseAccess(CaseAccessSetup):
                     continue
                 value = row[f"case.content.case_type_col_value{i}"]
                 case_content[case_type_col_id] = value
+            if for_create_upload:
+                return model.CaseForCreateUpdate(
+                    id=row["case.id"],
+                    subject_id=row["case.subject_id"],
+                    case_date=row["case.case_date"],
+                    content=case_content,
+                )
             return model.Case(
                 id=row["case.id"],
                 case_type_id=row["case.case_type_id"],
@@ -221,11 +176,16 @@ class TestCaseAccess(CaseAccessSetup):
                     operation=CrudOperation.DELETE_ONE,
                     obj_ids=UUID(row["case.id"]),
                 )
-            elif row_operation == "CASES_CREATE":
-                cmd = command.CasesCreateCommand(
+            elif row_operation == "CREATE_CASES":
+                cmd = command.CreateCasesCommand(
                     id=row["id"],
                     user=user,
-                    cases=[_create_case(row)],
+                    case_type_id=row["case.case_type_id"],
+                    created_in_data_collection_id=row[
+                        "case.created_in_data_collection_id"
+                    ],
+                    is_update=False,
+                    cases=[_create_case(row, for_create_upload=True)],  # type: ignore[list-item]
                     data_collection_ids=set(),
                     props={"id_present": "keep"},
                 )

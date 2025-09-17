@@ -9,9 +9,9 @@ from typing import Any, Iterable
 import pandas as pd
 
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     Filter,
+    LogicalOperator,
     NoFilter,
     RegexFilter,
     StringSetFilter,
@@ -134,7 +134,7 @@ class V1LogParser(LogParser):
         elif len(filters) == 1:
             filter = filters[0]
         else:
-            filter = CompositeFilter(filters=filters, operator=BooleanOperator.AND)
+            filter = CompositeFilter(filters=filters, operator=LogicalOperator.AND)
         # Filter rows
         records = []
         error_lines = []

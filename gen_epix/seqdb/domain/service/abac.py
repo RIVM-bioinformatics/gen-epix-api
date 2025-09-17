@@ -1,10 +1,10 @@
 import abc
 
-from gen_epix.fastapp import BaseService
+from gen_epix.commondb.services import AbacService as CommonAbacService
 from gen_epix.seqdb.domain.enum import ServiceType
 
 
-class BaseAbacService(BaseService):
+class BaseAbacService(CommonAbacService):
     SERVICE_TYPE = ServiceType.ABAC
 
     def register_handlers(self) -> None:

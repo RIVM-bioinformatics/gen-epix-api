@@ -9,5 +9,5 @@ from gen_epix.fastapp.repositories.sa.util import (
     ServerUtcTimestamp as ServerUtcTimestamp,
 )
 from gen_epix.fastapp.repositories.sa.util import (
-    get_pydantic_field_sa_type as get_pydantic_field_sa_type,
+    create_sa_type_from_field_info as create_sa_type_from_field_info,
 )

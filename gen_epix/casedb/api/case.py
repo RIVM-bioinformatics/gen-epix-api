@@ -1,11 +1,13 @@
-from typing import Any, Callable, NoReturn
+from typing import Any, Callable, NoReturn, Self
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, field_validator
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
@@ -19,18 +21,52 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     case_type_col_set_members: list[model.CaseTypeColSetMember]
 
 
-class CreateCasesRequestBody(PydanticBaseModel):
-    cases: list[model.Case]
-    data_collection_ids: set[UUID] = Field(
-        default=set(),
-        description="The data collections in which the cases will be put initially",
+class ValidateCasesRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(command.ValidateCasesCommand, "case_type_id")
+    created_in_data_collection_id: UUID = copy_model_field(
+        command.ValidateCasesCommand, "created_in_data_collection_id"
+    )
+    data_collection_ids: set[UUID] = copy_model_field(
+        command.ValidateCasesCommand, "data_collection_ids"
+    )
+    is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.ValidateCasesCommand, "cases"
     )
 
-    @field_validator("cases", mode="after")
-    def _validate_cases(cls, value: list[model.Case]) -> list[model.Case]:
-        if len(set(x.case_type_id for x in value)) > 1:
-            raise ValueError("Not all cases have the same case type.")
-        return value
+    @model_validator(mode="after")
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
+            )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
+        return self
+
+
+class CreateCasesRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(command.CreateCasesCommand, "case_type_id")
+    created_in_data_collection_id: UUID = copy_model_field(
+        command.CreateCasesCommand, "created_in_data_collection_id"
+    )
+    data_collection_ids: set[UUID] = copy_model_field(
+        command.CreateCasesCommand, "data_collection_ids"
+    )
+    is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.CreateCasesCommand, "cases"
+    )
+
+    @model_validator(mode="after")
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
+            )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
+        return self
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
@@ -58,8 +94,24 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID
-    case_ids: list[UUID]
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
+
+
+class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The case type column that contains the genetic sequences to retrieve.",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
+    file_name: str = Field(
+        description="The desired filename for the FASTA download.",
+    )
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
@@ -100,7 +152,8 @@ def create_case_endpoints(
     @router.put(
         "/case_type_sets/{case_type_set_id}/case_types",
         operation_id="case_type_sets__put__case_types",
-        name="CaseTypeSet_CaseType",
+        name="Update association between CaseTypeSet and CaseType",
+        description=command.CaseTypeSetCaseTypeUpdateAssociationCommand.__doc__,
     )
     async def case_type_sets__put__case_types(
         user: registered_user_dependency,  # type: ignore
@@ -122,7 +175,8 @@ def create_case_endpoints(
     @router.put(
         "/case_type_col_sets/{case_type_col_set_id}/case_type_cols",
         operation_id="case_type_col_sets__put__case_type_cols",
-        name="CaseTypeColSet_CaseTypeCol",
+        name="Update association between CaseTypeColSet and CaseTypeCol",
+        description=command.CaseTypeColSetCaseTypeColUpdateAssociationCommand.__doc__,
     )
     async def case_type_col_sets__put__case_type_cols(
         user: registered_user_dependency,  # type: ignore
@@ -144,7 +198,8 @@ def create_case_endpoints(
     @router.get(
         "/complete_case_types",
         operation_id="complete_case_types__get_one",
-        name="CompleteCaseType",
+        name="Retrieve complete case type",
+        description=command.RetrieveCompleteCaseTypeCommand.__doc__,
     )
     async def complete_case_types__get_one(
         user: registered_user_dependency,  # type: ignore
@@ -160,19 +215,47 @@ def create_case_endpoints(
         return retval
 
     @router.post(
+        "/validate/cases",
+        operation_id="validate__cases",
+        name="Validate cases",
+        description=command.ValidateCasesCommand.__doc__,
+    )
+    async def validate__cases(
+        user: registered_user_dependency,  # type: ignore
+        request_body: ValidateCasesRequestBody,
+    ) -> model.CaseValidationReport:
+        try:
+            cmd = command.ValidateCasesCommand(
+                user=user,
+                case_type_id=request_body.case_type_id,
+                created_in_data_collection_id=request_body.created_in_data_collection_id,
+                is_update=request_body.is_update,
+                cases=request_body.cases,
+                data_collection_ids=request_body.data_collection_ids,
+            )
+            retval: model.CaseValidationReport = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("9f8e7d6c", user, exception)
+        return retval
+
+    @router.post(
         "/create/cases",
         operation_id="create__cases",
-        name="Cases",
+        name="Create cases",
+        description=command.CreateCasesCommand.__doc__,
     )
     async def create__cases(
         user: registered_user_dependency,  # type: ignore
         request_body: CreateCasesRequestBody,
     ) -> list[model.Case]:
         try:
-            cmd = command.CasesCreateCommand(
+            cmd = command.CreateCasesCommand(
                 user=user,
                 cases=request_body.cases,
                 data_collection_ids=request_body.data_collection_ids,
+                case_type_id=request_body.case_type_id,
+                created_in_data_collection_id=request_body.created_in_data_collection_id,
+                is_update=request_body.is_update,
             )
             retval: list[model.Case] = app.handle(cmd)
         except Exception as exception:
@@ -182,14 +265,15 @@ def create_case_endpoints(
     @router.post(
         "/create/case_set",
         operation_id="create__case_set",
-        name="CaseSet",
+        name="Create case set",
+        description=command.CreateCaseSetCommand.__doc__,
     )
     async def create__case_set(
         user: registered_user_dependency,  # type: ignore
         request_body: CreateCaseSetRequestBody,
     ) -> model.CaseSet:
         try:
-            cmd = command.CaseSetCreateCommand(
+            cmd = command.CreateCaseSetCommand(
                 user=user,
                 case_set=request_body.case_set,
                 data_collection_ids=request_body.data_collection_ids,
@@ -203,7 +287,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_type_stats",
         operation_id="retrieve__case_type_stats",
-        name="CaseTypeStats",
+        name="Retrieve case type statistics",
+        description=command.RetrieveCaseTypeStatsCommand.__doc__,
     )
     async def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore
@@ -223,7 +308,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_set_stats",
         operation_id="retrieve__case_set_stats",
-        name="CaseSetStats",
+        name="Retrieve case set statistics",
+        description=command.RetrieveCaseSetStatsCommand.__doc__,
     )
     async def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore
@@ -232,7 +318,11 @@ def create_case_endpoints(
         try:
             cmd = command.RetrieveCaseSetStatsCommand(
                 user=user,
-                case_set_ids=request_body.case_set_ids,
+                case_set_ids=(
+                    None
+                    if not request_body.case_set_ids
+                    else list(request_body.case_set_ids)
+                ),
             )
             retval: list[model.CaseSetStat] = app.handle(cmd)
         except Exception as exception:
@@ -240,7 +330,10 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/case_ids_by_query", operation_id="retrieve__case_ids_by_query"
+        "/retrieve/case_ids_by_query",
+        operation_id="retrieve__case_ids_by_query",
+        name="Retrieve case IDs by query",
+        description=command.RetrieveCasesByQueryCommand.__doc__,
     )
     async def retrieve__case_ids_by_query(
         user: registered_user_dependency,  # type: ignore
@@ -257,7 +350,12 @@ def create_case_endpoints(
             handle_exception("a8f773fe", user, exception)
         return retval
 
-    @router.post("/retrieve/cases_by_ids", operation_id="retrieve__cases_by_ids")
+    @router.post(
+        "/retrieve/cases_by_ids",
+        operation_id="retrieve__cases_by_ids",
+        name="Retrieve cases by IDs",
+        description=command.RetrieveCasesByIdCommand.__doc__,
+    )
     async def retrieve__cases_by_ids(
         user: registered_user_dependency,  # type: ignore
         request_body: list[UUID],
@@ -276,6 +374,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_rights",
         operation_id="retrieve__case_rights",
+        name="Retrieve case rights",
+        description=command.RetrieveCaseRightsCommand.__doc__,
     )
     async def retrieve__case_rights(
         user: registered_user_dependency,  # type: ignore
@@ -295,6 +395,8 @@ def create_case_endpoints(
     @router.post(
         "/retrieve/case_set_rights",
         operation_id="retrieve__case_set_rights",
+        name="Retrieve case set rights",
+        description=command.RetrieveCaseSetRightsCommand.__doc__,
     )
     async def retrieve__case_set_rights(
         user: registered_user_dependency,  # type: ignore
@@ -312,29 +414,14 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/case_set_rights",
-        operation_id="retrieve__case_set_rights",
-    )
-    async def retrieve__case_set_rights(
-        user: registered_user_dependency,  # type: ignore
-        request_body: list[UUID],
-    ) -> list[model.CaseSetRights]:
-        try:
-            retval: list[model.CaseSetRights] = app.handle(
-                command.RetrieveCaseSetRightsCommand(
-                    user=user,
-                    case_set_ids=request_body,
-                )
-            )
-        except Exception as e:
-            handle_exception("b9c49fe1", user, e)
-        return retval
-
-    @router.post(
-        "/retrieve/organization_contact", operation_id="retrieve__organization_contact"
+        "/retrieve/organization_contact",
+        operation_id="retrieve__organization_contact",
+        name="Retrieve organization contact",
+        description=command.RetrieveOrganizationContactCommand.__doc__,
     )
     async def retrieve__organization_contact(
-        user: registered_user_dependency, request_body: RetrieveOrganizationContactRequestBody  # type: ignore
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveOrganizationContactRequestBody,
     ) -> list[model.Contact]:
         try:
             retval: list[model.Contact] = app.handle(
@@ -347,7 +434,7 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "b8172f62",
                 user,
                 exception,
@@ -358,7 +445,10 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/phylogenetic_tree", operation_id="retrieve__phylogenetic_tree"
+        "/retrieve/phylogenetic_tree",
+        operation_id="retrieve__phylogenetic_tree",
+        name="Retrieve phylogenetic tree",
+        description=command.RetrievePhylogeneticTreeByCasesCommand.__doc__,
     )
     async def retrieve__phylogenetic_tree(
         user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
@@ -373,13 +463,16 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "45219a88", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
     @router.post(
-        "/retrieve/genetic_sequence", operation_id="retrieve__genetic_sequence"
+        "/retrieve/genetic_sequence",
+        operation_id="retrieve__genetic_sequence",
+        name="Retrieve genetic sequence by case",
+        description=command.RetrieveGeneticSequenceByCaseCommand.__doc__,
     )
     async def retrieve__genetic_sequence(
         user: registered_user_dependency,  # type: ignore
@@ -394,26 +487,71 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(
+            handle_exception(  # type:ignore[call-arg]
                 "1238afb2", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
-    # @router.post("/retrieve/allele_profile", operation_id="retrieve__allele_profile")
-    # async def retrieve__allele_profile(
-    #     user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    # ) -> list[model.SeqDbAlleleProfile]:
-    #     try:
-    #         retval: list[model.SeqDbAlleleProfile] = app.handle(
-    #             command.RetrieveAlleleProfileCommand(
-    #                 user=user,
-    #                 sequence_ids=request_body.sequence_ids,
-    #                 props=request_body.props,
-    #             )
-    #         )
-    #     except Exception as exception:
-    #         handle_exception("a4c03b54", user, exception, request_ids=request_body.sequence_ids)
-    #     return retval
+    @router.post(
+        "/retrieve/genetic_sequence/fasta",
+        operation_id="retrieve__genetic_sequence__fasta",
+        name="Retrieve genetic sequence by case, in fasta format and streamed",
+        description=command.RetrieveGeneticSequenceFastaByCaseCommand.__doc__,
+    )
+    async def retrieve__genetic_sequence_fasta(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveGeneticSequenceFastaRequestBody,
+    ) -> StreamingResponse:
+        try:
+            fasta_iterable = app.handle(
+                command.RetrieveGeneticSequenceFastaByCaseCommand(
+                    user=user,
+                    genetic_sequence_case_type_col_id=(
+                        request_body.genetic_sequence_case_type_col_id
+                    ),
+                    case_ids=request_body.case_ids,
+                )
+            )
+        except Exception as exception:
+            handle_exception(  # type:ignore[call-arg]
+                "d4c2e1b1",
+                user,
+                exception,
+                request_ids=request_body.case_ids,
+            )
+            # TODO: next line should be deleted since handle_exception always raises (returns NoReturn)
+            return StreamingResponse(iter(()), media_type="text/plain")
+
+        return StreamingResponse(
+            fasta_iterable,
+            media_type="application/x-fasta",
+            headers={
+                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
+            },
+        )
+
+    @router.post(
+        "/retrieve/allele_profile",
+        operation_id="retrieve__allele_profile",
+        name="Retrieve allele profile",
+        description=command.RetrieveAlleleProfileCommand.__doc__,
+    )
+    async def retrieve__allele_profile(
+        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
+    ) -> list[model.AlleleProfile]:
+        try:
+            retval: list[model.AlleleProfile] = app.handle(
+                command.RetrieveAlleleProfileCommand(
+                    user=user,
+                    sequence_ids=request_body.sequence_ids,
+                    props=request_body.props,
+                )
+            )
+        except Exception as exception:
+            handle_exception(  # type:ignore[call-arg]
+                "a4c03b54", user, exception, request_ids=request_body.sequence_ids
+            )
+        return retval
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

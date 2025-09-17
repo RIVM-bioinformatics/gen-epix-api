@@ -1,4 +1,5 @@
-from typing import Any, Callable, Hashable, Iterable, Iterator, Literal
+from collections.abc import Hashable
+from typing import Any, Callable, Iterable, Iterator, Literal
 
 from pydantic import BaseModel
 
@@ -16,7 +17,7 @@ class NoFilter(Filter):
         self,
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[bool]:
         for value in values:
             yield not self.invert
@@ -25,7 +26,7 @@ class NoFilter(Filter):
         self,
         values: Iterable[Any | None],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
     ) -> Iterator[Any | None]:
         for value in values:
             if not self.invert:
@@ -35,7 +36,7 @@ class NoFilter(Filter):
         self,
         row: dict[Hashable, Any | None] | BaseModel,
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> bool:
         return not self.invert
@@ -44,7 +45,7 @@ class NoFilter(Filter):
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[bool]:
         for row in rows:
@@ -55,7 +56,7 @@ class NoFilter(Filter):
         self,
         rows: Iterable[dict[Hashable, Any | None] | BaseModel],
         na_values: set[Any] | None = None,
-        map_fun: Callable[[Any], Any] | None = None,
+        map_fn: Callable[[Any], Any] | None = None,
         is_model: bool = False,
     ) -> Iterator[dict[Hashable, Any | None]]:
         for row in rows:

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import abc
 import uuid
-from typing import Any, ClassVar, Hashable, Iterable, Self, Type
+from collections.abc import Hashable
+from typing import Any, ClassVar, Iterable, Self, Type
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import (
@@ -29,7 +30,7 @@ class Model(PydanticBaseModel):
     ENTITY: ClassVar[Entity | None] = None
 
 
-class User(Model):
+class User(PydanticBaseModel):
     id: Hashable | None = Field(
         default_factory=uuid.uuid4,
         description="The ID of the user. This can be the key of the user (see get_key method), or a separate ID.",
@@ -44,8 +45,8 @@ class User(Model):
         """
         return str(self.id)
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: Hashable, _info: Any) -> str:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: Hashable) -> str:
     #     return str(value)
 
 
@@ -89,8 +90,8 @@ class Permission(PydanticBaseModel, frozen=True):
     def __repr__(self) -> str:
         return f"({self.command_name},{self.permission_type.value})"
 
-    @field_serializer("permission_type")
-    def _serialize_permission_type(self, value: PermissionType, _info: Any) -> str:
+    @field_serializer("permission_type", mode="plain")
+    def _serialize_permission_type(self, value: PermissionType) -> str:
         return value.value
 
 
@@ -127,8 +128,8 @@ class Command(PydanticBaseModel):
     user: User | None = None
     _policies: list[Policy] = PrivateAttr(default_factory=list)
 
-    # @field_serializer("id")
-    # def _serialize_id(self, value: Hashable, _info: Any) -> str | None:
+    # @field_serializer("id", mode="plain")
+    # def _serialize_id(self, value: Hashable) -> str | None:
     #     return serialize_id(value)
 
 

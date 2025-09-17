@@ -1,23 +1,10 @@
-<p align="center">
-    <img src="./docs/assets/gen-epix_logo_full.svg" alt="gen-epix-logo">
-</p>
-<p align="center">
-    <a href="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" target="_blank">
-        <img src="https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg" alt="tests">
-    </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="sonarqube">
-    </a>
-    <a href="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" target="_blank">
-        <img src="https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c" alt="coverage">
-    </a>
-</p>
+![Gen-EpiX Logo](./docs/assets/gen-epix_logo_full.svg)
 
-
+[![tests](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg)](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml) [![sonarqube](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) [![coverage](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) ![pylint](https://img.shields.io/badge/PyLint-6.68-yellow?logo=python&logoColor=white)
 
 ---
 
-**Source Code**: <a href="https://github.com/RIVM-bioinformatics/gen-epix-api" target="_blank">https://github.com/RIVM-bioinformatics/gen-epix-api</a>
+**Source Code**: https://github.com/RIVM-bioinformatics/gen-epix-api
 
 ---
 # Gen-EpiX: Genomic Epidemiology platform for disease X (beta version)
@@ -31,7 +18,7 @@ Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It
 - **Search**: Search and filter cases, including on genetic similarity.
 - **Signal detection**: Detect, define and share sets of cases, signals and outbreaks.
 - **Disease X**: Any disease and corresponding analysis variables can be added.
-- **Data**: Adheres to the Medallion data architecture design pattern. The silver layer consists of normalized and standardized patient or subject data compliant with <a href="https://www.ohdsi.org/data-standardization" target="_blank">OMOP Common Data Model</a>, and a dedicated database for genetic sequence data and computation of phylogenetic trees. The gold layer consists of case data ready for analysis in the form of a single row of data per case.
+- **Data**: Adheres to the Medallion data architecture design pattern. The silver layer consists of normalized and standardized patient or subject data compliant with the [OMOP Common Data Model](https://www.ohdsi.org/data-standardization), and a dedicated database for genetic sequence data and computation of phylogenetic trees. The gold layer consists of case data ready for analysis in the form of a single row of data per case.
 - **Tech**: OpenAPI compliant API, deployable on cloud or on-premise, support for multiple authentication providers. Python/FastAPI backend and default TypeScript/React frontend available from gen-epix-web.
 
 ## Deliberately not in scope
@@ -52,7 +39,7 @@ Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It
 
 2. Create and activate a conda environment:
    ```console
-   conda create --name gen-epix python=3.12
+   conda create --name gen-epix python=3.13
    conda activate gen-epix
    ```
 
@@ -61,8 +48,8 @@ Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It
    pip install -r requirements.txt
    pip install --no-binary :all: pyodbc==5.2.*
    ```
-   **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility*
-<br>
+   **Some hardware architectures (especially Apple M1/M2/M3 chips) require pyodbc to be compiled from source for compatibility***
+
 
 4. For development, add testing tools:
    ```console
@@ -111,7 +98,7 @@ python run.py [service] [app_type] [env_name] [idp_config]
 - `service`: The service to run (api, etl) 
 - `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
 - `env_name`: Name of the environment.
-- `idp_config`: Which authentication setting to use (idps, mock_idps, no_auth, debug, no_ssl)
+- `idp_config`: Which authentication setting to use (idps, mock_idps, debug)
 
 ---
 
@@ -122,7 +109,8 @@ conda activate gen-epix
 python run.py api casedb local idps
 ```
 
-<img src="https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true" alt="example-docs">
+| ![Example documentation screenshot](https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true) |
+|:--:|
 
 ---
 
@@ -131,23 +119,31 @@ python run.py api casedb local idps
 Gen-EpiX relies on several Python packages to provide its functionality:
 
 **Core Dependencies**
-* <a href="https://fastapi.tiangolo.com" target="_blank"><code>fastapi</code></a> - Modern, high-performance web framework
-* <a href="https://www.sqlalchemy.org" target="_blank"><code>sqlalchemy</code></a> - SQL toolkit and Object-Relational Mapping (ORM) library
-* <a href="https://docs.pydantic.dev" target="_blank"><code>pydantic</code></a> - Data validation and settings management
-* <a href="https://biopython.org" target="_blank"><code>biopython</code></a> - Tools for computational molecular biology
+* [`fastapi`](https://fastapi.tiangolo.com) - Modern, high-performance web framework
+* [`sqlalchemy`](https://www.sqlalchemy.org) - SQL toolkit and Object-Relational Mapping (ORM) library
+* [`pydantic`](https://docs.pydantic.dev) - Data validation and settings management
+* [`biopython`](https://biopython.org) - Tools for computational molecular biology
 
 **Database Connectors**
-* <a href="https://github.com/mkleehammer/pyodbc" target="_blank"><code>pyodbc</code></a> - ODBC database adapter
+* [`pyodbc`](https://github.com/mkleehammer/pyodbc) - ODBC database adapter
 
 **Development Tools**
-* <a href="https://docs.pytest.org" target="_blank"><code>pytest</code></a> - Testing framework
-* <a href="https://black.readthedocs.io" target="_blank"><code>black</code></a> - Code formatter
-* <a href="https://pylint.org" target="_blank"><code>pylint</code></a> - Static code analyzer
-* <a href="https://mypy.readthedocs.io" target="_blank"><code>mypy</code></a> - Static type checker
+* [`pytest`](https://docs.pytest.org) - Testing framework
+* [`black`](https://black.readthedocs.io) - Code formatter
+* [`pylint`](https://pylint.org) - Static code analyzer
+* [`mypy`](https://mypy.readthedocs.io) - Static type checker
 
 For a complete list of dependencies, refer to:
 - [requirements.txt](requirements.txt) - Production dependencies
 - [dev-requirements.txt](dev-requirements.txt) - Development dependencies
 
 **Python Version**
-Gen-EpiX requires Python 3.12 or higher.
+Gen-EpiX requires Python 3.13 or higher.
+
+## Funding
+
+This work was funded by the European Union under the EU4Health Programme (EU4H), project IDs 101102070 (UNITED4Surveillance) and 101113520 (NLWGSHERA2).
+
+![EU Funding Logo](./docs/assets/cofunded_EU_logo.png)
+
+*Disclaimer: Funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or Health and Digital Executive Agency. Neither the European Union nor the granting authority can be held responsible for them.*

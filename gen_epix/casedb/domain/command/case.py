@@ -3,13 +3,14 @@ from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
-import gen_epix.casedb.domain.model.case as model
+import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     Command,
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 # Non-CRUD
@@ -35,7 +36,11 @@ class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand
     association_objs: list[model.CaseTypeColSetMember]
 
 
-class CaseSetCreateCommand(Command):
+class CreateCaseSetCommand(Command):
+    """
+    Create a new case set and associate it with the specified data collections and
+    cases.
+    """
 
     case_set: model.CaseSet = Field(description="The case set to create.")
     data_collection_ids: set[UUID] = Field(
@@ -52,33 +57,44 @@ class CaseSetCreateCommand(Command):
         return self
 
 
-class CasesCreateCommand(Command):
+class ValidateCasesCommand(Command):
+    """
+    Validate case data and return a validation report.
+    """
 
-    cases: list[model.Case] = Field(
-        description="The cases to create. All cases must have the same case type and created_in_data_collection."
+    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
+    created_in_data_collection_id: UUID = copy_model_field(
+        model.CaseValidationReport, "created_in_data_collection_id"
     )
-    data_collection_ids: set[UUID] = Field(
-        description="The data collections to associate with the cases, other than the created_in_data_collection. The latter will be removed from the set if present."
+    data_collection_ids: set[UUID] = copy_model_field(
+        model.CaseValidationReport, "data_collection_ids"
     )
+    is_update: bool = Field(description="Whether this is an update operation.")
+    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
 
     @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if len(set(x.case_type_id for x in self.cases)) > 1:
-            raise ValueError("Not all cases have the same case type.")
-        case_ids = set()
-        for i, case in enumerate(self.cases):
-            if case.id in case_ids:
-                raise ValueError(f"Duplicate case id: {case.id}")
-            if case.id is not None:
-                case_ids.add(case.id)
-        if self.cases:
-            self.data_collection_ids.discard(
-                self.cases[0].created_in_data_collection_id
+    def _validate_cases(self) -> Self:
+        if self.created_in_data_collection_id in self.data_collection_ids:
+            raise ValueError(
+                "The created in data collection ID may not be in the additional data collection IDs."
             )
+        if self.is_update and any(x.id is None for x in self.cases):
+            raise ValueError("All cases must have an ID when updating")
         return self
 
 
+class CreateCasesCommand(ValidateCasesCommand):
+    """
+    Create the corresponding cases and return them.
+    """
+
+    pass
+
+
 class RetrieveCaseSetStatsCommand(Command):
+    """
+    Retrieve statistics for a set of case sets.
+    """
 
     case_set_ids: list[UUID] | None = Field(
         default=None,
@@ -87,6 +103,9 @@ class RetrieveCaseSetStatsCommand(Command):
 
 
 class RetrieveCaseTypeStatsCommand(Command):
+    """
+    Retrieve statistics for a set of case types.
+    """
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -99,16 +118,25 @@ class RetrieveCaseTypeStatsCommand(Command):
 
 
 class RetrieveCompleteCaseTypeCommand(Command):
+    """
+    Retrieve a complete case type.
+    """
 
-    case_type_id: UUID
+    case_type_id: UUID = Field(description="The ID of the case type to retrieve.")
 
 
 class RetrieveCasesByQueryCommand(Command):
+    """
+    Retrieve cases based on a query.
+    """
 
-    case_query: model.CaseQuery
+    case_query: model.CaseQuery = Field(description="The query to filter cases by.")
 
 
 class RetrieveCasesByIdCommand(Command):
+    """
+    Retrieve cases by their IDs.
+    """
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve cases for. UNIQUE"
@@ -122,6 +150,9 @@ class RetrieveCasesByIdCommand(Command):
 
 
 class RetrieveCaseRightsCommand(Command):
+    """
+    Retrieve access rights for a set of cases.
+    """
 
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve access for. UNIQUE"
@@ -135,6 +166,9 @@ class RetrieveCaseRightsCommand(Command):
 
 
 class RetrieveCaseSetRightsCommand(Command):
+    """
+    Retrieve access rights for a set of case sets.
+    """
 
     case_set_ids: list[UUID] = Field(
         description="The case set ids to retrieve access for. UNIQUE"
@@ -148,26 +182,79 @@ class RetrieveCaseSetRightsCommand(Command):
 
 
 class RetrievePhylogeneticTreeBySequencesCommand(Command):
-    tree_algorithm_code: enum.TreeAlgorithmType
-    seqdb_seq_distance_protocol_id: UUID
-    sequence_ids: list[UUID]
+    """
+    Calculate a phylogenetic tree based on a set of sequence IDs, a tree algorithm, and
+    a sequence distance protocol.
+    """
+
+    tree_algorithm_code: enum.TreeAlgorithmType = Field(
+        description="The algorithm to use for constructing the phylogenetic tree."
+    )
+    seqdb_seq_distance_protocol_id: UUID = Field(
+        description="The ID of the sequence distance protocol to use."
+    )
+    sequence_ids: list[UUID] = Field(
+        description="The IDs of the sequences to calculate the phylogenetic tree for."
+    )
 
 
 class RetrievePhylogeneticTreeByCasesCommand(Command):
-    tree_algorithm: enum.TreeAlgorithmType
-    genetic_distance_case_type_col_id: UUID
-    case_ids: list[UUID]
+    """
+    Retrieve a phylogenetic tree based on a set of case IDs, a tree algorithm, and
+    a genetic distance case type column.
+    """
+
+    tree_algorithm: enum.TreeAlgorithmType = Field(
+        description="The algorithm to use for constructing the phylogenetic tree."
+    )
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The ID of the genetic distance case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to calculate the phylogenetic tree for."
+    )
 
 
 class RetrieveGeneticSequenceByCaseCommand(Command):
+    """
+    Retrieve a set of genetic sequences based on a set of case IDs and a genetic
+    sequence case type column.
+    """
 
-    genetic_sequence_case_type_col_id: UUID
-    case_ids: list[UUID]
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The ID of the genetic sequence case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve genetic sequences for."
+    )
+
+
+class RetrieveGeneticSequenceFastaByCaseCommand(Command):
+    """
+    Retrieve a set of genetic sequences in FASTA format based on a set of case IDs and a genetic
+    sequence case type column. An iterator is returned that yields the FASTA lines.
+    """
+
+    genetic_sequence_case_type_col_id: UUID = Field(
+        description="The ID of the genetic sequence case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve genetic sequences for."
+    )
 
 
 class RetrieveAlleleProfileCommand(Command):
+    """
+    Retrieve a set of allele profiles based on a set of case IDs and a genetic distance
+    case type column.
+    """
 
-    sequence_ids: list[UUID]
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The ID of the genetic distance case type column to use."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases to retrieve allele profiles for."
+    )
 
 
 # CRUD

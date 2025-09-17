@@ -5,30 +5,6 @@ from gen_epix.casedb.domain.service import BaseAbacService
 from gen_epix.fastapp.model import Policy
 
 
-class BaseIsOrganizationAdminPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
-        self.abac_service = abac_service
-        self.props = kwargs
-
-
-class BaseReadOrganizationResultsOnlyPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
-        self.abac_service = abac_service
-        self.props = kwargs
-
-
-class BaseReadSelfResultsOnlyPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
-        self.abac_service = abac_service
-        self.props = kwargs
-
-
-class BaseUpdateUserPolicy(Policy):
-    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
-        self.abac_service = abac_service
-        self.props = kwargs
-
-
 class BaseCaseAbacPolicy(Policy):
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         self.abac_service = abac_service

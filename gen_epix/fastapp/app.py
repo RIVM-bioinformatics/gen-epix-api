@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Hashable
 from datetime import datetime
-from typing import Any, Callable, Hashable, Type
+from typing import Any, Callable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain import Domain
@@ -57,8 +58,8 @@ class App:
         **kwargs: Any,
     ):
         # Set input members
-        self._id: str = kwargs.get("id", str(id_factory()))  # type: ignore[assignment]
-        self._name: str = kwargs.get("name", self._id)  # type: ignore[assignment]
+        self._id: str = kwargs.get("id", str(id_factory()))
+        self._name: str = kwargs.get("name", self._id)
         self._logger = logger
         self._pdp: PolicyDecisionPoint = pdp or PolicyDecisionPoint()
         self._domain = domain or Domain(self._id)
@@ -159,7 +160,7 @@ class App:
                     "REGISTERING_POLICY",
                     command={"class": command_class.__name__},
                     policy={"class": policy.__class__.__name__},
-                    timing=str(timing.value),  # type: ignore[arg-type]
+                    timing=str(timing.value),
                 ),
             )
         self.pdp.register_policy(command_class, policy, timing)
@@ -177,7 +178,7 @@ class App:
                     "UNREGISTERING_POLICY",
                     command={"class": command_class.__name__},
                     policy={"class": policy.__class__.__name__},
-                    timing=str(timing.value),  # type: ignore[arg-type]
+                    timing=str(timing.value),
                 ),
             )
         self.pdp.unregister_policy(command_class, policy, timing)
@@ -199,7 +200,7 @@ class App:
                     "REGISTERING_LISTENER",
                     command={"class": command_class.__name__},
                     listener={"name": listener.__name__},
-                    timing=str(timing.value),  # type: ignore[arg-type]
+                    timing=str(timing.value),
                 ),
             )
         listeners = self._command_listeners[timing]
@@ -223,9 +224,9 @@ class App:
                 self.create_log_message(
                     "a4f89615",
                     "UNREGISTERING_LISTENER",
-                    command_class=command_class.__name__,  # type: ignore[arg-type]
-                    listener=listener.__name__,  # type: ignore[arg-type]
-                    timing=str(timing.value),  # type: ignore[arg-type]
+                    command_class=command_class.__name__,
+                    listener=listener.__name__,
+                    timing=str(timing.value),
                 ),
             )
         listeners = self._command_listeners[timing]
@@ -238,7 +239,7 @@ class App:
     def register_handler(
         self,
         command_class: Type[Command],
-        handler_fun: Callable,  # Takes a Command and returns Any, no type hint here (would be Callable[[Command], Any]) to avoid linter messages
+        handler_fn: Callable,  # Takes a Command and returns Any, no type hint here (would be Callable[[Command], Any]) to avoid linter messages
         replace: bool = True,
     ) -> None:
         # Pydantic classes have pydantic.main.ModelMetaClass as type
@@ -255,7 +256,7 @@ class App:
                     "e56517f7",
                     "REGISTERING_HANDLER",
                     command={"class": command_class.__name__},
-                    handler_fun={"name": handler_fun.__name__},
+                    handler_fn={"name": handler_fn.__name__},
                 ),
             )
         if not issubclass(command_class, Command):
@@ -264,9 +265,9 @@ class App:
             )
         if command_class in self._command_handler_map and not replace:
             raise exc.InitializationServiceError(
-                f"Command handler already added for {command_class}: {handler_fun}"
+                f"Command handler already added for {command_class}: {handler_fn}"
             )
-        self._command_handler_map[command_class] = handler_fun
+        self._command_handler_map[command_class] = handler_fn
 
     def get_handler(self, command_class: Type[Command]) -> Callable:
         for type_ in command_class.__mro__:
@@ -316,7 +317,7 @@ class App:
                 if self._logger:
                     self._logger.error(
                         self.create_log_message(
-                            "abd561ff", "ERROR", cmd=cmd, exception=exception  # type: ignore[arg-type]
+                            "abd561ff", "ERROR", cmd=cmd, exception=exception
                         ),
                         exc_info=True,
                         stack_info=True,
@@ -329,7 +330,9 @@ class App:
         except Exception as exception:
             if self._logger:
                 self._logger.error(
-                    self.create_log_message("ad536c0b", "ERROR", cmd=cmd, exception=exception),  # type: ignore[arg-type]
+                    self.create_log_message(
+                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
+                    ),
                     exc_info=True,
                     stack_info=True,
                 )
@@ -367,7 +370,7 @@ class App:
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
-                        "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception  # type: ignore[arg-type]
+                        "e8891b42", "DOMAIN_EXCEPTION", cmd=cmd, exception=exception
                     )
                 )
             self._command_stack.pop()
@@ -376,7 +379,9 @@ class App:
             # Any other unexpected error: add stack trace
             if self._logger:
                 self._logger.error(
-                    self.create_log_message("b575040c", "ERROR", cmd=cmd, exception=exception),  # type: ignore[arg-type]
+                    self.create_log_message(
+                        "b575040c", "ERROR", cmd=cmd, exception=exception
+                    ),
                     exc_info=True,
                     stack_info=True,
                 )
@@ -432,7 +437,7 @@ class App:
                     "id": str(cmd.id),
                     "user_id": cmd.user.id if cmd.user else None,
                 }
-        log_item = self._log_item_class(code=code, msg=msg, **content)  # type: ignore[arg-type]
+        log_item = self._log_item_class(code=code, msg=msg, **content)
         return log_item.dumps()
 
     @staticmethod
@@ -442,7 +447,7 @@ class App:
         log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         **kwargs: Any,
     ) -> str:
-        cmd: Command | None = kwargs.pop("cmd", None)  # type: ignore[assignment]
+        cmd: Command | None = kwargs.pop("cmd", None)
         content = kwargs
         if cmd:
             content["command"] = kwargs.pop("command", {}) | {
@@ -450,7 +455,7 @@ class App:
                 "id": str(cmd.id),
                 "user_id": cmd.user.id if cmd.user else None,
             }
-        log_item = log_item_class(code=code, msg=msg, **content)  # type: ignore[arg-type]
+        log_item = log_item_class(code=code, msg=msg, **content)
         return log_item.dumps()
 
     def __del__(self) -> None:

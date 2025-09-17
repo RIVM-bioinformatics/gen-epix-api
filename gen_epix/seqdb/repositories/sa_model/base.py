@@ -1,36 +1,53 @@
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped
+
+from gen_epix.commondb.repositories.sa_model import get_mixin_mapped_column
+from gen_epix.seqdb.domain import model
 
 
 class CodeMixin:
-    code: Mapped[str] = mapped_column(sa.String, nullable=False)
+    code: Mapped[str] = get_mixin_mapped_column(model.CodeMixin, "code", sa.String)
 
 
 class QualityMixin:
-    quality_score: Mapped[float] = mapped_column(sa.Float, nullable=True)
-    quality: Mapped[str] = mapped_column(sa.String, nullable=True)
+    quality_score: Mapped[float] = get_mixin_mapped_column(
+        model.QualityMixin, "quality_score", sa.Float
+    )
+    quality: Mapped[str] = get_mixin_mapped_column(
+        model.QualityMixin, "quality", sa.String
+    )
 
 
 class SeqMixin:
-    seq: Mapped[str] = mapped_column(sa.String, nullable=False)
-    seq_format: Mapped[str] = mapped_column(sa.String, nullable=False)
-    seq_hash_sha256: Mapped[bytes] = mapped_column(
-        sa.LargeBinary(length=32), nullable=False
+    seq: Mapped[str] = get_mixin_mapped_column(model.SeqMixin, "seq", sa.Text)
+    seq_format: Mapped[str] = get_mixin_mapped_column(
+        model.SeqMixin, "seq_format", sa.String
     )
-    length: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    seq_hash_sha256: Mapped[bytes] = get_mixin_mapped_column(
+        model.SeqMixin, "seq_hash_sha256", sa.LargeBinary
+    )
+    length: Mapped[int] = get_mixin_mapped_column(model.SeqMixin, "length", sa.Integer)
 
 
 class AlignmentMixin:
-    aln: Mapped[str] = mapped_column(sa.String, nullable=False)
-    aln_format: Mapped[str] = mapped_column(sa.String, nullable=False)
-    aln_hash_sha256: Mapped[bytes] = mapped_column(
-        sa.LargeBinary(length=32), nullable=False
+    aln: Mapped[str] = get_mixin_mapped_column(model.AlignmentMixin, "aln", sa.Text)
+    aln_format: Mapped[str] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_format", sa.String
+    )
+    aln_hash_sha256: Mapped[bytes] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_hash_sha256", sa.LargeBinary
     )
 
 
 class ProtocolMixin:
-    code: Mapped[str] = mapped_column(sa.String, nullable=False)
-    name: Mapped[str] = mapped_column(sa.String, nullable=False)
-    version: Mapped[str] = mapped_column(sa.String, nullable=True)
-    description: Mapped[str] = mapped_column(sa.String, nullable=True)
-    props: Mapped[dict[str, str]] = mapped_column(sa.JSON(), nullable=True)
+    code: Mapped[str] = get_mixin_mapped_column(model.ProtocolMixin, "code", sa.String)
+    name: Mapped[str] = get_mixin_mapped_column(model.ProtocolMixin, "name", sa.String)
+    version: Mapped[str] = get_mixin_mapped_column(
+        model.ProtocolMixin, "version", sa.String
+    )
+    description: Mapped[str] = get_mixin_mapped_column(
+        model.ProtocolMixin, "description", sa.Text
+    )
+    props: Mapped[dict[str, str]] = get_mixin_mapped_column(
+        model.ProtocolMixin, "props", sa.JSON
+    )

@@ -6,28 +6,18 @@ from uuid import UUID
 
 from cachetools import TTLCache, cached
 
+from gen_epix.casedb import policies as policies
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.repository import BaseAbacRepository
-from gen_epix.casedb.domain.service import BaseAbacService
-from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
-from gen_epix.casedb.policies.is_organization_admin_policy import (
-    IsOrganizationAdminPolicy,
-)
-from gen_epix.casedb.policies.read_organization_results_only_policy import (
-    ReadOrganizationResultsOnlyPolicy,
-)
-from gen_epix.casedb.policies.read_self_results_only_policy import (
-    ReadSelfResultsOnlyPolicy,
-)
-from gen_epix.casedb.policies.update_user_policy import UpdateUserPolicy
-from gen_epix.common.util import map_paired_elements
+from gen_epix.casedb.domain.service.abac import BaseAbacService
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import App, CrudOperation, EventTiming
-from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.model import Command
 from gen_epix.filter import (
-    BooleanOperator,
     CompositeFilter,
     EqualsBooleanFilter,
     EqualsUuidFilter,
+    LogicalOperator,
     UuidSetFilter,
 )
 
@@ -48,93 +38,52 @@ class AbacService(BaseAbacService):
         logger: logging.Logger | None = None,
         **kwargs: Any,
     ):
-        super().__init__(app, repository=repository, logger=logger, **kwargs)
+        super().__init__(
+            app,
+            repository=repository,
+            organization_admin_policy_model_class=model.OrganizationAdminPolicy,
+            user_crud_command_class=command.UserCrudCommand,
+            is_organization_admin_policy_class=policies.IsOrganizationAdminPolicy,
+            read_organization_results_only_policy_class=policies.ReadOrganizationResultsOnlyPolicy,
+            read_self_results_only_policy_class=policies.ReadSelfResultsOnlyPolicy,
+            read_user_policy_class=policies.ReadUserPolicy,
+            update_user_policy_class=policies.UpdateUserPolicy,
+            logger=logger,
+            **kwargs,
+        )
         self.repository: BaseAbacRepository
 
-    def register_policies(self) -> None:
+    def register_policies(
+        self,
+        organization_admin_write_commands: set[
+            Type[Command]
+        ] = BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS,  # type: ignore[assignment]
+        read_user_commands: set[Type[Command]] = BaseAbacService.READ_USER_COMMANDS,  # type: ignore[assignment]
+        update_user_commands: set[Type[Command]] = BaseAbacService.UPDATE_USER_COMMANDS,  # type: ignore[assignment]
+        read_organization_results_only_commands: set[
+            Type[Command]
+        ] = BaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS,  # type: ignore[assignment]
+        read_self_results_only_commands: set[
+            Type[Command]
+        ] = BaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS,  # type: ignore[assignment]
+    ) -> None:
+        super().register_policies(
+            organization_admin_write_commands=organization_admin_write_commands,
+            read_user_commands=read_user_commands,
+            update_user_commands=update_user_commands,
+            read_organization_results_only_commands=read_organization_results_only_commands,
+            read_self_results_only_commands=read_self_results_only_commands,
+        )
+        policy = policies.CaseAbacPolicy(self)
         f = self.app.register_policy
-        policy: Policy
-        command_class: Type[Command]
-        policy = IsOrganizationAdminPolicy(self)
-        for command_class in BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS:
-            f(command_class, policy, EventTiming.BEFORE)
-        policy = UpdateUserPolicy(self)
-        for command_class in BaseAbacService.UPDATE_USER_COMMANDS:
-            f(command_class, policy, EventTiming.BEFORE)
-        policy = CaseAbacPolicy(self)
         for command_class in BaseAbacService.CASE_ABAC_COMMANDS:
             f(command_class, policy, EventTiming.DURING)
-        policy = ReadOrganizationResultsOnlyPolicy(self)
-        for command_class in BaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS:
-            f(command_class, policy, EventTiming.AFTER)
-        policy = ReadSelfResultsOnlyPolicy(self)
-        for command_class in BaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS:
-            f(command_class, policy, EventTiming.AFTER)
 
-    def crud(self, cmd: CrudCommand) -> Any:
-        retval = super().crud(cmd)
-        # Invalidate cache
-        if issubclass(type(cmd), AbacService.CACHE_INVALIDATION_COMMANDS):
-            self._get_user_by_id_cached.cache_clear()  # type:ignore[attr-defined]
-            self._get_case_abac_cached.cache_clear()  # type:ignore[attr-defined]
-        return retval
-
-    def get_organizations_under_admin(self, user: model.User) -> set[UUID]:
-        # TODO: inefficient implementation, retrieving first all objs and then filtering.
-        # To be improved with e.g. CQS.
-        with self.repository.uow() as uow:
-            organization_admin_policies: list[
-                model.OrganizationAdminPolicy
-            ] = self.repository.crud(
-                uow,
-                user_id=user.id,
-                model_class=model.OrganizationAdminPolicy,
-                objs=None,
-                obj_ids=None,
-                operation=CrudOperation.READ_ALL,
-            )  # type: ignore
-        return set(
-            x.organization_id
-            for x in organization_admin_policies
-            if x.user_id == user.id and x.is_active
-        )
-
-    def retrieve_organization_admin_name_emails(
-        self,
-        cmd: command.RetrieveOrganizationAdminNameEmailsCommand,
-    ) -> list[model.UserNameEmail]:
-        if not isinstance(cmd.user, model.User):
-            raise exc.ServiceException(
-                "Command has no or wrong user type: {cmd.user.__class__.__name__}"
-            )
-        organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-            self.app.handle(
-                command.OrganizationAdminPolicyCrudCommand(
-                    user=cmd.user,
-                    operation=CrudOperation.READ_ALL,
-                )
-            )
-        )
-        organization_admin_user_ids = {
-            x.user_id
-            for x in organization_admin_policies
-            if x.organization_id == cmd.user.organization_id
-        }
-        users = self.app.handle(
-            command.UserCrudCommand(
-                user=cmd.user,
-                obj_ids=list(organization_admin_user_ids),
-                operation=CrudOperation.READ_SOME,
-            )
-        )
-        return [
-            model.UserNameEmail(
-                id=x.id,
-                name=x.name,
-                email=x.email,
-            )
-            for x in users
-        ]
+    def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
+        if cmd.user is None or cmd.user.id is None:
+            raise exc.UnauthorizedAuthError("Command has no user")
+        user_id = cmd.user.id
+        return self._get_case_abac_cached(user_id)
 
     def temp_update_user_own_organization(
         self,
@@ -157,11 +106,11 @@ class AbacService(BaseAbacService):
           the previous organization. Analogous for OrganizationShareCasePolicy and
           UserShareCasePolicy.
         """
-        user = cmd.user
         is_new_user = cmd.is_new_user
         tgt_organization_id = cmd.organization_id
-        assert user is not None and user.id is not None
-        user_id = user.id
+        assert cmd.user is not None
+        user: model.User = cmd.user  # type: ignore[assignment]
+        assert user.id is not None
 
         # Special case: new organization is same as current
         if user.organization_id == tgt_organization_id and not is_new_user:
@@ -177,7 +126,7 @@ class AbacService(BaseAbacService):
                         operation=CrudOperation.READ_ALL,
                         query_filter=EqualsUuidFilter(
                             key="user_id",
-                            value=user_id,
+                            value=user.id,
                         ),
                     )
                 )
@@ -189,7 +138,7 @@ class AbacService(BaseAbacService):
                     operation=CrudOperation.READ_ALL,
                     query_filter=EqualsUuidFilter(
                         key="user_id",
-                        value=user_id,
+                        value=user.id,
                     ),
                 )
             )
@@ -223,13 +172,13 @@ class AbacService(BaseAbacService):
             # Convert target organization policies to new user policies
             new_user_access_case_policies = [
                 model.UserAccessCasePolicy(
-                    user_id=user_id, **x.model_dump(exclude={"id"})
+                    user_id=user.id, **x.model_dump(exclude={"id"})
                 )
                 for x in organization_access_case_policies
             ]
             new_user_share_case_policies = [
                 model.UserShareCasePolicy(
-                    user_id=user_id, **x.model_dump(exclude={"id"})
+                    user_id=user.id, **x.model_dump(exclude={"id"})
                 )
                 for x in organization_share_case_policies
             ]
@@ -270,37 +219,22 @@ class AbacService(BaseAbacService):
                 )
             )
             # Change the user organization
-            user.organization_id = tgt_organization_id
+            updated_user = user.model_copy()
+            updated_user.organization_id = tgt_organization_id
             user = self.app.handle(
                 command.UserCrudCommand(
                     user=user,
-                    objs=user,
+                    objs=updated_user,
                     operation=CrudOperation.UPDATE_ONE,
                 )
             )
 
         # Invalidate cache
-        self._get_user_by_id_cached.cache_clear()
-        self._get_case_abac_cached.cache_clear()
+        # TODO: develop general system for caching and cache invalidation
+        self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
+        self._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
 
         return user
-
-    @cached(cache=TTLCache(maxsize=1024, ttl=300))
-    def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
-        user: model.User = self.app.handle(  # type:ignore[assignment]
-            command.UserCrudCommand(
-                user=None,
-                obj_ids=user_id,
-                operation=CrudOperation.READ_ONE,
-            )
-        )
-        return user
-
-    def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
-        if cmd.user is None or cmd.user.id is None:
-            raise exc.UnauthorizedAuthError("Command has no user")
-        user_id = cmd.user.id
-        return self._get_case_abac_cached(user_id)
 
     @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def _get_case_abac_cached(
@@ -314,7 +248,6 @@ class AbacService(BaseAbacService):
         if is_full_access:
             return model.CaseAbac(
                 is_full_access=True,
-                private_data_collection_ids=set(),
                 case_type_access_abacs={},
                 case_type_share_abacs={},
             )
@@ -324,14 +257,14 @@ class AbacService(BaseAbacService):
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="organization_id", value=organization_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
         user_filter = CompositeFilter(
             filters=[
                 EqualsBooleanFilter(key="is_active", value=True),
                 EqualsUuidFilter(key="user_id", value=user_id),
             ],
-            operator=BooleanOperator.AND,
+            operator=LogicalOperator.AND,
         )
 
         # Retrieve all the policies as well as the case type set members and case type col set members
@@ -398,11 +331,16 @@ class AbacService(BaseAbacService):
                 as_set=True,
             )
             # Retrieve relevant case type set members and case type col set members
-            all_case_policies: list[model.BaseCasePolicy] = (
-                organization_access_case_policies  # type:ignore[assignment]
+            all_case_policies: list[
+                model.OrganizationAccessCasePolicy
+                | model.UserAccessCasePolicy
+                | model.OrganizationShareCasePolicy
+                | model.UserShareCasePolicy
+            ] = (
+                organization_access_case_policies
                 + organization_share_case_policies
                 + user_access_case_policies
-                + user_share_case_policies  # type:ignore[operator]
+                + user_share_case_policies
             )
             case_type_set_ids = frozenset(x.case_type_set_id for x in all_case_policies)
             case_type_set_member_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
@@ -499,7 +437,7 @@ class AbacService(BaseAbacService):
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
                     dict_[case_type_id] = {}
-                all_case_type_col_ids = case_type_col_map[case_type_id]
+                all_case_type_col_ids = case_type_col_map.get(case_type_id, set())
                 case_type_access_abac = model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
                     data_collection_id=x.data_collection_id,

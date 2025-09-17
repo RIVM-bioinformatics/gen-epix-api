@@ -4,6 +4,8 @@ from typing import Callable
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from gen_epix.commondb.util import get_package_version
+
 
 class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
     def __init__(
@@ -25,7 +27,6 @@ class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
             return response
         for endpoints, headers in self._exception_headers:
             if request["path"] in endpoints:
-                response = await call_next(request)
                 response.headers.update(headers)
                 return response
         response.headers.update(self._general_headers)
@@ -35,4 +36,5 @@ class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
             if content_type:
                 content_type = content_type + ";version=" + app_version
                 response.headers.update({"content-type": content_type})
+        response.headers["API-Version"] = get_package_version()
         return response

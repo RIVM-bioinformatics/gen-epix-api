@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.common.domain.model import Model
+from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp import Entity
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.metadata import RefSnp
@@ -17,18 +17,11 @@ from gen_epix.seqdb.domain.model.seq.persistable import (
     SeqTaxonomy,
 )
 
-_SERVICE_TYPE = enum.ServiceType.SEQ
-_ENTITY_KWARGS = {
-    "service_type": _SERVICE_TYPE,
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class CompleteContig(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_contigs",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID
     seq: str
@@ -40,7 +33,6 @@ class CompleteAlleleProfile(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_allele_profiles",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID
     locus_set_id: UUID
@@ -54,7 +46,6 @@ class CompleteSnpProfile(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_snp_profiles",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID
     ref_snps: list[RefSnp]
@@ -67,7 +58,6 @@ class CompleteSeq(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_seqs",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID | None
     primary_taxon_id: UUID | None
@@ -85,7 +75,6 @@ class CompleteSample(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_samples",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     primary_seq_id: UUID | None
     primary_taxon_id: UUID | None
@@ -98,7 +87,6 @@ class PhylogeneticTree(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="phylogenetic_trees",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     tree_algorithm: enum.TreeAlgorithm = Field(
         default=None, description="The tree algorithm"
@@ -140,7 +128,6 @@ class MultipleAlignment(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="multiple_alignments",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     alignment_protocol_id: UUID
     seq_ids: list[UUID]

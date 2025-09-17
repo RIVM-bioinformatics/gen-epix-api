@@ -1,7 +1,3 @@
-# pylint: disable=useless-import-alias
-from gen_epix.casedb.domain.repository.abac import (
-    BaseAbacRepository as BaseAbacRepository,
-)
 from gen_epix.casedb.domain.repository.case import (
     BaseCaseRepository as BaseCaseRepository,
 )
@@ -18,3 +14,6 @@ from gen_epix.casedb.domain.repository.subject import (
 from gen_epix.casedb.domain.repository.system import (
     BaseSystemRepository as BaseSystemRepository,
 )
+
+# pylint: disable=useless-import-alias
+from gen_epix.commondb.domain.repository import BaseAbacRepository as BaseAbacRepository

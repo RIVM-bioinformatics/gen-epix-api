@@ -3,16 +3,16 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from gen_epix.casedb.api.router import create_routers
-from gen_epix.common.api.exc import generate_handle_exception_function
+from gen_epix.commondb.api.exc import generate_handle_exception_function
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
-from gen_epix.fastapp.enum import LogLevel
 from gen_epix.fastapp.middleware import (
     HandleAuthExceptionMiddleware,
     UpdateResponseHeaderMiddleware,
@@ -70,6 +70,15 @@ def create_fast_api(
         lifespan=lifespan,
     )
 
+    if not debug:
+        fast_api.add_middleware(
+            CORSMiddleware,
+            allow_origins=[cfg.api.cors.allow_origins],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     # Add middleware
     # Rate limiting
     if not debug:
@@ -120,11 +129,11 @@ def create_fast_api(
         update_openapi_kwargs = kwargs.pop("update_openapi_kwargs", {})
         get_open_api_kwargs = update_openapi_kwargs.pop("get_openapi_kwargs", {})
         get_open_api_kwargs.update({"routes": fast_api.routes})
-        custom_openapi_function = create_custom_openapi_function(
+        custom_openapi_fn = create_custom_openapi_function(
             get_open_api_kwargs,
             fix_schema=update_openapi_kwargs.get("fix_schema", False),
             auth_service=update_openapi_kwargs.get("auth_service"),
         )
-        setattr(fast_api, "openapi", custom_openapi_function)
+        setattr(fast_api, "openapi", custom_openapi_fn)
 
     return fast_api

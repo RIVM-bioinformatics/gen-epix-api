@@ -1,15 +1,14 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.abac.case_abac import (
+from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
 from gen_epix.casedb.domain.model.case.case import (
-    _ENTITY_KWARGS,
     CaseType,
     CaseTypeCol,
     CaseTypeDim,
@@ -21,18 +20,12 @@ from gen_epix.casedb.domain.model.case.case import (
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.fastapp.domain import Entity
 
-_SERVICE_TYPE = enum.ServiceType.CASE
-_ENTITY_KWARGS = {
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class CompleteCaseType(CaseType):
     NAME: ClassVar = "CompleteCaseType"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_case_types",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     etiologies: dict[UUID, Etiology] = Field(
         description="The etiologies used by the case type"
@@ -45,7 +38,7 @@ class CompleteCaseType(CaseType):
     case_type_dims: list[CaseTypeDim] = Field(
         description="The ordered list of case type dimensions"
     )
-    case_type_cols: dict[UUID, CaseTypeCol] = Field(  # type: ignore
+    case_type_cols: dict[UUID, CaseTypeCol] = Field(
         description="The case type columns for the case type"
     )
     case_type_col_order: list[UUID] = Field(
@@ -63,3 +56,15 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
+
+    @model_validator(mode="after")
+    def derive_case_type_col_order(self) -> "CompleteCaseType":
+        ordered: list[UUID] = []
+        seen: set[UUID] = set()
+        for dim in self.case_type_dims:
+            for cid in dim.case_type_col_order:
+                if cid not in seen:
+                    ordered.append(cid)
+                    seen.add(cid)
+        self.case_type_col_order = ordered
+        return self

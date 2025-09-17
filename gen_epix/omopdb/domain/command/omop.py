@@ -4,7 +4,7 @@
 
 from typing import ClassVar
 
-from gen_epix.common.domain.command import CrudCommand
+from gen_epix.commondb.domain.command import CrudCommand
 from gen_epix.omopdb.domain import model
 
 
@@ -160,13 +160,5 @@ class CohortDefinitionCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CohortDefinition
 
 
-class ProvenanceCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Provenance
-
-
-class EtlCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Etl
-
-
-class SourceCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Source
+class MeasurementRelationCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MeasurementRelation

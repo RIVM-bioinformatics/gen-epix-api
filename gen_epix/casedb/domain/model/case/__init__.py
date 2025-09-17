@@ -3,6 +3,10 @@ from gen_epix.casedb.domain.model.case.case import Case as Case
 from gen_epix.casedb.domain.model.case.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
+from gen_epix.casedb.domain.model.case.case import CaseDataIssue as CaseDataIssue
+from gen_epix.casedb.domain.model.case.case import (
+    CaseForCreateUpdate as CaseForCreateUpdate,
+)
 from gen_epix.casedb.domain.model.case.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case.case import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case.case import CaseSet as CaseSet
@@ -30,6 +34,9 @@ from gen_epix.casedb.domain.model.case.case import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
 from gen_epix.casedb.domain.model.case.case import CaseTypeStat as CaseTypeStat
+from gen_epix.casedb.domain.model.case.case import (
+    CaseValidationReport as CaseValidationReport,
+)
 from gen_epix.casedb.domain.model.case.case import Col as Col
 from gen_epix.casedb.domain.model.case.case import Dim as Dim
 from gen_epix.casedb.domain.model.case.case import (
@@ -39,6 +46,7 @@ from gen_epix.casedb.domain.model.case.case import TreeAlgorithm as TreeAlgorith
 from gen_epix.casedb.domain.model.case.case import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
+from gen_epix.casedb.domain.model.case.case import ValidatedCase as ValidatedCase
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )

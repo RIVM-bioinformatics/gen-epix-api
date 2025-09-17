@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator, model_validator
 
-from gen_epix.common.domain.model.base import Model
+from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import (
@@ -36,12 +36,6 @@ from gen_epix.seqdb.domain.model.seq.metadata import (
     TaxonomyProtocol,
 )
 
-_SERVICE_TYPE = enum.ServiceType.SEQ
-_ENTITY_KWARGS = {
-    "service_type": _SERVICE_TYPE,
-    "schema_name": _SERVICE_TYPE.value.lower(),
-}
-
 
 class Allele(Model, SeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
@@ -50,7 +44,6 @@ class Allele(Model, SeqMixin, QualityMixin):
         persistable=True,
         keys=create_keys({1: ("locus_id", "seq_hash_sha256")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
-        **_ENTITY_KWARGS,
     )
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
@@ -75,7 +68,6 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     ref_allele_id: UUID
     ref_allele: Allele | None = Field(default=None, description="The reference allele.")
@@ -95,7 +87,6 @@ class Sample(Model, CodeMixin):
         table_name="sample",
         persistable=True,
         keys=create_keys({1: "code"}),
-        **_ENTITY_KWARGS,
     )
     props: dict[str, str] = Field(
         default_factory=dict, description="The properties of the sample."
@@ -107,7 +98,7 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         snake_case_plural_name="read_sets",
         table_name="read_set",
         persistable=True,
-        keys=create_keys({1: "code", 2: ("uri", "uri2")}),
+        keys=create_keys({1: "code"}),
         links=create_links(
             {
                 1: (
@@ -117,7 +108,6 @@ class ReadSet(Model, CodeMixin, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     uri: str = Field(description="The URI of the read set.")
     uri2: str | None = Field(
@@ -149,7 +139,6 @@ class RawSeq(Model, SeqMixin):
         snake_case_plural_name="raw_seqs",
         table_name="raw_seq",
         persistable=True,
-        **_ENTITY_KWARGS,
     )
 
 
@@ -161,12 +150,6 @@ class Seq(Model, CodeMixin, QualityMixin):
         keys=create_keys(
             {
                 1: "code",
-                2: (
-                    "read_set_id",
-                    "read_set2_id",
-                    "assembly_protocol_id",
-                    "raw_seq_id",
-                ),
             }
         ),
         links=create_links(
@@ -178,7 +161,6 @@ class Seq(Model, CodeMixin, QualityMixin):
                 5: ("raw_seq_id", RawSeq, "raw_seq"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID | None = Field(
         default=None,
@@ -224,7 +206,6 @@ class ContigAlignment(Model, AlignmentMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="contig_alignments",
         persistable=False,
-        **_ENTITY_KWARGS,
     )
     ref_seq_id: UUID = Field(
         description="The unique identifier for the reference sequence. FOREIGN KEY"
@@ -247,7 +228,6 @@ class SeqAlignment(Model):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -283,7 +263,6 @@ class AlleleProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -325,7 +304,7 @@ class AlleleProfile(Model, QualityMixin):
         sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
         return sha256.digest()
 
-    @field_serializer("allele_profile_format")
+    @field_serializer("allele_profile_format", mode="plain")
     def _serialize_snp_profile_format(
         self, value: str | enum.AlleleProfileFormat
     ) -> str:
@@ -359,7 +338,6 @@ class SnpProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -392,7 +370,7 @@ class SnpProfile(Model, QualityMixin):
             value = bytes.fromhex(value)
         return value
 
-    @field_serializer("snp_profile_format")
+    @field_serializer("snp_profile_format", mode="plain")
     def _serialize_snp_profile_format(self, value: str | enum.SnpProfileFormat) -> str:
         if isinstance(value, enum.SnpProfileFormat):
             return value.value
@@ -422,7 +400,6 @@ class KmerProfile(Model, QualityMixin):
                 ),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -465,7 +442,6 @@ class SeqClassification(Model):
                 3: ("primary_category_id", SeqCategory, "primary_category"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -508,7 +484,6 @@ class SeqTaxonomy(Model):
                 3: ("primary_taxon_id", Taxon, "primary_taxon"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -548,7 +523,6 @@ class PcrMeasurement(Model):
                 2: ("pcr_protocol_id", PcrProtocol, "pcr_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
@@ -580,7 +554,6 @@ class AstMeasurement(Model):
                 2: ("ast_protocol_id", AstProtocol, "ast_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
@@ -612,7 +585,6 @@ class AstPrediction(Model):
                 2: ("ast_protocol_id", AstProtocol, "ast_protocol"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -640,7 +612,6 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
             {
                 1: "code",
                 2: ("name", "version"),
-                3: ("seq_distance_protocol_type", "locus_set_id", "ref_seq_id"),
             }
         ),
         links=create_links(
@@ -649,7 +620,6 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
                 2: ("ref_seq_id", RefSeq, "ref_seq"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     max_stored_distance: float = Field(description="The maximum distance to be stored")
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
@@ -681,7 +651,7 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
             raise ValueError("ref_seq_id must be provided for snp based type")
         return self
 
-    @field_serializer("seq_distance_protocol_type")
+    @field_serializer("seq_distance_protocol_type", mode="plain")
     def _serialize_seq_format(self, value: str | enum.SeqDistanceProtocolType) -> str:
         if isinstance(value, enum.SeqDistanceProtocolType):
             return value.value
@@ -717,7 +687,6 @@ class SeqDistance(Model):
                 5: ("kmer_profile_id", KmerProfile, "kmer_profile"),
             }
         ),
-        **_ENTITY_KWARGS,
     )
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
@@ -772,7 +741,7 @@ class SeqDistance(Model):
                 raise ValueError(f"{obj.__class__.__name__} must be None")
         return self
 
-    @field_serializer("distance_format")
+    @field_serializer("distance_format", mode="plain")
     def _serialize_distance_format(self, value: str | enum.SeqDistanceFormat) -> str:
         if isinstance(value, enum.SeqDistanceFormat):
             return value.value

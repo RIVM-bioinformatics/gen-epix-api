@@ -21,18 +21,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+    - name: Set up Python 3.13
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
       with:
-        python-version: 3.12
+        python-version: 3.13
     - name: Install ODBC development headers
       run: |
         sudo apt-get update
         sudo apt-get install -y unixodbc-dev
     - name: Cache pip dependencies
       id: cache-pip
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: ~/.venv
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -60,9 +60,9 @@ jobs:
     needs: setup-env
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
     - name: Restore pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: ~/.venv
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -88,9 +88,9 @@ jobs:
     needs: setup-env
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
     - name: Restore pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: ~/.venv
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -116,9 +116,9 @@ jobs:
     needs: setup-env
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
     - name: Restore pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: ~/.venv
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -146,9 +146,9 @@ jobs:
       CASEDB_IDPS_CONFIG_FILE: ${{ github.workspace }}/gen_epix/casedb/config/idp/no_identity_providers.json
       CASEDB_SECRETS_DIR: ${{ github.workspace }}/gen_epix/casedb/config/.secret
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
     - name: Restore pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: ~/.venv
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -158,10 +158,10 @@ jobs:
         python run.py test_all
     - name: Upload coverage report
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: coverage-report
-        path: test/data/output/coverage.xml
+        path: test/output/coverage.xml
 
   sonarcloud:
     name: SonarCloud Scan
@@ -169,14 +169,14 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       with:
         fetch-depth: 0 # Shallow clones should be disabled for SonarCloud analysis
     - name: Download coverage report
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
       with:
         name: coverage-report
-        path: test/data/output/
+        path: test/output/
     - name: SonarCloud Scan
       if: always()
       uses: sonarsource/sonarcloud-github-action@master

@@ -1,5 +1,5 @@
-from gen_epix.common.config import AppCfg
-from gen_epix.common.util import get_package_version
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.util import get_package_version
 from gen_epix.omopdb.app_setup import create_fast_api
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.env import AppEnv
@@ -8,9 +8,9 @@ APP_NAME = "OMOPDB"
 
 # Data for OpenAPI schema
 SCHEMA_KWARGS = {
-    "title": "BioBase master database",
-    "description": "BioBase API",
-    "summary": "Summary goes here",
+    "title": "Gen-EpiX omopdb",
+    "summary": "Genomic Epidemiology platform for disease X, omopdb app",
+    "description": "The omopdb app manages clinical and epidemiological data of persons or subjects of non-human origin.",
     "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {

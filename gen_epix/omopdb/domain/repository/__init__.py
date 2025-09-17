@@ -1,4 +1,6 @@
-# pylint: disable=useless-import-alias
+from gen_epix.omopdb.domain.repository.abac import (
+    BaseAbacRepository as BaseAbacRepository,
+)
 from gen_epix.omopdb.domain.repository.omop import (
     BaseOmopRepository as BaseOmopRepository,
 )

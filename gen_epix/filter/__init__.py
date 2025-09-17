@@ -11,9 +11,9 @@ from gen_epix.filter.datetime_range import (
 )
 
 # Import relevant enums
-from gen_epix.filter.enum import BooleanOperator as BooleanOperator
 from gen_epix.filter.enum import ComparisonOperator as ComparisonOperator
 from gen_epix.filter.enum import FilterType as FilterType
+from gen_epix.filter.enum import LogicalOperator as LogicalOperator
 
 # Import all filter classes, part 2
 from gen_epix.filter.equals import EqualsFilter as EqualsFilter
@@ -34,8 +34,8 @@ from gen_epix.filter.equals_uuid import TypedEqualsUuidFilter as TypedEqualsUuid
 from gen_epix.filter.exists import ExistsFilter as ExistsFilter
 from gen_epix.filter.exists import TypedExistsFilter as TypedExistsFilter
 from gen_epix.filter.hashable_set import (
-    HashableSetFilter as HashableSetFilter,
-)  # TypedValueSetFilter does not exist
+    HashableSetFilter as HashableSetFilter,  # TypedHashableSetFilter does not exist
+)
 from gen_epix.filter.no_filter import NoFilter as NoFilter
 from gen_epix.filter.no_filter import TypedNoFilter as TypedNoFilter
 from gen_epix.filter.number_range import NumberRangeFilter as NumberRangeFilter

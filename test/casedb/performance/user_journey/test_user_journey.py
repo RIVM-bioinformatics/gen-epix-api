@@ -4,9 +4,8 @@ import pickle
 import pstats
 import re
 import sys
-import test.test_client.util as test_util
 from pathlib import Path
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient
+from test.casedb.casedb_test_client import CasedbTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
@@ -16,6 +15,7 @@ from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyC
 import pandas as pd
 import pyinstrument
 
+import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum
 
 PERFORMANCE_DF: list = []
@@ -95,11 +95,11 @@ class TestRead:
                 enum.RepositoryType.SA_SQLITE,
             }:
                 test_util.set_log_level("casedb", logging.ERROR)
-                env = CasedbServiceTestClient.get_test_client(
+                env = CasedbTestClient.get_test_client(
                     test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
                     repository_type=repository_type,
                     log_level=logging.ERROR,
-                    load_target="full",
+                    data_fixture_name="full",
                 )
                 # TODO: set logger
                 for i in range(1):
@@ -134,7 +134,7 @@ class TestRead:
 
     @classmethod
     def tearDownClass(cls) -> None:
-        test_dir = CasedbServiceTestClient(
+        test_dir = CasedbTestClient(
             test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir

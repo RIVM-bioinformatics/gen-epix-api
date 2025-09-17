@@ -1,14 +1,15 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
+pandas==2.3.2
 pytest==8.4.*
-pytest-cov==6.2.*
-pytest-mock==3.14.*
+pytest-cov==6.3.*
+pytest-mock==3.15.*
 pytest-dependency==0.6.*
 pyinstrument==5.1.*
 isort==5.13.*
 black==24.10.*
 pylint==3.3.*
-mypy==1.17.*
+mypy==1.18.*
 black==24.10.*
 cryptography==43.0.3
 
@@ -18,5 +19,5 @@ openpyxl==3.1.*
 types-cachetools==5.5.*
 types-python-jose==3.5.*
 
-# NCBI Taxonomy parsing
-# ete4==4.0.0b2
+# TODO: remove if run.py no longer uses it
+uvicorn==0.35.0

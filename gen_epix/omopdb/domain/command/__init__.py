@@ -1,67 +1,79 @@
 from typing import Type
 
 from gen_epix import fastapp
-from gen_epix.common.domain import command as common_command
-from gen_epix.common.domain import enum as common_enum
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain import command as common_command
+from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )
-from gen_epix.common.domain.command import Command as Command
-from gen_epix.common.domain.command import ContactCrudCommand as ContactCrudCommand
-from gen_epix.common.domain.command import CrudCommand as CrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import Command as Command
+from gen_epix.commondb.domain.command import ContactCrudCommand as ContactCrudCommand
+from gen_epix.commondb.domain.command import CrudCommand as CrudCommand
+from gen_epix.commondb.domain.command import (
     DataCollectionCrudCommand as DataCollectionCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetCrudCommand as DataCollectionSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetDataCollectionUpdateAssociationCommand as DataCollectionSetDataCollectionUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
-from gen_epix.common.domain.command import InviteUserCommand as InviteUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
+from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetMemberCrudCommand as OrganizationSetMemberCrudCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     OrganizationSetOrganizationUpdateAssociationCommand as OrganizationSetOrganizationUpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import OutageCrudCommand as OutageCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import OutageCrudCommand as OutageCrudCommand
+from gen_epix.commondb.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
-from gen_epix.common.domain.command import SiteCrudCommand as SiteCrudCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
+from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
-from gen_epix.common.domain.command import UpdateUserCommand as UpdateUserCommand
-from gen_epix.common.domain.command import (
+from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
+from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
+from gen_epix.commondb.domain.command.abac import (
+    RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
+    RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
+)
+from gen_epix.commondb.domain.command.rbac import (
+    RetrieveSubRolesCommand as RetrieveSubRolesCommand,
+)
 from gen_epix.omopdb.domain import enum
+from gen_epix.omopdb.domain.command.abac import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import (
     CareSiteCrudCommand as CareSiteCrudCommand,
 )
@@ -104,7 +116,6 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import (
     DrugStrengthCrudCommand as DrugStrengthCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import EtlCrudCommand as EtlCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     FactRelationshipCrudCommand as FactRelationshipCrudCommand,
 )
@@ -116,6 +127,9 @@ from gen_epix.omopdb.domain.command.omop import (
 )
 from gen_epix.omopdb.domain.command.omop import (
     MeasurementCrudCommand as MeasurementCrudCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
+    MeasurementRelationCrudCommand as MeasurementRelationCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     MetadataCrudCommand as MetadataCrudCommand,
@@ -136,15 +150,11 @@ from gen_epix.omopdb.domain.command.omop import (
     ProcedureOccurrenceCrudCommand as ProcedureOccurrenceCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
-    ProvenanceCrudCommand as ProvenanceCrudCommand,
-)
-from gen_epix.omopdb.domain.command.omop import (
     ProviderCrudCommand as ProviderCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     RelationshipCrudCommand as RelationshipCrudCommand,
 )
-from gen_epix.omopdb.domain.command.omop import SourceCrudCommand as SourceCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     SourceToConceptMapCrudCommand as SourceToConceptMapCrudCommand,
 )
@@ -173,6 +183,10 @@ from gen_epix.omopdb.domain.command.organization import (
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
+    enum.ServiceType.ABAC: set(
+        _COMMON_COMMANDS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]
+    )
+    | set(),
     enum.ServiceType.OMOP: {
         CareSiteCrudCommand,
         CdmSourceCrudCommand,
@@ -192,11 +206,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         DrugEraCrudCommand,
         DrugExposureCrudCommand,
         DrugStrengthCrudCommand,
-        EtlCrudCommand,
         FactRelationshipCrudCommand,
         LocationCrudCommand,
         LocationHistoryCrudCommand,
         MeasurementCrudCommand,
+        MeasurementRelationCrudCommand,
         MetadataCrudCommand,
         NoteCrudCommand,
         NoteNlpCrudCommand,
@@ -205,10 +219,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         PayerPlanPeriodCrudCommand,
         PersonCrudCommand,
         ProcedureOccurrenceCrudCommand,
-        ProvenanceCrudCommand,
         ProviderCrudCommand,
         RelationshipCrudCommand,
-        SourceCrudCommand,
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
         SurveyConductCrudCommand,
@@ -231,7 +243,8 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_IMPL: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
+COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }

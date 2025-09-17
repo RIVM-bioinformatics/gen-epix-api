@@ -1,5 +1,5 @@
-from gen_epix.common.config import AppCfg
-from gen_epix.common.util import get_package_version
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.util import get_package_version
 from gen_epix.seqdb.app_setup import create_fast_api
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.env import AppEnv
@@ -8,9 +8,9 @@ APP_NAME = "SEQDB"
 
 # Data for OpenAPI schema
 SCHEMA_KWARGS = {
-    "title": "Sequence database",
-    "description": "Sequence database API",
-    "summary": "Summary goes here",
+    "title": "Gen-EpiX seqdb",
+    "summary": "Genomic Epidemiology platform for disease X, seqdb app",
+    "description": "The seqdb app manages genomic sequencing data.",
     "version": get_package_version(),
     "terms_of_service": "http://example.com/terms/",
     "contact": {

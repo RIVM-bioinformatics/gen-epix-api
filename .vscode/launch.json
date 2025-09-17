@@ -32,32 +32,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.casedb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -67,19 +41,6 @@
                 "casedb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.casedb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "casedb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
@@ -111,32 +72,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.seqdb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.seqdb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -146,19 +81,6 @@
                 "seqdb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.seqdb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "seqdb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
@@ -190,32 +112,6 @@
             "justMyCode": true
         },
         {
-            "name": "api.omopdb.local.no_ssl",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "local",
-                "no_ssl"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.local.no_auth",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "local",
-                "no_auth"
-            ],
-            "justMyCode": true
-        },
-        {
             "name": "api.omopdb.local.debug",
             "type": "debugpy",
             "request": "launch",
@@ -225,19 +121,6 @@
                 "omopdb",
                 "local",
                 "debug"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.omopdb.remote",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "omopdb",
-                "remote",
-                "idps"
             ],
             "justMyCode": true
         },
@@ -425,6 +308,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.integration.case_validation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_integration_case_validation"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.integration.content",
             "type": "debugpy",
             "request": "launch",
@@ -568,12 +462,45 @@
             "justMyCode": true
         },
         {
+            "name": "test.commondb.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_common_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.auth",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_common_unit_auth"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.filter.unit",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "test_filter_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.transform.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_transform_unit"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -634,6 +561,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.docs.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_docs_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",
@@ -679,13 +617,24 @@
             "justMyCode": true
         },
         {
+            "name": "other.general.generate_erm_diagrams",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_erm_diagrams",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "other.casedb.parse_user_journey_v2",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
-                "./test/data/output/log.debug.txt",
+                "./test/output/log.debug.txt",
                 "2",
             ],
             "console": "integratedTerminal",
@@ -698,7 +647,7 @@
             "program": "run.py",
             "args": [
                 "other_casedb_parse_user_journey_from_debug_log",
-                "./test/data/output/log.debug.txt",
+                "./test/output/log.debug.txt",
                 "1",
             ],
             "console": "integratedTerminal",

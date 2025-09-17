@@ -19,11 +19,12 @@ class IdFactory(Enum):
 
 
 class ServiceType(Enum):
-    ORGANIZATION = "ORGANIZATION"
     AUTH = "AUTH"
-    RBAC = "RBAC"
-    OMOP = "OMOP"
+    ORGANIZATION = "ORGANIZATION"
     SYSTEM = "SYSTEM"
+    RBAC = "RBAC"
+    ABAC = "ABAC"
+    OMOP = "OMOP"
 
 
 class RepositoryType(Enum):

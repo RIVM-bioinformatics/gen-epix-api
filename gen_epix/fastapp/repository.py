@@ -1,7 +1,8 @@
 import abc
 import uuid
+from collections.abc import Hashable
 from itertools import chain
-from typing import Any, Callable, Hashable, Iterable, Type
+from typing import Any, Callable, Iterable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import CrudOperation
@@ -12,8 +13,8 @@ from gen_epix.filter import Filter
 
 class BaseRepository(abc.ABC):
     def __init__(self, **kwargs: Any):
-        self._id: str = kwargs.get("id", str(uuid.uuid4()))  # type: ignore[attr-defined]
-        self._name: str = kwargs.get("name", self._id)  # type: ignore[attr-defined]
+        self._id: str = kwargs.get("id", str(uuid.uuid4()))
+        self._name: str = kwargs.get("name", self._id)
 
     @property
     def id(self) -> str:
@@ -44,6 +45,26 @@ class BaseRepository(abc.ABC):
         applied to read and delete all operations. The filter must have keys that
         correspond to the row class fields and must be convertable into a where clause,
         and can e.g. be created by the split_filter method.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def read_fields(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: Type[Model],
+        field_names: list[str],
+        filter: Filter | None = None,
+        **kwargs: Any,
+    ) -> Iterable[tuple]:
+        """
+        Reads specific fields of objects of the given model class that match the
+        provided filter, if any. The filter must have keys that correspond to the model class
+        fields and must be convertable into a where clause, and can e.g. be created by
+        the split_filter method.
+        An iterable of tuples is returned, where each tuple contains the values of the
+        requested fields for one object.
         """
         raise NotImplementedError()
 
@@ -82,6 +103,9 @@ class BaseRepository(abc.ABC):
             "excluded_association_objs", []
         )
 
+        def get_id_pair(obj: Model) -> tuple[Hashable, Hashable]:
+            return (getattr(obj, link_field_name1), getattr(obj, link_field_name2))
+
         # Parse input and create some general functions and values
         association_objs = list(association_objs)
         assert model_class.ENTITY is not None
@@ -95,9 +119,6 @@ class BaseRepository(abc.ABC):
         )
         excluded_obj_ids = {get_association_id(x) for x in excluded_association_objs}
         excluded_id_pairs = {get_id_pair(x) for x in excluded_association_objs}
-
-        def get_id_pair(obj: Model) -> tuple[Hashable, Hashable]:
-            return (getattr(obj, link_field_name1), getattr(obj, link_field_name2))
 
         # Special case: no association objects, i.e. delete all associations of either obj1 or obj2
         if not association_objs:

@@ -1,14 +1,15 @@
-from test.casedb.casedb_service_test_client import CasedbServiceTestClient as Env
+from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
+    ALL_USERS,
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
-    ROOT,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
+from uuid import UUID
 
 import pydantic
 import pytest
@@ -81,11 +82,13 @@ class TestUpdate:
                         with pytest.raises(exc.UnauthorizedAuthError):
                             env.update_user(user, tgt_user, is_active=True)
                     if is_org_update_allowed:
-                        env.update_user(user, tgt_user, organization=new_tgt_org)
-                        env.update_user(user, tgt_user, organization=tgt_org)
+                        env.update_user(user, tgt_user, organization_or_str=new_tgt_org)
+                        env.update_user(user, tgt_user, organization_or_str=tgt_org)
                     else:
                         with pytest.raises(exc.UnauthorizedAuthError):
-                            env.update_user(user, tgt_user, organization=new_tgt_org)
+                            env.update_user(
+                                user, tgt_user, organization_or_str=new_tgt_org
+                            )
                     with pytest.raises(
                         (exc.UnauthorizedAuthError, exc.InvalidIdsError)
                     ):
@@ -257,10 +260,14 @@ class TestUpdate:
             user = f"{role_str}1_1"
             if env.verbose:
                 print(f"User: {user} -> org2")
-            user = env.temp_update_user_own_organization(user, organization="org2")
+            user = env.temp_update_user_own_organization(
+                user, organization_or_str="org2"
+            )
             if env.verbose:
                 print(f"User: {user} -> org1")
-            user = env.temp_update_user_own_organization(user, organization="org1")
+            user = env.temp_update_user_own_organization(
+                user, organization_or_str="org1"
+            )
             if not SKIP_RAISE:
                 if env.verbose:
                     print(f"User: {user} -> dummy")
@@ -415,9 +422,7 @@ class TestUpdate:
                     {"description": str(-i)},
                 )
 
-    @pytest.mark.skip(
-        reason="To be adjusted to similar structure as e.g test_update_case_type_col_set_member"
-    )
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_set_member(self, env: Env) -> None:
         """
         RBAC permissions:
@@ -428,20 +433,34 @@ class TestUpdate:
         - org_user: -
         - guest: -
         """
-        all_case_type_col_set_members = env.read_all(ROOT, model.CaseTypeColSetMember)
-        for user in REFDATA_ADMIN_OR_ABOVE_USERS:
-            env.update_case_type_col_set_member(user, all_case_type_col_set_members[-1])
-
-    @pytest.mark.skip(
-        reason="To be adjusted to similar structure as e.g test_update_case_type_col_set_member"
-    )
-    def test_update_case_type_col_set_member_raise(self, env: Env) -> None:
-        all_case_type_col_set_members = env.read_all(ROOT, model.CaseTypeColSetMember)
-        for user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.update_case_type_col_set_member(
-                    user, all_case_type_col_set_members[-1]
+        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(  # type: ignore[assignment]
+            "root1_1", model.CaseTypeColSetMember
+        )
+        all_cols: list[model.CaseTypeCol] = env.read_all("root1_1", model.CaseTypeCol)  # type: ignore[assignment]
+        col_case_type_map = {c.id: c.case_type_id for c in all_cols}
+        for user_name in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
+                user_name
+            )
+            expected_member_ids = {
+                x.id
+                for x in all_case_type_col_set_members
+                if col_case_type_map.get(x.case_type_col_id) in expected_case_type_ids
+            }
+            for member in expected_member_ids:
+                member_obj = next(
+                    (x for x in all_case_type_col_set_members if x.id == member),
+                    None,
                 )
+                if user_name in REFDATA_ADMIN_OR_ABOVE_USERS:
+                    # Use the update_case_type_col_set_member method to update a single
+                    # CaseTypeColSetMember object in the database
+                    env.update_case_type_col_set_member(user_name, member_obj)  # type: ignore[assignment]
+                else:
+                    # update_case_type_col_set_member checks via the CRUD command
+                    # the RBAC/ABAC permissions and should raise an error
+                    with pytest.raises(exc.UnauthorizedAuthError):
+                        env.update_case_type_col_set_member(user_name, member_obj)  # type: ignore[assignment]
 
     # def test_update_case_set(self, env: Env) -> None:
     #     # TODO
