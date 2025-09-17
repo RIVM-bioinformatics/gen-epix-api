@@ -128,13 +128,14 @@ def create_seq_endpoints(
         description=command.RetrieveCompleteAlleleProfileCommand.__doc__,
     )
     async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveSeqFastaRequestBody  # type: ignore
+        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
     ) -> list[model.CompleteAlleleProfile]:
         try:
             retval: list[model.CompleteAlleleProfile] = app.handle(
                 command.RetrieveCompleteAlleleProfileCommand(
                     user=user,
                     seq_ids=request_body.seq_ids,
+                    locus_set_id=request_body.locus_set_id,
                 )
             )
         except Exception as exception:
