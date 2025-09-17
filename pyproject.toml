@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Gen-EpiX"
-version = "5.0.0"
+version = "0.1.11"
 authors = [
     { name="RIVM-bioinformatics", email="ids-bioinformatics@rivm.nl" },
 ]
@@ -116,11 +116,12 @@ autoescape = false
 env = "GIT_COMMIT_AUTHOR"
 default = "semantic-release <semantic-release>"
 
+
 [semantic_release.commit_parser_options]
-minor_tags = ["feat"]
+minor_tags = ["feat", "feat!:"]
 patch_tags = ["fix", "perf"]
 other_allowed_tags = ["build", "chore", "ci", "docs", "style", "refactor", "test"]
-allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
+allowed_tags = ["feat", "feat!:", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
 default_bump_level = 0
 
 [semantic_release.remote]
