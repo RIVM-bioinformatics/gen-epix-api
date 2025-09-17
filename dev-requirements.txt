@@ -9,7 +9,7 @@ pyinstrument==5.1.*
 isort==5.13.*
 black==24.10.*
 pylint==3.3.*
-mypy==1.17.*
+mypy==1.18.*
 black==24.10.*
 cryptography==43.0.3
 
