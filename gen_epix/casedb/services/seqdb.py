@@ -108,17 +108,9 @@ class SeqdbService(BaseSeqdbService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
-        # For testing, use fixed seq IDs
-        # TODO: replace with real seq IDs from cmd when available
-        seq_ids: list[UUID] = [
-            UUID("018d074d-e9fc-224e-1124-7442d8c06019"),
-            UUID("018d074d-e9fc-857b-2aa4-bc8e160df6b4"),
-            UUID("018d074d-e9fc-d9ea-8ccb-778185f291b9"),
-        ]
-
         seqdb_cmd = seqdb_command.RetrieveSeqFastaCommand(
             user=self.ext_app_user,
-            seq_ids=seq_ids,
+            seq_ids=cmd.seq_ids,
             wrap=cmd.wrap,
         )
         stream: Iterable[str] = self.ext_app.handle(seqdb_cmd)

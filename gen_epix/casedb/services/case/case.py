@@ -444,6 +444,25 @@ class CaseService(BaseCaseService):
     ) -> model.PhylogeneticTree:
         return case_service_retrieve_phylogenetic_tree(self, cmd)
 
+    def _get_seq_ids_from_cases(
+        self,
+        uow: BaseUnitOfWork,
+        user: model.User,
+        case_abac: model.CaseAbac,
+        case_ids: list[UUID],
+        seq_case_type_col_id: UUID,
+    ) -> list[UUID]:
+        # @ABAC: Get cases and sequence_ids
+        cases = self._retrieve_cases_with_content_right(
+            uow,
+            user.id,  # type: ignore[arg-type]
+            case_abac,
+            enum.CaseRight.READ_CASE,
+            case_ids=case_ids,
+            filter_content=True,
+        )
+        return [UUID(x.content.get(seq_case_type_col_id)) for x in cases]
+
     def retrieve_genetic_sequence_by_case(
         self,
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
@@ -452,8 +471,6 @@ class CaseService(BaseCaseService):
         case_ids = cmd.case_ids
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
-
-        # Special case: zero case_ids
         if not case_ids:
             return []
 
@@ -461,18 +478,13 @@ class CaseService(BaseCaseService):
         assert case_abac is not None
 
         with repository.uow() as uow:
-
-            # @ABAC: Get cases and sequence_ids
-            cases = self._retrieve_cases_with_content_right(
+            seq_ids: list[UUID] = self._get_seq_ids_from_cases(
                 uow,
-                user.id,
+                user,
                 case_abac,
-                enum.CaseRight.READ_CASE,
-                case_ids=case_ids,
-                filter_content=True,
+                case_ids,
+                seq_case_type_col_id,
             )
-            seq_ids = [UUID(x.content.get(seq_case_type_col_id)) for x in cases]
-
             # Retrieve sequences
             genetic_sequences: list[model.GeneticSequence] = self.app.handle(
                 command.RetrieveGeneticSequenceByIdCommand(
@@ -486,40 +498,44 @@ class CaseService(BaseCaseService):
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
-        """Return a streaming iterable of FASTA formatted lines"""
-        # TODO: this implementation loads all sequences in memory first and then
-        # streams them. Replace this by a RetrieveGeneticSequenceFastaByIdCommand
-        # command in the seq service, and a RetrieveSeqFasta command in seqdb.
-        # The latter returns the fasta StreamingResponse which is then forwarded
-        # to the caller.
-        generator: Iterable[str] = self.app.handle(
-            command.RetrieveGeneticSequenceFastaByIdCommand(
-                user=cmd.user,
-                # Replace by real seq IDs
-                seq_ids=[
-                    UUID("018d074d-e9fc-224e-1124-7442d8c06019"),
-                    UUID("018d074d-e9fc-857b-2aa4-bc8e160df6b4"),
-                    UUID("018d074d-e9fc-d9ea-8ccb-778185f291b9"),
-                ],
-            )
-        )
-        return generator
+        """
+        Return a streaming iterable of FASTA formatted lines.
+        Path:
+        HTTP client
+        -> casedb endpoint
+        -> casedb service calls casedb seqdb command
+        -> seqdb command (inside casedb) calls ext_app with RetrieveSeqFastaCommand
+        -> seqdb service calls correct repository (dict or SA implementation) to stream Seq rows
+        -> seqdb service converts rows to FASTA lines on the fly
+        -> returns an iterator
+        -> casedb forwards that iterator
+        -> FastAPI wraps it in a StreamingResponse.
+        """
+        seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
+        case_ids = cmd.case_ids
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
 
-    def fasta_file_generator(
-        self,
-        sequences: Iterable[model.GeneticSequence],
-        wrap: int | None = 80,
-    ) -> Iterable[str]:
-        for seq in sequences:
-            if seq.id is None:
-                continue
-            yield f">{seq.id}\n"
-            sequence = seq.nucleotide_sequence or ""
-            if wrap and wrap > 0:
-                for i in range(0, len(sequence), wrap):
-                    yield sequence[i : i + wrap] + "\n"
-            else:
-                yield sequence + "\n"
+        if not case_ids:
+            raise exc.InvalidArgumentsError("No case ids given")
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+
+        with repository.uow() as uow:
+
+            seq_ids: list[UUID] = self._get_seq_ids_from_cases(
+                uow,
+                user,
+                case_abac,
+                case_ids,
+                seq_case_type_col_id,
+            )
+            retrieve_cmd = command.RetrieveGeneticSequenceFastaByIdCommand(
+                user=cmd.user, seq_ids=seq_ids
+            )
+            generator: Iterable[str] = self.app.handle(retrieve_cmd)
+            return generator
 
     def _read_association_with_valid_ids(
         self,
