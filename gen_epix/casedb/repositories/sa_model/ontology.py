@@ -56,11 +56,11 @@ class Concept(Base, RowMetadataMixin):
 class ConceptRelation(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptRelation)
 
-    concept_id_1: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConceptRelation, "concept_id_1"
+    from_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConceptRelation, "from_concept_id"
     )
-    concept_id_2: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConceptRelation, "concept_id_2"
+    to_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConceptRelation, "to_concept_id"
     )
     relation: Mapped[enum.ConceptRelationType] = create_mapped_column(
         DOMAIN, model.ConceptRelation, "relation"

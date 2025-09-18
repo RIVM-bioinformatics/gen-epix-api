@@ -102,18 +102,20 @@ class ConceptRelation(Model):
         snake_case_plural_name="concept_relations",
         table_name="concept_relation",
         persistable=True,
-        keys=create_keys({1: ("concept_id_1", "concept_id_2")}),
+        keys=create_keys({1: ("from_concept_id", "to_concept_id")}),
         links=create_links(
             {
-                1: ("concept_id_1", Concept, "concept_1"),
-                2: ("concept_id_2", Concept, "concept_2"),
+                1: ("from_concept_id", Concept, "from_concept"),
+                2: ("to_concept_id", Concept, "to_concept"),
             }
         ),
     )
-    concept_id_1: UUID = Field(description="The ID of the first concept. FOREIGN KEY")
-    concept_1: Concept | None = Field(default=None, description="The first concept.")
-    concept_id_2: UUID = Field(description="The ID of the second concept. FOREIGN KEY")
-    concept_2: Concept | None = Field(default=None, description="The second concept.")
+    from_concept_id: UUID = Field(
+        description="The ID of the first concept. FOREIGN KEY"
+    )
+    from_concept: Concept | None = Field(default=None, description="The first concept.")
+    to_concept_id: UUID = Field(description="The ID of the second concept. FOREIGN KEY")
+    to_concept: Concept | None = Field(default=None, description="The second concept.")
     relation: enum.ConceptRelationType = Field(
         description="The relation between the two concepts."
     )
