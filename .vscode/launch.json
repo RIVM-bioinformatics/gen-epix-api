@@ -467,7 +467,7 @@
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_common_unit"
+                "test_commondb_unit"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -478,7 +478,29 @@
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_common_unit_auth"
+                "test_commondb_unit_auth"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.integration",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.integration.build_db",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration_build_db"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

@@ -24,7 +24,7 @@ from gen_epix.fastapp.enum import CrudOperation
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION.value,
+        test_name=EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION.value,
         repository_type=REPOSITORY_TYPE,
         verbose=VERBOSE,
         log_level=logging.ERROR,

@@ -24,7 +24,7 @@ class TestRead:
                 continue
             test_util.set_log_level("casedb", logging.ERROR)
             env = CasedbTestClient.get_test_client(
-                test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
+                test_name=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
                 repository_type=repository_type,
                 log_level=logging.ERROR,
             )
@@ -56,7 +56,7 @@ class TestRead:
     @classmethod
     def tearDownClass(cls) -> None:
         test_dir = CasedbTestClient.get_test_client(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
+            test_name=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)

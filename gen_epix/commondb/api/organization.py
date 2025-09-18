@@ -6,11 +6,21 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator
 
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
+from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
+
+CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
+
+
+class ApiPermission(PydanticBaseModel, frozen=True):
+    command_name: CommandName = (  # pyright: ignore[reportInvalidTypeForm]
+        copy_model_field(Permission, "command_name")
+    )
+    permission_type: PermissionType = copy_model_field(Permission, "permission_type")
 
 
 class UserInvitationRequestBody(PydanticBaseModel):

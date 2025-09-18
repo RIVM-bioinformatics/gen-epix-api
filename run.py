@@ -12,6 +12,23 @@ class Run:
 
     ROOT_DIR = os.getcwd()
     APP_SECRETS_ENV_VARIABLES = {
+        AppType.COMMONDB: {
+            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="SETTINGS_DIR",
+                root_dir="test/",
+            ),
+            "SECRETS_DIR": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="SECRETS_DIR",
+                extension=".secret",
+            ),
+            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="LOGGING_CONFIG_FILE",
+                extension="logging.yaml",
+            ),
+        },
         AppType.CASEDB: {
             "SETTINGS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"
@@ -431,7 +448,7 @@ class Run:
             ]
         )
 
-    def test_common_unit(self) -> None:
+    def test_commondb_unit(self) -> None:
         import pytest
 
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
@@ -442,7 +459,7 @@ class Run:
             ]
         )
 
-    def test_common_unit_auth(self) -> None:
+    def test_commondb_unit_auth(self) -> None:
         import pytest
 
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
@@ -450,6 +467,28 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/unit/auth/",
+            ]
+        )
+
+    def test_commondb_integration(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/integration/build_db",
+            ]
+        )
+
+    def test_commondb_integration_build_db(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/integration/build_db",
             ]
         )
 
