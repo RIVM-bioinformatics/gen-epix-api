@@ -78,6 +78,7 @@ class RoleGenerator:
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.CRU),
             (command.ConceptSetCrudCommand, PermissionTypeSet.CRU),
+            (command.ConceptRelationCrudCommand, PermissionTypeSet.CRU),
             (command.DiseaseCrudCommand, PermissionTypeSet.CRU),
             (
                 command.DiseaseEtiologicalAgentUpdateAssociationCommand,

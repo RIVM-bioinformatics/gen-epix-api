@@ -389,7 +389,6 @@ class CaseTransformer(Transformer):
         list[model.RegionRelation],
     ]:
         app = self.case_service.app
-
         # Retrieve relevant regions
         regions: dict[UUID, model.Region] = {
             x.id: x
@@ -402,7 +401,6 @@ class CaseTransformer(Transformer):
                 )
             )
         }
-
         # Map regions to sets
         region_set_regions_map: dict[UUID, set[UUID]] = (
             map_paired_elements(  # type:ignore[assignment]
@@ -410,7 +408,6 @@ class CaseTransformer(Transformer):
                 as_set=True,
             )
         )
-
         # Retrieve region relations
         region_relations: list[model.RegionRelation] = app.handle(
             command.RegionRelationCrudCommand(

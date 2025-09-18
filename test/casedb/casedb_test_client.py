@@ -274,7 +274,7 @@ class CasedbTestClient(TestClient):
     def create_concept(
         self,
         user_or_str: str | model.User,
-        abbreviation: str,
+        code: str,
     ) -> model.Concept:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -284,7 +284,8 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.Concept(
-                    abbreviation=abbreviation,
+                    concept_set_id=self.generate_id(),
+                    code=code,
                 ),
             )
         )
@@ -321,10 +322,10 @@ class CasedbTestClient(TestClient):
         if concepts and set_dummy_concepts:
             for x in concepts:
                 if isinstance(x, str):
-                    self.create_concept(user, concept_set, x)
+                    self.create_concept(user, x)
                 else:
                     # If a Concept object is passed, replicate by code
-                    self.create_concept(user, concept_set, x.code if hasattr(x, "code") else x.abbreviation)  # type: ignore[attr-defined]
+                    self.create_concept(user, x.code)
         return self._set_obj(concept_set)  # type:ignore[return-value]
 
     def create_region_set(
