@@ -165,7 +165,7 @@ class OrganizationService(BaseOrganizationService):
         sub_cmd._policies = cmd._policies
         organization_ids = self.app.handle(sub_cmd)
         roles = self.app.handle(command.RetrieveSubRolesCommand(user=cmd.user))
-        return model.UserInvitationConstraints(
+        return self.user_invitation_constraints_class(
             organization_ids=organization_ids,
             roles=roles,
         )

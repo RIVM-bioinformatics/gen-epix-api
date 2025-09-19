@@ -1,11 +1,17 @@
 import datetime
+from typing import Type
 
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped, declarative_mixin
 
-from gen_epix.casedb.domain import model
-from gen_epix.commondb.domain import DOMAIN
+from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
-from gen_epix.commondb.repositories.sa_model.util import create_mapped_column
+from gen_epix.commondb.repositories.sa_model.util import (
+    create_mapped_column,
+    create_table_args,
+)
+
+Base: Type = orm.declarative_base(name=enum.ServiceType.SYSTEM.value)
 
 
 @declarative_mixin
@@ -31,3 +37,7 @@ class OutageMixin(RowMetadataMixin):
     is_visible: Mapped[bool | None] = create_mapped_column(
         DOMAIN, model.Outage, "is_visible"
     )
+
+
+class Outage(Base, OutageMixin):
+    __tablename__, __table_args__ = create_table_args(model.Outage)

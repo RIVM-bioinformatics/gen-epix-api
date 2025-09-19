@@ -1,7 +1,6 @@
 from uuid import UUID
 
-from gen_epix.casedb.domain import exc
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, exc, model
 from gen_epix.commondb.domain.policy import BaseReadUserPolicy
 from gen_epix.fastapp import Command
 from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet

@@ -37,15 +37,15 @@ def create_data_fixture(
         if not curr_cfg:
             # No repository
             continue
-        match repository_type:
-            case RepositoryType.DICT:
+        match repository_type.value:
+            case RepositoryType.DICT.value:
                 curr_cfg["file"] = re.sub(
                     r"\.[A-Za-z]+\.pkl\.gz",
                     f".{load_target.lower()}.pkl.gz",
                     curr_cfg["file"],
                     flags=re.IGNORECASE,
                 )
-            case RepositoryType.SA_SQLITE:
+            case RepositoryType.SA_SQLITE.value:
                 # Copy sqlite files to test output directory
                 source_file = Path(
                     re.sub(
@@ -60,7 +60,7 @@ def create_data_fixture(
                 target_file = test_dir / source_file.name
                 curr_cfg["file"] = str(target_file.absolute())
                 shutil.copyfile(source_file, target_file)
-            case RepositoryType.SA_SQL:
+            case RepositoryType.SA_SQL.value:
                 # Nothing to do
                 pass
             case _:
@@ -207,6 +207,7 @@ def load_demo_data(
             entities,
             connection_string.replace(".full.", ".empty."),
             name=service_type.value,
+            recreate_sqlite_file=True,
         )
         # Full repository
         sa_repository = sa_repository_class.create_sa_repository(

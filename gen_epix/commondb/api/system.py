@@ -12,7 +12,7 @@ from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
 from gen_epix.fastapp.api import CrudEndpointGenerator
 
-external_logger_fmap = exc.get_logger_fmap(logging.getLogger("casedb.external"))
+external_logger_fmap = exc.get_logger_fmap(logging.getLogger("commondb.external"))
 
 
 class HealthStatus(Enum):
