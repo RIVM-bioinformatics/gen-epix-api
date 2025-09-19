@@ -15,6 +15,10 @@ from typing import Any, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case
+from gen_epix.casedb.api.organization import (
+    UpdateUserRequestBody,
+    UserInvitationRequestBody,
+)
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
@@ -141,15 +145,20 @@ class CasedbTestClient(TestClient):
         """
         key = (test_type, repository_type, data_fixture_name)
         if key not in cls.TEST_CLIENTS:
-            test_dir = get_test_output_dir(get_test_name(test_type))
+            test_name = get_test_name(test_type)
+            test_dir = get_test_output_dir(test_name)
+            # Find existing test dir for same test type and use that if found,
+            # so all results come in the same dir
             for stored_key, stored_env in cls.TEST_CLIENTS.items():
                 stored_test_type, _, _ = stored_key  # type: ignore[misc]
                 if stored_test_type == test_type:  # type: ignore[has-type]
+                    test_name = stored_env.test_name
                     test_dir = stored_env.test_dir
                     break
             cls.TEST_CLIENTS[key] = cls(
                 app_cfg=app_cfg,
                 test_type=test_type,
+                test_name=test_name,
                 test_dir=test_dir,
                 repository_type=repository_type,
                 data_fixture_name=data_fixture_name,
@@ -178,7 +187,6 @@ class CasedbTestClient(TestClient):
         test_client_repository_type = TestClientRepositoryType(repository_type.value)
 
         # Set up test name and directory
-        cfg = app_cfg.cfg
         test_name = test_name or get_test_name(test_type)
         test_dir = test_dir or get_test_output_dir(test_name)
 
@@ -189,6 +197,7 @@ class CasedbTestClient(TestClient):
         curr_cfg = app_cfg.cfg.secret.root
         curr_cfg.organization.name = "org1"
         curr_cfg.user.email = "root1_1@org1.org"
+        curr_cfg.user.name = "root1_1"
         # Copy any repository files to test directory
         create_data_fixture(
             app_cfg.cfg.secret.repository[repository_type.value],
@@ -208,7 +217,7 @@ class CasedbTestClient(TestClient):
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
-                cfg,
+                app_cfg.cfg,
                 app=app_env.app,
                 registered_user_dependency=app_env.registered_user_dependency,
                 new_user_dependency=app_env.new_user_dependency,
@@ -221,7 +230,24 @@ class CasedbTestClient(TestClient):
             )
             app_last_handled_exception = LAST_HANDLED_EXCEPTION
             endpoint_test_client = CasedbEndpointTestClient(
-                app_env.app, fast_api, app_last_handled_exception, **kwargs
+                app_env.app,
+                fast_api,
+                app_last_handled_exception,
+                user_class=model.User,
+                user_invitation_class=model.UserInvitation,
+                user_invitation_constraints_class=model.UserInvitationConstraints,
+                organization_admin_policy_class=model.OrganizationAdminPolicy,
+                user_crud_command_class=command.UserCrudCommand,
+                user_invitation_crud_command_class=command.UserInvitationCrudCommand,
+                organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
+                retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
+                invite_user_command_class=command.InviteUserCommand,
+                register_invited_user_command_class=command.RegisterInvitedUserCommand,
+                retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
+                update_user_command_class=command.UpdateUserCommand,
+                user_invitation_request_body=UserInvitationRequestBody,
+                update_user_request_body=UpdateUserRequestBody,
+                **kwargs,
             )
 
         # Call base class constructor
@@ -235,13 +261,15 @@ class CasedbTestClient(TestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
+            user_invitation_constraints_class=model.UserInvitationConstraints,
             organization_admin_policy_class=model.OrganizationAdminPolicy,
             user_crud_command_class=command.UserCrudCommand,
             user_invitation_crud_command_class=command.UserInvitationCrudCommand,
             organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
             retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
             invite_user_command_class=command.InviteUserCommand,
-            retrieve_organization_admin_name_emails_class=command.RetrieveOrganizationAdminNameEmailsCommand,
+            register_invited_user_command_class=command.RegisterInvitedUserCommand,
+            retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
             update_user_command_class=command.UpdateUserCommand,
             verbose=verbose,
             log_level=log_level,
@@ -2000,6 +2028,7 @@ class CasedbTestClient(TestClient):
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
+        key = self._get_obj_key(table, model_class, obj, on_missing)
         if model_class == model.Case:
             if not isinstance(key, datetime.datetime):
                 key = self._convert_case_code_to_date(key)
@@ -2024,8 +2053,6 @@ class CasedbTestClient(TestClient):
             if copy:
                 return table[key].model_copy()
             return table[key]
-        else:
-            key = self._get_obj_key(table, model_class, obj, on_missing)
 
         if key not in table:
             if on_missing == "raise":

@@ -11,7 +11,7 @@ from gen_epix.commondb.api.organization import (
 )
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
-from gen_epix.commondb.domain import enum, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.fastapp import App
 
 
@@ -43,6 +43,9 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
+                "invite_user_command_class": command.InviteUserCommand,
+                "retrieve_invite_user_constraints_command_class": command.RetrieveInviteUserConstraintsCommand,
+                "update_user_command_class": command.UpdateUserCommand,
                 "user_invitation_request_body_class": UserInvitationRequestBody,
                 "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,

@@ -19,23 +19,23 @@ handlers:
     utc: True
     encoding: utf8
 loggers:
-  casedb.setup:
+  commondb.setup:
     level: DEBUG
     handlers: [console, file]
     propagate: no
-  casedb.service:
+  commondb.service:
     level: DEBUG
     handlers: [console, file]
     propagate: no
-  casedb.app:
+  commondb.app:
     level: DEBUG
     handlers: [console, file]
     propagate: no
-  casedb.api:
+  commondb.api:
     level: DEBUG
     handlers: [console, file]
     propagate: no
-  casedb.external:
+  commondb.external:
     level: DEBUG
     handlers: [console, file]
     propagate: no

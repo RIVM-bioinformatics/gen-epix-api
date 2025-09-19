@@ -35,6 +35,7 @@ class RoleSet(Enum):
             Role.GUEST,
         }
     )
+    LT_ORG_ADMIN = frozenset({Role.ORG_USER, Role.GUEST})
     ROOT = frozenset({Role.ROOT})
     APPLICATION = frozenset({Role.APP_ADMIN})
     ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})

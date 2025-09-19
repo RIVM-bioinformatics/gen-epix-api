@@ -160,6 +160,34 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
+        (AppType.COMMONDB, AppConfigType.IDPS): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/identity_providers.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.MOCK_IDPS): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/mock_identity_provider.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.NO_AUTH): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/no_identity_providers.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.DEBUG): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/identity_providers.json",
+            ),
+        },
     }
 
     APP_URI = {
@@ -199,11 +227,15 @@ class Run:
         },
         AppType.SEQDB: {
             "module_root": "gen_epix.seqdb",
-            "targets": ["organization", "system", "seq"],
+            "targets": ["organization", "system", "abac", "seq"],
         },
         AppType.OMOPDB: {
             "module_root": "gen_epix.omopdb",
-            "targets": ["organization", "system", "omop"],
+            "targets": ["organization", "system", "abac", "omop"],
+        },
+        AppType.COMMONDB: {
+            "module_root": "gen_epix.commondb",
+            "targets": ["organization", "system", "abac"],
         },
     }
     DEFAULT_PYTEST_ARGS = [
@@ -280,6 +312,10 @@ class Run:
 
     def env_omopdb(self) -> None:
         Run.set_env_variables(AppType.OMOPDB, AppConfigType.IDPS)
+        import gen_epix.omopdb.env as env
+
+    def env_commondb(self) -> None:
+        Run.set_env_variables(AppType.COMMONDB, AppConfigType.IDPS)
         import gen_epix.omopdb.env as env
 
     ## etl

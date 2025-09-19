@@ -1,15 +1,18 @@
-# pylint: disable=too-few-public-methods
-# This module defines base classes, methods are added later
-
-
 import datetime
+from typing import Type
 from uuid import UUID
 
+import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped, declarative_mixin, declared_attr, relationship
 
-from gen_epix.commondb.domain import DOMAIN, model
+from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
-from gen_epix.commondb.repositories.sa_model.util import create_mapped_column
+from gen_epix.commondb.repositories.sa_model.util import (
+    create_mapped_column,
+    create_table_args,
+)
+
+Base: Type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 
 @declarative_mixin
@@ -181,3 +184,47 @@ class UserInvitationMixin(RowMetadataMixin):
         return relationship(
             "Organization", foreign_keys="UserInvitation.organization_id"
         )
+
+
+class Organization(Base, OrganizationMixin):
+    __tablename__, __table_args__ = create_table_args(model.Organization)
+
+
+class User(Base, UserMixin):
+    __tablename__, __table_args__ = create_table_args(model.User)
+
+
+class OrganizationSet(Base, OrganizationSetMixin):
+    __tablename__, __table_args__ = create_table_args(model.OrganizationSet)
+
+
+class OrganizationSetMember(Base, OrganizationSetMemberMixin):
+    __tablename__, __table_args__ = create_table_args(model.OrganizationSetMember)
+
+
+class Site(Base, SiteMixin):
+    __tablename__, __table_args__ = create_table_args(model.Site)
+
+
+class Contact(Base, ContactMixin):
+    __tablename__, __table_args__ = create_table_args(model.Contact)
+
+
+class IdentifierIssuer(Base, IdentifierIssuerMixin):
+    __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
+
+
+class DataCollection(Base, DataCollectionMixin):
+    __tablename__, __table_args__ = create_table_args(model.DataCollection)
+
+
+class DataCollectionSet(Base, DataCollectionSetMixin):
+    __tablename__, __table_args__ = create_table_args(model.DataCollectionSet)
+
+
+class DataCollectionSetMember(Base, DataCollectionSetMemberMixin):
+    __tablename__, __table_args__ = create_table_args(model.DataCollectionSetMember)
+
+
+class UserInvitation(Base, UserInvitationMixin):
+    __tablename__, __table_args__ = create_table_args(model.UserInvitation)

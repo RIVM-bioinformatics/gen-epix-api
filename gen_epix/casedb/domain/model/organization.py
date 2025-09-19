@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import ClassVar, Type
 
+from pydantic import field_serializer
+
 import gen_epix.commondb.domain.model as common_model
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.util import copy_model_field
@@ -27,6 +29,10 @@ class User(common_model.User):
     # fmt: off
     roles: set[enum.Role] = copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
     # fmt: on
+
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
+        return [x.value for x in value]
 
 
 class UserInvitation(common_model.UserInvitation):
@@ -57,6 +63,10 @@ class UserInvitation(common_model.UserInvitation):
     roles: set[enum.Role] = copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
     # fmt: on
 
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
+        return [x.value for x in value]
+
 
 class UserInvitationConstraints(common_model.UserInvitationConstraints):
     """"""
@@ -73,3 +83,7 @@ class UserInvitationConstraints(common_model.UserInvitationConstraints):
     # fmt: off
     roles: set[enum.Role] = copy_model_field(common_model.UserInvitationConstraints, "roles")  # type: ignore[assignment]
     # fmt: on
+
+    @field_serializer("roles", mode="plain")
+    def _serialize_roles(self, value: set[Enum]) -> list[str]:
+        return [x.value for x in value]

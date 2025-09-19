@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, field_validator
+from pydantic import Field
 
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.util import copy_model_field
@@ -25,7 +25,7 @@ class ApiPermission(PydanticBaseModel, frozen=True):
 
 class UserInvitationRequestBody(PydanticBaseModel):
     email: str = copy_model_field(model.UserInvitation, "email")
-    roles: set[Enum] = copy_model_field(model.UserInvitation, "roles")
+    roles: set[enum.Role] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
@@ -45,18 +45,12 @@ class UpdateUserRequestBody(PydanticBaseModel):
     is_active: bool | None = Field(
         description="The updated active status of the user. Not updated if not provided."
     )
-    roles: set[Enum] | None = Field(
+    roles: set[enum.Role] | None = Field(
         description="The updated set of roles of the user. Not updated if not provided. If provided, should have at least one element.",
     )
     organization_id: UUID | None = Field(
         description="The updated organization ID of the user. Not updated if not provided."
     )
-
-    @field_validator("roles", mode="after")
-    def validate_roles(cls, value: set[Enum] | None) -> set[Enum] | None:
-        if value is not None and len(value) < 1:
-            raise ValueError("Roles must have at least one element when provided.")
-        return value
 
 
 class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
@@ -75,6 +69,15 @@ def create_organization_endpoints(
     service_type: enum.ServiceType = enum.ServiceType.ORGANIZATION,
     user_class: Type[model.User] = model.User,
     user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
+    invite_user_command_class: Type[
+        command.InviteUserCommand
+    ] = command.InviteUserCommand,
+    retrieve_invite_user_constraints_command_class: Type[
+        command.RetrieveInviteUserConstraintsCommand
+    ] = command.RetrieveInviteUserConstraintsCommand,
+    update_user_command_class: Type[
+        command.UpdateUserCommand
+    ] = command.UpdateUserCommand,
     user_invitation_request_body_class: Type[
         UserInvitationRequestBody
     ] = UserInvitationRequestBody,
@@ -88,14 +91,14 @@ def create_organization_endpoints(
         "/invite_user",
         operation_id="invite_user",
         name="Invite a user",
-        description=command.InviteUserCommand.__doc__,
+        description=invite_user_command_class.__doc__,
     )
     async def invite_user(
         user: registered_user_dependency, user_invitation: user_invitation_request_body_class  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_invitation_class:  # type: ignore
         try:
             retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
-                command.InviteUserCommand(
+                invite_user_command_class(
                     user=user,
                     email=user_invitation.email,
                     roles=user_invitation.roles,
@@ -110,14 +113,14 @@ def create_organization_endpoints(
         "/invite_user/constraints",
         operation_id="invite_user__constraints",
         name="The constraints for inviting a user",
-        description=command.RetrieveInviteUserConstraintsCommand.__doc__,
+        description=retrieve_invite_user_constraints_command_class.__doc__,
     )
     async def invite_user__constraints(
         user: registered_user_dependency,
     ) -> model.UserInvitationConstraints:
         try:
             retval: model.UserInvitationConstraints = app.handle(  # type: ignore[valid-type]
-                command.RetrieveInviteUserConstraintsCommand(user=user)
+                retrieve_invite_user_constraints_command_class(user=user)
             )
         except Exception as exception:
             handle_exception("cad2509e", None, exception)
@@ -220,13 +223,13 @@ def create_organization_endpoints(
         "/users/{object_id}",
         operation_id="users__put_one",
         name="UpdateUser",
-        description=command.UpdateUserCommand.__doc__,
+        description=update_user_command_class.__doc__,
     )
     async def users__put_one(
         user: registered_user_dependency, object_id: UUID, request_body: update_user_request_body_class  # type: ignore
     ) -> user_class:
         try:
-            cmd = command.UpdateUserCommand(
+            cmd = update_user_command_class(
                 user=user,
                 tgt_user_id=object_id,
                 is_active=request_body.is_active,
@@ -242,7 +245,7 @@ def create_organization_endpoints(
         "/update_user_own_organization",
         operation_id="update_user_own_organization",
         name="UpdateUserOwnOrganizationCommand",
-        description=command.UpdateUserCommand.__doc__,
+        description=command.UpdateUserOwnOrganizationCommand.__doc__,
     )
     async def update_user_own_organization(
         user: registered_user_dependency, data: UpdateUserOwnOrganizationRequestBody  # type: ignore

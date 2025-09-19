@@ -1,4 +1,4 @@
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseUpdateUserPolicy
 from gen_epix.fastapp import Command
 
@@ -9,16 +9,14 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         if user is None or user.id is None:
             return False
         roles = user.roles
-        is_root = (
-            len(roles.intersection(self.role_set_map[model.enum.RoleSet.ROOT])) > 0
-        )
+        is_root = len(roles.intersection(self.role_set_map[enum.RoleSet.ROOT])) > 0
 
         tgt_user: model.User
         if isinstance(cmd, command.InviteUserCommand):
             if user.email == cmd.email:
                 # User cannot invite themselves
                 return False
-            tgt_user = model.User(**cmd.model_dump())
+            tgt_user = self.user_class(**cmd.model_dump())
             tgt_roles_union = set(tgt_user.roles)
             is_organization_update = False
         elif isinstance(cmd, command.UpdateUserCommand):
@@ -40,15 +38,12 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
             # Root user can invite/update anyone with any permissions
             return True
         tgt_user.roles = tgt_roles_union
-        if (
-            len(roles.intersection(self.role_set_map[model.enum.RoleSet.GE_APP_ADMIN]))
-            > 0
-        ):
+        if len(roles.intersection(self.role_set_map[enum.RoleSet.GE_APP_ADMIN])) > 0:
             # APP_ADMIN users and above can invite/update anyone with less permissions
             # (so not another APP_ADMIN), and only if the new set of permissions is also
             # less than their own permissions
             return self._has_more_permissions(user, tgt_user)
-        if not roles.intersection(self.role_set_map[model.enum.RoleSet.GE_ORG_ADMIN]):
+        if not roles.intersection(self.role_set_map[enum.RoleSet.GE_ORG_ADMIN]):
             # Only ORG_ADMIN users and above can invite/update users
             return False
 
@@ -56,6 +51,9 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         # of, but only if they have less permissions (so not another ORG_ADMIN), and
         # only if the new set of permissions is also less than their own permissions.
         # They cannot update the organization.
+        if not tgt_roles_union.issubset(self.role_set_map[enum.RoleSet.LT_ORG_ADMIN]):
+            # Target user has at least one role that is not under ORG_ADMIN
+            return False
         if is_organization_update:
             # User cannot update the organization
             return False

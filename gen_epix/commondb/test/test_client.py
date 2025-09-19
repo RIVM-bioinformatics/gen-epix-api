@@ -8,9 +8,9 @@ from time import sleep
 from typing import Any, Dict, List, Type, TypeVar, cast
 from uuid import UUID
 
+from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config import BaseAppCfg
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.commondb.util import map_paired_elements
@@ -40,6 +40,9 @@ class TestClient:
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[model.User] = model.User,
         user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
+        user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = model.UserInvitationConstraints,
         organization_admin_policy_class: Type[
             model.OrganizationAdminPolicy
         ] = model.OrganizationAdminPolicy,
@@ -58,7 +61,10 @@ class TestClient:
         invite_user_command_class: Type[
             command.InviteUserCommand
         ] = command.InviteUserCommand,
-        retrieve_organization_admin_name_emails_class: Type[
+        register_invited_user_command_class: Type[
+            command.RegisterInvitedUserCommand
+        ] = command.RegisterInvitedUserCommand,
+        retrieve_organization_admin_name_emails_command_class: Type[
             command.RetrieveOrganizationAdminNameEmailsCommand
         ] = command.RetrieveOrganizationAdminNameEmailsCommand,
         update_user_command_class: Type[
@@ -79,18 +85,20 @@ class TestClient:
         )
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
+        self.user_invitation_constraints_class = user_invitation_constraints_class
         self.organization_admin_policy_class = organization_admin_policy_class
         self.user_crud_command_class = user_crud_command_class
         self.user_invitation_crud_command_class = user_invitation_crud_command_class
         self.organization_admin_policy_crud_command_class = (
             organization_admin_policy_crud_command_class
         )
-        self.retrieve_invite_user_constraints_class = (
+        self.retrieve_invite_user_constraints_command_class = (
             retrieve_invite_user_constraints_command_class
         )
         self.invite_user_command_class = invite_user_command_class
-        self.retrieve_organization_admin_name_emails_class = (
-            retrieve_organization_admin_name_emails_class
+        self.register_invited_user_command_class = register_invited_user_command_class
+        self.retrieve_organization_admin_name_emails_command_class = (
+            retrieve_organization_admin_name_emails_command_class
         )
         self.update_user_command_class = update_user_command_class
         self.log_level = log_level
@@ -210,8 +218,8 @@ class TestClient:
         if set_dummy_token:
             user_invitation.token = str(self.generate_id())
         tgt_user: model.User = self.handle(
-            command.RegisterInvitedUserCommand(
-                user=model.User(
+            self.register_invited_user_command_class(
+                user=self.user_class(
                     email=f"{user_name}@{organization_name}.org",
                     organization_id=organization_id,
                     roles={role},
@@ -227,7 +235,7 @@ class TestClient:
             )
         # Verify against user invitation constraints
         user_invitation_constraints: model.UserInvitationConstraints = self.handle(
-            self.retrieve_invite_user_constraints_class(
+            self.retrieve_invite_user_constraints_command_class(
                 user=user,
             )
         )
@@ -256,7 +264,7 @@ class TestClient:
         name: str,
     ) -> model.DataCollection:
         user: model.User = self._get_obj(
-            model.User, user_or_str
+            self.user_class, user_or_str
         )  # type:ignore[assignment]
         data_collection = self.handle(
             command.DataCollectionCrudCommand(
@@ -317,7 +325,7 @@ class TestClient:
             self.user_class, user_or_str
         )  # type:ignore[assignment]
         user_name_emails: list[model.UserNameEmail] = self.app.handle(
-            self.retrieve_organization_admin_name_emails_class(user=user)
+            self.retrieve_organization_admin_name_emails_command_class(user=user)
         )
         return user_name_emails
 
@@ -680,7 +688,7 @@ class TestClient:
     def print_users(self) -> None:
         root_user: model.User = self.get_root_user()
         users: list[model.User] = self.read_all(
-            root_user, model.User
+            root_user, self.user_class
         )  # type:ignore[assignment]
         organizations: dict[UUID, model.Organization] = {
             x.id: x  # type:ignore[misc]

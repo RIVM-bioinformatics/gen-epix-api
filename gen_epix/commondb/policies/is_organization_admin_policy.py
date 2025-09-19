@@ -15,7 +15,6 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
         user_class: Type[model.User] = model.User,
-        app_admin_roles: set[Enum] | None = None,
         **kwargs: Any,
     ):
         super().__init__(

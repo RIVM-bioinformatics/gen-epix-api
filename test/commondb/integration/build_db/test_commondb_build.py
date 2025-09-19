@@ -21,7 +21,7 @@ from gen_epix.commondb.test.test_client import TestClient as Env
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return commondb_get_test_client(
-        test_name=EnumTestType.COMMONDB_INTEGRATION_BUILD_DB.value,
+        test_type=EnumTestType.COMMONDB_INTEGRATION_BUILD_DB.value,
         repository_type=REPOSITORY_TYPE,
         verbose=VERBOSE,
         log_level=logging.ERROR,

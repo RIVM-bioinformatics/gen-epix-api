@@ -1,6 +1,4 @@
-from test.commondb.integration.build_db.base import (
-    SKIP_RAISE,
-)
+from test.commondb.integration.build_db.base import SKIP_RAISE
 
 import pytest
 
@@ -116,22 +114,22 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("org_admin1_1", "root1_11")
         with pytest.raises(exc.UnauthorizedAuthError):
-            env.invite_and_register_user("org_admin1_1", "app_admin1_1")
+            env.invite_and_register_user("org_admin1_1", "app_admin1_11")
         with pytest.raises(exc.UnauthorizedAuthError):
-            env.invite_and_register_user("org_admin1_1", "refdata_admin1_1")
+            env.invite_and_register_user("org_admin1_1", "refdata_admin1_11")
         for exec_user in ["org_user1_1", "guest1_1"]:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "root2_1")
+                env.invite_and_register_user(exec_user, "root1_11")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "app_admin2_1")
+                env.invite_and_register_user(exec_user, "app_admin1_11")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "refdata_admin2_1")
+                env.invite_and_register_user(exec_user, "refdata_admin1_11")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "org_admin2_1")
+                env.invite_and_register_user(exec_user, "org_admin1_11")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "org_user2_1")
+                env.invite_and_register_user(exec_user, "org_user1_11")
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.invite_and_register_user(exec_user, "guest2_1")
+                env.invite_and_register_user(exec_user, "guest1_11")
         # Invite user by org admin
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("org_admin1_1", "app_admin1_1")

@@ -96,7 +96,7 @@ class TestRead:
             }:
                 test_util.set_log_level("casedb", logging.ERROR)
                 env = CasedbTestClient.get_test_client(
-                    test_name=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
+                    test_type=EnumTestType.CASEDB_PERFORMANCE_USER_JOURNEY,
                     repository_type=repository_type,
                     log_level=logging.ERROR,
                     data_fixture_name="full",
