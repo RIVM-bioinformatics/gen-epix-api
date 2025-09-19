@@ -1,6 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==2.3.2
+erdantic==1.2.0
 pytest==8.4.*
 pytest-cov==6.3.*
 pytest-mock==3.15.*
