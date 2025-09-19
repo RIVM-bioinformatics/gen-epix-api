@@ -40,6 +40,9 @@ X-XSS-Protection = "1; mode=block"
 [api.route]
 v1 = "/v1"
 
+[api.cors]
+allow_origins = "*"
+
 [log]
 level = "DEBUG"
 

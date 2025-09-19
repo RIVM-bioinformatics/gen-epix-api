@@ -606,6 +606,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.docs.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_docs_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",
@@ -646,6 +657,17 @@
             "program": "run.py",
             "args": [
                 "other_general_run_mypy",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "other.general.generate_erm_diagrams",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_generate_erm_diagrams",
             ],
             "console": "integratedTerminal",
             "justMyCode": true

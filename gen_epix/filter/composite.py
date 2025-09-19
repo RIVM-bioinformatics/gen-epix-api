@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from collections.abc import Hashable
 from typing import (
-    Annotated,
     Any,
     Callable,
     Generator,
@@ -415,24 +414,21 @@ class CompositeFilter(Filter):
 class TypedCompositeFilter(CompositeFilter):
     type: Literal[enum.FilterType.COMPOSITE.value]
     filters: list[
-        Annotated[
-            TypedExistsFilter
-            | TypedEqualsBooleanFilter
-            | TypedEqualsNumberFilter
-            | TypedEqualsStringFilter
-            | TypedEqualsUuidFilter
-            | TypedNumberRangeFilter
-            | TypedDateRangeFilter
-            | TypedDatetimeRangeFilter
-            | TypedPartialDateRangeFilter
-            | TypedRegexFilter
-            | TypedNumberSetFilter
-            | TypedStringSetFilter
-            | TypedUuidSetFilter
-            | TypedNoFilter
-            | TypedCompositeFilter,
-            Field(discriminator="type"),
-        ]
+        TypedExistsFilter
+        | TypedEqualsBooleanFilter
+        | TypedEqualsNumberFilter
+        | TypedEqualsStringFilter
+        | TypedEqualsUuidFilter
+        | TypedNumberRangeFilter
+        | TypedDateRangeFilter
+        | TypedDatetimeRangeFilter
+        | TypedPartialDateRangeFilter
+        | TypedRegexFilter
+        | TypedNumberSetFilter
+        | TypedStringSetFilter
+        | TypedUuidSetFilter
+        | TypedNoFilter
+        | TypedCompositeFilter,
     ] = Field(
         description="The list of filters."
     )  # type: ignore

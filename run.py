@@ -484,6 +484,17 @@ class Run:
             ]
         )
 
+    def test_docs_unit(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/docs/unit/",
+            ]
+        )
+
     def test_commondb_unit(self) -> None:
         import pytest
 
@@ -841,8 +852,13 @@ class Run:
         log_parser.to_excel(out_log_excel_file)
         user_journey = log_parser.create_user_journey()
         user_journey.to_pickle(out_user_journey_file)
-
         main()
+
+    def other_general_generate_erm_diagrams(self) -> None:
+        from docs.erm import generate_erm_diagrams
+
+        out_dir = Path(__file__).parent / "docs" / "assets"
+        generate_erm_diagrams(out_dir)
 
 
 if __name__ == "__main__":
