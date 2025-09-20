@@ -8,6 +8,7 @@ from gen_epix.casedb.domain.enum import (
     CaseColDataRule,
     ColType,
     ColTypeSet,
+    ConceptRelationType,
     RegionRelationType,
 )
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -91,6 +92,8 @@ class CaseTransformer(Transformer):
         self.region_value_maps: dict[UUID, dict[str, str]] = {}
         # dict[(from_region_set_id, to_region_set_id), dict[from_region_id, to_region_id]]
         self.region_relation_maps: dict[tuple[UUID, UUID], dict[str, str]] = {}
+        # dict[lower(str(organization_id)|name|legal_entity_code), concept_id]
+        self.organization_value_map: dict[str, str] = {}
 
         self._init_metadata()
 
@@ -163,6 +166,12 @@ class CaseTransformer(Transformer):
                 transform_fn = lambda x: CaseTransformer._transform_decimal(
                     x, n_decimals
                 )
+            elif col.col_type == ColType.ORGANIZATION:
+                organization_value_map = self.organization_value_map
+                transform_fn = lambda x: (
+                    organization_value_map.get(x.lower(), NoReturn) if x else None
+                )
+                msg_template = "{orig_value} cannot be mapped to organization"
             else:
                 # TODO: transform other col_types
                 transform_fn = lambda x: x
@@ -228,6 +237,7 @@ class CaseTransformer(Transformer):
         self._init_set_metadata()
         self._init_concept_metadata()
         self._init_region_metadata()
+        self._init_organization_metadata()
 
     def _init_set_metadata(self) -> None:
         self.concept_set_ids = set()
@@ -263,9 +273,9 @@ class CaseTransformer(Transformer):
             self.concept_value_maps[concept_set_id] = (
                 {str(x).lower(): str(x) for x in concept_ids}
                 | {
-                    concepts[x].abbreviation.lower(): str(x)
+                    concepts[x].code.lower(): str(x)
                     for x in concept_ids
-                    if concepts[x].abbreviation is not None
+                    if concepts[x].code is not None
                 }
                 | {
                     concepts[x].name.lower(): str(x)
@@ -275,11 +285,19 @@ class CaseTransformer(Transformer):
             )
 
         # Fill in concept relation maps
-        for concept_relations in concept_relations:
-            from_concept = concepts[concept_relations.from_concept_set_id]
-            to_concept = concepts[concept_relations.to_concept_set_id]
+        for concept_relation in concept_relations:
+            from_concept = concepts[concept_relation.from_concept_id]
+            to_concept = concepts[concept_relation.to_concept_id]
+            if concept_relation.relation == ConceptRelationType.CONTAINS:
+                # Swap concepts to convert from contains to is-contained-in
+                from_concept, to_concept = to_concept, from_concept
+            elif concept_relation.relation != ConceptRelationType.IS_CONTAINED_IN:
+                # Only contains and is-contained-in relationships considered
+                continue
             key = (from_concept.concept_set_id, to_concept.concept_set_id)
             self.concept_relation_maps.setdefault(key, {})
+            assert from_concept.id is not None
+            assert to_concept.id is not None
             self.concept_relation_maps[key][str(from_concept.id)] = str(to_concept.id)
 
         # Fill in interval mappers
@@ -336,6 +354,23 @@ class CaseTransformer(Transformer):
             assert to_region.id is not None
             self.region_relation_maps[key][str(from_region.id)] = str(to_region.id)
 
+    def _init_organization_metadata(self) -> None:
+        self.organization_value_map = {}
+
+        # Retrieve organizations
+        organizations = self._retrieve_organization_data()
+
+        # Fill in organization value map
+        self.organization_value_map = (
+            {str(x.id).lower(): str(x.id) for x in organizations}
+            | {
+                x.legal_entity_code.lower(): str(x.id)
+                for x in organizations
+                if x.legal_entity_code
+            }
+            | {x.name.lower(): str(x.id) for x in organizations if x.name}
+        )
+
     def _retrieve_concept_data(
         self,
     ) -> tuple[
@@ -345,39 +380,54 @@ class CaseTransformer(Transformer):
         list[model.ConceptRelation],
     ]:
         app = self.case_service.app
-        # Retrieve relevant concept sets
+        # Retrieve relevant concepts sets
         concept_sets: dict[UUID, model.ConceptSet] = {
             x.id: x
             for x in app.handle(
                 command.ConceptSetCrudCommand(
-                    obj_ids=list(self.concept_set_ids),
-                    operation=CrudOperation.READ_SOME,
+                    operation=CrudOperation.READ_ALL,
+                    query_filter=UuidSetFilter(
+                        key="id", members=frozenset(self.concept_set_ids)
+                    ),
                 )
             )
         }
-
-        concept_list: list[model.Concept] = app.handle(
-            command.ConceptCrudCommand(
-                operation=CrudOperation.READ_ALL,
-                query_filter=UuidSetFilter(
-                    key="concept_set_id",
-                    members=frozenset(self.concept_set_ids),
-                ),
+        # Retrieve relevant concepts
+        concepts: dict[UUID, model.Concept] = {
+            x.id: x
+            for x in app.handle(
+                command.ConceptCrudCommand(
+                    operation=CrudOperation.READ_ALL,
+                    query_filter=UuidSetFilter(
+                        key="concept_set_id", members=frozenset(self.concept_set_ids)
+                    ),
+                )
             )
-        )
-        concepts: dict[UUID, model.Concept] = {x.id: x for x in concept_list}
-
+        }
+        # Map concepts to sets
         concept_set_concepts_map: dict[UUID, set[UUID]] = (
             map_paired_elements(  # type:ignore[assignment]
-                [(x.concept_set_id, x.concept_id) for x in concept_list],
+                [(x.concept_set_id, x.id) for x in concepts.values()],
                 as_set=True,
             )
         )
-        # Retrieve relevant concepts
+        # Retrieve concept relations
         concept_relations: list[model.ConceptRelation] = app.handle(
             command.ConceptRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
-                # add filters when needed
+                query_filter=CompositeFilter(
+                    filters=[
+                        UuidSetFilter(
+                            key="from_concept_id",
+                            members=frozenset(concepts.keys()),
+                        ),
+                        UuidSetFilter(
+                            key="to_concept_id",
+                            members=frozenset(concepts.keys()),
+                        ),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
             )
         )
 
@@ -429,6 +479,18 @@ class CaseTransformer(Transformer):
         )
 
         return regions, region_set_regions_map, region_relations
+
+    def _retrieve_organization_data(
+        self,
+    ) -> list[model.Organization]:
+        app = self.case_service.app
+        # Retrieve relevant organizations
+        organizations: list[model.Organization] = app.handle(
+            command.OrganizationCrudCommand(
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return organizations
 
 
 # TODO: for reference, remove when no longer needed
