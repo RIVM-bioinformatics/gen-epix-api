@@ -20,7 +20,8 @@ from gen_epix.filter import (
     UuidSetFilter,
 )
 from gen_epix.seqdb.domain import command, enum, exc, model
-from gen_epix.seqdb.domain.service.seq import BaseSeqService
+from gen_epix.seqdb.domain.repository import BaseSeqRepository
+from gen_epix.seqdb.domain.service import BaseSeqService
 
 
 class SeqService(BaseSeqService):
@@ -320,20 +321,23 @@ class SeqService(BaseSeqService):
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
-
-        def generator() -> Iterable[str]:
-            with self.repository.uow() as uow:
-                for seq_id, raw_seq in self.repository.retrieve_seq_fasta(
-                    uow, cmd.seq_ids
-                ):
-                    yield f">{seq_id}\n"
-                    if cmd.wrap and cmd.wrap > 0:
-                        for i in range(0, len(raw_seq), cmd.wrap):
-                            yield raw_seq[i : i + cmd.wrap] + "\n"
-                    else:
-                        yield raw_seq + "\n"
-
-        return generator()
+        """
+        Retrieve the raw sequences for the given sequence IDs in FASTA format
+        as an iterable that yields one sequence at a time.
+        """
+        wrap = cmd.wrap or 0
+        self.repository: BaseSeqRepository
+        with self.repository.uow() as uow:
+            for seq_id, raw_seq in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
+                header = f">{seq_id}\n"
+                if not wrap:
+                    yield f"{header}{raw_seq}\n"
+                seq_length = len(raw_seq)
+                n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
+                yield header + "\n".join(
+                    raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
+                    for i in range(n_chunks)
+                )
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(

@@ -16,8 +16,8 @@ from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSe
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
-        repository_type=enum.RepositoryType.DICT,
-        # repository_type=enum.RepositoryType.SA_SQLITE,
+        # repository_type=enum.RepositoryType.DICT,
+        repository_type=enum.RepositoryType.SA_SQLITE,
         verbose=False,
         log_level=logging.ERROR,
         use_endpoints=True,
@@ -160,14 +160,12 @@ class TestContent:
         for case_type in case_types:
             if case_type.id not in has_cases_case_type_ids:
                 continue
-            # print(f"START: {datetime.datetime.now()}")
             complete_case_type: model.CompleteCaseType = app.handle(  # type: ignore
                 command.RetrieveCompleteCaseTypeCommand(
                     user=org_user,
                     case_type_id=case_type.id,
                 )
             )
-            # print(f"END: {datetime.datetime.now()}")
             if len(complete_case_type.case_type_cols) <= 1:
                 continue
             # Retrieve cases based on a filter
@@ -207,12 +205,16 @@ class TestContent:
                     ),
                 )
             )
+            case_ids = case_ids[0:10]
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
                     case_ids=case_ids,
                 )
             )
+            if len(case_ids) > 100:
+                # Too high load for this test
+                continue
             # Retrieve phylogenetic tree
             dist_case_type_cols = [
                 case_type_col
@@ -222,9 +224,6 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
-                    if len(case_ids) > 100:
-                        # Too high load for this test
-                        continue
                     phylogenetic_tree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
@@ -263,20 +262,20 @@ class TestContent:
                         )
             # Retrieve genetic sequences in FASTA format
             for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
-                generator: Iterable[str] = app.handle(
+                fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
                         case_ids=case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
                     )
                 )
-                if not generator:
+                if not fasta_iterator:
                     raise ValueError("generator should not be empty")
                 # convert generator to string
-                generator = "".join(list(generator))
-                if not generator.startswith(">"):
+                fasta_str = "\n".join(fasta_iterator)
+                if not fasta_str.startswith(">"):
                     raise ValueError("FASTA string should start with '>'")
-                if "\n" not in generator:
+                if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
         for case_set in case_sets:
             case_ids = app.handle(

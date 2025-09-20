@@ -2,11 +2,13 @@ from typing import Iterable, Tuple
 from uuid import UUID
 
 import numpy as np
+import sqlalchemy as sa
 
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
-from gen_epix.fastapp.repositories import SARepository
+from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
+from gen_epix.seqdb.repositories import sa_model
 
 
 class SeqSARepository(SARepository, BaseSeqRepository):
@@ -45,21 +47,14 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         seq_ids: list[UUID],
     ) -> Iterable[Tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
-        for seq_id in seq_ids:
-            seq: model.Seq = self.crud(  # type: ignore[assignment]
-                uow,
-                None,
-                model.Seq,
-                seq_id,  # type: ignore[arg-type]
-                None,
-                CrudOperation.READ_ONE,
-            )
-            raw_seq: model.RawSeq = self.crud(  # type: ignore[assignment]
-                uow,
-                None,
-                model.RawSeq,
-                seq.raw_seq_id,  # type: ignore[arg-type]
-                None,
-                CrudOperation.READ_ONE,
-            )
-            yield (seq.id, raw_seq.seq)  # type: ignore[misc]
+        assert isinstance(uow, SAUnitOfWork)
+        stmt = (
+            sa.select(sa_model.Seq.id, sa_model.RawSeq.seq)
+            .join(sa_model.RawSeq, sa_model.Seq.raw_seq_id == sa_model.RawSeq.id)
+            .where(sa_model.Seq.id.in_(seq_ids))
+        )
+
+        result = uow.session.execute(stmt)
+        for seq_id, raw_seq in result:
+            print(f"Yielding seq_id={seq_id} with raw_seq length={len(raw_seq)}")
+            yield (seq_id, raw_seq)

@@ -113,8 +113,8 @@ class SeqdbService(BaseSeqdbService):
             seq_ids=cmd.seq_ids,
             wrap=cmd.wrap,
         )
-        stream: Iterable[str] = self.ext_app.handle(seqdb_cmd)
-        return stream
+        fasta_iterator: Iterable[str] = self.ext_app.handle(seqdb_cmd)
+        return fasta_iterator
 
     # def retrieve_allele_profile(
     #     self,

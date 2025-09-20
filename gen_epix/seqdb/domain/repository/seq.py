@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable, Tuple
+from typing import Iterable
 from uuid import UUID
 
 import numpy as np
@@ -25,5 +25,5 @@ class BaseSeqRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[Tuple[str, str]]:
+    ) -> Iterable[tuple[str, str]]:
         raise NotImplementedError()

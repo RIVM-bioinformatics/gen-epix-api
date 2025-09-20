@@ -534,8 +534,8 @@ class CaseService(BaseCaseService):
             retrieve_cmd = command.RetrieveGeneticSequenceFastaByIdCommand(
                 user=cmd.user, seq_ids=seq_ids
             )
-            generator: Iterable[str] = self.app.handle(retrieve_cmd)
-            return generator
+            fasta_iterator: Iterable[str] = self.app.handle(retrieve_cmd)
+            return fasta_iterator
 
     def _read_association_with_valid_ids(
         self,
