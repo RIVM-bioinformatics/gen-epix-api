@@ -150,6 +150,12 @@ from gen_epix.casedb.domain.command.ontology import (
     EtiologyCrudCommand as EtiologyCrudCommand,
 )
 from gen_epix.casedb.domain.command.organization import (
+    InviteUserCommand as InviteUserCommand,
+)
+from gen_epix.casedb.domain.command.organization import (
+    UpdateUserCommand as UpdateUserCommand,
+)
+from gen_epix.casedb.domain.command.organization import (
     UserCrudCommand as UserCrudCommand,
 )
 from gen_epix.casedb.domain.command.organization import (
@@ -157,6 +163,9 @@ from gen_epix.casedb.domain.command.organization import (
 )
 from gen_epix.casedb.domain.command.seqdb import (
     RetrieveGeneticSequenceByIdCommand as RetrieveGeneticSequenceByIdCommand,
+)
+from gen_epix.casedb.domain.command.seqdb import (
+    RetrieveGeneticSequenceFastaByIdCommand as RetrieveGeneticSequenceFastaByIdCommand,
 )
 from gen_epix.casedb.domain.command.subject import (
     SubjectCrudCommand as SubjectCrudCommand,
@@ -190,7 +199,6 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
-from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
 from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
@@ -226,7 +234,6 @@ from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
-from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
@@ -305,6 +312,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     },
     enum.ServiceType.SEQDB: {
         RetrieveGeneticSequenceByIdCommand,
+        RetrieveGeneticSequenceFastaByIdCommand,
     },
     enum.ServiceType.SUBJECT: {
         SubjectCrudCommand,
@@ -328,5 +336,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
 COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.InviteUserCommand: InviteUserCommand,
+    common_command.UpdateUserCommand: UpdateUserCommand,
     common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }

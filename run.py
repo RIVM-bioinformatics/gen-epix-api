@@ -12,6 +12,23 @@ class Run:
 
     ROOT_DIR = os.getcwd()
     APP_SECRETS_ENV_VARIABLES = {
+        AppType.COMMONDB: {
+            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="SETTINGS_DIR",
+                root_dir="test/",
+            ),
+            "SECRETS_DIR": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="SECRETS_DIR",
+                extension=".secret",
+            ),
+            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="LOGGING_CONFIG_FILE",
+                extension="logging.yaml",
+            ),
+        },
         AppType.CASEDB: {
             "SETTINGS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"
@@ -143,6 +160,34 @@ class Run:
                 extension="idp/identity_providers.json",
             ),
         },
+        (AppType.COMMONDB, AppConfigType.IDPS): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/identity_providers.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.MOCK_IDPS): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/mock_identity_provider.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.NO_AUTH): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/no_identity_providers.json",
+            ),
+        },
+        (AppType.COMMONDB, AppConfigType.DEBUG): {
+            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+                app_type=AppType.COMMONDB.value,
+                env_var_substring="IDPS_CONFIG_FILE",
+                extension="idp/identity_providers.json",
+            ),
+        },
     }
 
     APP_URI = {
@@ -182,11 +227,15 @@ class Run:
         },
         AppType.SEQDB: {
             "module_root": "gen_epix.seqdb",
-            "targets": ["organization", "system", "seq"],
+            "targets": ["organization", "system", "abac", "seq"],
         },
         AppType.OMOPDB: {
             "module_root": "gen_epix.omopdb",
-            "targets": ["organization", "system", "omop"],
+            "targets": ["organization", "system", "abac", "omop"],
+        },
+        AppType.COMMONDB: {
+            "module_root": "gen_epix.commondb",
+            "targets": ["organization", "system", "abac"],
         },
     }
     DEFAULT_PYTEST_ARGS = [
@@ -263,6 +312,10 @@ class Run:
 
     def env_omopdb(self) -> None:
         Run.set_env_variables(AppType.OMOPDB, AppConfigType.IDPS)
+        import gen_epix.omopdb.env as env
+
+    def env_commondb(self) -> None:
+        Run.set_env_variables(AppType.COMMONDB, AppConfigType.IDPS)
         import gen_epix.omopdb.env as env
 
     ## etl
@@ -442,7 +495,7 @@ class Run:
             ]
         )
 
-    def test_common_unit(self) -> None:
+    def test_commondb_unit(self) -> None:
         import pytest
 
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
@@ -453,7 +506,7 @@ class Run:
             ]
         )
 
-    def test_common_unit_auth(self) -> None:
+    def test_commondb_unit_auth(self) -> None:
         import pytest
 
         Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
@@ -461,6 +514,28 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/unit/auth/",
+            ]
+        )
+
+    def test_commondb_integration(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/integration/build_db",
+            ]
+        )
+
+    def test_commondb_integration_build_db(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/integration/build_db",
             ]
         )
 
@@ -782,7 +857,7 @@ class Run:
     def other_general_generate_erm_diagrams(self) -> None:
         from docs.erm import generate_erm_diagrams
 
-        out_dir = Path(__file__).parent / "docs" / "assets"
+        out_dir = Path(__file__).parent / "docs" / "assets" / "erm"
         generate_erm_diagrams(out_dir)
 
 

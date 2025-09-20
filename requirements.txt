@@ -3,7 +3,7 @@
 # application server
 fastapi[standard]==0.116.2
 gunicorn==23.0.*
-starlette==0.47.3
+starlette==0.48.0
 httpx==0.28.1
 python-jose==3.5.0
 
@@ -27,6 +27,6 @@ numpy==2.3.3
 biopython==1.85
 
 # other
-cachetools==5.5.2
+cachetools==6.2.0
 slowapi==0.1.9
 python-dateutil==2.9.*

@@ -35,6 +35,7 @@ class RoleSet(Enum):
             Role.GUEST,
         }
     )
+    LT_ORG_ADMIN = frozenset({Role.ORG_USER, Role.GUEST})
     ROOT = frozenset({Role.ROOT})
     APPLICATION = frozenset({Role.APP_ADMIN})
     ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
@@ -50,15 +51,22 @@ class ServiceType(Enum):
     ABAC = "ABAC"
 
 
+class RepositoryType(Enum):
+    DICT = "DICT"
+    SA_SQLITE = "SA_SQLITE"
+    SA_SQL = "SA_SQL"
+
+
 class AppType(Enum):
-    CASEDB = "casedb"
-    SEQDB = "seqdb"
-    OMOPDB = "omopdb"
-    ALL = "all"
+    COMMONDB = "COMMONDB"
+    CASEDB = "CASEDB"
+    SEQDB = "SEQDB"
+    OMOPDB = "OMOPDB"
+    ALL = "ALL"
 
 
 class AppTypeSet(Enum):
-    ALL = frozenset({AppType.CASEDB, AppType.SEQDB, AppType.OMOPDB})
+    ALL = frozenset({AppType.COMMONDB, AppType.CASEDB, AppType.SEQDB, AppType.OMOPDB})
 
 
 class AppConfigType(Enum):

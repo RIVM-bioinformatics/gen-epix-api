@@ -1,4 +1,5 @@
 import abc
+from typing import Iterable
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
@@ -16,6 +17,10 @@ class BaseSeqdbService(BaseService):
             self.retrieve_phylogenetic_tree,
         )
         f(command.RetrieveGeneticSequenceByIdCommand, self.retrieve_genetic_sequences)
+        f(
+            command.RetrieveGeneticSequenceFastaByIdCommand,
+            self.retrieve_genetic_sequence_fasta_by_id,
+        )
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -29,6 +34,13 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceByIdCommand,
     ) -> list[model.GeneticSequence]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_genetic_sequence_fasta_by_id(
+        self,
+        cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
+    ) -> Iterable[str]:
         raise NotImplementedError()
 
     # @abc.abstractmethod

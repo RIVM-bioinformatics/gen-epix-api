@@ -13,7 +13,7 @@ from gen_epix.seqdb.api.organization import (
     UserInvitationRequestBody,
 )
 from gen_epix.seqdb.api.seq import create_seq_endpoints
-from gen_epix.seqdb.domain import enum, model
+from gen_epix.seqdb.domain import command, enum, model
 
 
 def create_routers(
@@ -44,6 +44,9 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
+                "invite_user_command_class": command.InviteUserCommand,
+                "retrieve_invite_user_constraints_command_class": command.RetrieveInviteUserConstraintsCommand,
+                "update_user_command_class": command.UpdateUserCommand,
                 "user_invitation_request_body_class": UserInvitationRequestBody,
                 "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,

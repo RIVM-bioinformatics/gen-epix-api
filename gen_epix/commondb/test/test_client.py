@@ -8,9 +8,9 @@ from time import sleep
 from typing import Any, Dict, List, Type, TypeVar, cast
 from uuid import UUID
 
+from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config import BaseAppCfg
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.commondb.util import map_paired_elements
@@ -21,13 +21,13 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
-    TEST_CLIENTS: dict[Hashable, Any] = {}
 
     MODEL_KEY_MAP: dict[Type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
         model.UserInvitation: "email",
         model.Organization: "name",
         model.DataCollection: "name",
+        model.OrganizationAdminPolicy: ("organization_id", "user_id"),
     }
 
     def __init__(
@@ -40,18 +40,36 @@ class TestClient:
         role_hierarchy: dict[Hashable, set] | None = None,
         user_class: Type[model.User] = model.User,
         user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
+        user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = model.UserInvitationConstraints,
+        organization_admin_policy_class: Type[
+            model.OrganizationAdminPolicy
+        ] = model.OrganizationAdminPolicy,
         user_crud_command_class: Type[
             command.UserCrudCommand
         ] = command.UserCrudCommand,
         user_invitation_crud_command_class: Type[
             command.UserInvitationCrudCommand
         ] = command.UserInvitationCrudCommand,
-        retrieve_invite_user_constraints_class: Type[
+        organization_admin_policy_crud_command_class: Type[
+            command.OrganizationAdminPolicyCrudCommand
+        ] = command.OrganizationAdminPolicyCrudCommand,
+        retrieve_invite_user_constraints_command_class: Type[
             command.RetrieveInviteUserConstraintsCommand
         ] = command.RetrieveInviteUserConstraintsCommand,
         invite_user_command_class: Type[
             command.InviteUserCommand
         ] = command.InviteUserCommand,
+        register_invited_user_command_class: Type[
+            command.RegisterInvitedUserCommand
+        ] = command.RegisterInvitedUserCommand,
+        retrieve_organization_admin_name_emails_command_class: Type[
+            command.RetrieveOrganizationAdminNameEmailsCommand
+        ] = command.RetrieveOrganizationAdminNameEmailsCommand,
+        update_user_command_class: Type[
+            command.UpdateUserCommand
+        ] = command.UpdateUserCommand,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         **kwargs: Any,
@@ -67,12 +85,22 @@ class TestClient:
         )
         self.user_class = user_class
         self.user_invitation_class = user_invitation_class
+        self.user_invitation_constraints_class = user_invitation_constraints_class
+        self.organization_admin_policy_class = organization_admin_policy_class
         self.user_crud_command_class = user_crud_command_class
         self.user_invitation_crud_command_class = user_invitation_crud_command_class
-        self.retrieve_invite_user_constraints_class = (
-            retrieve_invite_user_constraints_class
+        self.organization_admin_policy_crud_command_class = (
+            organization_admin_policy_crud_command_class
+        )
+        self.retrieve_invite_user_constraints_command_class = (
+            retrieve_invite_user_constraints_command_class
         )
         self.invite_user_command_class = invite_user_command_class
+        self.register_invited_user_command_class = register_invited_user_command_class
+        self.retrieve_organization_admin_name_emails_command_class = (
+            retrieve_organization_admin_name_emails_command_class
+        )
+        self.update_user_command_class = update_user_command_class
         self.log_level = log_level
         self.verbose = verbose
 
@@ -141,66 +169,327 @@ class TestClient:
         else:
             return self.app.handle(cmd)
 
-    def update_object(
+    def create_organization(
+        self, user_or_str: str | model.User, organization_name: str
+    ) -> model.Organization:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        organization = self.app.handle(
+            command.OrganizationCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Organization(
+                    name=organization_name, legal_entity_code=organization_name
+                ),
+            )
+        )
+        retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
+        return retval
+
+    def invite_and_register_user(
         self,
-        user_or_key: str | model.User,
-        model_class: Type[model.Model],
-        obj_or_key: model.Model | str,
-        props: dict[str, Any | None],
-        set_dummy_link: dict[str, bool] | bool = False,
-        exclude_none: bool = True,
-    ) -> model.Model:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: model.Model = self._get_obj(
-            model_class, obj_or_key, copy=True
+        user_or_str: str | model.User,
+        user_name: str,
+        set_dummy_organization: bool = False,
+        set_dummy_token: bool = False,
+    ) -> model.User:
+        root_user: model.User = self.get_root_user()
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
+        if not m:
+            raise ValueError(f"Invalid user name {user_name}")
+        role = [x for x in self.roles if x.value.lower() == m.group(1).lower()][0]
+        organization_name = "org" + m.group(2)
+        organization_id: UUID
+        if organization_name not in self.db[model.Organization]:
+            if set_dummy_organization:
+                organization_id = self.generate_id()
+            else:
+                raise ValueError(f"Organization {organization_name} not found")
+        else:
+            organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
+        user_invitation: model.UserInvitation = self.handle(
+            self.invite_user_command_class(
+                user=user,
+                email=f"{user_name}@{organization_name}.org",
+                roles={role},
+                organization_id=organization_id,
+            )
+        )
+        if set_dummy_token:
+            user_invitation.token = str(self.generate_id())
+        tgt_user: model.User = self.handle(
+            self.register_invited_user_command_class(
+                user=self.user_class(
+                    email=f"{user_name}@{organization_name}.org",
+                    organization_id=organization_id,
+                    roles={role},
+                ),
+                token=user_invitation.token,
+            )
+        )
+        tgt_user.name = user_name
+        # Verify if the right role(s) were assigned
+        if tgt_user.roles != {role}:
+            raise ValueError(
+                f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
+            )
+        # Verify against user invitation constraints
+        user_invitation_constraints: model.UserInvitationConstraints = self.handle(
+            self.retrieve_invite_user_constraints_command_class(
+                user=user,
+            )
+        )
+        if tgt_user.organization_id not in user_invitation_constraints.organization_ids:
+            raise ValueError("User invitation constraints not met for organization_id")
+        if not tgt_user.roles.issubset(user_invitation_constraints.roles):
+            raise ValueError("User invitation constraints not met for roles")
+        # Verify no invitations remain for the user
+        remaining_invitations: list[model.UserInvitation] = self.handle(
+            self.user_invitation_crud_command_class(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+                obj_ids=None,
+            )
+        )
+        if any(x.email == tgt_user.email for x in remaining_invitations):
+            raise ValueError(
+                f"Some user invitations remaining for email {tgt_user.email}"
+            )
+        retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
+        return retval
+
+    def create_data_collection(
+        self,
+        user_or_str: str | model.User,
+        name: str,
+    ) -> model.DataCollection:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
         )  # type:ignore[assignment]
-        self._update_object_properties(
-            obj, props, set_dummy_link, exclude_none=exclude_none
-        )
-        sleep(0.000000001)
-        updated_obj = self.handle(
-            self.app.domain.get_crud_command_for_model(model_class)(
+        data_collection = self.handle(
+            command.DataCollectionCrudCommand(
                 user=user,
-                operation=CrudOperation.UPDATE_ONE,
-                objs=obj,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.DataCollection(
+                    name=name,
+                ),
             )
         )
-        assert user.id
-        TestClient._verify_updated_obj(obj, updated_obj, user.id)
-        return self._set_obj(updated_obj, update=True)
+        return self._set_obj(data_collection)  # type:ignore[return-value]
 
-    def delete_object(
+    def create_org_admin_policy(
         self,
-        user_or_key: str | model.User,
-        model_class: Type[model.Model],
-        obj_or_key: model.Model | str | tuple[UUID, UUID],
-        retry_obj: tuple[UUID, UUID] | None = None,
-    ) -> UUID:
-        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
-        obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
-
-        if not obj and retry_obj:
-            obj = self._get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
-
-        deleted_obj_id: UUID = self.handle(
-            self.app.domain.get_crud_command_for_model(model_class)(
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
+        organization_or_str: str | model.Organization,
+        is_active: bool = True,
+    ) -> model.OrganizationAdminPolicy:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        tgt_user: model.User = self._get_obj(
+            self.user_class, tgt_user_or_str
+        )  # type:ignore[assignment]
+        organization: model.Organization = self._get_obj(
+            model.Organization, organization_or_str
+        )  # type:ignore[assignment]
+        organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
+            self.organization_admin_policy_crud_command_class(
                 user=user,
-                operation=CrudOperation.DELETE_ONE,
-                obj_ids=obj.id,
+                operation=CrudOperation.CREATE_ONE,
+                objs=self.organization_admin_policy_class(
+                    organization_id=organization.id,
+                    user_id=tgt_user.id,
+                    is_active=is_active,
+                ),
             )
         )
-        # verify if deleted
-        # is_existing_obj = self.app.handle(
-        #     self.app.domain.get_crud_command_for_model(model_class)(
-        #         user=user,
-        #         operation=CrudOperation.EXISTS_ONE,
-        #         obj_ids=deleted_obj_id,
-        #     )
-        # )
-        # if is_existing_obj:
-        #     raise ValueError(f"Object {deleted_obj_id} not deleted")
-        self._delete_obj(model_class, deleted_obj_id)
-        return deleted_obj_id
+        return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
+
+    def read_all_user_invitations(
+        self, user_or_str: str | model.User
+    ) -> list[model.UserInvitation]:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        invitations: list[model.UserInvitation] = self.handle(
+            self.user_invitation_crud_command_class(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return invitations
+
+    def read_organization_admin_name_emails(
+        self, user_or_str: str | model.User
+    ) -> list[model.UserNameEmail]:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        user_name_emails: list[model.UserNameEmail] = self.app.handle(
+            self.retrieve_organization_admin_name_emails_command_class(user=user)
+        )
+        return user_name_emails
+
+    def read_all_users(self) -> list[model.User]:
+        root_user = self.get_root_user()
+        retval: list[model.User] = self.app.handle(
+            self.user_crud_command_class(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        return retval
+
+    def read_users_by_role(self, role: Enum) -> list[model.User]:
+        users = self.read_all_users()
+        return [x for x in users if role in x.roles]
+
+    def update_user(
+        self,
+        user_or_str: str | model.User,
+        tgt_user_or_str: str | model.User,
+        is_active: bool | None = None,
+        roles: set[Enum] | None = None,
+        organization_or_str: str | None = None,
+        set_dummy_organization: bool = False,
+    ) -> model.User:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        tgt_user: model.User = self._get_obj(
+            self.user_class, tgt_user_or_str, copy=True
+        )  # type:ignore[assignment]
+        if not organization_or_str:
+            if set_dummy_organization:
+                organization_id = self.generate_id()
+            else:
+                organization_id = None
+        else:
+            if set_dummy_organization:
+                raise ValueError("Organization given and set_dummy_organization True")
+            organization_id = self._get_obj(model.Organization, organization_or_str).id
+        has_updates = False
+        if is_active is not None and tgt_user.is_active != is_active:
+            has_updates = True
+            tgt_user.is_active = is_active
+        if roles is not None and tgt_user.roles != roles:
+            has_updates = True
+            tgt_user.roles = roles
+        if organization_id is not None and tgt_user.organization_id != organization_id:
+            has_updates = True
+            tgt_user.organization_id = organization_id
+        sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
+        updated_tgt_user = self.handle(
+            self.update_user_command_class(
+                user=user,
+                tgt_user_id=tgt_user.id,
+                is_active=is_active,
+                roles=roles,
+                organization_id=organization_id,
+            )
+        )
+        updated_tgt_user.name = tgt_user.name
+        TestClient._verify_updated_obj(
+            tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
+        )
+        return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
+
+    def get_root_user(self) -> model.User:
+        return self.user_class(
+            organization_id=self.cfg.secret.root.organization.id,
+            **self.cfg.secret.root.user,
+        )
+
+    def get_org_ids_for_org_admin(
+        self,
+        user_or_str: str | model.User,
+        include_self: bool = False,
+        on_no_admin: str = "raise",
+    ) -> list[model.Organization]:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+            x
+            for x in self.db[self.organization_admin_policy_class].values()
+            if x.user_id == user.id
+        ]
+        if not org_admin_policies:
+            if on_no_admin == "raise":
+                raise ValueError(f"User {user.name} is not an organization admin")
+            elif on_no_admin == "return":
+                return []
+        organization_ids = {x.organization_id for x in org_admin_policies}
+        if include_self:
+            organization_ids.add(user.organization_id)
+        return organization_ids
+
+    def get_own_org_admin_users(
+        self,
+        user_or_str: str | model.User,
+        include_self: bool = False,
+    ) -> list[model.Organization]:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+            x
+            for x in self.db[self.organization_admin_policy_class].values()
+            if x.organization_id == user.organization_id and x.is_active
+        ]
+        user_ids = {x.user_id for x in org_admin_policies}
+        if include_self:
+            user_ids.add(user.id)
+        return [
+            x
+            for x in self.db[self.user_class].values()
+            if x.id in user_ids and x.is_active
+        ]
+
+    def get_users_for_org(
+        self,
+        user_or_str: str | model.User,
+        on_no_admin: str = "raise",
+    ) -> list[model.User]:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        return [
+            x
+            for x in self.db[self.user_class].values()
+            if x.organization_id == user.organization_id
+        ]
+
+    def get_users_for_org_admin(
+        self,
+        user_or_str: str | model.User,
+        include_self: bool = False,
+        include_other_org_admins: bool = False,
+        on_no_admin: str = "raise",
+    ) -> list[model.User]:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        org_admin_policies: list[model.OrganizationAdminPolicy] = (
+            [  # type:ignore[assignment]
+                x
+                for x in self.db[self.organization_admin_policy_class].values()
+                if x.user_id == user.id and x.is_active
+            ]
+        )
+        if not org_admin_policies:
+            if on_no_admin == "raise":
+                raise ValueError(f"User {user.name} is not an organization admin")
+            elif on_no_admin == "return":
+                return []
+        organization_ids = {x.organization_id for x in org_admin_policies}
+        user_ids = {user.id} if include_self else set()
+        if include_other_org_admins:
+            other_org_admin_policies: list[model.OrganizationAdminPolicy] = (
+                [  # type:ignore[assignment]
+                    x
+                    for x in self.db[self.organization_admin_policy_class].values()
+                    if x.organization_id in organization_ids and x.is_active
+                ]
+            )
+            user_ids.update({x.user_id for x in other_org_admin_policies})
+        tgt_users: list[model.User] = list(self.db[self.user_class].values())
+        return [
+            x
+            for x in tgt_users
+            if x.id in user_ids or x.organization_id in organization_ids
+        ]
 
     def read_all(
         self,
@@ -270,6 +559,67 @@ class TestClient:
             raise ValueError(f"Multiple {model_class} with {name}='{value}' found")
         return objs[0]
 
+    def update_object(
+        self,
+        user_or_key: str | model.User,
+        model_class: Type[model.Model],
+        obj_or_key: model.Model | str,
+        props: dict[str, Any | None],
+        set_dummy_link: dict[str, bool] | bool = False,
+        exclude_none: bool = True,
+    ) -> model.Model:
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: model.Model = self._get_obj(
+            model_class, obj_or_key, copy=True
+        )  # type:ignore[assignment]
+        self._update_object_properties(
+            obj, props, set_dummy_link, exclude_none=exclude_none
+        )
+        sleep(0.000000001)
+        updated_obj = self.handle(
+            self.app.domain.get_crud_command_for_model(model_class)(
+                user=user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=obj,
+            )
+        )
+        assert user.id
+        TestClient._verify_updated_obj(obj, updated_obj, user.id)
+        return self._set_obj(updated_obj, update=True)
+
+    def delete_object(
+        self,
+        user_or_key: str | model.User,
+        model_class: Type[model.Model],
+        obj_or_key: model.Model | str | tuple[UUID, UUID],
+        retry_obj: tuple[UUID, UUID] | None = None,
+    ) -> UUID:
+        user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
+        obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
+
+        if not obj and retry_obj:
+            obj = self._get_obj(model_class, retry_obj, copy=True)  # type: ignore[assignment]
+
+        deleted_obj_id: UUID = self.handle(
+            self.app.domain.get_crud_command_for_model(model_class)(
+                user=user,
+                operation=CrudOperation.DELETE_ONE,
+                obj_ids=obj.id,
+            )
+        )
+        # verify if deleted
+        # is_existing_obj = self.app.handle(
+        #     self.app.domain.get_crud_command_for_model(model_class)(
+        #         user=user,
+        #         operation=CrudOperation.EXISTS_ONE,
+        #         obj_ids=deleted_obj_id,
+        #     )
+        # )
+        # if is_existing_obj:
+        #     raise ValueError(f"Object {deleted_obj_id} not deleted")
+        self._delete_obj(model_class, deleted_obj_id)
+        return deleted_obj_id
+
     def verify_read_all(
         self,
         user_or_str: model.User | str,
@@ -302,6 +652,80 @@ class TestClient:
             ]
             raise ValueError(
                 f"Difference in read all. Extra: {extra_names}. Missing: {missing_names}. User: {user.name}. Model: {model_class}"
+            )
+
+    def verify_user_has_role(
+        self, user_or_str: str | model.User, role: Enum, exclusive: bool = True
+    ) -> bool:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        roles = user.roles
+        if exclusive:
+            return role in roles and len(roles) == 1
+        return role in roles
+
+    def generate_id(self) -> UUID:
+        # Type cast needed because app.generate_id() returns Hashable
+        return cast(UUID, self.app.generate_id())
+
+    def print_organizations(self) -> None:
+        organizations: list[model.Organization] = self.read_all(
+            self.get_root_user(), model.Organization, cascade=True
+        )  # type:ignore[assignment]
+        print("\nOrganizations:")
+        for x in sorted(organizations, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_data_collections(self) -> None:
+        data_collections: list[model.DataCollection] = self.read_all(
+            self.get_root_user(), model.DataCollection, cascade=True
+        )  # type:ignore[assignment]
+        print("\nDataCollections:")
+        for x in sorted(data_collections, key=lambda x: x.name):
+            print(f"{x.name} ({x.id})")
+
+    def print_users(self) -> None:
+        root_user: model.User = self.get_root_user()
+        users: list[model.User] = self.read_all(
+            root_user, self.user_class
+        )  # type:ignore[assignment]
+        organizations: dict[UUID, model.Organization] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_all(root_user, model.Organization)
+        }
+        print("\nUsers:")
+        for x in sorted(
+            users, key=lambda x: (organizations[x.organization_id].name, x.email)
+        ):
+            print(
+                f"{organizations[x.organization_id].name} / {x.email}: "
+                + ", ".join([z for z in sorted(y.name for y in x.roles)])
+                + f" ({x.id})"
+            )
+
+    def print_user_permissions(self, user_or_str: str | model.User) -> None:
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user_permissions = self.app.user_manager.retrieve_user_permissions(user)
+        command_permissions = map_paired_elements(
+            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
+        )
+        print(
+            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
+        )
+        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):  # type: ignore[arg-type,return-value]
+            print(f"{x}")
+
+    def print_org_admin_policies(self) -> None:
+        org_admin_policies = self.read_all(
+            "root1_1", self.organization_admin_policy_class, cascade=True
+        )
+        print("\nOrganizationAdminPolicies:")
+        for x in sorted(
+            org_admin_policies, key=lambda x: (x.organization.name, x.user.name)
+        ):
+            print(
+                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
@@ -497,174 +921,3 @@ class TestClient:
         #     raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
         if out_obj != in_obj:
             raise ValueError(f"Object not updated: {in_obj}, {out_obj}")
-
-    def generate_id(self) -> UUID:
-        # Type cast needed because app.generate_id() returns Hashable
-        return cast(UUID, self.app.generate_id())
-
-    def get_root_user(self) -> model.User:
-        return self.user_class(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
-        )
-
-    def create_organization(
-        self, user_or_str: str | model.User, organization_name: str
-    ) -> model.Organization:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        organization = self.app.handle(
-            command.OrganizationCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.Organization(
-                    name=organization_name, legal_entity_code=organization_name
-                ),
-            )
-        )
-        retval: model.Organization = self._set_obj(organization)  # type: ignore[assignment]
-        return retval
-
-    def invite_and_register_user(
-        self,
-        user_or_str: str | model.User,
-        user_name: str,
-        set_dummy_organization: bool = False,
-        set_dummy_token: bool = False,
-    ) -> model.User:
-        root_user: model.User = self.get_root_user()
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
-        if not m:
-            raise ValueError(f"Invalid user name {user_name}")
-        role = [x for x in self.roles if x.value.lower() == m.group(1).lower()][0]
-        organization_name = "org" + m.group(2)
-        organization_id: UUID
-        if organization_name not in self.db[model.Organization]:
-            if set_dummy_organization:
-                organization_id = self.generate_id()
-            else:
-                raise ValueError(f"Organization {organization_name} not found")
-        else:
-            organization_id = self.db[model.Organization][organization_name].id  # type: ignore[assignment]
-        user_invitation: model.UserInvitation = self.handle(
-            self.invite_user_command_class(
-                user=user,
-                email=f"{user_name}@{organization_name}.org",
-                roles={role},
-                organization_id=organization_id,
-            )
-        )
-        if set_dummy_token:
-            user_invitation.token = str(self.generate_id())
-        tgt_user: model.User = self.handle(
-            command.RegisterInvitedUserCommand(
-                user=model.User(
-                    email=f"{user_name}@{organization_name}.org",
-                    organization_id=organization_id,
-                    roles={role},
-                ),
-                token=user_invitation.token,
-            )
-        )
-        tgt_user.name = user_name
-        # Verify if the right role(s) were assigned
-        if tgt_user.roles != {role}:
-            raise ValueError(
-                f"User {tgt_user.name} has incorrect roles {tgt_user.roles}, expected {role}"
-            )
-        # Verify against user invitation constraints
-        user_invitation_constraints: model.UserInvitationConstraints = self.handle(
-            self.retrieve_invite_user_constraints_class(
-                user=user,
-            )
-        )
-        if tgt_user.organization_id not in user_invitation_constraints.organization_ids:
-            raise ValueError("User invitation constraints not met for organization_id")
-        if not tgt_user.roles.issubset(user_invitation_constraints.roles):
-            raise ValueError("User invitation constraints not met for roles")
-        # Verify no invitations remain for the user
-        remaining_invitations: list[model.UserInvitation] = self.handle(
-            self.user_invitation_crud_command_class(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-                obj_ids=None,
-            )
-        )
-        if any(x.email == tgt_user.email for x in remaining_invitations):
-            raise ValueError(
-                f"Some user invitations remaining for email {tgt_user.email}"
-            )
-        retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
-        return retval
-
-    def read_all_users(self) -> list[model.User]:
-        root_user = self.get_root_user()
-        retval: list[model.User] = self.app.handle(
-            self.user_crud_command_class(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        return retval
-
-    def read_users_by_role(self, role: Enum) -> list[model.User]:
-        users = self.read_all_users()
-        return [x for x in users if role in x.roles]
-
-    def check_user_has_role(
-        self, user_or_str: str | model.User, role: Enum, exclusive: bool = True
-    ) -> bool:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type:ignore[assignment]
-        roles = user.roles
-        if exclusive:
-            return role in roles and len(roles) == 1
-        return role in roles
-
-    def print_organizations(self) -> None:
-        organizations: list[model.Organization] = self.read_all(
-            self.get_root_user(), model.Organization, cascade=True
-        )  # type:ignore[assignment]
-        print("\nOrganizations:")
-        for x in sorted(organizations, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
-
-    def print_data_collections(self) -> None:
-        data_collections: list[model.DataCollection] = self.read_all(
-            self.get_root_user(), model.DataCollection, cascade=True
-        )  # type:ignore[assignment]
-        print("\nDataCollections:")
-        for x in sorted(data_collections, key=lambda x: x.name):
-            print(f"{x.name} ({x.id})")
-
-    def print_users(self) -> None:
-        root_user: model.User = self.get_root_user()
-        users: list[model.User] = self.read_all(
-            root_user, model.User
-        )  # type:ignore[assignment]
-        organizations: dict[UUID, model.Organization] = {
-            x.id: x  # type:ignore[misc]
-            for x in self.read_all(root_user, model.Organization)
-        }
-        print("\nUsers:")
-        for x in sorted(
-            users, key=lambda x: (organizations[x.organization_id].name, x.email)
-        ):
-            print(
-                f"{organizations[x.organization_id].name} / {x.email}: "
-                + ", ".join([z for z in sorted(y.name for y in x.roles)])
-                + f" ({x.id})"
-            )
-
-    def print_user_permissions(self, user_or_str: str | model.User) -> None:
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        user_permissions = self.app.user_manager.retrieve_user_permissions(user)
-        command_permissions = map_paired_elements(
-            ((x.command_name, x.permission_type) for x in user_permissions), as_set=True
-        )
-        print(
-            f"\nPermissions for user {user.name} (n_commands={len(command_permissions)}):"
-        )
-        for x in sorted(list(user_permissions), key=lambda x: x.sort_key):  # type: ignore[arg-type,return-value]
-            print(f"{x}")

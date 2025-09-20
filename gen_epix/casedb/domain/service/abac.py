@@ -12,7 +12,7 @@ class BaseAbacService(CommonAbacService):
 
     ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
-        for x in CommonAbacService.COMMON_ORGANIZATION_ADMIN_WRITE_COMMANDS
+        for x in CommonAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
@@ -20,7 +20,7 @@ class BaseAbacService(CommonAbacService):
 
     READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
-        for x in CommonAbacService.COMMON_READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
+        for x in CommonAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
     } | {
         command.OrganizationAccessCasePolicyCrudCommand,
         command.OrganizationShareCasePolicyCrudCommand,
@@ -30,7 +30,7 @@ class BaseAbacService(CommonAbacService):
 
     READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
-        for x in CommonAbacService.COMMON_READ_SELF_RESULTS_ONLY_COMMANDS
+        for x in CommonAbacService.READ_SELF_RESULTS_ONLY_COMMANDS
     } | {
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
@@ -38,12 +38,12 @@ class BaseAbacService(CommonAbacService):
 
     READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
-        for x in CommonAbacService.COMMON_READ_USER_COMMANDS
+        for x in CommonAbacService.READ_USER_COMMANDS
     } | set()
 
     UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
-        for x in CommonAbacService.COMMON_UPDATE_USER_COMMANDS
+        for x in CommonAbacService.UPDATE_USER_COMMANDS
     } | set()
 
     CASE_ABAC_COMMANDS: set[Type[Command]] = {

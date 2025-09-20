@@ -5,7 +5,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.command import Command, CrudCommand
 from gen_epix.seqdb.domain import enum, model
@@ -48,6 +48,17 @@ class RetrievePhylogeneticTreeCommand(Command):
                 "leaf_codes must be None or have the same length as seq_ids"
             )
         return self
+
+
+class RetrieveSeqFastaCommand(Command):
+
+    seq_ids: list[UUID] = Field(
+        description="List of sequence IDs to retrieve in FASTA format.",
+    )
+    wrap: int | None = Field(
+        default=80,
+        description="Number of characters to wrap the sequence lines.",
+    )
 
 
 class RetrieveMultipleAlignmentCommand(Command):

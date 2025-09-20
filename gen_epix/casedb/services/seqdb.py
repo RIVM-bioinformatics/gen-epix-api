@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Iterable
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
@@ -61,24 +61,38 @@ class SeqdbService(BaseSeqdbService):
         )
         return phylogenetic_tree
 
+    def _retrieve_seq_objects_by_ids(
+        self, seq_ids: list[UUID]
+    ) -> list[seqdb_model.Seq]:
+        seqs: list[seqdb_model.Seq] = self.ext_app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=self.ext_app_user,
+                obj_ids=seq_ids,
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        return seqs
+
+    def _retrieve_rawseq_objects_by_ids(
+        self, raw_seq_ids: list[UUID]
+    ) -> list[seqdb_model.RawSeq]:
+        raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
+            seqdb_command.RawSeqCrudCommand(
+                user=self.ext_app_user,
+                obj_ids=raw_seq_ids,
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        return raw_seqs
+
     def retrieve_genetic_sequences(
         self, cmd: command.RetrieveGeneticSequenceByIdCommand
     ) -> list[model.GeneticSequence]:
         # naive implementation that retrieves sequences by ID
-        seqs: list[seqdb_model.Seq] = self.ext_app.handle(
-            seqdb_command.SeqCrudCommand(
-                user=self.ext_app_user,
-                obj_ids=cmd.seq_ids,
-                operation=CrudOperation.READ_SOME,
-            )
-        )
+        seqs: list[seqdb_model.Seq] = self._retrieve_seq_objects_by_ids(cmd.seq_ids)
         raw_seq_ids = [seq.raw_seq_id for seq in seqs]
-        raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
-            seqdb_command.RawSeqCrudCommand(
-                user=self.ext_app_user,
-                obj_ids=list(set(raw_seq_ids)),
-                operation=CrudOperation.READ_SOME,
-            )
+        raw_seqs: list[seqdb_model.RawSeq] = self._retrieve_rawseq_objects_by_ids(
+            list(set(raw_seq_ids))  # type: ignore[arg-type]
         )
         raw_seq_map = {x.id: x for x in raw_seqs}
         # Convert raw sequences to model.GeneticSequence
@@ -89,6 +103,18 @@ class SeqdbService(BaseSeqdbService):
             for seq, raw_seq_id in zip(seqs, raw_seq_ids)
         ]
         return genetic_sequences
+
+    def retrieve_genetic_sequence_fasta_by_id(
+        self,
+        cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
+    ) -> Iterable[str]:
+        seqdb_cmd = seqdb_command.RetrieveSeqFastaCommand(
+            user=self.ext_app_user,
+            seq_ids=cmd.seq_ids,
+            wrap=cmd.wrap,
+        )
+        fasta_iterator: Iterable[str] = self.ext_app.handle(seqdb_cmd)
+        return fasta_iterator
 
     # def retrieve_allele_profile(
     #     self,

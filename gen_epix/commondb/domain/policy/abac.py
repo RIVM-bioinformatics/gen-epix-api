@@ -89,9 +89,11 @@ class BaseUpdateUserPolicy(Policy):
         self,
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
+        user_class: Type[User] = User,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
+        self.user_class = user_class
         self.role_map = role_map or {x: x for x in enum.Role}
         self.role_set_map = get_role_set_map(self.role_map)
         self.props = kwargs
