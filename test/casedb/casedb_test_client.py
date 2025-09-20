@@ -15,6 +15,10 @@ from typing import Any, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case
+from gen_epix.casedb.api.organization import (
+    UpdateUserRequestBody,
+    UserInvitationRequestBody,
+)
 from gen_epix.casedb.app_setup import create_fast_api
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
@@ -22,6 +26,7 @@ from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.config.cfg import BaseAppCfg
 from gen_epix.commondb.test.enum import RepositoryType as TestClientRepositoryType
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.commondb.util import map_paired_elements
@@ -124,6 +129,7 @@ class CasedbTestClient(TestClient):
     @classmethod
     def get_test_client(
         cls,
+        app_cfg: AppCfg = APP_CFG,
         test_type: str = TestType.CASEDB_CUSTOM.value,
         repository_type: enum.RepositoryType = enum.RepositoryType.DICT,
         data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
@@ -139,21 +145,27 @@ class CasedbTestClient(TestClient):
         """
         key = (test_type, repository_type, data_fixture_name)
         if key not in cls.TEST_CLIENTS:
-            test_dir = None
+            test_name = get_test_name(test_type)
+            test_dir = get_test_output_dir(test_name)
+            # Find existing test dir for same test type and use that if found,
+            # so all results come in the same dir
             for stored_key, stored_env in cls.TEST_CLIENTS.items():
                 stored_test_type, _, _ = stored_key  # type: ignore[misc]
                 if stored_test_type == test_type:  # type: ignore[has-type]
+                    test_name = stored_env.test_name
                     test_dir = stored_env.test_dir
                     break
             cls.TEST_CLIENTS[key] = cls(
+                app_cfg=app_cfg,
                 test_type=test_type,
+                test_name=test_name,
+                test_dir=test_dir,
                 repository_type=repository_type,
                 data_fixture_name=data_fixture_name,
                 route_prefix=route_prefix,
                 verbose=verbose,
                 log_level=log_level,
                 log_setup=log_setup,
-                test_dir=test_dir,
                 **kwargs,
             )
         return cls.TEST_CLIENTS[key]  # type: ignore[no-any-return]
@@ -161,21 +173,21 @@ class CasedbTestClient(TestClient):
     def __init__(
         self,
         test_type: str = TestType.UNDEFINED.value,
+        test_name: str | None = None,
+        test_dir: Path | None = None,
+        app_cfg: BaseAppCfg = APP_CFG,
         repository_type: RepositoryType = RepositoryType.DICT,
         data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
-        test_dir: Path | None = None,
         use_endpoints: bool = False,
         **kwargs: Any,
     ):
         test_client_repository_type = TestClientRepositoryType(repository_type.value)
 
         # Set up test name and directory
-        app_cfg = APP_CFG
-        cfg = app_cfg.cfg
-        test_name = get_test_name(test_type)
+        test_name = test_name or get_test_name(test_type)
         test_dir = test_dir or get_test_output_dir(test_name)
 
         # Set and adjust cfg
@@ -185,6 +197,7 @@ class CasedbTestClient(TestClient):
         curr_cfg = app_cfg.cfg.secret.root
         curr_cfg.organization.name = "org1"
         curr_cfg.user.email = "root1_1@org1.org"
+        curr_cfg.user.name = "root1_1"
         # Copy any repository files to test directory
         create_data_fixture(
             app_cfg.cfg.secret.repository[repository_type.value],
@@ -204,7 +217,7 @@ class CasedbTestClient(TestClient):
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
-                cfg,
+                app_cfg.cfg,
                 app=app_env.app,
                 registered_user_dependency=app_env.registered_user_dependency,
                 new_user_dependency=app_env.new_user_dependency,
@@ -217,7 +230,24 @@ class CasedbTestClient(TestClient):
             )
             app_last_handled_exception = LAST_HANDLED_EXCEPTION
             endpoint_test_client = CasedbEndpointTestClient(
-                app_env.app, fast_api, app_last_handled_exception, **kwargs
+                app_env.app,
+                fast_api,
+                app_last_handled_exception,
+                user_class=model.User,
+                user_invitation_class=model.UserInvitation,
+                user_invitation_constraints_class=model.UserInvitationConstraints,
+                organization_admin_policy_class=model.OrganizationAdminPolicy,
+                user_crud_command_class=command.UserCrudCommand,
+                user_invitation_crud_command_class=command.UserInvitationCrudCommand,
+                organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
+                retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
+                invite_user_command_class=command.InviteUserCommand,
+                register_invited_user_command_class=command.RegisterInvitedUserCommand,
+                retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
+                update_user_command_class=command.UpdateUserCommand,
+                user_invitation_request_body=UserInvitationRequestBody,
+                update_user_request_body=UpdateUserRequestBody,
+                **kwargs,
             )
 
         # Call base class constructor
@@ -231,10 +261,16 @@ class CasedbTestClient(TestClient):
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
             user_invitation_class=model.UserInvitation,
+            user_invitation_constraints_class=model.UserInvitationConstraints,
+            organization_admin_policy_class=model.OrganizationAdminPolicy,
             user_crud_command_class=command.UserCrudCommand,
             user_invitation_crud_command_class=command.UserInvitationCrudCommand,
-            retrieve_invite_user_constraints_class=command.RetrieveInviteUserConstraintsCommand,
+            organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
+            retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
             invite_user_command_class=command.InviteUserCommand,
+            register_invited_user_command_class=command.RegisterInvitedUserCommand,
+            retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
+            update_user_command_class=command.UpdateUserCommand,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,
@@ -242,35 +278,6 @@ class CasedbTestClient(TestClient):
             app_last_handled_exception=app_last_handled_exception,
             **kwargs,
         )
-
-    def create_org_admin_policy(
-        self,
-        user_or_str: str | model.User,
-        tgt_user_or_str: str | model.User,
-        organization_or_str: str | model.Organization,
-        is_active: bool = True,
-    ) -> model.OrganizationAdminPolicy:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        tgt_user: model.User = self._get_obj(
-            model.User, tgt_user_or_str
-        )  # type:ignore[assignment]
-        organization: model.Organization = self._get_obj(
-            model.Organization, organization_or_str
-        )  # type:ignore[assignment]
-        organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
-            command.OrganizationAdminPolicyCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.OrganizationAdminPolicy(
-                    organization_id=organization.id,
-                    user_id=tgt_user.id,
-                    is_active=is_active,
-                ),
-            )
-        )
-        return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
 
     def create_concept(
         self,
@@ -622,25 +629,6 @@ class CasedbTestClient(TestClient):
             )
         )
         return self._set_obj(etiology)  # type:ignore[return-value]
-
-    def create_data_collection(
-        self,
-        user_or_str: str | model.User,
-        name: str,
-    ) -> model.DataCollection:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        data_collection = self.handle(
-            command.DataCollectionCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.DataCollection(
-                    name=name,
-                ),
-            )
-        )
-        return self._set_obj(data_collection)  # type:ignore[return-value]
 
     def create_case_type(
         self,
@@ -1516,243 +1504,6 @@ class CasedbTestClient(TestClient):
             x.case_type_id for x in members if x.case_type_set_id in case_type_set_ids
         }
 
-    def read_all_user_invitations(
-        self, user_or_str: str | model.User
-    ) -> list[model.UserInvitation]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        invitations: list[model.UserInvitation] = self.handle(
-            command.UserInvitationCrudCommand(
-                user=user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        return invitations
-
-    def read_organization_admin_name_emails(
-        self, user_or_str: str | model.User
-    ) -> list[model.UserNameEmail]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        user_name_emails: list[model.UserNameEmail] = self.app.handle(
-            command.RetrieveOrganizationAdminNameEmailsCommand(user=user)
-        )
-        return user_name_emails
-
-    def update_user(
-        self,
-        user_or_str: str | model.User,
-        tgt_user_or_str: str | model.User,
-        is_active: bool | None = None,
-        roles: set[enum.Role] | None = None,
-        organization_or_str: str | None = None,
-        set_dummy_organization: bool = False,
-    ) -> model.User:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        tgt_user: model.User = self._get_obj(
-            model.User, tgt_user_or_str, copy=True
-        )  # type:ignore[assignment]
-        if not organization_or_str:
-            if set_dummy_organization:
-                organization_id = self.generate_id()
-            else:
-                organization_id = None
-        else:
-            if set_dummy_organization:
-                raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization_or_str).id
-        has_updates = False
-        if is_active is not None and tgt_user.is_active != is_active:
-            has_updates = True
-            tgt_user.is_active = is_active
-        if roles is not None and tgt_user.roles != roles:
-            has_updates = True
-            tgt_user.roles = roles
-        if organization_id is not None and tgt_user.organization_id != organization_id:
-            has_updates = True
-            tgt_user.organization_id = organization_id
-        sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
-        updated_tgt_user = self.handle(
-            command.UpdateUserCommand(
-                user=user,
-                tgt_user_id=tgt_user.id,
-                is_active=is_active,
-                roles=roles,
-                organization_id=organization_id,
-            )
-        )
-        updated_tgt_user.name = tgt_user.name
-        TestClient._verify_updated_obj(
-            tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
-        )
-        return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
-
-    def temp_update_user_own_organization(
-        self,
-        user_or_str: str | model.User,
-        organization_or_str: str | None = None,
-        set_dummy_organization: bool = False,
-    ) -> model.User:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        root_user: model.User = self._get_obj(
-            model.User, "root1_1"
-        )  # type:ignore[assignment]
-        orig_organization_id = user.organization_id
-        if not organization_or_str:
-            if set_dummy_organization:
-                organization_id = self.generate_id()
-            else:
-                raise ValueError(
-                    "Organization not given and set_dummy_organization False"
-                )
-        else:
-            if set_dummy_organization:
-                raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization_or_str).id
-        # Get current policies
-        prev_user_access_case_policies = self.handle(
-            command.UserAccessCasePolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        prev_user_access_case_policy_ids = {
-            x.id for x in prev_user_access_case_policies if x.user_id == user.id
-        }
-        prev_user_share_case_policies = self.handle(
-            command.UserShareCasePolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        prev_user_share_case_policy_ids = {
-            x.id for x in prev_user_share_case_policies if x.user_id == user.id
-        }
-        # Update user organization
-        sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
-        user = self.handle(
-            command.UpdateUserOwnOrganizationCommand(
-                user=user,
-                organization_id=organization_id,
-            )
-        )
-        # Verify outcome
-        if user.organization_id != organization_id:
-            raise ValueError(f"organization_id not updated")
-        new_user_access_case_policies = self.handle(
-            command.UserAccessCasePolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        new_user_access_case_policy_ids = {
-            x.id for x in new_user_access_case_policies if x.user_id == user.id
-        }
-        new_user_share_case_policies = self.handle(
-            command.UserShareCasePolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        new_user_share_case_policy_ids = {
-            x.id for x in new_user_share_case_policies if x.user_id == user.id
-        }
-        if new_user_access_case_policy_ids.intersection(
-            prev_user_access_case_policy_ids
-        ):
-            raise ValueError(f"User case policies not updated")
-        if new_user_share_case_policy_ids.intersection(prev_user_share_case_policy_ids):
-            raise ValueError(f"User data collection policies not updated")
-        return self._set_obj(user, update=True)  # type:ignore[return-value]
-
-    # def update_user_access_case_policy(
-    #     self,
-    #     user_or_str: str | model.User,
-    #     props: dict[str, Any | None],
-    #     set_dummy_link: dict[str, bool] | bool = False,
-    #     exclude_none: bool = True,
-    #     new_case_type_set: str | model.CaseTypeSet | None = None,
-    #     new_data_collection: str | model.DataCollection | None = None,
-    #     new_is_active: bool | None = None,
-    #     new_add_case: bool | None = None,
-    #     new_remove_case: bool | None = None,
-    #     new_read_case_type_col_set: str | model.CaseTypeColSet | None = None,
-    #     new_write_case_type_col_set: str | model.CaseTypeColSet | None = None,
-    #     new_add_case_set: bool | None = None,
-    #     new_remove_case_set: bool | None = None,
-    #     new_read_case_set: bool | None = None,
-    #     new_write_case_set: bool | None = None,
-    # ) -> model.UserAccessCasePolicy:
-    #     root_user: model.User = self._get_obj(model.User, "root1_1")
-    #     user: model.User = self._get_obj(model.User, user_or_str)  # type:ignore[assignment]
-    #     tgt_user: model.User = self._get_obj(model.User, props["tgt_user"])
-    #     data_collection: model.DataCollection = self._get_obj(
-    #         model.DataCollection, props["data_collection"]
-    #     )
-    #     case_type_set: model.CaseTypeSet = self._get_obj(
-    #         model.CaseTypeSet, props["case_type_set"]
-    #     )
-    #     read_case_type_col_set: model.CaseTypeColSet = self._get_obj(
-    #         model.CaseTypeColSet, props["read_case_type_col_set"]
-    #     )
-    #     write_case_type_col_set: model.CaseTypeColSet = self._get_obj(
-    #         model.CaseTypeColSet, props["write_case_type_col_set"]
-    #     )
-    #     user_access_case_policies = self.handle(
-    #         command.UserAccessCasePolicyCrudCommand(
-    #             user=root_user,
-    #             operation=CrudOperation.READ_ALL,
-    #         )
-    #     )
-    #     user_access_case_policies = [
-    #         x
-    #         for x in user_access_case_policies
-    #         if x.user_id == tgt_user.id and x.data_collection_id == data_collection.id
-    #     ]
-    #     if len(user_access_case_policies) == 0:
-    #         raise exc.UnauthorizedAuthError(
-    #             f"User case policy not found: {tgt_user.name}, {data_collection.name}"
-    #         )
-    #     user_access_case_policy = user_access_case_policies[0]
-    #     # Update policy
-    #     props.pop("tgt_user")
-    #     props["user"] = tgt_user
-    #     props["data_collection"] = new_data_collection or data_collection
-    #     props["case_type_set"] = new_case_type_set or case_type_set
-    #     props["is_active"] = new_is_active or user_access_case_policy.is_active
-    #     props["add_case"] = new_add_case or user_access_case_policy.add_case
-    #     props["remove_case"] = new_remove_case or user_access_case_policy.remove_case
-    #     props["read_case_type_col_set"] = (
-    #         new_read_case_type_col_set or read_case_type_col_set
-    #     )
-    #     props["write_case_type_col_set"] = (
-    #         new_write_case_type_col_set or write_case_type_col_set
-    #     )
-    #     props["add_case_set"] = new_add_case_set or user_access_case_policy.add_case_set
-    #     props["remove_case_set"] = (
-    #         new_remove_case_set or user_access_case_policy.remove_case_set
-    #     )
-    #     props["read_case_set"] = (
-    #         new_read_case_set or user_access_case_policy.read_case_set
-    #     )
-    #     props["write_case_set"] = (
-    #         new_write_case_set or user_access_case_policy.write_case_set
-    #     )
-    #     return self.update_object(  # type: ignore
-    #         user,
-    #         model.UserAccessCasePolicy,
-    #         user_access_case_policy,
-    #         props,
-    #         set_dummy_link=set_dummy_link,
-    #         exclude_none=exclude_none,
-    #     )
-
     def update_association_case_data_collection(
         self,
         user_or_str: str | model.User,
@@ -1856,6 +1607,86 @@ class CasedbTestClient(TestClient):
             updated_case_type_col_set_member, update=True
         )  # type:ignore[return-value]
 
+    def temp_update_user_own_organization(
+        self,
+        user_or_str: str | model.User,
+        organization_or_str: str | None = None,
+        set_dummy_organization: bool = False,
+    ) -> model.User:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        root_user: model.User = self._get_obj(
+            model.User, "root1_1"
+        )  # type:ignore[assignment]
+        orig_organization_id = user.organization_id
+        if not organization_or_str:
+            if set_dummy_organization:
+                organization_id = self.generate_id()
+            else:
+                raise ValueError(
+                    "Organization not given and set_dummy_organization False"
+                )
+        else:
+            if set_dummy_organization:
+                raise ValueError("Organization given and set_dummy_organization True")
+            organization_id = self._get_obj(model.Organization, organization_or_str).id
+        # Get current policies
+        prev_user_access_case_policies = self.handle(
+            command.UserAccessCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        prev_user_access_case_policy_ids = {
+            x.id for x in prev_user_access_case_policies if x.user_id == user.id
+        }
+        prev_user_share_case_policies = self.handle(
+            command.UserShareCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        prev_user_share_case_policy_ids = {
+            x.id for x in prev_user_share_case_policies if x.user_id == user.id
+        }
+        # Update user organization
+        sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
+        user = self.handle(
+            command.UpdateUserOwnOrganizationCommand(
+                user=user,
+                organization_id=organization_id,
+            )
+        )
+        # Verify outcome
+        if user.organization_id != organization_id:
+            raise ValueError(f"organization_id not updated")
+        new_user_access_case_policies = self.handle(
+            command.UserAccessCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        new_user_access_case_policy_ids = {
+            x.id for x in new_user_access_case_policies if x.user_id == user.id
+        }
+        new_user_share_case_policies = self.handle(
+            command.UserShareCasePolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        new_user_share_case_policy_ids = {
+            x.id for x in new_user_share_case_policies if x.user_id == user.id
+        }
+        if new_user_access_case_policy_ids.intersection(
+            prev_user_access_case_policy_ids
+        ):
+            raise ValueError(f"User case policies not updated")
+        if new_user_share_case_policy_ids.intersection(prev_user_share_case_policy_ids):
+            raise ValueError(f"User data collection policies not updated")
+        return self._set_obj(user, update=True)  # type:ignore[return-value]
+
     def verify_case_content_access(
         self,
         expected_access: dict[tuple[str, str], list[str]],
@@ -1920,105 +1751,6 @@ class CasedbTestClient(TestClient):
                 if self.verbose:
                     print(msg)
                 raise ValueError(msg)
-
-    def get_org_ids_for_org_admin(
-        self,
-        user_or_str: str | model.User,
-        include_self: bool = False,
-        on_no_admin: str = "raise",
-    ) -> list[model.Organization]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = [
-            x
-            for x in self.db[model.OrganizationAdminPolicy].values()
-            if x.user_id == user.id
-        ]
-        if not org_admin_policies:
-            if on_no_admin == "raise":
-                raise ValueError(f"User {user.name} is not an organization admin")
-            elif on_no_admin == "return":
-                return []
-        organization_ids = {x.organization_id for x in org_admin_policies}
-        if include_self:
-            organization_ids.add(user.organization_id)
-        return organization_ids
-
-    def get_own_org_admin_users(
-        self,
-        user_or_str: str | model.User,
-        include_self: bool = False,
-    ) -> list[model.Organization]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = [
-            x
-            for x in self.db[model.OrganizationAdminPolicy].values()
-            if x.organization_id == user.organization_id and x.is_active
-        ]
-        user_ids = {x.user_id for x in org_admin_policies}
-        if include_self:
-            user_ids.add(user.id)
-        return [
-            x for x in self.db[model.User].values() if x.id in user_ids and x.is_active
-        ]
-
-    def get_users_for_org(
-        self,
-        user_or_str: str | model.User,
-        on_no_admin: str = "raise",
-    ) -> list[model.User]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        user = self._get_obj(model.User, user_or_str)  # type:ignore[assignment]
-        return [
-            x
-            for x in self.db[model.User].values()
-            if x.organization_id == user.organization_id
-        ]
-
-    def get_users_for_org_admin(
-        self,
-        user_or_str: str | model.User,
-        include_self: bool = False,
-        include_other_org_admins: bool = False,
-        on_no_admin: str = "raise",
-    ) -> list[model.User]:
-        user: model.User = self._get_obj(
-            model.User, user_or_str
-        )  # type:ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = (
-            [  # type:ignore[assignment]
-                x
-                for x in self.db[model.OrganizationAdminPolicy].values()
-                if x.user_id == user.id and x.is_active
-            ]
-        )
-        if not org_admin_policies:
-            if on_no_admin == "raise":
-                raise ValueError(f"User {user.name} is not an organization admin")
-            elif on_no_admin == "return":
-                return []
-        organization_ids = {x.organization_id for x in org_admin_policies}
-        user_ids = {user.id} if include_self else set()
-        if include_other_org_admins:
-            other_org_admin_policies: list[model.OrganizationAdminPolicy] = (
-                [  # type:ignore[assignment]
-                    x
-                    for x in self.db[model.OrganizationAdminPolicy].values()
-                    if x.organization_id in organization_ids and x.is_active
-                ]
-            )
-            user_ids.update({x.user_id for x in other_org_admin_policies})
-        tgt_users: list[model.User] = list(self.db[model.User].values())
-        return [
-            x
-            for x in tgt_users
-            if x.id in user_ids or x.organization_id in organization_ids
-        ]
 
     def print_case_data_collection_links(self) -> None:
         cases = self.read_all("root1_1", model.Case, cascade=True)
@@ -2126,18 +1858,6 @@ class CasedbTestClient(TestClient):
                 ]
             )
             print(f"{x.name}: {case_type_cols_str}\n({x.id}: {case_type_col_ids_str})")
-
-    def print_org_admin_policies(self) -> None:
-        org_admin_policies = self.read_all(
-            "root1_1", model.OrganizationAdminPolicy, cascade=True
-        )
-        print("\nOrganizationAdminPolicies:")
-        for x in sorted(
-            org_admin_policies, key=lambda x: (x.organization.name, x.user.name)
-        ):
-            print(
-                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"
-            )
 
     def print_organization_access_case_policies(self) -> None:
         organization_access_case_policies = self.read_all(
@@ -2308,6 +2028,7 @@ class CasedbTestClient(TestClient):
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]
+        key = self._get_obj_key(table, model_class, obj, on_missing)
         if model_class == model.Case:
             if not isinstance(key, datetime.datetime):
                 key = self._convert_case_code_to_date(key)
@@ -2332,8 +2053,6 @@ class CasedbTestClient(TestClient):
             if copy:
                 return table[key].model_copy()
             return table[key]
-        else:
-            key = self._get_obj_key(table, model_class, obj, on_missing)
 
         if key not in table:
             if on_missing == "raise":

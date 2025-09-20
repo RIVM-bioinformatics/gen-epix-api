@@ -1,0 +1,50 @@
+[app]
+host = "0.0.0.0"
+port = 8000
+debug = false
+
+[api]
+default_route = "/openapi.json"
+gzip_response_minimum_size = 1024
+
+[api.http_header]
+[api.http_header.general]
+CacheControl = "no-cache, no-store"
+Content-Security-Policy = "default-src 'none'; frame-ancestors 'none'; sandbox"
+Cross-Origin-Opener-Policy = "same-origin"
+Expires ="0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.openapi]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+[api.http_header.auth]
+CacheControl = "no-cache, no-store"
+Expires = "0"
+Pragma = "no-cache"
+Strict-Transport-Security = "max-age=63072000; includeSubDomains"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+
+[api.route]
+v1 = "/v1"
+
+[log]
+level = "DEBUG"
+
+[service]
+[service.defaults]
+id_factory = "ULID"
+[service.rbac]
+user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7

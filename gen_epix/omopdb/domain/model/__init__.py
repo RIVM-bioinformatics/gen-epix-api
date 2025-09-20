@@ -71,6 +71,9 @@ from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
 from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
 from gen_epix.omopdb.domain.model.organization import User as User
 from gen_epix.omopdb.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.omopdb.domain.model.organization import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
@@ -153,5 +156,6 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
+    common_model.UserInvitationConstraints: UserInvitationConstraints,
     common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }

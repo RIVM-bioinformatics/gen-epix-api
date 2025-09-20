@@ -11,7 +11,8 @@ from httpx import Response
 from jose import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.commondb.domain import model
+from gen_epix.commondb.api import UpdateUserRequestBody, UserInvitationRequestBody
+from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 
 
@@ -27,15 +28,67 @@ class EndpointTestClient:
         app_last_handled_exception: dict,
         user_class: Type[model.User] = model.User,
         user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
+        user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = model.UserInvitationConstraints,
+        organization_admin_policy_class: Type[
+            model.OrganizationAdminPolicy
+        ] = model.OrganizationAdminPolicy,
+        user_crud_command_class: Type[
+            command.UserCrudCommand
+        ] = command.UserCrudCommand,
+        user_invitation_crud_command_class: Type[
+            command.UserInvitationCrudCommand
+        ] = command.UserInvitationCrudCommand,
+        organization_admin_policy_crud_command_class: Type[
+            command.OrganizationAdminPolicyCrudCommand
+        ] = command.OrganizationAdminPolicyCrudCommand,
+        retrieve_invite_user_constraints_command_class: Type[
+            command.RetrieveInviteUserConstraintsCommand
+        ] = command.RetrieveInviteUserConstraintsCommand,
+        invite_user_command_class: Type[
+            command.InviteUserCommand
+        ] = command.InviteUserCommand,
+        register_invited_user_command_class: Type[
+            command.RegisterInvitedUserCommand
+        ] = command.RegisterInvitedUserCommand,
+        retrieve_organization_admin_name_emails_command_class: Type[
+            command.RetrieveOrganizationAdminNameEmailsCommand
+        ] = command.RetrieveOrganizationAdminNameEmailsCommand,
+        update_user_command_class: Type[
+            command.UpdateUserCommand
+        ] = command.UpdateUserCommand,
+        user_invitation_request_body: Type[
+            PydanticBaseModel
+        ] = UserInvitationRequestBody,
+        update_user_request_body: Type[PydanticBaseModel] = UpdateUserRequestBody,
         register_crud_commands: bool = True,
         route_prefix: str | None = None,
     ):
         self.app = app
         self.fast_api = fast_api
         self.test_client = TestClient(fast_api, raise_server_exceptions=False)
-        self._user_class = user_class
-        self._user_invitation_class = user_invitation_class
-        self._route_prefix = route_prefix or ""
+        self.user_class = user_class
+        self.user_invitation_class = user_invitation_class
+        self.user_invitation_constraints_class = user_invitation_constraints_class
+        self.organization_admin_policy_class = organization_admin_policy_class
+        self.user_crud_command_class = user_crud_command_class
+        self.user_invitation_crud_command_class = user_invitation_crud_command_class
+        self.organization_admin_policy_crud_command_class = (
+            organization_admin_policy_crud_command_class
+        )
+        self.retrieve_invite_user_constraints_command_class = (
+            retrieve_invite_user_constraints_command_class
+        )
+        self.invite_user_command_class = invite_user_command_class
+        self.register_invited_user_command_class = register_invited_user_command_class
+        self.retrieve_organization_admin_name_emails_command_class = (
+            retrieve_organization_admin_name_emails_command_class
+        )
+        self.update_user_command_class = update_user_command_class
+        self.user_invitation_request_body = user_invitation_request_body
+        self.update_user_request_body = update_user_request_body
+        self.route_prefix = route_prefix or ""
         self._handlers: dict[
             Type[Command],
             Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
@@ -43,6 +96,18 @@ class EndpointTestClient:
         if register_crud_commands:
             for crud_command_class in app.domain.crud_commands:
                 self.register_handler(crud_command_class, self.handle_crud_command)  # type: ignore[arg-type]
+        self.register_handler(
+            command.GetIdentityProvidersCommand, self.handle_get_identity_providers
+        )
+        self.register_handler(self.invite_user_command_class, self.handle_invite_user)
+        self.register_handler(
+            self.retrieve_invite_user_constraints_command_class,
+            self.handle_retrieve_invite_user_constraints,
+        )
+        self.register_handler(
+            self.register_invited_user_command_class, self.handle_register_invited_user
+        )
+        self.register_handler(self.update_user_command_class, self.handle_update_user)
 
     def register_handler(
         self,
@@ -58,7 +123,7 @@ class EndpointTestClient:
         route_prefix: str | None = None,
         **kwargs: Any,
     ) -> Any:
-        route_prefix = route_prefix or self._route_prefix
+        route_prefix = route_prefix or self.route_prefix
         if cmd.user:
             headers = self.get_headers(cmd)
         else:
@@ -70,6 +135,82 @@ class EndpointTestClient:
         if return_response:
             return retval, response
         return retval
+
+    def handle_get_identity_providers(
+        self,
+        cmd: command.GetIdentityProvidersCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.get(route_prefix + "/identity_providers")
+        retval = self._content_to_obj(response, model.IdentityProvider, is_list=True)
+        return retval, response
+
+    def handle_invite_user(
+        self,
+        cmd: command.InviteUserCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        request_body = self.user_invitation_request_body(
+            email=cmd.email,
+            roles=cmd.roles,
+            organization_id=cmd.organization_id,
+        )
+        response = self.test_client.post(
+            route_prefix + "/invite_user",
+            json=json.loads(request_body.model_dump_json()),
+            headers=headers,
+        )
+        retval = self._content_to_obj(response, self.user_invitation_class)
+        return retval, response
+
+    def handle_retrieve_invite_user_constraints(
+        self,
+        cmd: command.RetrieveInviteUserConstraintsCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.get(
+            route_prefix + "/invite_user/constraints",
+            headers=headers,
+        )
+        retval = self._content_to_obj(response, self.user_invitation_constraints_class)
+        return retval, response
+
+    def handle_register_invited_user(
+        self,
+        cmd: command.RegisterInvitedUserCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        response = self.test_client.post(
+            route_prefix + f"/user_registrations/{cmd.token}",
+            headers=headers,
+        )
+        retval = self._content_to_obj(response, self.user_class)
+        return retval, response
+
+    def handle_update_user(
+        self,
+        cmd: command.UpdateUserCommand,
+        route_prefix: str,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, Response]:
+        request_body = self.update_user_request_body(
+            is_active=cmd.is_active,
+            roles=cmd.roles,
+            organization_id=cmd.organization_id,
+        )
+        cmd_dict = json.loads(cmd.model_dump_json())
+        tgt_user_id = cmd_dict["tgt_user_id"]
+        response = self.test_client.put(
+            route_prefix + f"/users/{tgt_user_id}",
+            headers=headers,
+            json=json.loads(request_body.model_dump_json()),
+        )
+        retval = self._content_to_obj(response, self.user_class)
+        return retval, response
 
     def get_headers(self, cmd: Command, **kwargs: Any) -> dict[str, str] | None:
         if cmd.user:

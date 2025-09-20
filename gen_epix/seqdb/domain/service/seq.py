@@ -1,4 +1,5 @@
 import abc
+from typing import Iterable
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -25,6 +26,10 @@ class BaseSeqService(BaseService):
         f(
             command.RetrieveMultipleAlignmentCommand,
             self.retrieve_multiple_alignment,
+        )
+        f(
+            command.RetrieveSeqFastaCommand,
+            self.retrieve_seq_fasta,
         )
 
     @abc.abstractmethod
@@ -66,4 +71,8 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveMultipleAlignmentCommand,
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()

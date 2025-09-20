@@ -2,6 +2,9 @@ from typing import ClassVar
 
 import gen_epix.casedb.domain.model as model
 from gen_epix.commondb.domain.command import CrudCommand
+from gen_epix.commondb.domain.command import (
+    OrganizationAdminPolicyCrudCommand as CommonOrgAdminPolicyCrudCommand,
+)
 
 # Non-CRUD
 
@@ -9,7 +12,7 @@ from gen_epix.commondb.domain.command import CrudCommand
 # CRUD
 
 
-class OrganizationAdminPolicyCrudCommand(CrudCommand):
+class OrganizationAdminPolicyCrudCommand(CommonOrgAdminPolicyCrudCommand):
     MODEL_CLASS: ClassVar = model.OrganizationAdminPolicy
 
 

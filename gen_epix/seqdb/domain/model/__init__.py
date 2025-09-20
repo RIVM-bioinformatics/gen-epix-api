@@ -30,6 +30,9 @@ from gen_epix.seqdb.domain.model.abac import (
 )
 from gen_epix.seqdb.domain.model.organization import User as User
 from gen_epix.seqdb.domain.model.organization import UserInvitation as UserInvitation
+from gen_epix.seqdb.domain.model.organization import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
@@ -172,5 +175,6 @@ SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
+    common_model.UserInvitationConstraints: UserInvitationConstraints,
     common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }

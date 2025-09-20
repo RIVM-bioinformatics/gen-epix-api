@@ -27,7 +27,6 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
-from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
 from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
@@ -57,7 +56,6 @@ from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
-from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
 )
@@ -73,6 +71,12 @@ from gen_epix.commondb.domain.command.rbac import (
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.command.abac import (
     OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
+from gen_epix.seqdb.domain.command.organization import (
+    InviteUserCommand as InviteUserCommand,
+)
+from gen_epix.seqdb.domain.command.organization import (
+    UpdateUserCommand as UpdateUserCommand,
 )
 from gen_epix.seqdb.domain.command.organization import (
     UserCrudCommand as UserCrudCommand,
@@ -164,6 +168,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
 )
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -258,6 +265,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         RetrieveCompleteSnpProfileCommand,
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
+        RetrieveSeqFastaCommand,
         SampleCrudCommand,
         SeqAlignmentCrudCommand,
         SeqCategoryCrudCommand,
@@ -297,5 +305,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
 COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
     common_command.UserCrudCommand: UserCrudCommand,
     common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
+    common_command.InviteUserCommand: InviteUserCommand,
+    common_command.UpdateUserCommand: UpdateUserCommand,
     common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
 }

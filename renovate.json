@@ -11,31 +11,49 @@
     ],
     "packageRules": [
         {
+            "matchFiles": [
+                "requirements.txt"
+            ],
             "matchUpdateTypes": [
                 "major"
             ],
             "labels": [
                 "dependencies",
                 "major"
-            ]
+            ],
+            "automerge": false
         },
         {
+            "matchFiles": [
+                "requirements.txt"
+            ],
             "matchUpdateTypes": [
-                "minor"
+                "minor",
+                "patch"
             ],
             "labels": [
-                "dependencies",
-                "minor"
-            ]
+                "dependencies"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "automergeStrategy": "auto"
         },
         {
+            "matchFiles": [
+                "dev-requirements.txt"
+            ],
             "matchUpdateTypes": [
+                "major",
+                "minor",
                 "patch"
             ],
             "labels": [
                 "dependencies",
-                "patch"
-            ]
+                "dev"
+            ],
+            "automerge": true,
+            "automergeType": "pr",
+            "automergeStrategy": "auto"
         }
     ]
 }

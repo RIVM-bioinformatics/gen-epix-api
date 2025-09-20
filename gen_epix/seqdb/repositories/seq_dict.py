@@ -1,3 +1,4 @@
+from typing import Iterable, Tuple
 from uuid import UUID
 
 import numpy as np
@@ -29,3 +30,18 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
                 distance_matrix[id_to_idx_map[id_], i] = distance
             distance_matrix[i, i] = 0
         return distance_matrix
+
+    def retrieve_seq_fasta(
+        self,
+        uow: BaseUnitOfWork,
+        seq_ids: list[UUID],
+    ) -> Iterable[Tuple[str, str]]:
+        self.raise_on_duplicate_ids(seq_ids)
+
+        for seq_id in seq_ids:
+            seq: model.Seq = self.read_one(model.Seq, seq_id)  # type: ignore[assignment]
+            raw_seq: model.RawSeq = self.read_one(  # type: ignore[assignment]
+                model.RawSeq,
+                seq.raw_seq_id,
+            )
+            yield (seq.id, raw_seq.seq)  # type: ignore[misc]
