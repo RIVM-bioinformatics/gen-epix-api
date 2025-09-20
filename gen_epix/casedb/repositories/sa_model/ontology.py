@@ -50,6 +50,7 @@ class Concept(Base, RowMetadataMixin):
     description: Mapped[str] = create_mapped_column(
         DOMAIN, model.Concept, "description"
     )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.Concept, "rank")
     props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Concept, "props")
 
 

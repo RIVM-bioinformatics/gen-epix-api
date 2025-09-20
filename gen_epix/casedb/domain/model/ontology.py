@@ -88,6 +88,10 @@ class Concept(Model):
     description: str | None = Field(
         default=None, description="The description of the concept."
     )
+    rank: int | None = Field(
+        default=None,
+        description="The rank of the concept within the set. Must be provided for ordinal sets, for other sets it is optional and can be used for sorting.",
+    )
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the concept."
     )
