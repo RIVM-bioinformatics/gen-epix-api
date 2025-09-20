@@ -114,6 +114,7 @@ class RoleGenerator:
             (command.RetrieveCompleteContigCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteSampleCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteSeqCommand, PermissionTypeSet.E),
+            (command.RetrieveSeqFastaCommand, PermissionTypeSet.E),
         },
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }

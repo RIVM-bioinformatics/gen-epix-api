@@ -149,15 +149,6 @@ class BaseCaseService(DomainBaseCaseService):
         pass
 
     @abstractmethod
-    def fasta_file_generator(
-        self,
-        sequences: Iterable[model.GeneticSequence],
-        wrap: int | None = 80,
-    ) -> Iterable[str]:
-        """Generate FASTA format strings from genetic sequences."""
-        pass
-
-    @abstractmethod
     def _read_association_with_valid_ids(
         self,
         command_class: Type[command.CrudCommand],

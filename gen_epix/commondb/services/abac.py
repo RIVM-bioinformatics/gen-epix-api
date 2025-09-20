@@ -1,18 +1,22 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Type
 from uuid import UUID
 
 from cachetools import TTLCache, cached
 
 from gen_epix.commondb import policies as policies
-from gen_epix.commondb.domain import command, enum, exc, model
+from gen_epix.commondb.domain import command, enum, exc, model, policy
+from gen_epix.commondb.domain.repository.abac import BaseAbacRepository
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy,
 )
 from gen_epix.fastapp import CrudOperation
-from gen_epix.fastapp.model import Command, CrudCommand
+from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import EventTiming
+from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.filter import (
     CompositeFilter,
     EqualsBooleanFilter,
@@ -25,12 +29,90 @@ class AbacService(BaseAbacService):
 
     CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = tuple()
 
+    def __init__(
+        self,
+        app: App,
+        repository: BaseAbacRepository,
+        organization_admin_policy_model_class: Type[
+            model.OrganizationAdminPolicy
+        ] = model.OrganizationAdminPolicy,
+        user_crud_command_class: Type[
+            command.UserCrudCommand
+        ] = command.UserCrudCommand,
+        is_organization_admin_policy_class: Type[
+            policy.BaseIsOrganizationAdminPolicy
+        ] = policies.IsOrganizationAdminPolicy,
+        read_organization_results_only_policy_class: Type[
+            policy.BaseReadOrganizationResultsOnlyPolicy
+        ] = policies.ReadOrganizationResultsOnlyPolicy,
+        read_self_results_only_policy_class: Type[
+            policy.BaseReadSelfResultsOnlyPolicy
+        ] = policies.ReadSelfResultsOnlyPolicy,
+        read_user_policy_class: Type[
+            policy.BaseReadUserPolicy
+        ] = policies.ReadUserPolicy,
+        update_user_policy_class: Type[
+            policy.BaseUpdateUserPolicy
+        ] = policies.UpdateUserPolicy,
+        logger: logging.Logger | None = None,
+        **kwargs: Any,
+    ):
+        super().__init__(app, repository=repository, logger=logger, **kwargs)
+        self.repository: BaseAbacRepository  # type:ignore[misc]
+        self.organization_admin_policy_model_class = (
+            organization_admin_policy_model_class
+        )
+        self.user_crud_command_class = user_crud_command_class
+        self.is_organization_admin_policy_class = is_organization_admin_policy_class
+        self.read_organization_results_only_policy_class = (
+            read_organization_results_only_policy_class
+        )
+        self.read_self_results_only_policy_class = read_self_results_only_policy_class
+        self.read_user_policy_class = read_user_policy_class
+        self.update_user_policy_class = update_user_policy_class
+
     def crud(self, cmd: CrudCommand) -> Any:
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), AbacService.CACHE_INVALIDATION_COMMANDS):
             self._get_user_by_id_cached.cache_clear()  # type:ignore[attr-defined]
         return retval
+
+    def register_policies(
+        self,
+        organization_admin_write_commands: set[
+            Type[Command]
+        ] = BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS,
+        read_user_commands: set[Type[Command]] = BaseAbacService.READ_USER_COMMANDS,
+        update_user_commands: set[Type[Command]] = BaseAbacService.UPDATE_USER_COMMANDS,
+        read_organization_results_only_commands: set[
+            Type[Command]
+        ] = BaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS,
+        read_self_results_only_commands: set[
+            Type[Command]
+        ] = BaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS,
+    ) -> None:
+        f = self.app.register_policy
+        policy: Policy
+        command_class: Type[Command]
+        policy = self.is_organization_admin_policy_class(self)  # type:ignore[call-arg]
+        for command_class in organization_admin_write_commands:
+            f(command_class, policy, EventTiming.BEFORE)
+        policy = self.read_user_policy_class(self)  # type:ignore[call-arg]
+        for command_class in read_user_commands:
+            f(command_class, policy, EventTiming.AFTER)
+        policy = self.update_user_policy_class(self)  # type:ignore[call-arg]
+        for command_class in update_user_commands:
+            f(command_class, policy, EventTiming.BEFORE)
+        policy = self.read_organization_results_only_policy_class(
+            self  # pyright:ignore[reportCallIssue]
+        )  # type:ignore[call-arg]
+        for command_class in read_organization_results_only_commands:
+            f(command_class, policy, EventTiming.DURING)
+            f(command_class, policy, EventTiming.AFTER)
+        policy = self.read_self_results_only_policy_class(self)  # type:ignore[call-arg]
+        for command_class in read_self_results_only_commands:
+            f(command_class, policy, EventTiming.AFTER)
 
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand

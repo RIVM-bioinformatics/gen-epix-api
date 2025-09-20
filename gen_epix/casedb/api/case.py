@@ -519,8 +519,6 @@ def create_case_endpoints(
                 exception,
                 request_ids=request_body.case_ids,
             )
-            # TODO: next line should be deleted since handle_exception always raises (returns NoReturn)
-            return StreamingResponse(iter(()), media_type="text/plain")
 
         return StreamingResponse(
             fasta_iterable,

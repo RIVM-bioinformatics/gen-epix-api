@@ -7,7 +7,15 @@ from gen_epix.commondb.util import copy_model_field
 
 # Non-CRUD commands
 class InviteUserCommand(common_command.InviteUserCommand):
+    __doc__ = common_command.InviteUserCommand.__doc__
     roles: set[enum.Role] = copy_model_field(common_command.InviteUserCommand, "roles")  # type: ignore[assignment]
+
+
+class UpdateUserCommand(common_command.UpdateUserCommand):
+    __doc__ = common_command.UpdateUserCommand.__doc__
+
+
+roles: set[enum.Role] | None = copy_model_field(common_command.UpdateUserCommand, "roles")  # type: ignore[assignment]
 
 
 # CRUD commands

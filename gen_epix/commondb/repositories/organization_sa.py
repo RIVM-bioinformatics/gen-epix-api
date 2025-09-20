@@ -4,7 +4,7 @@ from sqlalchemy import Engine, select
 
 from gen_epix.commondb.domain import model
 from gen_epix.commondb.domain.repository.organization import BaseOrganizationRepository
-from gen_epix.commondb.repositories import sa_model
+from gen_epix.commondb.repositories.sa_model.organization import User, UserInvitation
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, exc
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
@@ -16,8 +16,8 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
         engine: Engine,
         user_class: Type[model.User] = model.User,
         user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        sa_user_class: Type = sa_model.UserMixin,
-        sa_user_invitation_class: Type = sa_model.UserInvitationMixin,
+        sa_user_class: Type[User] = User,
+        sa_user_invitation_class: Type[UserInvitation] = UserInvitation,
         **kwargs: Any,
     ):
         self.sa_user_class = sa_user_class

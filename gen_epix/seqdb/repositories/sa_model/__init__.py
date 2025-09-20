@@ -1,13 +1,13 @@
-from gen_epix.casedb.repositories.sa_model.organization import User as User
-from gen_epix.casedb.repositories.sa_model.organization import (
-    UserInvitation as UserInvitation,
-)
 from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_field_metadata,
     set_entity_repository_model_classes,
 )
 from gen_epix.seqdb.domain import DOMAIN, enum
+from gen_epix.seqdb.repositories.sa_model.organization import User as User
+from gen_epix.seqdb.repositories.sa_model.organization import (
+    UserInvitation as UserInvitation,
+)
 
 set_entity_repository_model_classes(
     DOMAIN, enum.ServiceType, RowMetadataMixin, "gen_epix.seqdb.repositories.sa_model"

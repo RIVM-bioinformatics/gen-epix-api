@@ -1,4 +1,5 @@
 import abc
+from typing import Iterable
 from uuid import UUID
 
 import numpy as np
@@ -9,7 +10,6 @@ from gen_epix.seqdb.domain import model as model  # forces models to be register
 
 
 class BaseSeqRepository(BaseRepository):
-    pass
 
     @abc.abstractmethod
     def get_distance_matrix_by_seq_ids(
@@ -19,3 +19,11 @@ class BaseSeqRepository(BaseRepository):
         seq_ids: list[UUID],
     ) -> np.ndarray:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def retrieve_seq_fasta(
+        self,
+        uow: BaseUnitOfWork,
+        seq_ids: list[UUID],
+    ) -> Iterable[tuple[str, str]]:
+        raise NotImplementedError()

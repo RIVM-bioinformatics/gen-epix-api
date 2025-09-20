@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
-from gen_epix.casedb.domain import DOMAIN
+from gen_epix.commondb.domain import DOMAIN
 from gen_epix.commondb.repositories.sa_model.util import create_field_metadata
 from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 
