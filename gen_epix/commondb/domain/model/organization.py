@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import Field, field_serializer, field_validator
 
 from gen_epix import fastapp
+from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
@@ -56,7 +57,7 @@ class User(fastapp.User, Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = Enum
+    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -69,7 +70,7 @@ class User(fastapp.User, Model):
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
     )
-    roles: set[Enum] = Field(description="The roles of the user", min_length=1)
+    roles: set[enum.Role] = Field(description="The roles of the user", min_length=1)
     organization_id: UUID = Field(
         description="The ID of the organization of the user. FOREIGN KEY"
     )
@@ -287,13 +288,13 @@ class UserInvitation(Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = Enum
+    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     email: str = Field(description="The email of the user, UNIQUE", max_length=320)
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
     )
-    roles: set[Enum] = Field(
+    roles: set[enum.Role] = Field(
         description="The initial roles that the new user will have", min_length=1
     )
     invited_by_user_id: UUID = Field(
@@ -336,8 +337,8 @@ class UserInvitationConstraints(Model):
         snake_case_plural_name="user_invitation_constraints",
         persistable=False,
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = Enum
-    roles: set[Enum] = Field(
+    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    roles: set[enum.Role] = Field(
         description="The roles that the user may be assigned by the inviting user."
     )
     organization_ids: set[UUID] = Field(

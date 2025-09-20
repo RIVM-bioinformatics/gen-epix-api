@@ -12,7 +12,7 @@ from gen_epix.casedb.api.organization import (
     UserInvitationRequestBody,
 )
 from gen_epix.casedb.api.subject import create_subject_endpoints
-from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.api.auth import create_auth_endpoints
 from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
@@ -48,6 +48,9 @@ def create_routers(
                 "service_type": enum.ServiceType.ORGANIZATION,
                 "user_class": model.User,
                 "user_invitation_class": model.UserInvitation,
+                "invite_user_command_class": command.InviteUserCommand,
+                "retrieve_invite_user_constraints_command_class": command.RetrieveInviteUserConstraintsCommand,
+                "update_user_command_class": command.UpdateUserCommand,
                 "user_invitation_request_body_class": UserInvitationRequestBody,
                 "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,
