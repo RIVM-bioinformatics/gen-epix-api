@@ -64,7 +64,6 @@ class CasedbTestClient(TestClient):
         model.ConceptSet: "name",
         model.CaseTypeSetMember: ("case_type_set_id", "case_type_id"),
         model.CaseTypeColSetMember: ("case_type_col_set_id", "case_type_col_id"),
-        model.ConceptSetMember: ("concept_set_id", "concept_id"),
         model.RegionSet: "code",
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
@@ -282,7 +281,7 @@ class CasedbTestClient(TestClient):
     def create_concept(
         self,
         user_or_str: str | model.User,
-        abbreviation: str,
+        code: str,
     ) -> model.Concept:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -292,7 +291,8 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.Concept(
-                    abbreviation=abbreviation,
+                    concept_set_id=self.generate_id(),
+                    code=code,
                 ),
             )
         )
@@ -326,32 +326,13 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        if set_dummy_concepts:
-            concept_ids = [self.generate_id() for _ in concepts]
-        else:
-            concept_ids = [self._get_obj(model.Concept, x).id for x in concepts]
-        concept_set_members = self.handle(
-            command.ConceptSetMemberCrudCommand(
-                user=user,
-                operation=CrudOperation.CREATE_SOME,
-                objs=[
-                    model.ConceptSetMember(  # type:ignore[call-arg]
-                        concept_set_id=concept_set.id,
-                        concept_id=x,
-                        rank=(
-                            i
-                            if concept_set_type
-                            in {
-                                enum.ConceptSetType.ORDINAL,
-                                enum.ConceptSetType.INTERVAL,
-                            }
-                            else None
-                        ),
-                    )
-                    for i, x in enumerate(concept_ids)
-                ],
-            )
-        )
+        if concepts and set_dummy_concepts:
+            for x in concepts:
+                if isinstance(x, str):
+                    self.create_concept(user, x)
+                else:
+                    # If a Concept object is passed, replicate by code
+                    self.create_concept(user, x.code)
         return self._set_obj(concept_set)  # type:ignore[return-value]
 
     def create_region_set(
@@ -1151,7 +1132,7 @@ class CasedbTestClient(TestClient):
             }:
                 concept_set_members = self.read_some_by_property(
                     root_user,
-                    model.ConceptSetMember,
+                    model.ConceptRelation,
                     "concept_set_id",
                     col.concept_set_id,
                 )

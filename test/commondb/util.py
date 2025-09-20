@@ -49,6 +49,7 @@ def retrieve_db_data_from_file(
                     )
                 )
             )
+            df.replace({np.nan: None}, inplace=True)
             objs = [model_class(**x) for x in df.to_dict(orient="records")]  # type: ignore[misc]
             db[model_class] = {x.id: x for x in objs}  # type: ignore[misc]
         for table_name, sheet_name in extra_table_to_sheet_map.items():
@@ -60,9 +61,8 @@ def retrieve_db_data_from_file(
 
     # Populate the environment with the loaded data
     root_user = test_client.get_root_user()
-    for model_class, df in db.items():
-        if model_class not in ordered_model_to_sheet_map:
-            continue
+    for model_class in ordered_model_to_sheet_map:
+        df = db[model_class]
         objs = list(df.values())
         if issubclass(model_class, model.Organization):
             # Update the root organization

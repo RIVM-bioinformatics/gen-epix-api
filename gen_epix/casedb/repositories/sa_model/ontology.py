@@ -18,19 +18,6 @@ from gen_epix.commondb.repositories.sa_model import (
 Base: Type = orm.declarative_base(name=enum.ServiceType.ONTOLOGY.value)
 
 
-class Concept(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.Concept)
-
-    abbreviation: Mapped[str] = create_mapped_column(
-        DOMAIN, model.Concept, "abbreviation"
-    )
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.Concept, "name")
-    description: Mapped[str] = create_mapped_column(
-        DOMAIN, model.Concept, "description"
-    )
-    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Concept, "props")
-
-
 class ConceptSet(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptSet)
 
@@ -51,21 +38,34 @@ class ConceptSet(Base, RowMetadataMixin):
     )
 
 
-class ConceptSetMember(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.ConceptSetMember)
+class Concept(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConceptSetMember, "concept_set_id"
+        DOMAIN, model.Concept, "concept_set_id"
     )
-    concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConceptSetMember, "concept_id"
-    )
-    rank: Mapped[int] = create_mapped_column(DOMAIN, model.ConceptSetMember, "rank")
 
-    concept_set: Mapped[ConceptSet] = relationship(
-        ConceptSet, foreign_keys=[concept_set_id]
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.Concept, "code")
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.Concept, "name")
+    description: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Concept, "description"
     )
-    concept: Mapped[Concept] = relationship(Concept, foreign_keys=[concept_id])
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.Concept, "rank")
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Concept, "props")
+
+
+class ConceptRelation(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.ConceptRelation)
+
+    from_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConceptRelation, "from_concept_id"
+    )
+    to_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConceptRelation, "to_concept_id"
+    )
+    relation: Mapped[enum.ConceptRelationType] = create_mapped_column(
+        DOMAIN, model.ConceptRelation, "relation"
+    )
 
 
 class Disease(Base, RowMetadataMixin):

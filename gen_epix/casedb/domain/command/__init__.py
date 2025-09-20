@@ -132,13 +132,10 @@ from gen_epix.casedb.domain.command.ontology import (
     ConceptCrudCommand as ConceptCrudCommand,
 )
 from gen_epix.casedb.domain.command.ontology import (
-    ConceptSetConceptUpdateAssociationCommand as ConceptSetConceptUpdateAssociationCommand,
+    ConceptRelationCrudCommand as ConceptRelationCrudCommand,
 )
 from gen_epix.casedb.domain.command.ontology import (
     ConceptSetCrudCommand as ConceptSetCrudCommand,
-)
-from gen_epix.casedb.domain.command.ontology import (
-    ConceptSetMemberCrudCommand as ConceptSetMemberCrudCommand,
 )
 from gen_epix.casedb.domain.command.ontology import (
     DiseaseCrudCommand as DiseaseCrudCommand,
@@ -305,10 +302,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         RetrieveContainingRegionCommand,
     },
     enum.ServiceType.ONTOLOGY: {
-        ConceptCrudCommand,
-        ConceptSetConceptUpdateAssociationCommand,
         ConceptSetCrudCommand,
-        ConceptSetMemberCrudCommand,
+        ConceptCrudCommand,
+        ConceptRelationCrudCommand,
         DiseaseCrudCommand,
         DiseaseEtiologicalAgentUpdateAssociationCommand,
         EtiologicalAgentCrudCommand,

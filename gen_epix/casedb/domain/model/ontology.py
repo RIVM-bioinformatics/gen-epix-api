@@ -12,31 +12,6 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
-class Concept(Model):
-    """
-    A concept in the ontology.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="concepts",
-        table_name="concept",
-        persistable=True,
-    )
-    # TODO: consider whether abbreviation (i) should renamed to code and (ii) should be a key
-    abbreviation: str = Field(description="The abbreviation for the concept.")
-    name: str | None = Field(
-        default=None,
-        description="The name of the concept.",
-        max_length=255,
-    )
-    description: str | None = Field(
-        default=None, description="The description of the concept."
-    )
-    props: dict[str, Any] = Field(
-        default_factory=dict, description="Additional properties of the concept."
-    )
-
-
 class ConceptSet(Model):
     """
     A set of concepts in the ontology.
@@ -96,33 +71,57 @@ class ConceptSet(Model):
         return self
 
 
-class ConceptSetMember(Model):
+class Concept(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="concepts",
+        table_name="concept",
+        persistable=True,
+        keys=create_keys({1: ("concept_set_id", "code")}),
+        links=create_links({1: ("concept_set_id", ConceptSet, "concept_set")}),
+    )
+    concept_set_id: UUID = Field(description="The ID of the concept set. FOREIGN KEY")
+    concept_set: ConceptSet | None = Field(default=None, description="The concept set.")
+    code: str = Field(description="Concept code within the set", max_length=255)
+    name: str | None = Field(
+        default=None, description="The name of the concept.", max_length=255
+    )
+    description: str | None = Field(
+        default=None, description="The description of the concept."
+    )
+    rank: int | None = Field(
+        default=None,
+        description="The rank of the concept within the set. Must be provided for ordinal sets, for other sets it is optional and can be used for sorting.",
+    )
+    props: dict[str, Any] = Field(
+        default_factory=dict, description="Additional properties of the concept."
+    )
+
+
+class ConceptRelation(Model):
     """
-    The membership of a concept in a concept set.
+    A relation between two concepts (analogous to RegionRelation).
     """
 
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="concept_set_members",
-        table_name="concept_set_member",
+        snake_case_plural_name="concept_relations",
+        table_name="concept_relation",
         persistable=True,
-        keys=create_keys({1: ("concept_set_id", "concept_id")}),
+        keys=create_keys({1: ("from_concept_id", "to_concept_id")}),
         links=create_links(
             {
-                1: ("concept_set_id", ConceptSet, "concept_set"),
-                2: ("concept_id", Concept, "concept"),
+                1: ("from_concept_id", Concept, "from_concept"),
+                2: ("to_concept_id", Concept, "to_concept"),
             }
         ),
     )
-    concept_set_id: UUID = Field(description="The ID of the concept set. FOREIGN KEY")
-    concept_set: ConceptSet | None = Field(default=None, description="The concept set")
-    concept_id: UUID = Field(description="The ID of the concept. FOREIGN KEY")
-    concept: Concept | None = Field(None, description="The concept")
-    rank: int | None = Field(
-        None,
-        description=(
-            "The rank of the concept within the set,"
-            " in case of an ORDINAL or INTERVAL concept set"
-        ),
+    from_concept_id: UUID = Field(
+        description="The ID of the first concept. FOREIGN KEY"
+    )
+    from_concept: Concept | None = Field(default=None, description="The first concept.")
+    to_concept_id: UUID = Field(description="The ID of the second concept. FOREIGN KEY")
+    to_concept: Concept | None = Field(default=None, description="The second concept.")
+    relation: enum.ConceptRelationType = Field(
+        description="The relation between the two concepts."
     )
 
 

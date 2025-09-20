@@ -8,16 +8,6 @@ from gen_epix.commondb.domain.command import CrudCommand, UpdateAssociationComma
 # Non-CRUD
 
 
-class ConceptSetConceptUpdateAssociationCommand(UpdateAssociationCommand):
-    ASSOCIATION_CLASS: ClassVar = model.ConceptSetMember
-    LINK_FIELD_NAME1: ClassVar = "concept_set_id"
-    LINK_FIELD_NAME2: ClassVar = "concept_id"
-
-    obj_id1: UUID | None = None
-    obj_id2: UUID | None = None
-    association_objs: list[model.ConceptSetMember]
-
-
 class DiseaseEtiologicalAgentUpdateAssociationCommand(UpdateAssociationCommand):
     ASSOCIATION_CLASS: ClassVar = model.Etiology
     LINK_FIELD_NAME1: ClassVar = "disease_id"
@@ -39,8 +29,8 @@ class ConceptSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ConceptSet
 
 
-class ConceptSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.ConceptSetMember
+class ConceptRelationCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ConceptRelation
 
 
 class DiseaseCrudCommand(CrudCommand):

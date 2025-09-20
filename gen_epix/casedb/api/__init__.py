@@ -24,9 +24,6 @@ from gen_epix.casedb.api.case import (
     UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
 )
 from gen_epix.casedb.api.ontology import (
-    UpdateConceptSetConceptRequestBody as UpdateConceptSetConceptRequestBody,
-)
-from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,
 )
 from gen_epix.casedb.api.organization import (

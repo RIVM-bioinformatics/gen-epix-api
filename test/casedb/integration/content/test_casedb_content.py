@@ -134,17 +134,15 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
-        concept_set_members = app.handle(
-            command.ConceptSetMemberCrudCommand(
+        concepts: list[model.Concept] = app.handle(
+            command.ConceptCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
         concept_ids_by_set = {
             concept_set.id: [
-                concept_set_member.concept_id
-                for concept_set_member in concept_set_members
-                if concept_set_member.concept_set_id == concept_set.id
+                x.id for x in concepts if x.concept_set_id == concept_set.id
             ]
             for concept_set in concept_sets
         }
