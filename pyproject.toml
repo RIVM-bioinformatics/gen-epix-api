@@ -38,7 +38,7 @@ dependencies = [
     "scipy==1.16.2",
     "numpy==2.3.3",
     "biopython==1.85",
-    "cachetools==5.5.2",
+    "cachetools==6.2.0",
     "slowapi==0.1.9",
 ]
 
