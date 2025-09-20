@@ -16,8 +16,8 @@ from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSe
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
-        # repository_type=enum.RepositoryType.DICT,
-        repository_type=enum.RepositoryType.SA_SQLITE,
+        repository_type=enum.RepositoryType.DICT,
+        # repository_type=enum.RepositoryType.SA_SQLITE,
         verbose=False,
         log_level=logging.ERROR,
         use_endpoints=True,
