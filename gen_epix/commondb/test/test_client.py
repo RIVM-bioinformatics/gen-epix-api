@@ -112,7 +112,7 @@ class TestClient:
         self.cfg = self.app_cfg.cfg
         self.services = self.app_env.services
         self.repositories = self.app_env.repositories
-        self.db: Dict[Type[model.Model], Dict[Hashable, model.Model]] = {}
+        self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(

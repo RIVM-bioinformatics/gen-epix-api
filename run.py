@@ -16,11 +16,16 @@ class Run:
             "SETTINGS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.COMMONDB.value,
                 env_var_substring="SETTINGS_DIR",
-                root_dir="test/",
             ),
-            "SECRETS_DIR": ConfigDiscovery.get_config_path(
+            "SETTINGS_FILES": Path.cwd()
+            / "gen_epix"
+            / "commondb"
+            / "config"
+            / "settings.toml",
+            "SECRETS_STRATEGY": "FILE",
+            "SECRETS_PATH": ConfigDiscovery.get_config_path(
                 app_type=AppType.COMMONDB.value,
-                env_var_substring="SECRETS_DIR",
+                env_var_substring="SECRETS_PATH",
                 extension=".secret",
             ),
             "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
@@ -206,6 +211,11 @@ class Run:
             "host": "0.0.0.0",
             "port": 8000,
         },
+        AppType.COMMONDB: {
+            "app": "gen_epix.commondb.app:FAST_API",
+            "host": "0.0.0.0",
+            "port": 8000,
+        },
     }
 
     APP_SSL_KEYFILE = "./cert/key.pem"
@@ -280,13 +290,13 @@ class Run:
     def api(self, app_type: str, env_name: str, idp_config: str) -> None:
         import uvicorn
 
-        app_type = AppType[app_type.upper()]
-        idp_config = AppConfigType[idp_config.upper()]
+        app_type_enum = AppType[app_type.upper()]
+        idp_config_enum = AppConfigType[idp_config.upper()]
         env_name = env_name.upper()
         # Set environment variables
-        Run.set_env_variables(app_type, idp_config)
+        Run.set_env_variables(app_type_enum, idp_config_enum)
         # Run app
-        uri_cfg = Run.APP_URI[app_type]
+        uri_cfg = Run.APP_URI[app_type_enum]
         ssl_keyfile = Run.APP_SSL_KEYFILE
         ssl_certfile = Run.APP_SSL_CERTFILE
         # profiler = pyinstrument.Profiler(async_mode="enabled")
@@ -514,6 +524,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/unit/auth/",
+            ]
+        )
+
+    def test_commondb_unit_config(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/config/",
             ]
         )
 
@@ -852,7 +873,6 @@ class Run:
         log_parser.to_excel(out_log_excel_file)
         user_journey = log_parser.create_user_journey()
         user_journey.to_pickle(out_user_journey_file)
-        main()
 
     def other_general_generate_erm_diagrams(self) -> None:
         from docs.erm import generate_erm_diagrams

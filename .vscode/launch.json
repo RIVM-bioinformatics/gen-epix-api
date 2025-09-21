@@ -124,6 +124,45 @@
             ],
             "justMyCode": true
         },
+        {
+            "name": "api.commondb.local",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "commondb",
+                "local",
+                "idps"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "api.commondb.local.mock_idp",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "commondb",
+                "local",
+                "mock_idps"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "api.commondb.local.debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "commondb",
+                "local",
+                "debug"
+            ],
+            "justMyCode": true
+        },
         // env
         {
             "name": "env.casedb",
@@ -502,6 +541,17 @@
             "program": "run.py",
             "args": [
                 "test_commondb_unit_auth"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.config",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_config"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
