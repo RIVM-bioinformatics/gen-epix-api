@@ -128,30 +128,22 @@ class AppEnv(BaseAppEnv):
             continue
         if "repository_kwargs" not in data:
             data["repository_kwargs"] = {}
-        data["repository_kwargs"][
-            "service_metadata_fields"
-        ] = sa_model.SERVICE_METADATA_FIELDS
+        data["repository_kwargs"]["service_metadata_fields"] = sa_model.SERVICE_METADATA_FIELDS
         data["repository_kwargs"]["db_metadata_fields"] = sa_model.DB_METADATA_FIELDS
-        data["repository_kwargs"][
-            "generate_service_metadata"
-        ] = sa_model.GENERATE_SERVICE_METADATA
+        data["repository_kwargs"]["generate_service_metadata"] = sa_model.GENERATE_SERVICE_METADATA
 
     def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
         self._cfg = app_cfg.cfg
         data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
         self._app: App = data["app"]
         self._services: dict[enum.ServiceType, BaseService] = data["services"]
-        self._repositories: dict[enum.RepositoryType, BaseRepository] = data[
-            "repositories"
-        ]
+        self._repositories: dict[enum.RepositoryType, BaseRepository] = data["repositories"]
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
     @staticmethod
-    def compose_application(
-        app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
-    ) -> dict:
+    def compose_application(app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any) -> dict:
 
         try:
             # Get logger for setup
@@ -160,17 +152,9 @@ class AppEnv(BaseAppEnv):
             app_logger = app_cfg.app_logger
             service_logger = app_cfg.service_logger
             if log_setup:
-                setup_logger.debug(
-                    App.create_static_log_message(
-                        "e8665136", "Starting composing application"
-                    )
-                )
+                setup_logger.debug(App.create_static_log_message("e8665136", "Starting composing application"))
 
-                setup_logger.debug(
-                    App.create_static_log_message(
-                        "fb612692", "Initialising services and repositories"
-                    )
-                )
+                setup_logger.debug(App.create_static_log_message("fb612692", "Initialising services and repositories"))
 
             # Initialize app
             app = App(
@@ -224,15 +208,14 @@ class AppEnv(BaseAppEnv):
                                 ),
                                 log_setup=log_setup,
                                 remote=True,
+                                case_cfg=app_cfg.cfg,
                             ).app,
                         },
                     },
                 )
             for service_type in service_data:
                 if "repository_class" in service_data[service_type]:
-                    service_data[service_type]["repository_class"][
-                        enum.RepositoryType.SA_SQLITE
-                    ] = service_data[service_type]["repository_class"][
+                    service_data[service_type]["repository_class"][enum.RepositoryType.SA_SQLITE] = service_data[service_type]["repository_class"][
                         enum.RepositoryType.SA_SQL
                     ]
 
@@ -241,26 +224,16 @@ class AppEnv(BaseAppEnv):
             repositories: dict[enum.ServiceType, BaseRepository] = {}
             for service_type in SORTED_SERVICE_TYPES:
                 data = service_data[service_type]
-                props = {
-                    x: y
-                    for x, y in cfg.service[service_type.value.lower()].items()
-                    if x not in {"id_factory", "timestamp_factory"}
-                }
+                props = {x: y for x, y in cfg.service[service_type.value.lower()].items() if x not in {"id_factory", "timestamp_factory"}}
                 id_factory = cfg.service[service_type.value.lower()]["id_factory"]
-                timestamp_factory = cfg.service[service_type.value.lower()][
-                    "timestamp_factory"
-                ]
+                timestamp_factory = cfg.service[service_type.value.lower()]["timestamp_factory"]
                 additional_service_kwargs: dict = data.get("kwargs", {})  # type: ignore
 
                 # Create repository if necessary
                 if "repository_class" in data:
-                    entities = app.domain.get_dag_sorted_entities(
-                        service_type=service_type
-                    )
+                    entities = app.domain.get_dag_sorted_entities(service_type=service_type)
                     repository_type = cfg.secret["db"]["repository_type"]
-                    repository_cfg = cfg.secret["repository"][
-                        repository_type.value.lower()
-                    ][service_type.value.lower()]
+                    repository_cfg = cfg.secret["repository"][repository_type.value.lower()][service_type.value.lower()]
                     if log_setup:
                         setup_logger.debug(
                             app.create_log_message(
@@ -302,9 +275,7 @@ class AppEnv(BaseAppEnv):
             # Set up roles
             service = services[enum.ServiceType.RBAC]
             assert isinstance(service, RbacService)
-            service.register_roles(
-                RoleGenerator.ROLE_PERMISSIONS, root_role=enum.Role.ROOT
-            )
+            service.register_roles(RoleGenerator.ROLE_PERMISSIONS, root_role=enum.Role.ROOT)
 
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
@@ -324,18 +295,14 @@ class AppEnv(BaseAppEnv):
 
             # Register security policies with app
             if log_setup:
-                setup_logger.debug(
-                    app.create_log_message("f329be4d", "Registering security policies")
-                )
+                setup_logger.debug(app.create_log_message("f329be4d", "Registering security policies"))
             services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
             services[enum.ServiceType.RBAC].register_policies()  # type: ignore
             services[enum.ServiceType.ABAC].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:
-                setup_logger.debug(
-                    app.create_log_message("da172304", "Finished composing application")
-                )
+                setup_logger.debug(app.create_log_message("da172304", "Finished composing application"))
 
         except Exception as e:
 

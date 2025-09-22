@@ -5,5 +5,6 @@
     "roles": [
         "APP_ADMIN"
     ],
-    "client_secret": "secret"
+    "client_id": "cIzXnNutzMck9L1VuVmSUfVwRPLAbGCR",
+    "client_secret": ""
 }

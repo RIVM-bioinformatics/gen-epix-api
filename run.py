@@ -13,9 +13,7 @@ class Run:
     ROOT_DIR = os.getcwd()
     APP_SECRETS_ENV_VARIABLES = {
         AppType.CASEDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"
-            ),
+            "SETTINGS_DIR": ConfigDiscovery.get_config_path(app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"),
             "SECRETS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.CASEDB.value,
                 env_var_substring="SECRETS_DIR",
@@ -28,9 +26,7 @@ class Run:
             ),
         },
         AppType.SEQDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value, env_var_substring="SETTINGS_DIR"
-            ),
+            "SETTINGS_DIR": ConfigDiscovery.get_config_path(app_type=AppType.SEQDB.value, env_var_substring="SETTINGS_DIR"),
             "SECRETS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.SEQDB.value,
                 env_var_substring="SECRETS_DIR",
@@ -43,9 +39,7 @@ class Run:
             ),
         },
         AppType.OMOPDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value, env_var_substring="SETTINGS_DIR"
-            ),
+            "SETTINGS_DIR": ConfigDiscovery.get_config_path(app_type=AppType.OMOPDB.value, env_var_substring="SETTINGS_DIR"),
             "SECRETS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.OMOPDB.value,
                 env_var_substring="SECRETS_DIR",
@@ -266,9 +260,7 @@ class Run:
         import gen_epix.omopdb.env as env
 
     ## etl
-    def etl_load_demo_data(
-        self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
-    ) -> None:
+    def etl_load_demo_data(self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True) -> None:
         from test.test_client.util import load_demo_data
 
         # Set all environment variables
@@ -288,9 +280,7 @@ class Run:
                 )
             return
         module_root: str = Run.ETL_ENV[app_type]["module_root"]
-        load_demo_data(
-            app_type, module_root, connect_timeout=connect_timeout, verbose=verbose
-        )
+        load_demo_data(app_type, module_root, connect_timeout=connect_timeout, verbose=verbose)
 
     ## test
     def test_all(self) -> None:
@@ -704,6 +694,18 @@ class Run:
             ]
         )
 
+    def test_integration_service_connection(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/test_remote_app.py",
+                # "test/seqdb/integration/service_connection",
+            ]
+        )
+
     ## Other
 
     def other_general_generate_uuids(self, n_rows: int = 1000, n_cols: int = 100):
@@ -732,15 +734,11 @@ class Run:
 
         file = Path(__file__).parent / "test" / "output" / "linter.pylint.txt"
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file2 = (
-            Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
-        )
+        file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_pylint_for_messages(
-            file, filter_on_codes=filter_on_codes
-        ):
+        for line in linter.parse_pylint_for_messages(file, filter_on_codes=filter_on_codes):
             print(line)
 
     def other_general_run_mypy(self) -> None:
@@ -758,14 +756,10 @@ class Run:
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_mypy_for_messages(
-            file, filter_on_codes=filter_on_codes
-        ):
+        for line in linter.parse_mypy_for_messages(file, filter_on_codes=filter_on_codes):
             print(line)
 
-    def other_casedb_parse_user_journey_from_debug_log(
-        self, path: str | None = None, version: int | None = None
-    ) -> None:
+    def other_casedb_parse_user_journey_from_debug_log(self, path: str | None = None, version: int | None = None) -> None:
         from test.test_client.log_parser import LogParser, LogType
         from test.test_client.log_parser_v1 import V1LogParser
         from test.test_client.log_parser_v2 import V2LogParser

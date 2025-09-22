@@ -583,6 +583,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.integration.service_connection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_integration_service_connection"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",
