@@ -69,7 +69,9 @@ class ConfigDiscovery:
         app_type: str, extension: str = "", root_dir: str = "."
     ) -> Path | None:
         """Get config path from local file, if not return None."""
-        local_config_path = Path(root_dir) / f"{app_type.lower()}" / "config"
+        local_config_path = (
+            Path(root_dir) / "gen_epix" / f"{app_type.lower()}" / "config"
+        )
         if local_config_path.exists():
             if extension:
                 return local_config_path / extension

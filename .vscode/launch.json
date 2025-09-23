@@ -617,6 +617,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.case.validation",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_case_validation"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",

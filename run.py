@@ -16,7 +16,8 @@ class Run:
             "SETTINGS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.COMMONDB.value,
                 env_var_substring="SETTINGS_DIR",
-                root_dir="test/",
+                root_dir=ROOT_DIR,
+                extension="settings.toml",
             ),
             "SECRETS_DIR": ConfigDiscovery.get_config_path(
                 app_type=AppType.COMMONDB.value,
@@ -764,6 +765,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/performance/startup",
+            ]
+        )
+
+    def test_case_validation(self) -> None:
+        import pytest
+
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/case_validation/test_casedb_case_validation.py",
             ]
         )
 

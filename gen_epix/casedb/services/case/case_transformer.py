@@ -431,6 +431,13 @@ class CaseTransformer(Transformer):
             )
         )
 
+        # _retrieve_concept_data method: concept_relations should not be a list, but instead should be made a concept_contained_in variable
+        # with a dict[(from_concept_set_id, to_concept_set_id), dict[from_concept_id, to_concept_id]]
+        # expressing the “from_concept IS_CONTAINED_IN to_concept” relation.
+        # The ConceptRelation table is to be constructed as part of LSP-2305: Make Concept-ConceptSet a many-to-one In Progress
+
+        # concept_contained_in: dict[tuple[str, str], tuple[str, str]]
+
         return concept_sets, concept_set_concepts_map, concepts, concept_relations
 
     def _retrieve_region_data(self) -> tuple[
