@@ -1,8 +1,10 @@
 import json
 from functools import partial
 from typing import Any, Callable, Type
+from uuid import UUID
 
 import httpx
+from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.fastapp import App
 from gen_epix.fastapp.domain.domain import Domain
@@ -12,12 +14,16 @@ from gen_epix.fastapp.model import Command, CrudCommand, Policy, User
 
 
 class RemoteApp(App):
-    def __init__(self, domain: Domain, default_route_prefix: str, default_jwt: str, **kwargs: Any) -> None:
+    def __init__(
+        self, domain: Domain, default_route_prefix: str, default_jwt: str, **kwargs: Any
+    ) -> None:
         super().__init__(domain, **kwargs)
         self._default_route_prefix = default_route_prefix
         self._default_jwt = default_jwt
         self._user_jwts: dict[str, str] = {}
         self._routes: dict[type[Command], str] = {}
+
+        # register handlers here
 
     def register_policy(
         self,
@@ -27,20 +33,28 @@ class RemoteApp(App):
     ) -> None:
         raise ServiceException("Policies cannot be registered on RemoteApp instances")
 
-    def unregister_policy(self, command_class: type[Command], policy: Policy, timing: EventTiming) -> None:
+    def unregister_policy(
+        self, command_class: type[Command], policy: Policy, timing: EventTiming
+    ) -> None:
         raise ServiceException("Policies cannot be unregistered on RemoteApp instances")
 
     def register_user(self, user: User, jwt: str) -> None:
         """Register a user user with a jwt token, which will be used for requests."""
         self._user_jwts[user.get_key()] = jwt
 
-    def register_route(self, command: Command, route: str, add_prefix: bool = True) -> None:
+    def register_route(
+        self, command: Command, route: str, add_prefix: bool = True
+    ) -> None:
         """Registers route to the db on the command."""
         route = self._default_route_prefix + route if add_prefix else route
         self._routes[command] = route
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
-        jwt = self._user_jwts.get(cmd.user.get_key(), self._default_jwt) if cmd.user else self._default_jwt
+        jwt = (
+            self._user_jwts.get(cmd.user.get_key(), self._default_jwt)
+            if cmd.user
+            else self._default_jwt
+        )
         return {"Authorization": f"Bearer {jwt}"} if jwt else {}
 
     def apply_handler(
@@ -58,7 +72,9 @@ class RemoteApp(App):
         else:
             route = self._routes.get(command_class, None)
         if not route:
-            raise NotImplementedError(f"No route registered for command: {command.__class__.__name__}")
+            raise NotImplementedError(
+                f"No route registered for command: {command.__class__.__name__}"
+            )
 
         headers = self.get_headers(command)
         if isinstance(command, CrudCommand):
@@ -67,7 +83,9 @@ class RemoteApp(App):
             handler = self.create_non_crud_handler(command, route, headers, handler)
         return handler(command)
 
-    def create_crud_handler(self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str]) -> Callable[[Command], Any]:
+    def create_crud_handler(
+        self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str]
+    ) -> Callable[[Command], Any]:
         model_class = cmd.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
@@ -154,7 +172,9 @@ class RemoteApp(App):
         return partial(handler, route)
 
     @staticmethod
-    def _content_to_obj(response: httpx.Response, retval_class: Type, is_list: bool = False) -> Any:
+    def _content_to_obj(
+        response: httpx.Response, retval_class: Type, is_list: bool = False
+    ) -> Any:
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))

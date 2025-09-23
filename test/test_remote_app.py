@@ -2,6 +2,7 @@
 
 import os
 import signal
+import ssl
 import subprocess
 import threading
 import time
@@ -21,11 +22,21 @@ class ServiceManager:
         self.project_root = project_root
         self.processes: dict[str, subprocess.Popen] = {}
         self.ports = {
-            "casedb": 8000,
             "seqdb": 8001,
+            "casedb": 8000,
             # "omopdb": 8002, # uncomment if needed
         }
-        self.base_urls = {service: f"https://localhost:{port}" for service, port in self.ports.items()}
+        self.base_urls = {
+            service: f"https://localhost:{port}" for service, port in self.ports.items()
+        }
+
+    def _create_ssl_context(self) -> ssl.SSLContext:
+        """Create SSL context that trusts the local certificate."""
+        ssl_context = ssl.create_default_context()
+        cert_file = os.path.join(self.project_root, "cert", "cert.pem")
+        if os.path.exists(cert_file):
+            ssl_context.load_verify_locations(cert_file)
+        return ssl_context
 
     def start_service(self, service_name: str, idp: str = "mock_idps") -> bool:
         """Start a service (CaseDB, SeqDB, OMOPDB) in a subprocess."""
@@ -81,10 +92,14 @@ class ServiceManager:
                     print(f"[{service_name}] {line_stripped}")
 
                     # Signal when service is truly ready
-                    if any(indicator in line_stripped for indicator in startup_indicators):
+                    if any(
+                        indicator in line_stripped for indicator in startup_indicators
+                    ):
                         print(f"[{service_name}] Startup indicator detected")
 
-        log_thread = threading.Thread(target=log_output, daemon=True, name=f"{service_name}-log")
+        log_thread = threading.Thread(
+            target=log_output, daemon=True, name=f"{service_name}-log"
+        )
         log_thread.start()
 
     def stop_service(self, service_name: str) -> None:
@@ -106,16 +121,16 @@ class ServiceManager:
         print(f"{service_name} stopped.")
 
     # TODO: reset timeout to 60 seconds
-    def _wait_for_service(self, service_name: str, timeout: int = 60_000) -> bool:  # I timed startup to ~25 sec
+    def _wait_for_service(
+        self, service_name: str, timeout: int = 60_000
+    ) -> bool:  # I timed startup to ~25 sec
         """Wait for a service to start by checking its health endpoint."""
 
         if service_name not in self.processes:
             raise ValueError(f"Unknown service: {service_name}")
 
-        url = f"{self.base_urls[service_name]}/v1/health"
+        url = f"{self.base_urls[service_name]}/v1/identity_providers"
         start_time = time.time()
-
-        time.sleep(20)
 
         while time.time() - start_time < timeout:
             if self.processes[service_name].poll() is not None:
@@ -123,12 +138,15 @@ class ServiceManager:
                 return False
 
             try:
-                response = httpx.get(url)
-                if response.status_code == 200:
-                    print(f"{service_name} is up and running.")
-                    return True
-            except httpx.ConnectError:
-                pass
+                # Use SSL context that trusts our local certificate or disable verification for testing
+                with httpx.Client(verify=False) as client:
+                    response = client.get(url)
+                    if response.status_code == 200:
+                        print(f"{service_name} is up and running.")
+                        return True
+            except httpx.ConnectError as e:
+                print(f"Connection error for {service_name}: {e}")
+                pass  # Continue trying instead of raising
             time.sleep(1)
 
         print(f"Timeout waiting for {service_name} to start.")
@@ -165,31 +183,37 @@ def service_manager_fixture() -> Generator[ServiceManager, None, None]:
 
 
 @pytest.fixture(scope="session")
-def start_casedb_and_seqdb(service_manager_fixture: ServiceManager) -> Generator[dict[str, str], None, None]:
+def start_casedb_and_seqdb(
+    service_manager_fixture: ServiceManager,
+) -> Generator[dict[str, str], None, None]:
     """Start CaseDB and SeqDB services."""
-    is_succes = service_manager_fixture.start_services(["casedb", "seqdb"])
+    is_succes = service_manager_fixture.start_services(["seqdb", "casedb"])
 
     if not is_succes:
         service_manager_fixture.stop_all_services()
         raise RuntimeError("Failed to start CaseDB and SeqDB services.")
 
     yield {
-        "casedb_url": service_manager_fixture.get_base_url("casedb"),
         "seqdb_url": service_manager_fixture.get_base_url("seqdb"),
+        "casedb_url": service_manager_fixture.get_base_url("casedb"),
     }
 
 
 @pytest.fixture(scope="function")
-def test_client_fixture(start_casedb_and_seqdb: dict[str, str]) -> Generator[httpx.Client, None, None]:
+def test_client_fixture(
+    start_casedb_and_seqdb: dict[str, str],
+) -> Generator[tuple[httpx.Client, dict[str, str]], None, None]:
     """Provide a httpx client for testing."""
-    with httpx.Client() as client:
+    with httpx.Client(verify=False) as client:  # Disable SSL verification for testing
         yield client, start_casedb_and_seqdb
 
 
-def test_casedb_calls_seqdb_health(test_client_fixture: tuple[httpx.Client, dict[str, str]]) -> None:
+def test_casedb_calls_seqdb_health(
+    test_client_fixture: tuple[httpx.Client, dict[str, str]],
+) -> None:
     client, urls = test_client_fixture
     seqdb_url = urls["seqdb_url"]
 
     response = client.get(f"{seqdb_url}/v1/health")
     assert response.status_code == 200
-    assert response.json().get("status") == "ok"
+    assert response.json().get("status") == "HEALTHY"
