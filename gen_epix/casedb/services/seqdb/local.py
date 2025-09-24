@@ -17,7 +17,9 @@ from gen_epix.seqdb.domain.model import User as SeqdbUser
 
 class SeqdbService(BaseSeqdbService):
 
-    def __init__(self, app: App, ext_app: App, ext_app_user: SeqdbUser, **kwargs: Any) -> None:
+    def __init__(
+        self, app: App, ext_app: App, ext_app_user: SeqdbUser, **kwargs: Any
+    ) -> None:
         super().__init__(app, **kwargs)
         self._ext_app = ext_app
         self._ext_app_user = ext_app_user
@@ -30,7 +32,9 @@ class SeqdbService(BaseSeqdbService):
     def ext_app_user(self) -> SeqdbUser:
         return self._ext_app_user
 
-    def retrieve_phylogenetic_tree(self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand) -> model.PhylogeneticTree | None:
+    def retrieve_phylogenetic_tree(
+        self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
+    ) -> model.PhylogeneticTree | None:
         user = cmd.user
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:
@@ -48,12 +52,18 @@ class SeqdbService(BaseSeqdbService):
         phylogenetic_tree = model.PhylogeneticTree(
             tree_algorithm_code=cmd.tree_algorithm_code,
             sequence_ids=seqdb_phylogenetic_tree.seq_ids,
-            leaf_ids=([UUID(x) for x in seqdb_phylogenetic_tree.leaf_names] if seqdb_phylogenetic_tree.leaf_names else None),
+            leaf_ids=(
+                [UUID(x) for x in seqdb_phylogenetic_tree.leaf_names]
+                if seqdb_phylogenetic_tree.leaf_names
+                else None
+            ),
             newick_repr=seqdb_phylogenetic_tree.newick_repr,
         )
         return phylogenetic_tree
 
-    def retrieve_genetic_sequences(self, cmd: command.RetrieveGeneticSequenceByIdCommand) -> list[model.GeneticSequence]:
+    def retrieve_genetic_sequences(
+        self, cmd: command.RetrieveGeneticSequenceByIdCommand
+    ) -> list[model.GeneticSequence]:
         # naive implementation that retrieves sequences by ID
         seqs: list[seqdb_model.Seq] = self.ext_app.handle(
             seqdb_command.SeqCrudCommand(
@@ -73,7 +83,9 @@ class SeqdbService(BaseSeqdbService):
         raw_seq_map = {x.id: x for x in raw_seqs}
         # Convert raw sequences to model.GeneticSequence
         genetic_sequences = [
-            model.GeneticSequence(id=seq.id, nucleotide_sequence=raw_seq_map[raw_seq_id].seq, distances={})
+            model.GeneticSequence(
+                id=seq.id, nucleotide_sequence=raw_seq_map[raw_seq_id].seq, distances={}
+            )
             for seq, raw_seq_id in zip(seqs, raw_seq_ids)
         ]
         return genetic_sequences

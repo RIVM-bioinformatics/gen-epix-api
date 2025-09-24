@@ -256,7 +256,13 @@ class App:
                     "e56517f7",
                     "REGISTERING_HANDLER",
                     command={"class": command_class.__name__},
-                    handler_fn={"name": handler_fn.__name__},
+                    handler_fn={
+                        "name": (
+                            handler_fn.__name__
+                            if hasattr(handler_fn, "__name__")
+                            else str(handler_fn)
+                        )
+                    },
                 ),
             )
         if not issubclass(command_class, Command):

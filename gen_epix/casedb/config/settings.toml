@@ -50,4 +50,6 @@ id_factory = "ULID"
 user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
 
 [service.seq]
-service_location = "REMOTE"
+service_location = "LOCAL"
+seqdb_url = "https://localhost"
+seqdb_port = 8001

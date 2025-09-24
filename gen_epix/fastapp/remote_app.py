@@ -63,24 +63,12 @@ class RemoteApp(App):
         handler: Callable[[Command], Any],
     ) -> Any:
         command_class = command.__class__
-        if command_class not in self._routes:
-            if isinstance(command, CrudCommand):
-                route = f"{self._default_route_prefix}/{command.MODEL_CLASS.ENTITY.snake_case_plural_name}"
-            else:
-                # non CRUD commands dont always have a MODEL_CLASS
-                route = f"{self._default_route_prefix}/{command_class.__name__.lower().replace('command', '')}"
-        else:
-            route = self._routes.get(command_class, None)
+        route = self._routes.get(command_class, None)
         if not route:
             raise NotImplementedError(
                 f"No route registered for command: {command.__class__.__name__}"
             )
 
-        headers = self.get_headers(command)
-        if isinstance(command, CrudCommand):
-            handler = self.create_crud_handler(command, route, headers)
-        else:
-            handler = self.create_non_crud_handler(command, route, headers, handler)
         return handler(command)
 
     def create_crud_handler(
@@ -93,7 +81,6 @@ class RemoteApp(App):
         self.register_route(cmd.__class__, route, add_prefix=False)
 
         def handler(cmd: CrudCommand, route: str) -> Any:
-
             with httpx.Client() as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:

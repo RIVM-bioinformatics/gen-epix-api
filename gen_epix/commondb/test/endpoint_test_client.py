@@ -95,7 +95,9 @@ class EndpointTestClient:
             "aud": aud or str(uuid.uuid4()),
             "exp": exp or datetime.now() + timedelta(minutes=expire_default_minutes),
         }
-        encoded_jwt = jwt.encode(claims, self.SECRET_KEY, algorithm=self.ENCRYPTION_ALGORITHM)
+        encoded_jwt = jwt.encode(
+            claims, self.SECRET_KEY, algorithm=self.ENCRYPTION_ALGORITHM
+        )
         return encoded_jwt
 
     def get_dummy_jwt_header(
@@ -107,9 +109,13 @@ class EndpointTestClient:
         exp: int | None = None,
         expire_default_minutes: int = 15,
     ) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self.get_dummy_jwt(email, iss, sub, aud, exp, expire_default_minutes)}"}
+        return {
+            "Authorization": f"Bearer {self.get_dummy_jwt(email, iss, sub, aud, exp, expire_default_minutes)}"
+        }
 
-    def handle_crud_command(self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str] | None) -> tuple[Any, Response]:
+    def handle_crud_command(
+        self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str] | None
+    ) -> tuple[Any, Response]:
         model_class = cmd.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
@@ -173,7 +179,9 @@ class EndpointTestClient:
             retval = self._content_to_obj(response, model_class, is_list=True)
         elif cmd.operation == CrudOperation.DELETE_ONE:
             assert isinstance(cmd.obj_ids, UUID)
-            response = self.test_client.delete(f"{route}/{cmd.obj_ids}", headers=headers)
+            response = self.test_client.delete(
+                f"{route}/{cmd.obj_ids}", headers=headers
+            )
             retval = self._content_to_obj(response, UUID)
         elif cmd.operation == CrudOperation.DELETE_SOME:
             assert isinstance(cmd.obj_ids, list)
@@ -189,7 +197,9 @@ class EndpointTestClient:
         return retval, response
 
     @staticmethod
-    def _content_to_obj(response: Response, retval_class: Type, is_list: bool = False) -> Any:
+    def _content_to_obj(
+        response: Response, retval_class: Type, is_list: bool = False
+    ) -> Any:
         if response.status_code not in (200, 201):
             return None
         decoded_obj = json.loads(response.content.decode(response.encoding or "utf-8"))

@@ -13,7 +13,7 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     seq_distance_protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
     seq_ids: list[UUID]
-    leaf_codes: list[str] | None
+    leaf_codes: list[str] | None = None
 
 
 class RetrieveSeqRequestBody(PydanticBaseModel):
