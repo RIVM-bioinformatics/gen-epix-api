@@ -82,7 +82,7 @@ class ConfigDiscovery:
         with importlib.resources.as_file(
             importlib.resources.files("gen_epix")
         ) as package_path:
-            package_config_path = package_path / app_type / "config"
+            package_config_path = package_path / app_type.lower() / "config"
         if package_config_path.exists():
             if extension:
                 return package_config_path / extension
