@@ -1,9 +1,10 @@
 import re
 from decimal import Decimal, InvalidOperation
+from itertools import combinations
 from typing import Any, NoReturn
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import (
     CaseColDataRule,
     ColType,
@@ -19,8 +20,11 @@ from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.transform import Transformer
 from gen_epix.transform.adapter import ObjectAdapter
+from gen_epix.transform.enum import NoMatchStrategy, TimeUnit, TimeUnitTransformStrategy
 from gen_epix.transform.transform_result import TransformResult
 from gen_epix.transform.transformers import IntervalTransformer
+from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
+from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
 
 
 class CaseTransformer(Transformer):
@@ -60,6 +64,14 @@ class CaseTransformer(Transformer):
         ),
     }
 
+    COL_TYPE_TO_TIME_UNIT = {
+        ColType.TIME_YEAR: TimeUnit.YEAR,
+        ColType.TIME_QUARTER: TimeUnit.QUARTER,
+        ColType.TIME_MONTH: TimeUnit.MONTH,
+        ColType.TIME_WEEK: TimeUnit.WEEK,
+        ColType.TIME_DAY: TimeUnit.DAY,
+    }
+
     @staticmethod
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
@@ -92,6 +104,10 @@ class CaseTransformer(Transformer):
         self.region_value_maps: dict[UUID, dict[str, str]] = {}
         # dict[(from_region_set_id, to_region_set_id), dict[from_region_id, to_region_id]]
         self.region_relation_maps: dict[tuple[UUID, UUID], dict[str, str]] = {}
+        # dict[from_region_id, to_region_id] - flattened mapping across all region sets
+        self.region_contained_in: dict[UUID, UUID] = {}
+        # dict[region_id, region_object] - for looking up region details
+        self.regions: dict[UUID, model.Region] = {}
         # dict[lower(str(organization_id)|name|legal_entity_code), concept_id]
         self.organization_value_map: dict[str, str] = {}
 
@@ -100,11 +116,16 @@ class CaseTransformer(Transformer):
     def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
         raise NotImplementedError()
 
-    def __call__(self, obj: Any) -> TransformResult:
-        if not isinstance(obj, command.ValidateCasesCommand):
-            raise ValueError("Invalid input")
+    def _setup_validation_report(self, obj: command.ValidateCasesCommand) -> tuple[
+        model.CaseValidationReport,
+        list[dict[UUID, str | None]],
+        list[dict[UUID, str | None]],
+        bool,
+    ]:
+        """Set up the case validation report and content lists for processing."""
         if obj.case_type_id != self.complete_case_type.id:
             raise ValueError("Invalid case type")
+
         is_update = obj.is_update
         contents = [case.content for case in obj.cases]
 
@@ -128,7 +149,16 @@ class CaseTransformer(Transformer):
             x.case.content for x in case_validation_report.validated_cases
         ]
 
-        # Validate and transform individual values
+        return case_validation_report, contents, updated_contents, is_update
+
+    def _transform_individual_values(
+        self,
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+        is_update: bool,
+    ) -> None:
+        """Validate and transform individual column values."""
         msg_template = "{orig_value}"
         for case_type_col in self.complete_case_type.case_type_cols.values():
             case_type_col_id = case_type_col.id
@@ -204,7 +234,31 @@ class CaseTransformer(Transformer):
                     continue
                 updated_content[case_type_col_id] = new_value
 
-        # Add any other case type cols present as data issue
+    def __call__(self, obj: Any) -> TransformResult:
+        case_validation_report, contents, updated_contents, is_update = (
+            self._setup_validation_report(obj)
+        )
+
+        self._transform_individual_values(
+            case_validation_report, contents, updated_contents, is_update
+        )
+
+        self._handle_unknown_columns(case_validation_report, contents)
+
+        self._process_dimensional_transformations(
+            case_validation_report, contents, updated_contents
+        )
+
+        return TransformResult(
+            success=True, original_object=obj, transformed_object=case_validation_report
+        )
+
+    def _handle_unknown_columns(
+        self,
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Handle any unknown case type columns and add appropriate data issues."""
         for i, content in enumerate(contents):
             for case_type_col_id in content.keys():
                 if case_type_col_id in self.complete_case_type.case_type_cols:
@@ -220,18 +274,444 @@ class CaseTransformer(Transformer):
                     )
                 )
 
-        # TODO: merge with existing content in case of update
+    def _process_dimensional_transformations(
+        self,
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process dimensional transformations for GEO, TIME, and NUMBER dimensions."""
 
-        # TODO: Add derived values: per case type dim, go over all pairs of case type cols and derive values
-        # for case_type_dim in self.complete_case_type.case_type_dims:
-        #     case_type_col_ids = case_type_dim.case_type_col_order
-        #     case_type_cols = [self.complete_case_type.case_type_cols[x] for x in case_type_col_ids]
-        #     cols = [self.complete_case_type.cols[x.col_id] for x in case_type_cols]
-        #     for case_type_col_id, col in zip(case_type_col_ids, cols):
+        for case_type_dim in self.complete_case_type.case_type_dims:
+            dim_type = self.complete_case_type.dims[case_type_dim.dim_id]
+            case_type_col_ids = case_type_dim.case_type_col_order
+            col_pairs = list(combinations(case_type_col_ids, 2)) + list(
+                combinations(case_type_col_ids[::-1], 2)
+            )
+            if dim_type.dim_type == enum.DimType.GEO:
+                self._process_geo_dimension(
+                    col_pairs, case_validation_report, contents, updated_contents
+                )
+            elif dim_type.dim_type == enum.DimType.TIME:
+                self._process_time_dimension(
+                    col_pairs, case_validation_report, contents, updated_contents
+                )
+            elif dim_type.dim_type == enum.DimType.NUMBER:
+                self._process_number_dimension(
+                    col_pairs, case_validation_report, contents, updated_contents
+                )
+            elif dim_type.dim_type == enum.DimType.TEXT:
+                pass
+            else:
+                continue
 
-        return TransformResult(
-            success=True, original_object=obj, transformed_object=case_validation_report
-        )
+    def _process_geo_dimension(
+        self,
+        col_pairs: list[tuple[UUID, UUID]],
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process GEO dimension transformations."""
+        for col_pair in col_pairs:
+            col1 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[0]].col_id
+            ]
+            col2 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[1]].col_id
+            ]
+            if (
+                col1.col_type != ColType.GEO_REGION
+                or col2.col_type != ColType.GEO_REGION
+            ):
+                continue
+            assert col1.region_set_id is not None
+            assert col2.region_set_id is not None
+            region_relation_map = self.region_relation_maps.get(
+                (col1.region_set_id, col2.region_set_id), {}
+            )
+            from_region_value_map = self.region_value_maps[col1.region_set_id]
+            for i, (content, updated_content) in enumerate(
+                zip(contents, updated_contents)
+            ):
+                if col_pair[0] not in content or content[col_pair[0]] is None:
+                    continue
+                orig_value = content[col_pair[0]]
+                if orig_value is None:
+                    continue
+                # First map the original value to a region ID
+                from_region_id = from_region_value_map.get(orig_value.lower())
+                if from_region_id is None:
+                    continue
+                # Then use the region relation map to find the derived region ID
+                derived_region_id = region_relation_map.get(from_region_id)
+                if derived_region_id is None:
+                    # Fallback to the flattened region_contained_in mapping
+                    derived_region_uuid = self.region_contained_in.get(
+                        UUID(from_region_id)
+                    )
+                    if derived_region_uuid is not None:
+                        derived_region_id = str(derived_region_uuid)
+                if derived_region_id is None:
+                    continue
+
+                # Convert the derived region ID back to a human-readable value
+                # Look up the region object and use its code, name, or ID as preferred
+                derived_region = self.regions.get(UUID(derived_region_id))
+                if derived_region is None:
+                    continue
+
+                # Prefer code, then name, then fallback to ID
+                # WHY IS THIS NOT PC3 BUT PV_1?
+                if derived_region.code:
+                    new_value = derived_region.code
+                elif derived_region.name:
+                    new_value = derived_region.name
+                else:
+                    new_value = str(derived_region.id)
+                if (
+                    col_pair[1] in updated_content
+                    and updated_content[col_pair[1]] is not None
+                    and updated_content[col_pair[1]] != new_value
+                ):
+                    # Overwrite existing different value
+                    case_validation_report.validated_cases[i].data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=col_pair[1],
+                            original_value=orig_value,
+                            updated_value=new_value,
+                            data_rule=CaseColDataRule.CONFLICT,
+                            details="Value overwritten based on transformation from another column",
+                        )
+                    )
+                else:
+                    # derived
+                    # TODO: CHECK HOW TO ACTUALLY DERIVE A VALUE
+                    # why is col_pair[0] not in region_contained_in?
+                    # I thought that region_contained_in is that the 3 number postal code is inherent in the 4 number postal code
+                    case_validation_report.validated_cases[i].data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=col_pair[1],
+                            original_value=orig_value,
+                            updated_value=new_value,
+                            data_rule=CaseColDataRule.DERIVED,
+                            details="Value derived from another column",
+                        )
+                    )
+
+                updated_content[col_pair[1]] = new_value
+
+    def _process_time_dimension(
+        self,
+        col_pairs: list[tuple[UUID, UUID]],
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process TIME dimension transformations."""
+        # For TIME dim: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
+        for col_pair in col_pairs:
+            col1 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[0]].col_id
+            ]
+            col2 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[1]].col_id
+            ]
+            # Skip if columns are not TIME types
+            if (
+                col1.col_type not in ColTypeSet.TIME.value
+                or col2.col_type not in ColTypeSet.TIME.value
+            ):
+                continue
+
+            from_time_unit = self.COL_TYPE_TO_TIME_UNIT[col1.col_type]
+            to_time_unit = self.COL_TYPE_TO_TIME_UNIT[col2.col_type]
+
+            # Skip if transformation is not possible
+            if not IsoTimeTransformer.can_transform_time(from_time_unit, to_time_unit):
+                continue
+
+            # Create IsoTimeTransformer for this transformation
+            time_transformer = IsoTimeTransformer(
+                field_name="time_value",
+                src_unit=from_time_unit,
+                tgt_unit=to_time_unit,
+                strategy=TimeUnitTransformStrategy.EXACT_ONLY,
+            )
+
+            for i, (content, updated_content) in enumerate(
+                zip(contents, updated_contents)
+            ):
+                if col_pair[0] not in content or content[col_pair[0]] is None:
+                    continue
+                orig_value = content[col_pair[0]]
+                if orig_value is None:
+                    continue
+
+                # Transform the time value using ObjectAdapter
+                try:
+                    adapter = ObjectAdapter({"time_value": orig_value})
+                    transformed_adapter = time_transformer.transform(adapter)
+                    new_value = transformed_adapter.get("time_value")
+                except Exception:
+                    # Skip if transformation fails
+                    continue
+
+                if new_value is None:
+                    continue
+
+                if (
+                    col_pair[1] in updated_content
+                    and updated_content[col_pair[1]] is not None
+                    and updated_content[col_pair[1]] != new_value
+                ):
+                    # Overwrite existing different value
+                    case_validation_report.validated_cases[i].data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=col_pair[1],
+                            original_value=orig_value,
+                            updated_value=new_value,
+                            data_rule=CaseColDataRule.CONFLICT,
+                            details="Value overwritten based on time transformation from another column",
+                        )
+                    )
+                else:
+                    # Derived time value
+                    case_validation_report.validated_cases[i].data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=col_pair[1],
+                            original_value=orig_value,
+                            updated_value=new_value,
+                            data_rule=CaseColDataRule.DERIVED,
+                            details="Time value derived from another column",
+                        )
+                    )
+
+                updated_content[col_pair[1]] = new_value
+
+    def _process_number_dimension(
+        self,
+        col_pairs: list[tuple[UUID, UUID]],
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process NUMBER dimension transformations."""
+        # For NUMBER dim: handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs.
+        for col_pair in col_pairs:
+            col1 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[0]].col_id
+            ]
+            col2 = self.complete_case_type.cols[
+                self.complete_case_type.case_type_cols[col_pair[1]].col_id
+            ]
+
+            # Only handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs
+            is_col1_decimal = col1.col_type in ColTypeSet.NUMBER.value
+            is_col2_interval = col2.col_type == ColType.INTERVAL
+            is_col1_interval = col1.col_type == ColType.INTERVAL
+
+            # DECIMAL_XXX -> INTERVAL transformation
+            if is_col1_decimal and is_col2_interval:
+                self._process_decimal_to_interval(
+                    col_pair,
+                    col1,
+                    col2,
+                    case_validation_report,
+                    contents,
+                    updated_contents,
+                )
+
+            # INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer
+            elif is_col1_interval and is_col2_interval:
+                self._process_interval_to_interval(
+                    col_pair,
+                    col1,
+                    col2,
+                    case_validation_report,
+                    contents,
+                    updated_contents,
+                )
+
+    def _process_decimal_to_interval(
+        self,
+        col_pair: tuple[UUID, UUID],
+        col1: model.Col,
+        col2: model.Col,
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process DECIMAL_XXX -> INTERVAL transformation."""
+        # Check if we have an interval transformer for col2's concept set
+        if col2.concept_set_id is None:
+            return
+        interval_transformer = self.interval_transformers.get(col2.concept_set_id)
+        if interval_transformer is None:
+            return
+
+        for i, (content, updated_content) in enumerate(zip(contents, updated_contents)):
+            if col_pair[0] not in content or content[col_pair[0]] is None:
+                continue
+            orig_value = content[col_pair[0]]
+            if orig_value is None:
+                continue
+
+            def _is_floatable(v: str) -> bool:
+                _float_pattern = re.compile(
+                    r"^[+-]?("
+                    r"(?:\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"  # normal floats + scientific notation
+                    r"|inf(?:inity)?"  # inf / infinity
+                    r"|nan"  # nan
+                    r")$",
+                    re.IGNORECASE,
+                )
+                return bool(_float_pattern.match(v.strip()))
+
+            if not _is_floatable(orig_value):
+                continue
+
+            numeric_value = float(orig_value)
+
+            if not interval_transformer.is_transformable(numeric_value):
+                continue
+
+            # Use the interval transformer with "value" field name
+            adapter = ObjectAdapter({"value": numeric_value})
+            transformed_adapter = interval_transformer.transform(adapter)
+            new_value = transformed_adapter.get("value")
+
+            if new_value is None:
+                continue
+
+            if (
+                col_pair[1] in updated_content
+                and updated_content[col_pair[1]] is not None
+                and updated_content[col_pair[1]] != new_value
+            ):
+                # Overwrite existing different value
+                case_validation_report.validated_cases[i].data_issues.append(
+                    model.CaseDataIssue(
+                        case_type_col_id=col_pair[1],
+                        original_value=orig_value,
+                        updated_value=new_value,
+                        data_rule=CaseColDataRule.CONFLICT,
+                        details="Value overwritten based on number-to-interval transformation from another column",
+                    )
+                )
+            else:
+                # Derived interval value
+                case_validation_report.validated_cases[i].data_issues.append(
+                    model.CaseDataIssue(
+                        case_type_col_id=col_pair[1],
+                        original_value=orig_value,
+                        updated_value=new_value,
+                        data_rule=CaseColDataRule.DERIVED,
+                        details="Interval value derived from number column",
+                    )
+                )
+
+            updated_content[col_pair[1]] = new_value
+
+    def _process_interval_to_interval(
+        self,
+        col_pair: tuple[UUID, UUID],
+        col1: model.Col,
+        col2: model.Col,
+        case_validation_report: model.CaseValidationReport,
+        contents: list[dict[UUID, str | None]],
+        updated_contents: list[dict[UUID, str | None]],
+    ) -> None:
+        """Process INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer."""
+        # Check if both columns have concept sets
+        if col1.concept_set_id is None or col2.concept_set_id is None:
+            return
+
+        # Skip if trying to map to the same concept set
+        if col1.concept_set_id == col2.concept_set_id:
+            return
+
+        # Get interval transformers for both concept sets
+        src_transformer = self.interval_transformers.get(col1.concept_set_id)
+        tgt_transformer = self.interval_transformers.get(col2.concept_set_id)
+
+        if src_transformer is None or tgt_transformer is None:
+            return
+
+        # Create IntervalToIntervalTransformer
+        try:
+            interval_to_interval_transformer = IntervalToIntervalTransformer(
+                src_field="interval_value",
+                src_interval_names=src_transformer._interval_names,
+                src_lower_bounds=src_transformer._lower_bounds,
+                src_upper_bounds=src_transformer._upper_bounds,
+                tgt_interval_names=tgt_transformer._interval_names,
+                tgt_lower_bounds=tgt_transformer._lower_bounds,
+                tgt_upper_bounds=tgt_transformer._upper_bounds,
+                src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
+                src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
+                tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
+                tgt_upper_bound_is_inclusive=tgt_transformer._upper_bound_is_inclusive,
+                overlap_strategy="largest_overlap",
+                no_match_strategy=NoMatchStrategy.SET_NONE,
+            )
+        except Exception:
+            # Skip if transformer creation fails
+            return
+
+        for i, (content, updated_content) in enumerate(zip(contents, updated_contents)):
+            if col_pair[0] not in content or content[col_pair[0]] is None:
+                continue
+            orig_value = content[col_pair[0]]
+            if orig_value is None:
+                continue
+
+            # Check if transformation is possible
+            if not interval_to_interval_transformer.is_transformable(orig_value):
+                continue
+
+            try:
+                # Transform the interval value using ObjectAdapter
+                adapter = ObjectAdapter({"interval_value": orig_value})
+                transformed_adapter = interval_to_interval_transformer.transform(
+                    adapter
+                )
+                new_value = transformed_adapter.get("interval_value")
+            except Exception:
+                # Skip if transformation fails
+                continue
+
+            if new_value is None:
+                continue
+
+            if (
+                col_pair[1] in updated_content
+                and updated_content[col_pair[1]] is not None
+                and updated_content[col_pair[1]] != new_value
+            ):
+                # Overwrite existing different value
+                case_validation_report.validated_cases[i].data_issues.append(
+                    model.CaseDataIssue(
+                        case_type_col_id=col_pair[1],
+                        original_value=orig_value,
+                        updated_value=new_value,
+                        data_rule=CaseColDataRule.CONFLICT,
+                        details="Value overwritten based on interval-to-interval transformation from another column",
+                    )
+                )
+            else:
+                # Derived interval value
+                case_validation_report.validated_cases[i].data_issues.append(
+                    model.CaseDataIssue(
+                        case_type_col_id=col_pair[1],
+                        original_value=orig_value,
+                        updated_value=new_value,
+                        data_rule=CaseColDataRule.DERIVED,
+                        details="Interval value derived from another interval column",
+                    )
+                )
+
+            updated_content[col_pair[1]] = new_value
 
     def _init_metadata(self) -> None:
         self._init_set_metadata()
@@ -264,7 +744,7 @@ class CaseTransformer(Transformer):
         self.regex_patterns = {}
 
         # Retrieve relevant concept sets, concepts, and relations
-        concept_sets, concept_set_concepts_map, concepts, concept_relations = (
+        concept_sets, concept_set_concepts_map, concepts, concept_contained_in = (
             self._retrieve_concept_data()
         )
 
@@ -285,20 +765,16 @@ class CaseTransformer(Transformer):
             )
 
         # Fill in concept relation maps
-        for concept_relation in concept_relations:
-            from_concept = concepts[concept_relation.from_concept_id]
-            to_concept = concepts[concept_relation.to_concept_id]
-            if concept_relation.relation == ConceptRelationType.CONTAINS:
-                # Swap concepts to convert from contains to is-contained-in
-                from_concept, to_concept = to_concept, from_concept
-            elif concept_relation.relation != ConceptRelationType.IS_CONTAINED_IN:
-                # Only contains and is-contained-in relationships considered
-                continue
-            key = (from_concept.concept_set_id, to_concept.concept_set_id)
-            self.concept_relation_maps.setdefault(key, {})
-            assert from_concept.id is not None
-            assert to_concept.id is not None
-            self.concept_relation_maps[key][str(from_concept.id)] = str(to_concept.id)
+        for (
+            from_concept_set_id,
+            to_concept_set_id,
+        ), mapping in concept_contained_in.items():
+            self.concept_relation_maps.setdefault(
+                (from_concept_set_id, to_concept_set_id), {}
+            )
+            self.concept_relation_maps[(from_concept_set_id, to_concept_set_id)].update(
+                mapping
+            )
 
         # Fill in interval mappers
         for concept_set_id in self.interval_concept_set_ids:
@@ -306,8 +782,10 @@ class CaseTransformer(Transformer):
                 concepts[x] for x in concept_set_concepts_map[concept_set_id]
             ]
             self.interval_transformers[concept_set_id] = IntervalTransformer(
-                None,
-                [str(x.id) for x in interval_concepts],
+                "value",  # src_field should match the field name used in ObjectAdapter
+                [
+                    x.name or x.code or str(x.id) for x in interval_concepts
+                ],  # Use human-readable names
                 [x.props["lb"] for x in interval_concepts],
                 [x.props["ub"] for x in interval_concepts],
                 lower_bound_is_inclusive=[x.props["lb_in"] for x in interval_concepts],
@@ -323,9 +801,16 @@ class CaseTransformer(Transformer):
     def _init_region_metadata(self) -> None:
         self.region_value_maps = {}
         self.region_relation_maps = {}
+        self.region_contained_in = {}
+        self.regions = {}
 
         # Retrieve relevant regions and relations
-        regions, region_set_regions_map, region_relations = self._retrieve_region_data()
+        regions, region_set_regions_map, region_contained_in = (
+            self._retrieve_region_data()
+        )
+
+        # Store regions for lookup
+        self.regions = regions
 
         # Fill in region value maps
         for region_set_id in self.region_set_ids:
@@ -339,20 +824,17 @@ class CaseTransformer(Transformer):
             )
 
         # Fill in region relation maps
-        for region_relation in region_relations:
-            from_region = regions[region_relation.from_region_id]
-            to_region = regions[region_relation.to_region_id]
-            if region_relation.relation == RegionRelationType.CONTAINS:
-                # Swap regions to convert from contains to is-contained-in
-                from_region, to_region = to_region, from_region
-            elif region_relation.relation != RegionRelationType.IS_CONTAINED_IN:
-                # Only contains and is-contained-in relationships considered
-                continue
-            key = (from_region.region_set_id, to_region.region_set_id)
-            self.region_relation_maps.setdefault(key, {})
-            assert from_region.id is not None
-            assert to_region.id is not None
-            self.region_relation_maps[key][str(from_region.id)] = str(to_region.id)
+        for (
+            from_region_set_id,
+            to_region_set_id,
+        ), mapping in region_contained_in.items():
+            self.region_relation_maps.setdefault(
+                (from_region_set_id, to_region_set_id), {}
+            )
+            self.region_relation_maps[(from_region_set_id, to_region_set_id)].update(
+                mapping
+            )
+            self.region_contained_in.update(mapping)
 
     def _init_organization_metadata(self) -> None:
         self.organization_value_map = {}
@@ -377,7 +859,7 @@ class CaseTransformer(Transformer):
         dict[UUID, model.ConceptSet],
         dict[UUID, set[UUID]],
         dict[UUID, model.Concept],
-        list[model.ConceptRelation],
+        dict[tuple[UUID, UUID], dict[UUID, UUID]],
     ]:
         app = self.case_service.app
         # Retrieve relevant concepts sets
@@ -411,8 +893,10 @@ class CaseTransformer(Transformer):
                 as_set=True,
             )
         )
-        # Retrieve concept relations
-        concept_relations: list[model.ConceptRelation] = app.handle(
+
+        # concept_contained_in maps (from_concept_set_id, to_concept_set_id) to map from_concept_id to to_concept_id
+        concept_contained_in: dict[tuple[UUID, UUID], dict[UUID, UUID]] = {}
+        for concept_relation in app.handle(
             command.ConceptRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
                 query_filter=CompositeFilter(
@@ -429,21 +913,27 @@ class CaseTransformer(Transformer):
                     operator=LogicalOperator.AND,
                 ),
             )
-        )
+        ):
+            from_concept = concepts[concept_relation.from_concept_id]
+            to_concept = concepts[concept_relation.to_concept_id]
+            if concept_relation.relation == ConceptRelationType.CONTAINS:
+                # Swap concepts to convert from contains to is-contained-in
+                from_concept, to_concept = to_concept, from_concept
+            elif concept_relation.relation != ConceptRelationType.IS_CONTAINED_IN:
+                # Only contains and is-contained-in relationships considered
+                continue
+            key = (from_concept.concept_set_id, to_concept.concept_set_id)
+            concept_contained_in.setdefault(key, {})
+            assert from_concept.id is not None
+            assert to_concept.id is not None
+            concept_contained_in[key][from_concept.id] = to_concept.id
 
-        # _retrieve_concept_data method: concept_relations should not be a list, but instead should be made a concept_contained_in variable
-        # with a dict[(from_concept_set_id, to_concept_set_id), dict[from_concept_id, to_concept_id]]
-        # expressing the “from_concept IS_CONTAINED_IN to_concept” relation.
-        # The ConceptRelation table is to be constructed as part of LSP-2305: Make Concept-ConceptSet a many-to-one In Progress
-
-        # concept_contained_in: dict[tuple[str, str], tuple[str, str]]
-
-        return concept_sets, concept_set_concepts_map, concepts, concept_relations
+        return concept_sets, concept_set_concepts_map, concepts, concept_contained_in
 
     def _retrieve_region_data(self) -> tuple[
         dict[UUID, model.Region],
         dict[UUID, set[UUID]],
-        list[model.RegionRelation],
+        dict[tuple[UUID, UUID], dict[UUID, UUID]],
     ]:
         app = self.case_service.app
         # Retrieve relevant regions
@@ -465,8 +955,10 @@ class CaseTransformer(Transformer):
                 as_set=True,
             )
         )
+
         # Retrieve region relations
-        region_relations: list[model.RegionRelation] = app.handle(
+        region_contained_in: dict[tuple[UUID, UUID], dict[UUID, UUID]] = {}
+        for region_relation in app.handle(
             command.RegionRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
                 query_filter=CompositeFilter(
@@ -483,9 +975,22 @@ class CaseTransformer(Transformer):
                     operator=LogicalOperator.AND,
                 ),
             )
-        )
+        ):
+            from_region = regions[region_relation.from_region_id]
+            to_region = regions[region_relation.to_region_id]
+            if region_relation.relation == RegionRelationType.CONTAINS:
+                # Swap regions to convert from contains to is-contained-in
+                from_region, to_region = to_region, from_region
+            elif region_relation.relation != RegionRelationType.IS_CONTAINED_IN:
+                # Only contains and is-contained-in relationships considered
+                continue
+            key = (from_region.region_set_id, to_region.region_set_id)
+            region_contained_in.setdefault(key, {})
+            assert from_region.id is not None
+            assert to_region.id is not None
+            region_contained_in[key][from_region.id] = to_region.id
 
-        return regions, region_set_regions_map, region_relations
+        return regions, region_set_regions_map, region_contained_in
 
     def _retrieve_organization_data(
         self,

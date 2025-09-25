@@ -71,6 +71,23 @@ class IsoTimeTransformer(Transformer):
     # Static converter methods for each combination
 
     @staticmethod
+    def can_transform_time(from_time_unit: TimeUnit, to_time_unit: TimeUnit) -> bool:
+        """
+        Returns True if a transformation from from_time_unit to to_time_unit is supported by IsoTimeTransformer.
+        Checks both EXACT_ONLY and LARGEST_OVERLAP strategies for completeness.
+        """
+        if from_time_unit == to_time_unit:
+            return True
+        for strategy in (
+            IsoTimeTransformer.EXACT_ONLY,
+            IsoTimeTransformer.LARGEST_OVERLAP,
+        ):
+            key = (from_time_unit, to_time_unit, strategy)
+            if key in IsoTimeTransformer.TRANSFORM_FN_MAP:
+                return True
+        return False
+
+    @staticmethod
     def convert_same_unit(value: str | None) -> str | None:
         """Convert when source and target units are the same."""
         return value
