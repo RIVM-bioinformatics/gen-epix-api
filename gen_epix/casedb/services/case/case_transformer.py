@@ -344,31 +344,12 @@ class CaseTransformer(Transformer):
                 if from_region_id is None:
                     continue
                 # Then use the region relation map to find the derived region ID
-                derived_region_id = region_relation_map.get(from_region_id)
-                if derived_region_id is None:
-                    # Fallback to the flattened region_contained_in mapping
-                    derived_region_uuid = self.region_contained_in.get(
-                        UUID(from_region_id)
-                    )
-                    if derived_region_uuid is not None:
-                        derived_region_id = str(derived_region_uuid)
+                derived_region_id = region_relation_map.get(UUID(from_region_id))
                 if derived_region_id is None:
                     continue
+                
+                new_value = str(derived_region_id)
 
-                # Convert the derived region ID back to a human-readable value
-                # Look up the region object and use its code, name, or ID as preferred
-                derived_region = self.regions.get(UUID(derived_region_id))
-                if derived_region is None:
-                    continue
-
-                # Prefer code, then name, then fallback to ID
-                # WHY IS THIS NOT PC3 BUT PV_1?
-                if derived_region.code:
-                    new_value = derived_region.code
-                elif derived_region.name:
-                    new_value = derived_region.name
-                else:
-                    new_value = str(derived_region.id)
                 if (
                     col_pair[1] in updated_content
                     and updated_content[col_pair[1]] is not None
