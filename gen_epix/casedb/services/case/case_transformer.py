@@ -426,7 +426,12 @@ class CaseTransformer(Transformer):
                 if col_pair[0] not in content or content[col_pair[0]] is None:
                     continue
                 orig_value = content[col_pair[0]]
-                if orig_value is None:
+                col1 = self.complete_case_type.cols[
+                    self.complete_case_type.case_type_cols[col_pair[0]].col_id
+                ]
+
+                # Check if orig_value is a valid time value for col1's type
+                if self.TIME_MATCHERS[col1.col_type](orig_value) is NoReturn:
                     continue
 
                 # Transform the time value using ObjectAdapter
