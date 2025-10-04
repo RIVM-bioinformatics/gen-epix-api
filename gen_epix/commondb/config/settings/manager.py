@@ -65,6 +65,7 @@ class SettingsManager:
             load_dotenv=True,
             envvar_separator="__",  # Support nested keys like API__HOST
             lowercase_read=self.lowercase_keys,  # Ensure keys are lowercase for Pydantic
+            ignore_unknown_envvars=True,
         )
         # Dynaconf conversion to dict does not preserve key casing, so we re-load with lowercase keys if needed
         self._settings_cache = DictProxy()
