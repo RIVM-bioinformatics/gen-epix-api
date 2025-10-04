@@ -117,6 +117,9 @@ class DictProxy:
         """Support iteration."""
         return iter(self._data)
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._data!r})"
+
     @staticmethod
     def _set_value_recursion(data: Any, key: str, value: Any) -> None:
         if not isinstance(value, dict):
