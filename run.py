@@ -23,12 +23,12 @@ class Run:
         AppType.SEQDB: {
             "app": "gen_epix.seqdb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8001,
         },
         AppType.OMOPDB: {
             "app": "gen_epix.omopdb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8002,
         },
         AppType.COMMONDB: {
             "app": "gen_epix.commondb.app:FAST_API",
@@ -648,6 +648,47 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/performance/startup",
+            ]
+        )
+
+    def test_integration_content(self) -> None:
+        import pytest
+
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/content",
+                # "test/seqdb/integration/content",
+            ]
+        )
+
+    def test_integration_service_connection(self) -> None:
+        import pytest
+
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/test_remote_app.py",
+                # "test/seqdb/integration/service_connection",
+            ]
+        )
+
+    def test_remote_app_unit(self) -> None:
+        import pytest
+
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/services/seqdb/test_remote_app.py",
             ]
         )
 

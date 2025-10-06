@@ -26,6 +26,7 @@ from gen_epix.fastapp.model import Role as Role
 from gen_epix.fastapp.model import UpdateAssociationCommand as UpdateAssociationCommand
 from gen_epix.fastapp.model import User as User
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as PolicyDecisionPoint
+from gen_epix.fastapp.remote_app import RemoteApp as RemoteApp
 from gen_epix.fastapp.repository import BaseRepository as BaseRepository
 from gen_epix.fastapp.service import BaseService as BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork as BaseUnitOfWork

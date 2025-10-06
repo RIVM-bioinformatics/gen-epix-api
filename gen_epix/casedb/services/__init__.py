@@ -6,6 +6,7 @@ from gen_epix.casedb.services.organization import (
     OrganizationService as OrganizationService,
 )
 from gen_epix.casedb.services.rbac import RbacService as RbacService
+from gen_epix.casedb.services.seqdb import SeqdbRemoteApp as SeqdbRemoteApp
 from gen_epix.casedb.services.seqdb import SeqdbService as SeqdbService
 from gen_epix.casedb.services.subject import SubjectService as SubjectService
 from gen_epix.commondb.services import AuthService as AuthService

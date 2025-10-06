@@ -37,6 +37,7 @@ from gen_epix.casedb.services import (
     SystemService,
     UserManager,
 )
+from gen_epix.casedb.services.seqdb.remote import SeqdbRemoteApp
 from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config import AppCfg
 from gen_epix.fastapp import App, BaseService
@@ -190,25 +191,39 @@ class AppEnv(BaseAppEnv):
                     },
                 }
             )
-            service_data[enum.ServiceType.SEQDB].update(
-                {
-                    "kwargs": {
-                        "ext_app_user": SeqdbUser(**cfg.secret.seqdb.user),
-                        "ext_app": SeqdbAppEnv(
-                            # TODO: temporary fix to not import seqdb secrets, only keeping the defaults for these
-                            # Ideally the namespace for casedb/seqdb/omopdb config should be different
-                            # When deployed separately, this is not an issue since only one set of secrets is used
-                            AppCfg(
-                                "SEQDB",
-                                SeqdbServiceType,
-                                SeqdbRepositoryType,
-                                secrets_dir_envvar=None,
-                            ),
-                            log_setup=log_setup,
-                        ).app,
+            if app_cfg.cfg.service.seq.service_location == "LOCAL":
+                service_data[enum.ServiceType.SEQDB].update(
+                    {
+                        "kwargs": {
+                            "ext_app_user": SeqdbUser(**cfg.secret.seqdb.user),
+                            "ext_app": SeqdbAppEnv(
+                                # TODO: temporary fix to not import seqdb secrets, only keeping the defaults for these
+                                # Ideally the namespace for casedb/seqdb/omopdb config should be different
+                                # When deployed separately, this is not an issue since only one set of secrets is used
+                                AppCfg(
+                                    "SEQDB",
+                                    SeqdbServiceType,
+                                    SeqdbRepositoryType,
+                                    secrets_dir_envvar=None,
+                                ),
+                                log_setup=log_setup,
+                                remote=False,
+                            ).app,
+                        },
                     },
-                },
-            )
+                )
+            elif app_cfg.cfg.service.seq.service_location == "REMOTE":
+                service_data[enum.ServiceType.SEQDB].update(
+                    {
+                        "kwargs": {
+                            "ext_app_user": SeqdbUser(**cfg.secret.seqdb.user),
+                            "ext_app": SeqdbRemoteApp(
+                                host=app_cfg.cfg.service.seq.seqdb_url,
+                                port=app_cfg.cfg.service.seq.seqdb_port,
+                            ),
+                        },
+                    },
+                )
             for service_type in service_data:
                 if "repository_class" in service_data[service_type]:
                     service_data[service_type]["repository_class"][

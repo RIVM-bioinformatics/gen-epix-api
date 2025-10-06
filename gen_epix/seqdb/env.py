@@ -1,9 +1,13 @@
 # pylint: disable=unused-import-alias
 import traceback
+from datetime import datetime
 from typing import Any, Callable, Type
+
+import httpx
 
 from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.env import BaseAppEnv
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.seqdb.domain import DOMAIN, enum, model
@@ -24,6 +28,8 @@ class AppEnv(BaseAppEnv):
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
+        self._token: None | str = None
+        self._token_expiry: None | datetime = None
 
     @staticmethod
     def compose_application(
@@ -54,8 +60,25 @@ class AppEnv(BaseAppEnv):
                 name="main",
                 domain=kwargs.get("domain", DOMAIN),
                 logger=app_logger if log_setup else None,
-                id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
+                id_factory=cfg.service.defaults.id_factory,
             )
+
+            # Compose data to initialize repositories and services
+            service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
+            service_data[enum.ServiceType.AUTH].update(
+                {
+                    "kwargs": {
+                        "idps_cfg": cfg.IDPS_CONFIG,
+                    },
+                }
+            )
+            for service_type in service_data:
+                if "repository_class" in service_data[service_type]:
+                    service_data[service_type]["repository_class"][
+                        enum.RepositoryType.SA_SQLITE
+                    ] = service_data[service_type]["repository_class"][
+                        enum.RepositoryType.SA_SQL
+                    ]
 
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
@@ -133,7 +156,7 @@ class AppEnv(BaseAppEnv):
                 )
             services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
             services[enum.ServiceType.RBAC].register_policies()  # type: ignore
-            services[enum.ServiceType.ABAC].register_policies()  # type: ignore
+            # services[enum.ServiceType.ABAC].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:
@@ -162,3 +185,26 @@ class AppEnv(BaseAppEnv):
             "new_user_dependency": new_user_dependency,
             "idp_user_dependency": idp_user_dependency,
         }
+
+
+def get_jwt(client_id: str, client_secret: str) -> str:
+    TOKEN_URL = "https://pre-login.rivm.nl/broker/sp/oidc/token"
+    SCOPE = "openid profile email"
+
+    token_data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials",
+        "scope": SCOPE,
+    }
+
+    with httpx.Client() as client:
+        response = client.post(
+            TOKEN_URL,
+            data=token_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        response.raise_for_status()
+        token_response = response.json()
+
+    return token_response["access_token"]
