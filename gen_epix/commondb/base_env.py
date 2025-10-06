@@ -62,7 +62,7 @@ class BaseAppEnv(abc.ABC):
     ) -> BaseRepository:
         repository: BaseRepository
         if repository_type.value == "DICT":
-            repository = DictRepository.from_pkl(
+            repository = DictRepository.create_repository_from_pkl(
                 repository_class,
                 entities,
                 repository_cfg["props"]["file"],

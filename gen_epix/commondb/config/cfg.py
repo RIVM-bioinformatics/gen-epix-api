@@ -227,17 +227,14 @@ class AppCfg(BaseAppCfg):
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
         # Map timestamp and id factories
+        defaults_cfg = self._cfg["service"]["defaults"]["props"]
         timestamp_factory = getattr(
             TimestampFactory,
-            self._cfg["service"]["defaults"]["props"]["timestamp_factory"],
+            defaults_cfg["timestamp_factory"],
         )
-        id_factory = getattr(
-            IdFactory, self._cfg["service"]["defaults"]["props"]["id_factory"]
-        )
-        self._cfg["service"]["defaults"]["props"][
-            "timestamp_factory"
-        ] = timestamp_factory
-        self._cfg["service"]["defaults"]["props"]["id_factory"] = id_factory
+        id_factory = getattr(IdFactory, defaults_cfg["id_factory"])
+        defaults_cfg["timestamp_factory"] = timestamp_factory
+        defaults_cfg["id_factory"] = id_factory
 
         # Map default repository type
         repository_type = getattr(
@@ -248,42 +245,38 @@ class AppCfg(BaseAppCfg):
         # Get class for and apply defaults to each service and repository
         for service_type in self._service_type_enum:
             service_type_str = service_type.value.lower()
+            if service_type_str not in self._cfg["service"]:
+                self._cfg["service"].update({service_type_str: {}})
+            service_cfg = self._cfg["service"][service_type_str]
 
             # Get class for service
-            service_module = self._cfg["service"][service_type_str]["module"]
-            service_class_name = self._cfg["service"][service_type_str]["class_name"]
-            self._cfg["service"][service_type_str]["class"] = getattr(
+            service_module = service_cfg["module"]
+            service_class_name = service_cfg["class_name"]
+            service_cfg["class"] = getattr(
                 importlib.import_module(service_module), service_class_name
             )
 
             # Apply defaults to service
-            if service_type_str not in self._cfg["service"]:
-                self._cfg["service"].update({service_type_str: {}})
-            orig_cfg = copy.deepcopy(self._cfg["service"][service_type_str])
-            self._cfg["service"][service_type_str].update(
-                self._cfg["service"]["defaults"]
-            )
-            self._cfg["service"][service_type_str].update(orig_cfg)
+            orig_cfg = copy.deepcopy(service_cfg)
+            service_cfg.update(self._cfg["service"]["defaults"])
+            service_cfg.update(orig_cfg)
 
             # Skip if the service does not have a repository
             if service_type_str not in self._cfg["repository"]:
                 continue
+            repository_cfg = self._cfg["repository"][service_type_str]
 
             # Get class for repository
-            repository_module = self._cfg["repository"][service_type_str]["module"]
-            repository_class_name = self._cfg["repository"][service_type_str][
-                "class_name"
-            ]
-            self._cfg["repository"][service_type_str]["class_name"] = getattr(
+            repository_module = repository_cfg["module"]
+            repository_class_name = repository_cfg["class_name"]
+            repository_cfg["class"] = getattr(
                 importlib.import_module(repository_module), repository_class_name
             )
 
             # Apply defaults to repository, if the service has a repository
-            orig_cfg = copy.deepcopy(self._cfg["repository"][service_type_str])
-            self._cfg["repository"][service_type_str].update(
-                self._cfg["repository"]["defaults"]
-            )
-            self._cfg["repository"][service_type_str].update(orig_cfg)
+            orig_cfg = copy.deepcopy(repository_cfg)
+            repository_cfg.update(self._cfg["repository"]["defaults"])
+            repository_cfg.update(orig_cfg)
 
     def _init_set_log_level(
         self,

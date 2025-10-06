@@ -186,8 +186,8 @@ class AppEnv(BaseAppEnv):
                     service_type=service_type,
                     repository=curr_repository,
                     logger=setup_logger if log_setup else None,
-                    props=service_props,
                     name=service_type.value,
+                    **service_props,
                     **additional_service_kwargs,
                 )
                 if not log_setup:

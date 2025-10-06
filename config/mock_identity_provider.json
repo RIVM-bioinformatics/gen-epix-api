@@ -2,7 +2,7 @@
     "service": {
         "auth": {
             "props": {
-                "ids_cfg": [
+                "idps_cfg": [
                     {
                         "name": "mock",
                         "label": "MOCK",

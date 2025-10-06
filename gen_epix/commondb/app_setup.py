@@ -81,21 +81,19 @@ def create_fast_api(
 
     # Response header handling
     if not debug:
-        exception_headers: list[tuple[set[str], dict[str, str]]] = (
-            [
-                (
-                    {"/docs/oauth2-redirect"},
-                    cfg["api"]["http_header"]["auth"],
-                ),  # type:ignore[assignment]
-                (
-                    {"/docs", "/redoc"},
-                    cfg["api"]["http_header"]["openapi"],
-                ),
-            ],
-        )
+        exception_headers: list[tuple[set[str], dict[str, str]]] = [
+            (
+                {"/docs/oauth2-redirect"},
+                dict(cfg["api"]["http_header"]["auth"]),
+            ),
+            (
+                {"/docs", "/redoc"},
+                dict(cfg["api"]["http_header"]["openapi"]),
+            ),
+        ]
         fast_api.add_middleware(
             UpdateResponseHeaderMiddleware,
-            general_headers=cfg["api"]["http_header"]["general"],
+            general_headers=dict(cfg["api"]["http_header"]["general"]),
             exception_headers=exception_headers,
         )
     # Handling of authentication exceptions

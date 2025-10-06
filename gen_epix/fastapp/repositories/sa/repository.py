@@ -44,6 +44,35 @@ from gen_epix.filter import (
 class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities = kwargs.pop("entities", [])
+        connection_string = kwargs.pop("connection_string", None)
+        file = kwargs.pop("file", None)
+        if connection_string is None:
+            if file is None:
+                raise exc.RepositoryInitializationServiceError(
+                    "Either connection_string or file must be provided"
+                )
+            connection_string = f"sqlite:///{Path(file).absolute().as_posix()}"
+        return SARepository.create_sa_repository(
+            repository_class=cls,
+            entities=entities,
+            connection_string=connection_string,
+            **kwargs,
+        )
+
+    @staticmethod
+    def create_repository_from_sqlite(
+        repository_class: Type[BaseRepository],
+        entities: Iterable[Entity],
+        sqlite_file: str,
+        **kwargs: Any,
+    ) -> "SARepository":
+        repository = repository_class(entities, db, **kwargs)  # type: ignore[call-arg]
+        assert isinstance(repository, SARepository)
+        return repository
+
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
@@ -847,7 +876,7 @@ class SARepository(BaseRepository):
 
     @staticmethod
     def _select_with_id_join(
-        session: sa.orm.Session,
+        session: Session,
         get_row_id: Callable[[Type], sa.Column],
         row_class: Type,
         obj_ids: list[Hashable],

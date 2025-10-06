@@ -2,7 +2,7 @@
     "service": {
         "auth": {
             "props": {
-                "ids_cfg": [
+                "idps_cfg": [
                     {
                         "name": "rivm_signicat_offline_access",
                         "label": "RIVM (Internal, External, and Guest accounts)",

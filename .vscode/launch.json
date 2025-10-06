@@ -86,50 +86,50 @@
         },
         // api.omopdb
         {
-            "name": "api.omopdb.local",
+            "name": "api.omopdb.local.idps.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "omopdb",
-                "local",
-                "idps"
+                "OMOPDB"
+                "IDPS",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.omopdb.local.mock_idp",
+            "name": "api.omopdb.local.idps.sa_sqlite_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "omopdb",
-                "local",
-                "mock_idps"
+                "OMOPDB"
+                "IDPS",
+                "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.omopdb.local.debug",
+            "name": "api.omopdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "omopdb",
-                "local",
-                "debug"
+                "OMOPDB"
+                "MOCK",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
+        // api.commondb
         {
             "name": "api.commondb.local.idps.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
-            // args adjusted for LSP-2190
             "args": [
                 "api",
                 "COMMONDB"
@@ -139,29 +139,28 @@
             "justMyCode": true
         },
         {
+            "name": "api.commondb.local.idps.sa_sqlite_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "COMMONDB"
+                "IDPS",
+                "SA_SQLITE_DEMO"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.commondb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
-            // args adjusted for LSP-2190
             "args": [
                 "api",
                 "COMMONDB"
                 "MOCK",
                 "DICT_DEMO"
-            ],
-            "justMyCode": true
-        },
-        {
-            "name": "api.commondb.local.debug",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "api",
-                "commondb",
-                "local",
-                "debug"
             ],
             "justMyCode": true
         },
