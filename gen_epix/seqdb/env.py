@@ -1,6 +1,5 @@
 # pylint: disable=unused-import-alias
 import traceback
-from datetime import datetime
 from typing import Any, Callable, Type
 
 import httpx
@@ -28,8 +27,6 @@ class AppEnv(BaseAppEnv):
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
-        self._token: None | str = None
-        self._token_expiry: None | datetime = None
 
     @staticmethod
     def compose_application(
@@ -60,25 +57,8 @@ class AppEnv(BaseAppEnv):
                 name="main",
                 domain=kwargs.get("domain", DOMAIN),
                 logger=app_logger if log_setup else None,
-                id_factory=cfg.service.defaults.id_factory,
+                id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
             )
-
-            # Compose data to initialize repositories and services
-            service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
-            service_data[enum.ServiceType.AUTH].update(
-                {
-                    "kwargs": {
-                        "idps_cfg": cfg.IDPS_CONFIG,
-                    },
-                }
-            )
-            for service_type in service_data:
-                if "repository_class" in service_data[service_type]:
-                    service_data[service_type]["repository_class"][
-                        enum.RepositoryType.SA_SQLITE
-                    ] = service_data[service_type]["repository_class"][
-                        enum.RepositoryType.SA_SQL
-                    ]
 
             # Initialise repositories and services
             services: dict[enum.ServiceType, BaseService] = {}
@@ -156,7 +136,7 @@ class AppEnv(BaseAppEnv):
                 )
             services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
             services[enum.ServiceType.RBAC].register_policies()  # type: ignore
-            # services[enum.ServiceType.ABAC].register_policies()  # type: ignore
+            services[enum.ServiceType.ABAC].register_policies()  # type: ignore
 
             # Finalise process
             if log_setup:

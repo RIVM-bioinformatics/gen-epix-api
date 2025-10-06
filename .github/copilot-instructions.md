@@ -4,7 +4,7 @@ Gen-EpiX is a **multi-service genomic epidemiology platform** with strict access
 
 ## Architecture Overview
 
-**Three Independent Services**: `casedb`, `seqdb`, `omopdb` - each runs as a separate FastAPI app on different ports (8000, 8001, 8002) with its own database, auth, and domain logic.
+**Four Independent Services**: `casedb`, `seqdb`, `omopdb`, `commondb` - each runs as a separate FastAPI app on different ports with its own database, auth, and domain logic.
 
 **Hexagonal Architecture**: Each service follows strict layering:
 - `domain/` - Pure business logic (models, commands, policies)  
@@ -48,10 +48,17 @@ enum.RepositoryType.DICT    # In-memory for testing
 
 ### Starting Services
 ```bash
-# Start specific service with auth config
-python run.py api casedb local idps      # Production auth
-python run.py api casedb local mock_idps # Mock auth for dev
-python run.py api casedb local debug     # Debug mode
+# New standardized format: SERVICE_NAME IDP_CONFIG REPOSITORY_CONFIG
+python run.py api CASEDB IDPS DICT_DEMO        # Production auth with demo data
+python run.py api CASEDB MOCK DICT_DEMO        # Mock auth for dev
+python run.py api SEQDB IDPS SA_SQLITE_DEMO    # SeqDB with SQLite and demo data
+python run.py api OMOPDB MOCK DICT_EMPTY       # OMOP with mock auth and empty data
+
+# Services run on different ports:
+# - CASEDB: 8000
+# - SEQDB: 8001  
+# - OMOPDB: 8002
+# - COMMONDB: 8000
 ```
 
 ### Testing
@@ -59,6 +66,8 @@ python run.py api casedb local debug     # Debug mode
 python run.py test_all                    # Full test suite
 python run.py test_casedb_integration     # Service-specific tests
 python run.py test_all_unit              # Unit tests only
+python run.py test_integration_content    # Content integration tests
+python run.py test_remote_app_unit        # Remote service connection tests
 ```
 
 ### Data Loading
@@ -76,10 +85,25 @@ python run.py etl_load_demo_data casedb  # Service-specific data
 - **API endpoints**: `gen_epix/{service}/api/`
 
 ### Configuration System
-Uses Dynaconf with environment-specific configs:
-- Settings: `gen_epix/{service}/config/settings.yaml`
-- Secrets: `gen_epix/{service}/config/.secret/`
-- Auth configs: `gen_epix/{service}/config/idp/`
+**NEW: Dynaconf-based Configuration Management**
+- **Settings files**: `gen_epix/{service}/config/settings.toml` (TOML format)
+- **Secrets**: `gen_epix/{service}/config/.secrets.{component}.toml` (separate files by component)
+- **Auth configs**: `gen_epix/{service}/config/idp/` (IDP configurations)
+- **Repository configs**: Service-specific TOML files with connection strings, file paths, etc.
+- **Environment variables**: Auto-discovery via `set_env_variables()` function
+- **Dev configs**: Standardized patterns like `DICT_DEMO`, `SA_SQLITE_DEMO`, `SA_SQL`, etc.
+
+Configuration structure example:
+```toml
+[service.auth.props.root.user]
+id = "01915051-edde-f225-19d7-7ab8886e00bc"
+email = "root@dummy.org"
+
+[repository.defaults]
+type = "DICT"
+[repository.defaults.props]
+dir = "./data/casedb/demo"
+```
 
 ### Transform Framework
 The `gen_epix.transform` module provides stream-processing pipelines for data transformation:
@@ -95,10 +119,12 @@ pipeline = TransformerPipeline([FieldTransformer("name", str.title)])
 3. **Service Dependencies**: `casedb` depends on `seqdb` - start `seqdb` when working with `casedb`
 4. **Command IDs**: All commands auto-generate UUIDs - don't manually set `id` fields
 5. **User Context**: Commands require a `user` parameter for authorization - use test fixtures for this
+5. **User Context**: Commands require a `user` parameter for authorization - use test fixtures for this
 
 ## Integration Points
 
 - **Cross-service communication**: Services communicate via HTTP APIs, not direct imports
+- **Remote service support**: Services can connect to remote instances via `RemoteApp` pattern
 - **Shared models**: Common models in `gen_epix.commondb` (User, Organization, etc.)
 - **Auth tokens**: JWT tokens shared across services via `gen_epix.fastapp.services.auth`
 
