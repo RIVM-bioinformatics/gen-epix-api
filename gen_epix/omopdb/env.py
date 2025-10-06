@@ -17,8 +17,10 @@ class AppEnv(BaseAppEnv):
         self._cfg = app_cfg.cfg
         data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
         self._app: App = data["app"]
-        self._services: dict[enum.ServiceType, BaseService] = {}
-        self._repositories: dict[enum.RepositoryType, BaseRepository] = {}
+        self._services: dict[enum.ServiceType, BaseService] = data["services"]
+        self._repositories: dict[enum.RepositoryType, BaseRepository] = data[
+            "repositories"
+        ]
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]

@@ -1,0 +1,31 @@
+[repository.abac]
+module = "gen_epix.casedb.repositories"
+class_name = "AbacSARepository"
+
+[repository.organization]
+module = "gen_epix.casedb.repositories"
+class_name = "OrganizationSARepository"
+
+[repository.system]
+module = "gen_epix.casedb.repositories"
+class_name = "SystemSARepository"
+
+[repository.case]
+module = "gen_epix.casedb.repositories"
+class_name = "CaseSARepository"
+
+[repository.geo]
+module = "gen_epix.casedb.repositories"
+class_name = "GeoSARepository"
+
+[repository.ontology]
+module = "gen_epix.casedb.repositories"
+class_name = "OntologySARepository"
+
+[repository.seqdb]
+module = "gen_epix.casedb.repositories"
+class_name = "SeqdbSARepository"
+
+[repository.subject]
+module = "gen_epix.casedb.repositories"
+class_name = "SubjectSARepository"

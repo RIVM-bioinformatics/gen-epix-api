@@ -2,8 +2,8 @@ import logging
 from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_access.base import (
-    REPOSITORY_TYPE,
+from test.casedb.integration.case_validation.base import (
+    DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     VERBOSE,
 )
@@ -16,20 +16,35 @@ import pandas as pd
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain import exc
-from gen_epix.commondb.util import map_paired_elements
+from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+from gen_epix.commondb.util import map_paired_elements, set_env_variables
 from gen_epix.fastapp.enum import CrudOperation
+
+APP_CFGS: dict[str, AppCfg] = {}
+for dev_repository_config in DevRepositoryConfig:
+    name = f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{dev_repository_config}"
+    set_env_variables(AppType.CASEDB, DevIdpConfig.MOCK, dev_repository_config)
+    APP_CFGS[name] = AppCfg(
+        AppType.CASEDB,
+        enum.ServiceType,
+        enum.RepositoryType,
+        name=name,
+        setup_logger_level=logging.WARNING,
+    )
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION.value,
-        repository_type=REPOSITORY_TYPE,
+        app_cfg=APP_CFGS[
+            f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{DEV_REPOSITORY_CONFIG}"
+        ],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
-        data_fixture_name="EMPTY",
     )
 
 

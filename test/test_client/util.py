@@ -2,9 +2,6 @@ import datetime
 import gzip
 import importlib
 import pickle
-import re
-import shutil
-from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
 from typing import Type
@@ -13,61 +10,11 @@ import pandas as pd
 
 from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
-from gen_epix.commondb.test.enum import RepositoryType
 from gen_epix.commondb.util import generate_ulid, set_env_variables
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
 from gen_epix.fastapp.repositories.sa import SARepository
-
-
-def create_data_fixture(
-    repository_cfg: dict,
-    services: set[Hashable],
-    repository_type: RepositoryType,
-    load_target: str,
-    test_dir: Path,
-) -> None:
-    for service_type in services:
-        service_type_str = (
-            str(service_type.value)
-            if isinstance(service_type, Enum)
-            else str(service_type)
-        )
-        curr_cfg = repository_cfg[service_type_str]
-        if not curr_cfg:
-            # No repository
-            continue
-        match repository_type.value:
-            case RepositoryType.DICT.value:
-                curr_cfg["file"] = re.sub(
-                    r"\.[A-Za-z]+\.pkl\.gz",
-                    f".{load_target.lower()}.pkl.gz",
-                    curr_cfg["file"],
-                    flags=re.IGNORECASE,
-                )
-            case RepositoryType.SA_SQLITE.value:
-                # Copy sqlite files to test output directory
-                source_file = Path(
-                    re.sub(
-                        r"\.[A-Za-z]+\.sqlite",
-                        f".{load_target.lower()}.sqlite",
-                        curr_cfg["file"],
-                        flags=re.IGNORECASE,
-                    )
-                )
-                if not source_file.is_file():
-                    continue
-                target_file = test_dir / source_file.name
-                curr_cfg["file"] = str(target_file.absolute())
-                shutil.copyfile(source_file, target_file)
-            case RepositoryType.SA_SQL.value:
-                # Nothing to do
-                pass
-            case _:
-                raise NotImplementedError(
-                    f"repository_type {repository_type} not implemented"
-                )
 
 
 def get_test_name(test_type: Enum | str) -> str:

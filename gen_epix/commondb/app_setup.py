@@ -25,6 +25,7 @@ from gen_epix.fastapp.middleware.update_response_header import (
 def create_fast_api(
     cfg: dict | Dynaconf,
     app: App,
+    create_routers_fn: Callable = create_routers,
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
@@ -106,7 +107,7 @@ def create_fast_api(
 
     # Add routers
     handle_exception = generate_handle_exception_function(app=app, logger=api_logger)
-    routers = create_routers(
+    routers = create_routers_fn(
         app=app,
         registered_user_dependency=registered_user_dependency,
         new_user_dependency=new_user_dependency,

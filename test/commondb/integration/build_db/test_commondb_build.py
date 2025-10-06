@@ -21,7 +21,6 @@ from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryCo
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.commondb.util import set_env_variables
 
-DATA_FIXTURE_NAME = "EMPTY"
 APP_CFGS: dict[str, AppCfg] = {}
 for dev_repository_config in DevRepositoryConfig:
     name = f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{dev_repository_config}"

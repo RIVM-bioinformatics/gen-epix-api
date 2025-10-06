@@ -4,12 +4,7 @@ import re
 from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
-from test.test_client.enum import TestType
-from test.test_client.util import (
-    create_data_fixture,
-    get_test_name,
-    get_test_output_dir,
-)
+from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
 from typing import Any, Type
 from uuid import UUID
@@ -19,15 +14,14 @@ from gen_epix.casedb.api.organization import (
     UpdateUserRequestBody,
     UserInvitationRequestBody,
 )
-from gen_epix.casedb.app_setup import create_fast_api
+from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppEnv
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
+from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.config.cfg import BaseAppCfg
-from gen_epix.commondb.test.enum import RepositoryType as TestClientRepositoryType
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
@@ -128,11 +122,8 @@ class CasedbTestClient(TestClient):
     @classmethod
     def get_test_client(
         cls,
-        app_cfg: AppCfg = APP_CFG,
-        test_type: str = TestType.CASEDB_CUSTOM.value,
-        repository_type: enum.RepositoryType = enum.RepositoryType.DICT,
-        data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
-        route_prefix: str = DEFAULT_ROUTE_PREFIX,
+        test_type: str,
+        app_cfg: AppCfg,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
@@ -142,10 +133,10 @@ class CasedbTestClient(TestClient):
         Create a test environment for the given test type and repository type. A
         single environment, with a common test directory, is kept for each test type.
         """
-        key = (test_type, repository_type, data_fixture_name)
-        if key not in cls.TEST_CLIENTS:
+        if app_cfg.name not in cls.TEST_CLIENTS:
             test_name = get_test_name(test_type)
             test_dir = get_test_output_dir(test_name)
+            is_new_test_dir = True
             # Find existing test dir for same test type and use that if found,
             # so all results come in the same dir
             for stored_key, stored_env in cls.TEST_CLIENTS.items():
@@ -153,58 +144,39 @@ class CasedbTestClient(TestClient):
                 if stored_test_type == test_type:  # type: ignore[has-type]
                     test_name = stored_env.test_name
                     test_dir = stored_env.test_dir
+                    is_new_test_dir = False
                     break
-            cls.TEST_CLIENTS[key] = cls(
-                app_cfg=app_cfg,
-                test_type=test_type,
-                test_name=test_name,
-                test_dir=test_dir,
-                repository_type=repository_type,
-                data_fixture_name=data_fixture_name,
-                route_prefix=route_prefix,
+            # Adjust config to new dir and copy any repository files there
+            if is_new_test_dir:
+                app_cfg.copy_repository_files(test_dir)
+            cls.TEST_CLIENTS[app_cfg.name] = cls(
+                test_name,
+                test_dir,
+                app_cfg,
                 verbose=verbose,
                 log_level=log_level,
                 log_setup=log_setup,
                 **kwargs,
             )
-        return cls.TEST_CLIENTS[key]  # type: ignore[no-any-return]
+        return cls.TEST_CLIENTS[app_cfg.name]  # type: ignore[no-any-return]
 
     def __init__(
         self,
-        test_type: str = TestType.UNDEFINED.value,
-        test_name: str | None = None,
-        test_dir: Path | None = None,
-        app_cfg: BaseAppCfg = APP_CFG,
-        repository_type: RepositoryType = RepositoryType.DICT,
-        data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
+        test_name: str,
+        test_dir: Path,
+        app_cfg: BaseAppCfg,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         log_setup: bool = False,
         use_endpoints: bool = False,
         **kwargs: Any,
     ):
-        test_client_repository_type = TestClientRepositoryType(repository_type.value)
-
-        # Set up test name and directory
-        test_name = test_name or get_test_name(test_type)
-        test_dir = test_dir or get_test_output_dir(test_name)
-
         # Set and adjust cfg
-        app_cfg.cfg.app.debug = True
-        app_cfg.cfg.secret["db"]["repository_type"] = repository_type
-        # Adjust cfg for root user
-        curr_cfg = app_cfg.cfg.secret.root
-        curr_cfg.organization.name = "org1"
-        curr_cfg.user.email = "root1_1@org1.org"
-        curr_cfg.user.name = "root1_1"
-        # Copy any repository files to test directory
-        create_data_fixture(
-            app_cfg.cfg.secret.repository[repository_type.value],
-            set(ServiceType),
-            test_client_repository_type,
-            data_fixture_name,
-            test_dir,
-        )
+        app_cfg.cfg["app"]["debug"] = True
+        curr_cfg = app_cfg.cfg["service"]["auth"]["props"]["root"]
+        curr_cfg["organization"]["name"] = "org1"
+        curr_cfg["user"]["email"] = "root1_1@org1.org"
+        curr_cfg["user"]["name"] = "root1_1"
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)
@@ -218,6 +190,7 @@ class CasedbTestClient(TestClient):
             fast_api = create_fast_api(
                 app_cfg.cfg,
                 app=app_env.app,
+                create_routers_fn=create_routers,
                 registered_user_dependency=app_env.registered_user_dependency,
                 new_user_dependency=app_env.new_user_dependency,
                 idp_user_dependency=app_env.idp_user_dependency,
@@ -255,7 +228,6 @@ class CasedbTestClient(TestClient):
             test_dir,
             app_cfg,
             app_env,
-            data_fixture_name=data_fixture_name,
             roles=set(enum.Role),
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,

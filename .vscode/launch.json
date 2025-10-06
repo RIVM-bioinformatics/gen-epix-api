@@ -6,81 +6,81 @@
     "configurations": [
         // api.casedb
         {
-            "name": "api.casedb.local",
+            "name": "api.casedb.local.idps.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "casedb",
-                "local",
-                "idps"
+                "CASEDB"
+                "IDPS",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.mock_idp",
+            "name": "api.casedb.local.idps.sa_sqlite_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "casedb",
-                "local",
-                "mock_idps"
+                "CASEDB"
+                "IDPS",
+                "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.debug",
+            "name": "api.casedb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "casedb",
-                "local",
-                "debug"
+                "CASEDB"
+                "MOCK",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
         // api.seqdb
         {
-            "name": "api.seqdb.local",
+            "name": "api.seqdb.local.idps.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "seqdb",
-                "local",
-                "idps"
+                "SEQDB"
+                "IDPS",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.seqdb.local.mock_idp",
+            "name": "api.seqdb.local.idps.sa_sqlite_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "seqdb",
-                "local",
-                "mock_idps"
+                "SEQDB"
+                "IDPS",
+                "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.seqdb.local.debug",
+            "name": "api.seqdb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
-                "seqdb",
-                "local",
-                "debug"
+                "SEQDB"
+                "MOCK",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },

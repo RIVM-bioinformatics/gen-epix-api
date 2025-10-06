@@ -1,7 +1,6 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
-    REPOSITORY_TYPE,
     SKIP_ENDPOINTS,
     VERBOSE,
 )
@@ -11,20 +10,39 @@ from test.casedb.integration.build_db.create import TestCreate as ModuleTestCrea
 from test.casedb.integration.build_db.delete import TestDelete as ModuleTestDelete
 from test.casedb.integration.build_db.read import TestRead as ModuleTestRead
 from test.casedb.integration.build_db.update import TestUpdate as ModuleTestUpdate
+from test.commondb.integration.build_db.base import DEV_REPOSITORY_CONFIG
 from test.test_client.enum import TestType as EnumTestType
 
 import pytest
+
+from gen_epix.casedb.domain import enum
+from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+from gen_epix.commondb.util import set_env_variables
+
+APP_CFGS: dict[str, AppCfg] = {}
+for dev_repository_config in DevRepositoryConfig:
+    name = f"{EnumTestType.CASEDB_INTEGRATION_BUILD_DB}_{dev_repository_config}"
+    set_env_variables(AppType.CASEDB, DevIdpConfig.MOCK, dev_repository_config)
+    APP_CFGS[name] = AppCfg(
+        AppType.CASEDB,
+        enum.ServiceType,
+        enum.RepositoryType,
+        name=name,
+        setup_logger_level=logging.WARNING,
+    )
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=EnumTestType.CASEDB_INTEGRATION_BUILD_DB.value,
-        repository_type=REPOSITORY_TYPE,
+        app_cfg=APP_CFGS[
+            f"{EnumTestType.CASEDB_INTEGRATION_BUILD_DB}_{DEV_REPOSITORY_CONFIG}"
+        ],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
-        data_fixture_name="EMPTY",
     )
 
 
