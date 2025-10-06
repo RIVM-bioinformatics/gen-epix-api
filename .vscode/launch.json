@@ -125,28 +125,30 @@
             "justMyCode": true
         },
         {
-            "name": "api.commondb.local",
+            "name": "api.commondb.local.idps.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
+            // args adjusted for LSP-2190
             "args": [
                 "api",
-                "commondb",
-                "local",
-                "idps"
+                "COMMONDB"
+                "IDPS",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.commondb.local.mock_idp",
+            "name": "api.commondb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
+            // args adjusted for LSP-2190
             "args": [
                 "api",
-                "commondb",
-                "local",
-                "mock_idps"
+                "COMMONDB"
+                "MOCK",
+                "DICT_DEMO"
             ],
             "justMyCode": true
         },

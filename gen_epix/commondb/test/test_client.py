@@ -5,7 +5,7 @@ from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, List, Type, TypeVar, cast
+from typing import Any, List, Type, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.commondb.base_env import BaseAppEnv
@@ -395,8 +395,10 @@ class TestClient:
 
     def get_root_user(self) -> model.User:
         return self.user_class(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
+            organization_id=self.cfg["service"]["auth"]["props"]["root"][
+                "organization"
+            ]["id"],
+            **self.cfg["service"]["auth"]["props"]["root"]["user"],
         )
 
     def get_org_ids_for_org_admin(

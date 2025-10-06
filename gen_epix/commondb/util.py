@@ -1,4 +1,5 @@
 import json
+import os
 import tomllib
 import uuid
 from collections.abc import Hashable
@@ -10,6 +11,13 @@ from typing import Any, Iterable, Type
 import ulid
 from pydantic import BaseModel, Field
 
+from gen_epix.commondb.domain.enum import (
+    AppType,
+    AppTypeSet,
+    DevIdpConfig,
+    DevRepositoryConfig,
+    DevRepositoryConfigSet,
+)
 from gen_epix.fastapp import Command, Domain, Model, exc
 
 
@@ -74,63 +82,63 @@ def map_paired_elements(
     return retval
 
 
-def update_cfg_from_file(
-    cfg: dict,
-    file_or_dir: str,
-    cfg_key_map: None | dict[str, str] = None,
-    file_key_delimiter: str = "-",
-) -> None:
-    """
-    Import values from files as a nested dict where the nested keys are the file
-    name split by "-". The value of the innermost key is the content of the file,
-    which can in turn again be a dict.
-    """
-    cfg_key_map = cfg_key_map or {}
+# def update_cfg_from_file(
+#     cfg: dict,
+#     file_or_dir: str,
+#     cfg_key_map: None | dict[str, str] = None,
+#     file_key_delimiter: str = "-",
+# ) -> None:
+#     """
+#     Import values from files as a nested dict where the nested keys are the file
+#     name split by "-". The value of the innermost key is the content of the file,
+#     which can in turn again be a dict.
+#     """
+#     cfg_key_map = cfg_key_map or {}
 
-    def _add_value_recursion(cfg: dict, new_cfg: dict, parent_path: str) -> None:
-        # Recursively add/replace values to/in cfg
-        for key, value in new_cfg.items():
-            path = f"{parent_path}.{key}" if len(parent_path) else key
-            key = cfg_key_map.get(key, key)
-            if isinstance(value, dict):
-                if key not in cfg:
-                    cfg[key] = {}
-                _add_value_recursion(cfg[key], value, path)
-            else:
-                cfg[key] = value
+#     def _add_value_recursion(cfg: dict, new_cfg: dict, parent_path: str) -> None:
+#         # Recursively add/replace values to/in cfg
+#         for key, value in new_cfg.items():
+#             path = f"{parent_path}.{key}" if len(parent_path) else key
+#             key = cfg_key_map.get(key, key)
+#             if isinstance(value, dict):
+#                 if key not in cfg:
+#                     cfg[key] = {}
+#                 _add_value_recursion(cfg[key], value, path)
+#             else:
+#                 cfg[key] = value
 
-    # Get list of files
-    if Path(file_or_dir).is_file():
-        files = [file_or_dir]
-    elif Path(file_or_dir).is_dir():
-        files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
-    else:
-        raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
+#     # Get list of files
+#     if Path(file_or_dir).is_file():
+#         files = [file_or_dir]
+#     elif Path(file_or_dir).is_dir():
+#         files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
+#     else:
+#         raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
 
-    # Read files into new_cfg
-    new_cfg: dict[str, Any] = {}
-    for file in files:
-        name = Path(file).name
-        keys = [cfg_key_map.get(x, x) for x in name.split(file_key_delimiter)]
-        curr_cfg = new_cfg
-        for key in keys[0:-1]:
-            if key not in curr_cfg:
-                curr_cfg[key] = {}
-            curr_cfg = curr_cfg[key]
-        path = Path(file)
-        if not path.is_file():
-            continue
-        # required for aks
-        with open(path, "r", encoding="utf-8") as handle:
-            try:
-                value = json.load(handle)
-            except json.JSONDecodeError as e:
-                print(f"Error reading {file}: {e}\nSkipping file")
-                continue
-        curr_cfg[keys[-1]] = value
+#     # Read files into new_cfg
+#     new_cfg: dict[str, Any] = {}
+#     for file in files:
+#         name = Path(file).name
+#         keys = [cfg_key_map.get(x, x) for x in name.split(file_key_delimiter)]
+#         curr_cfg = new_cfg
+#         for key in keys[0:-1]:
+#             if key not in curr_cfg:
+#                 curr_cfg[key] = {}
+#             curr_cfg = curr_cfg[key]
+#         path = Path(file)
+#         if not path.is_file():
+#             continue
+#         # required for aks
+#         with open(path, "r", encoding="utf-8") as handle:
+#             try:
+#                 value = json.load(handle)
+#             except json.JSONDecodeError as e:
+#                 print(f"Error reading {file}: {e}\nSkipping file")
+#                 continue
+#         curr_cfg[keys[-1]] = value
 
-    # Recursively add/replace values in cfg
-    _add_value_recursion(cfg, new_cfg, "")
+#     # Recursively add/replace values in cfg
+#     _add_value_recursion(cfg, new_cfg, "")
 
 
 # Get version with fallback for development
@@ -279,3 +287,75 @@ def copy_model_field(
     field_kwargs.update(kwargs)
     # Create field
     return Field(**field_kwargs)
+
+
+def set_env_variables(
+    app_type: AppType | str,
+    dev_idp_config: DevIdpConfig | str,
+    dev_repository_config: DevRepositoryConfig | str,
+) -> None:
+    # Parse input
+    if isinstance(app_type, str):
+        app_type_enum = AppType[app_type.upper()]
+    else:
+        app_type_enum = app_type
+    if isinstance(dev_idp_config, str):
+        dev_idp_config_enum = DevIdpConfig[dev_idp_config.upper()]
+    else:
+        dev_idp_config_enum = dev_idp_config
+    if isinstance(dev_repository_config, str):
+        dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
+    else:
+        dev_repository_config_enum = dev_repository_config
+    # Special case: set environment variables for all apps
+    if app_type_enum == AppType.ALL:
+        for app2 in AppTypeSet.ALL.value:
+            set_env_variables(app2, dev_idp_config_enum, dev_repository_config_enum)
+        return
+    elif app_type_enum == AppType.CASEDB:
+        set_env_variables(
+            AppType.SEQDB, dev_idp_config_enum, dev_repository_config_enum
+        )
+    # Initialise some
+    cfg_path = Path.cwd() / "gen_epix" / app_type_enum.value.lower() / "config"
+    general_cfg_path = Path.cwd() / "config"
+    envvar_prefix = app_type_enum.value.upper() + "_"
+    settings_files: list[Path] = []
+    # General settings
+    settings_files.append(cfg_path / "settings.toml")
+    # Service secrets
+    settings_files.append(cfg_path / ".secrets.service.toml")
+    # Identity provider settings
+    if dev_idp_config_enum == DevIdpConfig.IDPS:
+        settings_files.append(general_cfg_path / "identity_providers.json")
+    elif dev_idp_config_enum == DevIdpConfig.MOCK:
+        settings_files.append(general_cfg_path / "mock_identity_provider.json")
+    else:
+        raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
+    # Repository settings
+    if dev_repository_config_enum in DevRepositoryConfigSet.DICT.value:
+        settings_files.append(cfg_path / "settings.repository.dict.toml")
+    elif dev_repository_config_enum in DevRepositoryConfigSet.SA.value:
+        settings_files.append(cfg_path / "settings.repository.sa.toml")
+    else:
+        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+    # Repository secrets
+    if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
+        settings_files.append(cfg_path / ".secrets.repository.dict.demo.toml")
+    elif dev_repository_config_enum == DevRepositoryConfig.DICT_EMPTY:
+        settings_files.append(cfg_path / ".secrets.repository.dict.empty.toml")
+    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
+        settings_files.append(cfg_path / ".secrets.repository.sa_sqlite.demo.toml")
+    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_EMPTY:
+        settings_files.append(cfg_path / ".secrets.repository.sa_sqlite.empty.toml")
+    elif dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
+        settings_files.append(cfg_path / ".secrets.repository.sa_sql.toml")
+    else:
+        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+    # Set environment variables
+    os.environ[envvar_prefix + "SETTINGS_FILES"] = json.dumps(
+        [str(x.absolute()) for x in settings_files]
+    )
+    os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
+        (general_cfg_path / "logging.yaml").absolute()
+    )

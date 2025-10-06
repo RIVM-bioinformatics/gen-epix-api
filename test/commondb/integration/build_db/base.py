@@ -5,8 +5,10 @@ SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQL
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
-REPOSITORY_TYPE = enum.RepositoryType.DICT
+# REPOSITORY_TYPE = enum.RepositoryType.DICT
 # REPOSITORY_TYPE = enum.RepositoryType.SA_SQLITE
+DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.DICT_EMPTY
+# DEV_REPOSITORY_CONFIG = enum.DevRepositoryConfig.SA_SQLITE_EMPTY
 
 ALL_USERS = [
     "root1_1",

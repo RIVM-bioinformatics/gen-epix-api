@@ -77,10 +77,10 @@ def test_complete_configuration_system_with_examples(
 
         # Test settings access - values from custom settings file should override defaults
         # Custom settings file has host="127.0.0.1", port=9000, debug=true, default_route="/api-docs"
-        assert app_cfg.settings.app.host == "127.0.0.1"
-        assert app_cfg.settings.app.port == 9000
-        assert app_cfg.settings.app.debug is True
-        assert app_cfg.settings.api.default_route == "/api-docs"
+        assert app_cfg.cfg.app.host == "127.0.0.1"
+        assert app_cfg.cfg.app.port == 9000
+        assert app_cfg.cfg.app.debug is True
+        assert app_cfg.cfg.api.default_route == "/api-docs"
 
         # Test secrets access
         assert app_cfg.secrets["db"]["repository_type"] == "DICT"

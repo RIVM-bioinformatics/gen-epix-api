@@ -1,6 +1,6 @@
 import logging
-from test.commondb.integration.build_db.base import (
-    REPOSITORY_TYPE,
+from test.commondb.integration.build_db.base import (  # REPOSITORY_TYPE,
+    DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     VERBOSE,
 )
@@ -15,18 +15,36 @@ from test.test_client.enum import TestType as EnumTestType
 
 import pytest
 
+from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.domain import enum
+from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
 from gen_epix.commondb.test.test_client import TestClient as Env
+from gen_epix.commondb.util import set_env_variables
+
+DATA_FIXTURE_NAME = "EMPTY"
+APP_CFGS: dict[str, AppCfg] = {}
+for dev_repository_config in DevRepositoryConfig:
+    name = f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{dev_repository_config}"
+    set_env_variables(AppType.COMMONDB, DevIdpConfig.MOCK, dev_repository_config)
+    APP_CFGS[name] = AppCfg(
+        AppType.COMMONDB,
+        enum.ServiceType,
+        enum.RepositoryType,
+        name=name,
+        setup_logger_level=logging.WARNING,
+    )
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return commondb_get_test_client(
         test_type=EnumTestType.COMMONDB_INTEGRATION_BUILD_DB.value,
-        repository_type=REPOSITORY_TYPE,
+        app_cfg=APP_CFGS[
+            f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{DEV_REPOSITORY_CONFIG}"
+        ],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
-        data_fixture_name="EMPTY",
     )
 
 

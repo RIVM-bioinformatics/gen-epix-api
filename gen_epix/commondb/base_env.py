@@ -65,7 +65,7 @@ class BaseAppEnv(abc.ABC):
             repository = DictRepository.from_pkl(
                 repository_class,
                 entities,
-                repository_cfg["file"],
+                repository_cfg["props"]["file"],
                 timestamp_factory=timestamp_factory,
                 **kwargs,
             )
@@ -73,7 +73,7 @@ class BaseAppEnv(abc.ABC):
             assert issubclass(repository_class, SARepository)
             repository = repository_class.create_sa_repository(
                 entities,
-                "sqlite:///" + repository_cfg["file"],
+                "sqlite:///" + repository_cfg["props"]["file"],
                 name=service_type.value,
                 timestamp_factory=timestamp_factory,
                 **kwargs,
@@ -82,7 +82,7 @@ class BaseAppEnv(abc.ABC):
             assert issubclass(repository_class, SARepository)
             repository = repository_class.create_sa_repository(
                 entities,
-                repository_cfg["connection_string"],
+                repository_cfg["props"]["connection_string"],
                 name=service_type.value,
                 timestamp_factory=timestamp_factory,
                 **kwargs,

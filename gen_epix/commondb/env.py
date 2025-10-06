@@ -104,12 +104,12 @@ class AppEnv(BaseAppEnv):
         app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
     ) -> dict:
 
+        # Get logger for setup
+        cfg = app_cfg.cfg
+        setup_logger = app_cfg.setup_logger
+        app_logger = app_cfg.app_logger
+        service_logger = app_cfg.service_logger
         try:
-            # Get logger for setup
-            cfg = app_cfg.cfg
-            setup_logger = app_cfg.setup_logger
-            app_logger = app_cfg.app_logger
-            service_logger = app_cfg.service_logger
             if log_setup:
                 setup_logger.debug(
                     App.create_static_log_message(
@@ -128,18 +128,11 @@ class AppEnv(BaseAppEnv):
                 name="main",
                 domain=kwargs.get("domain", DOMAIN),
                 logger=app_logger if log_setup else None,
-                id_factory=cfg.service.defaults.id_factory,
+                id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
             )
 
             # Compose data to initialize repositories and services
             service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
-            service_data[enum.ServiceType.AUTH].update(
-                {
-                    "kwargs": {
-                        "idps_cfg": cfg.IDPS_CONFIG,
-                    },
-                }
-            )
             for service_type in service_data:
                 if "repository_class" in service_data[service_type]:
                     service_data[service_type]["repository_class"][
@@ -152,27 +145,17 @@ class AppEnv(BaseAppEnv):
             services: dict[enum.ServiceType, BaseService] = {}
             repositories: dict[enum.ServiceType, BaseRepository] = {}
             for service_type in model.SORTED_SERVICE_TYPES:
+                service_cfg = cfg["service"][service_type.value]
                 data = service_data[service_type]
-                props = {
-                    x: y
-                    for x, y in cfg.service[service_type.value.lower()].items()
-                    if x not in {"id_factory", "timestamp_factory"}
-                }
-                id_factory = cfg.service[service_type.value.lower()]["id_factory"]
-                timestamp_factory = cfg.service[service_type.value.lower()][
-                    "timestamp_factory"
-                ]
-                additional_service_kwargs: dict = data.get("kwargs", {})  # type: ignore
-
+                service_props = service_cfg.props
+                additional_service_kwargs: dict = data.get("kwargs", {})
                 # Create repository if necessary
                 if "repository_class" in data:
                     entities = app.domain.get_dag_sorted_entities(
                         service_type=service_type
                     )
-                    repository_type = cfg.secret["db"]["repository_type"]
-                    repository_cfg = cfg.secret["repository"][
-                        repository_type.value.lower()
-                    ][service_type.value.lower()]
+                    repository_cfg = cfg["repository"][service_type.value]
+                    repository_type = repository_cfg["type"]
                     if log_setup:
                         setup_logger.debug(
                             app.create_log_message(
@@ -181,10 +164,12 @@ class AppEnv(BaseAppEnv):
                             )
                         )
                     repository_class = data["repository_class"][repository_type]
-                    additional_repository_kwargs: dict = data.get("repository_kwargs", {})  # type: ignore
+                    additional_repository_kwargs: dict = data.get(
+                        "repository_kwargs", {}
+                    )
                     curr_repository = AppEnv.create_repository(
                         service_type,
-                        timestamp_factory,
+                        service_cfg.props.timestamp_factory,
                         entities,
                         repository_type,
                         repository_cfg,
@@ -194,15 +179,15 @@ class AppEnv(BaseAppEnv):
                 else:
                     curr_repository = None
                 # Create service, injecting app, repository, logger and props
-                service_class: Type[BaseService] = data["service_class"]
+                # service_class: Type[BaseService] = data["service_class"]
+                service_class: Type[BaseService] = service_cfg["class"]
                 curr_service: BaseService = service_class(
                     app,
                     service_type=service_type,
                     repository=curr_repository,
                     logger=setup_logger if log_setup else None,
-                    props=props,
+                    props=service_props,
                     name=service_type.value,
-                    id_factory=id_factory,
                     **additional_service_kwargs,
                 )
                 if not log_setup:
@@ -225,8 +210,10 @@ class AppEnv(BaseAppEnv):
                 model.UserInvitation,
                 services[enum.ServiceType.ORGANIZATION],  # type: ignore
                 services[enum.ServiceType.RBAC],  # type: ignore
-                cfg.secret.root,
-                automatic_new_user_cfg=cfg.secret.automatic_new_user,  # set to None if no automatic new user
+                cfg["service"]["auth"]["props"]["root"],
+                automatic_new_user_cfg=cfg["service"]["auth"]["props"][
+                    "automatic_new_user"
+                ],  # set to None if no automatic new user
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints

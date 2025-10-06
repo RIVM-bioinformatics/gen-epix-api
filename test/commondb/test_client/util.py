@@ -1,9 +1,5 @@
 import logging
-from test.test_client.util import (
-    create_data_fixture,
-    get_test_name,
-    get_test_output_dir,
-)
+from test.test_client.util import get_test_name, get_test_output_dir
 from typing import Any, Hashable
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
@@ -15,21 +11,14 @@ from gen_epix.commondb.env import AppEnv
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.test_client import TestClient
 
-APP_NAME = "COMMONDB"
-APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
-APP_CFG.setup_logger.setLevel(logging.WARNING)
+DEFAULT_ROUTE_PREFIX = "/v1"
 
 TEST_CLIENTS: dict[Hashable, TestClient] = {}
-
-DEFAULT_DATA_FIXTURE_NAME = "empty"
-DEFAULT_ROUTE_PREFIX = "/v1"
 
 
 def get_test_client(
     test_type: str,
-    app_cfg: AppCfg = APP_CFG,
-    repository_type: enum.RepositoryType = enum.RepositoryType.DICT,
-    data_fixture_name: str = DEFAULT_DATA_FIXTURE_NAME,
+    app_cfg: AppCfg,
     use_endpoints: bool = False,
     route_prefix: str = DEFAULT_ROUTE_PREFIX,
     verbose: bool = False,
@@ -41,14 +30,10 @@ def get_test_client(
     Create a test environment for the given test type and repository type. A
     single environment, with a common test directory, is kept for each test type.
     """
-    key: tuple[str, enum.RepositoryType, str] = (
-        test_type,
-        repository_type,
-        data_fixture_name,
-    )
-    if key not in TEST_CLIENTS:
+    if app_cfg.name not in TEST_CLIENTS:
         test_name = get_test_name(test_type)
         test_dir = get_test_output_dir(test_name)
+        is_new_test_dir = True
         # Find existing test dir for same test type and use that if found,
         # so all results come in the same dir
         for stored_key, stored_env in TEST_CLIENTS.items():
@@ -56,24 +41,26 @@ def get_test_client(
             if stored_test_type == test_type:  # type: ignore[has-type]
                 test_name = stored_env.test_name
                 test_dir = stored_env.test_dir
+                is_new_test_dir = False
                 break
+        if is_new_test_dir:
+            app_cfg.copy_repository_files(test_dir)
 
         # Set and adjust cfg
-        app_cfg.cfg.app.debug = True
-        app_cfg.cfg.secret["db"]["repository_type"] = repository_type
+        app_cfg.cfg["app"]["debug"] = True
         # Adjust cfg for root user
-        curr_cfg = app_cfg.cfg.secret.root
-        curr_cfg.organization.name = "org1"
-        curr_cfg.user.email = "root1_1@org1.org"
-        curr_cfg.user.name = "root1_1"
-        # Copy any repository files to test directory
-        create_data_fixture(
-            app_cfg.cfg.secret.repository[repository_type.value],
-            set(enum.ServiceType),
-            repository_type,
-            data_fixture_name,
-            test_dir,
-        )
+        curr_cfg = app_cfg.cfg["service"]["auth"]["props"]["root"]
+        curr_cfg["organization"]["name"] = "org1"
+        curr_cfg["user"]["email"] = "root1_1@org1.org"
+        curr_cfg["user"]["name"] = "root1_1"
+        # # Copy any repository files to test directory
+        # create_data_fixture(
+        #     app_cfg.cfg["repository"][repository_type.value],
+        #     set(enum.ServiceType),
+        #     repository_type,
+        #     data_fixture_name,
+        #     test_dir,
+        # )
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)
@@ -110,7 +97,6 @@ def get_test_client(
             test_dir,
             app_cfg,
             app_env,
-            data_fixture_name=data_fixture_name,
             roles=set(enum.Role),
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
@@ -132,5 +118,5 @@ def get_test_client(
             **kwargs,
         )
 
-        TEST_CLIENTS[key] = test_client
-    return TEST_CLIENTS[key]  # type: ignore[no-any-return]
+        TEST_CLIENTS[app_cfg.name] = test_client
+    return TEST_CLIENTS[app_cfg.name]

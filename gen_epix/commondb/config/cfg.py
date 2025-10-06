@@ -1,25 +1,20 @@
 """Refactored configuration management using Strategy Pattern."""
 
 import abc
-import json
+import copy
+import importlib
 import logging
 import logging.config as logging_config
 import os
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
-from typing import Any, Type
-from urllib.parse import quote_plus
+from typing import Type
 
 import yaml  # type: ignore[import-untyped]
-from sqlalchemy import URL
+from dynaconf import Dynaconf
 
-from gen_epix.commondb.config.dict_proxy import DictProxy
 from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
-from gen_epix.commondb.config.secret_provider import (
-    SecretLoadError,
-    SecretProviderFactory,
-)
 from gen_epix.commondb.config.settings import SettingsManager
 from gen_epix.fastapp import App
 
@@ -28,16 +23,22 @@ class BaseAppCfg(abc.ABC):
     """Abstract base class for application configuration."""
 
     def __init__(self) -> None:
+        self._name: str | None
         self._app_name: str
         self._service_type_enum: Type[Enum]
         self._repository_type_enum: Type[Enum]
         self._log_setup: bool
-        self._settings: DictProxy
-        self._secrets: DictProxy
+        self._cfg: Dynaconf
         self._setup_logger: logging.Logger
         self._api_logger: logging.Logger
         self._app_logger: logging.Logger
         self._service_logger: logging.Logger
+
+    @property
+    def name(self) -> str:
+        if self._name is None:
+            raise ValueError("name is not set")
+        return self._name
 
     @property
     def app_name(self) -> str:
@@ -56,12 +57,8 @@ class BaseAppCfg(abc.ABC):
         return self._log_setup
 
     @property
-    def settings(self) -> DictProxy:
-        return self._settings
-
-    @property
-    def secrets(self) -> DictProxy:
-        return self._secrets
+    def cfg(self) -> Dynaconf:
+        return self._cfg
 
     @property
     def setup_logger(self) -> logging.Logger:
@@ -79,43 +76,14 @@ class BaseAppCfg(abc.ABC):
     def service_logger(self) -> logging.Logger:
         return self._service_logger
 
-    # Backward compatibility - cfg property that combines settings and secrets
-    @property
-    def cfg(self) -> Any:
-        """Backward compatibility property that provides dynaconf-like access."""
-        return ConfigProxy(self._settings, self._secrets)
-
-
-class ConfigProxy:
-    """Proxy class to provide backward compatibility with old cfg access pattern."""
-
-    def __init__(self, settings: DictProxy, secrets: DictProxy):
-        self._settings = settings
-        self._secrets = secrets
-        # Create a secret proxy for backward compatibility
-        self.secret = secrets
-
-    def __getattr__(self, name: str) -> Any:
-        # First try to get from settings
-        if hasattr(self._settings, name):
-            return getattr(self._settings, name)
-
-        # Then try from secrets
-        if name in self._secrets:
-            return (
-                DictProxy(data=self._secrets[name])
-                if isinstance(self._secrets[name], dict)
-                else self._secrets[name]
-            )
-
-        raise AttributeError(f"'ConfigProxy' object has no attribute '{name}'")
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get configuration value with default."""
-        try:
-            return getattr(self, key)
-        except AttributeError:
-            return default
+    @abc.abstractmethod
+    def copy_repository_files(
+        self,
+        tgt_dir: Path | str,
+        service_type: Enum | None = None,
+        on_exist: str = "skip",
+    ) -> None:
+        raise NotImplementedError("Subclasses must implement copy_repository_files")
 
 
 class AppCfg(BaseAppCfg):
@@ -141,20 +109,16 @@ class AppCfg(BaseAppCfg):
 
     def __init__(
         self,
-        app_name: str,
+        app_name_or_enum: Enum | str,
         service_type_enum: Type[Enum],
         repository_type_enum: Type[Enum],
         log_setup: bool = True,
+        name: str | None = None,
+        setup_logger_level: int | None = None,
         logger_prefix: str | None = None,
         envvar_prefix: str | None = None,
-        logging_config_file_envvar: str = "LOGGING_CONFIG_FILE",
-        idps_config_file_envvar: str = "IDPS_CONFIG_FILE",
-        logging_level_from_secret_envvar: str = "LOGGING_LEVEL_FROM_SECRET",
-        # Legacy parameters for backward compatibility - now ignored
-        settings_dir_envvar: str = "SETTINGS_DIR",
-        secrets_dir_envvar: str | None = "SECRETS_DIR",
-        settings_files: list[str] | None = None,
-        cfg_key_map: dict[str, str] | None = None,
+        log_config_file_envvar: str = "LOG_CONFIG_FILE",
+        log_level_envvar: str = "LOG_LEVEL",
     ):
         """Initialize application configuration.
 
@@ -162,6 +126,8 @@ class AppCfg(BaseAppCfg):
             app_name: Name of the application (e.g., 'commondb', 'casedb')
             service_type_enum: Enum of service types
             repository_type_enum: Enum of repository types
+            name: optional name for this configuration instance that can e.g. be used
+               as a key in collection of configurations
             log_setup: Whether to set up logging
             logger_prefix: Prefix for logger names (defaults to app_name.lower())
             envvar_prefix: Prefix for environment variables (defaults to app_name.upper())
@@ -170,54 +136,47 @@ class AppCfg(BaseAppCfg):
             logging_level_from_secret_envvar: Environment variable to control log level from secrets
         """
         # Parse input
+        if isinstance(app_name_or_enum, Enum):
+            app_name = str(app_name_or_enum.value)
+        else:
+            app_name = app_name_or_enum
         logger_prefix = logger_prefix or app_name.lower()
         envvar_prefix = envvar_prefix or f"{app_name.upper()}_"
 
         # Add some properties
         self._app_name = app_name
+        self._name = name
         self._service_type_enum = service_type_enum
         self._repository_type_enum = repository_type_enum
         self._log_setup = log_setup
 
         # Configure and set loggers
         self._init_configure_loggers(
-            envvar_prefix, logging_config_file_envvar, logger_prefix
+            envvar_prefix, log_config_file_envvar, logger_prefix
         )
-
+        if setup_logger_level is not None:
+            self.setup_logger.setLevel(setup_logger_level)
         if log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message(
-                    "c6010f14", "Starting setting up config data with new architecture"
-                )
+            self.setup_logger.info(
+                App.create_static_log_message("c6010f14", "Started loading config data")
             )
 
-        # Load settings using new SettingsManager
+        # Load settings
         self._init_load_settings(envvar_prefix, log_setup)
 
-        # Load secrets using new SecretProviderFactory
-        self._init_load_secrets(envvar_prefix, log_setup)
-
-        # Set timestamp and ID factory per service
-        self._init_set_factories_for_services()
-
-        # Set log level from secrets
-        self._init_set_log_level(
-            envvar_prefix, logging_level_from_secret_envvar, log_setup
-        )
-
-        # Add authentication settings
-        self._init_add_authentication_cfg(idps_config_file_envvar)
-
-        # Fill in repository connection string parameters per service
-        self._init_repository_cfg()
+        # Validate settings
+        self._init_validate_settings()
 
         # Finalise process
         if log_setup:
-            self.setup_logger.debug(
+            self.setup_logger.info(
                 App.create_static_log_message(
-                    "cdb7abcb", "Finished setting up config data with new architecture"
+                    "cdb7abcb", "Finished loading config data"
                 )
             )
+
+        # Set log level
+        self._init_set_log_level(envvar_prefix, log_level_envvar, log_setup)
 
     def _init_configure_loggers(
         self,
@@ -256,44 +215,75 @@ class AppCfg(BaseAppCfg):
             )
 
         settings_manager = SettingsManager(prefix=envvar_prefix)
-        self._settings = settings_manager.load_settings()
+        self._cfg = settings_manager.load_settings()
 
         if log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
-                    "a7b3c4d5", f"Loaded settings from {type(self._settings).__name__}"
+                    "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
                 )
             )
 
-    def _init_load_secrets(self, envvar_prefix: str, log_setup: bool) -> None:
-        """Load secrets using SecretProviderFactory."""
-        if log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message(
-                    "c61368d6", "Loading secrets with SecretProviderFactory"
-                )
+    def _init_validate_settings(self) -> None:
+        """Validate settings and apply defaults to all services and repositories."""
+        # Map timestamp and id factories
+        timestamp_factory = getattr(
+            TimestampFactory,
+            self._cfg["service"]["defaults"]["props"]["timestamp_factory"],
+        )
+        id_factory = getattr(
+            IdFactory, self._cfg["service"]["defaults"]["props"]["id_factory"]
+        )
+        self._cfg["service"]["defaults"]["props"][
+            "timestamp_factory"
+        ] = timestamp_factory
+        self._cfg["service"]["defaults"]["props"]["id_factory"] = id_factory
+
+        # Map default repository type
+        repository_type = getattr(
+            self._repository_type_enum, self._cfg["repository"]["defaults"]["type"]
+        )
+        self._cfg["repository"]["defaults"]["type"] = repository_type
+
+        # Get class for and apply defaults to each service and repository
+        for service_type in self._service_type_enum:
+            service_type_str = service_type.value.lower()
+
+            # Get class for service
+            service_module = self._cfg["service"][service_type_str]["module"]
+            service_class_name = self._cfg["service"][service_type_str]["class_name"]
+            self._cfg["service"][service_type_str]["class"] = getattr(
+                importlib.import_module(service_module), service_class_name
             )
 
-        try:
-            self._secrets = SecretProviderFactory.load_secrets(prefix=envvar_prefix)
+            # Apply defaults to service
+            if service_type_str not in self._cfg["service"]:
+                self._cfg["service"].update({service_type_str: {}})
+            orig_cfg = copy.deepcopy(self._cfg["service"][service_type_str])
+            self._cfg["service"][service_type_str].update(
+                self._cfg["service"]["defaults"]
+            )
+            self._cfg["service"][service_type_str].update(orig_cfg)
 
-            if log_setup:
-                strategy_env_var = f"{envvar_prefix}_SECRETS_STRATEGY"
-                strategy = os.environ.get(strategy_env_var, "unknown")
-                self.setup_logger.debug(
-                    App.create_static_log_message(
-                        "f8e7d6c5", f"Loaded secrets using strategy: {strategy}"
-                    )
-                )
+            # Skip if the service does not have a repository
+            if service_type_str not in self._cfg["repository"]:
+                continue
 
-        except SecretLoadError as e:
-            if log_setup:
-                self.setup_logger.error(
-                    App.create_static_log_message(
-                        "e1f2a3b4", f"Failed to load secrets: {e}"
-                    )
-                )
-            raise
+            # Get class for repository
+            repository_module = self._cfg["repository"][service_type_str]["module"]
+            repository_class_name = self._cfg["repository"][service_type_str][
+                "class_name"
+            ]
+            self._cfg["repository"][service_type_str]["class_name"] = getattr(
+                importlib.import_module(repository_module), repository_class_name
+            )
+
+            # Apply defaults to repository, if the service has a repository
+            orig_cfg = copy.deepcopy(self._cfg["repository"][service_type_str])
+            self._cfg["repository"][service_type_str].update(
+                self._cfg["repository"]["defaults"]
+            )
+            self._cfg["repository"][service_type_str].update(orig_cfg)
 
     def _init_set_log_level(
         self,
@@ -314,10 +304,10 @@ class AppCfg(BaseAppCfg):
                 )
             )
         ):
-            # Get log level from secrets
+            # Get log level
             log_level = None
-            if "log" in self._secrets and "level" in self._secrets["log"]:
-                log_level = self._secrets["log"]["level"].upper()
+            if "log" in self._cfg and "level" in self._cfg["log"]:
+                log_level = self._cfg["log"]["level"].upper()
 
             if log_level:
                 for logger_name in logging_config_yaml["loggers"]:
@@ -333,124 +323,58 @@ class AppCfg(BaseAppCfg):
                         handler.setLevel(log_level)
                     curr_logger.setLevel(log_level)
 
-    def _init_add_authentication_cfg(self, idps_config_file_envvar: str) -> None:
-        """Add authentication configuration if file is provided."""
-        logger = self.setup_logger
-        msg = "Checking for authentication settings"
-        logger.debug(App.create_static_log_message("d9dd9170", msg))
-
-        # Check if IDPS config file is provided in environment
-        idps_config_file = os.environ.get(idps_config_file_envvar)
-        if not idps_config_file:
-            msg = "No identity provider configuration file provided"
-            logger.debug(App.create_static_log_message("e2547edf", msg))
-            return
-
-        if not Path(idps_config_file).is_file():
-            msg = f"Authentication settings file does not exist: {idps_config_file}"
-            logger.error(App.create_static_log_message("dc779cad", msg))
-            raise FileNotFoundError(msg)
+    def copy_repository_files(
+        self,
+        tgt_dir: Path | str,
+        service_type: Enum | None = None,
+        on_exist: str = "skip",
+    ) -> None:
+        """
+        Copy any repository files to a new folder and update the configuration
+        correspondingly. This is useful e.g. for creating isolated test environments.
+        """
+        # Parse input
+        if isinstance(tgt_dir, str):
+            tgt_dir = Path(tgt_dir)
+        if not tgt_dir.is_dir():
+            raise ValueError(f"new_folder {tgt_dir} is not a directory")
+        if on_exist not in ("skip", "overwrite", "raise"):
+            raise ValueError(
+                f"on_exist must be 'skip', 'overwrite' or 'raise', got {on_exist}"
+            )
+        if service_type is None:
+            service_types = list(self.service_type_enum)
         else:
-            with open(
-                idps_config_file, "rt", encoding=getpreferredencoding()
-            ) as handle:
-                # Add IDPS_CONFIG to secrets for backward compatibility
-                self._secrets["IDPS_CONFIG"] = json.load(handle)
-
-    def _init_set_factories_for_services(self) -> None:
-        """Set timestamp and ID factories for services."""
-        # Set default factories
-        timestamp_factory = getattr(
-            TimestampFactory,
-            self._settings.service.defaults.timestamp_factory,
-        )
-        id_factory = getattr(IdFactory, self._settings.service.defaults.id_factory)
-
-        # Store factories in a way that's backward compatible
-        self._secrets["service"] = self._secrets.get("service", {})
-        self._secrets["service"]["defaults"] = {
-            "timestamp_factory": timestamp_factory,
-            "id_factory": id_factory,
-        }
-
-        # Set per-service factories
-        for service_type in self._service_type_enum:
+            service_types = [service_type]
+        # Go over each service type
+        for service_type in service_types:
+            # Get file path from config
             service_type_str = service_type.value.lower()
-
-            if service_type_str not in self._secrets["service"]:
-                self._secrets["service"][service_type_str] = {}
-
-            service_config = self._secrets["service"][service_type_str]
-
-            # Use service-specific factory if configured, otherwise use default
-            service_config["timestamp_factory"] = service_config.get(
-                "timestamp_factory", timestamp_factory
-            )
-            service_config["id_factory"] = service_config.get("id_factory", id_factory)
-
-    def _init_repository_cfg(self) -> None:
-        """Initialize repository configuration with connection strings."""
-        if "repository" not in self._secrets:
-            return
-
-        for repository_type in self.repository_type_enum:
-            repository_type_str = repository_type.value.lower()
-
-            # Handle 'dict' vs 'dict_repo' alias
-            repo_key = (
-                "dict_repo" if repository_type_str == "dict" else repository_type_str
-            )
-            if repo_key not in self._secrets["repository"]:
-                repo_key = repository_type_str  # fallback to original key
-
-            if repo_key not in self._secrets["repository"]:
+            if service_type_str not in self._cfg["repository"]:
                 continue
-
-            default_cfg = self._secrets["repository"][repo_key].get("defaults", {})
-
-            for service_type in self._service_type_enum:
-                service_type_str = service_type.value.lower()
-                curr_cfg = self._secrets["repository"][repo_key]
-
-                if service_type_str not in curr_cfg:
-                    curr_cfg[service_type_str] = {}
-
-                curr_cfg = curr_cfg[service_type_str]
-
-                if repository_type_str in {"dict", "sa_sqlite"}:
-                    parameter = "file"
-                elif repository_type_str == "sa_sql":
-                    parameter = "connection_string"
-                else:
-                    raise ValueError(f"Unknown repository type: {repository_type_str}")
-
-                if parameter in curr_cfg:
-                    format_string = curr_cfg[parameter]
-                elif parameter in default_cfg:
-                    format_string = default_cfg[parameter]
-                else:
-                    # No repository for this service
+            cfg = self._cfg["repository"][service_type_str]["props"]
+            if "file" not in cfg:
+                continue
+            curr_path = Path(cfg["file"])
+            new_path = tgt_dir / curr_path.name
+            # Copy file
+            if not curr_path.exists():
+                raise FileNotFoundError(f"Source file not found: {curr_path}")
+            if new_path.exists():
+                if on_exist == "overwrite":
+                    pass
+                elif on_exist == "skip":
                     continue
-
-                parameters = {
-                    x: y for x, y in (default_cfg | curr_cfg).items() if x != parameter
-                }
-
-                if parameter == "connection_string":
-                    if "pymssql" in parameters.get("driver", ""):
-                        curr_cfg[parameter] = URL.create(
-                            drivername=parameters["driver"],
-                            host=parameters["server"],
-                            database=parameters["database"],
-                            username=parameters["uid"],
-                            password=parameters["pwd"],
-                        )
-                    else:
-                        sep = "="
-                        conn_prefix, conn_details = format_string.format(
-                            **parameters
-                        ).split(sep, 1)
-                        encoded_details = quote_plus(conn_details)
-                        curr_cfg[parameter] = conn_prefix + sep + encoded_details
+                elif on_exist == "raise":
+                    raise FileExistsError(
+                        f"Destination file already exists: {new_path}"
+                    )
                 else:
-                    curr_cfg[parameter] = format_string.format(**parameters)
+                    raise NotImplementedError(
+                        f"on_exist value '{on_exist}' not implemented"
+                    )
+            with open(curr_path, "rb") as src_handle:
+                with open(new_path, "wb") as dst_handle:
+                    dst_handle.write(src_handle.read())
+            # Update config
+            cfg["file"] = str(Path(tgt_dir) / curr_path.name)

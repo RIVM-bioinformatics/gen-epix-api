@@ -1,199 +1,196 @@
-import os
 from datetime import datetime
 from pathlib import Path
 
 import fire
 
-from gen_epix.commondb.config import ConfigDiscovery
-from gen_epix.commondb.domain.enum import AppConfigType, AppType, AppTypeSet
+from gen_epix.commondb.domain.enum import (
+    AppType,
+    AppTypeSet,
+    DevIdpConfig,
+    DevRepositoryConfig,
+)
+from gen_epix.commondb.util import set_env_variables
 
 
 class Run:
 
-    ROOT_DIR = os.getcwd()
-    APP_SECRETS_ENV_VARIABLES = {
-        AppType.COMMONDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="SETTINGS_DIR",
-            ),
-            "SETTINGS_FILES": Path.cwd()
-            / "gen_epix"
-            / "commondb"
-            / "config"
-            / "settings.toml",
-            "SECRETS_STRATEGY": "FILE",
-            "SECRETS_PATH": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="SECRETS_PATH",
-                extension=".secret",
-            ),
-            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="LOGGING_CONFIG_FILE",
-                extension="logging.yaml",
-            ),
-        },
-        AppType.CASEDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"
-            ),
-            "SECRETS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="SECRETS_DIR",
-                extension=".secret",
-            ),
-            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="LOGGING_CONFIG_FILE",
-                extension="logging.yaml",
-            ),
-        },
-        AppType.SEQDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value, env_var_substring="SETTINGS_DIR"
-            ),
-            "SECRETS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="SECRETS_DIR",
-                extension=".secret",
-            ),
-            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="LOGGING_CONFIG_FILE",
-                extension="logging.yaml",
-            ),
-        },
-        AppType.OMOPDB: {
-            "SETTINGS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value, env_var_substring="SETTINGS_DIR"
-            ),
-            "SECRETS_DIR": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="SECRETS_DIR",
-                extension=".secret",
-            ),
-            "LOGGING_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="LOGGING_CONFIG_FILE",
-                extension="logging.yaml",
-            ),
-        },
-    }
-    APP_IDP_ENV_VARIABLES = {
-        (AppType.CASEDB, AppConfigType.IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.CASEDB, AppConfigType.MOCK_IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/mock_identity_provider.json",
-            ),
-        },
-        (AppType.CASEDB, AppConfigType.NO_AUTH): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/no_identity_providers.json",
-            ),
-        },
-        (AppType.CASEDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.CASEDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.SEQDB, AppConfigType.IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.SEQDB, AppConfigType.MOCK_IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/mock_identity_provider.json",
-            ),
-        },
-        (AppType.SEQDB, AppConfigType.NO_AUTH): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/no_identity_providers.json",
-            ),
-        },
-        (AppType.SEQDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.SEQDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.MOCK_IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/mock_identity_provider.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.NO_AUTH): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/no_identity_providers.json",
-            ),
-        },
-        (AppType.OMOPDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.OMOPDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.COMMONDB, AppConfigType.IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-        (AppType.COMMONDB, AppConfigType.MOCK_IDPS): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/mock_identity_provider.json",
-            ),
-        },
-        (AppType.COMMONDB, AppConfigType.NO_AUTH): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/no_identity_providers.json",
-            ),
-        },
-        (AppType.COMMONDB, AppConfigType.DEBUG): {
-            "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
-                app_type=AppType.COMMONDB.value,
-                env_var_substring="IDPS_CONFIG_FILE",
-                extension="idp/identity_providers.json",
-            ),
-        },
-    }
+    # ROOT_DIR = os.getcwd()
+    # APP_SECRETS_ENV_VARIABLES = {
+    #     AppType.COMMONDB: {
+    #         "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="SETTINGS_DIR",
+    #         ),
+    #         "SETTINGS_FILES": [
+    #             Path.cwd() / "gen_epix" / "commondb" / "config" / "settings.toml",
+    #             Path.cwd() / "gen_epix" / "commondb" / "config" / ".secrets.toml",
+    #         ],
+    #         "LOG_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="LOG_CONFIG_FILE",
+    #             extension="logging.yaml",
+    #         ),
+    #     },
+    #     AppType.CASEDB: {
+    #         "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value, env_var_substring="SETTINGS_DIR"
+    #         ),
+    #         "SECRETS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="SECRETS_DIR",
+    #             extension=".secret",
+    #         ),
+    #         "LOG_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="LOG_CONFIG_FILE",
+    #             extension="logging.yaml",
+    #         ),
+    #     },
+    #     AppType.SEQDB: {
+    #         "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value, env_var_substring="SETTINGS_DIR"
+    #         ),
+    #         "SECRETS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="SECRETS_DIR",
+    #             extension=".secret",
+    #         ),
+    #         "LOG_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="LOG_CONFIG_FILE",
+    #             extension="logging.yaml",
+    #         ),
+    #     },
+    #     AppType.OMOPDB: {
+    #         "SETTINGS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value, env_var_substring="SETTINGS_DIR"
+    #         ),
+    #         "SECRETS_DIR": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="SECRETS_DIR",
+    #             extension=".secret",
+    #         ),
+    #         "LOG_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="LOG_CONFIG_FILE",
+    #             extension="logging.yaml",
+    #         ),
+    #     },
+    # }
+    # APP_IDP_ENV_VARIABLES = {
+    #     (AppType.CASEDB, AppConfigType.IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.CASEDB, AppConfigType.MOCK_IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/mock_identity_provider.json",
+    #         ),
+    #     },
+    #     (AppType.CASEDB, AppConfigType.NO_AUTH): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/no_identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.CASEDB, AppConfigType.DEBUG): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.CASEDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.SEQDB, AppConfigType.IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.SEQDB, AppConfigType.MOCK_IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/mock_identity_provider.json",
+    #         ),
+    #     },
+    #     (AppType.SEQDB, AppConfigType.NO_AUTH): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/no_identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.SEQDB, AppConfigType.DEBUG): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.SEQDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.OMOPDB, AppConfigType.IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.OMOPDB, AppConfigType.MOCK_IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/mock_identity_provider.json",
+    #         ),
+    #     },
+    #     (AppType.OMOPDB, AppConfigType.NO_AUTH): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/no_identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.OMOPDB, AppConfigType.DEBUG): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.OMOPDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.COMMONDB, AppConfigType.IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.COMMONDB, AppConfigType.MOCK_IDPS): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/mock_identity_provider.json",
+    #         ),
+    #     },
+    #     (AppType.COMMONDB, AppConfigType.NO_AUTH): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/no_identity_providers.json",
+    #         ),
+    #     },
+    #     (AppType.COMMONDB, AppConfigType.DEBUG): {
+    #         "IDPS_CONFIG_FILE": ConfigDiscovery.get_config_path(
+    #             app_type=AppType.COMMONDB.value,
+    #             env_var_substring="IDPS_CONFIG_FILE",
+    #             extension="idp/identity_providers.json",
+    #         ),
+    #     },
+    # }
 
     APP_URI = {
         AppType.CASEDB: {
@@ -259,42 +256,15 @@ class Run:
         "ignore::sqlalchemy.exc.SAWarning",
     ]
 
-    @staticmethod
-    def set_env_variables(app_type: AppType, idp_config: AppConfigType) -> None:
-        # Special case: set environment variables for all apps
-        if app_type == AppType.ALL:
-            for app2 in AppTypeSet.ALL.value:
-                Run.set_env_variables(app2, idp_config)
-            return
-        elif app_type == AppType.CASEDB:
-            Run.set_env_variables(AppType.SEQDB, idp_config)
-        # Set environment variables
-        for name, value in Run.APP_SECRETS_ENV_VARIABLES[app_type].items():
-            env_var_name = app_type.value.upper() + "_" + name
-            if isinstance(value, Path):
-                value = str(value.absolute())
-            if env_var_name not in os.environ:
-                os.environ[env_var_name] = value
-        key = (app_type, idp_config)
-        for name, value in Run.APP_IDP_ENV_VARIABLES[key].items():
-            env_var_name = app_type.value.upper() + "_" + name
-            if isinstance(value, Path):
-                value = str(value.absolute())
-            if env_var_name not in os.environ:
-                os.environ[env_var_name] = value
-        os.environ["APP_VERSION"] = "DEVELOPMENT"
-        if idp_config in {"DEBUG"}:
-            os.environ[app_type.value.upper() + "_LOGGING_LEVEL_FROM_SECRET"] = "0"
-
     ## api
-    def api(self, app_type: str, env_name: str, idp_config: str) -> None:
+    def api(self, app_type: str, idp_config: str, dev_repository_config: str) -> None:
         import uvicorn
 
         app_type_enum = AppType[app_type.upper()]
-        idp_config_enum = AppConfigType[idp_config.upper()]
-        env_name = env_name.upper()
+        idp_config_enum = DevIdpConfig[idp_config.upper()]
+        dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
         # Set environment variables
-        Run.set_env_variables(app_type_enum, idp_config_enum)
+        set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
         ssl_keyfile = Run.APP_SSL_KEYFILE
@@ -313,19 +283,27 @@ class Run:
     ## env
 
     def env_casedb(self) -> None:
-        Run.set_env_variables(AppType.CASEDB, AppConfigType.IDPS)
+        set_env_variables(
+            AppType.CASEDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
+        )
         import gen_epix.casedb.env as env
 
     def env_seqdb(self) -> None:
-        Run.set_env_variables(AppType.SEQDB, AppConfigType.IDPS)
+        set_env_variables(
+            AppType.SEQDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
+        )
         import gen_epix.seqdb.env as env
 
     def env_omopdb(self) -> None:
-        Run.set_env_variables(AppType.OMOPDB, AppConfigType.IDPS)
+        set_env_variables(
+            AppType.OMOPDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
+        )
         import gen_epix.omopdb.env as env
 
     def env_commondb(self) -> None:
-        Run.set_env_variables(AppType.COMMONDB, AppConfigType.IDPS)
+        set_env_variables(
+            AppType.COMMONDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
+        )
         import gen_epix.omopdb.env as env
 
     ## etl
@@ -335,7 +313,9 @@ class Run:
         from test.test_client.util import load_demo_data
 
         # Set all environment variables
-        Run.set_env_variables(AppType.ALL, AppConfigType.IDPS)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_EMPTY
+        )
         if isinstance(app_type, str):
             app_type = AppType[app_type.upper()]
         assert isinstance(app_type, AppType)
@@ -359,7 +339,9 @@ class Run:
     def test_all(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -383,14 +365,18 @@ class Run:
     def test_all_incl_performance(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
 
         pytest.main(Run.DEFAULT_PYTEST_ARGS + ["."])
 
     def test_all_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -406,7 +392,9 @@ class Run:
     def test_all_integration(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -418,7 +406,9 @@ class Run:
     def test_all_performance(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -431,7 +421,9 @@ class Run:
     def test_filter_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -442,7 +434,9 @@ class Run:
     def test_transform_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -453,7 +447,9 @@ class Run:
     def test_fastapp_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -464,7 +460,9 @@ class Run:
     def test_fastapp_unit_auth(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -475,7 +473,9 @@ class Run:
     def test_fastapp_unit_rbac(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -486,7 +486,9 @@ class Run:
     def test_fastapp_unit_repository(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -497,7 +499,9 @@ class Run:
     def test_docs_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -508,7 +512,9 @@ class Run:
     def test_commondb_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -519,7 +525,9 @@ class Run:
     def test_commondb_unit_auth(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -530,7 +538,9 @@ class Run:
     def test_commondb_unit_config(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -541,7 +551,9 @@ class Run:
     def test_commondb_integration(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -552,7 +564,9 @@ class Run:
     def test_commondb_integration_build_db(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -563,7 +577,9 @@ class Run:
     def test_omopdb_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -574,7 +590,9 @@ class Run:
     def test_fastapp_performance(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -585,7 +603,9 @@ class Run:
     def test_fastapp_performance_repository(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -596,7 +616,9 @@ class Run:
     def test_casedb_integration(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -610,7 +632,9 @@ class Run:
     def test_casedb_integration_build_db(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -621,7 +645,9 @@ class Run:
     def test_casedb_integration_case_access(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -632,7 +658,9 @@ class Run:
     def test_casedb_integration_case_validation(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -643,7 +671,9 @@ class Run:
     def test_casedb_integration_content(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -654,7 +684,9 @@ class Run:
     def test_casedb_performance(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -667,7 +699,9 @@ class Run:
     def test_casedb_performance_repository(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -678,7 +712,9 @@ class Run:
     def test_casedb_performance_user_journey(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -689,7 +725,9 @@ class Run:
     def test_casedb_performance_startup(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -700,7 +738,9 @@ class Run:
     def test_casedb_custom(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -711,7 +751,9 @@ class Run:
     def test_seqdb_integration(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -723,7 +765,9 @@ class Run:
     def test_seqdb_integration_build_db(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -734,7 +778,9 @@ class Run:
     def test_seqdb_integration_content(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -745,7 +791,9 @@ class Run:
     def test_seqdb_performance(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -758,7 +806,9 @@ class Run:
     def test_seqdb_performance_repository(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -769,7 +819,9 @@ class Run:
     def test_seqdb_performance_user_journey(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -780,7 +832,9 @@ class Run:
     def test_seqdb_performance_startup(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
+        set_env_variables(
+            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
+        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
