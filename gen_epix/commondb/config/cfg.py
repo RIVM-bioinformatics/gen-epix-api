@@ -15,7 +15,7 @@ import yaml  # type: ignore[import-untyped]
 from dynaconf import Dynaconf
 
 from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
-from gen_epix.commondb.config.settings import SettingsManager
+from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
 

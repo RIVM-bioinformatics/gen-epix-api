@@ -13,10 +13,12 @@ from gen_epix.commondb.api.exc import generate_handle_exception_function
 from gen_epix.commondb.api.router import create_routers
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
-from gen_epix.fastapp.middleware import (
+from gen_epix.fastapp.middleware import limiter
+from gen_epix.fastapp.middleware.handle_auth_exception import (
     HandleAuthExceptionMiddleware,
+)
+from gen_epix.fastapp.middleware.update_response_header import (
     UpdateResponseHeaderMiddleware,
-    limiter,
 )
 
 
@@ -79,13 +81,22 @@ def create_fast_api(
 
     # Response header handling
     if not debug:
+        exception_headers: list[tuple[set[str], dict[str, str]]] = (
+            [
+                (
+                    {"/docs/oauth2-redirect"},
+                    cfg["api"]["http_header"]["auth"],
+                ),  # type:ignore[assignment]
+                (
+                    {"/docs", "/redoc"},
+                    cfg["api"]["http_header"]["openapi"],
+                ),
+            ],
+        )
         fast_api.add_middleware(
             UpdateResponseHeaderMiddleware,
             general_headers=cfg["api"]["http_header"]["general"],
-            exception_headers=[
-                ({"/docs/oauth2-redirect"}, cfg["api"]["http_header"]["auth"]),
-                ({"/docs", "/redoc"}, cfg["api"]["http_header"]["openapi"]),
-            ],
+            exception_headers=exception_headers,
         )
     # Handling of authentication exceptions
     if not debug:

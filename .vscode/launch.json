@@ -548,17 +548,6 @@
             "justMyCode": true,
         },
         {
-            "name": "test.commondb.unit.config",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_commondb_unit_config"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
             "name": "test.commondb.integration",
             "type": "debugpy",
             "request": "launch",

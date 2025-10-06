@@ -82,65 +82,6 @@ def map_paired_elements(
     return retval
 
 
-# def update_cfg_from_file(
-#     cfg: dict,
-#     file_or_dir: str,
-#     cfg_key_map: None | dict[str, str] = None,
-#     file_key_delimiter: str = "-",
-# ) -> None:
-#     """
-#     Import values from files as a nested dict where the nested keys are the file
-#     name split by "-". The value of the innermost key is the content of the file,
-#     which can in turn again be a dict.
-#     """
-#     cfg_key_map = cfg_key_map or {}
-
-#     def _add_value_recursion(cfg: dict, new_cfg: dict, parent_path: str) -> None:
-#         # Recursively add/replace values to/in cfg
-#         for key, value in new_cfg.items():
-#             path = f"{parent_path}.{key}" if len(parent_path) else key
-#             key = cfg_key_map.get(key, key)
-#             if isinstance(value, dict):
-#                 if key not in cfg:
-#                     cfg[key] = {}
-#                 _add_value_recursion(cfg[key], value, path)
-#             else:
-#                 cfg[key] = value
-
-#     # Get list of files
-#     if Path(file_or_dir).is_file():
-#         files = [file_or_dir]
-#     elif Path(file_or_dir).is_dir():
-#         files = [str(Path(file_or_dir) / x) for x in Path(file_or_dir).iterdir()]
-#     else:
-#         raise ValueError(f"Invalid file_or_dir: {file_or_dir}")
-
-#     # Read files into new_cfg
-#     new_cfg: dict[str, Any] = {}
-#     for file in files:
-#         name = Path(file).name
-#         keys = [cfg_key_map.get(x, x) for x in name.split(file_key_delimiter)]
-#         curr_cfg = new_cfg
-#         for key in keys[0:-1]:
-#             if key not in curr_cfg:
-#                 curr_cfg[key] = {}
-#             curr_cfg = curr_cfg[key]
-#         path = Path(file)
-#         if not path.is_file():
-#             continue
-#         # required for aks
-#         with open(path, "r", encoding="utf-8") as handle:
-#             try:
-#                 value = json.load(handle)
-#             except json.JSONDecodeError as e:
-#                 print(f"Error reading {file}: {e}\nSkipping file")
-#                 continue
-#         curr_cfg[keys[-1]] = value
-
-#     # Recursively add/replace values in cfg
-#     _add_value_recursion(cfg, new_cfg, "")
-
-
 # Get version with fallback for development
 @lru_cache(maxsize=1)
 def get_package_version() -> str:

@@ -43,24 +43,16 @@ def get_test_client(
                 test_dir = stored_env.test_dir
                 is_new_test_dir = False
                 break
+        # Adjust config to new dir and copy any repository files there
         if is_new_test_dir:
             app_cfg.copy_repository_files(test_dir)
 
         # Set and adjust cfg
         app_cfg.cfg["app"]["debug"] = True
-        # Adjust cfg for root user
         curr_cfg = app_cfg.cfg["service"]["auth"]["props"]["root"]
         curr_cfg["organization"]["name"] = "org1"
         curr_cfg["user"]["email"] = "root1_1@org1.org"
         curr_cfg["user"]["name"] = "root1_1"
-        # # Copy any repository files to test directory
-        # create_data_fixture(
-        #     app_cfg.cfg["repository"][repository_type.value],
-        #     set(enum.ServiceType),
-        #     repository_type,
-        #     data_fixture_name,
-        #     test_dir,
-        # )
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)

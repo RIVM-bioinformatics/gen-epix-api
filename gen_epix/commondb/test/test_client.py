@@ -719,15 +719,16 @@ class TestClient:
             print(f"{x}")
 
     def print_org_admin_policies(self) -> None:
-        org_admin_policies = self.read_all(
+        org_admin_policies: list[model.OrganizationAdminPolicy] = self.read_all(  # type: ignore[assignment]
             "root1_1", self.organization_admin_policy_class, cascade=True
         )
         print("\nOrganizationAdminPolicies:")
         for x in sorted(
-            org_admin_policies, key=lambda x: (x.organization.name, x.user.name)
+            org_admin_policies,
+            key=lambda x: (x.organization.name, x.user.name),  # type:ignore[union-attr]
         ):
             print(
-                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"
+                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type:ignore[union-attr]
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
