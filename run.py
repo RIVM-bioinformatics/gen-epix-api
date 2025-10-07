@@ -161,9 +161,6 @@ class Run:
     def test_all(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -187,18 +184,11 @@ class Run:
     def test_all_incl_performance(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
-
         pytest.main(Run.DEFAULT_PYTEST_ARGS + ["."])
 
     def test_all_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -214,9 +204,6 @@ class Run:
     def test_all_integration(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -228,9 +215,6 @@ class Run:
     def test_all_performance(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -243,9 +227,6 @@ class Run:
     def test_filter_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -256,9 +237,6 @@ class Run:
     def test_transform_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -269,9 +247,6 @@ class Run:
     def test_fastapp_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -282,9 +257,6 @@ class Run:
     def test_fastapp_unit_auth(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -295,9 +267,6 @@ class Run:
     def test_fastapp_unit_rbac(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -308,9 +277,6 @@ class Run:
     def test_fastapp_unit_repository(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -321,9 +287,6 @@ class Run:
     def test_docs_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -334,9 +297,6 @@ class Run:
     def test_commondb_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -347,9 +307,6 @@ class Run:
     def test_commondb_unit_auth(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -360,9 +317,6 @@ class Run:
     def test_commondb_integration(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -373,9 +327,6 @@ class Run:
     def test_commondb_integration_build_db(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -386,9 +337,6 @@ class Run:
     def test_omopdb_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -399,9 +347,6 @@ class Run:
     def test_fastapp_performance(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -412,9 +357,6 @@ class Run:
     def test_fastapp_performance_repository(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -425,9 +367,6 @@ class Run:
     def test_casedb_integration(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -441,9 +380,6 @@ class Run:
     def test_casedb_integration_build_db(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -454,9 +390,6 @@ class Run:
     def test_casedb_integration_case_access(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -467,9 +400,6 @@ class Run:
     def test_casedb_integration_case_validation(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -480,9 +410,6 @@ class Run:
     def test_casedb_integration_content(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -493,9 +420,6 @@ class Run:
     def test_casedb_performance(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -508,9 +432,6 @@ class Run:
     def test_casedb_performance_repository(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -521,9 +442,6 @@ class Run:
     def test_casedb_performance_user_journey(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -534,9 +452,6 @@ class Run:
     def test_casedb_performance_startup(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -547,9 +462,6 @@ class Run:
     def test_casedb_custom(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -560,9 +472,6 @@ class Run:
     def test_seqdb_integration(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -574,9 +483,6 @@ class Run:
     def test_seqdb_integration_build_db(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -587,9 +493,6 @@ class Run:
     def test_seqdb_integration_content(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -600,9 +503,6 @@ class Run:
     def test_seqdb_performance(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -615,9 +515,6 @@ class Run:
     def test_seqdb_performance_repository(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -628,9 +525,6 @@ class Run:
     def test_seqdb_performance_user_journey(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -641,9 +535,6 @@ class Run:
     def test_seqdb_performance_startup(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -654,9 +545,6 @@ class Run:
     def test_integration_content(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -668,9 +556,6 @@ class Run:
     def test_integration_service_connection(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -682,9 +567,6 @@ class Run:
     def test_remote_app_unit(self) -> None:
         import pytest
 
-        set_env_variables(
-            AppType.ALL, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_EMPTY
-        )
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [

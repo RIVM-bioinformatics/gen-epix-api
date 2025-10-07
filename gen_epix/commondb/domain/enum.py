@@ -79,6 +79,7 @@ class AppConfigType(Enum):
 class DevIdpConfig(Enum):
     IDPS = "IDPS"
     MOCK = "MOCK"
+    NONE = "NONE"
 
 
 class DevRepositoryConfig(Enum):

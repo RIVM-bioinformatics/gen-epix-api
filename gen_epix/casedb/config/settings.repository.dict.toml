@@ -22,10 +22,6 @@ class_name = "GeoDictRepository"
 module = "gen_epix.casedb.repositories"
 class_name = "OntologyDictRepository"
 
-[repository.seqdb]
-module = "gen_epix.casedb.repositories"
-class_name = "SeqdbDictRepository"
-
 [repository.subject]
 module = "gen_epix.casedb.repositories"
 class_name = "SubjectDictRepository"

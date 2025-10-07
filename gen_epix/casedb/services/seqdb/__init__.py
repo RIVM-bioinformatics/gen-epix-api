@@ -1,2 +1,2 @@
-from gen_epix.casedb.services.seqdb.local import SeqdbService as SeqdbService
-from gen_epix.casedb.services.seqdb.remote import SeqdbRemoteApp as SeqdbRemoteApp
+from gen_epix.casedb.services.seqdb.remote_app import SeqdbRemoteApp as SeqdbRemoteApp
+from gen_epix.casedb.services.seqdb.service import SeqdbService as SeqdbService

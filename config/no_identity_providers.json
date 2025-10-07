@@ -1,0 +1,9 @@
+{
+    "service": {
+        "auth": {
+            "props": {
+                "idps_cfg": []
+            }
+        }
+    }
+}

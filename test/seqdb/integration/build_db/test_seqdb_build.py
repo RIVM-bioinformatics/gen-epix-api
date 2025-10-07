@@ -21,10 +21,9 @@ from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryCo
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.commondb.util import set_env_variables
 
-DATA_FIXTURE_NAME = "EMPTY"
 APP_CFGS: dict[str, AppCfg] = {}
 for dev_repository_config in DevRepositoryConfig:
-    name = f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{dev_repository_config}"
+    name = f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{dev_repository_config.value}"
     set_env_variables(AppType.COMMONDB, DevIdpConfig.MOCK, dev_repository_config)
     APP_CFGS[name] = AppCfg(
         AppType.COMMONDB,
@@ -40,7 +39,7 @@ def get_test_client() -> Env:
     return commondb_get_test_client(
         test_type=EnumTestType.COMMONDB_INTEGRATION_BUILD_DB.value,
         app_cfg=APP_CFGS[
-            f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{DEV_REPOSITORY_CONFIG}"
+            f"{EnumTestType.COMMONDB_INTEGRATION_BUILD_DB}_{DEV_REPOSITORY_CONFIG.value}"
         ],
         verbose=VERBOSE,
         log_level=logging.ERROR,

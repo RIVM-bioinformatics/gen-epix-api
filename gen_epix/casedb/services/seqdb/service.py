@@ -1,11 +1,15 @@
+import importlib
 from typing import Any, Iterable
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
+from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
+from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.command import (
     RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
@@ -13,24 +17,54 @@ from gen_epix.seqdb.domain.command import (
 from gen_epix.seqdb.domain.enum import TreeAlgorithm as SeqdbTreeAlgorithm
 from gen_epix.seqdb.domain.model import PhylogeneticTree as SeqdbPhylogeneticTree
 from gen_epix.seqdb.domain.model import User as SeqdbUser
+from gen_epix.seqdb.env import AppEnv
 
 
 class SeqdbService(BaseSeqdbService):
 
-    def __init__(
-        self, app: App, ext_app: App, ext_app_user: SeqdbUser, **kwargs: Any
-    ) -> None:
+    def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
+        seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
+        seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
         super().__init__(app, **kwargs)
-        self._ext_app = ext_app
-        self._ext_app_user = ext_app_user
+        seqdb_app: App
+        seqdb_user: SeqdbUser | None
+        if seqdb_app_type.upper() == "LOCAL":
+            if "app_cfg" in seqdb_local_app_props:
+                seqdb_app_cfg = seqdb_local_app_props.pop("app_cfg")
+            else:
+                seqdb_app_cfg = AppCfg(
+                    AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
+                )
+            log_setup = seqdb_local_app_props.pop(
+                "log_setup", kwargs.get("logger") is not None
+            )
+            seqdb_app_env = AppEnv(
+                seqdb_app_cfg, log_setup=log_setup, **seqdb_local_app_props
+            )
+            seqdb_app = seqdb_app_env.app
+            seqdb_user = SeqdbUser(**seqdb_local_app_props["user"])
+        elif seqdb_app_type.upper() == "REMOTE":
+            remote_app_module = seqdb_remote_app_props.pop("module")
+            remote_app_class_name = seqdb_remote_app_props.pop("class_name")
+            remote_app_class = getattr(
+                importlib.import_module(remote_app_module), remote_app_class_name
+            )
+            seqdb_app = remote_app_class(**seqdb_remote_app_props)
+            seqdb_user = None
+        else:
+            raise exc.InitializationServiceError(
+                f"Invalid seqdb_app_type: {seqdb_app_type}. Must be 'LOCAL' or 'REMOTE'."
+            )
+        self._seqdb_app = seqdb_app
+        self._seqdb_user = seqdb_user
 
     @property
-    def ext_app(self) -> App:
-        return self._ext_app
+    def seqdb_app(self) -> App:
+        return self._seqdb_app
 
     @property
-    def ext_app_user(self) -> SeqdbUser:
-        return self._ext_app_user
+    def seqdb_user(self) -> SeqdbUser | None:
+        return self._seqdb_user
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
@@ -42,13 +76,15 @@ class SeqdbService(BaseSeqdbService):
         else:
             leaf_names = None
         seqdb_cmd = SeqdbRetrievePhylogeneticTreeCommand(
-            user=self.ext_app_user,
+            user=self.seqdb_user,
             seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
             tree_algorithm=SeqdbTreeAlgorithm[cmd.tree_algorithm_code.value],
             seq_ids=cmd.sequence_ids,
             leaf_names=leaf_names,
         )
-        seqdb_phylogenetic_tree: SeqdbPhylogeneticTree = self.ext_app.handle(seqdb_cmd)
+        seqdb_phylogenetic_tree: SeqdbPhylogeneticTree = self.seqdb_app.handle(
+            seqdb_cmd
+        )
         phylogenetic_tree = model.PhylogeneticTree(
             tree_algorithm_code=cmd.tree_algorithm_code,
             sequence_ids=seqdb_phylogenetic_tree.seq_ids,
@@ -64,9 +100,9 @@ class SeqdbService(BaseSeqdbService):
     def _retrieve_seq_objects_by_ids(
         self, seq_ids: list[UUID]
     ) -> list[seqdb_model.Seq]:
-        seqs: list[seqdb_model.Seq] = self.ext_app.handle(
+        seqs: list[seqdb_model.Seq] = self.seqdb_app.handle(
             seqdb_command.SeqCrudCommand(
-                user=self.ext_app_user,
+                user=self.seqdb_user,
                 obj_ids=seq_ids,
                 operation=CrudOperation.READ_SOME,
             )
@@ -76,9 +112,9 @@ class SeqdbService(BaseSeqdbService):
     def _retrieve_rawseq_objects_by_ids(
         self, raw_seq_ids: list[UUID]
     ) -> list[seqdb_model.RawSeq]:
-        raw_seqs: list[seqdb_model.RawSeq] = self.ext_app.handle(
+        raw_seqs: list[seqdb_model.RawSeq] = self.seqdb_app.handle(
             seqdb_command.RawSeqCrudCommand(
-                user=self.ext_app_user,
+                user=self.seqdb_user,
                 obj_ids=raw_seq_ids,
                 operation=CrudOperation.READ_SOME,
             )
@@ -109,11 +145,11 @@ class SeqdbService(BaseSeqdbService):
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
         seqdb_cmd = seqdb_command.RetrieveSeqFastaCommand(
-            user=self.ext_app_user,
+            user=self.seqdb_user,
             seq_ids=cmd.seq_ids,
             wrap=cmd.wrap,
         )
-        fasta_iterator: Iterable[str] = self.ext_app.handle(seqdb_cmd)
+        fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
 
     # def retrieve_allele_profile(

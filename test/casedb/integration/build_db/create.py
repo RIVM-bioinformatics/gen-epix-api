@@ -2,8 +2,8 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    DEV_REPOSITORY_CONFIG,
     REFDATA_ADMIN_OR_ABOVE_USERS,
-    REPOSITORY_TYPE,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
@@ -13,6 +13,7 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum, exc, model
+from gen_epix.commondb.domain.enum import DevRepositoryConfigSet
 
 
 class TestCreate:
@@ -1069,9 +1070,10 @@ class TestCreate:
                     "case_type_set_category1",
                 )
         # CaseTypeCol already exists
-        if not SKIP_CREATE_DATA and REPOSITORY_TYPE not in {
-            enum.RepositoryType.SA_SQLITE
-        }:
+        if (
+            not SKIP_CREATE_DATA
+            and DEV_REPOSITORY_CONFIG not in DevRepositoryConfigSet.SA_SQLITE.value
+        ):
             # sqlite does not enforce unique constraints on nullable columns.
             # CaseTypeCol.occurrence, which is part of a unique constraint, is
             # nullable, so this this test will fail for sqlite and should therefore

@@ -11,8 +11,6 @@ from gen_epix.commondb.env import AppEnv
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.test_client import TestClient
 
-DEFAULT_ROUTE_PREFIX = "/v1"
-
 TEST_CLIENTS: dict[Hashable, TestClient] = {}
 
 
@@ -20,7 +18,7 @@ def get_test_client(
     test_type: str,
     app_cfg: AppCfg,
     use_endpoints: bool = False,
-    route_prefix: str = DEFAULT_ROUTE_PREFIX,
+    route_prefix: str | None = None,
     verbose: bool = False,
     log_level: int = logging.ERROR,
     log_setup: bool = False,

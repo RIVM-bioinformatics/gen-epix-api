@@ -22,10 +22,6 @@ class_name = "GeoSARepository"
 module = "gen_epix.casedb.repositories"
 class_name = "OntologySARepository"
 
-[repository.seqdb]
-module = "gen_epix.casedb.repositories"
-class_name = "SeqdbSARepository"
-
 [repository.subject]
 module = "gen_epix.casedb.repositories"
 class_name = "SubjectSARepository"

@@ -13,6 +13,9 @@ from gen_epix.seqdb.domain import enum as seq_enum
 
 
 class SeqdbRemoteApp(RemoteApp):
+
+    DEFAULT_ROUTE_PREFIX = "/v1/"
+
     TREE_ALGORITHM_MAP = {
         x: y
         for x in enum.TreeAlgorithmType
@@ -25,15 +28,18 @@ class SeqdbRemoteApp(RemoteApp):
     }
 
     def __init__(self, host: str, port: int, **kwargs: dict) -> None:
+        default_route_prefix: str = kwargs.pop(  # type:ignore[assignment]
+            "default_route_prefix", self.DEFAULT_ROUTE_PREFIX
+        )
         super().__init__(
-            domain=DOMAIN,  # type: ignore
-            default_route_prefix="/v1/",
+            domain=DOMAIN,
+            default_route_prefix=default_route_prefix,
             default_jwt="",
             **kwargs,
         )
         self._host = host
         self._port = port
-        self.base_url = f"http://{self._host}:{self._port}{self._default_route_prefix}"
+        self.base_url = f"https://{self._host}:{self._port}{self._default_route_prefix}"
 
         handler = self.create_retrieve_phylogenetic_tree_handler()
         self.register_handler(

@@ -271,6 +271,8 @@ def set_env_variables(
         settings_files.append(general_cfg_path / "identity_providers.json")
     elif dev_idp_config_enum == DevIdpConfig.MOCK:
         settings_files.append(general_cfg_path / "mock_identity_provider.json")
+    elif dev_idp_config_enum == DevIdpConfig.NONE:
+        settings_files.append(general_cfg_path / "no_identity_providers.json")
     else:
         raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
     # Repository settings

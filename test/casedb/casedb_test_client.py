@@ -27,10 +27,6 @@ from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
 
-APP_NAME = "CASEDB"
-APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
-APP_CFG.setup_logger.setLevel(logging.WARNING)
-
 
 class OrganismType(enum.Enum):
     ORGANISM = "ORGANISM"
@@ -40,9 +36,6 @@ class OrganismType(enum.Enum):
 
 class CasedbTestClient(TestClient):
     TEST_CLIENTS: dict[Hashable, Any] = {}
-
-    DEFAULT_DATA_FIXTURE_NAME = "empty"
-    DEFAULT_ROUTE_PREFIX = "/v1"
 
     MODEL_KEY_MAP = TestClient.MODEL_KEY_MAP | {
         model.User: "name",
@@ -169,6 +162,7 @@ class CasedbTestClient(TestClient):
         log_level: int = logging.ERROR,
         log_setup: bool = False,
         use_endpoints: bool = False,
+        default_route_prefix: str | None = None,
         **kwargs: Any,
     ):
         # Set and adjust cfg

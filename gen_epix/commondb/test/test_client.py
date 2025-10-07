@@ -22,6 +22,8 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 class TestClient:
 
+    DEFAULT_ROUTE_PREFIX = "/v1"
+
     MODEL_KEY_MAP: dict[Type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
         model.UserInvitation: "email",
@@ -72,6 +74,8 @@ class TestClient:
         ] = command.UpdateUserCommand,
         verbose: bool = False,
         log_level: int = logging.ERROR,
+        use_endpoints: bool = False,
+        default_route_prefix: str | None = None,
         **kwargs: Any,
     ):
         # Set provided parameters
@@ -79,6 +83,7 @@ class TestClient:
         self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_env = app_env
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self.roles = set() if roles is None else roles
         self.role_hierarchy: dict[Hashable, set] = (
             {} if role_hierarchy is None else role_hierarchy
@@ -114,7 +119,8 @@ class TestClient:
         self.repositories = self.app_env.repositories
         self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
-        self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
+        self.use_endpoints = use_endpoints
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
@@ -147,6 +153,7 @@ class TestClient:
             assert self.app_last_handled_exception is not None
             assert self.endpoint_test_client is not None
 
+            route_prefix = route_prefix or self.default_route_prefix
             previous_exception_id = self.app_last_handled_exception["id"]
             retval, response = self.endpoint_test_client.handle(
                 cmd,

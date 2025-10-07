@@ -24,14 +24,14 @@ from gen_epix.fastapp.enum import CrudOperation
 
 APP_CFGS: dict[str, AppCfg] = {}
 for dev_repository_config in DevRepositoryConfig:
-    name = f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{dev_repository_config}"
+    name = f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{dev_repository_config.value}"
     set_env_variables(AppType.CASEDB, DevIdpConfig.MOCK, dev_repository_config)
     APP_CFGS[name] = AppCfg(
         AppType.CASEDB,
         enum.ServiceType,
         enum.RepositoryType,
         name=name,
-        setup_logger_level=logging.WARNING,
+        log_setup=False,
     )
 
 
@@ -40,7 +40,7 @@ def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION.value,
         app_cfg=APP_CFGS[
-            f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{DEV_REPOSITORY_CONFIG}"
+            f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{DEV_REPOSITORY_CONFIG.value}"
         ],
         verbose=VERBOSE,
         log_level=logging.ERROR,

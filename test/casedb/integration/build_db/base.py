@@ -1,12 +1,12 @@
 # Variables for debugging purposes
-from gen_epix.casedb.domain import enum
+from gen_epix.commondb.domain.enum import DevRepositoryConfig
 
 SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False
-REPOSITORY_TYPE = enum.RepositoryType.DICT
-# REPOSITORY_TYPE = enum.RepositoryType.SA_SQLITE
+DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_EMPTY
+# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_EMPTY
 
 ALL_USERS = [
     "root1_1",
