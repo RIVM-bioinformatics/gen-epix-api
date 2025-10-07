@@ -97,16 +97,24 @@ def load_demo_data(
                     CrudOperation.CREATE_SOME,
                 )
 
+    # Import the sa_model module to register the models
+    importlib.import_module(f"{module_root}.repositories.sa_model")
     # Get classes and config for the app type
     enum = importlib.import_module(f"{module_root}.domain.enum")
     model = importlib.import_module(f"{module_root}.domain.model")
     domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
-    dict_app_cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
+    dict_app_cfg = AppCfg(
+        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+    )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQLITE_DEMO)
-    sa_sqlite_app_cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
+    sa_sqlite_app_cfg = AppCfg(
+        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+    )
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.SA_SQL)
-    sa_sql_app_cfg = AppCfg(app_type.value, enum.ServiceType, enum.RepositoryType)
+    sa_sql_app_cfg = AppCfg(
+        app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
+    )
     user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     for service_type in enum.ServiceType:
         # # TODO: TEMPORARY for debugging, remove later
