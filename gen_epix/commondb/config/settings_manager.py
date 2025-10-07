@@ -72,15 +72,6 @@ class SettingsManager:
         )
         self._settings_cache = settings
 
-        # Dynaconf conversion to dict does not preserve key casing, so we re-load with lowercase keys if needed
-        # self._settings_cache = DictProxy()
-
-        # Convert dynaconf to dict for pydantic validation
-        # self._settings_cache = DictProxy(data=dict(settings))
-
-        # Validate with pydantic schema
-        # self._settings = SettingsSchema(**self._settings_cache)
-
         return self._settings_cache
 
     @property

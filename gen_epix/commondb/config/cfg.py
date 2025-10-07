@@ -3,6 +3,7 @@
 import abc
 import copy
 import importlib
+import json
 import logging
 import logging.config as logging_config
 import os
@@ -162,12 +163,40 @@ class AppCfg(BaseAppCfg):
             )
 
         # Load settings
+        if log_setup:
+            self.setup_logger.debug(
+                App.create_static_log_message(
+                    "d5fd558a", "Loading settings with SettingsManager"
+                )
+            )
         self._init_load_settings(envvar_prefix, log_setup)
+        # TODO: remove after debugging env setting on cloud
+        if log_setup:
+            self.setup_logger.info("Before validation")
+            cfg_dict = self._cfg.as_dict()
+            for sub_cfg in cfg_dict["REPOSITORY"].values():
+                for key in [
+                    "password",
+                    "user",
+                    "username",
+                    "api_key",
+                    "uid",
+                    "pwd",
+                    "connection_string",
+                    "file",
+                ]:
+                    if key in sub_cfg["props"]:
+                        sub_cfg["props"][key] = "***REDACTED***"
+            self.setup_logger.info(json.dumps(cfg_dict, indent=4))
+        if log_setup:
+            self.setup_logger.debug(
+                App.create_static_log_message(
+                    "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
+                )
+            )
 
         # Validate settings
         self._init_validate_settings()
-
-        # Finalise process
         if log_setup:
             self.setup_logger.info(
                 App.create_static_log_message(
@@ -207,22 +236,9 @@ class AppCfg(BaseAppCfg):
 
     def _init_load_settings(self, envvar_prefix: str, log_setup: bool) -> None:
         """Load settings using SettingsManager."""
-        if log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message(
-                    "d5fd558a", "Loading settings with SettingsManager"
-                )
-            )
 
         settings_manager = SettingsManager(prefix=envvar_prefix)
         self._cfg = settings_manager.load_settings()
-
-        if log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message(
-                    "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
-                )
-            )
 
     def _init_validate_settings(self) -> None:
         """Validate settings and apply defaults to all services and repositories."""
