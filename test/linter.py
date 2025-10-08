@@ -52,9 +52,9 @@ class Linter:
         ],
         "pylint": [
             "pylint",
-            "--max-line-length=88",
             "--fail-under=9",
             "gen_epix/",
+            "--disable=C0301",  # Ignore "line too long" warnings since black handles that
             # "test/",
         ],
         "isort": [
@@ -74,14 +74,22 @@ class Linter:
     }
 
     def run_pylint(
-        self, file: Path | str, filter_on_codes: set[str] | None = None
-    ) -> None:
-        cmd = self.presets["pylint"]
+        self,
+        file: Path | str,
+        filter_on_codes: set[str] | None = None,
+        disable_codes: set[str] | None = None,
+    ) -> str:
+        base_cmd = list(self.presets["pylint"])  # copy to avoid mutation
         if isinstance(file, str):
             file = Path(file)
         if filter_on_codes:
-            cmd = cmd + ["--disable=all", "--enable=" + ",".join(filter_on_codes)]
-        self.run(cmd, file=file)
+            base_cmd += [
+                "--disable=all",
+                f"--enable={','.join(sorted(filter_on_codes))}",
+            ]
+        if disable_codes:
+            base_cmd += [f"--disable={','.join(sorted(disable_codes))}"]
+        return self.run(base_cmd, file=file)
 
     def run_mypy(
         self, file: Path | str, filter_on_codes: set[str] | None = None
