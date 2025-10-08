@@ -41,7 +41,7 @@ CASEDB_APP_CFGS = get_app_cfgs(
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
         test_type=TEST_TYPE.value,
-        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE}_{DEV_REPOSITORY_CONFIG.value}"],
+        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE}__{DEV_REPOSITORY_CONFIG.value}"],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,

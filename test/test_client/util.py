@@ -264,7 +264,7 @@ def get_app_cfgs(
             extra_settings_files[i] = file.resolve()
     app_cfgs: dict[str, AppCfg] = {}
     for dev_repository_config in DevRepositoryConfig:
-        name = f"{test_type}_{dev_repository_config.value}"
+        name = f"{test_type}__{dev_repository_config.value}"
         set_env_variables(
             app_type,
             dev_idp_config,
