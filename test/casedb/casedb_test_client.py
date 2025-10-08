@@ -1,7 +1,6 @@
 import datetime
 import logging
 import re
-from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
@@ -35,7 +34,7 @@ class OrganismType(enum.Enum):
 
 
 class CasedbTestClient(TestClient):
-    TEST_CLIENTS: dict[Hashable, Any] = {}
+    TEST_CLIENTS: dict[str, "CasedbTestClient"] = {}
 
     MODEL_KEY_MAP = TestClient.MODEL_KEY_MAP | {
         model.User: "name",
@@ -47,7 +46,7 @@ class CasedbTestClient(TestClient):
         model.CaseType: "name",
         model.CaseTypeSetCategory: "name",
         model.CaseTypeSet: "name",
-        model.Concept: "abbreviation",
+        model.Concept: "code",
         model.ConceptSet: "name",
         model.CaseTypeSetMember: ("case_type_set_id", "case_type_id"),
         model.CaseTypeColSetMember: ("case_type_col_set_id", "case_type_col_id"),
@@ -132,9 +131,8 @@ class CasedbTestClient(TestClient):
             is_new_test_dir = True
             # Find existing test dir for same test type and use that if found,
             # so all results come in the same dir
-            for stored_key, stored_env in cls.TEST_CLIENTS.items():
-                stored_test_type, _, _ = stored_key  # type: ignore[misc]
-                if stored_test_type == test_type:  # type: ignore[has-type]
+            for stored_name, stored_env in cls.TEST_CLIENTS.items():
+                if stored_name.startswith(test_type):
                     test_name = stored_env.test_name
                     test_dir = stored_env.test_dir
                     is_new_test_dir = False
@@ -248,16 +246,31 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         code: str,
+        concept_set_or_str: str | model.ConceptSet | None = None,
+        set_dummy_concept_set: bool = False,
     ) -> model.Concept:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
+        concept_set: model.ConceptSet = (
+            self._get_obj(model.ConceptSet, concept_set_or_str)
+            if concept_set_or_str
+            else None
+        )  # type:ignore[assignment]
+        if set_dummy_concept_set:
+            if concept_set:
+                raise ValueError(
+                    "concept_set_or_str must be None if set_dummy_concept_set is True"
+                )
+            concept_set_id = self.generate_id()
+        else:
+            concept_set_id = concept_set.id
         concept = self.handle(
             command.ConceptCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.Concept(
-                    concept_set_id=self.generate_id(),
+                    concept_set_id=concept_set_id,
                     code=code,
                 ),
             )
@@ -268,8 +281,8 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         code: str,
-        concepts: set[str | model.Concept],
         concept_set_type: enum.ConceptSetType,
+        concepts: set[str | model.Concept] | None = None,
         regex: str | None = None,
         schema_definition: str | None = None,
         schema_uri: str | None = None,
@@ -295,10 +308,10 @@ class CasedbTestClient(TestClient):
         if concepts and set_dummy_concepts:
             for x in concepts:
                 if isinstance(x, str):
-                    self.create_concept(user, x)
+                    self.create_concept(user, x, concept_set)
                 else:
                     # If a Concept object is passed, replicate by code
-                    self.create_concept(user, x.code)
+                    self.create_concept(user, x.code, concept_set)
         return self._set_obj(concept_set)  # type:ignore[return-value]
 
     def create_region_set(
