@@ -1,7 +1,8 @@
 import abc
-from collections.abc import Hashable
 from enum import Enum
 from typing import Any, Callable, Type
+
+from dynaconf import Dynaconf
 
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.domain.entity import Entity
@@ -12,17 +13,17 @@ from gen_epix.fastapp.repository import BaseRepository
 
 class BaseAppEnv(abc.ABC):
     def __init__(self) -> None:
-        self._cfg: dict
+        self._cfg: Dynaconf
         self._app: App
-        self._services: dict[Hashable, BaseService]
-        self._repositories: dict[Hashable, BaseRepository]
+        self._services: dict[Enum, BaseService]
+        self._repositories: dict[Enum, BaseRepository]
         self._registered_user_dependency: Callable
         self._new_user_dependency: Callable
         self._idp_user_dependency: Callable
         raise NotImplementedError()
 
     @property
-    def cfg(self) -> dict:
+    def cfg(self) -> Dynaconf:
         return self._cfg
 
     @property
@@ -30,11 +31,11 @@ class BaseAppEnv(abc.ABC):
         return self._app
 
     @property
-    def services(self) -> dict[Hashable, BaseService]:
+    def services(self) -> dict[Enum, BaseService]:
         return self._services
 
     @property
-    def repositories(self) -> dict[Hashable, BaseRepository]:
+    def repositories(self) -> dict[Enum, BaseRepository]:
         return self._repositories
 
     @property

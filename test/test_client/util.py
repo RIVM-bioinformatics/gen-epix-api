@@ -1,6 +1,7 @@
 import datetime
 import gzip
 import importlib
+import logging
 import pickle
 from enum import Enum
 from pathlib import Path
@@ -241,6 +242,8 @@ def get_app_cfgs(
     extra_settings_files: (
         list[Path | str] | Path | str | None
     ) = "./test/test_client/settings.toml",
+    log_setup: bool = False,
+    log_level: str | int = logging.ERROR,
 ) -> dict[str, AppCfg]:
     """
     Create all casedb and seqdb app cfgs with a name for the given test type and
@@ -261,7 +264,7 @@ def get_app_cfgs(
             extra_settings_files[i] = file.resolve()
     app_cfgs: dict[str, AppCfg] = {}
     for dev_repository_config in DevRepositoryConfig:
-        name = f"{test_type}_{dev_repository_config.value}"
+        name = f"{test_type}__{dev_repository_config.value}"
         set_env_variables(
             app_type,
             dev_idp_config,
@@ -273,8 +276,10 @@ def get_app_cfgs(
             service_type_enum,
             repository_type_enum,
             name=name,
-            log_setup=False,
+            log_setup=log_setup,
         )
+        # Set log level
+        app_cfgs[name].set_log_level(log_level)
         # Add seqdb app_cfg to casedb app_cfg for seqdb service local app so that when the latter is instantiated, it can directly use this app_cfg without risk of having seqdb env variables being altered in the meantime
         if app_type == AppType.CASEDB and seqdb_app_cfgs is not None:
             app_cfgs[name].cfg["service"]["seqdb"]["props"]["seqdb_local_app"][

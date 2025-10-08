@@ -3,6 +3,7 @@ from typing import Type
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role
 from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.commondb.domain.policy import (
     map_common_role_hierarchy,
     map_common_role_permission_sets,
@@ -20,7 +21,7 @@ COMMON_ROLE_MAP = {
 }
 
 
-class RoleGenerator:
+class RoleGenerator(CommonRoleGenerator):
 
     COMMON_ROLE_PERMISSION_SETS = map_common_role_permission_sets(
         COMMON_ROLE_MAP, command.COMMON_COMMAND_MAP  # type: ignore[arg-type]

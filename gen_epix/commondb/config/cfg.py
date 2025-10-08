@@ -115,7 +115,7 @@ class AppCfg(BaseAppCfg):
         repository_type_enum: Type[Enum],
         log_setup: bool = True,
         name: str | None = None,
-        setup_logger_level: int | None = None,
+        setup_logger_level: str | int | None = None,
         logger_prefix: str | None = None,
         envvar_prefix: str | None = None,
         log_config_file_envvar: str = "LOG_CONFIG_FILE",
@@ -141,37 +141,37 @@ class AppCfg(BaseAppCfg):
             app_name = str(app_name_or_enum.value)
         else:
             app_name = app_name_or_enum
-        logger_prefix = logger_prefix or app_name.lower()
-        envvar_prefix = envvar_prefix or f"{app_name.upper()}_"
 
         # Add some properties
         self._app_name = app_name
         self._name = name
         self._service_type_enum = service_type_enum
         self._repository_type_enum = repository_type_enum
+        self._envvar_prefix = envvar_prefix or f"{app_name.upper()}_"
+        self._logger_prefix = logger_prefix or app_name.lower()
+        self._log_config_file_envvar = log_config_file_envvar
         self._log_setup = log_setup
+        self._setup_logger_level = setup_logger_level
 
         # Configure and set loggers
-        self._init_configure_loggers(
-            envvar_prefix, log_config_file_envvar, logger_prefix
-        )
-        if setup_logger_level is not None:
-            self.setup_logger.setLevel(setup_logger_level)
-        if log_setup:
+        self._init_configure_loggers()
+        if self._setup_logger_level is not None:
+            self.setup_logger.setLevel(self._setup_logger_level)
+        if self._log_setup:
             self.setup_logger.info(
                 App.create_static_log_message("c6010f14", "Started loading config data")
             )
 
         # Load settings
-        if log_setup:
+        if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
                     "d5fd558a", "Loading settings with SettingsManager"
                 )
             )
-        self._init_load_settings(envvar_prefix, log_setup)
+        self._init_load_settings()
         # TODO: remove after debugging env setting on cloud
-        if log_setup:
+        if self._log_setup:
             self.setup_logger.info("Before validation")
             cfg_dict = self._cfg.as_dict()
             for sub_cfg in cfg_dict["REPOSITORY"].values():
@@ -189,7 +189,7 @@ class AppCfg(BaseAppCfg):
                         sub_cfg["props"][key] = "***REDACTED***"
             self.setup_logger.info(json.dumps(cfg_dict, indent=4))
         # TODO: end remove
-        if log_setup:
+        if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
                     "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
@@ -198,7 +198,7 @@ class AppCfg(BaseAppCfg):
 
         # Validate settings
         self._init_validate_settings()
-        if log_setup:
+        if self._log_setup:
             self.setup_logger.info(
                 App.create_static_log_message(
                     "cdb7abcb", "Finished loading config data"
@@ -206,39 +206,38 @@ class AppCfg(BaseAppCfg):
             )
 
         # Set log level
-        self._init_set_log_level(envvar_prefix, log_level_envvar, log_setup)
+        self.set_log_level()
 
     def _init_configure_loggers(
         self,
-        envvar_prefix: str | None,
-        logging_config_file_envvar: str,
-        logger_prefix: str | None,
     ) -> None:
         """Configure loggers from logging configuration file."""
-        logging_config_file = os.environ[f"{envvar_prefix}{logging_config_file_envvar}"]
+        logging_config_file = os.environ[
+            f"{self._envvar_prefix}{self._log_config_file_envvar}"
+        ]
         with open(logging_config_file, "rt", encoding=getpreferredencoding()) as handle:
             logging_config_yaml = yaml.safe_load(handle.read())
             logging_config.dictConfig(logging_config_yaml)
 
         # Get loggers and put as attributes
         self._setup_logger = logging.getLogger(
-            AppCfg._prefix_logger(logger_prefix, "setup")
+            AppCfg._prefix_logger(self._logger_prefix, "setup")
         )
         self._api_logger = logging.getLogger(
-            AppCfg._prefix_logger(logger_prefix, "api")
+            AppCfg._prefix_logger(self._logger_prefix, "api")
         )
         self._app_logger = logging.getLogger(
-            AppCfg._prefix_logger(logger_prefix, "app")
+            AppCfg._prefix_logger(self._logger_prefix, "app")
         )
         self._service_logger = logging.getLogger(
-            AppCfg._prefix_logger(logger_prefix, "service")
+            AppCfg._prefix_logger(self._logger_prefix, "service")
         )
         self._logging_config_yaml = logging_config_yaml
 
-    def _init_load_settings(self, envvar_prefix: str, log_setup: bool) -> None:
+    def _init_load_settings(self) -> None:
         """Load settings using SettingsManager."""
 
-        settings_manager = SettingsManager(prefix=envvar_prefix)
+        settings_manager = SettingsManager(prefix=self._envvar_prefix)
         self._cfg = settings_manager.load_settings()
 
     def _init_validate_settings(self) -> None:
@@ -295,44 +294,6 @@ class AppCfg(BaseAppCfg):
             repository_cfg.update(self._cfg["repository"]["defaults"])
             repository_cfg.update(orig_cfg)
 
-    def _init_set_log_level(
-        self,
-        envvar_prefix: str | None,
-        logging_level_from_secret_envvar: str,
-        log_setup: bool,
-    ) -> None:
-        """Set log level from secrets if configured to do so."""
-        logging_config_yaml = self._logging_config_yaml
-
-        if bool(
-            int(
-                os.environ.get(
-                    AppCfg._prefix_envvar(
-                        envvar_prefix, logging_level_from_secret_envvar
-                    ),
-                    "1",
-                )
-            )
-        ):
-            # Get log level
-            log_level = None
-            if "log" in self._cfg and "level" in self._cfg["log"]:
-                log_level = self._cfg["log"]["level"].upper()
-
-            if log_level:
-                for logger_name in logging_config_yaml["loggers"]:
-                    curr_logger = logging.getLogger(logger_name)
-                    if log_setup:
-                        self.setup_logger.debug(
-                            App.create_static_log_message(
-                                "6ba9367c",
-                                f"Updated logger {logger_name} with level {log_level}",
-                            )
-                        )
-                    for handler in curr_logger.handlers:
-                        handler.setLevel(log_level)
-                    curr_logger.setLevel(log_level)
-
     def copy_repository_files(
         self,
         tgt_dir: Path | str,
@@ -388,3 +349,28 @@ class AppCfg(BaseAppCfg):
                     dst_handle.write(src_handle.read())
             # Update config
             cfg["file"] = str(Path(tgt_dir) / curr_path.name)
+
+    def set_log_level(self, log_level: str | int | None = None) -> None:
+        """Set log level for all loggers."""
+        # Parse log level
+        if log_level is None:
+            # Get log level from settings
+            log_level = self._cfg["log"]["level"]
+        else:
+            # Set new log level in settings as well
+            self._cfg["log"]["level"] = log_level
+        if isinstance(log_level, str):
+            log_level = log_level.upper()
+        assert isinstance(log_level, int) or isinstance(log_level, str)
+        for logger_name in self._logging_config_yaml["loggers"]:
+            curr_logger = logging.getLogger(logger_name)
+            if self._log_setup:
+                self.setup_logger.debug(
+                    App.create_static_log_message(
+                        "6ba9367c",
+                        f"Updated logger {logger_name} with level {log_level}",
+                    )
+                )
+            for handler in curr_logger.handlers:
+                handler.setLevel(log_level)
+            curr_logger.setLevel(log_level)
