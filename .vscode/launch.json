@@ -651,6 +651,17 @@
             "justMyCode": true
         },
         {
+            "name": "other.general.run_pylint_code_impact",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_general_run_pylint_code_impact",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "other.general.run_mypy",
             "type": "debugpy",
             "request": "launch",

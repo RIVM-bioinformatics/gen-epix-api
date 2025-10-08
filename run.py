@@ -806,6 +806,36 @@ class Run:
         ):
             print(line)
 
+    def other_general_run_pylint_code_impact(self) -> None:
+
+        import re
+        from test.linter import Linter
+
+        output_dir = Path(__file__).parent / "test" / "output"
+        base_report = output_dir / "pylint_base.txt"
+        summary_file = output_dir / "pylint_code_impact.csv"
+
+        linter = Linter()
+        base_output = linter.run_pylint(file=base_report)
+
+        code_pattern = re.compile(r": ([A-Z]\d{4}):")
+        codes = sorted(set(code_pattern.findall(base_output)))
+
+        results: list[tuple[str, str]] = []
+
+        for code in codes:
+            temp_report = output_dir / f"pylint_disable_{code}.txt"
+            # fresh run for each code
+            output = linter.run_pylint(file=temp_report, disable_codes={code})
+            score_match = re.search(r"Your code has been rated at ([\d\.]+)/10", output)
+            score = score_match.group(1) if score_match else "?"
+            results.append((code, score))
+
+        with open(summary_file, "w", encoding="utf-8") as f:
+            f.write("code,score,impact_score\n")
+            for code, score in results:
+                f.write(f"{code},{score}\n")
+
     def other_general_run_mypy(self) -> None:
         from test.linter import Linter
 
