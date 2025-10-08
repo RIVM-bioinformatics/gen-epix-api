@@ -355,7 +355,7 @@ class TestSeqdbRemoteApp:
         host = "test-host"
         port = 9999
         app = SeqdbRemoteApp(host=host, port=port)
-        expected_base_url = f"http://{host}:{port}/v1/"
+        expected_base_url = f"https://{host}:{port}/v1/"
         assert app.base_url == expected_base_url
 
     def test_handler_registration_on_init(self) -> None:

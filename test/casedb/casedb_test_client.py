@@ -132,13 +132,14 @@ class CasedbTestClient(TestClient):
             is_new_test_dir = True
             # Find existing test dir for same test type and use that if found,
             # so all results come in the same dir
-            for stored_key, stored_env in cls.TEST_CLIENTS.items():
-                stored_test_type, _, _ = stored_key  # type: ignore[misc]
-                if stored_test_type == test_type:  # type: ignore[has-type]
-                    test_name = stored_env.test_name
-                    test_dir = stored_env.test_dir
-                    is_new_test_dir = False
-                    break
+            if cls.TEST_CLIENTS:
+                for stored_key, stored_env in cls.TEST_CLIENTS.items():
+                    stored_test_type = stored_key.split(".")[-1]  # type: ignore[misc]
+                    if stored_test_type == test_type:  # type: ignore[has-type]
+                        test_name = stored_env.test_name
+                        test_dir = stored_env.test_dir
+                        is_new_test_dir = False
+                        break
             # Adjust config to new dir and copy any repository files there
             if is_new_test_dir:
                 app_cfg.copy_repository_files(test_dir)
