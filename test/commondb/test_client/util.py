@@ -4,7 +4,7 @@ from typing import Any, Hashable
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.env import AppEnv

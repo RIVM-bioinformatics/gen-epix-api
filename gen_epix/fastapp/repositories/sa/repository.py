@@ -62,17 +62,6 @@ class SARepository(BaseRepository):
             **kwargs,
         )
 
-    @staticmethod
-    def create_repository_from_sqlite(
-        repository_class: Type[BaseRepository],
-        entities: Iterable[Entity],
-        sqlite_file: str,
-        **kwargs: Any,
-    ) -> "SARepository":
-        repository = repository_class(entities, db, **kwargs)  # type: ignore[call-arg]
-        assert isinstance(repository, SARepository)
-        return repository
-
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
@@ -128,8 +117,8 @@ class SARepository(BaseRepository):
             )
         isolation_level: IsolationLevel = kwargs.pop(
             "isolation_level", self._default_isolation_level
-        )  # type: ignore[assignment]
-        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)  # type: ignore[assignment]
+        )
+        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)
         return SAUnitOfWork(
             self.get_session(
                 isolation_level=isolation_level,
@@ -151,24 +140,26 @@ class SARepository(BaseRepository):
         )
         return session
 
-    def register_mappers(self, **kwargs: Any) -> None:
+    def register_mappers(
+        self,
+        entities: list[Entity] | None = None,
+        field_name_map: dict[Type[Model], dict[str, str]] | None = None,
+        service_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        db_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        generate_service_metadata: (
+            dict[Type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
+        ) = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Default implementation to register standard mappers for a list of entities.
         """
         # Parse arguments
-        entities: list[Entity] = kwargs.pop("entities", [])  # type: ignore[assignment]
-        field_name_map: dict[Type[Model], dict[str, str]] = kwargs.pop(
-            "field_name_map", {}
-        )
-        service_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "service_metadata_field_names", {}
-        )
-        db_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "db_metadata_field_names", {}
-        )
-        generate_service_metadata: dict[
-            Type[Model], Callable[[Model, Hashable], dict[str, Any]]
-        ] = kwargs.pop("get_row_metadata", {})
+        entities = entities or []
+        field_name_map = field_name_map or {}
+        service_metadata_field_names = service_metadata_field_names or {}
+        db_metadata_field_names = db_metadata_field_names or {}
+        generate_service_metadata = generate_service_metadata or {}
 
         # Create and register mapper for each entity
         for entity in entities:

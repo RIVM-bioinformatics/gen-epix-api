@@ -1,7 +1,6 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
-from test.test_client.util import get_app_cfgs
 from typing import Iterable
 
 import pytest
@@ -9,6 +8,7 @@ import pytest
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
