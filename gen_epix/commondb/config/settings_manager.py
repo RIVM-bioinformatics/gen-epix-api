@@ -19,6 +19,7 @@ class SettingsManager:
         Initialize settings manager.
         """
         self.prefix = prefix
+        self.prefix_without_underscore = prefix.rstrip("_")  # necessary for dynaconf
         self._settings_cache: Dynaconf | None = None
         self.lowercase_keys = lowercase_keys
 
@@ -62,7 +63,7 @@ class SettingsManager:
 
         # Load settings using dynaconf for environment variable support
         settings = Dynaconf(
-            envvar_prefix=self.prefix,
+            envvar_prefix=self.prefix_without_underscore,
             settings_files=settings_files,
             envvar_separator=envvar_separator,  # Support nested keys like API__HOST
             lowercase_read=self.lowercase_keys,  # Ensure keys are lowercase for Pydantic
