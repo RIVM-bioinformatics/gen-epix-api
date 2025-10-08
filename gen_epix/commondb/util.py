@@ -275,11 +275,11 @@ def set_env_variables(
     settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
     if dev_idp_config_enum == DevIdpConfig.IDPS:
-        settings_files.append(general_cfg_path / "identity_providers.json")
+        settings_files.append(general_cfg_path / "identity_providers.toml")
     elif dev_idp_config_enum == DevIdpConfig.MOCK:
-        settings_files.append(general_cfg_path / "mock_identity_provider.json")
+        settings_files.append(general_cfg_path / "mock_identity_provider.toml")
     elif dev_idp_config_enum == DevIdpConfig.NONE:
-        settings_files.append(general_cfg_path / "no_identity_providers.json")
+        settings_files.append(general_cfg_path / "no_identity_providers.toml")
     else:
         raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
     # Repository settings
