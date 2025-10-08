@@ -1,27 +1,47 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.util import get_app_cfgs
 from typing import Iterable
 
 import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
+
+SKIP_ENDPOINTS = False
+VERBOSE = False
+DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
+
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    TEST_TYPE,
+)
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    TEST_TYPE,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
-        repository_type=enum.RepositoryType.DICT,
-        # repository_type=enum.RepositoryType.SA_SQLITE,
-        verbose=False,
+        test_type=TEST_TYPE.value,
+        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE}_{DEV_REPOSITORY_CONFIG.value}"],
+        verbose=VERBOSE,
         log_level=logging.ERROR,
-        use_endpoints=True,
-        data_fixture_name="FULL",
+        use_endpoints=not SKIP_ENDPOINTS,
     )
 
 

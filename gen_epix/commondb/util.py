@@ -234,11 +234,18 @@ def set_env_variables(
     app_type: AppType | str,
     dev_idp_config: DevIdpConfig | str,
     dev_repository_config: DevRepositoryConfig | str,
+    extra_settings_files: list[Path] | None = None,
 ) -> None:
     # Parse input
     if isinstance(app_type, str):
-        app_type_enum = AppType[app_type.upper()]
+        if app_type.upper() in AppType.__members__:
+            app_type_enum = AppType[app_type.upper()]
+            app_type_str = app_type_enum.value.lower()
+        else:
+            app_type_str = app_type.lower()
+            app_type_enum = None
     else:
+        app_type_str = app_type.value.lower()
         app_type_enum = app_type
     if isinstance(dev_idp_config, str):
         dev_idp_config_enum = DevIdpConfig[dev_idp_config.upper()]
@@ -258,14 +265,14 @@ def set_env_variables(
             AppType.SEQDB, dev_idp_config_enum, dev_repository_config_enum
         )
     # Initialise some
-    cfg_path = Path.cwd() / "gen_epix" / app_type_enum.value.lower() / "config"
+    cfg_path = Path.cwd() / "gen_epix" / app_type_str / "config"
     general_cfg_path = Path.cwd() / "config"
-    envvar_prefix = app_type_enum.value.upper() + "_"
+    envvar_prefix = app_type_str.upper() + "_"
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
     # Service secrets
-    settings_files.append(cfg_path / ".secrets.service.toml")
+    settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
     if dev_idp_config_enum == DevIdpConfig.IDPS:
         settings_files.append(general_cfg_path / "identity_providers.json")
@@ -284,21 +291,28 @@ def set_env_variables(
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
     # Repository secrets
     if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
-        settings_files.append(cfg_path / ".secrets.repository.dict.demo.toml")
+        settings_files.append(cfg_path / ".example.secrets.repository.dict.demo.toml")
     elif dev_repository_config_enum == DevRepositoryConfig.DICT_EMPTY:
-        settings_files.append(cfg_path / ".secrets.repository.dict.empty.toml")
+        settings_files.append(cfg_path / ".example.secrets.repository.dict.empty.toml")
     elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_DEMO:
-        settings_files.append(cfg_path / ".secrets.repository.sa_sqlite.demo.toml")
+        settings_files.append(
+            cfg_path / ".example.secrets.repository.sa_sqlite.demo.toml"
+        )
     elif dev_repository_config_enum == DevRepositoryConfig.SA_SQLITE_EMPTY:
-        settings_files.append(cfg_path / ".secrets.repository.sa_sqlite.empty.toml")
+        settings_files.append(
+            cfg_path / ".example.secrets.repository.sa_sqlite.empty.toml"
+        )
     elif dev_repository_config_enum == DevRepositoryConfig.SA_SQL:
-        settings_files.append(cfg_path / ".secrets.repository.sa_sql.toml")
+        settings_files.append(cfg_path / ".example.secrets.repository.sa_sql.toml")
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+    # Add any extra settings files
+    if extra_settings_files:
+        settings_files.extend(extra_settings_files)
     # Set environment variables
     os.environ[envvar_prefix + "SETTINGS_FILES"] = json.dumps(
-        [str(x.absolute()) for x in settings_files]
+        [str(x.resolve()) for x in settings_files]
     )
     os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
-        (general_cfg_path / "logging.yaml").absolute()
+        (general_cfg_path / "logging.yaml").resolve()
     )

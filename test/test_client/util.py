@@ -4,6 +4,7 @@ import importlib
 import pickle
 from enum import Enum
 from pathlib import Path
+from test.test_client.enum import TestType as EnumTestType
 from typing import Type
 
 import pandas as pd
@@ -128,10 +129,10 @@ def load_demo_data(
         )
         # Create dict repository, which is assumed to always be available
         dict_repository_class: Type[DictRepository] = dict_repository_cfg["class"]
-        demo_dict_file = Path(dict_repository_cfg["props"]["file"]).absolute()
+        demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
         empty_dict_file = Path(
             str(demo_dict_file).replace(".full.", ".empty.")
-        ).absolute()
+        ).resolve()
         zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
         start_time = datetime.datetime.now()
         dict_repository: DictRepository = (
@@ -160,10 +161,10 @@ def load_demo_data(
             service_type.value
         ]
         sa_repository_class: Type[SARepository] = sa_sqlite_repository_cfg["class"]
-        demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).absolute()
+        demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).resolve()
         empty_sa_sqlite_file = Path(
             str(demo_sa_sqlite_file).replace(".full", ".empty")
-        ).absolute()
+        ).resolve()
         start_time = datetime.datetime.now()
         # Empty repository
         sa_repository_class.create_repository(
@@ -228,3 +229,55 @@ def load_demo_data(
             print(
                 f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
             )
+
+
+def get_app_cfgs(
+    app_type: AppType,
+    service_type_enum: Type[Enum],
+    repository_type_enum: Type[Enum],
+    test_type: EnumTestType,
+    dev_idp_config: DevIdpConfig = DevIdpConfig.NONE,
+    seqdb_app_cfgs: dict[str, AppCfg] | None = None,
+    extra_settings_files: (
+        list[Path | str] | Path | str | None
+    ) = "./test/test_client/settings.toml",
+) -> dict[str, AppCfg]:
+    """
+    Create all casedb and seqdb app cfgs with a name for the given test type and
+    dev repository config so that they can be reused in tests
+    """
+    if extra_settings_files:
+        if not isinstance(extra_settings_files, list):
+            extra_settings_files = [extra_settings_files]
+        for i, file in enumerate(extra_settings_files):
+            if not isinstance(file, (str, Path)):
+                raise ValueError("extra_settings_files must be a list of str or Path")
+            if isinstance(file, str):
+                file = Path(file)
+            if not file.is_file():
+                raise ValueError(
+                    f"extra_settings_file {file} does not exist or is not a file"
+                )
+            extra_settings_files[i] = file.resolve()
+    app_cfgs: dict[str, AppCfg] = {}
+    for dev_repository_config in DevRepositoryConfig:
+        name = f"{test_type}_{dev_repository_config.value}"
+        set_env_variables(
+            app_type,
+            dev_idp_config,
+            dev_repository_config,
+            extra_settings_files=extra_settings_files,
+        )
+        app_cfgs[name] = AppCfg(
+            app_type,
+            service_type_enum,
+            repository_type_enum,
+            name=name,
+            log_setup=False,
+        )
+        # Add seqdb app_cfg to casedb app_cfg for seqdb service local app so that when the latter is instantiated, it can directly use this app_cfg without risk of having seqdb env variables being altered in the meantime
+        if app_type == AppType.CASEDB and seqdb_app_cfgs is not None:
+            app_cfgs[name].cfg["service"]["seqdb"]["props"]["seqdb_local_app"][
+                "app_cfg"
+            ] = seqdb_app_cfgs[name]
+    return app_cfgs

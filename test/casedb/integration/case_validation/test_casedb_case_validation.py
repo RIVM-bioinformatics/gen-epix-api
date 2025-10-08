@@ -9,6 +9,7 @@ from test.casedb.integration.case_validation.base import (
 )
 from test.commondb.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
+from test.test_client.util import get_app_cfgs
 from typing import Any, Type
 from uuid import UUID
 
@@ -16,32 +17,33 @@ import pandas as pd
 import pytest
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain import exc
-from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
-from gen_epix.commondb.util import map_paired_elements, set_env_variables
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
-APP_CFGS: dict[str, AppCfg] = {}
-for dev_repository_config in DevRepositoryConfig:
-    name = f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{dev_repository_config.value}"
-    set_env_variables(AppType.CASEDB, DevIdpConfig.MOCK, dev_repository_config)
-    APP_CFGS[name] = AppCfg(
-        AppType.CASEDB,
-        enum.ServiceType,
-        enum.RepositoryType,
-        name=name,
-        log_setup=False,
-    )
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    TEST_TYPE,
+)
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    TEST_TYPE,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION.value,
-        app_cfg=APP_CFGS[
-            f"{EnumTestType.CASEDB_INTEGRATION_CASE_VALIDATION}_{DEV_REPOSITORY_CONFIG.value}"
-        ],
+        test_type=TEST_TYPE.value,
+        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE}_{DEV_REPOSITORY_CONFIG.value}"],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,

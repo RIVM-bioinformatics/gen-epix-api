@@ -96,7 +96,7 @@ python run.py etl_load_demo_data casedb  # Service-specific data
 Configuration structure example:
 ```toml
 [service.auth.props.root.user]
-id = "01915051-edde-f225-19d7-7ab8886e00bc"
+id = "019542cc-8225-8f5d-fa30-d9c3f2629703"
 email = "root@dummy.org"
 
 [repository.defaults]

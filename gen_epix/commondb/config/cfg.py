@@ -188,6 +188,7 @@ class AppCfg(BaseAppCfg):
                     if key in sub_cfg["props"]:
                         sub_cfg["props"][key] = "***REDACTED***"
             self.setup_logger.info(json.dumps(cfg_dict, indent=4))
+        # TODO: end remove
         if log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
