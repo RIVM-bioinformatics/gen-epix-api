@@ -12,8 +12,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB"
-                "IDPS",
+                "CASEDB""IDPS",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -25,8 +24,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB"
-                "IDPS",
+                "CASEDB""IDPS",
                 "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
@@ -38,11 +36,26 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB"
-                "MOCK",
+                "CASEDB""MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true
+        },
+        {
+            "name": "api.casedb.local.idps.remote_seqdb",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "CASEDB",
+                "IDPS",
+                "DICT_DEMO"
+            ],
+            "justMyCode": true,
+            "env": {
+                "CASEDB_SERVICE__SEQDB__PROPS__SEQDB_APP_TYPE": "REMOTE"
+            }
         },
         // api.seqdb
         {
@@ -52,8 +65,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "SEQDB"
-                "IDPS",
+                "SEQDB""IDPS",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -65,8 +77,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "SEQDB"
-                "IDPS",
+                "SEQDB""IDPS",
                 "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
@@ -78,8 +89,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "SEQDB"
-                "MOCK",
+                "SEQDB""MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -92,8 +102,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "OMOPDB"
-                "IDPS",
+                "OMOPDB""IDPS",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -105,8 +114,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "OMOPDB"
-                "IDPS",
+                "OMOPDB""IDPS",
                 "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
@@ -118,8 +126,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "OMOPDB"
-                "MOCK",
+                "OMOPDB""MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -132,8 +139,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "COMMONDB"
-                "IDPS",
+                "COMMONDB""IDPS",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -145,8 +151,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "COMMONDB"
-                "IDPS",
+                "COMMONDB""IDPS",
                 "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
@@ -158,8 +163,7 @@
             "program": "run.py",
             "args": [
                 "api",
-                "COMMONDB"
-                "MOCK",
+                "COMMONDB""MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true
