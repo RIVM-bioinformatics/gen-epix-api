@@ -580,7 +580,10 @@ class CaseForCreateUpdate(Model):
     )
     subject_id: UUID | None = copy_model_field(Case, "subject_id")
     count: int | None = copy_model_field(Case, "count")
-    case_date: datetime = copy_model_field(Case, "case_date")
+    case_date: datetime | None = Field(
+        description="The date of the case. Required when creating a case, ignored when updating.",
+        default=None,
+    )
     content: dict[UUID, str | None] = Field(
         description="The column data of the case as {col_id: str_value}. If None and the model is used for update, then any existing value will be deleted."
     )

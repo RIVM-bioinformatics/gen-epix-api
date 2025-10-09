@@ -79,7 +79,9 @@ class ValidateCasesCommand(Command):
                 "The created in data collection ID may not be in the additional data collection IDs."
             )
         if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
+            raise ValueError("All cases must have an ID when updating cases")
+        if not self.is_update and any(x.case_date is None for x in self.cases):
+            raise ValueError("All cases must have a case date when creating cases")
         return self
 
 
