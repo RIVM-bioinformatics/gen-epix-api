@@ -15,15 +15,28 @@ from gen_epix.fastapp.model import Command, CrudCommand, Policy, User
 
 class RemoteApp(App):
     def __init__(
-        self, domain: Domain, default_route_prefix: str, default_jwt: str, **kwargs: Any
+        self,
+        domain: Domain,
+        host: str,
+        port: int,
+        default_route_prefix: str,
+        create_crud_handlers: bool = True,
+        **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
         self._default_route_prefix = default_route_prefix
-        self._default_jwt = default_jwt
+        self._host = host
+        self._port = port
         self._user_jwts: dict[str, str] = {}
         self._routes: dict[type[Command], str] = {}
 
         # register handlers here
+        if create_crud_handlers:
+            for command_class in self.domain.crud_commands:
+                handler = self.create_crud_handler(
+                    command_class, self._default_route_prefix, {}
+                )
+                self.register_handler(command_class, handler)
 
     def register_policy(
         self,
@@ -50,11 +63,7 @@ class RemoteApp(App):
         self._routes[command] = route
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
-        jwt = (
-            self._user_jwts.get(cmd.user.get_key(), self._default_jwt)
-            if cmd.user
-            else self._default_jwt
-        )
+        jwt = "DUMMY_JWT"
         return {"Authorization": f"Bearer {jwt}"} if jwt else {}
 
     def apply_handler(
@@ -72,15 +81,18 @@ class RemoteApp(App):
         return handler(command)
 
     def create_crud_handler(
-        self, cmd: CrudCommand, route_prefix: str, headers: dict[str, str]
+        self,
+        command_class: Type[CrudCommand],
+        route_prefix: str,
+        headers: dict[str, str],
     ) -> Callable[[Command], Any]:
-        model_class = cmd.MODEL_CLASS
+        model_class = command_class.MODEL_CLASS
         entity = model_class.ENTITY
         assert entity is not None
-        route = f"{route_prefix}/{entity.snake_case_plural_name}"
-        self.register_route(cmd.__class__, route, add_prefix=False)
+        route = f"https://{self._host}:{self._port}{route_prefix}{entity.snake_case_plural_name}"
+        self.register_route(command_class, route, add_prefix=False)
 
-        def handler(cmd: CrudCommand, route: str) -> Any:
+        def handler(route: str, cmd: CrudCommand) -> Any:
             with httpx.Client() as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:

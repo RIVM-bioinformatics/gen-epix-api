@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Callable
 from uuid import UUID
 
 import httpx
@@ -32,9 +33,10 @@ class SeqdbRemoteApp(RemoteApp):
             "default_route_prefix", self.DEFAULT_ROUTE_PREFIX
         )
         super().__init__(
-            domain=DOMAIN,
+            DOMAIN,
+            host,
+            port,
             default_route_prefix=default_route_prefix,
-            default_jwt="",
             **kwargs,
         )
         self._host = host
@@ -46,7 +48,7 @@ class SeqdbRemoteApp(RemoteApp):
             self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand], handler
         )
 
-    def create_retrieve_phylogenetic_tree_handler(self) -> partial:
+    def create_retrieve_phylogenetic_tree_handler(self) -> Callable:
 
         route = self.base_url + "retrieve/phylogenetic_tree"
         self.register_route(

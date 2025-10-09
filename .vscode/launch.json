@@ -12,7 +12,8 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB""IDPS",
+                "CASEDB",
+                "IDPS",
                 "DICT_DEMO"
             ],
             "justMyCode": true
@@ -24,7 +25,8 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB""IDPS",
+                "CASEDB",
+                "IDPS",
                 "SA_SQLITE_DEMO"
             ],
             "justMyCode": true
@@ -36,20 +38,21 @@
             "program": "run.py",
             "args": [
                 "api",
-                "CASEDB""MOCK",
+                "CASEDB",
+                "MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true
         },
         {
-            "name": "api.casedb.local.idps.remote_seqdb",
+            "name": "api.casedb.local.mock.remote_seqdb",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
                 "api",
                 "CASEDB",
-                "IDPS",
+                "MOCK",
                 "DICT_DEMO"
             ],
             "justMyCode": true,
