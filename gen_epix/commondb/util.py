@@ -11,7 +11,7 @@ from collections.abc import Hashable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from test.test_client.enum import TestType as EnumTestType
+from test.test_client.enum import TestType
 from typing import Any, Iterable, Type
 
 import ulid
@@ -320,7 +320,7 @@ def set_env_variables(
         settings_files.append(cfg_path / ".example.secrets.repository.sa_sql.toml")
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
-    # Add any extra settings files
+    # Add any extra settings files at the end
     if extra_settings_files:
         settings_files.extend(extra_settings_files)
     # Set environment variables
@@ -518,12 +518,14 @@ def get_app_cfgs(
     app_type: AppType,
     service_type_enum: Type[Enum],
     repository_type_enum: Type[Enum],
-    test_type: EnumTestType | str,
+    test_type: TestType | str,
     dev_idp_config: DevIdpConfig = DevIdpConfig.NONE,
-    seqdb_app_cfgs: dict[str, AppCfg] | None = None,
+    general_cfg_path: Path | None = None,
+    cfg_path: Path | None = None,
     extra_settings_files: (
         list[Path | str] | Path | str | None
     ) = "./test/test_client/settings.toml",
+    seqdb_app_cfgs: dict[str, AppCfg] | None = None,
     log_setup: bool = False,
     log_level: str | int = logging.ERROR,
 ) -> dict[str, AppCfg]:
@@ -553,6 +555,8 @@ def get_app_cfgs(
             app_type,
             dev_idp_config,
             dev_repository_config,
+            general_cfg_path=general_cfg_path,
+            cfg_path=cfg_path,
             extra_settings_files=extra_settings_files,
         )
         app_cfgs[name] = AppCfg(

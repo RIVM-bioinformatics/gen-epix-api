@@ -1,5 +1,9 @@
+from test.test_client.enum import TestType
+
 # Variables for debugging purposes
 from gen_epix.commondb.domain import enum
+
+TEST_TYPE = TestType.SEQDB_INTEGRATION_BUILD_DB
 
 SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
