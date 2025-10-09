@@ -11,7 +11,7 @@ from test.fastapp.model import Base1, Base2, Model1_1, Model1_2, Model2_1, Model
 from test.fastapp.service import Service1, Service2
 from test.fastapp.user_manager import UserManager
 from test.test_client.util import get_test_name, get_test_root_output_dir
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.fastapp import (

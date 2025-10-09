@@ -1,4 +1,3 @@
-from typing import Type
 
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role

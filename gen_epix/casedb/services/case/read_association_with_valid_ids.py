@@ -1,4 +1,3 @@
-from typing import Type
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model

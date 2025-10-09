@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.domain import enum

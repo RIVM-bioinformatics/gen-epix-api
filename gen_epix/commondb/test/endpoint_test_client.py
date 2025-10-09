@@ -2,7 +2,7 @@ import json
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 # import libraries

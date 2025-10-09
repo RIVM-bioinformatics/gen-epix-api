@@ -2,7 +2,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Type
+from typing import Any
 
 import httpx
 from fastapi import Request

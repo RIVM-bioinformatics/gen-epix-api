@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseReadOrganizationResultsOnlyPolicy

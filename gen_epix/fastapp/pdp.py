@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.enum import EventTiming

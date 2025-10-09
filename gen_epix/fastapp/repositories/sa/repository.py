@@ -3,7 +3,7 @@ import uuid
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Self, Type
+from typing import Any, Self
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, select

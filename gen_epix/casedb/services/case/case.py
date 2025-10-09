@@ -1,7 +1,7 @@
 import datetime
 from collections.abc import Callable, Iterable
 from decimal import Decimal
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command

@@ -5,7 +5,7 @@ import logging
 import uuid
 from collections.abc import Callable, Hashable
 from datetime import datetime
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain import Domain

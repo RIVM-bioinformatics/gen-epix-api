@@ -1,7 +1,7 @@
 import importlib
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 
 import sqlalchemy as sa
 from pydantic.fields import FieldInfo

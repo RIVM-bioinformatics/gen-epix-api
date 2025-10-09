@@ -1,5 +1,5 @@
 from collections.abc import Hashable
-from typing import Any, Type
+from typing import Any
 
 from pydantic import BaseModel
 

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any, Type
+from typing import Any
 
 from cachetools import TTLCache, cached
 

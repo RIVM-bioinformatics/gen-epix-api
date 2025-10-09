@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 from gen_epix.omopdb.domain import enum
 
 

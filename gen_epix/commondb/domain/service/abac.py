@@ -1,6 +1,5 @@
 import abc
 import uuid
-from typing import Type
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType

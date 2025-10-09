@@ -8,7 +8,7 @@ from test.casedb.integration.case_access.base import (
 )
 from test.commondb.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import pandas as pd

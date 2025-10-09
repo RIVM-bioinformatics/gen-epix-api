@@ -1,6 +1,6 @@
 import abc
 from types import TracebackType
-from typing import Self, Type
+from typing import Self
 
 
 class BaseUnitOfWork(abc.ABC):

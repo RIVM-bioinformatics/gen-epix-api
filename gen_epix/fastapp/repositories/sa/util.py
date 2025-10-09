@@ -3,7 +3,7 @@ import ipaddress
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa

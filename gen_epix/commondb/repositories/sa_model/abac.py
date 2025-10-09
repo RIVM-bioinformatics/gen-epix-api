@@ -1,4 +1,3 @@
-from typing import Type
 
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import declarative_mixin

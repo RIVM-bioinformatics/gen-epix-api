@@ -12,7 +12,7 @@ from test.fastapp.enum import ServiceType
 from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient
 from test.fastapp.user_manager import UserManager
-from typing import Any, Type
+from typing import Any
 
 import pytest
 

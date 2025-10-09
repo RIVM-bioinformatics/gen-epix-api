@@ -1,6 +1,5 @@
 # pylint: disable=too-few-public-methods
 
-from typing import Type
 from uuid import UUID
 
 import sqlalchemy.orm as orm

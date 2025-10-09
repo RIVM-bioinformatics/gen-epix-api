@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Hashable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import (
     App,

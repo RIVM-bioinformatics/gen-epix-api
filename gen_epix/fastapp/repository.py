@@ -2,7 +2,7 @@ import abc
 import uuid
 from collections.abc import Callable, Hashable, Iterable
 from itertools import chain
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import CrudOperation

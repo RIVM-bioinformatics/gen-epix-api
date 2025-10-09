@@ -1,5 +1,4 @@
 import time
-from typing import Type
 
 from cachetools import TTLCache, cached
 

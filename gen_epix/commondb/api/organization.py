@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, NoReturn, Type
+from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI

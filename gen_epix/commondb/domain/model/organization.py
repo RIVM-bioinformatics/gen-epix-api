@@ -1,7 +1,7 @@
 import datetime
 import json
 from enum import Enum
-from typing import ClassVar, Type
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator

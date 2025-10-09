@@ -3,7 +3,7 @@ Transformer registry for managing and creating transformer instances.
 """
 
 from collections.abc import Callable
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from gen_epix.transform.transformer import Transformer
 

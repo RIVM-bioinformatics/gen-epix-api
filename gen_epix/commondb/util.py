@@ -5,7 +5,7 @@ from collections.abc import Hashable, Iterable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 
 import ulid
 from pydantic import BaseModel, Field

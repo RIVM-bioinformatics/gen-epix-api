@@ -24,7 +24,6 @@ class TestStartup:
             TestType as EnumTestType,  # to avoid pytest warning
         )
 
-        from gen_epix.casedb.domain import enum
         from gen_epix.casedb.domain.enum import RepositoryType
 
         repository_type = RepositoryType.DICT

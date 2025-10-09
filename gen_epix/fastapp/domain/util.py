@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from types import NoneType, UnionType
-from typing import Annotated, Any, Type, Union, get_args, get_origin
+from typing import Annotated, Any, Union, get_args, get_origin
 
 from gen_epix.fastapp.domain.key import Key
 from gen_epix.fastapp.domain.link import Link

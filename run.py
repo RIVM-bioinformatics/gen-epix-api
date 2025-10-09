@@ -304,19 +304,15 @@ class Run:
 
     def env_casedb(self) -> None:
         Run.set_env_variables(AppType.CASEDB, AppConfigType.IDPS)
-        import gen_epix.casedb.env as env
 
     def env_seqdb(self) -> None:
         Run.set_env_variables(AppType.SEQDB, AppConfigType.IDPS)
-        import gen_epix.seqdb.env as env
 
     def env_omopdb(self) -> None:
         Run.set_env_variables(AppType.OMOPDB, AppConfigType.IDPS)
-        import gen_epix.omopdb.env as env
 
     def env_commondb(self) -> None:
         Run.set_env_variables(AppType.COMMONDB, AppConfigType.IDPS)
-        import gen_epix.omopdb.env as env
 
     ## etl
     def etl_load_demo_data(

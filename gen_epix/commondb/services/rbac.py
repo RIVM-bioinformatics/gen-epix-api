@@ -4,7 +4,7 @@ import logging
 import uuid
 from collections.abc import Callable, Hashable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.domain import command, model

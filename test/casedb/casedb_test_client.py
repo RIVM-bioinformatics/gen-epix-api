@@ -11,7 +11,7 @@ from test.test_client.util import (
     get_test_output_dir,
 )
 from time import sleep
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.case

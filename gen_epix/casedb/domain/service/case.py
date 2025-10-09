@@ -1,6 +1,5 @@
 import abc
 from collections.abc import Iterable
-from typing import Type
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model

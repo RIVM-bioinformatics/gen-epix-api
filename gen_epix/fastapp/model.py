@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import uuid
 from collections.abc import Hashable, Iterable
-from typing import Any, ClassVar, Self, Type
+from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import (

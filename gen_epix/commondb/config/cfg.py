@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 from urllib.parse import quote_plus
 
 import yaml

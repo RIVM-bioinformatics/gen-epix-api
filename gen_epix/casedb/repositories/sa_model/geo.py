@@ -2,7 +2,6 @@
 # This module defines base classes, methods are added later
 
 
-from typing import Type
 from uuid import UUID
 
 import sqlalchemy.orm as orm

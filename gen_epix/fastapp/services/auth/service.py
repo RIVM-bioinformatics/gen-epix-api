@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Any, Type
+from typing import Annotated, Any
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes

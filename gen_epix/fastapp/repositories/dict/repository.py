@@ -5,7 +5,7 @@ import pickle
 import zipfile
 from collections.abc import Callable, Hashable, Iterable
 from functools import partial
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.fastapp import exc

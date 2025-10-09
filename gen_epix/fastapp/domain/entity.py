@@ -3,7 +3,7 @@ import uuid
 from collections.abc import Callable, Hashable, Mapping
 from enum import Enum
 from functools import partial
-from typing import Any, ClassVar, Self, Type
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator

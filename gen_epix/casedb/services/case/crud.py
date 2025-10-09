@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model

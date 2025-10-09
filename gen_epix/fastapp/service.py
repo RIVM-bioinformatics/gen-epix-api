@@ -4,7 +4,7 @@ import abc
 import datetime
 import logging
 from collections.abc import Callable, Hashable, Iterable
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App

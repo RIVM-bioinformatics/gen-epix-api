@@ -1,6 +1,6 @@
 from test.fastapp import enum
 from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from gen_epix import fastapp
 from gen_epix.fastapp.model import CrudCommand

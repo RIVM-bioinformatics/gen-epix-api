@@ -1,5 +1,5 @@
 from collections.abc import Hashable, Iterable
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.commondb.domain import model
 from gen_epix.commondb.domain.model import Model

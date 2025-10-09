@@ -1,7 +1,7 @@
 import copy
 import traceback
 from collections.abc import Callable
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
 from gen_epix.casedb.domain.model import SORTED_SERVICE_TYPES

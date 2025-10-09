@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from typing import Tuple
 from uuid import UUID
 
 import numpy as np

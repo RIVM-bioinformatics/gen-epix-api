@@ -1,5 +1,4 @@
 from datetime import date, datetime
-from typing import Type
 from uuid import UUID
 
 import sqlalchemy.orm as orm

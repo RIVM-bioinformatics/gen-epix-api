@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import Self, Type
+from typing import Self
 
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import exc as sa_exc

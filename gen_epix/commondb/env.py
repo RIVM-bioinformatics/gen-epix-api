@@ -2,7 +2,7 @@
 import copy
 import traceback
 from collections.abc import Callable
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config.cfg import AppCfg

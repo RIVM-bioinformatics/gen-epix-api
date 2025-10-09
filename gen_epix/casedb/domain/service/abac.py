@@ -1,5 +1,4 @@
 import abc
-from typing import Type
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType

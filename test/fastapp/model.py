@@ -1,5 +1,5 @@
 from test.fastapp.enum import ServiceType
-from typing import ClassVar, Type
+from typing import ClassVar
 from uuid import UUID
 
 import sqlalchemy as sa

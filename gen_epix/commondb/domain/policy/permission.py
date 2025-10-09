@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Type
 
 from gen_epix.commondb.domain import command
 from gen_epix.commondb.domain.command import Command

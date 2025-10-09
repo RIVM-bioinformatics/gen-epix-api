@@ -1,4 +1,3 @@
-from typing import Type
 
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import (

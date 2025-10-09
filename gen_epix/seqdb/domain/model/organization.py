@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from pydantic import field_serializer
 
