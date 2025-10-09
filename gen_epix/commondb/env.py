@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Callable, Type
 
 from gen_epix.commondb.base_env import BaseAppEnv
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator

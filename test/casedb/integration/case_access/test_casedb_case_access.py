@@ -8,7 +8,6 @@ from test.casedb.integration.case_access.base import (
 )
 from test.commondb.util import retrieve_db_data_from_file
 from test.test_client.enum import TestType as EnumTestType
-from test.test_client.util import get_app_cfgs
 from typing import Any, Type
 from uuid import UUID
 
@@ -18,6 +17,7 @@ import pytest
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 

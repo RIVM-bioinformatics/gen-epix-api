@@ -15,7 +15,7 @@ from test.test_client.enum import TestType as EnumTestType
 
 import pytest
 
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
 from gen_epix.commondb.test.test_client import TestClient as Env

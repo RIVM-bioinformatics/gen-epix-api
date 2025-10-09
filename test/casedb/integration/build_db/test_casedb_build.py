@@ -12,12 +12,12 @@ from test.casedb.integration.build_db.delete import TestDelete as ModuleTestDele
 from test.casedb.integration.build_db.read import TestRead as ModuleTestRead
 from test.casedb.integration.build_db.update import TestUpdate as ModuleTestUpdate
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
-from test.test_client.util import get_app_cfgs
 
 import pytest
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_BUILD_DB

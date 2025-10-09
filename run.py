@@ -105,34 +105,22 @@ class Run:
     ## env
 
     def env_casedb(self) -> None:
-        set_env_variables(
-            AppType.CASEDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
-        )
         import gen_epix.casedb.env as env
 
     def env_seqdb(self) -> None:
-        set_env_variables(
-            AppType.SEQDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
-        )
         import gen_epix.seqdb.env as env
 
     def env_omopdb(self) -> None:
-        set_env_variables(
-            AppType.OMOPDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
-        )
         import gen_epix.omopdb.env as env
 
     def env_commondb(self) -> None:
-        set_env_variables(
-            AppType.COMMONDB, DevIdpConfig.IDPS, DevRepositoryConfig.DICT_DEMO
-        )
-        import gen_epix.omopdb.env as env
+        import gen_epix.commondb.env as env
 
     ## etl
     def etl_load_demo_data(
         self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
     ) -> None:
-        from test.test_client.util import load_demo_data
+        from gen_epix.commondb.util import load_demo_data
 
         # Set all environment variables
         set_env_variables(

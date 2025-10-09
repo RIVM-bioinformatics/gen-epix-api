@@ -4,7 +4,7 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import App
 from gen_epix.fastapp.enum import CrudOperation
