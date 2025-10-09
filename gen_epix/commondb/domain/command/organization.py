@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import ClassVar
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 import gen_epix.commondb.domain.model.organization as model
 from gen_epix.commondb.domain.command.base import (
@@ -111,6 +111,24 @@ class RetrieveOrganizationContactCommand(Command):
     contact_ids: list[UUID] | None = Field(
         default=None, description="List of contact IDs to retrieve contacts for"
     )
+
+    @model_validator(mode="after")
+    def check_one_of_fields(self) -> Any:
+        if (
+            sum(
+                [
+                    self.organization_ids is not None,
+                    self.site_ids is not None,
+                    self.contact_ids is not None,
+                ]
+            )
+            != 1
+        ):
+            raise ValueError(
+                "Exactly one of organization_ids, site_ids or contact_ids must be "
+                "provided"
+            )
+        return self
 
 
 class UpdateUserCommand(Command):

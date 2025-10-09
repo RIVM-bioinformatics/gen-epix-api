@@ -179,7 +179,7 @@ class Contact(Model):
         ),
     )
     # TODO: Temporary implementation, check established models for this
-    site_id: UUID | None = Field(
+    site_id: UUID = Field(
         description="The ID of the site in case the contact is site-specific. FOREIGN KEY",
     )
     site: Site | None = Field(
