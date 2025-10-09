@@ -1,7 +1,7 @@
 import abc
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Type
 
 from gen_epix.fastapp import App, BaseService
 from gen_epix.fastapp.domain.entity import Entity
@@ -57,7 +57,7 @@ class BaseAppEnv(abc.ABC):
         entities: list[Entity],
         repository_type: Enum,
         repository_cfg: dict[str, Any],
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         **kwargs: Any,
     ) -> BaseRepository:
         repository: BaseRepository

@@ -1,4 +1,5 @@
-from typing import Iterable, Tuple
+from collections.abc import Iterable
+from typing import Tuple
 from uuid import UUID
 
 import numpy as np
@@ -45,7 +46,7 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[Tuple[str, str]]:
+    ) -> Iterable[tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
         assert isinstance(uow, SAUnitOfWork)
         stmt = (

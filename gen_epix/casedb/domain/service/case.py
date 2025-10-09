@@ -12,7 +12,7 @@ from gen_epix.fastapp import BaseService
 class BaseCaseService(BaseService):
     SERVICE_TYPE = ServiceType.CASE
 
-    NO_ABAC_COMMAND_CLASSES: set[Type[command.Command]] = {
+    NO_ABAC_COMMAND_CLASSES: set[type[command.Command]] = {
         command.TreeAlgorithmClassCrudCommand,
         command.TreeAlgorithmCrudCommand,
         command.GeneticDistanceProtocolCrudCommand,
@@ -22,7 +22,7 @@ class BaseCaseService(BaseService):
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
     }
-    ABAC_METADATA_COMMAND_CLASSES: set[Type[command.Command]] = {
+    ABAC_METADATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,
@@ -30,7 +30,7 @@ class BaseCaseService(BaseService):
         command.CaseTypeColSetMemberCrudCommand,
         command.CaseTypeColSetCrudCommand,
     }
-    ABAC_DATA_COMMAND_CLASSES: set[Type[command.Command]] = {
+    ABAC_DATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseCrudCommand,
         command.CaseSetCrudCommand,
         command.CaseSetMemberCrudCommand,
@@ -39,7 +39,7 @@ class BaseCaseService(BaseService):
         command.ValidateCasesCommand,
     }
     CASCADE_DELETE_MODEL_CLASSES: dict[
-        Type[model.Model], tuple[Type[model.Model], ...]
+        type[model.Model], tuple[type[model.Model], ...]
     ] = {
         model.CaseTypeSet: (model.CaseTypeSetMember,),
         model.CaseType: (model.CaseTypeSetMember,),

@@ -1,7 +1,8 @@
 # pylint: disable=unused-import-alias
 import copy
 import traceback
-from typing import Any, Callable, Type
+from collections.abc import Callable
+from typing import Any, Type
 
 from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config.cfg import AppCfg
@@ -194,7 +195,7 @@ class AppEnv(BaseAppEnv):
                 else:
                     curr_repository = None
                 # Create service, injecting app, repository, logger and props
-                service_class: Type[BaseService] = data["service_class"]
+                service_class: type[BaseService] = data["service_class"]
                 curr_service: BaseService = service_class(
                     app,
                     service_type=service_type,

@@ -1,6 +1,7 @@
 import importlib
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Type
 
 import sqlalchemy as sa
 from pydantic.fields import FieldInfo
@@ -13,7 +14,7 @@ from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_
 
 
 def create_table_args(
-    model_class: Type[Model],
+    model_class: type[Model],
     field_name_map: dict[str, str] | None = None,
     **kwargs: Any,
 ) -> tuple:
@@ -43,9 +44,9 @@ def create_table_args(
 
 def create_mapped_column(
     domain: Domain,
-    model_class: Type[Model],
+    model_class: type[Model],
     field_name: str,
-    field_name_map: dict[Type[Model], dict[str, str]] | None = None,
+    field_name_map: dict[type[Model], dict[str, str]] | None = None,
     **kwargs: Any,
 ) -> MappedColumn[Any]:
     assert model_class.ENTITY is not None
@@ -102,15 +103,15 @@ def create_mapped_column(
 def create_field_metadata(
     domain: Domain,
 ) -> tuple[
-    dict[Type[Model], list[str]],
-    dict[Type[Model], list[str]],
-    dict[Type[Model], Callable[[Any, Any], dict[str, Any]]],
+    dict[type[Model], list[str]],
+    dict[type[Model], list[str]],
+    dict[type[Model], Callable[[Any, Any], dict[str, Any]]],
 ]:
-    model_classes: frozenset[Type[Model]] = domain.models  # type: ignore[assignment]
-    service_metadata_fields: dict[Type[Model], list[str]] = {
+    model_classes: frozenset[type[Model]] = domain.models  # type: ignore[assignment]
+    service_metadata_fields: dict[type[Model], list[str]] = {
         model_class: ["_modified_by"] for model_class in model_classes
     }
-    db_metadata_fields: dict[Type[Model], list[str]] = {
+    db_metadata_fields: dict[type[Model], list[str]] = {
         model_class: [
             "_created_at",
             "_modified_at",
@@ -119,7 +120,7 @@ def create_field_metadata(
         for model_class in model_classes
     }
     generate_service_metadata: dict[
-        Type[Model], Callable[[Any, Any], dict[str, Any]]
+        type[Model], Callable[[Any, Any], dict[str, Any]]
     ] = {
         model_class: lambda x, y: {
             "_modified_by": y,
@@ -131,10 +132,10 @@ def create_field_metadata(
 
 def set_entity_repository_model_classes(
     domain: Domain,
-    service_type_enum: Type[Enum],
-    row_metadata_mixin_class: Type,
+    service_type_enum: type[Enum],
+    row_metadata_mixin_class: type,
     service_modules_path: str,
-    field_name_map: dict[Type, dict[str, str]] | None = None,
+    field_name_map: dict[type, dict[str, str]] | None = None,
 ) -> None:
     if field_name_map is None:
         field_name_map = {}
@@ -193,9 +194,9 @@ def set_entity_repository_model_classes(
 
 
 def get_mixin_mapped_column(
-    model_mixin_class: Type,
+    model_mixin_class: type,
     field_name: str,
-    sa_column_type: Type[sa.types.TypeEngine],
+    sa_column_type: type[sa.types.TypeEngine],
     **kwargs: Any,
 ) -> Mapped:
 

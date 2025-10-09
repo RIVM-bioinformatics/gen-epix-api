@@ -37,7 +37,7 @@ from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
 SORTED_MODELS_BY_SERVICE_TYPE: dict[
-    enum.ServiceType, tuple[Type[fastapp.Model], ...]
+    enum.ServiceType, tuple[type[fastapp.Model], ...]
 ] = {
     enum.ServiceType.AUTH: (
         IdentityProvider,

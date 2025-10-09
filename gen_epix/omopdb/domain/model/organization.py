@@ -25,7 +25,7 @@ class User(common_model.User):
             exclude={"schema_name", "_model_class"},
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     roles: set[
         enum.Role
     ] = copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride] # Enum not subclassable
@@ -55,7 +55,7 @@ class UserInvitation(common_model.UserInvitation):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     # Override invited_by_user to ensure it uses the correct User model
     invited_by_user: User | None = (
         copy_model_field(  # pyright: ignore[reportIncompatibleVariableOverride]

@@ -20,7 +20,7 @@ from gen_epix.seqdb.repositories.sa_model.base import (
     SeqMixin,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 
 # TODO: add SA relationship calls
 

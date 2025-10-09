@@ -10,7 +10,7 @@ from gen_epix.commondb.services import AbacService as CommonAbacService
 class BaseAbacService(CommonAbacService):
     SERVICE_TYPE = ServiceType.ABAC
 
-    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS
     } | {
@@ -18,7 +18,7 @@ class BaseAbacService(CommonAbacService):
         command.UserShareCasePolicyCrudCommand,
     }
 
-    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
     } | {
@@ -28,7 +28,7 @@ class BaseAbacService(CommonAbacService):
         command.UserShareCasePolicyCrudCommand,
     }
 
-    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.READ_SELF_RESULTS_ONLY_COMMANDS
     } | {
@@ -36,17 +36,17 @@ class BaseAbacService(CommonAbacService):
         command.UserShareCasePolicyCrudCommand,
     }
 
-    READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+    READ_USER_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.READ_USER_COMMANDS
     } | set()
 
-    UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+    UPDATE_USER_COMMANDS: set[type[Command]] = {  # type: ignore[assignment]
         command.COMMON_COMMAND_MAP.get(x, x)
         for x in CommonAbacService.UPDATE_USER_COMMANDS
     } | set()
 
-    CASE_ABAC_COMMANDS: set[Type[Command]] = {
+    CASE_ABAC_COMMANDS: set[type[Command]] = {
         command.RetrieveCompleteCaseTypeCommand,
         command.RetrieveCasesByQueryCommand,
         command.RetrieveCasesByIdCommand,

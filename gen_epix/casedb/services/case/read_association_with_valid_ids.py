@@ -9,7 +9,7 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFil
 
 def case_service_read_association_with_valid_ids(
     self: BaseCaseService,
-    command_class: Type[command.CrudCommand],
+    command_class: type[command.CrudCommand],
     field_name1: str,
     field_name2: str,
     valid_ids1: set[UUID] | frozenset[UUID] | None = None,

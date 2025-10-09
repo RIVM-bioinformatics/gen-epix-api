@@ -1,11 +1,11 @@
 import json
 import tomllib
 import uuid
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Type
+from typing import Any, Type
 
 import ulid
 from pydantic import BaseModel, Field
@@ -121,7 +121,7 @@ def update_cfg_from_file(
         if not path.is_file():
             continue
         # required for aks
-        with open(path, "r", encoding="utf-8") as handle:
+        with open(path, encoding="utf-8") as handle:
             try:
                 value = json.load(handle)
             except json.JSONDecodeError as e:
@@ -153,10 +153,10 @@ def get_package_version() -> str:
 def register_domain_entities(
     domain: Domain,
     sorted_service_types: Iterable[Hashable],
-    sorted_models_by_service_type: dict[Hashable, list[Type[Model]]],
-    commands_by_service_type: dict[Hashable, set[Type[Command]]],
-    common_model_map: dict[Type[Model], Type[Model]] | None = None,
-    common_command_map: dict[Type[Command], Type[Command]] | None = None,
+    sorted_models_by_service_type: dict[Hashable, list[type[Model]]],
+    commands_by_service_type: dict[Hashable, set[type[Command]]],
+    common_model_map: dict[type[Model], type[Model]] | None = None,
+    common_command_map: dict[type[Command], type[Command]] | None = None,
     set_schema_to_service_type: bool = False,
 ) -> None:
     """
@@ -214,7 +214,7 @@ def register_domain_entities(
 
 
 def copy_model_field(
-    from_model: Type[BaseModel], field_name: str, **kwargs: Any
+    from_model: type[BaseModel], field_name: str, **kwargs: Any
 ) -> Any:
     """
     Copy a field from a model

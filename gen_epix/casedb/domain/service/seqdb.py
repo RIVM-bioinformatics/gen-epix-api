@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable
+from collections.abc import Iterable
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType

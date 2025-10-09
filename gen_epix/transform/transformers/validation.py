@@ -2,7 +2,7 @@
 Validation transformer implementation.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.transformer import Transformer

@@ -15,7 +15,7 @@ from gen_epix.commondb.repositories.sa_model import (
     create_table_args,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.ONTOLOGY.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.ONTOLOGY.value)
 
 
 class ConceptSet(Base, RowMetadataMixin):

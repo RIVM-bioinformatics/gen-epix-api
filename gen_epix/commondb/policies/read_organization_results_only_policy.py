@@ -20,15 +20,15 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             role_map=role_map,
             **kwargs,
         )
-        self.user_crud_command_class: Type[command.UserCrudCommand] = (
+        self.user_crud_command_class: type[command.UserCrudCommand] = (
             command.UserCrudCommand
         )
-        self.has_organization_id_attr_command_classes: set[Type[command.Command]] = {
+        self.has_organization_id_attr_command_classes: set[type[command.Command]] = {
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,
             command.UserInvitationCrudCommand,
         }
-        self.has_user_id_attr_command_classes: set[Type[command.Command]] = set()
+        self.has_user_id_attr_command_classes: set[type[command.Command]] = set()
 
     def filter(self, cmd: command.Command, retval: Any) -> Any:  # type: ignore[override]
         if not cmd.user or not cmd.user.id:

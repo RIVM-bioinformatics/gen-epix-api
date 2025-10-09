@@ -1,10 +1,11 @@
 import logging
+from collections.abc import Hashable
 from test.test_client.util import (
     create_data_fixture,
     get_test_name,
     get_test_output_dir,
 )
-from typing import Any, Hashable
+from typing import Any
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api

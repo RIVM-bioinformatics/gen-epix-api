@@ -31,13 +31,13 @@ class ServiceTestClient:
     TEST_CLIENTS = {}
 
     @classmethod
-    def get_test_client(cls, repository_class: Type[BaseRepository], **kwargs: Any):
+    def get_test_client(cls, repository_class: type[BaseRepository], **kwargs: Any):
         key = (kwargs.get("test_type", repository_class.__name__), repository_class)
         if key not in cls.TEST_CLIENTS:
             cls.TEST_CLIENTS[key] = cls(repository_class, **kwargs)
         return cls.TEST_CLIENTS[key]
 
-    def __init__(self, repository_class: Type[BaseRepository], **kwargs: Any) -> None:
+    def __init__(self, repository_class: type[BaseRepository], **kwargs: Any) -> None:
         self.test_type = kwargs.get("test_type", repository_class.__name__)
         self.test_name: str = kwargs.get("test_name", get_test_name(self.test_type))
         self.test_dir = get_test_root_output_dir() / self.test_name
@@ -79,7 +79,7 @@ class ServiceTestClient:
                 UUID("ff9b7532-5e90-42a8-ba5c-9b413bb5d513"),
             ],
         }
-        self.df: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
+        self.df: dict[type[model.Model], dict[Hashable, model.Model]] = {}
         self.df[Model1_1] = {
             x: Model1_1(id=x, var1=i, var2=f"{i}")
             for i, x in enumerate(model_ids[Model1_1])
@@ -116,7 +116,7 @@ class ServiceTestClient:
 
     def create_repository(
         self,
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         service_type: ServiceType,
         service: BaseService,
         **kwargs: Any,
@@ -173,7 +173,7 @@ class ServiceTestClient:
 
     def get_model_instances_for_class(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         as_dict: bool = False,
         set_id: bool = True,
     ) -> model.Model | dict:
@@ -189,7 +189,7 @@ class ServiceTestClient:
 
     def get_model_instance_for_class(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         as_dict: bool = False,
         idx: int = 0,
         set_id: bool = True,

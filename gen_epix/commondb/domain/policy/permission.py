@@ -30,7 +30,7 @@ NO_RBAC_PERMISSIONS: set[tuple[type[Command], PermissionType]] = {
 class RoleGenerator:
 
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Role, set[tuple[type[command.Command], PermissionTypeSet]]
     ] = {
         # TODO: remove UPDATE from association objects that do not have properties of their own such as CaseTypeSetMember
         Role.APP_ADMIN: {
@@ -120,7 +120,7 @@ class RoleGenerator:
 
 def map_common_role_permission_sets(
     role_map: dict[Enum, Enum],
-    command_map: dict[Type, Type],
+    command_map: dict[type, type],
 ) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
     role_permission_sets = RoleGenerator.ROLE_PERMISSION_SETS
     mapped_role_permission_sets: dict[Enum, set[tuple[type, PermissionTypeSet]]] = {}

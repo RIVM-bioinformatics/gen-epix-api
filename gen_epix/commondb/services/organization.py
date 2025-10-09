@@ -15,7 +15,7 @@ class OrganizationService(BaseOrganizationService):
         "user_invitation_time_to_live": 86400,  # 1 day
     }
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )

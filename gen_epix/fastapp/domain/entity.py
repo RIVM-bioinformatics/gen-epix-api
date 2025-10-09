@@ -1,9 +1,9 @@
 import re
 import uuid
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable, Mapping
 from enum import Enum
 from functools import partial
-from typing import Any, Callable, ClassVar, Mapping, Self, Type
+from typing import Any, ClassVar, Self, Type
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -45,14 +45,14 @@ class Entity(BaseModel):
     keys: dict[int, Key] = {}
     links: dict[int, Link] = {}
 
-    _model_class: Type[BaseModel] | None = None
-    _db_model_class: Type | None = None
-    _crud_command_class: Type | None = None
-    _create_api_model_class: Type | None = None
-    _read_api_model_class: Type | None = None
+    _model_class: type[BaseModel] | None = None
+    _db_model_class: type | None = None
+    _crud_command_class: type | None = None
+    _create_api_model_class: type | None = None
+    _read_api_model_class: type | None = None
     _fields: dict[str, dict[str, Any]] | None = None
     _links_by_field_name: dict[str, tuple[int, Link]] = {}
-    _get_link_id_by_model_class: dict[Type, Callable[[Any], Hashable]] = {}
+    _get_link_id_by_model_class: dict[type, Callable[[Any], Hashable]] = {}
     _keys_generator: Callable | None = None
     _has_model: bool = False
 
@@ -125,13 +125,13 @@ class Entity(BaseModel):
         return self._model_class.NAME  # type: ignore
 
     @property
-    def model_class(self) -> Type[BaseModel]:
+    def model_class(self) -> type[BaseModel]:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         return self._model_class  # type: ignore
 
     @property
-    def crud_command_class(self) -> Type[BaseModel] | None:
+    def crud_command_class(self) -> type[BaseModel] | None:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -139,7 +139,7 @@ class Entity(BaseModel):
         return self._crud_command_class  # type: ignore
 
     @property
-    def db_model_class(self) -> Type | None:
+    def db_model_class(self) -> type | None:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         if not self.persistable:
@@ -147,13 +147,13 @@ class Entity(BaseModel):
         return self._db_model_class  # type: ignore
 
     @property
-    def create_api_model_class(self) -> Type | None:
+    def create_api_model_class(self) -> type | None:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         return self._create_api_model_class  # type: ignore
 
     @property
-    def read_api_model_class(self) -> Type | None:
+    def read_api_model_class(self) -> type | None:
         if not self.has_model():
             raise DomainException(Entity.NO_MODEL_ERROR_MSG)
         return self._read_api_model_class  # type: ignore
@@ -166,7 +166,7 @@ class Entity(BaseModel):
         return lambda x: getattr(x, self.id_field_name)
 
     def set_model_class(
-        self, model_class: Type[BaseModel], on_existing: str = "raise"
+        self, model_class: type[BaseModel], on_existing: str = "raise"
     ) -> Self:
         """
         Set the model class for the entity.
@@ -248,7 +248,7 @@ class Entity(BaseModel):
         """
         return self._model_class is not None
 
-    def set_db_model_class(self, db_model_class: Type) -> Self:
+    def set_db_model_class(self, db_model_class: type) -> Self:
         """
         Set the repository model class for the entity, which is intended as the class
         that is stored or retrieved from the repository.
@@ -260,7 +260,7 @@ class Entity(BaseModel):
         self._db_model_class = db_model_class
         return self
 
-    def set_create_api_model_class(self, create_api_model_class: Type) -> Self:
+    def set_create_api_model_class(self, create_api_model_class: type) -> Self:
         """
         Set the API model class for the entity, which is intended as the request model
         that is posted to an endpoint to create a resource.
@@ -270,7 +270,7 @@ class Entity(BaseModel):
         self._create_api_model_class = create_api_model_class
         return self
 
-    def set_read_api_model_class(self, read_api_model_class: Type) -> Self:
+    def set_read_api_model_class(self, read_api_model_class: type) -> Self:
         """
         Set the API model class for the entity, which is intended as the model
         that returned in a response by an endpoint.
@@ -280,7 +280,7 @@ class Entity(BaseModel):
         self._read_api_model_class = read_api_model_class
         return self
 
-    def set_crud_command_class(self, crud_command_class: Type[BaseModel]) -> Self:
+    def set_crud_command_class(self, crud_command_class: type[BaseModel]) -> Self:
         """
         Set the CRUD command class for the entity, which is intended as the class
         that is stored or retrieved from the repository.
@@ -422,7 +422,7 @@ class Entity(BaseModel):
             raise ValueError("Entity does not have a model set")
         return self._keys_generator
 
-    def get_link_id(self, link_model_class: Type) -> Callable[[Any], Hashable]:
+    def get_link_id(self, link_model_class: type) -> Callable[[Any], Hashable]:
         fun = self._get_link_id_by_model_class.get(link_model_class)
         if fun is None:
             raise ValueError(
@@ -454,7 +454,7 @@ class Entity(BaseModel):
 
     def get_link_properties_by_field_name(
         self, link_field_name: str
-    ) -> tuple[int, Type[BaseModel], str | None]:
+    ) -> tuple[int, type[BaseModel], str | None]:
         """
         Get the properties of a link by its field name.
 
@@ -550,7 +550,7 @@ class Entity(BaseModel):
         props.update(update)
         return Entity(**props)
 
-    def _verify_and_parse_model_links(self, model_class: Type[BaseModel]) -> Self:
+    def _verify_and_parse_model_links(self, model_class: type[BaseModel]) -> Self:
         """
         Check if the link field names and back populate field names are valid given
         the model class. If they are valid, set the type of the field to LINK and
@@ -596,7 +596,7 @@ class Entity(BaseModel):
         return self
 
     def _verify_link_field_name(
-        self, model_class: Type[BaseModel], link_field_names: set, link: Link
+        self, model_class: type[BaseModel], link_field_names: set, link: Link
     ) -> None:
         """
         Verify the link field name.
@@ -633,7 +633,7 @@ class Entity(BaseModel):
         link_field_names.add(link.link_field_name)
 
     def _verify_relationship_fields(
-        self, model_class: Type[BaseModel], relationship_field_names: set, link: Link
+        self, model_class: type[BaseModel], relationship_field_names: set, link: Link
     ) -> None:
         """
         Verify the back populate field names.
@@ -702,7 +702,7 @@ class Entity(BaseModel):
 
     @staticmethod
     def _get_model_field_names(
-        model_class: Type[BaseModel],
+        model_class: type[BaseModel],
     ) -> list[tuple[str, str | None]]:
         """
         Returns a list of (field_name, alias) tuples.

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Type
 from uuid import UUID
 
 from gen_epix.commondb.domain import command, model
@@ -19,7 +19,7 @@ class RbacService(BaseRbacService):
         self,
         app: App,
         logger: logging.Logger | None = None,
-        role_enum: Type[Enum] = Enum,
+        role_enum: type[Enum] = Enum,
         **kwargs: Any,
     ):
         kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)

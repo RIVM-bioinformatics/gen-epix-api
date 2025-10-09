@@ -3,8 +3,9 @@
 
 
 import json
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, ClassVar, Iterable, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel

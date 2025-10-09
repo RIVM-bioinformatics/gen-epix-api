@@ -12,7 +12,7 @@ from gen_epix.commondb.repositories.sa_model.util import (
     create_table_args,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 
 @declarative_mixin

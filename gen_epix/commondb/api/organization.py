@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, NoReturn, Type
+from typing import Any, NoReturn, Type
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -67,22 +68,22 @@ def create_organization_endpoints(
     idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     service_type: enum.ServiceType = enum.ServiceType.ORGANIZATION,
-    user_class: Type[model.User] = model.User,
+    user_class: type[model.User] = model.User,
     user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
-    invite_user_command_class: Type[
+    invite_user_command_class: type[
         command.InviteUserCommand
     ] = command.InviteUserCommand,
-    retrieve_invite_user_constraints_command_class: Type[
+    retrieve_invite_user_constraints_command_class: type[
         command.RetrieveInviteUserConstraintsCommand
     ] = command.RetrieveInviteUserConstraintsCommand,
-    update_user_command_class: Type[
+    update_user_command_class: type[
         command.UpdateUserCommand
     ] = command.UpdateUserCommand,
-    user_invitation_request_body_class: Type[
+    user_invitation_request_body_class: type[
         UserInvitationRequestBody
     ] = UserInvitationRequestBody,
-    update_user_request_body_class: Type[UpdateUserRequestBody] = UpdateUserRequestBody,
-    api_permission_class: Type = Permission,
+    update_user_request_body_class: type[UpdateUserRequestBody] = UpdateUserRequestBody,
+    api_permission_class: type = Permission,
     **kwargs: Any,
 ) -> None:
     assert handle_exception

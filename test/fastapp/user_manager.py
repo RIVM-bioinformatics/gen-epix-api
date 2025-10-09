@@ -18,7 +18,7 @@ MOCK_USER = MockUser(id="u1", name="John", email="info@org.nl")
 
 class UserManager(BaseUserManager):
 
-    def __init__(self, user_class: Type[User] = User) -> None:
+    def __init__(self, user_class: type[User] = User) -> None:
         self.user_class = user_class
         self.users: dict[Hashable, User] = {}
         self.root_users: dict[Hashable, User] = {}

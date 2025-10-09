@@ -15,7 +15,7 @@ from gen_epix.commondb.repositories.sa_model import (
     create_table_args,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.GEO.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.GEO.value)
 
 
 class RegionSet(Base, RowMetadataMixin):

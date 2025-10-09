@@ -18,12 +18,12 @@ class PolicyDecisionPoint:
 
     def __init__(self) -> None:
         self._policies: dict[
-            Type[model.Command], dict[EventTiming, list[model.Policy]]
+            type[model.Command], dict[EventTiming, list[model.Policy]]
         ] = {}
 
     def register_policy(
         self,
-        command_class: Type[model.Command],
+        command_class: type[model.Command],
         policy: model.Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
@@ -42,7 +42,7 @@ class PolicyDecisionPoint:
 
     def unregister_policy(
         self,
-        command_class: Type[model.Command],
+        command_class: type[model.Command],
         policy: model.Policy,
         timing: EventTiming | None = None,
     ) -> None:
@@ -75,7 +75,7 @@ class PolicyDecisionPoint:
                 )
 
     def get_policies(
-        self, command_class: Type[model.Command], timing: EventTiming
+        self, command_class: type[model.Command], timing: EventTiming
     ) -> list[model.Policy]:
         """
         Get all policies registered for a command class and timing. The list is a copy.

@@ -14,13 +14,13 @@ from gen_epix.fastapp.enum import CrudOperation
 
 def retrieve_db_data_from_file(
     test_client: TestClient,
-    ordered_model_to_sheet_map: dict[Type[model.Model], str],
+    ordered_model_to_sheet_map: dict[type[model.Model], str],
     excel_file: Path,
     pickle_file: Path,
     extra_table_to_sheet_map: dict[str, str],
-) -> dict[Type[model.Model] | str, dict[UUID, model.Model] | pd.DataFrame]:
+) -> dict[type[model.Model] | str, dict[UUID, model.Model] | pd.DataFrame]:
     is_loaded_from_pkl = False
-    db: dict[Type[model.Model] | str, dict[UUID, model.Model] | pd.DataFrame] = {}
+    db: dict[type[model.Model] | str, dict[UUID, model.Model] | pd.DataFrame] = {}
     # Load from pickle if possible
     if (
         pickle_file.exists()

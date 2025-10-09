@@ -41,7 +41,7 @@ class AuthService(BaseAuthService):
 
     def create_user_dependencies(
         self,
-    ) -> tuple[Type[model.User], Type[model.User], Type[IDPUser]]:
+    ) -> tuple[type[model.User], type[model.User], type[IDPUser]]:
 
         if not self._idp_clients:
             # No authentication -> create/retrieve root user

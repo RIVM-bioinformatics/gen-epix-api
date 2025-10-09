@@ -30,7 +30,7 @@ class OIDCClient(IDPClient, OpenIdConnect):
         self,
         oidc_configuration: OIDCConfiguration,
         logger: logging.Logger | None = None,
-        log_item_class: Type[BaseLogItem] = LogItem,
+        log_item_class: type[BaseLogItem] = LogItem,
         **kwargs: Any,
     ):
         self._id = kwargs.get("id", uuid.uuid4())

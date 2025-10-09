@@ -99,7 +99,7 @@ class Linter:
     ) -> list[str]:
         if isinstance(file, str):
             file = Path(file)
-        with open(file, "rt") as handle:
+        with open(file) as handle:
             lines = handle.readlines()
         pattern = re.compile(r": ([A-Z]\d{4}):")
         messages = [
@@ -117,7 +117,7 @@ class Linter:
     ) -> list[str]:
         if isinstance(file, str):
             file = Path(file)
-        with open(file, "rt") as handle:
+        with open(file) as handle:
             lines = handle.readlines()
         location_pattern = re.compile(r"^(.*?:(\d+):)")
         error_code_pattern = re.compile(r"\[(.*?)\]\r?\n?$")
@@ -233,6 +233,6 @@ class Linter:
         if file_basename:
             file = Path(f"{file_basename}.txt")
             file2 = Path(f"{file_basename}.{now_str}.txt")
-            with open(file, "wt") as handle:
+            with open(file, "w") as handle:
                 handle.write("\n".join(outputs))
             file2.write_text(file.read_text())

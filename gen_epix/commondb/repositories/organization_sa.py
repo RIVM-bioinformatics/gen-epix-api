@@ -14,10 +14,10 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
     def __init__(
         self,
         engine: Engine,
-        user_class: Type[model.User] = model.User,
-        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        sa_user_class: Type[User] = User,
-        sa_user_invitation_class: Type[UserInvitation] = UserInvitation,
+        user_class: type[model.User] = model.User,
+        user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
+        sa_user_class: type[User] = User,
+        sa_user_invitation_class: type[UserInvitation] = UserInvitation,
         **kwargs: Any,
     ):
         self.sa_user_class = sa_user_class

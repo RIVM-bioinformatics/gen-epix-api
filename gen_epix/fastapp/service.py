@@ -3,8 +3,8 @@ from __future__ import annotations
 import abc
 import datetime
 import logging
-from collections.abc import Hashable
-from typing import Any, Callable, Iterable, Type
+from collections.abc import Callable, Hashable, Iterable
+from typing import Any, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
@@ -57,7 +57,7 @@ class BaseService(abc.ABC):
         self._timestamp_factory: Callable[[], datetime.datetime] = timestamp_factory
         # Initialize other members
         self._crud_listeners: dict[
-            tuple[Type[CrudCommand], EventTiming],
+            tuple[type[CrudCommand], EventTiming],
             list[Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]]],
         ] = {}
         # Log start
@@ -121,7 +121,7 @@ class BaseService(abc.ABC):
         raise NotImplementedError()
 
     def register_default_crud_handlers(
-        self, exclude: set[Type[CrudCommand]] | None = None
+        self, exclude: set[type[CrudCommand]] | None = None
     ) -> None:
         """
         Register the crud method as the handler for all registered CRUD
@@ -143,7 +143,7 @@ class BaseService(abc.ABC):
 
     def register_crud_listener(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
@@ -168,7 +168,7 @@ class BaseService(abc.ABC):
 
     def unregister_crud_listener(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
@@ -492,11 +492,11 @@ class BaseService(abc.ABC):
             return
         for link in other_service_links.values():
             link_obj_ids = list(
-                set(
+                {
                     getattr(x, link.link_field_name)
                     for x in objs
                     if getattr(x, link.link_field_name) is not None
-                )
+                }
             )
             if link_obj_ids:
                 link_cmd = self._app.domain.get_crud_command_for_model(
@@ -528,11 +528,11 @@ class BaseService(abc.ABC):
             return
         for link in same_service_links.values():
             link_obj_ids = list(
-                set(
+                {
                     getattr(x, link.link_field_name)
                     for x in objs
                     if getattr(x, link.link_field_name) is not None
-                )
+                }
             )
             if link_obj_ids:
                 try:

@@ -22,8 +22,8 @@ class UserManager(BaseUserManager):
 
     def __init__(
         self,
-        user_class: Type[model.User],
-        user_invitation_class: Type[model.UserInvitation],
+        user_class: type[model.User],
+        user_invitation_class: type[model.UserInvitation],
         organization_service: BaseOrganizationService,
         rbac_service: BaseRbacService,
         root_cfg: dict[str, dict[str, str]],
@@ -32,12 +32,12 @@ class UserManager(BaseUserManager):
     ):
         self._user_class = user_class
         self._user_invitation_class = user_invitation_class
-        self._role_enum: Type[Enum] = user_class.ROLE_ENUM
-        if "ROOT" not in set(x.value for x in self._role_enum):
+        self._role_enum: type[Enum] = user_class.ROLE_ENUM
+        if "ROOT" not in {x.value for x in self._role_enum}:
             raise exc.InitializationServiceError(
                 "Root role is not defined in the user model"
             )
-        if "GUEST" not in set(x.value for x in self._role_enum):
+        if "GUEST" not in {x.value for x in self._role_enum}:
             raise exc.InitializationServiceError(
                 "Guest role is not defined in the user model"
             )

@@ -4,9 +4,10 @@ import time
 import uuid
 from abc import ABC
 from collections import Counter, defaultdict
+from collections.abc import Collection, Iterable
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Collection, Iterable
+from typing import Any
 
 import sqlalchemy as sa
 
@@ -201,13 +202,11 @@ class ModelAnonymizer(BaseAnonymizer):
                 )
                 values = [t[0] for t in results.fetchall()]
                 value_counts = Counter(values)
-                values_culled = set(
-                    [
-                        val
-                        for val, ct in value_counts.items()
-                        if ct >= self._MIN_VALUES_REQUIRED
-                    ]
-                )
+                values_culled = {
+                    val
+                    for val, ct in value_counts.items()
+                    if ct >= self._MIN_VALUES_REQUIRED
+                }
                 categorical_loc_values[model_class][field_name] = values_culled
         return categorical_loc_values
 

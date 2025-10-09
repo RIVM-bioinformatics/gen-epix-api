@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import abc
 import uuid
-from collections.abc import Hashable
-from typing import Any, ClassVar, Iterable, Self, Type
+from collections.abc import Hashable, Iterable
+from typing import Any, ClassVar, Self, Type
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import (
@@ -96,7 +96,7 @@ class Permission(PydanticBaseModel, frozen=True):
 
 
 class Policy(abc.ABC):
-    def get_is_denied_exception(self) -> Type[Exception]:
+    def get_is_denied_exception(self) -> type[Exception]:
         return exc.UnauthorizedAuthError
 
     # Not an abstract method since it is not always needed
@@ -108,7 +108,7 @@ class Policy(abc.ABC):
         raise NotImplementedError
 
     # Not an abstract method since it is not always needed
-    def get_content_return_type(self, cmd: Command) -> Type:
+    def get_content_return_type(self, cmd: Command) -> type:
         raise NotImplementedError
 
     # Not an abstract method since it is not always needed
@@ -135,7 +135,7 @@ class Command(PydanticBaseModel):
 
 class CrudCommand(Command):
     PERMISSION_TYPE_SET: ClassVar[PermissionTypeSet] = PermissionTypeSet.CRUD
-    MODEL_CLASS: ClassVar[Type[Model]] = Model
+    MODEL_CLASS: ClassVar[type[Model]] = Model
 
     operation: CrudOperation = Field(description="The CRUD operation to perform.")
     obj_ids: Hashable | list[Hashable] | None = Field(
@@ -256,7 +256,7 @@ class CrudCommand(Command):
 
 
 class UpdateAssociationCommand(Command):
-    ASSOCIATION_CLASS: ClassVar[Type[Model]] = Model
+    ASSOCIATION_CLASS: ClassVar[type[Model]] = Model
     LINK_FIELD_NAME1: ClassVar[str] = ""
     LINK_FIELD_NAME2: ClassVar[str] = ""
 

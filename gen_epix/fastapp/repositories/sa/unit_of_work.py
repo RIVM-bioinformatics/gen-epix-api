@@ -42,7 +42,7 @@ class SAUnitOfWork(BaseUnitOfWork):
 
     @staticmethod
     def _handle_exception(
-        exception_class: Type[Exception],
+        exception_class: type[Exception],
         exception_value: Exception,
         traceback: TracebackType | None,
     ) -> Exception:
@@ -88,7 +88,7 @@ class SAUnitOfWork(BaseUnitOfWork):
 
     def __exit__(
         self,
-        exception_class: Type[Exception] | None,
+        exception_class: type[Exception] | None,
         exception_value: Exception | None,
         traceback: TracebackType | None,
     ) -> None:

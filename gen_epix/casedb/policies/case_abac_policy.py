@@ -9,5 +9,5 @@ class CaseAbacPolicy(BaseCaseAbacPolicy):
     def get_content(self, cmd: Command) -> model.CaseAbac:
         return self.abac_service.get_case_abac(cmd)
 
-    def get_content_return_type(self, cmd: Command) -> Type[model.Model]:
+    def get_content_return_type(self, cmd: Command) -> type[model.Model]:
         return model.CaseAbac

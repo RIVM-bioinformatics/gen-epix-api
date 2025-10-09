@@ -3,7 +3,7 @@ ISO time transformer implementation.
 """
 
 import datetime
-from typing import Callable
+from collections.abc import Callable
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import TimeUnit as TimeUnit

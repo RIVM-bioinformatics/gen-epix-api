@@ -15,9 +15,9 @@ class BaseOrganizationService(BaseService):
     def __init__(
         self,
         *args: Any,
-        user_class: Type[model.User] = model.User,
-        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        user_invitation_constraints_class: Type[
+        user_class: type[model.User] = model.User,
+        user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
+        user_invitation_constraints_class: type[
             model.UserInvitationConstraints
         ] = model.UserInvitationConstraints,
         **kwargs: Any,

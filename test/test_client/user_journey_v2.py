@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from enum import Enum
 from test.test_client.user_journey import UserJourney
-from typing import Any, Iterable, Self
+from typing import Any, Self
 
 import pandas as pd
 

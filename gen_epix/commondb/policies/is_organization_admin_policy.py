@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Type
 from uuid import UUID
 
 from gen_epix.commondb.domain import command, enum, model
@@ -14,7 +15,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         self,
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
-        user_class: Type[model.User] = model.User,
+        user_class: type[model.User] = model.User,
         **kwargs: Any,
     ):
         super().__init__(
@@ -24,7 +25,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
             **kwargs,
         )
         self._get_organization_ids_handler_map: dict[
-            Type[command.Command],
+            type[command.Command],
             Callable[[command.Command], set[UUID]],
         ] = {}
         f = self.register_retrieve_organization_ids_handler
@@ -59,7 +60,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
 
     def register_retrieve_organization_ids_handler(
         self,
-        command_class: Type[command.Command],
+        command_class: type[command.Command],
         handler: Callable[[command.Command], set[UUID]],
     ) -> None:
         self._get_organization_ids_handler_map[command_class] = handler
@@ -94,7 +95,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
             command.ContactCrudCommand(
                 user=cmd.user,
                 objs=None,
-                obj_ids=list(set(x.site_id for x in contacts if x.site_id)),
+                obj_ids=list({x.site_id for x in contacts if x.site_id}),
                 operation=CrudOperation.READ_SOME,
             )
         )

@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 import numpy as np

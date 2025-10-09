@@ -32,7 +32,7 @@ from gen_epix.commondb.repositories.sa_model import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model import create_table_args
 from gen_epix.seqdb.domain import enum, model
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 
 class Organization(Base, OrganizationMixin):

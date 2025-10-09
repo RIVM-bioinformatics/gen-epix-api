@@ -21,8 +21,8 @@ from gen_epix.fastapp import App
 class BaseAppCfg(abc.ABC):
     def __init__(self) -> None:
         self._app_name: str
-        self._service_type_enum: Type[Enum]
-        self._repository_type_enum: Type[Enum]
+        self._service_type_enum: type[Enum]
+        self._repository_type_enum: type[Enum]
         self._log_setup: bool
         self._cfg: Any
         self._setup_logger: logging.Logger
@@ -35,11 +35,11 @@ class BaseAppCfg(abc.ABC):
         return self._app_name
 
     @property
-    def service_type_enum(self) -> Type[Enum]:
+    def service_type_enum(self) -> type[Enum]:
         return self._service_type_enum
 
     @property
-    def repository_type_enum(self) -> Type[Enum]:
+    def repository_type_enum(self) -> type[Enum]:
         return self._repository_type_enum
 
     @property
@@ -87,8 +87,8 @@ class AppCfg(BaseAppCfg):
     def __init__(
         self,
         app_name: str,
-        service_type_enum: Type[Enum],
-        repository_type_enum: Type[Enum],
+        service_type_enum: type[Enum],
+        repository_type_enum: type[Enum],
         log_setup: bool = True,
         logger_prefix: str | None = None,
         envvar_prefix: str | None = None,
@@ -184,7 +184,7 @@ class AppCfg(BaseAppCfg):
         logging_config_file = os.environ[
             AppCfg._prefix_envvar(envvar_prefix, logging_config_file_envvar)
         ]
-        with open(logging_config_file, "rt", encoding=getpreferredencoding()) as handle:
+        with open(logging_config_file, encoding=getpreferredencoding()) as handle:
             logging_config_yaml = yaml.safe_load(handle.read())
             logging_config.dictConfig(logging_config_yaml)
 
@@ -279,9 +279,7 @@ class AppCfg(BaseAppCfg):
             logger.error(App.create_static_log_message("dc779cad", msg))
             raise FileNotFoundError(msg)
         else:
-            with open(
-                idps_config_file, "rt", encoding=getpreferredencoding()
-            ) as handle:
+            with open(idps_config_file, encoding=getpreferredencoding()) as handle:
                 cfg.IDPS_CONFIG = json.load(handle)
 
     def _init_set_factories_for_services(self) -> None:

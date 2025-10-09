@@ -57,7 +57,7 @@ class User(fastapp.User, Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -288,7 +288,7 @@ class UserInvitation(Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     email: str = Field(description="The email of the user, UNIQUE", max_length=320)
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
@@ -337,7 +337,7 @@ class UserInvitationConstraints(Model):
         snake_case_plural_name="user_invitation_constraints",
         persistable=False,
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     roles: set[enum.Role] = Field(
         description="The roles that the user may be assigned by the inviting user."
     )

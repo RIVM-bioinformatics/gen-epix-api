@@ -34,7 +34,7 @@ def get_test_client() -> Env:
 
 
 class CaseValidationSetup:
-    ORDERED_MODEL_TO_SHEET_MAP: dict[Type[model.Model], str] = {
+    ORDERED_MODEL_TO_SHEET_MAP: dict[type[model.Model], str] = {
         model.ConceptSet: "ConceptSet",
         model.Concept: "Concept",
         model.ConceptRelation: "ConceptRelation",

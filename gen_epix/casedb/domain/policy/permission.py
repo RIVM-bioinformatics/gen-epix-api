@@ -27,7 +27,7 @@ class RoleGenerator:
     )
 
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Role, set[tuple[type[command.Command], PermissionTypeSet]]
     ] = {
         # TODO: remove UPDATE from association objects that do not have properties of their own such as CaseTypeSetMember
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN]

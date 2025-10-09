@@ -32,7 +32,7 @@ def get_test_client() -> Env:
 
 
 class CaseAccessSetup:
-    ORDERED_MODEL_TO_SHEET_MAP: dict[Type[model.Model], str] = {
+    ORDERED_MODEL_TO_SHEET_MAP: dict[type[model.Model], str] = {
         model.Organization: "Organization",
         model.User: "User",
         model.UserInvitation: "UserInvitation",

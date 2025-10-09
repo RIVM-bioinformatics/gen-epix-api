@@ -27,7 +27,7 @@ class RoleGenerator:
     )
 
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Role, set[tuple[type[command.Command], PermissionTypeSet]]
     ] = {
         # TODO: fill in permissions
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),

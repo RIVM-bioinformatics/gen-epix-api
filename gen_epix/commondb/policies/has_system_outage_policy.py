@@ -19,7 +19,7 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
         assert cmd.user.id
         return self._is_permitted(cmd.user)  # type: ignore[arg-type]
 
-    def get_is_denied_exception(self) -> Type[Exception]:
+    def get_is_denied_exception(self) -> type[Exception]:
         return exc.ServiceUnavailableError
 
     @cached(cache=TTLCache(maxsize=100, ttl=100))

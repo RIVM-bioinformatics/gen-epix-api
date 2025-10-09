@@ -1,8 +1,8 @@
 import logging
 import uuid
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from functools import partial
-from typing import Any, Callable, NoReturn
+from typing import Any, NoReturn
 
 from gen_epix.fastapp import App, LogLevel, exc, model
 from gen_epix.fastapp.api import exc as api_exc

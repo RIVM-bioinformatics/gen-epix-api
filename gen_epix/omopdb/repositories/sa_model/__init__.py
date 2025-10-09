@@ -11,7 +11,7 @@ from gen_epix.omopdb.repositories.sa_model.organization import (
     UserInvitation as UserInvitation,
 )
 
-FIELD_NAME_MAP: dict[Type, dict[str, str]] = {}
+FIELD_NAME_MAP: dict[type, dict[str, str]] = {}
 
 set_entity_repository_model_classes(
     DOMAIN,

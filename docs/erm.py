@@ -30,7 +30,7 @@ def generate_erm_diagrams(dir: Path) -> None:
 
     # Generate and save hash for all model classes across domains
     all_classes_hash = generate_hash_for_domain_models(DOMAINS, dir)
-    with open(dir / "erm.json", "wt") as handle:
+    with open(dir / "erm.json", "w") as handle:
         json.dump({"models_hash": all_classes_hash}, handle)
 
 

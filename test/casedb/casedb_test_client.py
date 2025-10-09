@@ -1723,7 +1723,7 @@ class CasedbTestClient(TestClient):
                     operation=CrudOperation.READ_ALL,
                 )
             )
-            expected_case_types = set([f"case_type{x}" for x in expected_case_types])
+            expected_case_types = {f"case_type{x}" for x in expected_case_types}
             actual_case_types = {x.name for x in case_types}
             missing_case_types = expected_case_types - actual_case_types
             extra_case_types = actual_case_types - expected_case_types
@@ -1993,7 +1993,7 @@ class CasedbTestClient(TestClient):
 
     def _get_obj(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj: (
             str
             | UUID

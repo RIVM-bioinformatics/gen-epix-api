@@ -1,8 +1,8 @@
 import abc
 import uuid
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable, Iterable
 from itertools import chain
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import CrudOperation
@@ -29,7 +29,7 @@ class BaseRepository(abc.ABC):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: Model | Iterable[Model] | None,
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
@@ -53,7 +53,7 @@ class BaseRepository(abc.ABC):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         field_names: list[str],
         filter: Filter | None = None,
         **kwargs: Any,
@@ -70,7 +70,7 @@ class BaseRepository(abc.ABC):
 
     @abc.abstractmethod
     def split_filter(
-        self, model_class: Type, filter: Filter | None
+        self, model_class: type, filter: Filter | None
     ) -> tuple[Filter | None, Filter | None]:
         """
         Splits a filter into two parts: a repository filter that can can be applied by
@@ -90,7 +90,7 @@ class BaseRepository(abc.ABC):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         link_field_name1: str,
         link_field_name2: str,
         obj_id1: Hashable | None,
@@ -266,7 +266,7 @@ class BaseRepository(abc.ABC):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Iterable[Hashable],
         verify_exists: bool = True,
         verify_duplicate: bool = True,
@@ -290,7 +290,7 @@ class BaseRepository(abc.ABC):
 
     @staticmethod
     def verify_crud_args(
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: Model | Iterable[Model] | None,
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
