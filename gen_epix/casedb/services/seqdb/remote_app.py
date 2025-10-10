@@ -1,13 +1,12 @@
-from functools import partial
-from typing import Callable
+from typing import Any, Callable
 from uuid import UUID
 
 import httpx
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.command import RetrievePhylogeneticTreeBySequencesCommand
-from gen_epix.fastapp.remote_app import RemoteApp
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
+from gen_epix.fastapp import HttpProtocol, RemoteApp
+from gen_epix.fastapp.model import Command
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seq_command
 from gen_epix.seqdb.domain import enum as seq_enum
@@ -17,6 +16,13 @@ class SeqdbRemoteApp(RemoteApp):
 
     DEFAULT_ROUTE_PREFIX = "/v1/"
 
+    COMMAND_MAP: dict[type[Command], type[Command]] = {
+        command.RetrievePhylogeneticTreeBySequencesCommand: seq_command.RetrievePhylogeneticTreeCommand,
+    }
+    ROUTE_MAP: dict[type[Command], str] = {
+        seq_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
+    }
+
     TREE_ALGORITHM_MAP = {
         x: y
         for x in enum.TreeAlgorithmType
@@ -24,51 +30,60 @@ class SeqdbRemoteApp(RemoteApp):
         if x.value == y.value
     }
 
-    COMMAND_MAP = {
-        command.RetrievePhylogeneticTreeBySequencesCommand: seq_command.RetrievePhylogeneticTreeCommand,
-    }
-
-    def __init__(self, host: str, port: int, **kwargs: dict) -> None:
-        default_route_prefix: str = kwargs.pop(  # type:ignore[assignment]
-            "default_route_prefix", self.DEFAULT_ROUTE_PREFIX
-        )
+    def __init__(
+        self,
+        host: str,
+        port: int | None,
+        http_protocol: HttpProtocol = HttpProtocol.HTTPS,
+        default_route_prefix: str | None = None,
+        default_headers: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         super().__init__(
             DOMAIN,
             host,
             port,
+            http_protocol=http_protocol,
             default_route_prefix=default_route_prefix,
+            default_headers=default_headers,
+            add_generated_crud_route_handlers=True,
             **kwargs,
         )
-        self._host = host
-        self._port = port
-        self.base_url = f"https://{self._host}:{self._port}{self._default_route_prefix}"
 
-        handler = self.create_retrieve_phylogenetic_tree_handler()
         self.register_handler(
-            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand], handler
+            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
+            self.create_retrieve_phylogenetic_tree_handler,
         )
+
+    def get_headers(self, cmd: Command) -> dict[str, str]:
+        headers = super().get_headers(cmd)
+        token = ""
+        headers["Authorization"] = f"Bearer {token}"
+        return headers
 
     def create_retrieve_phylogenetic_tree_handler(self) -> Callable:
 
-        route = self.base_url + "retrieve/phylogenetic_tree"
+        seqdb_command_class = seq_command.RetrievePhylogeneticTreeCommand
         self.register_route(
-            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
-            route,
-            add_prefix=False,
+            self.COMMAND_MAP[command.RetrievePhylogeneticTreeBySequencesCommand],
+            self.ROUTE_MAP[seqdb_command_class],
         )
 
         def handler(
             cmd: seq_command.RetrievePhylogeneticTreeCommand,
         ) -> model.PhylogeneticTree | None:
             headers = self.get_headers(cmd)
+            route = self.get_route(cmd)
 
             with httpx.Client() as client:
                 response = client.post(
                     route,
-                    json=RetrievePhylogeneticTreeRequestBody(
+                    json=seqdb_command_class(
                         seq_distance_protocol_id=cmd.seq_distance_protocol_id,
                         tree_algorithm=cmd.tree_algorithm,
                         seq_ids=cmd.seq_ids,
+                        leaf_names=cmd.leaf_names,
                     ).model_dump(),
                     headers=headers,
                 )
@@ -99,4 +114,4 @@ class SeqdbRemoteApp(RemoteApp):
                 )
                 return phylogenetic_tree
 
-        return partial(handler)
+        return handler

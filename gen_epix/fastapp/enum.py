@@ -219,6 +219,11 @@ class CrudOperationSet(Enum):
     )
 
 
+class HttpProtocol(Enum):
+    HTTP = "HTTP"
+    HTTPS = "HTTPS"
+
+
 class CrudEndpointType(Enum):
     POST_ONE = "POST_ONE"
     POST_SOME = "POST_SOME"
