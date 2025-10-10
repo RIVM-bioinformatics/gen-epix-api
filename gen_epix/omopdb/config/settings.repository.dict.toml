@@ -1,0 +1,15 @@
+[repository.abac]
+module = "gen_epix.omopdb.repositories"
+class_name = "AbacDictRepository"
+
+[repository.organization]
+module = "gen_epix.omopdb.repositories"
+class_name = "OrganizationDictRepository"
+
+[repository.system]
+module = "gen_epix.omopdb.repositories"
+class_name = "SystemDictRepository"
+
+[repository.omop]
+module = "gen_epix.omopdb.repositories"
+class_name = "OmopDictRepository"

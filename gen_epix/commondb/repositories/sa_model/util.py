@@ -1,8 +1,8 @@
-import importlib
 from enum import Enum
 from typing import Any, Callable, Type
 
 import sqlalchemy as sa
+from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
@@ -131,9 +131,8 @@ def create_field_metadata(
 
 def set_entity_repository_model_classes(
     domain: Domain,
-    service_type_enum: Type[Enum],
+    sa_models_by_service_type: dict[Enum, dict[Type[BaseModel], Type]],
     row_metadata_mixin_class: Type,
-    service_modules_path: str,
     field_name_map: dict[Type, dict[str, str]] | None = None,
 ) -> None:
     if field_name_map is None:
@@ -141,24 +140,17 @@ def set_entity_repository_model_classes(
     sa_metadata_field_names = set(row_metadata_mixin_class.__annotations__.keys()) - {
         "id"
     }
-    sa_model_name_class_map = {}
-    for service_type in service_type_enum:
-        try:
-            sa_module = importlib.import_module(
-                f"{service_modules_path}.{service_type.value.lower()}"
-            )
-        except ModuleNotFoundError:
-            continue
-        for variable_content in sa_module.__dict__.values():
-            if not hasattr(variable_content, "__tablename__"):
-                # Not an SA model class
-                continue
-            sa_model_name_class_map[variable_content.__name__] = variable_content
+    sa_model_map = {}
+    for curr_sa_model_map in sa_models_by_service_type.values():
+        for model_class, sa_model_class in curr_sa_model_map.items():
+            if model_class in sa_model_map:
+                raise ValueError(f"Duplicate SA model for {model_class.__name__}")
+            sa_model_map[model_class] = sa_model_class
     for entity in domain.get_dag_sorted_entities():
         if not entity.persistable:
             continue
         model_class = entity.model_class
-        sa_model_class = sa_model_name_class_map.get(model_class.__name__)
+        sa_model_class = sa_model_map.get(model_class)
         if not sa_model_class:
             raise ValueError(
                 f"Model {model_class.__name__} does not have a corresponding SA model"

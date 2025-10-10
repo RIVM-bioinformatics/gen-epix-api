@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any, Callable, Type
 from uuid import UUID
 
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import NO_RBAC_PERMISSIONS
 from gen_epix.commondb.domain.service import BaseRbacService
 from gen_epix.fastapp import App, Command, Permission
@@ -19,7 +19,7 @@ class RbacService(BaseRbacService):
         self,
         app: App,
         logger: logging.Logger | None = None,
-        role_enum: Type[Enum] = Enum,
+        role_enum: Type[Enum] = enum.Role,
         **kwargs: Any,
     ):
         kwargs["id_factory"] = kwargs.get("id_factory", uuid.uuid4)

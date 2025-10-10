@@ -74,3 +74,38 @@ class AppConfigType(Enum):
     MOCK_IDPS = "mock_idps"
     NO_AUTH = "no_auth"
     DEBUG = "debug"
+
+
+class DevIdpConfig(Enum):
+    IDPS = "IDPS"
+    MOCK = "MOCK"
+    NONE = "NONE"
+
+
+class DevRepositoryConfig(Enum):
+    DICT_DEMO = "DICT_DEMO"
+    DICT_EMPTY = "DICT_EMPTY"
+    SA_SQLITE_DEMO = "SA_SQLITE_DEMO"
+    SA_SQLITE_EMPTY = "SA_SQLITE_EMPTY"
+    SA_SQL = "SA_SQL"
+
+
+class DevRepositoryConfigSet(Enum):
+    DICT = frozenset({DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.DICT_EMPTY})
+    SA = frozenset(
+        {
+            DevRepositoryConfig.SA_SQLITE_DEMO,
+            DevRepositoryConfig.SA_SQLITE_EMPTY,
+            DevRepositoryConfig.SA_SQL,
+        }
+    )
+    SA_SQLITE = frozenset(
+        {DevRepositoryConfig.SA_SQLITE_DEMO, DevRepositoryConfig.SA_SQLITE_EMPTY}
+    )
+    SA_SQL = frozenset({DevRepositoryConfig.SA_SQL})
+    DEMO = frozenset(
+        {DevRepositoryConfig.DICT_DEMO, DevRepositoryConfig.SA_SQLITE_DEMO}
+    )
+    EMPTY = frozenset(
+        {DevRepositoryConfig.DICT_EMPTY, DevRepositoryConfig.SA_SQLITE_EMPTY}
+    )

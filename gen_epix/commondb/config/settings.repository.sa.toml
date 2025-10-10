@@ -1,0 +1,11 @@
+[repository.abac]
+module = "gen_epix.commondb.repositories"
+class_name = "AbacSARepository"
+
+[repository.organization]
+module = "gen_epix.commondb.repositories"
+class_name = "OrganizationSARepository"
+
+[repository.system]
+module = "gen_epix.commondb.repositories"
+class_name = "SystemSARepository"

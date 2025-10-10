@@ -44,6 +44,24 @@ from gen_epix.filter import (
 class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities = kwargs.pop("entities", [])
+        connection_string = kwargs.pop("connection_string", None)
+        file = kwargs.pop("file", None)
+        if connection_string is None:
+            if file is None:
+                raise exc.RepositoryInitializationServiceError(
+                    "Either connection_string or file must be provided"
+                )
+            connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
+        return SARepository.create_sa_repository(
+            repository_class=cls,
+            entities=entities,
+            connection_string=connection_string,
+            **kwargs,
+        )
+
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
@@ -99,8 +117,8 @@ class SARepository(BaseRepository):
             )
         isolation_level: IsolationLevel = kwargs.pop(
             "isolation_level", self._default_isolation_level
-        )  # type: ignore[assignment]
-        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)  # type: ignore[assignment]
+        )
+        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)
         return SAUnitOfWork(
             self.get_session(
                 isolation_level=isolation_level,
@@ -122,24 +140,26 @@ class SARepository(BaseRepository):
         )
         return session
 
-    def register_mappers(self, **kwargs: Any) -> None:
+    def register_mappers(
+        self,
+        entities: list[Entity] | None = None,
+        field_name_map: dict[Type[Model], dict[str, str]] | None = None,
+        service_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        db_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        generate_service_metadata: (
+            dict[Type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
+        ) = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Default implementation to register standard mappers for a list of entities.
         """
         # Parse arguments
-        entities: list[Entity] = kwargs.pop("entities", [])  # type: ignore[assignment]
-        field_name_map: dict[Type[Model], dict[str, str]] = kwargs.pop(
-            "field_name_map", {}
-        )
-        service_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "service_metadata_field_names", {}
-        )
-        db_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "db_metadata_field_names", {}
-        )
-        generate_service_metadata: dict[
-            Type[Model], Callable[[Model, Hashable], dict[str, Any]]
-        ] = kwargs.pop("get_row_metadata", {})
+        entities = entities or []
+        field_name_map = field_name_map or {}
+        service_metadata_field_names = service_metadata_field_names or {}
+        db_metadata_field_names = db_metadata_field_names or {}
+        generate_service_metadata = generate_service_metadata or {}
 
         # Create and register mapper for each entity
         for entity in entities:
@@ -847,7 +867,7 @@ class SARepository(BaseRepository):
 
     @staticmethod
     def _select_with_id_join(
-        session: sa.orm.Session,
+        session: Session,
         get_row_id: Callable[[Type], sa.Column],
         row_class: Type,
         obj_ids: list[Hashable],

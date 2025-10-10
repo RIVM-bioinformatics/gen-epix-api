@@ -5,7 +5,7 @@ from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, List, Type, TypeVar, cast
+from typing import Any, List, Type, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.commondb.base_env import BaseAppEnv
@@ -21,6 +21,8 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 
 class TestClient:
+
+    DEFAULT_ROUTE_PREFIX = "/v1"
 
     MODEL_KEY_MAP: dict[Type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
@@ -72,6 +74,8 @@ class TestClient:
         ] = command.UpdateUserCommand,
         verbose: bool = False,
         log_level: int = logging.ERROR,
+        use_endpoints: bool = False,
+        default_route_prefix: str | None = None,
         **kwargs: Any,
     ):
         # Set provided parameters
@@ -79,6 +83,7 @@ class TestClient:
         self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_env = app_env
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self.roles = set() if roles is None else roles
         self.role_hierarchy: dict[Hashable, set] = (
             {} if role_hierarchy is None else role_hierarchy
@@ -112,9 +117,10 @@ class TestClient:
         self.cfg = self.app_cfg.cfg
         self.services = self.app_env.services
         self.repositories = self.app_env.repositories
-        self.db: Dict[Type[model.Model], Dict[Hashable, model.Model]] = {}
+        self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
-        self.use_endpoints: bool = kwargs.pop("use_endpoints", False)
+        self.use_endpoints = use_endpoints
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
@@ -147,6 +153,7 @@ class TestClient:
             assert self.app_last_handled_exception is not None
             assert self.endpoint_test_client is not None
 
+            route_prefix = route_prefix or self.default_route_prefix
             previous_exception_id = self.app_last_handled_exception["id"]
             retval, response = self.endpoint_test_client.handle(
                 cmd,
@@ -395,8 +402,10 @@ class TestClient:
 
     def get_root_user(self) -> model.User:
         return self.user_class(
-            organization_id=self.cfg.secret.root.organization.id,
-            **self.cfg.secret.root.user,
+            organization_id=self.cfg["service"]["auth"]["props"]["root"][
+                "organization"
+            ]["id"],
+            **self.cfg["service"]["auth"]["props"]["root"]["user"],
         )
 
     def get_org_ids_for_org_admin(
@@ -717,15 +726,16 @@ class TestClient:
             print(f"{x}")
 
     def print_org_admin_policies(self) -> None:
-        org_admin_policies = self.read_all(
+        org_admin_policies: list[model.OrganizationAdminPolicy] = self.read_all(  # type: ignore[assignment]
             "root1_1", self.organization_admin_policy_class, cascade=True
         )
         print("\nOrganizationAdminPolicies:")
         for x in sorted(
-            org_admin_policies, key=lambda x: (x.organization.name, x.user.name)
+            org_admin_policies,
+            key=lambda x: (x.organization.name, x.user.name),  # type:ignore[union-attr]
         ):
             print(
-                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"
+                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type:ignore[union-attr]
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
