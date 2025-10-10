@@ -806,45 +806,12 @@ class Run:
         ):
             print(line)
 
-    def other_general_run_pylint_code_impact(self) -> None:
+    def other_general_analyse_pylint_code_impact(self) -> None:
 
-        import re
         from test.linter import Linter
 
-        def _get_pylint_score(output: str) -> float | None:
-            match = re.search(r"Your code has been rated at ([\d\.]+)/10", output)
-            return float(match.group(1)) if match else None
-
-        output_dir = Path(__file__).parent / "test" / "output"
-        base_report = output_dir / "pylint_base.txt"
-        summary_file = output_dir / "pylint_code_impact.csv"
-
         linter = Linter()
-        base_output = linter.run_pylint(file=base_report)
-
-        base_score = _get_pylint_score(base_output)
-        if base_score is None:
-            raise ValueError("Could not determine base pylint score.")
-
-        code_pattern = re.compile(r": ([A-Z]\d{4}):")
-        codes = sorted(set(code_pattern.findall(base_output)))
-
-        results: list[tuple[str, float | None, float | None]] = []
-
-        for code in codes:
-            temp_report = output_dir / f"pylint_disable_{code}.txt"
-            # fresh run for each code
-            output = linter.run_pylint(file=temp_report, disable_codes={code})
-            score = _get_pylint_score(output)
-            impact_score = (score - base_score) if score is not None else None
-            results.append((code, score, impact_score))
-
-        with open(summary_file, "w", encoding="utf-8") as f:
-            f.write("code,score,impact_score\n")
-            for code, score, impact_score in results:
-                score_str = f"{score:.2f}" if score is not None else "?"
-                impact_str = f"{impact_score:.2f}" if impact_score is not None else "?"
-                f.write(f"{code},{score_str},{impact_str}\n")
+        linter.analyse_pylint_code_impact()
 
     def other_general_run_mypy(self) -> None:
         from test.linter import Linter
