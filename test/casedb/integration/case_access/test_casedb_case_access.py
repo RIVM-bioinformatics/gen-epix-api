@@ -2,32 +2,48 @@ import logging
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.case_access.base import (
-    REPOSITORY_TYPE,
+    DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
+    TEST_TYPE,
     VERBOSE,
 )
 from test.commondb.util import retrieve_db_data_from_file
-from test.test_client.enum import TestType as EnumTestType
 from typing import Any, Type
 from uuid import UUID
 
 import pandas as pd
 import pytest
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
+
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    TEST_TYPE,
+)
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    TEST_TYPE,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS.value,
-        repository_type=REPOSITORY_TYPE,
+        test_type=TEST_TYPE.value,
+        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
-        data_fixture_name="EMPTY",
     )
 
 
@@ -90,7 +106,7 @@ class TestCaseAccess(CaseAccessSetup):
             raise ValueError("Case CRUD commands DataFrame is not set.")
         df = df.loc[df["dm.is_active"] == True, :]
         command_idx_to_test = None
-        # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
+        # command_idx_to_test = {33}  # For debugging, set set of indices, otherwise None
         n_case_type_cols = 3
         # Sort by index to have correct order
         df = df.sort_values(by="index", axis=0).to_dict(orient="records")

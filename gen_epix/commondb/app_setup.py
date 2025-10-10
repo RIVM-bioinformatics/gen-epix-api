@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Callable, NoReturn
 
+from dynaconf import Dynaconf
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
 from fastapi.responses import RedirectResponse
@@ -12,16 +13,19 @@ from gen_epix.commondb.api.exc import generate_handle_exception_function
 from gen_epix.commondb.api.router import create_routers
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
-from gen_epix.fastapp.middleware import (
+from gen_epix.fastapp.middleware import limiter
+from gen_epix.fastapp.middleware.handle_auth_exception import (
     HandleAuthExceptionMiddleware,
+)
+from gen_epix.fastapp.middleware.update_response_header import (
     UpdateResponseHeaderMiddleware,
-    limiter,
 )
 
 
 def create_fast_api(
-    cfg: dict,
+    cfg: dict | Dynaconf,
     app: App,
+    create_routers_fn: Callable = create_routers,
     registered_user_dependency: Callable | None = None,
     new_user_dependency: Callable | None = None,
     idp_user_dependency: Callable | None = None,
@@ -32,8 +36,6 @@ def create_fast_api(
     **kwargs: Any,
 ) -> FastAPI:
 
-    app_id = kwargs.pop("app_id", app.generate_id())
-
     # Set up lifespan
     @asynccontextmanager
     async def lifespan(fast_api: FastAPI) -> Any:
@@ -41,7 +43,7 @@ def create_fast_api(
             setup_logger.info(
                 app.create_log_message(
                     "a49dedfc",
-                    {"status": "STARTING_APP", "app_id": str(app_id)},  # type: ignore[arg-type]
+                    {"status": "STARTED_APP"},  # type: ignore[arg-type]
                 )
             )
         yield
@@ -49,7 +51,7 @@ def create_fast_api(
             setup_logger.info(
                 app.create_log_message(
                     "dcabb0ac",
-                    {"status": "STOPPING_APP", "app_id": str(app_id)},  # type: ignore[arg-type]
+                    {"status": "STOPPING_APP"},  # type: ignore[arg-type]
                 )
             )
 
@@ -80,13 +82,20 @@ def create_fast_api(
 
     # Response header handling
     if not debug:
+        exception_headers: list[tuple[set[str], dict[str, str]]] = [
+            (
+                {"/docs/oauth2-redirect"},
+                dict(cfg["api"]["http_header"]["auth"]),
+            ),
+            (
+                {"/docs", "/redoc"},
+                dict(cfg["api"]["http_header"]["openapi"]),
+            ),
+        ]
         fast_api.add_middleware(
             UpdateResponseHeaderMiddleware,
-            general_headers=cfg.api.http_header.general,
-            exception_headers=[
-                ({"/docs/oauth2-redirect"}, cfg.api.http_header.auth),
-                ({"/docs", "/redoc"}, cfg.api.http_header.openapi),
-            ],
+            general_headers=dict(cfg["api"]["http_header"]["general"]),
+            exception_headers=exception_headers,
         )
     # Handling of authentication exceptions
     if not debug:
@@ -98,7 +107,7 @@ def create_fast_api(
 
     # Add routers
     handle_exception = generate_handle_exception_function(app=app, logger=api_logger)
-    routers = create_routers(
+    routers = create_routers_fn(
         app=app,
         registered_user_dependency=registered_user_dependency,
         new_user_dependency=new_user_dependency,
@@ -106,12 +115,12 @@ def create_fast_api(
         handle_exception=handle_exception,
     )
     for router in routers:
-        fast_api.include_router(router, prefix=cfg.api.route.v1)
+        fast_api.include_router(router, prefix=cfg["api"]["route"]["v1"])
 
     # Redirect root to default route
     @fast_api.get("/")
     async def redirect() -> Response:
-        response = RedirectResponse(url=cfg.api.default_route)
+        response = RedirectResponse(url=cfg["api"]["default_route"])
         return response
 
     # Update OpenAPI schema generator function

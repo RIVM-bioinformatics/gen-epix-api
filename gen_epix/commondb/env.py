@@ -1,116 +1,71 @@
-# pylint: disable=unused-import-alias
-import copy
 import traceback
+
+# pylint: disable=unused-import-alias
+from collections.abc import Iterable
+from enum import Enum
 from typing import Any, Callable, Type
 
 from gen_epix.commondb.base_env import BaseAppEnv
-from gen_epix.commondb.config.cfg import AppCfg
+from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, model
+from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
-from gen_epix.commondb.repositories import (
-    OrganizationDictRepository,
-    OrganizationSARepository,
-    SystemDictRepository,
-    SystemSARepository,
-    sa_model,
-)
-from gen_epix.commondb.repositories.abac_dict import AbacDictRepository
-from gen_epix.commondb.repositories.abac_sa import AbacSARepository
-from gen_epix.commondb.services import (
-    AbacService,
-    AuthService,
-    OrganizationService,
-    RbacService,
-    SystemService,
-)
+from gen_epix.commondb.services import AuthService, RbacService
+from gen_epix.commondb.services.abac import AbacService
+from gen_epix.commondb.services.organization import OrganizationService
+from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
 from gen_epix.fastapp.app import App
+from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
 
 
 class AppEnv(BaseAppEnv):
-    SERVICE_DATA: dict[enum.ServiceType, dict[str, Any]] = {
-        enum.ServiceType.ORGANIZATION: {
-            "service_class": OrganizationService,
-            "repository_class": {
-                enum.RepositoryType.DICT: OrganizationDictRepository,
-                enum.RepositoryType.SA_SQL: OrganizationSARepository,
-            },
-            "kwargs": {
-                "user_class": model.User,
-                "user_invitation_class": model.UserInvitation,
-            },
-            "repository_kwargs": {
-                "user_class": model.User,
-                "user_invitation_class": model.UserInvitation,
-                "user_invitation_constraints_class": model.UserInvitationConstraints,
-                "sa_user_class": sa_model.User,
-                "sa_user_invitation_class": sa_model.UserInvitation,
-            },
-        },
-        enum.ServiceType.AUTH: {
-            "service_class": AuthService,
-            "kwargs": {},
-        },
-        enum.ServiceType.RBAC: {
-            "service_class": RbacService,
-            "kwargs": {
-                "role_enum": enum.Role,
-            },
-        },
-        enum.ServiceType.SYSTEM: {
-            "service_class": SystemService,
-            "repository_class": {
-                enum.RepositoryType.DICT: SystemDictRepository,
-                enum.RepositoryType.SA_SQL: SystemSARepository,
-            },
-        },
-        enum.ServiceType.ABAC: {
-            "service_class": AbacService,
-            "repository_class": {
-                enum.RepositoryType.DICT: AbacDictRepository,
-                enum.RepositoryType.SA_SQL: AbacSARepository,
-            },
-        },
-    }
-    for data in SERVICE_DATA.values():
-        if "repository_class" not in data:
-            continue
-        if "repository_kwargs" not in data:
-            data["repository_kwargs"] = {}
-        data["repository_kwargs"][
-            "service_metadata_fields"
-        ] = sa_model.SERVICE_METADATA_FIELDS
-        data["repository_kwargs"]["db_metadata_fields"] = sa_model.DB_METADATA_FIELDS
-        data["repository_kwargs"][
-            "generate_service_metadata"
-        ] = sa_model.GENERATE_SERVICE_METADATA
-
-    def __init__(self, app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any):
+    def __init__(
+        self,
+        app_cfg: AppCfg,
+        domain: Domain | None = None,
+        sorted_service_types: tuple[Enum] | None = None,
+        role_generator_class: Type[RoleGenerator] | None = None,
+        rbac_service_class: Type[RbacService] | None = None,
+        user_manager_class: Type[UserManager] | None = None,
+        user_class: Type[model.User] | None = None,
+        user_invitation_class: Type[model.UserInvitation] | None = None,
+        log_setup: bool = True,
+        **kwargs: Any,
+    ):
+        self._app_cfg = app_cfg
         self._cfg = app_cfg.cfg
-        data = self.compose_application(app_cfg, log_setup=log_setup, **kwargs)
+        self._domain = domain or DOMAIN
+        self._sorted_service_types = sorted_service_types or SORTED_SERVICE_TYPES
+        self._role_generator_class = role_generator_class or RoleGenerator
+        self._rbac_service_class = rbac_service_class or RbacService
+        self._user_manager_class = user_manager_class or UserManager
+        self._user_class = user_class or model.User
+        self._user_invitation_class = user_invitation_class or model.UserInvitation
+        self._log_setup = log_setup
+
+        # Compose application
+        data = self.compose_application(app_cfg, **kwargs)
         self._app: App = data["app"]
-        self._services: dict[enum.ServiceType, BaseService] = data["services"]
-        self._repositories: dict[enum.RepositoryType, BaseRepository] = data[
-            "repositories"
-        ]
+        self._services: dict[Enum, BaseService] = data["services"]
+        self._repositories: dict[Enum, BaseRepository] = data["repositories"]
         self._registered_user_dependency: Callable = data["registered_user_dependency"]
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
-    @staticmethod
-    def compose_application(
-        app_cfg: AppCfg, log_setup: bool = True, **kwargs: Any
-    ) -> dict:
+    def compose_application(self, app_cfg: AppCfg, **kwargs: Any) -> dict:
 
+        # Get loggers
+        cfg = app_cfg.cfg
+        setup_logger = app_cfg.setup_logger
+        app_logger = app_cfg.app_logger
+        service_logger = app_cfg.service_logger
+
+        # Compose application
         try:
-            # Get logger for setup
-            cfg = app_cfg.cfg
-            setup_logger = app_cfg.setup_logger
-            app_logger = app_cfg.app_logger
-            service_logger = app_cfg.service_logger
-            if log_setup:
+            if self._log_setup:
                 setup_logger.debug(
                     App.create_static_log_message(
                         "e8665136", "Starting composing application"
@@ -126,125 +81,122 @@ class AppEnv(BaseAppEnv):
             # Initialize app
             app = App(
                 name="main",
-                domain=kwargs.get("domain", DOMAIN),
-                logger=app_logger if log_setup else None,
-                id_factory=cfg.service.defaults.id_factory,
+                domain=kwargs.get("domain", self._domain),
+                logger=app_logger if self._log_setup else None,
+                id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
             )
-
-            # Compose data to initialize repositories and services
-            service_data = copy.deepcopy(AppEnv.SERVICE_DATA)
-            service_data[enum.ServiceType.AUTH].update(
-                {
-                    "kwargs": {
-                        "idps_cfg": cfg.IDPS_CONFIG,
-                    },
-                }
-            )
-            for service_type in service_data:
-                if "repository_class" in service_data[service_type]:
-                    service_data[service_type]["repository_class"][
-                        enum.RepositoryType.SA_SQLITE
-                    ] = service_data[service_type]["repository_class"][
-                        enum.RepositoryType.SA_SQL
-                    ]
 
             # Initialise repositories and services
-            services: dict[enum.ServiceType, BaseService] = {}
-            repositories: dict[enum.ServiceType, BaseRepository] = {}
-            for service_type in model.SORTED_SERVICE_TYPES:
-                data = service_data[service_type]
-                props = {
-                    x: y
-                    for x, y in cfg.service[service_type.value.lower()].items()
-                    if x not in {"id_factory", "timestamp_factory"}
-                }
-                id_factory = cfg.service[service_type.value.lower()]["id_factory"]
-                timestamp_factory = cfg.service[service_type.value.lower()][
-                    "timestamp_factory"
-                ]
-                additional_service_kwargs: dict = data.get("kwargs", {})  # type: ignore
+            services: dict[Enum, BaseService] = {}
+            repositories: dict[Enum, BaseRepository] = {}
+            for service_type in self._sorted_service_types:
+                service_cfg = cfg["service"][service_type.value]
+                service_class = service_cfg["class"]
+                service_props = service_cfg["props"]
+                repository_cfg = cfg["repository"].get(service_type.value)
 
                 # Create repository if necessary
-                if "repository_class" in data:
+                curr_repository = None
+                if repository_cfg:
+                    repository_class: Type[BaseRepository] = repository_cfg["class"]
+                    repository_props = repository_cfg["props"]
+                    if isinstance(repository_cfg["type"], str):
+                        repository_type = enum.RepositoryType(repository_cfg["type"])
+                    else:
+                        repository_type = enum.RepositoryType(
+                            repository_cfg["type"].value
+                        )
                     entities = app.domain.get_dag_sorted_entities(
                         service_type=service_type
                     )
-                    repository_type = cfg.secret["db"]["repository_type"]
-                    repository_cfg = cfg.secret["repository"][
-                        repository_type.value.lower()
-                    ][service_type.value.lower()]
-                    if log_setup:
+                    if self._log_setup:
                         setup_logger.debug(
                             app.create_log_message(
                                 "db89f0a5",
                                 f"Setting up {service_type.value} service with {repository_type.value} repository",
                             )
                         )
-                    repository_class = data["repository_class"][repository_type]
-                    additional_repository_kwargs: dict = data.get("repository_kwargs", {})  # type: ignore
-                    curr_repository = AppEnv.create_repository(
-                        service_type,
-                        timestamp_factory,
-                        entities,
-                        repository_type,
-                        repository_cfg,
-                        repository_class,
-                        **additional_repository_kwargs,
+                    curr_repository = repository_class.create_repository(
+                        entities=entities, **repository_props
                     )
-                else:
-                    curr_repository = None
+                    # Add to overview of repositories
+                    repositories[service_type] = curr_repository
                 # Create service, injecting app, repository, logger and props
-                service_class: Type[BaseService] = data["service_class"]
                 curr_service: BaseService = service_class(
                     app,
                     service_type=service_type,
                     repository=curr_repository,
-                    logger=setup_logger if log_setup else None,
-                    props=props,
+                    logger=setup_logger if self._log_setup else None,
                     name=service_type.value,
-                    id_factory=id_factory,
-                    **additional_service_kwargs,
+                    **service_props,
                 )
-                if not log_setup:
+                if not self._log_setup:
                     curr_service.logger = service_logger
-                # Add to overview of services and repositories
-                repositories[service_type] = curr_repository
+                # Add to overview of services
                 services[service_type] = curr_service
 
+            # Get common services and types
+            system_service_type = AppEnv._get_enum_from_list(
+                self._sorted_service_types, "SYSTEM"
+            )
+            system_service = services[system_service_type]
+            assert isinstance(system_service, SystemService)
+            auth_service_type = AppEnv._get_enum_from_list(
+                self._sorted_service_types, "AUTH"
+            )
+            auth_service = services[auth_service_type]
+            assert isinstance(auth_service, AuthService)
+            rbac_service_type = AppEnv._get_enum_from_list(
+                self._sorted_service_types, "RBAC"
+            )
+            rbac_service = services[rbac_service_type]
+            assert isinstance(rbac_service, RbacService)
+            abac_service_type = AppEnv._get_enum_from_list(
+                self._sorted_service_types, "ABAC"
+            )
+            abac_service = services[abac_service_type]
+            assert isinstance(abac_service, AbacService)
+            organization_service_type = AppEnv._get_enum_from_list(
+                self._sorted_service_types, "ORGANIZATION"
+            )
+            organization_service = services[organization_service_type]
+            assert isinstance(organization_service, OrganizationService)
+
             # Set up roles
-            service = services[enum.ServiceType.RBAC]
-            assert isinstance(service, RbacService)
-            service.register_roles(
-                RoleGenerator.ROLE_PERMISSIONS, root_role=enum.Role.ROOT
+            root_role = AppEnv._get_enum_from_list(self._role_generator_class.ROLE_PERMISSIONS, "ROOT")  # type: ignore[arg-type]
+            rbac_service.register_roles(
+                self._role_generator_class.ROLE_PERMISSIONS, root_role=root_role  # type: ignore[arg-type]
             )
 
             # Create and set user generator, which can create new users under different scenarios
             # such as from claims, from invitation, and when matching root secret
-            app.user_manager = UserManager(
-                model.User,
-                model.UserInvitation,
-                services[enum.ServiceType.ORGANIZATION],  # type: ignore
-                services[enum.ServiceType.RBAC],  # type: ignore
-                cfg.secret.root,
-                automatic_new_user_cfg=cfg.secret.automatic_new_user,  # set to None if no automatic new user
+            app.user_manager = self._user_manager_class(
+                self._user_class,
+                self._user_invitation_class,
+                organization_service,
+                rbac_service,
+                cfg["service"]["auth"]["props"]["root"],
+                automatic_new_user_cfg=cfg["service"]["auth"]["props"][
+                    "automatic_new_user"
+                ],  # set to None if no automatic new user
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
-            registered_user_dependency, new_user_dependency, idp_user_dependency = services[  # type: ignore
-                enum.ServiceType.AUTH
-            ].create_user_dependencies()
+            registered_user_dependency, new_user_dependency, idp_user_dependency = (
+                auth_service.create_user_dependencies()
+            )
 
             # Register security policies with app
-            if log_setup:
+            if self._log_setup:
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering security policies")
                 )
-            services[enum.ServiceType.SYSTEM].register_policies()  # type: ignore
-            services[enum.ServiceType.RBAC].register_policies()  # type: ignore
-            services[enum.ServiceType.ABAC].register_policies()  # type: ignore
+            system_service.register_policies()
+            rbac_service.register_policies()
+            abac_service.register_policies()
 
             # Finalise process
-            if log_setup:
+            if self._log_setup:
                 setup_logger.debug(
                     app.create_log_message("da172304", "Finished composing application")
                 )
@@ -253,7 +205,7 @@ class AppEnv(BaseAppEnv):
 
             # Print error for deployment log, in regular log is not shown there
             traceback.print_exc()
-            if log_setup:
+            if self._log_setup:
                 setup_logger.error(
                     App.create_static_log_message(
                         "db960800",
@@ -270,3 +222,31 @@ class AppEnv(BaseAppEnv):
             "new_user_dependency": new_user_dependency,
             "idp_user_dependency": idp_user_dependency,
         }
+
+    # TODO: make base class method abstract and implement here with new repository_class.create_repository method
+    # @classmethod
+    # def create_repository(
+    #     cls,
+    #     service_type: Enum,
+    #     timestamp_factory: Callable,
+    #     entities: list[Entity],
+    #     repository_type: Enum,
+    #     repository_cfg: dict[str, Any],
+    #     repository_class: Type[BaseRepository],
+    #     **kwargs: Any,
+    # ) -> BaseRepository:
+    #     repository: BaseRepository
+    #     repository = repository_class.create_repository(
+    #         entities=entities,
+    #         timestamp_factory=timestamp_factory,
+    #         **repository_cfg["props"],
+    #         **kwargs,
+    #     )
+    #     return repository
+
+    @staticmethod
+    def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
+        for enum_item in enums:
+            if enum_item.name == name:
+                return enum_item
+        raise ValueError(f"Enum with name {name} not found")

@@ -164,6 +164,12 @@ Base: Type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 class TestOmopSpecification:
 
+    CHARACTER_REPLACEMENTS = {
+        "\\n": "\n",
+        "\\r": "\r",
+        "\x0b": "\v",
+    }
+
     def test_model_specification(self) -> None:
         def _is_yes(x: Any) -> bool:
             return x.upper() == "YES" if isinstance(x, str) else False
@@ -373,6 +379,17 @@ class TestOmopSpecification:
                 field_info = model_class.model_fields[field_name]
                 field_expected_description = description[1:-1]
                 field_actual_description = _get_repr(field_info.description)
+                for src, tgt in self.CHARACTER_REPLACEMENTS.items():
+                    field_expected_description = field_expected_description.replace(
+                        src, tgt
+                    )
+                    field_actual_description = field_actual_description.replace(
+                        src, tgt
+                    )
+                field_expected_description = re.sub(
+                    r"\s+", "", field_expected_description
+                )
+                field_actual_description = re.sub(r"\s+", "", field_actual_description)
                 if field_expected_description != field_actual_description:
                     error_messages.append(
                         f"Field description for {field_name} not found in model {model_class.__name__}."

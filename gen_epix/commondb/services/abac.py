@@ -80,18 +80,24 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[
-            Type[Command]
-        ] = BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS,
-        read_user_commands: set[Type[Command]] = BaseAbacService.READ_USER_COMMANDS,
-        update_user_commands: set[Type[Command]] = BaseAbacService.UPDATE_USER_COMMANDS,
-        read_organization_results_only_commands: set[
-            Type[Command]
-        ] = BaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS,
-        read_self_results_only_commands: set[
-            Type[Command]
-        ] = BaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS,
+        organization_admin_write_commands: set[Type[Command]] | None = None,
+        read_user_commands: set[Type[Command]] | None = None,
+        update_user_commands: set[Type[Command]] | None = None,
+        read_organization_results_only_commands: set[Type[Command]] | None = None,
+        read_self_results_only_commands: set[Type[Command]] | None = None,
     ) -> None:
+        organization_admin_write_commands = (
+            organization_admin_write_commands or self.ORGANIZATION_ADMIN_WRITE_COMMANDS
+        )
+        read_user_commands = read_user_commands or self.READ_USER_COMMANDS
+        update_user_commands = update_user_commands or self.UPDATE_USER_COMMANDS
+        read_organization_results_only_commands = (
+            read_organization_results_only_commands
+            or self.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
+        )
+        read_self_results_only_commands = (
+            read_self_results_only_commands or self.READ_SELF_RESULTS_ONLY_COMMANDS
+        )
         f = self.app.register_policy
         policy: Policy
         command_class: Type[Command]

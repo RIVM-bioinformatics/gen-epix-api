@@ -1,13 +1,15 @@
 [app]
 host = "0.0.0.0"
-port = 8000
+port = 8002
 debug = false
+
 
 [api]
 default_route = "/openapi.json"
 gzip_response_minimum_size = 1024
 
 [api.http_header]
+
 [api.http_header.general]
 CacheControl = "no-cache, no-store"
 Content-Security-Policy = "default-src 'none'; frame-ancestors 'none'; sandbox"
@@ -40,14 +42,43 @@ X-XSS-Protection = "1; mode=block"
 [api.route]
 v1 = "/v1"
 
-[api.cors]
-allow_origins = "*"
 
 [log]
-level = "DEBUG"
+level = "INFO"
+
 
 [service]
+
 [service.defaults]
-id_factory = "ULID"
+props.timestamp_factory = "DATETIME_NOW"
+props.id_factory = "ULID"
+
+[service.abac]
+module = "gen_epix.omopdb.services"
+class_name = "AbacService"
+
+[service.auth]
+module = "gen_epix.omopdb.services"
+class_name = "AuthService"
+
+[service.organization]
+module = "gen_epix.omopdb.services"
+class_name = "OrganizationService"
+
 [service.rbac]
-user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
+module = "gen_epix.omopdb.services"
+class_name = "RbacService"
+props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 * 7
+
+[service.system]
+module = "gen_epix.omopdb.services"
+class_name = "SystemService"
+
+[service.omop]
+module = "gen_epix.omopdb.services"
+class_name = "OmopService"
+
+
+[repository]
+[repository.defaults]
+[repository.defaults.props]
