@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from gen_epix.fastapp.services.auth import OIDCClient
+from gen_epix.fastapp.services.auth import OidcClient
 
 
 @pytest.fixture(scope="module", name="env")
@@ -78,7 +78,7 @@ class TestAuth:
     @pytest.mark.parametrize("key,value", INVALID_JWK.items(), ids=INVALID_JWK.keys())
     def test_invalid_jwk(self, env: AuthTestClient, key: str, value: str) -> None:
         for idp_client in env.auth_service.idp_clients:
-            if isinstance(idp_client, OIDCClient):
+            if isinstance(idp_client, OidcClient):
                 idp_client._load_keys = MagicMock(return_value=None)
             else:
                 raise NotImplementedError

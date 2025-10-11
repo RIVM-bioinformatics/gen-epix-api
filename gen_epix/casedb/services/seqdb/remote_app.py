@@ -1,3 +1,4 @@
+from logging import Logger
 from typing import Any, Callable
 from uuid import UUID
 
@@ -5,8 +6,12 @@ import httpx
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.command import RetrievePhylogeneticTreeBySequencesCommand
-from gen_epix.fastapp import HttpProtocol, RemoteApp
+from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
+from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
+from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
+from gen_epix.fastapp.services.auth.model import OidcCfg
+from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seq_command
 from gen_epix.seqdb.domain import enum as seq_enum
@@ -37,9 +42,14 @@ class SeqdbRemoteApp(RemoteApp):
         http_protocol: HttpProtocol = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
+        auth_protocol: AuthProtocol = AuthProtocol.NONE,
+        oauth_flow: OauthFlow | None = None,
+        logger: Logger | None = None,
+        log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
     ) -> None:
         default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
+
         super().__init__(
             DOMAIN,
             host,
@@ -51,6 +61,25 @@ class SeqdbRemoteApp(RemoteApp):
             **kwargs,
         )
 
+        # Initialize IDP client if needed
+        oidc_client: OidcClient | None = None
+        if auth_protocol == AuthProtocol.NONE:
+            pass
+        elif auth_protocol == AuthProtocol.OAUTH2:
+            oidc_client = OidcClient(
+                oidc_configuration=OidcCfg(**kwargs),
+                logger=logger,
+                log_item_class=log_item_class,
+            )
+        else:
+            raise exc.InitializationServiceError(
+                f"Auth protocol {auth_protocol} not supported"
+            )
+        self._auth_protocol = auth_protocol
+        self._oauth_flow = oauth_flow
+        self._oidc_client = oidc_client
+
+        # Register handlers
         self.register_handler(
             self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
             self.create_retrieve_phylogenetic_tree_handler,
@@ -58,7 +87,27 @@ class SeqdbRemoteApp(RemoteApp):
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
         headers = super().get_headers(cmd)
-        token = ""
+        # Call identity provider to get token through OAuth Client Credentials flow
+        token_data = {
+            "grant_type": "client_credentials",
+            "client_id": "casedb-service",
+            "client_secret": "service-secret",
+            "scope": "seqdb:read seqdb:write",
+        }
+
+        # Get token endpoint from config or use default
+        token_url = "http://localhost:8080/oauth/token"
+
+        with httpx.Client() as client:
+            response = client.post(
+                token_url,
+                data=token_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            response.raise_for_status()
+            token_response = response.json()
+            token = token_response["access_token"]
+
         headers["Authorization"] = f"Bearer {token}"
         return headers
 

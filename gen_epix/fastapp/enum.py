@@ -262,11 +262,12 @@ class EventTiming(Enum):
 
 
 class AuthProtocol(Enum):
+    NONE = "NONE"
     OAUTH2 = "OAUTH2"
     OIDC = "OIDC"
 
 
-class OauthFlowType(Enum):
+class OauthFlow(Enum):
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
     RESOURCE_OWNER = "RESOURCE_OWNER"

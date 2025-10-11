@@ -3,10 +3,10 @@ from typing import Any
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import AuthProtocol
-from gen_epix.fastapp.services.auth.idp_client import IDPClient
+from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
-from gen_epix.fastapp.services.auth.model import OIDCConfiguration
-from gen_epix.fastapp.services.auth.oidc_client import OIDCClient
+from gen_epix.fastapp.services.auth.model import OidcCfg
+from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 
 OIDC_DISCOVERY_DOCUMENT_KEYS = {
     "issuer",
@@ -51,10 +51,10 @@ def get_name_from_claims(
 
 def create_idp_clients_from_config(
     app: App, idps_cfg: list[dict[str, str | list]] | None
-) -> list[IDPClient]:
+) -> list[IdpClient]:
     if not idps_cfg:
         idps_cfg = []
-    idp_clients: list[IDPClient] = []
+    idp_clients: list[IdpClient] = []
     idp_names = set()
     idp_labels = set()
     logger = app.logger
@@ -80,8 +80,8 @@ def create_idp_clients_from_config(
                     if OIDC_DISCOVERY_DOCUMENT_KEYS.issubset(set(idp_cfg.keys()))
                     else None
                 )
-                idp_client = OIDCClient(
-                    OIDCConfiguration(**idp_cfg),  # type: ignore
+                idp_client = OidcClient(
+                    OidcCfg(**idp_cfg),  # type: ignore
                     logger=logger,
                     log_item_class=app.log_item_class,
                     discovery_document=discovery_document,
@@ -100,7 +100,7 @@ def create_idp_clients_from_config(
                     app.create_log_message("48b7e021", msg, exception=exception)
                 )
     for idp_client in idp_clients:  # type: ignore
-        if isinstance(idp_client, OIDCClient):
+        if isinstance(idp_client, OidcClient):
             if logger:
                 logger.info(
                     app.create_log_message(

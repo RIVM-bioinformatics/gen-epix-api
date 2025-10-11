@@ -7,7 +7,7 @@ from fastapi.security import SecurityScopes
 from gen_epix.fastapp import App, exc, model
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
-from gen_epix.fastapp.services.auth.idp_client import IDPClient
+from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.mock_idp_client import MockIDPClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
 from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
@@ -25,7 +25,7 @@ class AuthService(BaseAuthService):
         **kwargs: Any,
     ):
         super().__init__(app, repository=repository, logger=logger, **kwargs)
-        self._idp_clients: list[IDPClient] = []
+        self._idp_clients: list[IdpClient] = []
 
         # Initialize authentication services
         self._idp_clients = create_idp_clients_from_config(app, idps_cfg)
@@ -33,10 +33,10 @@ class AuthService(BaseAuthService):
 
         # Initialize no authentication user
         self._no_auth_user: model.User
-        self._no_auth_idp_client: IDPClient = MockIDPClient(logger=logger)
+        self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
 
     @property
-    def idp_clients(self) -> list[IDPClient]:
+    def idp_clients(self) -> list[IdpClient]:
         return list(self._idp_clients)
 
     def create_user_dependencies(
