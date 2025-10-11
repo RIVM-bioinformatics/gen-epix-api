@@ -1,4 +1,5 @@
 import abc
+import uuid
 from uuid import UUID
 
 from fastapi import Request
@@ -17,7 +18,7 @@ class IdpClient(abc.ABC):
         id: UUID | None = None,
         **kwargs: dict,
     ) -> None:
-        self._id: UUID = id or UUID()
+        self._id: UUID = id or uuid.uuid4()
 
         # Set SecurityBase properties
         self.scheme_name = scheme_name

@@ -30,13 +30,14 @@ class OidcClient(IdpClient, OpenIdConnect):
         token_name: str | None = None,
         logger: logging.Logger | None = None,
         log_item_class: Type[BaseLogItem] = LogItem,
+        discovery_url: str | None = None,
+        discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,
         **kwargs: Any,
     ):
         # Set cfg and retrieve remaining information
         self._cfg = oidc_configuration.model_copy()
-        if oidc_configuration.discovery_url:
-            self.update_config_from_discovery_url()
+        self.update_config_from_discovery(url=discovery_url, doc=discovery_doc)
 
         # Set IdpClient properties
         issuer = self._cfg.issuer
@@ -74,22 +75,35 @@ class OidcClient(IdpClient, OpenIdConnect):
     def audience(self) -> str:
         return self._cfg.client_id
 
-    def update_config_from_discovery_url(self, url: str | None = None) -> None:
+    def update_config_from_discovery(
+        self, url: str | None = None, doc: dict[str, Any] | None = None
+    ) -> None:
         """
         Update the OIDC configuration from the discovery URL or, if provided, the
         discovery document.
         """
+
+        # Special case: discovery document provided
+        if doc:
+            # Update current configuration from provided discovery document
+            for key, value in doc.items():
+                setattr(self._cfg, key, value)
+            return
+
+        # Get discovery URL
         url = url or self._cfg.discovery_url
         if not url:
             raise exc.InitializationServiceError(
-                "No discovery URL provided for OIDC configuration"
+                "No discovery URL or document provided for OIDC configuration"
             )
+
+        # Update from discovery URL
         try:
-            # Create new oidc configuration from discovery URL
+            # Create new config from discovery URL
             oidc_cfg = OidcClient.create_config_for_discovery_url(
                 url, name=self._cfg.name, label=self._cfg.label
             )
-            # Update current configuration
+            # Update current configuration with data from new config
             for key, value in oidc_cfg.model_dump(
                 exclude=OidcCfg.NON_SPEC_FIELDS
             ).items():
