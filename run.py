@@ -601,6 +601,13 @@ class Run:
         ):
             print(line)
 
+    def other_general_analyse_pylint_code_impact(self) -> None:
+
+        from test.linter import Linter
+
+        linter = Linter()
+        linter.analyse_pylint_code_impact()
+
     def other_general_run_mypy(self) -> None:
         from test.linter import Linter
 
