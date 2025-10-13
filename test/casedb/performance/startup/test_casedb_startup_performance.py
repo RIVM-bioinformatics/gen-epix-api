@@ -21,7 +21,7 @@ class TestStartup:
 
         from test.test_client.app_test_client import ServiceTestClient
         from test.test_client.enum import (
-            TestType as EnumTestType,  # to avoid pytest warning
+            TestType as TestType,  # to avoid pytest warning
         )
 
         from gen_epix.casedb.domain import enum
@@ -29,7 +29,7 @@ class TestStartup:
 
         repository_type = RepositoryType.DICT
         _ = ServiceTestClient.get_test_client(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
+            test_type=TestType.CASEDB_PERFORMANCE_STARTUP,
             repository_type=repository_type,
             log_level=logging.ERROR,
         )
@@ -40,14 +40,14 @@ class TestStartup:
         with cProfile.Profile() as profiler:
             from test.test_client.app_test_client import ServiceTestClient
             from test.test_client.enum import (
-                TestType as EnumTestType,  # to avoid pytest warning
+                TestType as TestType,  # to avoid pytest warning
             )
 
             from gen_epix.casedb.domain.enum import RepositoryType
 
             repository_type = RepositoryType.SA_SQLITE
             _ = ServiceTestClient.get_test_client(
-                test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
+                test_type=TestType.CASEDB_PERFORMANCE_STARTUP,
                 repository_type=repository_type,
                 log_level=logging.ERROR,
             )
@@ -64,13 +64,13 @@ class TestStartup:
     def tearDownClass(cls) -> None:
         from test.test_client.app_test_client import ServiceTestClient
         from test.test_client.enum import (
-            TestType as EnumTestType,  # to avoid pytest warning
+            TestType as TestType,  # to avoid pytest warning
         )
 
         from gen_epix.casedb.domain.enum import RepositoryType
 
         test_dir = ServiceTestClient.get_test_client(
-            test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
+            test_type=TestType.CASEDB_PERFORMANCE_STARTUP,
             repository_type=RepositoryType.DICT,
         ).test_dir
         with open(Path(test_dir) / f"{cls.__name__}.performance.html", "w") as f:

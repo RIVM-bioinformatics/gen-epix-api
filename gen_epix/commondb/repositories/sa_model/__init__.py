@@ -1,4 +1,6 @@
-from gen_epix.commondb.domain import DOMAIN, enum
+from typing import Type
+
+from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
@@ -95,11 +97,35 @@ from gen_epix.commondb.repositories.sa_model.util import (
     set_entity_repository_model_classes as set_entity_repository_model_classes,
 )
 
+SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[Type[model.Model], Type]] = {
+    enum.ServiceType.ABAC: {
+        model.OrganizationAdminPolicy: OrganizationAdminPolicy,
+    },
+    enum.ServiceType.ORGANIZATION: {
+        model.Contact: Contact,
+        model.DataCollection: DataCollection,
+        model.DataCollectionSet: DataCollectionSet,
+        model.DataCollectionSetMember: DataCollectionSetMember,
+        model.IdentifierIssuer: IdentifierIssuer,
+        model.Organization: Organization,
+        model.OrganizationSet: OrganizationSet,
+        model.OrganizationSetMember: OrganizationSetMember,
+        model.Site: Site,
+        model.User: User,
+        model.UserInvitation: UserInvitation,
+    },
+    enum.ServiceType.SYSTEM: {
+        model.Outage: Outage,
+    },
+}
+
+FIELD_NAME_MAP: dict[Type, dict[str, str]] = {}
+
 set_entity_repository_model_classes(
     DOMAIN,
-    enum.ServiceType,
+    SA_MODELS_BY_SERVICE_TYPE,
     RowMetadataMixin,
-    "gen_epix.commondb.repositories.sa_model",
+    field_name_map=FIELD_NAME_MAP,
 )
 
 SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (

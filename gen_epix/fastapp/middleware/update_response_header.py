@@ -12,7 +12,7 @@ class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):
         self,
         app: FastAPI,
         general_headers: dict[str, str] | None = None,
-        exception_headers: tuple[set[str], dict[str, str]] | None = None,
+        exception_headers: list[tuple[set[str], dict[str, str]]] | None = None,
     ):
         super().__init__(app)
         self._general_headers = general_headers or {}

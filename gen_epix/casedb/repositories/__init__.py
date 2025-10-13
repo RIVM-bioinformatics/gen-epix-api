@@ -15,17 +15,17 @@ from gen_epix.casedb.repositories.ontology_dict import (
 from gen_epix.casedb.repositories.ontology_sa import (
     OntologySARepository as OntologySARepository,
 )
+from gen_epix.casedb.repositories.organization_dict import (
+    OrganizationDictRepository as OrganizationDictRepository,
+)
+from gen_epix.casedb.repositories.organization_sa import (
+    OrganizationSARepository as OrganizationSARepository,
+)
 from gen_epix.casedb.repositories.subject_dict import (
     SubjectDictRepository as SubjectDictRepository,
 )
 from gen_epix.casedb.repositories.subject_sa import (
     SubjectSARepository as SubjectSARepository,
 )
-from gen_epix.commondb.repositories import (
-    OrganizationDictRepository as OrganizationDictRepository,
-)
 from gen_epix.commondb.repositories import SystemDictRepository as SystemDictRepository
 from gen_epix.commondb.repositories import SystemSARepository as SystemSARepository
-from gen_epix.commondb.repositories.organization_sa import (
-    OrganizationSARepository as OrganizationSARepository,
-)

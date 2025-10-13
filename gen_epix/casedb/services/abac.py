@@ -55,17 +55,11 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[
-            Type[Command]
-        ] = BaseAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS,  # type: ignore[assignment]
-        read_user_commands: set[Type[Command]] = BaseAbacService.READ_USER_COMMANDS,  # type: ignore[assignment]
-        update_user_commands: set[Type[Command]] = BaseAbacService.UPDATE_USER_COMMANDS,  # type: ignore[assignment]
-        read_organization_results_only_commands: set[
-            Type[Command]
-        ] = BaseAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS,  # type: ignore[assignment]
-        read_self_results_only_commands: set[
-            Type[Command]
-        ] = BaseAbacService.READ_SELF_RESULTS_ONLY_COMMANDS,  # type: ignore[assignment]
+        organization_admin_write_commands: set[Type[Command]] | None = None,
+        read_user_commands: set[Type[Command]] | None = None,
+        update_user_commands: set[Type[Command]] | None = None,
+        read_organization_results_only_commands: set[Type[Command]] | None = None,
+        read_self_results_only_commands: set[Type[Command]] | None = None,
     ) -> None:
         super().register_policies(
             organization_admin_write_commands=organization_admin_write_commands,

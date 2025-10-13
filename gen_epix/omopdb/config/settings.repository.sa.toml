@@ -1,0 +1,15 @@
+[repository.abac]
+module = "gen_epix.omopdb.repositories"
+class_name = "AbacSARepository"
+
+[repository.organization]
+module = "gen_epix.omopdb.repositories"
+class_name = "OrganizationSARepository"
+
+[repository.system]
+module = "gen_epix.omopdb.repositories"
+class_name = "SystemSARepository"
+
+[repository.omop]
+module = "gen_epix.omopdb.repositories"
+class_name = "OmopSARepository"
