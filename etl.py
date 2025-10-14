@@ -1,28 +1,44 @@
 import datetime
 import os
+import sys
 from pathlib import Path
 from typing import Type
 
 from gen_epix.casedb import domain
 from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+from gen_epix.commondb.domain.enum import (
+    AppType,
+    AppTypeSet,
+    DevIdpConfig,
+    DevRepositoryConfig,
+)
 from gen_epix.commondb.util import create_demo_data_from_repository, set_env_variables
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 
-ENVVAR_PREFIX = "CASEDB_"
-MODULE_ROOT = "gen_epix.casedb"
-APP_TYPE = AppType.CASEDB
+if len(sys.argv) != 4:
+    print("Usage: etl.py ENVVAR_PREFIX MODULE_ROOT APP_TYPE")
+    print("Example: etl.py CASEDB_ gen_epix.casedb CASEDB")
+    sys.exit(1)
+
+ENVVAR_PREFIX = str(sys.argv[1]) #"CASEDB_"
+MODULE_ROOT = str(sys.argv[2]) # "gen_epix.casedb"
+APP_TYPE = AppType[sys.argv[3]] # AppType.CASEDB
 CONNECTION_TIMEOUT: float = 1
+
+if not ENVVAR_PREFIX.isupper() or not ENVVAR_PREFIX.endswith("_"):
+    raise ValueError(f"Invalid envvar prefix: {ENVVAR_PREFIX}")
+
+if not MODULE_ROOT.startswith("gen_epix."):
+    raise ValueError(f"Invalid module root: {MODULE_ROOT}")
+
+if APP_TYPE not in AppTypeSet.ALL.value:
+    raise ValueError(f"Invalid app type: {APP_TYPE}")
 
 original_settings_files_environ = os.environ.get(ENVVAR_PREFIX + "SETTINGS_FILES")
 original_log_config_file_environ = os.environ.get(
     ENVVAR_PREFIX + "LOG_CONFIG_FILE"
-)
-
-sa_sql_app_cfg = AppCfg(
-    APP_TYPE.value, ServiceType, RepositoryType, log_setup=False
 )
 
 for service_type in ServiceType:
@@ -55,6 +71,9 @@ for service_type in ServiceType:
     os.environ[ENVVAR_PREFIX + "SETTINGS_FILES"] = original_settings_files_environ
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
 
+    sa_sql_app_cfg = AppCfg(
+        APP_TYPE.value, ServiceType, RepositoryType, log_setup=False
+    )
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
     sa_repository_class: Type[SARepository] = sa_sql_repository_cfg["class"]

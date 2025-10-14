@@ -789,5 +789,17 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        {
+            "name": "etl casedb",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "etl.py",
+            "args": [
+                "CASEDB_",
+                "gen_epix.casedb",
+                "CASEDB",
+            ],
+            "justMyCode": true
+        },
     ]
 }
