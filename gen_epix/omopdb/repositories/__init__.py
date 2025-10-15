@@ -4,6 +4,7 @@ from gen_epix.commondb.repositories.system_dict import (
 from gen_epix.commondb.repositories.system_sa import (
     SystemSARepository as SystemSARepository,
 )
+from gen_epix.omopdb.repositories import sa_model as sa_model  # Initialize SA Models
 from gen_epix.omopdb.repositories.abac_dict import (
     AbacDictRepository as AbacDictRepository,
 )
