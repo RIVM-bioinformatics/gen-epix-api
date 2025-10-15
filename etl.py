@@ -54,7 +54,7 @@ CONNECTION_TIMEOUT: float = 1
 
 importlib.import_module(f"{MODULE_ROOT}.repositories.sa_model")
 enum = importlib.import_module(f"{MODULE_ROOT}.domain.enum")
-domain = importlib.import_module(f"{MODULE_ROOT}.domain")
+domain = importlib.import_module(f"{MODULE_ROOT}.domain").DOMAIN
 
 if not ENVVAR_PREFIX.isupper() or not ENVVAR_PREFIX.endswith("_"):
     raise ValueError(f"Invalid envvar prefix: {ENVVAR_PREFIX}")
