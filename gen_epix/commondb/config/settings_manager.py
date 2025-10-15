@@ -106,5 +106,5 @@ class SettingsManager:
         """
         if content.startswith("[") and content.endswith("]"):
             return json.loads(content)
-        return [s.strip() for s in content.split(",") if s.strip()]
+        return [x.strip() for x in content.split(",") if x.strip()]
 

@@ -1,11 +1,36 @@
+"""
+ETL (Extract, Transform, Load) script for Gen-EpiX genomic epidemiology platform.
+
+This module performs data loading operations between different repository types
+(dictionary-based and SQLAlchemy-based) for Gen-EpiX services. It transfers
+demo data from dictionary repositories to SQL repositories, enabling testing
+and development with realistic datasets.
+
+Usage:
+    python etl.py ENVVAR_PREFIX MODULE_ROOT APP_TYPE
+
+Examples:
+    python etl.py CASEDB_ gen_epix.casedb CASEDB
+    python etl.py SEQDB_ gen_epix.seqdb SEQDB
+    python etl.py OMOPDB_ gen_epix.omopdb OMOPDB
+
+The script:
+1. Loads demo data from dictionary repositories (file-based)
+2. Creates corresponding SQLAlchemy repositories (database-based)
+3. Transfers data between repositories using the service's domain entities
+4. Handles connection testing and error reporting for database operations
+
+This enables seamless migration of demo data from development dictionary
+repositories to production SQL repositories across all Gen-EpiX services.
+"""
+
 import datetime
+import importlib
 import os
 import sys
 from pathlib import Path
 from typing import Type
 
-from gen_epix.casedb import domain
-from gen_epix.casedb.domain.enum import RepositoryType, ServiceType
 from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import (
     AppType,
@@ -27,6 +52,10 @@ MODULE_ROOT = str(sys.argv[2]) # "gen_epix.casedb"
 APP_TYPE = AppType[sys.argv[3]] # AppType.CASEDB
 CONNECTION_TIMEOUT: float = 1
 
+importlib.import_module(f"{MODULE_ROOT}.repositories.sa_model")
+enum = importlib.import_module(f"{MODULE_ROOT}.domain.enum")
+domain = importlib.import_module(f"{MODULE_ROOT}.domain")
+
 if not ENVVAR_PREFIX.isupper() or not ENVVAR_PREFIX.endswith("_"):
     raise ValueError(f"Invalid envvar prefix: {ENVVAR_PREFIX}")
 
@@ -41,17 +70,25 @@ original_log_config_file_environ = os.environ.get(
     ENVVAR_PREFIX + "LOG_CONFIG_FILE"
 )
 
-for service_type in ServiceType:
+print(
+    f" ===== ETL STARTED FOR {APP_TYPE.value} ====="
+)
+
+for service_type in enum.ServiceType:
+    print(
+        f" STARTING ETL FOR {APP_TYPE.value} - {service_type.value} ====="
+    )
+
     set_env_variables(APP_TYPE, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
 
     dict_app_cfg = AppCfg(
-        APP_TYPE.value, ServiceType, RepositoryType, log_setup=False
+        APP_TYPE.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     dict_repository_cfg = dict_app_cfg.cfg["repository"].get(service_type.value)
     if not dict_repository_cfg:
         continue
-    entities = domain.DOMAIN.get_dag_sorted_entities(
+    entities = domain.get_dag_sorted_entities(
         service_type=service_type, persistable=True
     )
     # Create dict repository, which is assumed to always be available
@@ -72,7 +109,7 @@ for service_type in ServiceType:
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
 
     sa_sql_app_cfg = AppCfg(
-        APP_TYPE.value, ServiceType, RepositoryType, log_setup=False
+        APP_TYPE.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
@@ -95,7 +132,6 @@ for service_type in ServiceType:
         connection_string, **connect_args
     ):
         print(
-            # f"App {app_type.value}, service {service_type.value}: sa_sql connection failed: {exception}"
             f"App {APP_TYPE.value}, service {service_type.value}: sa_sql connection failed"
         )
         continue

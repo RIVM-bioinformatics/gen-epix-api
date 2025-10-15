@@ -324,7 +324,7 @@ def set_env_variables(
         settings_files.extend(extra_settings_files)
     # Set environment variables
     os.environ[envvar_prefix + "SETTINGS_FILES"] = ",".join(
-        [str(f.resolve()) for f in settings_files]
+        [str(x.resolve()) for x in settings_files]
     )
     os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
         (general_cfg_path / "logging.yaml").resolve()
