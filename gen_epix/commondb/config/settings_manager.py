@@ -43,11 +43,11 @@ class SettingsManager:
             # Try to get from environment variable
             settings_files = os.environ.get(f"{self.prefix}{settings_files_envvar}")
             if settings_files:
-                settings_files = SettingsManager.parse_json(settings_files)
+                settings_files = SettingsManager.parse_settings_files_from_string(settings_files)
         elif isinstance(settings_files, list):
             pass
         else:
-            settings_files = SettingsManager.parse_json(settings_files)
+            settings_files = SettingsManager.parse_settings_files_from_string(settings_files)
         if isinstance(settings_files, str):
             settings_files = [settings_files]
         if not settings_files:
@@ -100,14 +100,11 @@ class SettingsManager:
             return default
 
     @staticmethod
-    def parse_json(content: str, allow_str: bool = False) -> Any:
+    def parse_settings_files_from_string(content: str) -> list[str]:
         """
-        Parse content as JSON if possible, otherwise return as string.
+        Parse settings file from comma separated string.
         """
-        if (
-            (content.startswith("{") and content.endswith("}"))
-            or (content.startswith("[") and content.endswith("]"))
-            or (content.startswith('"') and content.endswith('"'))
-        ):
+        if content.startswith("[") and content.endswith("]"):
             return json.loads(content)
-        return content
+        return [s.strip() for s in content.split(",") if s.strip()]
+
