@@ -70,6 +70,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CRUD),
             (command.SampleCrudCommand, PermissionTypeSet.CRUD),
             (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
+            (command.FileCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqCrudCommand, PermissionTypeSet.CRUD),
             (command.RawSeqCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleProfileCrudCommand, PermissionTypeSet.CRUD),

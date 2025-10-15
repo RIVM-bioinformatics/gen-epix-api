@@ -9,6 +9,7 @@ from gen_epix.seqdb.domain import DOMAIN, enum, model
 from gen_epix.seqdb.repositories.sa_model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
+from gen_epix.seqdb.repositories.sa_model.file import File as File
 from gen_epix.seqdb.repositories.sa_model.organization import Contact as Contact
 from gen_epix.seqdb.repositories.sa_model.organization import (
     DataCollection as DataCollection,
@@ -169,6 +170,9 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[Type[model.Model], Type]]
         model.TaxonSetMember: TaxonSetMember,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
+    },
+    enum.ServiceType.FILE: {
+        model.File: File,
     },
 }
 

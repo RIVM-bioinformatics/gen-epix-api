@@ -109,17 +109,17 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
-    uri: str = Field(description="The URI of the read set.")
-    uri2: str | None = Field(
-        default=None, description="The URI of the second paired read set, if any."
+    for_uri: str | None = Field(description="The forward URI of the read set.")
+    rev_uri: str | None = Field(
+        default=None, description="The reverse URI of the paired read set, if any."
     )
-    reads_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by uri.",
+    for_reads_hash_sha256: bytes | None = Field(
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by for_uri.",
         min_length=32,
         max_length=32,
     )
-    reads2_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by uri2.",
+    rev_reads_hash_sha256: bytes | None = Field(
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by rev_uri.",
         min_length=32,
         max_length=32,
     )
@@ -131,6 +131,10 @@ class ReadSet(Model, CodeMixin, QualityMixin):
     )
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255
+    )
+    file_id: UUID = Field(description="The unique file identifier.")
+    file_id2: UUID | None = Field(
+        description="The unique file identifier for the second read set, if any."
     )
 
 

@@ -28,6 +28,7 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
+from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.organization import User as User
 from gen_epix.seqdb.domain.model.organization import UserInvitation as UserInvitation
 from gen_epix.seqdb.domain.model.organization import (
@@ -167,6 +168,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             SeqDistance,
             SeqTaxonomy,
         ],
+        enum.ServiceType.FILE: [File],
     }
 )
 
