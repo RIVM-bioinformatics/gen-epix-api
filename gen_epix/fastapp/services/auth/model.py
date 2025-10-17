@@ -52,7 +52,7 @@ class Claims(Model):
     )
 
 
-class OidcCfg(Model):
+class OidcServerCfg(Model):
     """OpenID Connect Provider Configuration model.
 
     This model represents the OpenID Provider Metadata as defined in Section 3 of the

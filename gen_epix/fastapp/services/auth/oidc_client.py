@@ -18,7 +18,7 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
-from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcCfg
+from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 
 
 class OidcClient(IdpClient, OpenIdConnect):
@@ -26,7 +26,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     def __init__(
         self,
-        oidc_configuration: OidcCfg,
+        server_cfg: OidcServerCfg,
         token_name: str | None = None,
         logger: logging.Logger | None = None,
         log_item_class: Type[BaseLogItem] = LogItem,
@@ -36,11 +36,11 @@ class OidcClient(IdpClient, OpenIdConnect):
         **kwargs: Any,
     ):
         # Set cfg and retrieve remaining information
-        self._cfg = oidc_configuration.model_copy()
+        self._server_cfg = server_cfg.model_copy()
         self.update_config_from_discovery(url=discovery_url, doc=discovery_doc)
 
         # Set IdpClient properties
-        issuer = self._cfg.issuer
+        issuer = self._server_cfg.issuer
         assert issuer is not None
         super().__init__(
             issuer, token_name=token_name or self.DEFAULT_TOKEN, id=id, **kwargs
@@ -68,12 +68,12 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     @property
     def issuer(self) -> str:
-        assert self._cfg.issuer is not None
-        return self._cfg.issuer
+        assert self._server_cfg.issuer is not None
+        return self._server_cfg.issuer
 
     @property
     def audience(self) -> str:
-        return self._cfg.client_id
+        return self._server_cfg.client_id
 
     def update_config_from_discovery(
         self, url: str | None = None, doc: dict[str, Any] | None = None
@@ -87,11 +87,11 @@ class OidcClient(IdpClient, OpenIdConnect):
         if doc:
             # Update current configuration from provided discovery document
             for key, value in doc.items():
-                setattr(self._cfg, key, value)
+                setattr(self._server_cfg, key, value)
             return
 
         # Get discovery URL
-        url = url or self._cfg.discovery_url
+        url = url or self._server_cfg.discovery_url
         if not url:
             raise exc.InitializationServiceError(
                 "No discovery URL or document provided for OIDC configuration"
@@ -100,21 +100,21 @@ class OidcClient(IdpClient, OpenIdConnect):
         # Update from discovery URL
         try:
             # Create new config from discovery URL
-            oidc_cfg = OidcClient.create_config_for_discovery_url(
-                url, name=self._cfg.name, label=self._cfg.label
+            server_cfg = OidcClient.create_server_config_for_discovery_url(
+                url, name=self._server_cfg.name, label=self._server_cfg.label
             )
             # Update current configuration with data from new config
-            for key, value in oidc_cfg.model_dump(
-                exclude=OidcCfg.NON_SPEC_FIELDS
+            for key, value in server_cfg.model_dump(
+                exclude=OidcServerCfg.NON_SPEC_FIELDS
             ).items():
-                setattr(self._cfg, key, value)
-            if not oidc_cfg.is_valid():
-                invalid_fields = oidc_cfg.get_invalid_fields()
+                setattr(self._server_cfg, key, value)
+            if not server_cfg.is_valid():
+                invalid_fields = server_cfg.get_invalid_fields()
                 raise exc.InitializationServiceError(
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
                 )
         except Exception as exception:
-            msg = f"Error accessing discovery URL for OIDC service {self._cfg.name}: {exception}"
+            msg = f"Error accessing discovery URL for OIDC service {self._server_cfg.name}: {exception}"
             if self._logger:
                 self._logger.error(
                     self._log_item_class(
@@ -193,8 +193,8 @@ class OidcClient(IdpClient, OpenIdConnect):
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
         if (
-            claims["iss"] != self._cfg.issuer
-            or claims.get("aud") != self._cfg.client_id
+            claims["iss"] != self._server_cfg.issuer
+            or claims.get("aud") != self._server_cfg.client_id
         ):
             # Different OIDC server
             return None
@@ -210,9 +210,9 @@ class OidcClient(IdpClient, OpenIdConnect):
             claims = jwt.decode(
                 jwt_token,
                 key=key,
-                algorithms=self._cfg.id_token_signing_alg_values_supported,
-                audience=self._cfg.client_id,
-                issuer=self._cfg.issuer,
+                algorithms=self._server_cfg.id_token_signing_alg_values_supported,
+                audience=self._server_cfg.client_id,
+                issuer=self._server_cfg.issuer,
                 # TODO: Check if this is not a security risk
                 options={"verify_at_hash": False},
             )
@@ -264,7 +264,7 @@ class OidcClient(IdpClient, OpenIdConnect):
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
-        userinfo_endpoint = self._cfg.userinfo_endpoint
+        userinfo_endpoint = self._server_cfg.userinfo_endpoint
         assert userinfo_endpoint is not None
         try:
             with httpx.Client(
@@ -299,17 +299,17 @@ class OidcClient(IdpClient, OpenIdConnect):
             return {}
 
     def get_identity_provider(self) -> IdentityProvider:
-        issuer = self._cfg.issuer
-        scopes_supported = self._cfg.scopes_supported
+        issuer = self._server_cfg.issuer
+        scopes_supported = self._server_cfg.scopes_supported
         assert issuer is not None
         assert scopes_supported is not None
         scope = " ".join(scopes_supported)
         return IdentityProvider(
-            name=self._cfg.name,
-            label=self._cfg.label,
-            client_id=self._cfg.client_id,
-            client_secret=self._cfg.client_secret,
-            discovery_url=self._cfg.discovery_url,
+            name=self._server_cfg.name,
+            label=self._server_cfg.label,
+            client_id=self._server_cfg.client_id,
+            client_secret=self._server_cfg.client_secret,
+            discovery_url=self._server_cfg.discovery_url,
             issuer=issuer,
             auth_protocol=AuthProtocol.OIDC,
             oauth_flow=OauthFlow.AUTHORIZATION_CODE,
@@ -317,7 +317,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         )
 
     def _load_keys(self) -> None:
-        jwks_uri = self._cfg.jwks_uri
+        jwks_uri = self._server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
             with httpx.Client(verify=OidcClient.should_verify_ssl(jwks_uri)) as client:
@@ -396,11 +396,13 @@ class OidcClient(IdpClient, OpenIdConnect):
         return not any(x in url.lower() for x in OidcClient.LOCAL_HOSTS)
 
     @staticmethod
-    def create_config_for_discovery_url(
+    def create_server_config_for_discovery_url(
         url: str, name: str = "", label: str = ""
-    ) -> OidcCfg:
+    ) -> OidcServerCfg:
         with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
             response = client.get(url)
             discovery_doc = response.json()
-        oidc_cfg = OidcCfg(name=name, label=label, discovery_url=url, **discovery_doc)
-        return oidc_cfg
+        server_cfg = OidcServerCfg(
+            name=name, label=label, discovery_url=url, **discovery_doc
+        )
+        return server_cfg

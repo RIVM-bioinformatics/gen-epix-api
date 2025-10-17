@@ -10,7 +10,7 @@ from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
-from gen_epix.fastapp.services.auth.model import OidcCfg
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seq_command
@@ -67,7 +67,7 @@ class SeqdbRemoteApp(RemoteApp):
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
             oidc_client = OidcClient(
-                oidc_configuration=OidcCfg(**kwargs),
+                server_cfg=OidcServerCfg(**kwargs),
                 logger=logger,
                 log_item_class=log_item_class,
             )

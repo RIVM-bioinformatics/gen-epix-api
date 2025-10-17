@@ -11,7 +11,7 @@ from gen_epix.fastapp.services.auth.mock_idp_client import (
 from gen_epix.fastapp.services.auth.model import Claims as Claims
 from gen_epix.fastapp.services.auth.model import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth.model import IDPUser as IDPUser
-from gen_epix.fastapp.services.auth.model import OidcCfg as OidcCfg
+from gen_epix.fastapp.services.auth.model import OidcServerCfg as OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient as OidcClient
 from gen_epix.fastapp.services.auth.service import AuthService as AuthService
 from gen_epix.fastapp.services.auth.util import (

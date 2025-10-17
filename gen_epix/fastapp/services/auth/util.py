@@ -5,7 +5,7 @@ from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
-from gen_epix.fastapp.services.auth.model import OidcCfg
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 
 
@@ -61,7 +61,7 @@ def create_idp_clients_from_config(
         idp_names.add(idp_name)
         idp_labels.add(idp_label)
 
-        oidc_discovery_doc_keys = set(OidcCfg.model_fields.keys())
+        oidc_discovery_doc_keys = set(OidcServerCfg.model_fields.keys())
         try:
             protocol = AuthProtocol[str(idp_cfg["protocol"])]
             if protocol == AuthProtocol.OIDC:
@@ -69,7 +69,7 @@ def create_idp_clients_from_config(
                     x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
                 }
                 idp_client = OidcClient(
-                    OidcCfg(**idp_cfg),  # type: ignore
+                    OidcServerCfg(**idp_cfg),  # type: ignore
                     logger=logger,
                     log_item_class=app.log_item_class,
                     discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again)
