@@ -552,6 +552,28 @@
             "justMyCode": true
         },
         {
+            "name": "test.omopdb.integration",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_integration_build_db"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.omopdb.integration.build_db",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_integration_build_db"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.commondb.unit",
             "type": "debugpy",
             "request": "launch",

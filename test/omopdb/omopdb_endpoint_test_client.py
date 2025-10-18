@@ -5,10 +5,10 @@ from fastapi import FastAPI, Response
 
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.fastapp.app import App
-from gen_epix.seqdb.domain import command, model
+from gen_epix.omopdb.domain import command, model
 
 
-class SeqdbEndpointTestClient(EndpointTestClient):
+class OmopdbEndpointTestClient(EndpointTestClient):
 
     def __init__(
         self,

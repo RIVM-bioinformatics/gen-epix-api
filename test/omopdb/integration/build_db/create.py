@@ -4,7 +4,7 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.commondb.test.test_client import TestClient as Env
-from gen_epix.seqdb.domain import exc, model
+from gen_epix.omopdb.domain import exc, model
 
 
 class TestCreate:

@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
+from test.omopdb.omopdb_endpoint_test_client import OmopdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
 from typing import Any
 
@@ -8,18 +8,18 @@ from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.test.test_client import TestClient
-from gen_epix.seqdb.api.organization import (
+from gen_epix.omopdb.api.organization import (
     UpdateUserRequestBody,
     UserInvitationRequestBody,
 )
-from gen_epix.seqdb.api.router import create_routers
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.policy import RoleGenerator
-from gen_epix.seqdb.env import AppEnv
+from gen_epix.omopdb.api.router import create_routers
+from gen_epix.omopdb.domain import command, enum, model
+from gen_epix.omopdb.domain.policy import RoleGenerator
+from gen_epix.omopdb.env import AppEnv
 
 
-class SeqdbTestClient(TestClient):
-    TEST_CLIENTS: dict[str, "SeqdbTestClient"] = {}
+class OmopdbTestClient(TestClient):
+    TEST_CLIENTS: dict[str, "OmopdbTestClient"] = {}
 
     MODEL_KEY_MAP = TestClient.MODEL_KEY_MAP | {
         model.User: "name",
@@ -96,7 +96,7 @@ class SeqdbTestClient(TestClient):
 
         # Create endpoint test client if endpoints are to be used (including own
         # app_env), otherwise construct app env separately
-        endpoint_test_client: SeqdbEndpointTestClient | None = None
+        endpoint_test_client: OmopdbEndpointTestClient | None = None
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
@@ -113,7 +113,7 @@ class SeqdbTestClient(TestClient):
                 update_openapi_schema=True,
             )
             app_last_handled_exception = LAST_HANDLED_EXCEPTION
-            endpoint_test_client = SeqdbEndpointTestClient(
+            endpoint_test_client = OmopdbEndpointTestClient(
                 app_env.app,
                 fast_api,
                 app_last_handled_exception,

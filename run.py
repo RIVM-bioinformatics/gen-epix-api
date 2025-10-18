@@ -161,8 +161,10 @@ class Run:
                 "test/commondb/unit",
                 "test/casedb/unit",
                 "test/casedb/integration",
+                # "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
+                "test/omopdb/integration",
                 # Not normally included, uncomment if needed
                 # "test/casedb/performance",
                 # "test/seqdb/performance",
@@ -326,13 +328,10 @@ class Run:
             ]
         )
 
-    def test_omopdb_unit(self) -> None:
-        import pytest
-
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/omopdb/unit/",
+                "test/seqdb/integration/build_db",
             ]
         )
 
@@ -563,6 +562,36 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/integration/content",
+            ]
+        )
+
+    def test_omopdb_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/",
+            ]
+        )
+
+    def test_omopdb_integration(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/integration",
+            ]
+        )
+
+    def test_omopdb_integration_build_db(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/integration/build_db",
             ]
         )
 

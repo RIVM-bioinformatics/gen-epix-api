@@ -8,7 +8,7 @@ import pydantic
 import pytest
 
 from gen_epix.commondb.test.test_client import TestClient as Env
-from gen_epix.seqdb.domain import enum, exc, model
+from gen_epix.omopdb.domain import enum, exc, model
 
 
 class TestUpdate:
