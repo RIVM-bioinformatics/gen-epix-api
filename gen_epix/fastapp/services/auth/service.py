@@ -14,7 +14,6 @@ from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
 
 
 class AuthService(BaseAuthService):
-    SERVICE_TYPE = "AUTH"
 
     def __init__(
         self,

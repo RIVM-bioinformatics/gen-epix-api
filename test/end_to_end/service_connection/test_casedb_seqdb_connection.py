@@ -1,4 +1,4 @@
-"""Test the connecting of CaseDB to a RemoteApp service of SeqDB."""
+"""Test connection between casedb, seqdb and/or omopdb"""
 
 import os
 import signal
@@ -11,19 +11,19 @@ from typing import Generator
 import httpx
 import pytest
 
-from gen_epix.commondb.domain.enum import AppConfigType, AppType
-from run import Run
+from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
+from gen_epix.commondb.util import set_env_variables
 
 
 class ServiceManager:
-    """Manages CaseDB, SeqDB and possibly OMOPDB services for testing purposes."""
+    """Manages casedb, seqdb and possibly omopdb services for testing purposes."""
 
     def __init__(self, project_root: str):
         self.project_root = project_root
         self.processes: dict[str, subprocess.Popen] = {}
         self.ports = {
-            "seqdb": 8001,
             "casedb": 8000,
+            "seqdb": 8001,
             # "omopdb": 8002, # uncomment if needed
         }
         self.base_urls = {
@@ -38,7 +38,12 @@ class ServiceManager:
             ssl_context.load_verify_locations(cert_file)
         return ssl_context
 
-    def start_service(self, service_name: str, idp: str = "mock_idps") -> bool:
+    def start_service(
+        self,
+        service_name: str,
+        idp_config: DevIdpConfig = DevIdpConfig.MOCK,
+        dev_repository_config: DevRepositoryConfig = DevRepositoryConfig.DICT_EMPTY,
+    ) -> bool:
         """Start a service (CaseDB, SeqDB, OMOPDB) in a subprocess."""
 
         if service_name not in self.ports:
@@ -48,11 +53,22 @@ class ServiceManager:
             print(f"{service_name} is already running. Stopping it first.")
             self.stop_service(service_name)
 
-        cmd = ["python", "run.py", "api", service_name, "local", idp]
+        cmd = [
+            "python",
+            "run.py",
+            "api",
+            service_name,
+            idp_config.value,
+            dev_repository_config.value,
+        ]
 
         print(f"Starting {service_name} with command: {' '.join(cmd)}")
 
-        Run.set_env_variables(AppType[service_name.upper()], AppConfigType[idp.upper()])
+        set_env_variables(
+            AppType[service_name.upper()],
+            DevIdpConfig.MOCK,
+            DevRepositoryConfig.DICT_EMPTY,
+        )
         env = os.environ.copy()
         env.update(
             {
@@ -60,15 +76,24 @@ class ServiceManager:
             }
         )
 
+        popen_kwargs = {
+            "cwd": self.project_root,
+            "env": env,
+            "stdout": subprocess.PIPE,
+            "stderr": subprocess.STDOUT,
+            "universal_newlines": True,
+            "bufsize": 1,
+        }
+        if os.name == "posix":
+            popen_kwargs["preexec_fn"] = (
+                os.setsid
+            )  # To allow killing the whole process group
+        elif os.name == "nt":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+
         process = subprocess.Popen(
             cmd,
-            cwd=self.project_root,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,  # To allow killing the whole process group
-            universal_newlines=True,
-            bufsize=1,
+            **popen_kwargs,
         )
 
         self.processes[service_name] = process
@@ -111,12 +136,26 @@ class ServiceManager:
         process = self.processes[service_name]
 
         try:
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            if os.name == "posix":
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            elif os.name == "nt":
+                process.send_signal(signal.CTRL_BREAK_EVENT)
             process.wait(timeout=10)
         except (subprocess.TimeoutExpired, ProcessLookupError):
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            if os.name == "posix":
+                try:
+                    os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass  # Process already terminated
+            elif os.name == "nt":
+                process.kill()
         finally:
-            del self.processes[service_name]
+            if process.stdout:
+                process.stdout.close()
+            if process.stderr:
+                process.stderr.close()
+            if service_name in self.processes:
+                del self.processes[service_name]
 
         print(f"{service_name} stopped.")
 

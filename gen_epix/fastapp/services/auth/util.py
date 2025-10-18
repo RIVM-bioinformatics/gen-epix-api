@@ -12,11 +12,13 @@ from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 def get_email_from_claims(
     claims: dict[str, Any],
 ) -> str | None:
-    if "email" in claims and isinstance(claims["email"], str):
-        return claims["email"].lower()
-    for claim in claims.values():
-        if isinstance(claim, str) and EMAIL_PATTERN.match(claim.lower()):
-            return claim.lower()
+    email = claims.get("email")
+    if email is None:
+        for claim in claims.values():
+            if isinstance(claim, str) and EMAIL_PATTERN.match(claim.lower()):
+                return claim.lower()
+    else:
+        return email.lower()
     return None
 
 

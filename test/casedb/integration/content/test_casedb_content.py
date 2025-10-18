@@ -112,6 +112,7 @@ class TestContent:
         )
         # Invite an org user as org admin user
         new_user = model.User(
+            key="new_user@example.com",
             email="new_user@example.com",
             organization_id=org_admin_user.organization_id,
             roles={enum.Role.ORG_USER},
@@ -119,6 +120,7 @@ class TestContent:
         new_user_invitation: model.UserInvitation = app.handle(
             command.InviteUserCommand(
                 user=org_admin_user,
+                key=new_user.key,
                 email=new_user.email,
                 organization_id=new_user.organization_id,
                 roles=new_user.roles,

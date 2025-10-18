@@ -1,7 +1,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
@@ -102,6 +102,10 @@ class OidcServerCfg(Model):
     client_secret: str | None = Field(
         default=None, description="The client secret of the application"
     )
+    claim_map: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mapping of identity provider claims to standard names",
+    )
 
     # OpenID Provider Metadata fields from Section 3 of the specification
 
@@ -116,15 +120,17 @@ class OidcServerCfg(Model):
     jwks_uri: str | None = Field(
         default=None, description="URL of the OP's JWK Set document"
     )
-    response_types_supported: list[str] = Field(
-        description="JSON array containing a list of the OAuth 2.0 response_type values that this OP supports"
+    response_types_supported: list[str] | None = Field(
+        default=None,
+        description="JSON array containing a list of the OAuth 2.0 response_type values that this OP supports",
     )
     subject_types_supported: list[str] | None = Field(
         default=None,
         description="JSON array containing a list of the Subject Identifier types that this OP supports",
     )
     id_token_signing_alg_values_supported: list[str] | None = Field(
-        description="JSON array containing a list of the JWS signing algorithms supported by the OP for the ID Token"
+        default=None,
+        description="JSON array containing a list of the JWS signing algorithms supported by the OP for the ID Token",
     )
 
     # REQUIRED unless only Implicit Flow is used
@@ -245,6 +251,16 @@ class OidcServerCfg(Model):
         default=None,
         description="URL that the OpenID Provider provides to the person registering the Client to read about the OpenID Provider's terms of service",
     )
+
+    @model_validator(mode="after")
+    def _validate(self) -> "OidcServerCfg":
+        """Validate that all required fields are set after model initialization."""
+        for new_claim_name, orig_claim_name in self.claim_map.items():
+            if new_claim_name == orig_claim_name:
+                raise ValueError(
+                    f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
+                )
+        return self
 
     @property
     def scope(self) -> str:

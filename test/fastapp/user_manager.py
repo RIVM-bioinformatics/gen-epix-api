@@ -9,11 +9,12 @@ from gen_epix.fastapp.model import Permission, User
 
 class MockUser(BaseModel):
     id: str
-    name: str
+    key: str
     email: str
+    name: str
 
 
-MOCK_USER = MockUser(id="u1", name="John", email="info@org.nl")
+MOCK_USER = MockUser(id="u1", key="info@org.nl", email="info@org.nl", name="John")
 
 
 class UserManager(BaseUserManager):

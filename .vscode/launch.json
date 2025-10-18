@@ -343,12 +343,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.custom",
+            "name": "test.casedb.unit.seqdb_remote_app",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_custom"
+                "test_casedb_unit_seqdb_remote_app"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -448,6 +448,17 @@
             "program": "run.py",
             "args": [
                 "test_casedb_performance_startup"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.casedb.custom",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_custom"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -673,34 +684,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.integration.content",
+            "name": "test.end_to_end.service_connection",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_integration_content"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.integration.service_connection",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_integration_service_connection"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.remote-app.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_remote_app_unit"
+                "test_end_to_end_service_connection"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

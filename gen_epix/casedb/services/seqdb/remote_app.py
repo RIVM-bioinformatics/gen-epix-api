@@ -13,8 +13,8 @@ from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 from gen_epix.seqdb.domain import DOMAIN
-from gen_epix.seqdb.domain import command as seq_command
-from gen_epix.seqdb.domain import enum as seq_enum
+from gen_epix.seqdb.domain import command as seqdb_command
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class SeqdbRemoteApp(RemoteApp):
@@ -22,16 +22,16 @@ class SeqdbRemoteApp(RemoteApp):
     DEFAULT_ROUTE_PREFIX = "/v1/"
 
     COMMAND_MAP: dict[type[Command], type[Command]] = {
-        command.RetrievePhylogeneticTreeBySequencesCommand: seq_command.RetrievePhylogeneticTreeCommand,
+        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
     }
     ROUTE_MAP: dict[type[Command], str] = {
-        seq_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
+        seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
     }
 
     TREE_ALGORITHM_MAP = {
         x: y
         for x in enum.TreeAlgorithmType
-        for y in seq_enum.TreeAlgorithm
+        for y in seqdb_enum.TreeAlgorithm
         if x.value == y.value
     }
 
@@ -79,10 +79,15 @@ class SeqdbRemoteApp(RemoteApp):
         self._oauth_flow = oauth_flow
         self._oidc_client = oidc_client
 
-        # Register handlers
+        # Register routes and handlers
+        seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
+        self.register_route(
+            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
+            self.ROUTE_MAP[seqdb_command_class],
+        )
         self.register_handler(
             self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
-            self.create_retrieve_phylogenetic_tree_handler,
+            self.create_retrieve_phylogenetic_tree_handler(),
         )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
@@ -113,27 +118,29 @@ class SeqdbRemoteApp(RemoteApp):
 
     def create_retrieve_phylogenetic_tree_handler(self) -> Callable:
 
-        seqdb_command_class = seq_command.RetrievePhylogeneticTreeCommand
-        self.register_route(
-            self.COMMAND_MAP[command.RetrievePhylogeneticTreeBySequencesCommand],
-            self.ROUTE_MAP[seqdb_command_class],
-        )
+        seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
+        # Route registration is handled during initialization
 
         def handler(
-            cmd: seq_command.RetrievePhylogeneticTreeCommand,
+            cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
         ) -> model.PhylogeneticTree | None:
             headers = self.get_headers(cmd)
             route = self.get_route(cmd)
 
+            # Create request body matching seqdb API expectations
+            from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
+
+            request_body = RetrievePhylogeneticTreeRequestBody(
+                seq_distance_protocol_id=cmd.seq_distance_protocol_id,
+                tree_algorithm=cmd.tree_algorithm,
+                seq_ids=cmd.seq_ids,
+                leaf_codes=cmd.leaf_names,
+            )
+
             with httpx.Client() as client:
                 response = client.post(
                     route,
-                    json=seqdb_command_class(
-                        seq_distance_protocol_id=cmd.seq_distance_protocol_id,
-                        tree_algorithm=cmd.tree_algorithm,
-                        seq_ids=cmd.seq_ids,
-                        leaf_names=cmd.leaf_names,
-                    ).model_dump(),
+                    json=request_body.model_dump(),
                     headers=headers,
                 )
                 response.raise_for_status()

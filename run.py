@@ -159,13 +159,17 @@ class Run:
                 "test/transform/unit",
                 "test/fastapp/unit",
                 "test/commondb/unit",
-                "test/casedb/integration/build_db",
-                "test/casedb/integration/content",
-                "test/casedb/integration/case_access",
-                "test/casedb/integration/case_validation",
                 "test/casedb/unit",
-                "test/seqdb/integration/build_db",
+                "test/casedb/integration",
+                "test/seqdb/integration",
                 "test/omopdb/unit",
+                # Not normally included, uncomment if needed
+                # "test/casedb/performance",
+                # "test/seqdb/performance",
+                # "test/omopdb/performance",
+                # "test/commondb/performance",
+                # "test/fastapp/performance",
+                # "test/end_to_end",
             ]
         )
 
@@ -352,16 +356,43 @@ class Run:
             ]
         )
 
+    def test_casedb_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/",
+            ]
+        )
+
+    def test_casedb_unit_case_type_col_order(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/case_type_col_order",
+            ]
+        )
+
+    def test_casedb_unit_seqdb_remote_app(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/seqdb_remote_app",
+            ]
+        )
+
     def test_casedb_integration(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/build_db",
-                "test/casedb/integration/case_access",
-                "test/casedb/integration/case_validation",
-                "test/casedb/integration/content",
+                "test/casedb/integration",
             ]
         )
 
@@ -411,9 +442,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/performance/repository",
-                "test/casedb/performance/user_journey",
-                "test/casedb/performance/startup",
+                "test/casedb/performance",
             ]
         )
 
@@ -463,8 +492,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/integration/build_db",
-                "test/seqdb/integration/content",
+                "test/seqdb/integration",
             ]
         )
 
@@ -494,9 +522,7 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/performance/repository",
-                "test/seqdb/performance/user_journey",
-                "test/seqdb/performance/startup",
+                "test/seqdb/performance",
             ]
         )
 
@@ -530,35 +556,23 @@ class Run:
             ]
         )
 
-    def test_integration_content(self) -> None:
+    def test_seqdb_integration_content(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/content",
-                # "test/seqdb/integration/content",
+                "test/seqdb/integration/content",
             ]
         )
 
-    def test_integration_service_connection(self) -> None:
+    def test_end_to_end_service_connection(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/test_remote_app.py",
-                # "test/seqdb/integration/service_connection",
-            ]
-        )
-
-    def test_remote_app_unit(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/services/seqdb/test_remote_app.py",
+                "test/end_to_end/service_connection",
             ]
         )
 

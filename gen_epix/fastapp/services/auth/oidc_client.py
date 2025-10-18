@@ -37,7 +37,7 @@ class OidcClient(IdpClient, OpenIdConnect):
     ):
         # Set cfg and retrieve remaining information
         self._server_cfg = server_cfg.model_copy()
-        self.update_config_from_discovery(url=discovery_url, doc=discovery_doc)
+        self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
 
         # Set IdpClient properties
         issuer = self._server_cfg.issuer
@@ -75,7 +75,7 @@ class OidcClient(IdpClient, OpenIdConnect):
     def audience(self) -> str:
         return self._server_cfg.client_id
 
-    def update_config_from_discovery(
+    def update_server_config_from_discovery(
         self, url: str | None = None, doc: dict[str, Any] | None = None
     ) -> None:
         """
@@ -192,9 +192,10 @@ class OidcClient(IdpClient, OpenIdConnect):
         # Decode token without verifying signature to make sure this token is generated
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
+        server_cfg = self._server_cfg
         if (
-            claims["iss"] != self._server_cfg.issuer
-            or claims.get("aud") != self._server_cfg.client_id
+            claims["iss"] != server_cfg.issuer
+            or claims.get("aud") != server_cfg.client_id
         ):
             # Different OIDC server
             return None
@@ -210,9 +211,9 @@ class OidcClient(IdpClient, OpenIdConnect):
             claims = jwt.decode(
                 jwt_token,
                 key=key,
-                algorithms=self._server_cfg.id_token_signing_alg_values_supported,
-                audience=self._server_cfg.client_id,
-                issuer=self._server_cfg.issuer,
+                algorithms=server_cfg.id_token_signing_alg_values_supported,
+                audience=server_cfg.client_id,
+                issuer=server_cfg.issuer,
                 # TODO: Check if this is not a security risk
                 options={"verify_at_hash": False},
             )
@@ -239,6 +240,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
 
+        # Get issuer and sub
         issuer = claims["iss"]
         sub = claims.get("sub")
         if not issuer or not sub:
@@ -259,6 +261,11 @@ class OidcClient(IdpClient, OpenIdConnect):
             raise exc.CredentialsAuthError(
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             )
+
+        # Map claims according to claim_map, allowing e.g. to standardize claim names across IDPs
+        for new_claim_name, orig_claim_name in server_cfg.claim_map.items():
+            claims[new_claim_name] = claims.get(orig_claim_name)
+
         return claims
 
     def get_claims_from_userinfo(

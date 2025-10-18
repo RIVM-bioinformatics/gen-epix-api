@@ -7,3 +7,5 @@ client_id = "mock"
 client_secret = "mock"
 scope = "openid profile email offline_access"
 
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "email"
