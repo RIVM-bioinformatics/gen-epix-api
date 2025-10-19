@@ -704,6 +704,16 @@ class Run:
         out_dir = Path(__file__).parent / "docs" / "assets" / "erm"
         generate_erm_diagrams(out_dir)
 
+    def other_oauth_server_start(self) -> None:
+        from test.test_client.oauth.start_server import start_server
+
+        start_server()
+
+    def other_oauth_server_client_demo(self) -> None:
+        from test.test_client.oauth.demo_client import demo_client_credentials_flow
+
+        demo_client_credentials_flow()
+
 
 if __name__ == "__main__":
     fire.Fire(Run)

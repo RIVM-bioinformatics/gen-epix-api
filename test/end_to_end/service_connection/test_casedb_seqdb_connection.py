@@ -44,7 +44,7 @@ class ServiceManager:
         idp_config: DevIdpConfig = DevIdpConfig.MOCK,
         dev_repository_config: DevRepositoryConfig = DevRepositoryConfig.DICT_EMPTY,
     ) -> bool:
-        """Start a service (CaseDB, SeqDB, OMOPDB) in a subprocess."""
+        """Start a service (casedb, seqdb, omopdb) in a subprocess."""
 
         if service_name not in self.ports:
             raise ValueError(f"Unknown service: {service_name}")

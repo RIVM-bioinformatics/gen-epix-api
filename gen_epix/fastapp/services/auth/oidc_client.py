@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Any, Type
 from uuid import UUID
@@ -22,7 +23,13 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcS
 
 
 class OidcClient(IdpClient, OpenIdConnect):
-    LOCAL_HOSTS = {"localhost", "127.0.0.1"}
+
+    LOCAL_HOSTS: set[str] = {"localhost", "127.0.0.1"}
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
+    DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
 
     def __init__(
         self,
@@ -33,6 +40,9 @@ class OidcClient(IdpClient, OpenIdConnect):
         discovery_url: str | None = None,
         discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,
+        client_credential_flow_request_headers: dict[str, str] | None = None,
+        client_credential_flow_max_retries: int | None = None,
+        client_credential_flow_base_delay: float | None = None,
         **kwargs: Any,
     ):
         # Set cfg and retrieve remaining information
@@ -50,6 +60,18 @@ class OidcClient(IdpClient, OpenIdConnect):
         self._logger = logger
         self._log_item_class = log_item_class
         self._signing_keys: dict[str, Key] = {}
+        self._client_credential_flow_request_headers = (
+            client_credential_flow_request_headers
+            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
+        )
+        self._client_credential_flow_max_retries = (
+            client_credential_flow_max_retries
+            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES
+        )
+        self._client_credential_flow_base_delay = (
+            client_credential_flow_base_delay
+            or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+        )
 
         # self._load_keys()
         # authorization_endpoint = self._cfg.authorization_endpoint
@@ -267,6 +289,85 @@ class OidcClient(IdpClient, OpenIdConnect):
             claims[new_claim_name] = claims.get(orig_claim_name)
 
         return claims
+
+    def retrieve_jwt_with_client_credentials_flow(
+        self,
+        scope: str,
+        headers: dict[str, str] | None = None,
+        max_retries: int | None = None,
+        base_delay: float | None = None,
+    ) -> str:
+        """
+        Call server to get token through OAuth Client Credentials flow.
+        """
+        # Parse input
+        headers = headers or self._client_credential_flow_request_headers
+        max_retries = max_retries or self._client_credential_flow_max_retries
+        base_delay = base_delay or self._client_credential_flow_base_delay
+
+        # Get token endpoint URL
+        url = self._server_cfg.token_endpoint
+        if not isinstance(url, str):
+            # Try to get from discovery document
+            if self._logger:
+                self._logger.info(
+                    self._log_item_class(
+                        code="8f3a2b1c",
+                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self._server_cfg.name}, trying to update from discovery URL",
+                    ).dumps()
+                )
+            self.update_server_config_from_discovery()
+            url = self._server_cfg.token_endpoint
+        if not isinstance(url, str):
+            raise exc.ServiceUnavailableError("Token endpoint URL is not set")
+
+        # Create request body
+        token_data = {
+            "grant_type": "client_credentials",
+            "client_id": self._server_cfg.client_id,
+            "client_secret": self._server_cfg.client_secret,
+            "scope": scope,
+        }
+
+        # Call server with retries
+        last_exception: Exception | None = None
+        for attempt in range(max_retries + 1):
+            try:
+                with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
+                    response = client.post(
+                        url,
+                        data=token_data,
+                        headers=headers,
+                    )
+                    response.raise_for_status()
+                    token_response = response.json()
+                    token: str = token_response["access_token"]
+                    return token
+            except Exception as exception:
+                last_exception = exception
+                if self._logger:
+                    self._logger.warning(
+                        self._log_item_class(
+                            code="a7f3e9d2",
+                            msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self._server_cfg.name}",
+                            exception=exception,
+                        ).dumps()
+                    )
+            # Wait before next retry (but not after the last attempt)
+            if attempt < max_retries:
+                time.sleep(base_delay)
+
+        # All retries failed
+        if self._logger:
+            self._logger.error(
+                self._log_item_class(
+                    code="f8a3d7b2",
+                    msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self._server_cfg.name}",
+                ).dumps()
+            )
+        raise exc.ServiceUnavailableError(
+            f"Token retrieval failed for server {self._server_cfg.name}: {last_exception}"
+        )
 
     def get_claims_from_userinfo(
         self, access_token: str

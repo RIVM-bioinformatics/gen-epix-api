@@ -809,6 +809,7 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        // TODO: move to ETL section and rename
         {
             "name": "etl casedb",
             "type": "debugpy",
@@ -824,6 +825,28 @@
                 "CASEDB_SETTINGS_FILES": "gen_epix/casedb/config/settings.toml, config/mock_identity_provider.toml, gen_epix/casedb/config/.example.secrets.service.toml, gen_epix/casedb/config/settings.repository.sa.toml, gen_epix/casedb/config/.example.secrets.repository.sa_sql.toml",
                 "CASEDB_LOG_CONFIG_FILE": "config/logging.yaml"
             }
+        },
+        {
+            "name": "other.oauth_server.start",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_oauth_server_start",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "other.oauth_server.client_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_oauth_server_client_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         },
     ]
 }
