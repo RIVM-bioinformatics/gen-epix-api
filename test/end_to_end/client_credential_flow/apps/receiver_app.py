@@ -11,7 +11,7 @@ from typing import AsyncGenerator
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient
@@ -44,7 +44,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
                 label="OAuth Server",
                 client_id="ReceiverApp",  # This service's identifier (expected audience)
                 client_secret="receiver-secret",  # Not used for validation
-                discovery_url=self.oauth_discovery_url,
+                discovery_endpoint=self.oauth_discovery_url,
             )
 
             self.oidc_client = OidcClient(
@@ -64,7 +64,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
         @self.app.get("/test_client_credential_flow")
         async def test_endpoint(
             request: Request,  # pylint: disable=unused-argument
-            token=Depends(security),
+            token: HTTPAuthorizationCredentials = Depends(security),
         ) -> JSONResponse:
             """Protected endpoint that validates access tokens."""
             try:

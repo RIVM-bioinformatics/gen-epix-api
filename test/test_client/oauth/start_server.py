@@ -45,9 +45,16 @@ def setup_logging(debug: bool = False) -> None:
 
 
 def start_server(
-    host: str = "127.0.0.1", port: int = 8080, debug: bool = False, reload: bool = False
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    ssl_keyfile: str | None = None,
+    ssl_certfile: str | None = None,
+    debug: bool = False,
+    reload: bool = False,
 ) -> None:
     """Start the OAuth 2.0 server."""
+    if (ssl_certfile is None) != (ssl_keyfile is None):
+        raise ValueError("Both ssl_keyfile and ssl_certfile must be provided together")
 
     setup_logging(debug)
     logger = logging.getLogger(__name__)
@@ -87,6 +94,8 @@ def start_server(
             log_level="debug" if debug else "info",
             reload=reload,
             access_log=True,
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile,
         )
     except KeyboardInterrupt:
         logger.info("🛑 Server stopped by user")

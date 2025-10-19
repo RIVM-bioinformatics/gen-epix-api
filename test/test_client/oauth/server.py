@@ -459,9 +459,3 @@ async def get_client(client_id: str) -> ClientResponse:
         created_at=client.created_at.isoformat(),
         is_active=client.is_active,
     )
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8080)

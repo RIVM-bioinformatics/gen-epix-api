@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
+from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.model import Model
 
 
@@ -22,7 +22,7 @@ class IdentityProvider(Model):
     label: str = Field(description="Label of the identity provider")
     issuer: str = Field(description="The issuer URL of the identity provider")
     auth_protocol: AuthProtocol = Field(description="The authentication protocol")
-    oauth_flow: OauthFlow | None = Field(
+    oauth_flow: OAuthFlow | None = Field(
         default=None, description="The OAuth flow type of the identity provider"
     )
     discovery_url: str | None = Field(

@@ -181,7 +181,7 @@ class RemoteApp(App):
             cmd: CrudCommand,
         ) -> Any:
             headers = self.get_headers(cmd)
-            with httpx.Client() as client:
+            with httpx.Client(verify=False) as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:
                         response = client.post(

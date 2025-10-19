@@ -6,11 +6,10 @@ This module provides a command-line interface for starting the ReceiverApp using
 
 import logging
 import sys
+from test.end_to_end.client_credential_flow.apps.receiver_app import ReceiverApp
 
 import fire
 import uvicorn
-
-from .receiver_app import ReceiverApp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +19,13 @@ logger = logging.getLogger(__name__)
 class ReceiverAppCLI:  # pylint: disable=too-few-public-methods
     """Command-line interface for ReceiverApp."""
 
-    def run(self, port: int = 8001, oauth_discovery_url: str = "") -> None:
+    def run(
+        self,
+        port: int = 8001,
+        oauth_discovery_url: str = "",
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+    ) -> None:
         """
         Start the ReceiverApp server.
 
@@ -28,6 +33,9 @@ class ReceiverAppCLI:  # pylint: disable=too-few-public-methods
             port: Port to run the server on (default: 8001)
             oauth_discovery_url: OAuth server discovery URL
         """
+        if (ssl_keyfile is None) != (ssl_certfile is None):
+            logger.error("Both ssl_keyfile and ssl_certfile must be provided, or none")
+            sys.exit(1)
         if not oauth_discovery_url:
             logger.error("oauth_discovery_url is required")
             sys.exit(1)
@@ -44,6 +52,8 @@ class ReceiverAppCLI:  # pylint: disable=too-few-public-methods
             host="localhost",
             port=port,
             log_level="info",
+            ssl_keyfile=ssl_keyfile,
+            ssl_certfile=ssl_certfile,
         )
 
 

@@ -1,5 +1,6 @@
 import json
 import logging
+import ssl
 import time
 from datetime import datetime
 from typing import Any, Type
@@ -16,7 +17,7 @@ from jose.backends.base import Key
 from jose.exceptions import JWTClaimsError
 
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
+from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
@@ -104,25 +105,25 @@ class OidcClient(IdpClient, OpenIdConnect):
         Update the OIDC configuration from the discovery URL or, if provided, the
         discovery document.
         """
-
-        # Special case: discovery document provided
-        if doc:
-            # Update current configuration from provided discovery document
-            for key, value in doc.items():
-                setattr(self._server_cfg, key, value)
-            return
-
-        # Get discovery URL
         url = url or self._server_cfg.discovery_url
-        if not url:
+        if url is None and doc is None:
             raise exc.InitializationServiceError(
                 "No discovery URL or document provided for OIDC configuration"
             )
 
+        # Special case: discovery document provided -> update from that first
+        if doc:
+            # Update current configuration from provided discovery document
+            for key, value in doc.items():
+                setattr(self._server_cfg, key, value)
+
         # Update from discovery URL
+        if not url:
+            return
         try:
             # Get discovery document
-            with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
+            verify_setting = OidcClient.get_ssl_context_or_verify_flag(url)
+            with httpx.Client(verify=verify_setting) as client:
                 response = client.get(url)
                 discovery_doc = response.json()
 
@@ -216,6 +217,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
         server_cfg = self._server_cfg
+        # TODO: check audience claim as well?
         if (
             claims["iss"] != server_cfg.issuer
             or claims.get("aud") != server_cfg.client_id
@@ -334,7 +336,8 @@ class OidcClient(IdpClient, OpenIdConnect):
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
+                verify_setting = OidcClient.get_ssl_context_or_verify_flag(url)
+                with httpx.Client(verify=verify_setting) as client:
                     response = client.post(
                         url,
                         data=token_data,
@@ -376,9 +379,10 @@ class OidcClient(IdpClient, OpenIdConnect):
         userinfo_endpoint = self._server_cfg.userinfo_endpoint
         assert userinfo_endpoint is not None
         try:
-            with httpx.Client(
-                verify=OidcClient.should_verify_ssl(userinfo_endpoint)
-            ) as client:
+            verify_setting = OidcClient.get_ssl_context_or_verify_flag(
+                userinfo_endpoint
+            )
+            with httpx.Client(verify=verify_setting) as client:
                 response = client.get(
                     userinfo_endpoint,
                     headers={"Authorization": f"Bearer {access_token}"},
@@ -421,7 +425,7 @@ class OidcClient(IdpClient, OpenIdConnect):
             discovery_url=self._server_cfg.discovery_url,
             issuer=issuer,
             auth_protocol=AuthProtocol.OIDC,
-            oauth_flow=OauthFlow.AUTHORIZATION_CODE,
+            oauth_flow=OAuthFlow.AUTHORIZATION_CODE,
             scope=scope,
         )
 
@@ -429,7 +433,8 @@ class OidcClient(IdpClient, OpenIdConnect):
         jwks_uri = self._server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
-            with httpx.Client(verify=OidcClient.should_verify_ssl(jwks_uri)) as client:
+            verify_setting = OidcClient.get_ssl_context_or_verify_flag(jwks_uri)
+            with httpx.Client(verify=verify_setting) as client:
                 # get keys
                 response = client.get(jwks_uri)
                 response.raise_for_status()
@@ -501,17 +506,57 @@ class OidcClient(IdpClient, OpenIdConnect):
         return None
 
     @staticmethod
+    def get_ssl_context_or_verify_flag(url: str) -> ssl.SSLContext | bool:
+        """
+        Get SSL context for URL or return verification flag.
+        Returns custom SSL context for local development or False/True for verification.
+        """
+        import os
+
+        # Check environment variable to globally disable SSL verification
+        if os.getenv("DISABLE_SSL_VERIFICATION", "").lower() in ("true", "1", "yes"):
+            return False
+
+        # For development: disable SSL verification for local hosts
+        local_indicators = {
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "::1",  # IPv6 localhost
+            ".local",  # mDNS local domain
+        }
+        if any(indicator in url.lower() for indicator in local_indicators):
+            # Try to load local certificate if available
+            cert_file = os.path.join("cert", "cert.pem")
+            if os.path.exists(cert_file):
+                ssl_context = ssl.create_default_context()
+                ssl_context.load_verify_locations(cert_file)
+                return ssl_context
+            else:
+                # No local cert found, disable verification
+                return False
+
+        # For production URLs, use default verification
+        return True
+
+    @staticmethod
     def should_verify_ssl(url: str) -> bool:
-        return not any(x in url.lower() for x in OidcClient.LOCAL_HOSTS)
+        """Legacy method - returns verification flag only."""
+        result = OidcClient.get_ssl_context_or_verify_flag(url)
+        return result if isinstance(result, bool) else True
 
     @staticmethod
     def create_server_config_for_discovery_url(
-        url: str, name: str = "", label: str = ""
+        discovery_endpoint: str, name: str = "", label: str = ""
     ) -> OidcServerCfg:
-        with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
-            response = client.get(url)
+        verify_setting = OidcClient.get_ssl_context_or_verify_flag(discovery_endpoint)
+        with httpx.Client(verify=verify_setting) as client:
+            response = client.get(discovery_endpoint)
             discovery_doc = response.json()
         server_cfg = OidcServerCfg(
-            name=name, label=label, discovery_url=url, **discovery_doc
+            name=name,
+            label=label,
+            discovery_endpoint=discovery_endpoint,
+            **discovery_doc,
         )
         return server_cfg

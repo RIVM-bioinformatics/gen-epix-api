@@ -706,12 +706,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.end_to_end.service_connection",
+            "name": "test.end_to_end.casedb_seqdb_connection",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_end_to_end_service_connection"
+                "test_end_to_end_casedb_seqdb_connection"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

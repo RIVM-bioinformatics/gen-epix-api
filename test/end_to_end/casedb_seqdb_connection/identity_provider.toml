@@ -1,0 +1,11 @@
+[[service.auth.props.idps_cfg]]
+name = "mock"
+label = "MOCK"
+protocol = "OIDC"
+discovery_url = "https://127.0.0.1:8000/.well-known/openid-configuration"
+client_id = "mock"
+client_secret = "CASEDB_FOR_SEQDB"
+scope = "openid profile"
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "aud"

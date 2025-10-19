@@ -9,7 +9,7 @@ from jose import jwt
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.command import RetrievePhylogeneticTreeBySequencesCommand
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
-from gen_epix.fastapp.enum import AuthProtocol, OauthFlow
+from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
@@ -46,14 +46,24 @@ class SeqdbRemoteApp(RemoteApp):
         http_protocol: HttpProtocol = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
-        auth_protocol: AuthProtocol = AuthProtocol.NONE,
-        oauth_flow: OauthFlow | None = None,
+        auth_protocol: AuthProtocol | str = AuthProtocol.NONE,
+        oauth_flow: OAuthFlow | str | None = None,
+        oauth_discovery_url: str | None = None,
+        oauth_client_id: str | None = None,
+        oauth_client_secret: str | None = None,
         oauth_scope: str | None = None,
+        oauth_token_endpoint: str | None = None,
         oauth_token_refresh_margin: float | None = None,
         logger: Logger | None = None,
         log_item_class: type[LogItem] = LogItem,
         **kwargs: Any,
     ) -> None:
+        # DEBUG: Print all kwargs to understand what's being passed
+        print(f"SeqdbRemoteApp init kwargs: {kwargs}")
+        if isinstance(auth_protocol, str):
+            auth_protocol = AuthProtocol(auth_protocol)
+        if isinstance(oauth_flow, str):
+            oauth_flow = OAuthFlow(oauth_flow)
         default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         oauth_token_refresh_margin = (
             oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
@@ -75,8 +85,19 @@ class SeqdbRemoteApp(RemoteApp):
         if auth_protocol == AuthProtocol.NONE:
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
+            if oauth_discovery_url is None:
+                raise exc.InitializationServiceError(
+                    "OAuth discovery endpoint must be provided for OAUTH2 auth protocol"
+                )
             oidc_client = OidcClient(
-                server_cfg=OidcServerCfg(**kwargs),
+                server_cfg=OidcServerCfg(
+                    name="",
+                    label="",
+                    discovery_url=oauth_discovery_url,
+                    client_id=oauth_client_id,
+                    client_secret=oauth_client_secret,
+                    token_endpoint=oauth_token_endpoint,
+                ),
                 logger=logger,
                 log_item_class=log_item_class,
             )
@@ -109,9 +130,11 @@ class SeqdbRemoteApp(RemoteApp):
     def get_headers(self, cmd: Command) -> dict[str, str]:
         headers = super().get_headers(cmd)
         # Call identity provider to get JWT
-        assert self._oidc_client is not None
-        assert self._oauth_scope is not None
+        if self._auth_protocol == AuthProtocol.NONE:
+            return headers
         if self._auth_protocol == AuthProtocol.OAUTH2:
+            assert self._oidc_client is not None
+            assert self._oauth_scope is not None
             # Check if cached token is still valid
             if self._oauth_token_cache and self._oauth_token_cache[0] > (
                 datetime.now().timestamp() - self._oauth_token_refresh_margin

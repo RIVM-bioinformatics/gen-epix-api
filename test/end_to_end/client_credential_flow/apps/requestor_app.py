@@ -35,7 +35,7 @@ class RequestorApp:
                 label="OAuth Server",
                 client_id=self.client_id,
                 client_secret=self.client_secret,
-                discovery_url=self.oauth_discovery_url,
+                discovery_endpoint=self.oauth_discovery_url,
             )
 
             self.oidc_client = OidcClient(

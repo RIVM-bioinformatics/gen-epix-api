@@ -6,9 +6,7 @@ This module manages the ReceiverApp server process for testing.
 
 import logging
 import subprocess
-from test.end_to_end.client_credential_flow.apps.base_process_manager import (
-    BaseProcessManager,
-)
+from test.test_client.oauth.base_process_manager import BaseProcessManager
 
 # Configure logging
 logger = logging.getLogger(__name__)

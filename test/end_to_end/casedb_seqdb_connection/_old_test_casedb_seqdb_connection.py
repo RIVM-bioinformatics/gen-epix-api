@@ -6,6 +6,7 @@ import ssl
 import subprocess
 import threading
 import time
+from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from typing import Generator
 
 import httpx
@@ -13,6 +14,8 @@ import pytest
 
 from gen_epix.commondb.domain.enum import AppType, DevIdpConfig, DevRepositoryConfig
 from gen_epix.commondb.util import set_env_variables
+
+set_envvar()
 
 
 class ServiceManager:

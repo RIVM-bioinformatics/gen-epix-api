@@ -267,7 +267,7 @@ class AuthProtocol(Enum):
     OIDC = "OIDC"
 
 
-class OauthFlow(Enum):
+class OAuthFlow(Enum):
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
     RESOURCE_OWNER = "RESOURCE_OWNER"

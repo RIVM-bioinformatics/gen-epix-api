@@ -595,13 +595,13 @@ class Run:
             ]
         )
 
-    def test_end_to_end_service_connection(self) -> None:
+    def test_end_to_end_casedb_seqdb_connection(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/end_to_end/service_connection",
+                "test/end_to_end/casedb_seqdb_connection",
             ]
         )
 

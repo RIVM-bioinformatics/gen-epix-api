@@ -89,7 +89,7 @@ def oauth_server() -> Generator[OAuthServerManager, None, None]:
             logger.warning(f"Failed to create demo clients: {e}")
 
         # Add M2M client for RequestorApp
-        if not server.add_m2m_client(
+        if not server.add_client(
             client_id="RequestorApp",
             client_secret="requestor_app_secret",
             audience="ReceiverApp",

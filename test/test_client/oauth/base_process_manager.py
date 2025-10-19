@@ -20,11 +20,24 @@ logger = logging.getLogger(__name__)
 class BaseProcessManager:  # pylint: disable=too-few-public-methods
     """Base class for managing server processes."""
 
-    def __init__(self, port: int, service_name: str):
+    def __init__(
+        self,
+        port: int,
+        service_name: str,
+        ssl_keyfile: str | None = None,
+        ssl_certfile: str | None = None,
+    ):
+        if (ssl_keyfile is None) != (ssl_certfile is None):
+            raise ValueError(
+                "Both ssl_keyfile and ssl_certfile must be provided together"
+            )
         self.port = port
         self.service_name = service_name
         self.process: subprocess.Popen[str] | None = None
-        self.base_url = f"http://localhost:{port}"
+        self.http_protocol = "https" if ssl_keyfile and ssl_certfile else "http"
+        self.base_url = f"{self.http_protocol}://localhost:{port}"
+        self.ssl_keyfile = ssl_keyfile
+        self.ssl_certfile = ssl_certfile
 
     def _create_process_kwargs(self) -> dict[str, Any]:
         """Create common subprocess kwargs."""
@@ -76,7 +89,7 @@ class BaseProcessManager:  # pylint: disable=too-few-public-methods
                 return False
 
             try:
-                with httpx.Client() as client:
+                with httpx.Client(verify=self.ssl_certfile) as client:
                     response = client.get(health_url, timeout=5.0)
                     if response.status_code == 200:
                         logger.info(f"{self.service_name} is ready")
