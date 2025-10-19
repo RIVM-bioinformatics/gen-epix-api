@@ -27,6 +27,7 @@ import jwt
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,31 +43,8 @@ oidc_provider = OIDCProvider(jwks_manager)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Initialize the OAuth server with demo clients."""
+    """Initialize the OAuth server."""
     logger.info("Starting OAuth 2.0 Provider with OIDC support")
-
-    # Create demo clients
-    demo_client = Client(
-        client_id="demo-client",
-        client_secret="demo-secret",
-        client_name="Demo Client",
-        scopes=["read", "write", "openid", "profile"],
-        grant_types=["client_credentials"],
-    )
-    client_store.store_client(demo_client)
-
-    test_client = Client(
-        client_id="test-client",
-        client_secret="test-secret",
-        client_name="Test Client",
-        scopes=["read", "openid"],
-        grant_types=["client_credentials"],
-    )
-    client_store.store_client(test_client)
-
-    logger.info("Demo clients created:")
-    logger.info("- demo-client / demo-secret (scopes: read, write, openid, profile)")
-    logger.info("- test-client / test-secret (scopes: read, openid)")
 
     yield  # This is where the app runs
 
@@ -86,6 +64,32 @@ app = FastAPI(
 security = HTTPBasic()
 
 
+# Pydantic models for API requests
+class ClientCreateRequest(BaseModel):
+    """Request model for creating a new OAuth client."""
+
+    client_id: str
+    client_secret: str
+    client_name: str
+    scopes: list[str]
+    grant_types: list[str] = ["client_credentials"]
+    redirect_uris: list[str] = []
+    audience: str | None = None
+
+
+class ClientResponse(BaseModel):
+    """Response model for client information."""
+
+    client_id: str
+    client_name: str
+    scopes: list[str]
+    grant_types: list[str]
+    redirect_uris: list[str]
+    audience: str | None = None
+    created_at: str
+    is_active: bool
+
+
 def get_client_credentials(
     credentials: HTTPBasicCredentials = Depends(security),
 ) -> Client:
@@ -97,6 +101,53 @@ def get_client_credentials(
             detail="Invalid client credentials",
             headers={"WWW-Authenticate": "Basic"},
         )
+    return client
+
+
+async def authenticate_client(request: Request) -> Client:
+    """Authenticate client using HTTP Basic Auth or form data."""
+    client_id = None
+    client_secret = None
+
+    # Try HTTP Basic Auth first
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Basic "):
+        try:
+            import base64
+
+            encoded_credentials = auth_header[6:]  # Remove "Basic "
+            decoded_credentials = base64.b64decode(encoded_credentials).decode("utf-8")
+            client_id, client_secret = decoded_credentials.split(":", 1)
+        except Exception:
+            pass
+
+    # If no basic auth, try form data
+    if not client_id or not client_secret:
+        form_data = await request.form()
+        client_id_form = form_data.get("client_id")
+        client_secret_form = form_data.get("client_secret")
+
+        # Handle UploadFile vs string types
+        client_id = client_id_form if isinstance(client_id_form, str) else None
+        client_secret = (
+            client_secret_form if isinstance(client_secret_form, str) else None
+        )
+
+    if not client_id or not client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Client authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    client = client_store.get_client(client_id)
+    if not client or not client.check_secret(client_secret):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid client credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     return client
 
 
@@ -132,10 +183,11 @@ async def jwks_endpoint() -> Dict[str, Any]:
 
 
 @app.post("/oauth/token")
-async def token_endpoint(
-    request: Request, client: Client = Depends(get_client_credentials)
-) -> JSONResponse:
+async def token_endpoint(request: Request) -> JSONResponse:
     """OAuth 2.0 Token endpoint supporting Client Credentials flow."""
+
+    # Authenticate client using either HTTP Basic Auth or form data
+    client = await authenticate_client(request)
 
     # Parse form data
     form_data = await request.form()
@@ -161,7 +213,7 @@ async def token_endpoint(
     access_token_payload = {
         "iss": f"{request.url.scheme}://{request.url.netloc}",
         "sub": client.client_id,
-        "aud": client.client_id,
+        "aud": client.audience or client.client_id,  # Use client's audience if set
         "iat": int(now.timestamp()),
         "exp": int(expires_at.timestamp()),
         "scope": " ".join(allowed_scopes),
@@ -193,7 +245,7 @@ async def token_endpoint(
         id_token_payload = {
             "iss": f"{request.url.scheme}://{request.url.netloc}",
             "sub": client.client_id,
-            "aud": client.client_id,
+            "aud": client.audience or client.client_id,  # Use client's audience if set
             "iat": int(now.timestamp()),
             "exp": int(expires_at.timestamp()),
             "auth_time": int(now.timestamp()),
@@ -316,6 +368,97 @@ async def userinfo_endpoint(request: Request) -> JSONResponse:
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@app.post("/admin/clients", status_code=status.HTTP_201_CREATED)
+async def create_client(client_request: ClientCreateRequest) -> ClientResponse:
+    """Create a new OAuth client."""
+    # Check if client already exists
+    if client_store.client_exists(client_request.client_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Client with ID '{client_request.client_id}' already exists",
+        )
+
+    # Create new client
+    client = Client(
+        client_id=client_request.client_id,
+        client_secret=client_request.client_secret,
+        client_name=client_request.client_name,
+        scopes=client_request.scopes,
+        grant_types=client_request.grant_types,
+        redirect_uris=client_request.redirect_uris,
+        audience=client_request.audience,
+    )
+
+    client_store.store_client(client)
+
+    logger.info(f"Created new client: {client_request.client_id}")
+
+    # Return client info (without secret)
+    return ClientResponse(
+        client_id=client.client_id,
+        client_name=client.client_name,
+        scopes=client.scopes,
+        grant_types=client.grant_types,
+        redirect_uris=client.redirect_uris,
+        audience=client.audience,
+        created_at=client.created_at.isoformat(),
+        is_active=client.is_active,
+    )
+
+
+@app.delete("/admin/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_client(client_id: str) -> None:
+    """Delete an OAuth client."""
+    if not client_store.delete_client(client_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Client with ID '{client_id}' not found",
+        )
+
+    logger.info(f"Deleted client: {client_id}")
+
+
+@app.get("/admin/clients")
+async def list_clients() -> list[ClientResponse]:
+    """List all OAuth clients."""
+    clients = client_store.list_clients()
+    return [
+        ClientResponse(
+            client_id=client.client_id,
+            client_name=client.client_name,
+            scopes=client.scopes,
+            grant_types=client.grant_types,
+            redirect_uris=client.redirect_uris,
+            audience=client.audience,
+            created_at=client.created_at.isoformat(),
+            is_active=client.is_active,
+        )
+        for client in clients
+    ]
+
+
+@app.get("/admin/clients/{client_id}")
+async def get_client(client_id: str) -> ClientResponse:
+    """Get a specific OAuth client."""
+    client = client_store.get_client(client_id)
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Client with ID '{client_id}' not found",
+        )
+
+    return ClientResponse(
+        client_id=client.client_id,
+        client_name=client.client_name,
+        scopes=client.scopes,
+        grant_types=client.grant_types,
+        redirect_uris=client.redirect_uris,
+        audience=client.audience,
+        created_at=client.created_at.isoformat(),
+        is_active=client.is_active,
+    )
 
 
 if __name__ == "__main__":

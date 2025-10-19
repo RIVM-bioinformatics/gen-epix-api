@@ -45,18 +45,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         client_credential_flow_base_delay: float | None = None,
         **kwargs: Any,
     ):
-        # Set cfg and retrieve remaining information
-        self._server_cfg = server_cfg.model_copy()
-        self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
-
-        # Set IdpClient properties
-        issuer = self._server_cfg.issuer
-        assert issuer is not None
-        super().__init__(
-            issuer, token_name=token_name or self.DEFAULT_TOKEN, id=id, **kwargs
-        )
-
-        # Set input properties and initialize some
+        # Set input properties first
         self._logger = logger
         self._log_item_class = log_item_class
         self._signing_keys: dict[str, Key] = {}
@@ -71,6 +60,17 @@ class OidcClient(IdpClient, OpenIdConnect):
         self._client_credential_flow_base_delay = (
             client_credential_flow_base_delay
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
+        )
+
+        # Set cfg and retrieve remaining information
+        self._server_cfg = server_cfg.model_copy()
+        self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
+
+        # Set IdpClient properties
+        issuer = self._server_cfg.issuer
+        assert issuer is not None
+        super().__init__(
+            issuer, token_name=token_name or self.DEFAULT_TOKEN, id=id, **kwargs
         )
 
         # self._load_keys()
@@ -121,17 +121,18 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         # Update from discovery URL
         try:
-            # Create new config from discovery URL
-            server_cfg = OidcClient.create_server_config_for_discovery_url(
-                url, name=self._server_cfg.name, label=self._server_cfg.label
-            )
-            # Update current configuration with data from new config
-            for key, value in server_cfg.model_dump(
-                exclude=OidcServerCfg.NON_SPEC_FIELDS
-            ).items():
-                setattr(self._server_cfg, key, value)
-            if not server_cfg.is_valid():
-                invalid_fields = server_cfg.get_invalid_fields()
+            # Get discovery document
+            with httpx.Client(verify=OidcClient.should_verify_ssl(url)) as client:
+                response = client.get(url)
+                discovery_doc = response.json()
+
+            # Update current configuration with discovery data, preserving client credentials
+            for key, value in discovery_doc.items():
+                if key not in OidcServerCfg.NON_SPEC_FIELDS:
+                    setattr(self._server_cfg, key, value)
+
+            if not self._server_cfg.is_valid():
+                invalid_fields = self._server_cfg.get_invalid_fields()
                 raise exc.InitializationServiceError(
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
                 )

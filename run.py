@@ -605,6 +605,16 @@ class Run:
             ]
         )
 
+    def test_end_to_end_client_credential_flow(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/end_to_end/client_credential_flow",
+            ]
+        )
+
     ## Other
 
     def other_general_generate_uuids(self, n_rows: int = 1000, n_cols: int = 100):

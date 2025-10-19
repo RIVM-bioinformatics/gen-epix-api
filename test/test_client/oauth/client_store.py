@@ -23,6 +23,7 @@ class Client:
     scopes: list[str] = field(default_factory=list)
     grant_types: list[str] = field(default_factory=lambda: ["client_credentials"])
     redirect_uris: list[str] = field(default_factory=list)
+    audience: str | None = field(default=None)  # Target audience for M2M clients
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = True
 
@@ -153,6 +154,7 @@ class ClientStore:
         scopes: list[str],
         grant_types: list[str] | None = None,
         redirect_uris: list[str] | None = None,
+        audience: str | None = None,
     ) -> Client:
         """Create a new client with auto-generated credentials."""
         client_id = f"client_{secrets.token_urlsafe(16)}"
@@ -170,6 +172,7 @@ class ClientStore:
             scopes=scopes,
             grant_types=grant_types,
             redirect_uris=redirect_uris,
+            audience=audience,
         )
 
         self.store_client(client)

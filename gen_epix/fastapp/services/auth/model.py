@@ -155,6 +155,9 @@ class OidcServerCfg(Model):
     )
 
     # OPTIONAL fields
+    introspection_endpoint: str | None = Field(
+        default=None, description="URL of the OP's Token Introspection Endpoint"
+    )
     response_modes_supported: list[str] | None = Field(
         default=None,
         description="JSON array containing a list of the OAuth 2.0 response_mode values that this OP supports",
