@@ -428,13 +428,13 @@ class PcrMeasurement(Base, RowMetadataMixin):
 class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.ReadSet)
 
-    uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "uri")
-    uri2: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "uri2")
-    reads_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.ReadSet, "reads_hash_sha256"
+    for_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "for_uri")
+    rev_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "rev_uri")
+    for_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.ReadSet, "for_reads_hash_sha256"
     )
-    reads2_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.ReadSet, "reads_hash_sha256"
+    rev_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.ReadSet, "rev_reads_hash_sha256"
     )
     library_prep_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "library_prep_protocol_id"
@@ -442,6 +442,8 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"
     )
+    file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.ReadSet, "file_id")
+    file_id2: Mapped[UUID] = create_mapped_column(DOMAIN, model.ReadSet, "file_id2")
 
 
 class RawSeq(Base, RowMetadataMixin, SeqMixin):

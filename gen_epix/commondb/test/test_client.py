@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import re
 from collections.abc import Hashable
@@ -16,6 +17,8 @@ from gen_epix.commondb.test.util import set_log_level
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
+from gen_epix.seqdb.domain import command as seqcommand
+from gen_epix.seqdb.domain import model as seqmodel
 
 BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
@@ -310,6 +313,75 @@ class TestClient:
             )
         )
         return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
+
+    def create_read_set(
+        self,
+        user_or_str: str | model.User,
+        file: seqmodel.File,
+        library_prep: seqmodel.LibraryPrepProtocol,
+        content: bytes,
+    ) -> seqmodel.ReadSet:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        reads_hash_sha256: bytes = hashlib.sha256(content).digest()
+        read_set: seqmodel.ReadSet = self.app.handle(
+            seqcommand.ReadSetCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=seqmodel.ReadSet(
+                    for_uri="",
+                    rev_uri=None,
+                    for_reads_hash_sha256=reads_hash_sha256,
+                    rev_reads_hash_sha256=None,
+                    library_prep_protocol_id=library_prep.id,  # type:ignore[arg-type]
+                    sequencing_run_code="",
+                    file_id=file.id,  # type:ignore[arg-type]
+                    file_id2=None,
+                ),
+            )
+        )
+        return read_set
+
+    def create_library_prep_protocol(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        name: str,
+    ) -> seqmodel.LibraryPrepProtocol:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        lib_prep: seqmodel.LibraryPrepProtocol = self.app.handle(
+            seqcommand.LibraryPrepProtocolCrudCommand(
+                operation=CrudOperation.CREATE_ONE,
+                user=user,
+                objs=seqmodel.LibraryPrepProtocol(code=code, name=name),  # type:ignore
+            )
+        )
+        return lib_prep
+
+    def create_file_object(
+        self, user_or_str: str | model.User, content: bytes
+    ) -> seqmodel.File:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        hash_sha256: bytes = hashlib.sha256(content).digest()
+        file_obj: seqmodel.File = self.app.handle(
+            seqcommand.FileCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=seqmodel.File(
+                    id=None,
+                    size_bytes=len(content),
+                    hash_sha256=hash_sha256,
+                    content=content,
+                ),
+            )
+        )
+
+        return file_obj
 
     def read_all_user_invitations(
         self, user_or_str: str | model.User

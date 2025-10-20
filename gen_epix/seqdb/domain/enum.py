@@ -25,6 +25,7 @@ class ServiceType(Enum):
     RBAC = "RBAC"
     ABAC = "ABAC"
     SEQ = "SEQ"
+    FILE = "FILE"
 
 
 class RepositoryType(Enum):

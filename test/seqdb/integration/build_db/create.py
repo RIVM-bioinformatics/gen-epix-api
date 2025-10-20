@@ -200,3 +200,24 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
         # TODO: OrganizationAdminPolicy.user does not exist
+
+    def test_create_read_set_with_files(self, env: Env) -> None:
+        # Define variables for creating file, library prep protocol and read set
+        root1_1: str = "root1_1"
+        file_content: bytes = b">example content for file"
+        code: str = "libprep1"
+        name: str = "libprep1"
+        # Create File and LibraryPrepProtocol and use for creating ReadSet
+        file: model.File = env.create_file_object(root1_1, file_content)
+        library_prep: model.LibraryPrepProtocol = env.create_library_prep_protocol(
+            root1_1, code, name
+        )
+        read_set: model.ReadSet = env.create_read_set(
+            root1_1, file, library_prep, file_content
+        )
+        # Retrieve created ReadSet and check linking to File and LibraryPrepProtocol
+        read_sets: list[model.ReadSet] = env.read_all(root1_1, model.ReadSet)  # type: ignore[assignment]
+        assert len(read_sets) == 1
+        assert read_sets[0].id == read_set.id
+        assert read_sets[0].file_id == file.id
+        assert read_sets[0].library_prep_protocol_id == library_prep.id

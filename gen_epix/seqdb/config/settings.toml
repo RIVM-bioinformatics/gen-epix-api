@@ -78,6 +78,11 @@ class_name = "SystemService"
 module = "gen_epix.seqdb.services"
 class_name = "SeqService"
 
+[service.file]
+module = "gen_epix.seqdb.services"
+class_name = "FileService"
+
 [repository]
 [repository.defaults]
 [repository.defaults.props]
+
