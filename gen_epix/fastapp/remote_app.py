@@ -112,7 +112,7 @@ class RemoteApp(App):
             )
         return route
 
-    def get_headers(self, cmd: Command) -> dict[str, str]:
+    async def get_headers(self, cmd: Command) -> dict[str, str]:
         """
         Get headers for the command. Override to include e.g. authorization header.
         """

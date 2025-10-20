@@ -56,7 +56,9 @@ class RequestorApp:
         try:
             # Request token with appropriate scope
             scope = "openid read write"
-            token = self.oidc_client.retrieve_jwt_with_client_credentials_flow(scope)
+            token = await self.oidc_client.retrieve_jwt_with_client_credentials_flow(
+                scope
+            )
             logger.info(f"Retrieved access token for audience {audience}")
             return token
         except Exception as e:

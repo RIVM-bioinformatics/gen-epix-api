@@ -96,7 +96,7 @@ class OidcServerCfg(Model):
     name: str = Field(description="Service name")
     label: str = Field(description="Service label")
     discovery_url: str | None = Field(
-        description="The URL of the OpenID Connect discovery document"
+        default=None, description="The URL of the OpenID Connect discovery document"
     )
     client_id: str = Field(description="The client ID of the application")
     client_secret: str | None = Field(

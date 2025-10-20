@@ -127,7 +127,7 @@ class SeqdbRemoteApp(RemoteApp):
             self.create_retrieve_phylogenetic_tree_handler(),
         )
 
-    def get_headers(self, cmd: Command) -> dict[str, str]:
+    async def get_headers(self, cmd: Command) -> dict[str, str]:
         headers = super().get_headers(cmd)
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
@@ -142,8 +142,10 @@ class SeqdbRemoteApp(RemoteApp):
                 jwt_token = self._oauth_token_cache[1]
             else:
                 # Retrieve new token
-                jwt_token = self._oidc_client.retrieve_jwt_with_client_credentials_flow(
-                    scope=self._oauth_scope
+                jwt_token = (
+                    await self._oidc_client.retrieve_jwt_with_client_credentials_flow(
+                        scope=self._oauth_scope
+                    )
                 )
                 # Put token in cache together with its expiry time
                 claims = jwt.get_unverified_claims(jwt_token)

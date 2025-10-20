@@ -32,7 +32,7 @@ class AuthTestClient:
                 "label": "idp1",
                 "protocol": "OIDC",
                 "issuer": AuthTestClient.MOCK_JWK_TOKEN.payload["iss"],
-                "discovery_url": "https://idp1.org/configuration",
+                # "discovery_url": "https://idp1.org/configuration",
                 "client_id": AuthTestClient.MOCK_JWK_TOKEN.payload["aud"],
                 "claim_map": {"__key__": "email"},
                 "scope": "openid profile email",
