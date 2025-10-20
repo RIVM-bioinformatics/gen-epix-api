@@ -103,6 +103,9 @@ from gen_epix.commondb.domain.model import Site as Site
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
+from gen_epix.seqdb.domain.model import LibraryPrepProtocol as LibraryPrepProtocol
+from gen_epix.seqdb.domain.model import ReadSet as ReadSet
+from gen_epix.seqdb.domain.model import File as File
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
@@ -139,6 +142,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             AlleleProfile,
             GeneticSequence,
             PhylogeneticTree,
+            LibraryPrepProtocol,
+            ReadSet,
+            File,
         ],
         enum.ServiceType.SUBJECT: [
             Subject,

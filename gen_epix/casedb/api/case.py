@@ -137,6 +137,16 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
+class CreateReadsSetsForCasesRequestBody(PydanticBaseModel):
+    case_read_set_entries: list[command.CreateReadsSetsForCasesCommand.Entry] = Field(
+        description="The entries defining which read sets to create for which cases and case type columns.",
+    )
+
+
+class CreateFileForReadsSetRequestBody(PydanticBaseModel):
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
 def create_case_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -550,6 +560,28 @@ def create_case_endpoints(
                 "a4c03b54", user, exception, request_ids=request_body.sequence_ids
             )
         return retval
+
+    @router.post(
+        "/create_reads_sets_for_cases",
+        operation_id="create_reads_sets_for_cases",
+        name="Create reads sets for cases",
+        description=command.CreateReadsSetsForCasesCommand.__doc__,
+    )
+    async def create_reads_sets_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        request_body: CreateReadsSetsForCasesRequestBody,
+    ) -> list[model.ReadSet]:
+        try:
+            created_read_sets: list[model.ReadSet] = app.handle(
+                command.CreateReadsSetsForCasesCommand(
+                    user=user,
+                    case_read_set_entries=request_body.case_read_set_entries,
+                )
+            )
+        except Exception as exception:
+            print("Exception occurred:", exception)
+
+        return created_read_sets
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

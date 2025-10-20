@@ -1,6 +1,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
@@ -256,6 +257,20 @@ class RetrieveAlleleProfileCommand(Command):
     )
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to retrieve allele profiles for."
+    )
+
+
+class CreateReadsSetsForCasesCommand(Command):
+    """
+    Create read sets for a set of cases based on a read set case type column.
+    """
+    class Entry(PydanticBaseModel):
+        case_id: UUID
+        case_type_col_id: UUID
+        read_set: model.ReadSet
+
+    case_read_set_entries: list[Entry] = Field(
+        description="The entries of (case_id, case_type_col_id, read_set) to create."
     )
 
 

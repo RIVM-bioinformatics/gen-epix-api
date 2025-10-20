@@ -130,6 +130,8 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
             (command.ValidateCasesCommand, PermissionTypeSet.E),
+            (command.CreateReadsSetsForCasesCommand, PermissionTypeSet.E),
+            (command.CreateFileForReadsSetCommand, PermissionTypeSet.E),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),
             (command.ConceptSetCrudCommand, PermissionTypeSet.R),
@@ -150,6 +152,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveGeneticSequenceFastaByCaseCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeBySequencesCommand, PermissionTypeSet.E),
+            (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
         },
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }

@@ -89,6 +89,7 @@ class BaseCaseService(BaseService):
             command.RetrieveGeneticSequenceFastaByCaseCommand,
             self.retrieve_genetic_sequence_fasta_by_case,
         )
+        f(command.CreateReadsSetsForCasesCommand, self.create_reads_sets_for_cases)
 
     @abc.abstractmethod
     def validate_cases(
@@ -165,4 +166,11 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
     ) -> Iterable[str]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_reads_sets_for_cases(
+        self,
+        cmd: command.CreateReadsSetsForCasesCommand,
+    ) -> list[model.ReadSet] | None:
         raise NotImplementedError()

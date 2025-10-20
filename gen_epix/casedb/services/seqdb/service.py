@@ -152,6 +152,17 @@ class SeqdbService(BaseSeqdbService):
         fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
 
+    def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
+        read_sets: list[model.ReadSet] = self.seqdb_app.handle(
+            seqdb_command.ReadSetCrudCommand(
+                user=self.seqdb_user,
+                objs=cmd.objs,
+                obj_ids=cmd.obj_ids,
+                operation=cmd.operation,
+            )
+        )
+        return read_sets
+
     # def retrieve_allele_profile(
     #     self,
     #     cmd: command.RetrieveAlleleProfileCommand,

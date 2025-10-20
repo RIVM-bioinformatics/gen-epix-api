@@ -1,5 +1,6 @@
 import abc
 from typing import Iterable
+from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
@@ -21,6 +22,7 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
+        f(command.ReadSetCrudCommand, self.create_read_set)
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -42,6 +44,11 @@ class BaseSeqdbService(BaseService):
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
+        raise NotImplementedError()
+
 
     # @abc.abstractmethod
     # def retrieve_allele_profile(

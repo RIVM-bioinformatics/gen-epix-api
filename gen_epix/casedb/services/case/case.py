@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 from decimal import Decimal
 from typing import Any, Callable, Iterable, Type
 from uuid import UUID
@@ -1132,3 +1133,19 @@ class CaseService(BaseCaseService):
             ],
             operator=LogicalOperator.AND,
         )
+
+    def create_reads_sets_for_cases(
+        self, cmd: command.CreateReadsSetsForCasesCommand
+    ) -> list[model.ReadSet] | None:
+        # TODO: What to do here with case_id and case_type_col_id?
+        # Create sha hashes here?
+        # validate?
+        read_sets: list[model.ReadSet] = self.app.handle(
+            command.ReadSetCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=[x.read_set for x in cmd.case_read_set_entries],
+            )
+        )
+
+        return read_sets
