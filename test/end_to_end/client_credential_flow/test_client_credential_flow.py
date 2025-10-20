@@ -22,6 +22,7 @@ from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=imp
 )
 from typing import Generator
 
+import anyio
 import httpx
 import pytest
 
@@ -134,8 +135,12 @@ def test_oauth_client_credentials_flow_success(
     """Test successful OAuth Client Credentials flow."""
 
     # Step 1: RequestorApp gets access token for ReceiverApp
-    access_token = requestor_app.get_access_token("ReceiverApp")
-    assert access_token, "Should receive access token"
+    async def _test() -> str:
+        access_token = await requestor_app.get_access_token("ReceiverApp")
+        assert access_token, "Should receive access token"
+        return access_token
+
+    access_token = anyio.run(_test)
 
     # Step 2: RequestorApp calls protected endpoint on ReceiverApp
     endpoint_url = f"{receiver_app.base_url}/test_client_credential_flow"

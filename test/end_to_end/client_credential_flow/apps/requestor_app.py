@@ -48,7 +48,7 @@ class RequestorApp:
             logger.error(f"Failed to initialize RequestorApp OIDC client: {e}")
             raise
 
-    def get_access_token(self, audience: str) -> str:
+    async def get_access_token(self, audience: str) -> str:
         """Get an access token for the specified audience."""
         if not self.oidc_client:
             raise RuntimeError("OIDC client not initialized")
