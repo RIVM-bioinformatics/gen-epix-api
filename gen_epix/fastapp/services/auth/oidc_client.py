@@ -25,7 +25,6 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcS
 
 class OidcClient(IdpClient, OpenIdConnect):
 
-    LOCAL_HOSTS: set[str] = {"localhost", "127.0.0.1"}
     DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded"
     }
@@ -41,13 +40,28 @@ class OidcClient(IdpClient, OpenIdConnect):
         discovery_url: str | None = None,
         discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,
+        ssl_context: ssl.SSLContext | bool = False,
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
         **kwargs: Any,
     ):
-        # Set input properties first
-        self._logger = logger
+        # Set IdpClient properties
+        issuer = server_cfg.issuer
+        if issuer is None:
+            # Fetch issuer later from discovery document
+            issuer = ""
+        super().__init__(
+            issuer,
+            token_name=token_name or self.DEFAULT_TOKEN,
+            id=id,
+            ssl_context=ssl_context,
+            **kwargs,
+        )
+
+        # Set input properties
+        self.server_cfg = server_cfg.model_copy()
+        self.logger = logger
         self._log_item_class = log_item_class
         self._signing_keys: dict[str, Key] = {}
         self._client_credential_flow_request_headers = (
@@ -64,48 +78,29 @@ class OidcClient(IdpClient, OpenIdConnect):
         )
 
         # Set cfg and retrieve remaining information
-        self._server_cfg = server_cfg.model_copy()
         self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
-
-        # Set IdpClient properties
-        issuer = self._server_cfg.issuer
-        assert issuer is not None
-        super().__init__(
-            issuer, token_name=token_name or self.DEFAULT_TOKEN, id=id, **kwargs
-        )
-
-        # self._load_keys()
-        # authorization_endpoint = self._cfg.authorization_endpoint
-        # token_endpoint = self._cfg.token_endpoint
-        # scopes_supported = self._cfg.scopes_supported
-        # assert authorization_endpoint is not None
-        # assert token_endpoint is not None
-        # assert scopes_supported is not None
-        # flows = OAuthFlows()
-        # flows.authorizationCode = OAuthFlowAuthorizationCode(
-        #     authorizationUrl=authorization_endpoint,
-        #     tokenUrl=token_endpoint,
-        #     scopes={x: x for x in scopes_supported},
-        # )
-        # self.model = OAuth2(flows=flows)
+        if issuer == "":
+            self.scheme_name = self.server_cfg.issuer or ""
 
     @property
     def issuer(self) -> str:
-        assert self._server_cfg.issuer is not None
-        return self._server_cfg.issuer
+        assert self.server_cfg.issuer is not None
+        return self.server_cfg.issuer
 
     @property
     def audience(self) -> str:
-        return self._server_cfg.client_id
+        return self.server_cfg.audience or self.server_cfg.client_id
 
     def update_server_config_from_discovery(
-        self, url: str | None = None, doc: dict[str, Any] | None = None
+        self,
+        url: str | None = None,
+        doc: dict[str, Any] | None = None,
     ) -> None:
         """
         Update the OIDC configuration from the discovery URL or, if provided, the
         discovery document.
         """
-        url = url or self._server_cfg.discovery_url
+        url = url or self.server_cfg.discovery_url
         if url is None and doc is None:
             raise exc.InitializationServiceError(
                 "No discovery URL or document provided for OIDC configuration"
@@ -115,32 +110,31 @@ class OidcClient(IdpClient, OpenIdConnect):
         if doc:
             # Update current configuration from provided discovery document
             for key, value in doc.items():
-                setattr(self._server_cfg, key, value)
+                setattr(self.server_cfg, key, value)
 
         # Update from discovery URL
         if not url:
             return
         try:
             # Get discovery document
-            verify_setting = OidcClient.get_ssl_context_or_verify_flag(url)
-            with httpx.Client(verify=verify_setting) as client:
+            with httpx.Client(verify=self.ssl_context) as client:
                 response = client.get(url)
                 discovery_doc = response.json()
 
             # Update current configuration with discovery data, preserving client credentials
             for key, value in discovery_doc.items():
                 if key not in OidcServerCfg.NON_SPEC_FIELDS:
-                    setattr(self._server_cfg, key, value)
+                    setattr(self.server_cfg, key, value)
 
-            if not self._server_cfg.is_valid():
-                invalid_fields = self._server_cfg.get_invalid_fields()
+            if not self.server_cfg.is_valid():
+                invalid_fields = self.server_cfg.get_invalid_fields()
                 raise exc.InitializationServiceError(
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
                 )
         except Exception as exception:
-            msg = f"Error accessing discovery URL for OIDC service {self._server_cfg.name}: {exception}"
-            if self._logger:
-                self._logger.error(
+            msg = f"Error accessing discovery URL for OIDC service {self.server_cfg.name}: {exception}"
+            if self.logger:
+                self.logger.error(
                     self._log_item_class(
                         code="cfe970aa", msg=msg, exception=exception
                     ).dumps()
@@ -151,8 +145,8 @@ class OidcClient(IdpClient, OpenIdConnect):
         try:
             header = jwt.get_unverified_header(jwt_token)
         except JWTError as e:
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="4cff1367",
                         msg="Unable to parse header from token",
@@ -164,8 +158,8 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         key_id = header.get("kid")
         if not key_id:
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="0184bc35",
                         msg="No key ID found in token header",
@@ -178,8 +172,8 @@ class OidcClient(IdpClient, OpenIdConnect):
         # TODO: verify if fetching new signing keys is ok
         key = self._signing_keys.get(key_id)
         if not key:
-            if self._logger:
-                self._logger.info(
+            if self.logger:
+                self.logger.info(
                     self._log_item_class(
                         code="e90dd1aa",
                         msg="Key ID not found among signing keys, fetching new ones",
@@ -190,8 +184,8 @@ class OidcClient(IdpClient, OpenIdConnect):
             self._load_keys()
             key = self._signing_keys.get(key_id)
             if not key:
-                if self._logger:
-                    self._logger.warning(
+                if self.logger:
+                    self.logger.warning(
                         self._log_item_class(
                             code="2a5975ff",
                             msg="Key ID not found amoung newly fetched signing keys",
@@ -199,8 +193,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                         ).dumps()
                     )
                 raise exc.UnauthorizedAuthError()
-            if self._logger:
-                self._logger.info(
+            if self.logger:
+                self.logger.info(
                     self._log_item_class(
                         code="c448ead5",
                         msg="Key ID found among newly fetched signing keys",
@@ -216,12 +210,9 @@ class OidcClient(IdpClient, OpenIdConnect):
         # Decode token without verifying signature to make sure this token is generated
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
-        server_cfg = self._server_cfg
+        server_cfg = self.server_cfg
         # TODO: check audience claim as well?
-        if (
-            claims["iss"] != server_cfg.issuer
-            or claims.get("aud") != server_cfg.client_id
-        ):
+        if claims["iss"] != server_cfg.issuer or claims.get("aud") != self.audience:
             # Different OIDC server
             return None
 
@@ -237,7 +228,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 jwt_token,
                 key=key,
                 algorithms=server_cfg.id_token_signing_alg_values_supported,
-                audience=server_cfg.client_id,
+                audience=self.audience,
                 issuer=server_cfg.issuer,
                 # TODO: Check if this is not a security risk
                 options={"verify_at_hash": False},
@@ -252,8 +243,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                 msg += "signature is invalid"
             else:
                 msg += "unknown issue"
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="f4b73564",
                         msg=msg,
@@ -275,8 +266,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                 msg_part = "no sub"
             else:
                 msg_part = "no issuer"
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="b4a1d49b",
                         msg=f"JWT does not contain required claims: {msg_part}",
@@ -309,26 +300,26 @@ class OidcClient(IdpClient, OpenIdConnect):
         base_delay = base_delay or self._client_credential_flow_base_delay
 
         # Get token endpoint URL
-        url = self._server_cfg.token_endpoint
+        url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
             # Try to get from discovery document
-            if self._logger:
-                self._logger.info(
+            if self.logger:
+                self.logger.info(
                     self._log_item_class(
                         code="8f3a2b1c",
-                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self._server_cfg.name}, trying to update from discovery URL",
+                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
                     ).dumps()
                 )
             self.update_server_config_from_discovery()
-            url = self._server_cfg.token_endpoint
+            url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
             raise exc.ServiceUnavailableError("Token endpoint URL is not set")
 
         # Create request body
         token_data = {
             "grant_type": "client_credentials",
-            "client_id": self._server_cfg.client_id,
-            "client_secret": self._server_cfg.client_secret,
+            "client_id": self.server_cfg.client_id,
+            "client_secret": self.server_cfg.client_secret,
             "scope": scope,
         }
 
@@ -336,8 +327,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                verify_setting = OidcClient.get_ssl_context_or_verify_flag(url)
-                with httpx.Client(verify=verify_setting) as client:
+                with httpx.Client(verify=self.ssl_context) as client:
                     response = client.post(
                         url,
                         data=token_data,
@@ -349,11 +339,11 @@ class OidcClient(IdpClient, OpenIdConnect):
                     return token
             except Exception as exception:
                 last_exception = exception
-                if self._logger:
-                    self._logger.warning(
+                if self.logger:
+                    self.logger.warning(
                         self._log_item_class(
                             code="a7f3e9d2",
-                            msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self._server_cfg.name}",
+                            msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self.server_cfg.name}",
                             exception=exception,
                         ).dumps()
                     )
@@ -362,27 +352,24 @@ class OidcClient(IdpClient, OpenIdConnect):
                 await asyncio.sleep(base_delay)
 
         # All retries failed
-        if self._logger:
-            self._logger.error(
+        if self.logger:
+            self.logger.error(
                 self._log_item_class(
                     code="f8a3d7b2",
-                    msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self._server_cfg.name}",
+                    msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self.server_cfg.name}",
                 ).dumps()
             )
         raise exc.ServiceUnavailableError(
-            f"Token retrieval failed for server {self._server_cfg.name}: {last_exception}"
+            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}"
         )
 
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:
-        userinfo_endpoint = self._server_cfg.userinfo_endpoint
+        userinfo_endpoint = self.server_cfg.userinfo_endpoint
         assert userinfo_endpoint is not None
         try:
-            verify_setting = OidcClient.get_ssl_context_or_verify_flag(
-                userinfo_endpoint
-            )
-            with httpx.Client(verify=verify_setting) as client:
+            with httpx.Client(verify=self.ssl_context) as client:
                 response = client.get(
                     userinfo_endpoint,
                     headers={"Authorization": f"Bearer {access_token}"},
@@ -390,8 +377,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                 claims = json.loads(response.content)
                 if not isinstance(claims, dict) or "error" in claims:
                     # Currently e.g. "InvalidAuthenticationToken"
-                    if self._logger:
-                        self._logger.warning(
+                    if self.logger:
+                        self.logger.warning(
                             self._log_item_class(
                                 code="ce05d050",
                                 msg=f"Unable to get claims from {userinfo_endpoint}: claims contain error",
@@ -401,8 +388,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                     raise exc.ServiceUnavailableError()
                 return claims
         except Exception as exception:
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="ac6c84f7",
                         msg=f"Unable to get claims from {userinfo_endpoint}",
@@ -412,17 +399,17 @@ class OidcClient(IdpClient, OpenIdConnect):
             return {}
 
     def get_identity_provider(self) -> IdentityProvider:
-        issuer = self._server_cfg.issuer
-        scopes_supported = self._server_cfg.scopes_supported
+        issuer = self.server_cfg.issuer
+        scopes_supported = self.server_cfg.scopes_supported
         assert issuer is not None
         assert scopes_supported is not None
         scope = " ".join(scopes_supported)
         return IdentityProvider(
-            name=self._server_cfg.name,
-            label=self._server_cfg.label,
-            client_id=self._server_cfg.client_id,
-            client_secret=self._server_cfg.client_secret,
-            discovery_url=self._server_cfg.discovery_url,
+            name=self.server_cfg.name,
+            label=self.server_cfg.label,
+            client_id=self.server_cfg.client_id,
+            client_secret=self.server_cfg.client_secret,
+            discovery_url=self.server_cfg.discovery_url,
             issuer=issuer,
             auth_protocol=AuthProtocol.OIDC,
             oauth_flow=OAuthFlow.AUTHORIZATION_CODE,
@@ -430,11 +417,10 @@ class OidcClient(IdpClient, OpenIdConnect):
         )
 
     def _load_keys(self) -> None:
-        jwks_uri = self._server_cfg.jwks_uri
+        jwks_uri = self.server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
-            verify_setting = OidcClient.get_ssl_context_or_verify_flag(jwks_uri)
-            with httpx.Client(verify=verify_setting) as client:
+            with httpx.Client(verify=self.ssl_context) as client:
                 # get keys
                 response = client.get(jwks_uri)
                 response.raise_for_status()
@@ -451,8 +437,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                     if key_data["use"] == "sig"
                 }
         except Exception as exception:
-            if self._logger:
-                self._logger.warning(
+            if self.logger:
+                self.logger.warning(
                     self._log_item_class(
                         code="edab2e97",
                         msg=f"Unable to load new signing keys from {jwks_uri}",
@@ -478,8 +464,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                         claims=claims, scheme=scheme, token=token, idp_client_id=self.id
                     )
                 except exc.AuthException as exception:
-                    if self._logger:
-                        self._logger.warning(
+                    if self.logger:
+                        self.logger.warning(
                             self._log_item_class(
                                 code="ac521d94",
                                 exception=exception,
@@ -488,75 +474,19 @@ class OidcClient(IdpClient, OpenIdConnect):
                     return None
             else:
                 # Authorization scheme not implemented
-                if self._logger:
-                    self._logger.warning(
+                if self.logger:
+                    self.logger.warning(
                         self._log_item_class(
                             code="ecb88df4",
                             msg=f"Authorization scheme {scheme} not implemented",
                         ).dumps()
                     )
                 return None
-        if self._logger:
-            self._logger.warning(
+        if self.logger:
+            self.logger.warning(
                 self._log_item_class(
                     code="e1dad160",
                     msg="No authorisation information provided in header",
                 ).dumps()
             )
         return None
-
-    @staticmethod
-    def get_ssl_context_or_verify_flag(url: str) -> ssl.SSLContext | bool:
-        """
-        Get SSL context for URL or return verification flag.
-        Returns custom SSL context for local development or False/True for verification.
-        """
-        import os
-
-        # Check environment variable to globally disable SSL verification
-        if os.getenv("DISABLE_SSL_VERIFICATION", "").lower() in ("true", "1", "yes"):
-            return False
-
-        # For development: disable SSL verification for local hosts
-        local_indicators = {
-            "localhost",
-            "127.0.0.1",
-            "0.0.0.0",
-            "::1",  # IPv6 localhost
-            ".local",  # mDNS local domain
-        }
-        if any(indicator in url.lower() for indicator in local_indicators):
-            # Try to load local certificate if available
-            cert_file = os.path.join("cert", "cert.pem")
-            if os.path.exists(cert_file):
-                ssl_context = ssl.create_default_context()
-                ssl_context.load_verify_locations(cert_file)
-                return ssl_context
-            else:
-                # No local cert found, disable verification
-                return False
-
-        # For production URLs, use default verification
-        return True
-
-    @staticmethod
-    def should_verify_ssl(url: str) -> bool:
-        """Legacy method - returns verification flag only."""
-        result = OidcClient.get_ssl_context_or_verify_flag(url)
-        return result if isinstance(result, bool) else True
-
-    @staticmethod
-    def create_server_config_for_discovery_url(
-        discovery_endpoint: str, name: str = "", label: str = ""
-    ) -> OidcServerCfg:
-        verify_setting = OidcClient.get_ssl_context_or_verify_flag(discovery_endpoint)
-        with httpx.Client(verify=verify_setting) as client:
-            response = client.get(discovery_endpoint)
-            discovery_doc = response.json()
-        server_cfg = OidcServerCfg(
-            name=name,
-            label=label,
-            discovery_endpoint=discovery_endpoint,
-            **discovery_doc,
-        )
-        return server_cfg

@@ -124,7 +124,7 @@ class TestOidcClientCredentials:
             mock_client_class.return_value = mock_client
 
             # Set up a valid token endpoint
-            oidc_client._server_cfg.token_endpoint = "https://idp1.org/token"
+            oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
             # Call the method
             result = await oidc_client.retrieve_jwt_with_client_credentials_flow(
@@ -174,7 +174,7 @@ class TestOidcClientCredentials:
             mock_client_class.return_value = mock_client
 
             # Set up a valid token endpoint
-            oidc_client._server_cfg.token_endpoint = "https://idp1.org/token"
+            oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
             # Mock asyncio.sleep to speed up the test
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
@@ -199,7 +199,7 @@ class TestOidcClientCredentials:
 
         async def _test() -> None:
             # Set token endpoint to None
-            oidc_client._server_cfg.token_endpoint = None
+            oidc_client.server_cfg.token_endpoint = None
 
             # Mock update_server_config_from_discovery to still have None token_endpoint
             with patch.object(
@@ -239,7 +239,7 @@ class TestOidcClientCredentials:
             mock_client_class.return_value = mock_client
 
             # Set up a valid token endpoint
-            oidc_client._server_cfg.token_endpoint = "https://idp1.org/token"
+            oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
             # Mock asyncio.sleep to speed up the test
             with patch("asyncio.sleep", new_callable=AsyncMock):
@@ -266,7 +266,7 @@ class TestOidcClientCredentials:
             mock_client_class.return_value = mock_client
 
             # Set up a valid token endpoint
-            oidc_client._server_cfg.token_endpoint = "https://idp1.org/token"
+            oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
             # Mock asyncio.sleep to speed up the test
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
@@ -301,7 +301,7 @@ class TestOidcClientCredentials:
                 mock_client_class.return_value = mock_client
 
                 # Set up a valid token endpoint
-                oidc_client._server_cfg.token_endpoint = "https://idp1.org/token"
+                oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
                 # Call with custom parameters
                 result = await oidc_client.retrieve_jwt_with_client_credentials_flow(

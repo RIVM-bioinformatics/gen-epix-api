@@ -29,13 +29,11 @@ class IdentityProvider(Model):
         default=None, description="The discovery URL of the identity provider"
     )
     client_id: str | None = Field(
-        default=None, description="The client ID of the identity provider"
+        default=None, description="The client ID that tokens should be requested for"
     )
-    client_secret: str | None = Field(
-        default=None, description="The client secret of the identity provider"
-    )
+    client_secret: str | None = Field(default=None, description="The client secret")
     scope: str | None = Field(
-        default=None, description="The scope of the identity provider"
+        default=None, description="The OIDC scopes, space separated"
     )
 
 
@@ -105,6 +103,10 @@ class OidcServerCfg(Model):
     claim_map: dict[str, str] = Field(
         default_factory=dict,
         description="Mapping of identity provider claims to standard names",
+    )
+    audience: str | None = Field(
+        default=None,
+        description="The audience that the identity provider will include in the aud claim of tokens",
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification

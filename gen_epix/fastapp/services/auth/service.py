@@ -521,6 +521,7 @@ class AuthService(BaseAuthService):
                             "User is root user, creating",
                             issuer=issuer,
                             sub=sub,
+                            user_key=user_key,
                         )
                     )
                 return user_manager.create_root_user_from_claims(claims.claims)
@@ -530,8 +531,8 @@ class AuthService(BaseAuthService):
                 user = user_manager.create_user_from_claims(claims.claims)
                 if not user:
                     raise exc.UnauthorizedAuthError()
-                if self._logger and self._logger.level <= logging.DEBUG:
-                    self._logger.debug(
+                if self._logger:
+                    self._logger.info(
                         self.create_log_message(
                             "fe8bfbd0",
                             "Automatically created user",

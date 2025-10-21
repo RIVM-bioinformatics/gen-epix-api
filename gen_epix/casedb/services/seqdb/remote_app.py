@@ -3,6 +3,7 @@ from logging import Logger
 from typing import Any, Callable
 from uuid import UUID
 
+import anyio
 import httpx
 from jose import jwt
 
@@ -46,6 +47,7 @@ class SeqdbRemoteApp(RemoteApp):
         http_protocol: HttpProtocol = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
+        ssl_cert_file: str | None = None,
         auth_protocol: AuthProtocol | str = AuthProtocol.NONE,
         oauth_flow: OAuthFlow | str | None = None,
         oauth_discovery_url: str | None = None,
@@ -77,6 +79,7 @@ class SeqdbRemoteApp(RemoteApp):
             default_route_prefix=default_route_prefix,
             default_headers=default_headers,
             add_generated_crud_route_handlers=True,
+            ssl_cert_file=ssl_cert_file,
             **kwargs,
         )
 
@@ -89,6 +92,10 @@ class SeqdbRemoteApp(RemoteApp):
                 raise exc.InitializationServiceError(
                     "OAuth discovery endpoint must be provided for OAUTH2 auth protocol"
                 )
+            if oauth_client_id is None:
+                raise exc.InitializationServiceError(
+                    "OAuth client ID must be provided for OAUTH2 auth protocol"
+                )
             oidc_client = OidcClient(
                 server_cfg=OidcServerCfg(
                     name="",
@@ -98,6 +105,7 @@ class SeqdbRemoteApp(RemoteApp):
                     client_secret=oauth_client_secret,
                     token_endpoint=oauth_token_endpoint,
                 ),
+                ssl_context=self.ssl_context,
                 logger=logger,
                 log_item_class=log_item_class,
             )
@@ -114,7 +122,7 @@ class SeqdbRemoteApp(RemoteApp):
         self._oidc_client = oidc_client
         self._oauth_scope = oauth_scope
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
-        self._oauth_token_cache: tuple[int, str] | None = None
+        self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
         # Register routes and handlers
         seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
@@ -128,39 +136,39 @@ class SeqdbRemoteApp(RemoteApp):
         )
 
     async def get_headers(self, cmd: Command) -> dict[str, str]:
-        headers = super().get_headers(cmd)
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
-            return headers
+            return self._default_headers
         if self._auth_protocol == AuthProtocol.OAUTH2:
             assert self._oidc_client is not None
             assert self._oauth_scope is not None
             # Check if cached token is still valid
-            if self._oauth_token_cache and self._oauth_token_cache[0] > (
+            if self._oauth_header_cache and self._oauth_header_cache[0] > (
                 datetime.now().timestamp() - self._oauth_token_refresh_margin
             ):
-                jwt_token = self._oauth_token_cache[1]
-            else:
-                # Retrieve new token
-                jwt_token = (
-                    await self._oidc_client.retrieve_jwt_with_client_credentials_flow(
-                        scope=self._oauth_scope
-                    )
+                # Return cached header
+                return self._oauth_header_cache[1]
+            # Retrieve new token
+            jwt_token = (
+                await self._oidc_client.retrieve_jwt_with_client_credentials_flow(
+                    scope=self._oauth_scope
                 )
-                # Put token in cache together with its expiry time
-                claims = jwt.get_unverified_claims(jwt_token)
-                exp: int | None = claims.get("exp")
-                if exp is None:
-                    # No expiration claim, valid forever
-                    self._oauth_token_cache = (int(datetime.max.timestamp()), jwt_token)
-                else:
-                    self._oauth_token_cache = (exp, jwt_token)
-        else:
-            raise exc.InitializationServiceError(
-                f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
             )
-        headers["Authorization"] = f"Bearer {jwt_token}"
-        return headers
+            # Create headers
+            headers = dict(self._default_headers)
+            headers["Authorization"] = f"Bearer {jwt_token}"
+            # Put header in cache together with its expiry time
+            claims = jwt.get_unverified_claims(jwt_token)
+            exp: int | None = claims.get("exp")
+            if exp is None:
+                # No expiration claim, valid forever
+                self._oauth_header_cache = (int(datetime.max.timestamp()), headers)
+            else:
+                self._oauth_headers_cache = (exp, headers)
+            return headers
+        raise exc.InitializationServiceError(
+            f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
+        )
 
     def create_retrieve_phylogenetic_tree_handler(self) -> Callable:
 
@@ -170,7 +178,10 @@ class SeqdbRemoteApp(RemoteApp):
         def handler(
             cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
         ) -> model.PhylogeneticTree | None:
-            headers = self.get_headers(cmd)
+            async def get_headers_async() -> dict[str, str]:
+                return await self.get_headers(cmd)
+
+            headers = anyio.run(get_headers_async)
             route = self.get_route(cmd)
 
             # Create request body matching seqdb API expectations
@@ -183,7 +194,7 @@ class SeqdbRemoteApp(RemoteApp):
                 leaf_codes=cmd.leaf_names,
             )
 
-            with httpx.Client() as client:
+            with httpx.Client(verify=self.ssl_context) as client:
                 response = client.post(
                     route,
                     json=request_body.model_dump(),

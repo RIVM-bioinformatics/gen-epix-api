@@ -1,8 +1,11 @@
 import json
+import ssl
 from functools import partial
+from pathlib import Path
 from typing import Any, Callable, Type
 from uuid import UUID
 
+import anyio
 import httpx
 from pydantic import BaseModel as PydanticBaseModel
 
@@ -18,6 +21,8 @@ class RemoteApp(App):
 
     DEFAULT_ROUTE_PREFIX = "/"
 
+    LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
+
     def __init__(
         self,
         domain: Domain,
@@ -27,6 +32,8 @@ class RemoteApp(App):
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
         add_generated_crud_route_handlers: bool = True,
+        ssl_cert_file: Path | str | None = None,
+        disable_ssl_verification: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(domain, **kwargs)
@@ -36,6 +43,11 @@ class RemoteApp(App):
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or {}
         self._routes: dict[type[Command], str] = {}
+
+        # Initialise SSL context
+        self._ssl_context = RemoteApp.create_ssl_context(
+            host, ssl_cert_file, disable_ssl_verification
+        )
 
         # Create and register generated crud route handlers
         if add_generated_crud_route_handlers:
@@ -63,6 +75,10 @@ class RemoteApp(App):
     def host_url(self) -> str:
         port_str = f":{self._port}" if self._port else ""
         return f"{self.http_protocol.value.lower()}://{self._host}{port_str}"
+
+    @property
+    def ssl_context(self) -> ssl.SSLContext | bool:
+        return self._ssl_context
 
     def register_policy(
         self,
@@ -180,8 +196,13 @@ class RemoteApp(App):
             ids_route_suffix: str,
             cmd: CrudCommand,
         ) -> Any:
-            headers = self.get_headers(cmd)
-            with httpx.Client(verify=False) as client:
+
+            async def get_headers() -> dict[str, str]:
+                return await self.get_headers(cmd)
+
+            headers = anyio.run(get_headers)
+            # headers = await self.get_headers(cmd)
+            with httpx.Client(verify=self.ssl_context) as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:
                         response = client.post(
@@ -264,13 +285,36 @@ class RemoteApp(App):
                     raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
             return retval, response
 
-        return partial(  # type: ignore[return-value]
+        return partial(
             handler,
             base_route,
             batch_route_suffix,
             query_route_suffix,
             ids_route_suffix,
         )
+
+    @staticmethod
+    def create_ssl_context(
+        host: str, ssl_cert_file: Path | str | None, disable_ssl_verification: bool
+    ) -> ssl.SSLContext | bool:
+        """Get SSL verification setting using similar logic to OidcClient."""
+        if disable_ssl_verification:
+            return False
+
+        # For local development hosts, disable verification
+        if host in RemoteApp.LOCAL_HOSTS:
+            return False
+
+        # If a cert file is given, use that for verification
+        if ssl_cert_file is not None:
+            if isinstance(ssl_cert_file, str):
+                ssl_cert_file = Path(ssl_cert_file)
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_verify_locations(ssl_cert_file.absolute().as_posix())
+            return ssl_context
+
+        # Use default verification
+        return True
 
     @staticmethod
     def _content_to_obj(
