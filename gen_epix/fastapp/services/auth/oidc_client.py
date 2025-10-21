@@ -1,6 +1,8 @@
+import base64
 import json
 import logging
 import ssl
+import urllib.parse
 from datetime import datetime
 from typing import Any, Type
 from uuid import UUID
@@ -297,9 +299,17 @@ class OidcClient(IdpClient, OpenIdConnect):
         Call server to get token through OAuth Client Credentials flow.
         """
         # Parse input
-        headers = headers or self._client_credential_flow_request_headers
+        headers = dict(headers or self._client_credential_flow_request_headers)
         max_retries = max_retries or self._client_credential_flow_max_retries
         base_delay = base_delay or self._client_credential_flow_base_delay
+
+        # Add basic auth header
+        headers["Authorization"] = (
+            "Basic "
+            + base64.b64encode(
+                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+            ).decode()
+        )
 
         # Get token endpoint URL
         url = self.server_cfg.token_endpoint
@@ -321,12 +331,18 @@ class OidcClient(IdpClient, OpenIdConnect):
             raise exc.ServiceUnavailableError("Token endpoint URL is not set")
 
         # Create request body
-        token_data = {
-            "grant_type": "client_credentials",
-            "client_id": self.server_cfg.client_id,
-            "client_secret": self.server_cfg.client_secret,
-            "scope": scope,
-        }
+        token_data: str = "&".join(
+            (
+                f"grant_type=client_credentials",
+                f"scope={urllib.parse.quote(scope)}",
+            )
+        )
+        # token_data = {
+        #     "grant_type": "client_credentials",
+        #     "client_id": self.server_cfg.client_id,
+        #     "client_secret": self.server_cfg.client_secret,
+        #     "scope": scope,
+        # }
 
         # Call server with retries
         print(
