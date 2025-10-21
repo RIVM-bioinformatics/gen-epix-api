@@ -1,5 +1,5 @@
 import importlib
-from typing import Any, Hashable, Iterable, Type
+from typing import Any, Hashable, Iterable
 from uuid import UUID
 
 from gen_epix.casedb.domain import command
@@ -165,7 +165,7 @@ class SeqdbService(BaseSeqdbService):
     def crud(
         self, cmd: CrudCommand
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
-        cmd.user.roles: set[common_enum.Role] = self.map_roles(cmd.user.roles)
+        cmd.user.roles: set[common_enum.Role] = self.map_roles(cmd.user.roles)  # type: ignore
         result = self.seqdb_app.handle(cmd)
         return result  # type: ignore[no-any-return]
 

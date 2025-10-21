@@ -1191,7 +1191,23 @@ class CaseService(BaseCaseService):
                 filter_content=False,
             )
 
-            # Column-level WRITE right check per case?
+            # TODO: Column level check?
+            # TODO: Type of column is correct? (CaseTypeCol -> Col.ColType.TEXT in ENUM?)
+
+            # gen_epix/casedb/domain/enum.py::ColType
+
+            # col_ids = {case_type_col.col_id for case_type_col in case_type_cols}
+            # cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+            #     uow,
+            #     user.id,
+            #     model.Col,
+            #     None,
+            #     list(col_ids),
+            #     CrudOperation.READ_SOME,
+            # )
+            # col_by_id = {c.id: c for c in cols}
+            # col = col_by_id[case_type_column.col_id]
+
             for case_read_sets in cmd.case_read_sets:
                 case = case_by_id[case_read_sets.case_id]
                 case_type_column = case_type_col_by_id[case_read_sets.case_type_col_id]

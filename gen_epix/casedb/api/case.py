@@ -137,7 +137,6 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
-
 class CreateFileForReadSetRequestBody(PydanticBaseModel):
     file_content: bytes = Field(description="The content of the file to create.")
 
@@ -566,17 +565,15 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore
         case_read_sets: list[model.CaseReadSet],
     ) -> list[model.ReadSet]:
-        created_read_sets: list[model.ReadSet] = []
         try:
-            created_read_sets = app.handle(
+            created_read_sets: list[model.ReadSet] = app.handle(
                 command.CreateReadSetsForCasesCommand(
                     user=user,
                     case_read_sets=case_read_sets,
                 )
             )
         except Exception as exception:
-            print("Exception occurred:", exception)
-
+            handle_exception("e3d4f5a6", user, exception)
         return created_read_sets
 
     @router.post(
