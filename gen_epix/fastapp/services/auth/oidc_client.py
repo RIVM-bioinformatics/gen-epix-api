@@ -1,7 +1,9 @@
 import asyncio
+import base64
 import json
 import logging
 import ssl
+import urllib
 from datetime import datetime
 from typing import Any, Type
 from uuid import UUID
@@ -123,7 +125,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
             # Update current configuration with discovery data, preserving client credentials
             for key, value in discovery_doc.items():
-                if key not in OidcServerCfg.NON_SPEC_FIELDS:
+                if key not in OidcServerCfg.NON_SPEC_FIELDS and key in self.server_cfg.__class__.model_fields:
                     setattr(self.server_cfg, key, value)
 
             if not self.server_cfg.is_valid():
@@ -318,19 +320,31 @@ class OidcClient(IdpClient, OpenIdConnect):
         if not isinstance(url, str):
             raise exc.ServiceUnavailableError("Token endpoint URL is not set")
 
-        # Create request body
-        token_data = {
-            "grant_type": "client_credentials",
-            "client_id": self.server_cfg.client_id,
-            "client_secret": self.server_cfg.client_secret,
-            "scope": scope,
-        }
+        token_data: str = "&".join((
+            f"grant_type=client_credentials",
+            f"scope={urllib.parse.quote(scope)}",
+        ))
 
         # Call server with retries
         print(
             f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: calling IDP with {token_data}"
         )
         last_exception: Exception | None = None
+
+        # # Create request body
+        # token_data = {
+        #     "grant_type": "client_credentials",
+        #     "client_id": self.server_cfg.client_id,
+        #     "client_secret": self.server_cfg.client_secret,
+        #     "scope": scope,
+        # }
+        # # 'grant_type=client_credentials&scope=' + urlEncode(scope)
+
+
+        headers['Authorization'] = 'Basic ' + base64.b64encode(
+            f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+        ).decode()
+
         for attempt in range(max_retries + 1):
             try:
                 with httpx.Client(verify=self.ssl_context) as client:
