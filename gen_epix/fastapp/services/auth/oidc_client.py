@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import ssl
@@ -123,7 +122,10 @@ class OidcClient(IdpClient, OpenIdConnect):
 
             # Update current configuration with discovery data, preserving client credentials
             for key, value in discovery_doc.items():
-                if key not in OidcServerCfg.NON_SPEC_FIELDS:
+                if (
+                    key not in OidcServerCfg.NON_SPEC_FIELDS
+                    and key in self.server_cfg.__class__.model_fields
+                ):
                     setattr(self.server_cfg, key, value)
 
             if not self.server_cfg.is_valid():
