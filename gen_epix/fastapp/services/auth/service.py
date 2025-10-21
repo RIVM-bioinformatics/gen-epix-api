@@ -7,14 +7,13 @@ from fastapi.security import SecurityScopes
 from gen_epix.fastapp import App, exc, model
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
-from gen_epix.fastapp.services.auth.idp_client import IDPClient
+from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.mock_idp_client import MockIDPClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
 from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
 
 
 class AuthService(BaseAuthService):
-    SERVICE_TYPE = "AUTH"
 
     def __init__(
         self,
@@ -25,7 +24,7 @@ class AuthService(BaseAuthService):
         **kwargs: Any,
     ):
         super().__init__(app, repository=repository, logger=logger, **kwargs)
-        self._idp_clients: list[IDPClient] = []
+        self._idp_clients: list[IdpClient] = []
 
         # Initialize authentication services
         self._idp_clients = create_idp_clients_from_config(app, idps_cfg)
@@ -33,10 +32,10 @@ class AuthService(BaseAuthService):
 
         # Initialize no authentication user
         self._no_auth_user: model.User
-        self._no_auth_idp_client: IDPClient = MockIDPClient(logger=logger)
+        self._no_auth_idp_client: IdpClient = MockIDPClient(logger=logger)
 
     @property
-    def idp_clients(self) -> list[IDPClient]:
+    def idp_clients(self) -> list[IdpClient]:
         return list(self._idp_clients)
 
     def create_user_dependencies(
@@ -522,6 +521,7 @@ class AuthService(BaseAuthService):
                             "User is root user, creating",
                             issuer=issuer,
                             sub=sub,
+                            user_key=user_key,
                         )
                     )
                 return user_manager.create_root_user_from_claims(claims.claims)
@@ -531,8 +531,8 @@ class AuthService(BaseAuthService):
                 user = user_manager.create_user_from_claims(claims.claims)
                 if not user:
                     raise exc.UnauthorizedAuthError()
-                if self._logger and self._logger.level <= logging.DEBUG:
-                    self._logger.debug(
+                if self._logger:
+                    self._logger.info(
                         self.create_log_message(
                             "fe8bfbd0",
                             "Automatically created user",

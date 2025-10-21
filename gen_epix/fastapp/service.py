@@ -45,7 +45,7 @@ class BaseService(abc.ABC):
         # Set input members
         self._id: str = kwargs.pop("id", str(id_factory()))
         self._service_type: Hashable = kwargs.pop(
-            "service_type", self.__class__.SERVICE_TYPE
+            "service_type", self.__class__.__name__
         )
         self._name: str = Domain.get_service_name(self._service_type)
         self._created_at: datetime.datetime = timestamp_factory()

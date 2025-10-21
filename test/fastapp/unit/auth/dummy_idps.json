@@ -6,6 +6,9 @@
         "discovery_url": "https://test",
         "client_id": "TEST",
         "client_secret": "",
-        "scope": "openid profile email offline_access"
+        "scope": "openid profile email offline_access",
+        "claim_map": {
+            "__key__": "email"
+        }
     }
 ]

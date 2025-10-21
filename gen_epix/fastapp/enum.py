@@ -219,6 +219,11 @@ class CrudOperationSet(Enum):
     )
 
 
+class HttpProtocol(Enum):
+    HTTP = "HTTP"
+    HTTPS = "HTTPS"
+
+
 class CrudEndpointType(Enum):
     POST_ONE = "POST_ONE"
     POST_SOME = "POST_SOME"
@@ -257,11 +262,12 @@ class EventTiming(Enum):
 
 
 class AuthProtocol(Enum):
+    NONE = "NONE"
     OAUTH2 = "OAUTH2"
     OIDC = "OIDC"
 
 
-class OauthFlowType(Enum):
+class OAuthFlow(Enum):
     AUTHORIZATION_CODE = "AUTHORIZATION_CODE"
     CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
     RESOURCE_OWNER = "RESOURCE_OWNER"

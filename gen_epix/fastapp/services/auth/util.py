@@ -3,31 +3,22 @@ from typing import Any
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import AuthProtocol
-from gen_epix.fastapp.services.auth.idp_client import IDPClient
+from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.literal import EMAIL_PATTERN
-from gen_epix.fastapp.services.auth.model import OIDCConfiguration
-from gen_epix.fastapp.services.auth.oidc_client import OIDCClient
-
-OIDC_DISCOVERY_DOCUMENT_KEYS = {
-    "issuer",
-    "authorization_endpoint",
-    "token_endpoint",
-    "jwks_uri",
-    "userinfo_endpoint",
-    "response_types_supported",
-    "subject_types_supported",
-    "id_token_signing_alg_values_supported",
-}
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
+from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 
 
 def get_email_from_claims(
     claims: dict[str, Any],
 ) -> str | None:
-    if "email" in claims and isinstance(claims["email"], str):
-        return claims["email"].lower()
-    for claim in claims.values():
-        if isinstance(claim, str) and EMAIL_PATTERN.match(claim.lower()):
-            return claim.lower()
+    email = claims.get("email")
+    if email is None:
+        for claim in claims.values():
+            if isinstance(claim, str) and EMAIL_PATTERN.match(claim.lower()):
+                return claim.lower()
+    else:
+        return email.lower()
     return None
 
 
@@ -51,10 +42,10 @@ def get_name_from_claims(
 
 def create_idp_clients_from_config(
     app: App, idps_cfg: list[dict[str, str | list]] | None
-) -> list[IDPClient]:
+) -> list[IdpClient]:
     if not idps_cfg:
         idps_cfg = []
-    idp_clients: list[IDPClient] = []
+    idp_clients: list[IdpClient] = []
     idp_names = set()
     idp_labels = set()
     logger = app.logger
@@ -72,19 +63,18 @@ def create_idp_clients_from_config(
         idp_names.add(idp_name)
         idp_labels.add(idp_label)
 
+        oidc_discovery_doc_keys = set(OidcServerCfg.model_fields.keys())
         try:
             protocol = AuthProtocol[str(idp_cfg["protocol"])]
             if protocol == AuthProtocol.OIDC:
-                discovery_document = (
-                    idp_cfg
-                    if OIDC_DISCOVERY_DOCUMENT_KEYS.issubset(set(idp_cfg.keys()))
-                    else None
-                )
-                idp_client = OIDCClient(
-                    OIDCConfiguration(**idp_cfg),  # type: ignore
+                discovery_doc = {
+                    x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
+                }
+                idp_client = OidcClient(
+                    OidcServerCfg(**idp_cfg),  # type: ignore
                     logger=logger,
                     log_item_class=app.log_item_class,
-                    discovery_document=discovery_document,
+                    discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again)
                 )
             else:
                 raise exc.InitializationServiceError(
@@ -100,7 +90,7 @@ def create_idp_clients_from_config(
                     app.create_log_message("48b7e021", msg, exception=exception)
                 )
     for idp_client in idp_clients:  # type: ignore
-        if isinstance(idp_client, OIDCClient):
+        if isinstance(idp_client, OidcClient):
             if logger:
                 logger.info(
                     app.create_log_message(
