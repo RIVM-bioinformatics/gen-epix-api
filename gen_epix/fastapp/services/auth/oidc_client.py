@@ -26,7 +26,7 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcS
 class OidcClient(IdpClient, OpenIdConnect):
 
     DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Content-Type": "application/x-www-form-urlencoded",
     }
     DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
     DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds

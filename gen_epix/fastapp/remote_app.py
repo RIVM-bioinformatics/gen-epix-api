@@ -21,6 +21,8 @@ class RemoteApp(App):
 
     DEFAULT_ROUTE_PREFIX = "/"
 
+    DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
+
     LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
     def __init__(
@@ -41,7 +43,7 @@ class RemoteApp(App):
         self._port = port
         self._http_protocol = http_protocol
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
-        self._default_headers = default_headers or {}
+        self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
 
         # Initialise SSL context
