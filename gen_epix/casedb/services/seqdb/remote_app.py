@@ -61,7 +61,7 @@ class SeqdbRemoteApp(RemoteApp):
         **kwargs: Any,
     ) -> None:
         # DEBUG: Print all kwargs to understand what's being passed
-        print(f"SeqdbRemoteApp init kwargs: {kwargs}")
+        print(f"DEBUG: SeqdbRemoteApp.__init__: kwargs: {kwargs}")
         if isinstance(auth_protocol, str):
             auth_protocol = AuthProtocol(auth_protocol)
         if isinstance(oauth_flow, str):
@@ -142,13 +142,18 @@ class SeqdbRemoteApp(RemoteApp):
         if self._auth_protocol == AuthProtocol.OAUTH2:
             assert self._oidc_client is not None
             assert self._oauth_scope is not None
+            print("DEBUG: SeqdbRemoteApp.get_headers: Getting OAuth2 token.")
             # Check if cached token is still valid
             if self._oauth_header_cache and self._oauth_header_cache[0] > (
                 datetime.now().timestamp() - self._oauth_token_refresh_margin
             ):
+                print(
+                    "DEBUG: SeqdbRemoteApp.get_headers: Getting OAuth2 token from cache."
+                )
                 # Return cached header
                 return self._oauth_header_cache[1]
             # Retrieve new token
+            print("DEBUG: SeqdbRemoteApp.get_headers: Getting new OAuth2 token.")
             jwt_token = (
                 await self._oidc_client.retrieve_jwt_with_client_credentials_flow(
                     scope=self._oauth_scope
@@ -157,6 +162,7 @@ class SeqdbRemoteApp(RemoteApp):
             # Create headers
             headers = dict(self._default_headers)
             headers["Authorization"] = f"Bearer {jwt_token}"
+            print("DEBUG: SeqdbRemoteApp.get_headers: headers created.")
             # Put header in cache together with its expiry time
             claims = jwt.get_unverified_claims(jwt_token)
             exp: int | None = claims.get("exp")
@@ -181,6 +187,9 @@ class SeqdbRemoteApp(RemoteApp):
             async def get_headers_async() -> dict[str, str]:
                 return await self.get_headers(cmd)
 
+            print(
+                "DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: start."
+            )
             headers = anyio.run(get_headers_async)
             route = self.get_route(cmd)
 
@@ -193,12 +202,18 @@ class SeqdbRemoteApp(RemoteApp):
                 seq_ids=cmd.seq_ids,
                 leaf_codes=cmd.leaf_names,
             )
+            print(
+                f"DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: request body created: {request_body}."
+            )
 
             with httpx.Client(verify=self.ssl_context) as client:
                 response = client.post(
                     route,
                     json=request_body.model_dump(),
                     headers=headers,
+                )
+                print(
+                    f"DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: response with status {response.status_code}: {response.content}."
                 )
                 response.raise_for_status()
                 data = response.json()
