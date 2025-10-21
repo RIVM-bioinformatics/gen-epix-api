@@ -95,7 +95,7 @@ def create_idp_clients_from_config(
                 logger.info(
                     app.create_log_message(
                         "7e0b64cc",
-                        f"OIDC service on {idp_client._issuer} initialized",
+                        f"OIDC service on {idp_client.issuer} initialized",
                     )
                 )
         else:
