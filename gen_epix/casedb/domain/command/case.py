@@ -1,7 +1,6 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
@@ -260,19 +259,27 @@ class RetrieveAlleleProfileCommand(Command):
     )
 
 
-class CreateReadsSetsForCasesCommand(Command):
+class CreateReadSetsForCasesCommand(Command):
     """
     Create read sets for a set of cases based on a read set case type column.
     """
-    class Entry(PydanticBaseModel):
-        case_id: UUID
-        case_type_col_id: UUID
-        read_set: model.ReadSet
-
-    case_read_set_entries: list[Entry] = Field(
-        description="The entries of (case_id, case_type_col_id, read_set) to create."
+    case_read_sets: list[model.CaseReadSet] = Field(
+        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created."
     )
 
+
+class CreateFileForReadSetCommand(Command):
+    """
+    Create a file for a read set associated with a case.
+    """
+
+    is_fwd: bool = Field(
+        description="Whether the file is a forward read file.", default=False
+    )
+    file_content: bytes = Field(description="The content of the file to create.")
+    read_set_id: UUID = Field(
+        description="The ID of the read set to associate the file with."
+    )
 
 # CRUD
 

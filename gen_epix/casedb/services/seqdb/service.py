@@ -1,15 +1,18 @@
 import importlib
-from typing import Any, Iterable
+from typing import Any, Hashable, Iterable, Type
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, exc, model
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain import enum as casedb_enum
+from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.fastapp import App
+from gen_epix.fastapp import App, CrudCommand, Model
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import enum as common_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.command import (
     RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
@@ -22,6 +25,13 @@ from gen_epix.seqdb.env import AppEnv
 
 class SeqdbService(BaseSeqdbService):
 
+    @staticmethod
+    def map_roles(
+        roles: set[casedb_enum.Role],
+        # target_enum: Type[common_enum.Role],
+    ) -> set[common_enum.Role]:
+        return {common_enum.Role[r.name] for r in roles}
+
     def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
         seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
@@ -33,7 +43,7 @@ class SeqdbService(BaseSeqdbService):
                 seqdb_app_cfg = seqdb_local_app_props.pop("app_cfg")
             else:
                 seqdb_app_cfg = AppCfg(
-                    AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
+                    AppType.SEQDB, common_enum.ServiceType, common_enum.RepositoryType
                 )
             log_setup = seqdb_local_app_props.pop(
                 "log_setup", kwargs.get("logger") is not None
@@ -152,15 +162,30 @@ class SeqdbService(BaseSeqdbService):
         fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
 
-    def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
+    def crud(
+        self, cmd: CrudCommand
+    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+        cmd.user.roles: set[common_enum.Role] = self.map_roles(cmd.user.roles)
+        result = self.seqdb_app.handle(cmd)
+        return result  # type: ignore[no-any-return]
+
+    def retrieve_read_sets_by_id(self, read_set_id: UUID) -> list[model.ReadSet]:
         read_sets: list[model.ReadSet] = self.seqdb_app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=self.seqdb_user,
-                objs=cmd.objs,
-                obj_ids=cmd.obj_ids,
-                operation=cmd.operation,
+                obj_ids=[read_set_id],
+                operation=CrudOperation.READ_SOME,
             )
         )
+        if not read_sets:
+            raise exc.NoResultsError(
+                f"ReadSet with ID {read_set_id} not found in SeqDB."
+            )
+        if len(read_sets) > 1:
+            raise exc.InvalidArgumentsError(
+                f"Multiple ReadSets found with ID {read_set_id} in SeqDB."
+            )
+
         return read_sets
 
     # def retrieve_allele_profile(

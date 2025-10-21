@@ -50,3 +50,4 @@ from gen_epix.casedb.domain.model.case.case import ValidatedCase as ValidatedCas
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )
+from gen_epix.casedb.domain.model.case.case import CaseReadSet as CaseReadSet

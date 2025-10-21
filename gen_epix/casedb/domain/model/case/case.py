@@ -932,3 +932,20 @@ class CaseValidationReport(Model):
     validated_cases: list[ValidatedCase] = Field(
         description="The cases containing validated content and any data issues found during validation."
     )
+
+
+class CaseReadSet(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_read_sets",
+        persistable=False,
+    )
+    case_id: UUID = Field(
+        description="The ID of the case that the read set is or will be associated with."
+    )
+    case_type_col_id: UUID = Field(
+        description="The ID of the case type column that the read set is or will be associated with."
+    )
+    read_set_id: UUID | None = Field(description="The ID of the read set.", default=None)
+    library_prep_protocol_id: UUID = Field(
+        description="The ID of the library prep protocol associated with the read set."
+    )

@@ -1135,17 +1135,108 @@ class CaseService(BaseCaseService):
         )
 
     def create_reads_sets_for_cases(
-        self, cmd: command.CreateReadsSetsForCasesCommand
+        self, cmd: command.CreateReadSetsForCasesCommand
     ) -> list[model.ReadSet] | None:
-        # TODO: What to do here with case_id and case_type_col_id?
-        # Create sha hashes here?
-        # validate?
-        read_sets: list[model.ReadSet] = self.app.handle(
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+
+        case_ids: set[UUID] = {x.case_id for x in cmd.case_read_sets}
+        case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_read_sets}
+        read_sets_to_create: list[model.ReadSet] = []
+
+        with repository.uow() as uow:
+            cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                list(case_ids),
+                CrudOperation.READ_SOME,
+            )
+            if len(cases) != len(case_ids):
+                raise exc.InvalidArgumentsError("Some case ids do not exist")
+
+            case_type_cols: list[model.CaseTypeCol] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user.id if user else None,
+                    model.CaseTypeCol,
+                    None,
+                    list(case_type_col_ids),
+                    CrudOperation.READ_SOME,
+                )
+            )
+            if len(case_type_cols) != len(case_type_col_ids):
+                raise exc.InvalidArgumentsError(
+                    "Some case type column ids do not exist"
+                )
+
+            case_by_id: dict[UUID, model.Case] = {x.id: x for x in cases}
+            case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
+                x.id: x for x in case_type_cols
+            }
+
+            # Case-level write right check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=list(case_ids),
+                filter_content=False,
+            )
+
+            # Column-level WRITE right check per case?
+            for case_read_sets in cmd.case_read_sets:
+                case = case_by_id[case_read_sets.case_id]
+                case_type_column = case_type_col_by_id[case_read_sets.case_type_col_id]
+                # check if case type col belongs to case type of case
+                if case_type_column.case_type_id != case.case_type_id:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {case_read_sets.case_type_col_id} not part of case type {case.case_type_id}"
+                    )
+                read_sets_to_create.append(
+                    model.ReadSet(
+                        library_prep_protocol_id=case_read_sets.library_prep_protocol_id
+                    )
+                )
+        # Create ReadSets in seqdb and then update them in Case
+        created_read_sets: list[model.ReadSet] = self.app.handle(
             command.ReadSetCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.CREATE_SOME,
-                objs=[x.read_set for x in cmd.case_read_set_entries],
+                objs=read_sets_to_create,  # type: ignore[arg-type]
             )
         )
 
-        return read_sets
+        # link ReadSets to Cases via Case.content[case_type_col_id] = ReadSet.id
+        cases_to_update: list[model.Case] = []
+        # Use CaseReadSet.library_prep_protocol_id to find the case_id and case_type_col_id back
+        read_set_by_protocol: dict[UUID, model.ReadSet] = {
+            read_set.library_prep_protocol_id: read_set
+            for read_set in created_read_sets
+        }
+        for case_read_set in cmd.case_read_sets:
+            if case_read_set.library_prep_protocol_id not in read_set_by_protocol:
+                raise exc.InvalidArgumentsError(
+                    "Read set not found for library_prep_protocol_id"
+                )
+            case = case_by_id[case_read_set.case_id]
+            case.content[case_read_set.case_type_col_id] = read_set_by_protocol[  # type: ignore
+                case_read_set.library_prep_protocol_id
+            ].id
+            cases_to_update.append(case)
+
+        with self.repository.uow() as uow:
+            super(DomainBaseCaseService, self).crud(
+                command.CaseCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.UPDATE_SOME,
+                    objs=cases_to_update,  # type: ignore[arg-type]
+                )
+            )
+
+        return created_read_sets
