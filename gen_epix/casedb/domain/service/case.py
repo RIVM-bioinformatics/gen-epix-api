@@ -176,3 +176,9 @@ class BaseCaseService(BaseService):
     ) -> list[model.ReadSet] | None:
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def create_file_for_reads_set(
+        self,
+        cmd: command.CreateFileForReadSetCommand,
+    ) -> UUID | None:
+        raise NotImplementedError()

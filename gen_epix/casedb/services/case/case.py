@@ -1174,9 +1174,11 @@ class CaseService(BaseCaseService):
                     "Some case type column ids do not exist"
                 )
 
-            case_by_id: dict[UUID, model.Case] = {x.id: x for x in cases}
+            case_by_id: dict[UUID, model.Case] = {
+                x.id: x for x in cases if x.id is not None
+            }
             case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
-                x.id: x for x in case_type_cols
+                x.id: x for x in case_type_cols if x.id is not None
             }
 
             # Case-level write right check
@@ -1240,3 +1242,21 @@ class CaseService(BaseCaseService):
             )
 
         return created_read_sets
+
+    def create_file_for_reads_set(
+        self, cmd: command.CreateFileForReadSetCommand
+    ) -> UUID | None:
+        created_file_id: UUID = self.app.handle(
+            command.FileCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.File(
+                    size_bytes=len(cmd.file_content),
+                    hash_sha256=hashlib.sha256(cmd.file_content).digest(),
+                    content=cmd.file_content,
+                ),
+                props={"read_set_id": cmd.read_set_id, "is_fwd": cmd.is_fwd},
+            )
+        )
+
+        return created_file_id

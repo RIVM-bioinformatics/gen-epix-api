@@ -109,19 +109,23 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
-    for_uri: str | None = Field(description="The forward URI of the read set.")
+    fwd_uri: str | None = Field(
+        description="The forward URI of the read set.", default=None
+    )
     rev_uri: str | None = Field(
         default=None, description="The reverse URI of the paired read set, if any."
     )
     for_reads_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by for_uri.",
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by fwd_uri.",
         min_length=32,
         max_length=32,
+        default=None,
     )
     rev_reads_hash_sha256: bytes | None = Field(
         description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by rev_uri.",
         min_length=32,
         max_length=32,
+        default=None,
     )
     library_prep_protocol_id: UUID = Field(
         description="The unique identifier for the library preparation protocol. FOREIGN KEY"
@@ -130,11 +134,14 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         default=None, description="The sequencing protocol."
     )
     sequencing_run_code: str | None = Field(
-        description="The code of the sequencing run.", max_length=255
+        description="The code of the sequencing run.", max_length=255, default=None
     )
-    file_id: UUID = Field(description="The unique file identifier.")
+    file_id: UUID | None = Field(
+        description="The unique file identifier.", default=None
+    )
     file_id2: UUID | None = Field(
-        description="The unique file identifier for the second read set, if any."
+        description="The unique file identifier for the second read set, if any.",
+        default=None,
     )
 
 

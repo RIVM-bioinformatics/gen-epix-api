@@ -428,7 +428,7 @@ class PcrMeasurement(Base, RowMetadataMixin):
 class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.ReadSet)
 
-    for_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "for_uri")
+    fwd_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "fwd_uri")
     rev_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "rev_uri")
     for_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
         DOMAIN, model.ReadSet, "for_reads_hash_sha256"

@@ -153,6 +153,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeBySequencesCommand, PermissionTypeSet.E),
             (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
+            (command.FileCrudCommand, PermissionTypeSet.CRUD),
         },
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }

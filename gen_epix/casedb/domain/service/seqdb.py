@@ -22,7 +22,8 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
-        f(command.ReadSetCrudCommand, self.create_read_set)
+        # f(command.ReadSetCrudCommand, self.create_read_set)
+        f(command.FileCrudCommand, self.create_file_for_read_set)
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -45,10 +46,15 @@ class BaseSeqdbService(BaseService):
     ) -> Iterable[str]:
         raise NotImplementedError()
 
-    @abc.abstractmethod
-    def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
-        raise NotImplementedError()
+    # @abc.abstractmethod
+    # def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
+    #     raise NotImplementedError()
 
+    @abc.abstractmethod
+    def create_file_for_read_set(
+        self, cmd: command.FileCrudCommand
+    ) -> UUID | None:
+        raise NotImplementedError()
 
     # @abc.abstractmethod
     # def retrieve_allele_profile(

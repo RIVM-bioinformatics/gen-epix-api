@@ -137,6 +137,11 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
+
+class CreateFileForReadSetRequestBody(PydanticBaseModel):
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
 def create_case_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -573,6 +578,58 @@ def create_case_endpoints(
             print("Exception occurred:", exception)
 
         return created_read_sets
+
+    @router.post(
+        "/create_file_for_reads_set/{reads_set_id}/fwd",
+        operation_id="create_file_for_reads_set_fwd",
+        name="Create file for reads set - forward reads",
+        description=command.CreateFileForReadSetCommand.__doc__,
+    )
+    async def create_file_for_reads_set_fwd(
+        user: registered_user_dependency,  # type: ignore
+        reads_set_id: UUID,
+        request_body: CreateFileForReadSetRequestBody,
+    ) -> UUID:
+        is_fwd: bool = True
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForReadSetCommand(
+                    user=user,
+                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    read_set_id=reads_set_id,
+                    is_fwd=is_fwd,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d3f4e2b1", user, exception)
+        return created_file_id
+
+    @router.post(
+        "/create_file_for_reads_set/{reads_set_id}/rev",
+        operation_id="create_file_for_reads_set_rev",
+        name="Create file for reads set - reverse reads",
+        description=command.CreateFileForReadSetCommand.__doc__,
+    )
+    async def create_file_for_reads_set_rev(
+        user: registered_user_dependency,  # type: ignore
+        reads_set_id: UUID,
+        request_body: CreateFileForReadSetRequestBody,
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForReadSetCommand(
+                    user=user,
+                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    read_set_id=reads_set_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d3f4e2b1", user, exception)
+        return created_file_id
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

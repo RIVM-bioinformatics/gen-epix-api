@@ -330,7 +330,7 @@ class TestClient:
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=seqdb_model.ReadSet(
-                    for_uri="",
+                    fwd_uri="",
                     rev_uri=None,
                     for_reads_hash_sha256=reads_hash_sha256,
                     rev_reads_hash_sha256=None,
