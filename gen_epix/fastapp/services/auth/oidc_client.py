@@ -1,9 +1,8 @@
-import asyncio
 import base64
 import json
 import logging
 import ssl
-import urllib
+import urllib.parse
 from datetime import datetime
 from typing import Any, Type
 from uuid import UUID
@@ -125,7 +124,10 @@ class OidcClient(IdpClient, OpenIdConnect):
 
             # Update current configuration with discovery data, preserving client credentials
             for key, value in discovery_doc.items():
-                if key not in OidcServerCfg.NON_SPEC_FIELDS and key in self.server_cfg.__class__.model_fields:
+                if (
+                    key not in OidcServerCfg.NON_SPEC_FIELDS
+                    and key in self.server_cfg.__class__.model_fields
+                ):
                     setattr(self.server_cfg, key, value)
 
             if not self.server_cfg.is_valid():
@@ -297,9 +299,17 @@ class OidcClient(IdpClient, OpenIdConnect):
         Call server to get token through OAuth Client Credentials flow.
         """
         # Parse input
-        headers = headers or self._client_credential_flow_request_headers
+        headers = dict(headers or self._client_credential_flow_request_headers)
         max_retries = max_retries or self._client_credential_flow_max_retries
         base_delay = base_delay or self._client_credential_flow_base_delay
+
+        # Add basic auth header
+        headers["Authorization"] = (
+            "Basic "
+            + base64.b64encode(
+                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+            ).decode()
+        )
 
         # Get token endpoint URL
         url = self.server_cfg.token_endpoint
@@ -320,31 +330,25 @@ class OidcClient(IdpClient, OpenIdConnect):
         if not isinstance(url, str):
             raise exc.ServiceUnavailableError("Token endpoint URL is not set")
 
-        token_data: str = "&".join((
-            f"grant_type=client_credentials",
-            f"scope={urllib.parse.quote(scope)}",
-        ))
-
-        # Call server with retries
-        print(
-            f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: calling IDP with {token_data}"
+        # Create request body
+        token_data: str = "&".join(
+            (
+                f"grant_type=client_credentials",
+                f"scope={urllib.parse.quote(scope)}",
+            )
         )
-        last_exception: Exception | None = None
-
-        # # Create request body
         # token_data = {
         #     "grant_type": "client_credentials",
         #     "client_id": self.server_cfg.client_id,
         #     "client_secret": self.server_cfg.client_secret,
         #     "scope": scope,
         # }
-        # # 'grant_type=client_credentials&scope=' + urlEncode(scope)
 
-
-        headers['Authorization'] = 'Basic ' + base64.b64encode(
-            f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-        ).decode()
-
+        # Call server with retries
+        print(
+            f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: calling IDP with {token_data}"
+        )
+        last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
                 with httpx.Client(verify=self.ssl_context) as client:
@@ -431,8 +435,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         issuer = self.server_cfg.issuer
         scopes_supported = self.server_cfg.scopes_supported
         assert issuer is not None
-        assert scopes_supported is not None
-        scope = " ".join(scopes_supported)
+        scope = " ".join(scopes_supported) if scopes_supported else None
         return IdentityProvider(
             name=self.server_cfg.name,
             label=self.server_cfg.label,
