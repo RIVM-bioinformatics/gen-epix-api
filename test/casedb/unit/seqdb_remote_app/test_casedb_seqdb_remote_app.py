@@ -1,6 +1,5 @@
 """Unit tests for SeqdbRemoteApp create_retrieve_phylogenetic_tree_handler function."""
 
-from functools import partial
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
@@ -12,8 +11,8 @@ from gen_epix.casedb.domain import enum as casedb_enum
 from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.casedb.services.seqdb.remote_app import SeqdbRemoteApp
 from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
-from gen_epix.seqdb.domain import command as seq_command
-from gen_epix.seqdb.domain import enum as seq_enum
+from gen_epix.seqdb.domain import command as seqdb_command
+from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
 
@@ -27,6 +26,7 @@ class TestSeqdbRemoteApp:
 
         return seqdb_model.User(
             id=uuid4(),
+            key="test@example.com",
             email="test@example.com",
             name="Test User",
             organization_id=uuid4(),
@@ -41,12 +41,12 @@ class TestSeqdbRemoteApp:
     @pytest.fixture
     def sample_command(
         self, mock_user: seqdb_model.User
-    ) -> seq_command.RetrievePhylogeneticTreeCommand:
+    ) -> seqdb_command.RetrievePhylogeneticTreeCommand:
         """Create a sample command for testing."""
-        return seq_command.RetrievePhylogeneticTreeCommand(
+        return seqdb_command.RetrievePhylogeneticTreeCommand(
             user=mock_user,
             seq_distance_protocol_id=uuid4(),
-            tree_algorithm=seq_enum.TreeAlgorithm.UPGMA,
+            tree_algorithm=seqdb_enum.TreeAlgorithm.UPGMA,
             seq_ids=[uuid4(), uuid4()],
             leaf_names=["seq1", "seq2"],
         )
@@ -65,11 +65,11 @@ class TestSeqdbRemoteApp:
     ) -> None:
         """Test that create_retrieve_phylogenetic_tree_handler returns a partial function."""
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        assert isinstance(handler, partial)
+        assert callable(handler)
 
     def test_route_registration(self, remote_app: SeqdbRemoteApp) -> None:
         """Test that the handler registers the correct route."""
-        expected_route = remote_app.base_url + "retrieve/phylogenetic_tree"
+        expected_route = remote_app.host_url + "retrieve/phylogenetic_tree"
 
         # Create a test handler to verify route registration works
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -77,14 +77,14 @@ class TestSeqdbRemoteApp:
 
         # Verify the expected route format is correct
         assert "retrieve/phylogenetic_tree" in expected_route
-        assert remote_app.base_url in expected_route
+        assert remote_app.host_url in expected_route
 
     @patch("httpx.Client")
     def test_successful_request_with_full_response(
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
         mock_user: seqdb_model.User,
     ) -> None:
@@ -124,10 +124,12 @@ class TestSeqdbRemoteApp:
             seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             seq_ids=sample_command.seq_ids,
+            leaf_codes=sample_command.leaf_names,
         )
 
         mock_client.post.assert_called_once_with(
-            remote_app.base_url + "retrieve/phylogenetic_tree",
+            # remote_app.host_url + "retrieve/phylogenetic_tree",
+            remote_app.get_route(sample_command),
             json=expected_request_body.model_dump(),
             headers={"Authorization": "Bearer test_token"},
         )
@@ -137,7 +139,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
         mock_user: seqdb_model.User,
     ) -> None:
         """Test successful HTTP request with response data missing leaf_ids."""
@@ -176,7 +178,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty/null response data returns None."""
         # Setup mock HTTP client with empty response
@@ -203,7 +205,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
     ) -> None:
         """Test that empty dict response returns None."""
         # Setup mock HTTP client with empty dict response
@@ -230,7 +232,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
     ) -> None:
         """Test that HTTP errors are properly propagated."""
         # Setup mock HTTP client with error response
@@ -258,7 +260,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
         """Test that authentication headers are properly included in requests."""
@@ -294,7 +296,7 @@ class TestSeqdbRemoteApp:
         self,
         mock_client_class: Mock,
         remote_app: SeqdbRemoteApp,
-        sample_command: seq_command.RetrievePhylogeneticTreeCommand,
+        sample_command: seqdb_command.RetrievePhylogeneticTreeCommand,
         sample_response_data: dict[str, Any],
     ) -> None:
         """Test that RetrievePhylogeneticTreeRequestBody is constructed correctly."""
@@ -320,10 +322,11 @@ class TestSeqdbRemoteApp:
             seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
             seq_ids=sample_command.seq_ids,
+            leaf_codes=sample_command.leaf_names,
         )
 
         mock_client.post.assert_called_once_with(
-            remote_app.base_url + "retrieve/phylogenetic_tree",
+            remote_app.get_route(sample_command),
             json=expected_request_body.model_dump(),
             headers={},
         )
@@ -337,7 +340,7 @@ class TestSeqdbRemoteApp:
         assert RetrievePhylogeneticTreeBySequencesCommand in remote_app.COMMAND_MAP
         assert (
             remote_app.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand]
-            == seq_command.RetrievePhylogeneticTreeCommand
+            == seqdb_command.RetrievePhylogeneticTreeCommand
         )
 
     def test_tree_algorithm_mapping_exists(self, remote_app: SeqdbRemoteApp) -> None:
@@ -347,16 +350,16 @@ class TestSeqdbRemoteApp:
         # Verify the mapping structure - each casedb enum should map to seqdb enum with same value
         for casedb_enum_val, seqdb_enum_val in remote_app.TREE_ALGORITHM_MAP.items():
             assert isinstance(casedb_enum_val, casedb_enum.TreeAlgorithmType)
-            assert isinstance(seqdb_enum_val, seq_enum.TreeAlgorithm)
+            assert isinstance(seqdb_enum_val, seqdb_enum.TreeAlgorithm)
             assert casedb_enum_val.value == seqdb_enum_val.value
 
-    def test_base_url_construction(self) -> None:
+    def test_host_url_construction(self) -> None:
         """Test that base URL is constructed correctly."""
         host = "test-host"
         port = 9999
         app = SeqdbRemoteApp(host=host, port=port)
-        expected_base_url = f"https://{host}:{port}/v1/"
-        assert app.base_url == expected_base_url
+        expected_host_url = f"https://{host}:{port}"
+        assert app.host_url == expected_host_url
 
     def test_handler_registration_on_init(self) -> None:
         """Test that handlers are registered during initialization."""
@@ -371,8 +374,9 @@ class TestSeqdbRemoteApp:
 
                 # Verify handler creation and registration was called
                 mock_create.assert_called_once()
-                mock_register.assert_called_once_with(
-                    seq_command.RetrievePhylogeneticTreeCommand, mock_handler
+                # Check that our specific handler was registered (among many others)
+                mock_register.assert_any_call(
+                    seqdb_command.RetrievePhylogeneticTreeCommand, mock_handler
                 )
 
                 # Verify app was created

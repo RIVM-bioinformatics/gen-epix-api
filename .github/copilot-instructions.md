@@ -97,6 +97,7 @@ Configuration structure example:
 ```toml
 [service.auth.props.root.user]
 id = "019542cc-8225-8f5d-fa30-d9c3f2629703"
+key = "root@dummy.org"
 email = "root@dummy.org"
 
 [repository.defaults]

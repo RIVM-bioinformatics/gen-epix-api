@@ -144,7 +144,7 @@ for service_type in enum.ServiceType:
             name=service_type.value,
         )
     )
-    user_id = sa_sql_repository_cfg["service"]["auth"]["props"]["root"]["user"]["id"]
+    user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     create_demo_data_from_repository(user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT)
     end_time = datetime.datetime.now()
     print(

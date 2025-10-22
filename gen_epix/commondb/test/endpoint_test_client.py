@@ -153,7 +153,9 @@ class EndpointTestClient:
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
         request_body = self.user_invitation_request_body(
+            key=cmd.key,
             email=cmd.email,
+            name=cmd.name,
             roles=cmd.roles,
             organization_id=cmd.organization_id,
         )
@@ -230,6 +232,7 @@ class EndpointTestClient:
         expire_default_minutes: int = 15,
     ) -> str:
         claims = {
+            "__key__": email,
             "email": email,
             "iss": iss or f"https://{uuid.uuid4()}.org",
             "sub": sub or str(uuid.uuid4()),

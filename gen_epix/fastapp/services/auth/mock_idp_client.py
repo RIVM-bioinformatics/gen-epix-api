@@ -8,11 +8,11 @@ from jose import jwt
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.log import BaseLogItem, LogItem
-from gen_epix.fastapp.services.auth.idp_client import IDPClient
+from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
 
-class MockIDPClient(IDPClient):
+class MockIDPClient(IdpClient):
 
     def __init__(
         self,

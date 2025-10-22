@@ -86,6 +86,7 @@ class SeqdbTestClient(TestClient):
         app_cfg.cfg["app"]["debug"] = True
         curr_cfg = app_cfg.cfg["service"]["auth"]["props"]["root"]
         curr_cfg["organization"]["name"] = "org1"
+        curr_cfg["user"]["key"] = "root1_1@org1.org"
         curr_cfg["user"]["email"] = "root1_1@org1.org"
         curr_cfg["user"]["name"] = "root1_1"
 
