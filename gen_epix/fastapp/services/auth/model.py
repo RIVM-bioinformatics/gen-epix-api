@@ -35,6 +35,9 @@ class IdentityProvider(Model):
     scope: str | None = Field(
         default=None, description="The OIDC scopes, space separated"
     )
+    public: bool = Field(
+        default=False, description="Whether the identity provider is public"
+    )
 
 
 class Claims(Model):
@@ -78,6 +81,7 @@ class OidcServerCfg(Model):
         "discovery_url",
         "client_id",
         "client_secret",
+        "public",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -107,6 +111,9 @@ class OidcServerCfg(Model):
     audience: str | None = Field(
         default=None,
         description="The audience that the identity provider will include in the aud claim of tokens",
+    )
+    public: bool = Field(
+        default=False, description="Whether the identity provider is public"
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification

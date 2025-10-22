@@ -412,9 +412,12 @@ class AuthService(BaseAuthService):
 
     def get_identity_providers(
         self,
-        _cmd: GetIdentityProvidersCommand,
+        cmd: GetIdentityProvidersCommand,
     ) -> list[IdentityProvider]:
-        return [x.get_identity_provider() for x in self._idp_clients]
+        identity_providers = [x.get_identity_provider() for x in self._idp_clients]
+        if cmd.public:
+            return [idp for idp in identity_providers if idp.public]
+        return identity_providers
 
     async def get_idp_user_from_claims(self, claims: Claims) -> IDPUser:
         claims_dict = claims.claims

@@ -446,6 +446,7 @@ class OidcClient(IdpClient, OpenIdConnect):
             auth_protocol=AuthProtocol.OIDC,
             oauth_flow=OAuthFlow.AUTHORIZATION_CODE,
             scope=scope,
+            public=self.server_cfg.public,
         )
 
     def _load_keys(self) -> None:
