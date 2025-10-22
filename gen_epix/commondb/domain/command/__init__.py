@@ -8,9 +8,6 @@ from gen_epix.commondb.domain.command.abac import (
 from gen_epix.commondb.domain.command.abac import (
     RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
 )
-from gen_epix.commondb.domain.command.auth import (
-    GetIdentityProvidersCommand as GetIdentityProvidersCommand,
-)
 from gen_epix.commondb.domain.command.base import Command as Command
 from gen_epix.commondb.domain.command.base import CrudCommand as CrudCommand
 from gen_epix.commondb.domain.command.base import (
@@ -90,6 +87,9 @@ from gen_epix.commondb.domain.command.system import (
 )
 from gen_epix.commondb.domain.command.system import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
+)
+from gen_epix.fastapp.services.auth import (
+    GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
