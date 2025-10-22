@@ -81,6 +81,7 @@ class OidcServerCfg(Model):
         "discovery_url",
         "client_id",
         "client_secret",
+        "scope",
         "public",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
@@ -112,6 +113,7 @@ class OidcServerCfg(Model):
         default=None,
         description="The audience that the identity provider will include in the aud claim of tokens",
     )
+    scope: str = Field(description="The scope of the application")
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
     )
@@ -273,10 +275,6 @@ class OidcServerCfg(Model):
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
                 )
         return self
-
-    @property
-    def scope(self) -> str:
-        return " ".join(self.scopes_supported or [])
 
     def is_valid(self) -> bool:
         """Check if the configuration has the required fields set."""

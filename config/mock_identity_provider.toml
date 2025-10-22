@@ -5,7 +5,7 @@ protocol = "OIDC"
 discovery_url = "https://127.0.0.1:5443/.well-known/openid-configuration"
 client_id = "mock"
 client_secret = "mock"
-scope = "openid profile email offline_access"
+scope = "openid profile email"
 public = true
 
 [service.auth.props.idps_cfg.claim_map]

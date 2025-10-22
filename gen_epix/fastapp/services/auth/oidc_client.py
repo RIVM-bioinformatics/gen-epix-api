@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -91,6 +92,11 @@ class OidcClient(IdpClient, OpenIdConnect):
     @property
     def audience(self) -> str:
         return self.server_cfg.audience or self.server_cfg.client_id
+
+    @property
+    def scope(self) -> str:
+        assert self.server_cfg.scope is not None
+        return self.server_cfg.scope
 
     def update_server_config_from_discovery(
         self,
@@ -435,7 +441,6 @@ class OidcClient(IdpClient, OpenIdConnect):
         issuer = self.server_cfg.issuer
         scopes_supported = self.server_cfg.scopes_supported
         assert issuer is not None
-        scope = " ".join(scopes_supported) if scopes_supported else None
         return IdentityProvider(
             name=self.server_cfg.name,
             label=self.server_cfg.label,
@@ -445,7 +450,7 @@ class OidcClient(IdpClient, OpenIdConnect):
             issuer=issuer,
             auth_protocol=AuthProtocol.OIDC,
             oauth_flow=OAuthFlow.AUTHORIZATION_CODE,
-            scope=scope,
+            scope=self.server_cfg.scope,
             public=self.server_cfg.public,
         )
 
