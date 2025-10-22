@@ -1,14 +1,13 @@
 import datetime
-import hashlib
 from decimal import Decimal
 from typing import Any, Callable, Iterable, Type
 from uuid import UUID
 
-import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 import gen_epix.casedb.domain.model.case.complete_case_type
+import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
@@ -1147,6 +1146,7 @@ class CaseService(BaseCaseService):
 
         case_ids: set[UUID] = {x.case_id for x in cmd.case_read_sets}
         case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_read_sets}
+        col_ids: set[UUID] = {case_type_col.col_id for case_type_col in case_type_cols}
         read_sets_to_create: list[model.ReadSet] = []
 
         with repository.uow() as uow:
@@ -1175,12 +1175,23 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "Some case type column ids do not exist"
                 )
+            cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                list(col_ids),
+                CrudOperation.READ_SOME,
+            )
 
             case_by_id: dict[UUID, model.Case] = {
                 x.id: x for x in cases if x.id is not None
             }
             case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
                 x.id: x for x in case_type_cols if x.id is not None
+            }
+            col_by_id: dict[UUID, model.Col] = {
+                x.id: x for x in cols if x.id is not None
             }
 
             # Case-level write right check
@@ -1192,23 +1203,7 @@ class CaseService(BaseCaseService):
                 case_ids=list(case_ids),
                 filter_content=False,
             )
-
             # TODO: Column level check?
-            # TODO: Type of column is correct? (CaseTypeCol -> Col.ColType.TEXT in ENUM?)
-
-            # gen_epix/casedb/domain/enum.py::ColType
-
-            # col_ids = {case_type_col.col_id for case_type_col in case_type_cols}
-            # cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
-            #     uow,
-            #     user.id,
-            #     model.Col,
-            #     None,
-            #     list(col_ids),
-            #     CrudOperation.READ_SOME,
-            # )
-            # col_by_id = {c.id: c for c in cols}
-            # col = col_by_id[case_type_column.col_id]
 
             for case_read_sets in cmd.case_read_sets:
                 case = case_by_id[case_read_sets.case_id]
@@ -1217,6 +1212,12 @@ class CaseService(BaseCaseService):
                 if case_type_column.case_type_id != case.case_type_id:
                     raise exc.InvalidArgumentsError(
                         f"Column {case_read_sets.case_type_col_id} not part of case type {case.case_type_id}"
+                    )
+                # Check if col is of type GENETIC_READS
+                col = col_by_id[case_type_column.col_id]
+                if col.col_type != enum.ColType.GENETIC_READS:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {col.id} is not of type GENETIC_READS"
                     )
                 read_sets_to_create.append(
                     model.ReadSet(
@@ -1264,5 +1265,5 @@ class CaseService(BaseCaseService):
     def create_file_for_reads_set(
         self, cmd: command.CreateFileForReadSetCommand
     ) -> UUID | None:
-        #TODO: implement
+        # TODO: implement
         raise NotImplementedError()
