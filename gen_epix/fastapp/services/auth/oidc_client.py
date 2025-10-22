@@ -439,7 +439,6 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     def get_identity_provider(self) -> IdentityProvider:
         issuer = self.server_cfg.issuer
-        scopes_supported = self.server_cfg.scopes_supported
         assert issuer is not None
         return IdentityProvider(
             name=self.server_cfg.name,
