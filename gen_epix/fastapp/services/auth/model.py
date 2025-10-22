@@ -48,7 +48,7 @@ class Claims(Model):
     idp_client_id: UUID = Field(
         description="The ID of the IDP client that processed the claims"
     )
-    claims: dict[str, str | int | bool | list[str]] = Field(
+    claims: dict[str, str | int | bool | list[str] | None] = Field(
         description="The claims as verified and processed by the IDP client"
     )
 

@@ -9,4 +9,4 @@ scope = "openid profile email"
 public = true
 
 [service.auth.props.idps_cfg.claim_map]
-__key__ = "email"
+__key__ = "sub"
