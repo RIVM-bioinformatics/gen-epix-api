@@ -22,6 +22,8 @@ from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 
 class AuthService(BaseAuthService):
 
+    DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
+
     def __init__(
         self,
         app: App,
@@ -579,7 +581,7 @@ class AuthService(BaseAuthService):
         for idp_cfg in idps_cfg:
             idp_name = idp_cfg["name"]
             idp_label = idp_cfg["label"]
-            is_exposed = idp_cfg.get("is_exposed", self.DEFAULT_IS_EXPOSED_IDP)
+            is_public = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)
             if idp_name in idp_names or idp_label in idp_labels:
                 msg = (
                     "Authentication service name and/or label are not unique: "
@@ -609,7 +611,7 @@ class AuthService(BaseAuthService):
                         f"Protocol {protocol.value} not implemented"
                     )
                 idp_clients.append(idp_client)
-                if is_exposed:
+                if is_public:
                     exposed_idp_clients.append(idp_client)
             except Exception as exception:
                 # Unable to initialize authentication service: do not raise
