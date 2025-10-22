@@ -5,6 +5,7 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
+import gen_epix.casedb.domain.model.case.complete_case_type
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.filter import DatetimeRangeFilter, Filter
@@ -84,7 +85,7 @@ class BaseCaseService(DomainBaseCaseService):
     def retrieve_complete_case_type(
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
-    ) -> model.CompleteCaseType:
+    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
         """Retrieve complete case type information including all related metadata."""
         pass
 

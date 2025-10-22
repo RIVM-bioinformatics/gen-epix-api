@@ -4,9 +4,11 @@ from decimal import Decimal
 from typing import Any, Callable, Iterable, Type
 from uuid import UUID
 
+import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
+import gen_epix.casedb.domain.model.case.complete_case_type
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
@@ -215,7 +217,7 @@ class CaseService(BaseCaseService):
     def retrieve_complete_case_type(
         self: DomainBaseCaseService,
         cmd: command.RetrieveCompleteCaseTypeCommand,
-    ) -> model.CompleteCaseType:
+    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
         return case_service_retrieve_complete_case_type(self, cmd)
 
     def retrieve_case_type_stats(
@@ -1223,7 +1225,7 @@ class CaseService(BaseCaseService):
                 )
         # Create ReadSets in seqdb and then update them in Case
         created_read_sets: list[model.ReadSet] = self.app.handle(
-            command.ReadSetCrudCommand(
+            seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.CREATE_SOME,
                 objs=read_sets_to_create,  # type: ignore[arg-type]
@@ -1262,17 +1264,5 @@ class CaseService(BaseCaseService):
     def create_file_for_reads_set(
         self, cmd: command.CreateFileForReadSetCommand
     ) -> UUID | None:
-        created_file_id: UUID = self.app.handle(
-            command.FileCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.File(
-                    size_bytes=len(cmd.file_content),
-                    hash_sha256=hashlib.sha256(cmd.file_content).digest(),
-                    content=cmd.file_content,
-                ),
-                props={"read_set_id": cmd.read_set_id, "is_fwd": cmd.is_fwd},
-            )
-        )
-
-        return created_file_id
+        #TODO: implement
+        raise NotImplementedError()

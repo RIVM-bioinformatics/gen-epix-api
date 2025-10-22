@@ -5,6 +5,7 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
+import gen_epix.seqdb.domain.command as seqdb_command
 
 
 class BaseSeqdbService(BaseService):
@@ -22,8 +23,9 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
-        # f(command.ReadSetCrudCommand, self.create_read_set)
-        f(command.FileCrudCommand, self.create_file_for_read_set)
+        f(seqdb_command.ReadSetCrudCommand, self.crud)
+        f(seqdb_command.FileCrudCommand, self.crud)
+        f(seqdb_command.LibraryPrepProtocolCrudCommand, self.crud)
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -44,16 +46,6 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,
     ) -> Iterable[str]:
-        raise NotImplementedError()
-
-    # @abc.abstractmethod
-    # def create_read_set(self, cmd: command.ReadSetCrudCommand) -> list[model.ReadSet]:
-    #     raise NotImplementedError()
-
-    @abc.abstractmethod
-    def create_file_for_read_set(
-        self, cmd: command.FileCrudCommand
-    ) -> UUID | None:
         raise NotImplementedError()
 
     # @abc.abstractmethod

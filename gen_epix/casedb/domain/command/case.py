@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
+import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
     Command,
@@ -70,7 +71,9 @@ class ValidateCasesCommand(Command):
         model.CaseValidationReport, "data_collection_ids"
     )
     is_update: bool = Field(description="Whether this is an update operation.")
-    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
+    cases: list[
+        model.CaseForCreateUpdate
+    ] = Field(description="The cases to validate.")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -263,6 +266,7 @@ class CreateReadSetsForCasesCommand(Command):
     """
     Create read sets for a set of cases based on a read set case type column.
     """
+
     case_read_sets: list[model.CaseReadSet] = Field(
         description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created."
     )
@@ -280,6 +284,7 @@ class CreateFileForReadSetCommand(Command):
     read_set_id: UUID = Field(
         description="The ID of the read set to associate the file with."
     )
+
 
 # CRUD
 

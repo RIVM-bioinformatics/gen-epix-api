@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from gen_epix.casedb.domain.model.case.case import CaseTypeDim
 from gen_epix.casedb.domain.model.case.complete_case_type import CompleteCaseType
+from gen_epix.casedb.domain.model.case.persistable import CaseTypeDim
 
 
 def test_case_type_col_order_derivation() -> None:

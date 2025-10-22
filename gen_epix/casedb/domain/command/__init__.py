@@ -249,11 +249,6 @@ from gen_epix.commondb.domain.command.organization import (
 from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
-from gen_epix.seqdb.domain.command import FileCrudCommand as FileCrudCommand
-from gen_epix.seqdb.domain.command import (
-    LibraryPrepProtocolCrudCommand as LibraryPrepProtocolCrudCommand,
-)
-from gen_epix.seqdb.domain.command import ReadSetCrudCommand as ReadSetCrudCommand
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     # Specific commands
@@ -326,9 +321,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     enum.ServiceType.SEQDB: {
         RetrieveGeneticSequenceByIdCommand,
         RetrieveGeneticSequenceFastaByIdCommand,
-        ReadSetCrudCommand,
-        LibraryPrepProtocolCrudCommand,
-        FileCrudCommand,
     },
     enum.ServiceType.SUBJECT: {
         SubjectCrudCommand,

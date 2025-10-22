@@ -26,6 +26,7 @@ from gen_epix.seqdb.env import AppEnv
 class SeqdbService(BaseSeqdbService):
 
     @staticmethod
+    # TODO: make explicit role by role mapping
     def map_roles(
         roles: set[casedb_enum.Role],
         # target_enum: Type[common_enum.Role],
@@ -198,35 +199,35 @@ class SeqdbService(BaseSeqdbService):
             read_set.file_id2 = created_file.id
         return read_set
 
-    def create_file_for_read_set(self, cmd: command.FileCrudCommand) -> UUID | None:
-        # Extract read_set_id from cmd.props
-        props: dict[str, Any] = getattr(cmd, "props", {}) or {}
-        read_set_id: UUID = props.get("read_set_id")  # type: ignore[assignment]
-        is_fwd: bool = props.get("is_fwd", False)
-        created_file: model.File = self.seqdb_app.handle(
-            seqdb_command.FileCrudCommand(
-                user=self.seqdb_user,
-                objs=cmd.objs,
-                operation=CrudOperation.CREATE_ONE,
-            )
-        )
-        read_sets: list[model.ReadSet] = self.retrieve_read_sets_by_id(read_set_id)
-        # more validation in updating file id in read set?
-        # check if id is None? Check if codes not the same?
-        read_set: model.ReadSet = self.assign_correct_file_id_to_read_set(
-            is_fwd, created_file, read_sets
-        )
-        # introduce try/except?
-        # update read set in seqdb with new file id
-        self.seqdb_app.handle(
-            seqdb_command.ReadSetCrudCommand(
-                user=self.seqdb_user,
-                objs=read_set,
-                operation=CrudOperation.UPDATE_ONE,
-            )
-        )
+    # def create_file_for_read_set(self, cmd: command.CreateFileForReadSetCommand) -> UUID | None:
+    #     # Extract read_set_id from cmd.props
+    #     props: dict[str, Any] = getattr(cmd, "props", {}) or {}
+    #     read_set_id: UUID = props.get("read_set_id")  # type: ignore[assignment]
+    #     is_fwd: bool = props.get("is_fwd", False)
+    #     created_file: model.File = self.seqdb_app.handle(
+    #         seqdb_command.FileCrudCommand(
+    #             user=self.seqdb_user,
+    #             objs=cmd.objs,
+    #             operation=CrudOperation.CREATE_ONE,
+    #         )
+    #     )
+    #     read_sets: list[model.ReadSet] = self.retrieve_read_sets_by_id(read_set_id)
+    #     # more validation in updating file id in read set?
+    #     # check if id is None? Check if codes not the same?
+    #     read_set: model.ReadSet = self.assign_correct_file_id_to_read_set(
+    #         is_fwd, created_file, read_sets
+    #     )
+    #     # introduce try/except?
+    #     # update read set in seqdb with new file id
+    #     self.seqdb_app.handle(
+    #         seqdb_command.ReadSetCrudCommand(
+    #             user=self.seqdb_user,
+    #             objs=read_set,
+    #             operation=CrudOperation.UPDATE_ONE,
+    #         )
+    #     )
 
-        return created_file.id
+    #     return created_file.id
 
     # def retrieve_allele_profile(
     #     self,

@@ -6,6 +6,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
 
+import gen_epix.casedb.domain.model.case.complete_case_type
+import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
@@ -30,9 +32,9 @@ class ValidateCasesRequestBody(PydanticBaseModel):
         command.ValidateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.ValidateCasesCommand, "cases"
-    )
+    cases: list[
+        gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate
+    ] = copy_model_field(command.ValidateCasesCommand, "cases")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -54,9 +56,9 @@ class CreateCasesRequestBody(PydanticBaseModel):
         command.CreateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.CreateCasesCommand, "cases"
-    )
+    cases: list[
+        gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate
+    ] = copy_model_field(command.CreateCasesCommand, "cases")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -208,12 +210,14 @@ def create_case_endpoints(
     async def complete_case_types__get_one(
         user: registered_user_dependency,  # type: ignore
         case_type_id: UUID,
-    ) -> model.CompleteCaseType:
+    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
         try:
             cmd = command.RetrieveCompleteCaseTypeCommand(
                 user=user, case_type_id=case_type_id
             )
-            retval: model.CompleteCaseType = app.handle(cmd)
+            retval: (
+                gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType
+            ) = app.handle(cmd)
         except Exception as exception:
             handle_exception("c6c17125", user, exception)
         return retval
@@ -577,7 +581,7 @@ def create_case_endpoints(
         return created_read_sets
 
     @router.post(
-        "/create_file_for_reads_set/{reads_set_id}/fwd",
+        "/create_file_for_read_set/{case_id}/{case_type_col_id}/fwd",
         operation_id="create_file_for_reads_set_fwd",
         name="Create file for reads set - forward reads",
         description=command.CreateFileForReadSetCommand.__doc__,

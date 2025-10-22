@@ -381,12 +381,13 @@ def load_demo_data(
     connect_timeout: float = 1,
     verbose: bool = True,
 ) -> None:
-
+    domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
     # Get classes and config for the app type
+
     enum = importlib.import_module(f"{module_root}.domain.enum")
-    domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
+
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
     dict_app_cfg = AppCfg(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False

@@ -5,6 +5,7 @@ from typing import Iterable
 
 import pytest
 
+import gen_epix.casedb.domain.model.case.complete_case_type
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
@@ -181,7 +182,7 @@ class TestContent:
         for case_type in case_types:
             if case_type.id not in has_cases_case_type_ids:
                 continue
-            complete_case_type: model.CompleteCaseType = app.handle(  # type: ignore
+            complete_case_type: gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType = app.handle(  # type: ignore
                 command.RetrieveCompleteCaseTypeCommand(
                     user=org_user,
                     case_type_id=case_type.id,

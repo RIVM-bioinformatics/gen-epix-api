@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from typing import Type
 from uuid import UUID
 
+import gen_epix.casedb.domain.model.case.complete_case_type
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.domain.repository import BaseCaseRepository
@@ -112,7 +113,7 @@ class BaseCaseService(BaseService):
     def retrieve_complete_case_type(
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
-    ) -> model.CompleteCaseType:
+    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
         raise NotImplementedError()
 
     @abc.abstractmethod

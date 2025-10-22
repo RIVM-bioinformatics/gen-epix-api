@@ -24,7 +24,6 @@ from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
-from gen_epix.casedb.domain.model.case import CaseForCreateUpdate as CaseForCreateUpdate
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
@@ -53,7 +52,6 @@ from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
 )
 from gen_epix.casedb.domain.model.case import Col as Col
-from gen_epix.casedb.domain.model.case import CompleteCaseType as CompleteCaseType
 from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
@@ -61,6 +59,12 @@ from gen_epix.casedb.domain.model.case import (
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
 from gen_epix.casedb.domain.model.case import ValidatedCase as ValidatedCase
+from gen_epix.casedb.domain.model.case.complete_case_type import (
+    CompleteCaseType as CompleteCaseType,
+)
+from gen_epix.casedb.domain.model.case.non_persistable import (
+    CaseForCreateUpdate as CaseForCreateUpdate,
+)
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
@@ -77,8 +81,13 @@ from gen_epix.casedb.domain.model.organization import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
+from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
+from gen_epix.casedb.domain.model.seqdb import (
+    LibraryPrepProtocol as LibraryPrepProtocol,
+)
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
+from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
@@ -104,9 +113,6 @@ from gen_epix.commondb.domain.model import Site as Site
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
-from gen_epix.seqdb.domain.model import File as File
-from gen_epix.seqdb.domain.model import LibraryPrepProtocol as LibraryPrepProtocol
-from gen_epix.seqdb.domain.model import ReadSet as ReadSet
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
