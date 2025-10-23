@@ -4,7 +4,6 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
-import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
     Command,
@@ -71,9 +70,7 @@ class ValidateCasesCommand(Command):
         model.CaseValidationReport, "data_collection_ids"
     )
     is_update: bool = Field(description="Whether this is an update operation.")
-    cases: list[
-        model.CaseForCreateUpdate
-    ] = Field(description="The cases to validate.")
+    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -280,9 +277,20 @@ class CreateFileForReadSetCommand(Command):
     is_fwd: bool = Field(
         description="Whether the file is a forward read file.", default=False
     )
+    case_id: UUID = Field(description="The ID of the case the read set belongs to.")
+    case_type_col_id: UUID = Field(
+        description="The ID of the read set case type column."
+    )
     file_content: bytes = Field(description="The content of the file to create.")
-    read_set_id: UUID = Field(
-        description="The ID of the read set to associate the file with."
+
+
+class CreateSeqsForCasesCommand(Command):
+    """
+    Create sequences for a set of cases based on a genetic sequence case type column.
+    """
+
+    case_seqs: list[model.CaseSeq] = Field(
+        description="The CaseSequences describing for which (case_id, case_type_col_id) a Sequence is to be created."
     )
 
 

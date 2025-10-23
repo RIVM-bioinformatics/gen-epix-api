@@ -72,6 +72,9 @@ from gen_epix.casedb.domain.command.case import (
 from gen_epix.casedb.domain.command.case import (
     CreateReadSetsForCasesCommand as CreateReadSetsForCasesCommand,
 )
+from gen_epix.casedb.domain.command.case import (
+    CreateSeqsForCasesCommand as CreateSeqsForCasesCommand,
+)
 from gen_epix.casedb.domain.command.case import DimCrudCommand as DimCrudCommand
 from gen_epix.casedb.domain.command.case import (
     GeneticDistanceProtocolCrudCommand as GeneticDistanceProtocolCrudCommand,
@@ -286,6 +289,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         GeneticDistanceProtocolCrudCommand,
         RetrieveAlleleProfileCommand,
         CreateReadSetsForCasesCommand,
+        CreateSeqsForCasesCommand,
         CreateFileForReadSetCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,

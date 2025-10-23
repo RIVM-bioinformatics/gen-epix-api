@@ -253,3 +253,19 @@ class CaseReadSet(Model):
     library_prep_protocol_id: UUID = Field(
         description="The ID of the library prep protocol associated with the read set."
     )
+
+class CaseSeq(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_seq",
+        persistable=False,
+    )
+    case_id: UUID = Field(
+        description="The ID of the case that the sequence is or will be associated with."
+    )
+    case_type_col_id: UUID = Field(
+        description="The ID of the case type column that the sequence is or will be associated with."
+    )
+    seq_id: UUID | None = Field(
+        description="The ID of the sequence.", default=None
+    )
+    #TODO: add required fields for Seq creation here

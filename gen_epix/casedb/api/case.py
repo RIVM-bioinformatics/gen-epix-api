@@ -588,18 +588,20 @@ def create_case_endpoints(
     )
     async def create_file_for_reads_set_fwd(
         user: registered_user_dependency,  # type: ignore
-        reads_set_id: UUID,
-        request_body: CreateFileForReadSetRequestBody,
+        case_id: UUID,
+        case_type_col_id: UUID,
+        file_content: str,  # TODO: change to bytes or something else
     ) -> UUID:
         is_fwd: bool = True
         try:
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
                     user=user,
-                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                    file_content=file_content.encode(  # TODO: REMOVE encoding (testing only)
                         "utf-8"
                     ),
-                    read_set_id=reads_set_id,
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
                     is_fwd=is_fwd,
                 )
             )
@@ -608,29 +610,54 @@ def create_case_endpoints(
         return created_file_id
 
     @router.post(
-        "/create_file_for_reads_set/{reads_set_id}/rev",
+        "/create_file_for_read_set/{case_id}/{case_type_col_id}/rev",
         operation_id="create_file_for_reads_set_rev",
         name="Create file for reads set - reverse reads",
         description=command.CreateFileForReadSetCommand.__doc__,
     )
     async def create_file_for_reads_set_rev(
         user: registered_user_dependency,  # type: ignore
-        reads_set_id: UUID,
-        request_body: CreateFileForReadSetRequestBody,
+        case_id: UUID,
+        case_type_col_id: UUID,
+        file_content: str,
     ) -> UUID:
+        is_fwd: bool = False
         try:
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
                     user=user,
-                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                    file_content=file_content.encode(
                         "utf-8"
                     ),
-                    read_set_id=reads_set_id,
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                    is_fwd=is_fwd,
                 )
             )
         except Exception as exception:
-            handle_exception("d3f4e2b1", user, exception)
+            handle_exception("f2e3d4c5", user, exception)
         return created_file_id
+
+    @router.post(
+        "/create_seqs_for_cases",
+        operation_id="create__seqs_for_cases",
+        name="Create sequences for cases",
+        description=command.CreateSeqsForCasesCommand.__doc__,
+    )
+    async def create__seqs_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        case_seqs: list[model.CaseSeq],
+    ) -> list[model.Seq]:
+        try:
+            created_seqs: list[model.Seq] = app.handle(
+                command.CreateSeqsForCasesCommand(
+                    user=user,
+                    case_seqs=case_seqs,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a1b2c3d4", user, exception)
+        return created_seqs
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

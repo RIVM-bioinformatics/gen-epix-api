@@ -131,6 +131,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
             (command.ValidateCasesCommand, PermissionTypeSet.E),
             (command.CreateReadSetsForCasesCommand, PermissionTypeSet.E),
+            (command.CreateSeqsForCasesCommand, PermissionTypeSet.E),
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),

@@ -27,6 +27,7 @@ from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
+from gen_epix.casedb.domain.model.case import CaseSeq as CaseSeq
 from gen_epix.casedb.domain.model.case import CaseSet as CaseSet
 from gen_epix.casedb.domain.model.case import CaseSetCategory as CaseSetCategory
 from gen_epix.casedb.domain.model.case import (
@@ -81,13 +82,17 @@ from gen_epix.casedb.domain.model.organization import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
+from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
 from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import (
     LibraryPrepProtocol as LibraryPrepProtocol,
 )
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
+from gen_epix.casedb.domain.model.seqdb import RawSeq as RawSeq
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
+from gen_epix.casedb.domain.model.seqdb import Sample as Sample
+from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
@@ -152,6 +157,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             LibraryPrepProtocol,
             ReadSet,
             File,
+            RawSeq,
+            Sample,
+            AssemblyProtocol,
+            Seq,
         ],
         enum.ServiceType.SUBJECT: [
             Subject,
@@ -164,6 +173,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             Dim,
             Col,
             CaseReadSet,
+            CaseSeq,
             CaseTypeSetCategory,
             CaseType,
             CaseTypeSet,

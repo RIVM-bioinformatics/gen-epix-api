@@ -12,6 +12,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 )
 from gen_epix.casedb.domain.model.case.non_persistable import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case.non_persistable import CaseReadSet as CaseReadSet
+from gen_epix.casedb.domain.model.case.non_persistable import CaseSeq as CaseSeq
 from gen_epix.casedb.domain.model.case.non_persistable import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseSetQuery as CaseSetQuery,
