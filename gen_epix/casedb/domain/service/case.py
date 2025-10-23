@@ -91,8 +91,9 @@ class BaseCaseService(BaseService):
             self.retrieve_genetic_sequence_fasta_by_case,
         )
         f(command.CreateReadSetsForCasesCommand, self.create_reads_sets_for_cases)
-        f(command.CreateFileForReadSetCommand, self.create_file_for_reads_set)
+        f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
         f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
+        f(command.CreateFileForSeqCommand, self.create_file_for_seq)
 
     @abc.abstractmethod
     def validate_cases(
@@ -179,7 +180,7 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_file_for_reads_set(
+    def create_file_for_read_set(
         self,
         cmd: command.CreateFileForReadSetCommand,
     ) -> UUID | None:
@@ -190,4 +191,11 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.CreateSeqsForCasesCommand,
     ) -> list[model.Seq] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_file_for_seq(
+        self,
+        cmd: command.CreateFileForSeqCommand,
+    ) -> UUID | None:
         raise NotImplementedError()

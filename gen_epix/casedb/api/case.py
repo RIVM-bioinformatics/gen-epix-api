@@ -626,9 +626,7 @@ def create_case_endpoints(
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
                     user=user,
-                    file_content=file_content.encode(
-                        "utf-8"
-                    ),
+                    file_content=file_content.encode("utf-8"),
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                     is_fwd=is_fwd,
@@ -658,6 +656,33 @@ def create_case_endpoints(
         except Exception as exception:
             handle_exception("a1b2c3d4", user, exception)
         return created_seqs
+
+    @router.post(
+        "/create_file_for_seq/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_seq",
+        name="Create file for sequence",
+        description=command.CreateFileForSeqCommand.__doc__,
+    )
+    async def create_file_for_seq(
+        user: registered_user_dependency,  # type: ignore
+        case_id: UUID,
+        case_type_col_id: UUID,
+        file_content: str,  # TODO: change to bytes or something else
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForSeqCommand(
+                    user=user,
+                    file_content=file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("b5c6d7e8", user, exception)
+        return created_file_id
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

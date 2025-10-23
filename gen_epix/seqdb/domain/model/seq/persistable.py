@@ -200,6 +200,7 @@ class Seq(Model, CodeMixin, QualityMixin):
         description="The unique identifier for the raw sequence, if available. FOREIGN KEY",
     )
     raw_seq: RawSeq | None = Field(default=None, description="The raw sequence.")
+    file_id: UUID | None = Field(default=None, description="The unique file identifier.")
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:

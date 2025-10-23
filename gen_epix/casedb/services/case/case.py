@@ -1242,7 +1242,7 @@ class CaseService(BaseCaseService):
 
         return created_read_sets
 
-    def create_file_for_reads_set(
+    def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
     ) -> UUID | None:
         user, repository = self._get_user_and_repository(cmd)
@@ -1356,6 +1356,110 @@ class CaseService(BaseCaseService):
                 user=cmd.user,
                 operation=CrudOperation.UPDATE_ONE,
                 objs=existing_read_set,
+            )
+        )
+
+        return created_file.id
+
+    def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID | None:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+        # Retrieve case, case type col and col, and perform validations
+        with repository.uow() as uow:
+            # Check case exists
+            case: model.Case = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                cmd.case_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Case and column-level ABAC check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=[cmd.case_id],
+                filter_content=True,
+                extra_access_case_type_col_ids={cmd.case_type_col_id},
+            )
+
+            # Retrieve case type column and underlying column
+            case_type_col: model.CaseTypeCol = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.CaseTypeCol,
+                None,
+                cmd.case_type_col_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Verify the column belongs to the case type of the case
+            if case_type_col.case_type_id != case.case_type_id:
+                raise exc.InvalidArgumentsError(
+                    f"Column {cmd.case_type_col_id} not part of case type {case.case_type_id}"
+                )
+
+            col: model.Col = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                case_type_col.col_id,
+                CrudOperation.READ_ONE,
+            )
+            if col.col_type != enum.ColType.GENETIC_SEQUENCE:
+                raise exc.InvalidArgumentsError(
+                    f"Column {col.id} is not of type GENETIC_SEQUENCE"
+                )
+
+            # Retrieve Seq id from case content
+            if cmd.case_type_col_id not in case.content:
+                raise exc.InvalidArgumentsError(
+                    "No Seq linked to case for the given case type column"
+                )
+            seq_val = case.content[cmd.case_type_col_id]
+            seq_id: UUID = seq_val if isinstance(seq_val, UUID) else UUID(str(seq_val))
+
+        file_hash = hashlib.sha256(cmd.file_content).digest()
+        file_to_create = model.File(
+            size_bytes=len(cmd.file_content),
+            hash_sha256=file_hash,
+            content=cmd.file_content,
+        )
+        created_file: model.File = self.app.handle(
+            seqdb_command.FileCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=file_to_create,
+            )
+        )
+
+        # Read current Seq to avoid overwriting unrelated fields
+        existing_seq: model.Seq = self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=seq_id,
+            )
+        )
+
+        if existing_seq.file_id is not None:
+            raise exc.InvalidArgumentsError("File already linked to Seq")
+        existing_seq.file_id = created_file.id
+
+        # Update Seq with the new file link
+        self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=existing_seq,
             )
         )
 

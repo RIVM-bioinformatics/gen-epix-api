@@ -70,6 +70,9 @@ from gen_epix.casedb.domain.command.case import (
     CreateFileForReadSetCommand as CreateFileForReadSetCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    CreateFileForSeqCommand as CreateFileForSeqCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     CreateReadSetsForCasesCommand as CreateReadSetsForCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -291,6 +294,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         CreateReadSetsForCasesCommand,
         CreateSeqsForCasesCommand,
         CreateFileForReadSetCommand,
+        CreateFileForSeqCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,

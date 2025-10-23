@@ -284,6 +284,18 @@ class CreateFileForReadSetCommand(Command):
     file_content: bytes = Field(description="The content of the file to create.")
 
 
+class CreateFileForSeqCommand(Command):
+    """
+    Create a file for a sequence associated with a case.
+    """
+
+    case_id: UUID = Field(description="The ID of the case the sequence belongs to.")
+    case_type_col_id: UUID = Field(
+        description="The ID of the genetic sequence case type column."
+    )
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
 class CreateSeqsForCasesCommand(Command):
     """
     Create sequences for a set of cases based on a genetic sequence case type column.
