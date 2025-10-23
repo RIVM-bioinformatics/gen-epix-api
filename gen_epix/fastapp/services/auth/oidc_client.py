@@ -10,6 +10,8 @@ from uuid import UUID
 
 import httpx
 from fastapi import Request
+from fastapi.openapi.models import OAuthFlowAuthorizationCode, OAuthFlows, SecurityBase
+from fastapi.security import OAuth2
 
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
@@ -83,6 +85,21 @@ class OidcClient(IdpClient, OpenIdConnect):
         self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
         if issuer == "":
             self.scheme_name = self.server_cfg.issuer or ""
+
+        # Set SecurityBase properties
+        authorization_endpoint = (
+            self.server_cfg.authorization_endpoint or ""
+        )  # In case of client credentials flow or development, this may not be set
+        token_endpoint = (
+            self.server_cfg.token_endpoint or ""
+        )  # In case of client credentials flow or development, this may not be set
+        flows = OAuthFlows()
+        flows.authorizationCode = OAuthFlowAuthorizationCode(
+            authorizationUrl=authorization_endpoint,
+            tokenUrl=token_endpoint,
+            scopes={x: x for x in self.server_cfg.scope.split()},
+        )
+        self.model: SecurityBase = OAuth2(flows=flows)
 
     @property
     def issuer(self) -> str:

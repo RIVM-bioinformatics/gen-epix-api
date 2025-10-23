@@ -4,6 +4,7 @@ import uuid
 from uuid import UUID
 
 from fastapi import Request
+from fastapi.openapi.models import SecurityBase
 
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider
 
@@ -27,6 +28,7 @@ class IdpClient(abc.ABC):
         # Set SecurityBase properties
         self.scheme_name = scheme_name
         self.token_name = token_name or self.DEFAULT_TOKEN
+        self.model: SecurityBase  # type: ignore
 
     @abc.abstractmethod
     def get_identity_provider(self) -> IdentityProvider:
