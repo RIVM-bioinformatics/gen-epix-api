@@ -96,6 +96,10 @@ class SeqdbRemoteApp(RemoteApp):
                 raise exc.InitializationServiceError(
                     "OAuth client ID must be provided for OAUTH2 auth protocol"
                 )
+            if oauth_scope is None:
+                raise exc.InitializationServiceError(
+                    "OAuth scope must be provided for OAUTH2 auth protocol"
+                )
             oidc_client = OidcClient(
                 server_cfg=OidcServerCfg(
                     name="",
@@ -104,15 +108,12 @@ class SeqdbRemoteApp(RemoteApp):
                     client_id=oauth_client_id,
                     client_secret=oauth_client_secret,
                     token_endpoint=oauth_token_endpoint,
+                    scope=oauth_scope,
                 ),
                 ssl_context=self.ssl_context,
                 logger=logger,
                 log_item_class=log_item_class,
             )
-            if oauth_scope is None:
-                raise exc.InitializationServiceError(
-                    "OAuth scope must be provided for OAUTH2 auth protocol"
-                )
         else:
             raise exc.InitializationServiceError(
                 f"Auth protocol {auth_protocol} not supported"
