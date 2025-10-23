@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timedelta
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
@@ -139,8 +140,18 @@ class TestOidcClientCredentials:
             call_args = mock_client.post.call_args
             assert call_args[0][0] == "https://idp1.org/token"
 
-            # Verify request data
-            request_data = call_args[1]["data"]
+            # Unpack request data
+            # Split request_data string into a dict
+            request_data = dict(x.split("=") for x in call_args[1]["data"].split("&"))
+            # Extract client_id and client_secret from request_headers using basic auth
+            auth_header = call_args[1]["headers"].get("Authorization", "")
+            if auth_header.startswith("Basic "):
+                auth_payload = base64.b64decode(auth_header[6:]).decode("utf-8")
+                request_data["client_id"], request_data["client_secret"] = (
+                    auth_payload.split(":", 1)
+                )
+
+            # Check expected values
             assert request_data["grant_type"] == "client_credentials"
             assert request_data["scope"] == "openid"
             assert "client_id" in request_data
@@ -320,7 +331,9 @@ class TestOidcClientCredentials:
                 assert request_headers["Custom-Header"] == "test-value"
 
                 # Verify custom scope was used
-                request_data = call_args[1]["data"]
+                request_data = dict(
+                    x.split("=") for x in call_args[1]["data"].split("&")
+                )
                 assert request_data["scope"] == "custom_scope"
 
         anyio.run(_test)

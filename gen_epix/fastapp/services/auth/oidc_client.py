@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import logging
@@ -9,6 +10,8 @@ from uuid import UUID
 
 import httpx
 from fastapi import Request
+from fastapi.openapi.models import OAuthFlowAuthorizationCode, OAuthFlows, SecurityBase
+from fastapi.security import OAuth2
 
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
@@ -83,6 +86,21 @@ class OidcClient(IdpClient, OpenIdConnect):
         if issuer == "":
             self.scheme_name = self.server_cfg.issuer or ""
 
+        # Set SecurityBase properties
+        authorization_endpoint = (
+            self.server_cfg.authorization_endpoint or ""
+        )  # In case of client credentials flow or development, this may not be set
+        token_endpoint = (
+            self.server_cfg.token_endpoint or ""
+        )  # In case of client credentials flow or development, this may not be set
+        flows = OAuthFlows()
+        flows.authorizationCode = OAuthFlowAuthorizationCode(
+            authorizationUrl=authorization_endpoint,
+            tokenUrl=token_endpoint,
+            scopes={x: x for x in self.server_cfg.scope.split()},
+        )
+        self.model: SecurityBase = OAuth2(flows=flows)
+
     @property
     def issuer(self) -> str:
         assert self.server_cfg.issuer is not None
@@ -91,6 +109,11 @@ class OidcClient(IdpClient, OpenIdConnect):
     @property
     def audience(self) -> str:
         return self.server_cfg.audience or self.server_cfg.client_id
+
+    @property
+    def scope(self) -> str:
+        assert self.server_cfg.scope is not None
+        return self.server_cfg.scope
 
     def update_server_config_from_discovery(
         self,
@@ -433,9 +456,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     def get_identity_provider(self) -> IdentityProvider:
         issuer = self.server_cfg.issuer
-        scopes_supported = self.server_cfg.scopes_supported
         assert issuer is not None
-        scope = " ".join(scopes_supported) if scopes_supported else None
         return IdentityProvider(
             name=self.server_cfg.name,
             label=self.server_cfg.label,
@@ -445,7 +466,8 @@ class OidcClient(IdpClient, OpenIdConnect):
             issuer=issuer,
             auth_protocol=AuthProtocol.OIDC,
             oauth_flow=OAuthFlow.AUTHORIZATION_CODE,
-            scope=scope,
+            scope=self.server_cfg.scope,
+            public=self.server_cfg.public,
         )
 
     def _load_keys(self) -> None:

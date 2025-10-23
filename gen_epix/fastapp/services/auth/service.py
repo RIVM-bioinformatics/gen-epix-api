@@ -5,15 +5,24 @@ from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
 
 from gen_epix.fastapp import App, exc, model
+from gen_epix.fastapp.app import App
+from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.mock_idp_client import MockIDPClient
-from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
-from gen_epix.fastapp.services.auth.util import create_idp_clients_from_config
+from gen_epix.fastapp.services.auth.model import (
+    Claims,
+    IdentityProvider,
+    IDPUser,
+    OidcServerCfg,
+)
+from gen_epix.fastapp.services.auth.oidc_client import OidcClient
 
 
 class AuthService(BaseAuthService):
+
+    DEFAULT_IS_PUBLIC_IDP = False  # Security: IDPs are not public by default
 
     def __init__(
         self,
@@ -24,10 +33,9 @@ class AuthService(BaseAuthService):
         **kwargs: Any,
     ):
         super().__init__(app, repository=repository, logger=logger, **kwargs)
-        self._idp_clients: list[IdpClient] = []
 
         # Initialize authentication services
-        self._idp_clients = create_idp_clients_from_config(app, idps_cfg)
+        self._init_idp_clients(app, idps_cfg)
         self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
 
         # Initialize no authentication user
@@ -412,9 +420,12 @@ class AuthService(BaseAuthService):
 
     def get_identity_providers(
         self,
-        _cmd: GetIdentityProvidersCommand,
+        cmd: GetIdentityProvidersCommand,
     ) -> list[IdentityProvider]:
-        return [x.get_identity_provider() for x in self._idp_clients]
+        identity_providers = [x.get_identity_provider() for x in self._idp_clients]
+        if cmd.public:
+            return [x for x in identity_providers if x.public]
+        return identity_providers
 
     async def get_idp_user_from_claims(self, claims: Claims) -> IDPUser:
         claims_dict = claims.claims
@@ -555,3 +566,77 @@ class AuthService(BaseAuthService):
                         )
                     )
                 raise exc.UnauthorizedAuthError()
+
+    def _init_idp_clients(
+        self, app: App, idps_cfg: list[dict[str, str | list]] | None
+    ) -> None:
+        # Initialize list of all IDP clients and list of exposed IDP clients
+        if not idps_cfg:
+            idps_cfg = []
+        idp_clients: list[IdpClient] = []
+        exposed_idp_clients: list[IdpClient] = []
+        idp_names = set()
+        idp_labels = set()
+        logger = app.logger
+        for idp_cfg in idps_cfg:
+            idp_name = idp_cfg["name"]
+            idp_label = idp_cfg["label"]
+            is_public = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)
+            if idp_name in idp_names or idp_label in idp_labels:
+                msg = (
+                    "Authentication service name and/or label are not unique: "
+                    f"{idp_cfg['name']}, {idp_cfg['label']}"
+                )
+                if logger:
+                    logger.error(app.create_log_message("30a9a272", msg))
+                raise exc.InitializationServiceError(msg)
+            idp_names.add(idp_name)
+            idp_labels.add(idp_label)
+
+            oidc_discovery_doc_keys = set(OidcServerCfg.model_fields.keys())
+            try:
+                protocol = AuthProtocol[str(idp_cfg["protocol"])]
+                if protocol == AuthProtocol.OIDC:
+                    discovery_doc = {
+                        x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
+                    }
+                    idp_client = OidcClient(
+                        OidcServerCfg(**idp_cfg),  # type: ignore
+                        logger=logger,
+                        log_item_class=app.log_item_class,
+                        discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again)
+                    )
+                else:
+                    raise exc.InitializationServiceError(
+                        f"Protocol {protocol.value} not implemented"
+                    )
+                idp_clients.append(idp_client)
+                if is_public:
+                    exposed_idp_clients.append(idp_client)
+            except Exception as exception:
+                # Unable to initialize authentication service: do not raise
+                # an error to avoid entire app not starting up
+                msg = (
+                    "Could not initialize authentication client for service "
+                    f"{idp_cfg['name']}"
+                )
+                if logger:
+                    logger.error(
+                        app.create_log_message("48b7e021", msg, exception=exception)
+                    )
+        for idp_client in idp_clients:  # type: ignore
+            if isinstance(idp_client, OidcClient):
+                if logger:
+                    logger.info(
+                        app.create_log_message(
+                            "7e0b64cc",
+                            f"Authentication client on {idp_client.issuer} initialized",
+                        )
+                    )
+            else:
+                raise exc.InitializationServiceError(
+                    f"Authentication client of type {type(idp_client)} "
+                    "not implemented"
+                )
+        self._idp_clients = idp_clients
+        self._exposed_idp_clients = exposed_idp_clients
