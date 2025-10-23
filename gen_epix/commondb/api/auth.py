@@ -24,11 +24,11 @@ def create_auth_endpoints(
         "/identity_providers",
         operation_id="identity_providers__get_all",
         name="IdentityProvider",
-        description=command.GetIdentityProvidersCommand.__doc__,
+        description="Get all public identity providers",
     )
     async def identity_providers__get_all() -> list[model.IdentityProvider]:
         try:
-            cmd = command.GetIdentityProvidersCommand(user=None)
+            cmd = command.GetIdentityProvidersCommand(user=None, public=True)
             retval: list[model.IdentityProvider] = app.handle(cmd)
         except Exception as exception:
             handle_exception("3ddf8ebb", None, exception)

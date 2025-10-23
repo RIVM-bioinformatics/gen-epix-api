@@ -1,7 +1,7 @@
 """Unit tests for SeqdbRemoteApp create_retrieve_phylogenetic_tree_handler function."""
 
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import httpx
@@ -101,8 +101,8 @@ class TestSeqdbRemoteApp:
 
         # No need to modify command attributes - they're already set in fixture
 
-        # Mock get_headers to return test headers
-        remote_app.get_headers = Mock(
+        # Mock get_headers to return test headers (async function)
+        remote_app.get_headers = AsyncMock(
             return_value={"Authorization": "Bearer test_token"}
         )
 
@@ -160,7 +160,7 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = Mock(return_value={})
+        remote_app.get_headers = AsyncMock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -191,7 +191,7 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        remote_app.get_headers = AsyncMock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -218,7 +218,7 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        remote_app.get_headers = AsyncMock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -247,7 +247,7 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = Mock(return_value={})
+        remote_app.get_headers = AsyncMock(return_value={})
 
         # Get handler and verify exception is raised
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -279,7 +279,7 @@ class TestSeqdbRemoteApp:
             "Authorization": "Bearer test_jwt_token",
             "Content-Type": "application/json",
         }
-        remote_app.get_headers = Mock(return_value=expected_headers)
+        remote_app.get_headers = AsyncMock(return_value=expected_headers)
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
@@ -311,7 +311,7 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = Mock(return_value={})
+        remote_app.get_headers = AsyncMock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()

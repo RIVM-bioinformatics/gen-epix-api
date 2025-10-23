@@ -35,6 +35,9 @@ class IdentityProvider(Model):
     scope: str | None = Field(
         default=None, description="The OIDC scopes, space separated"
     )
+    public: bool = Field(
+        default=False, description="Whether the identity provider is public"
+    )
 
 
 class Claims(Model):
@@ -45,7 +48,7 @@ class Claims(Model):
     idp_client_id: UUID = Field(
         description="The ID of the IDP client that processed the claims"
     )
-    claims: dict[str, str | int | bool | list[str]] = Field(
+    claims: dict[str, str | int | bool | list[str] | None] = Field(
         description="The claims as verified and processed by the IDP client"
     )
 
@@ -78,6 +81,8 @@ class OidcServerCfg(Model):
         "discovery_url",
         "client_id",
         "client_secret",
+        "scope",
+        "public",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -107,6 +112,10 @@ class OidcServerCfg(Model):
     audience: str | None = Field(
         default=None,
         description="The audience that the identity provider will include in the aud claim of tokens",
+    )
+    scope: str = Field(description="The scope of the application")
+    public: bool = Field(
+        default=False, description="Whether the identity provider is public"
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification
@@ -266,10 +275,6 @@ class OidcServerCfg(Model):
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
                 )
         return self
-
-    @property
-    def scope(self) -> str:
-        return " ".join(self.scopes_supported or [])
 
     def is_valid(self) -> bool:
         """Check if the configuration has the required fields set."""
