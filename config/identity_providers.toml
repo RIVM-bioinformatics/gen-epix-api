@@ -9,20 +9,7 @@ scope = "openid profile email"
 public = true
 
 [service.auth.props.idps_cfg.claim_map]
-__key__ = "email"
-
-[[service.auth.props.idps_cfg]]
-name = "rivm_entra"
-label = "RIVM Internal"
-protocol = "OIDC"
-discovery_url = "https://pre-login.rivm.nl/broker/sp/oidc/.well-known/openid-configuration"
-client_id = "DUMMY"
-client_secret = ""
-scope = "openid profile email"
-public = true
-
-[service.auth.props.idps_cfg.claim_map]
-__key__ = "email"
+__key__ = "email preferred_username"
 
 [[service.auth.props.idps_cfg]]
 name = "mock"

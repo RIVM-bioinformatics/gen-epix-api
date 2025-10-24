@@ -306,8 +306,11 @@ class OidcClient(IdpClient, OpenIdConnect):
             )
 
         # Map claims according to claim_map, allowing e.g. to standardize claim names across IDPs
-        for new_claim_name, orig_claim_name in server_cfg.claim_map.items():
-            claims[new_claim_name] = claims.get(orig_claim_name)
+        for new_claim_name, orig_claim_names in server_cfg.claim_map.items():
+            for orig_claim_name in orig_claim_names:
+                claims[new_claim_name] = claims.get(orig_claim_name)
+                if claims[new_claim_name] is not None:
+                    break
 
         return claims
 
