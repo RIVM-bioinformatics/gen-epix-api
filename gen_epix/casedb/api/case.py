@@ -101,22 +101,6 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
         description="The case ids to retrieve genetic sequences for.",
     )
 
-
-class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The case type column that contains the genetic sequences to retrieve.",
-    )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
-    )
-    file_name: str = Field(
-        description="The desired filename for the FASTA download.",
-    )
-    token: str = Field(
-        description="The token to authorize the request.",
-    )
-
-
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     sequence_ids: list[UUID]
     props: dict[str, Any] = {}
