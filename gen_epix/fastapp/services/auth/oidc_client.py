@@ -1,8 +1,8 @@
-import asyncio
 import base64
 import json
 import logging
 import ssl
+import time
 import urllib.parse
 from datetime import datetime
 from typing import Any, Type
@@ -314,7 +314,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         return claims
 
-    async def retrieve_jwt_with_client_credentials_flow(
+    def retrieve_jwt_with_client_credentials_flow(
         self,
         scope: str,
         headers: dict[str, str] | None = None,
@@ -405,7 +405,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     )
             # Wait before next retry (but not after the last attempt)
             if attempt < max_retries:
-                await asyncio.sleep(base_delay)
+                time.sleep(base_delay)
 
         # All retries failed
         print(

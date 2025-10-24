@@ -3,7 +3,6 @@ from logging import Logger
 from typing import Any, Callable
 from uuid import UUID
 
-import anyio
 import httpx
 from jose import jwt
 
@@ -136,7 +135,7 @@ class SeqdbRemoteApp(RemoteApp):
             self.create_retrieve_phylogenetic_tree_handler(),
         )
 
-    async def get_headers(self, cmd: Command) -> dict[str, str]:
+    def get_headers(self, cmd: Command) -> dict[str, str]:
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
@@ -155,10 +154,9 @@ class SeqdbRemoteApp(RemoteApp):
                 return self._oauth_header_cache[1]
             # Retrieve new token
             print("DEBUG: SeqdbRemoteApp.get_headers: Getting new OAuth2 token.")
-            jwt_token = (
-                await self._oidc_client.retrieve_jwt_with_client_credentials_flow(
-                    scope=self._oauth_scope
-                )
+
+            jwt_token = self._oidc_client.retrieve_jwt_with_client_credentials_flow(
+                scope=self._oauth_scope
             )
             # Create headers
             headers = dict(self._default_headers)
@@ -185,13 +183,10 @@ class SeqdbRemoteApp(RemoteApp):
         def handler(
             cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
         ) -> model.PhylogeneticTree | None:
-            async def get_headers_async() -> dict[str, str]:
-                return await self.get_headers(cmd)
-
             print(
                 "DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: start."
             )
-            headers = anyio.from_thread.run(get_headers_async)
+            headers = self.get_headers(cmd)
             route = self.get_route(cmd)
 
             # Create request body matching seqdb API expectations
