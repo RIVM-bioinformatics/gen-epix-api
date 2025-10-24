@@ -491,6 +491,7 @@ def create_case_endpoints(
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
+        user: model.User | None = None
         try:
             user = await app.services[enum.ServiceType.AUTH].get_existing_user_from_token(
                 token=token
@@ -507,7 +508,7 @@ def create_case_endpoints(
         except Exception as exception:
             handle_exception(  # type:ignore[call-arg]
                 "d4c2e1b1",
-                None,
+                user,
                 exception,
                 request_ids=case_ids,
             )
