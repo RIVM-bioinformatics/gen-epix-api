@@ -4,6 +4,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
+import anyio
 import httpx
 import pytest
 
@@ -108,7 +109,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        result = anyio.run(run_handler)
 
         # Verify the result
         assert isinstance(result, casedb_model.PhylogeneticTree)
@@ -164,7 +171,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        result = anyio.run(run_handler)
 
         # Verify the result
         assert isinstance(result, casedb_model.PhylogeneticTree)
@@ -195,7 +208,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        result = anyio.run(run_handler)
 
         # Verify None is returned
         assert result is None
@@ -222,7 +241,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        result = anyio.run(run_handler)
 
         # Verify None is returned
         assert result is None
@@ -252,8 +277,13 @@ class TestSeqdbRemoteApp:
         # Get handler and verify exception is raised
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
 
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
         with pytest.raises(httpx.HTTPStatusError):
-            handler(sample_command)
+            anyio.run(run_handler)
 
     @patch("httpx.Client")
     def test_authentication_headers_included(
@@ -283,7 +313,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        anyio.run(run_handler)
 
         # Verify headers were requested and used
         remote_app.get_headers.assert_called_with(sample_command)
@@ -315,7 +351,13 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        handler(sample_command)
+        
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+        
+        anyio.run(run_handler)
 
         # Verify request body construction
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
