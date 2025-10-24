@@ -48,7 +48,7 @@ class UserManager(BaseUserManager):
             raise exc.NoResultsError()
         new_user = self.user_class(id=user_id, **claims)
         if new_user.id in self.users:
-            raise exc.AlreadyExistingIdsError(f"{user.id} already exists")
+            raise exc.AlreadyExistingIdsError(f"{new_user.id} already exists")
         self.users[new_user.id] = new_user
         return new_user
 

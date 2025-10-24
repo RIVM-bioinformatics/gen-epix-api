@@ -46,6 +46,20 @@ class AuthService(BaseAuthService):
     def idp_clients(self) -> list[IdpClient]:
         return list(self._idp_clients)
 
+    async def get_existing_user_from_token(self, token: str) -> model.User | None:
+        for idp_client in self._idp_clients:
+            jwt_claims = await idp_client.get_claims_from_jwt(token)
+            if jwt_claims:
+                try:
+                    user = await self.get_existing_user_from_claims(Claims(
+                        claims=jwt_claims, scheme='BEARER', token=token, idp_client_id=idp_client.id
+                    ))
+                    return user
+                except exc.UnauthorizedAuthError:
+                    continue
+        # No valid user found for any of the IDP clients
+        raise exc.UnauthorizedAuthError()
+
     def create_user_dependencies(
         self,
     ) -> tuple[Type[model.User], Type[model.User], Type[IDPUser]]:
