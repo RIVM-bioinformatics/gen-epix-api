@@ -137,7 +137,7 @@ class TestSeqdbRemoteApp:
         mock_client.post.assert_called_once_with(
             # remote_app.host_url + "retrieve/phylogenetic_tree",
             remote_app.get_route(sample_command),
-            json=expected_request_body.model_dump(),
+            json=expected_request_body.model_dump_json(),
             headers={"Authorization": "Bearer test_token"},
         )
 
@@ -369,7 +369,7 @@ class TestSeqdbRemoteApp:
 
         mock_client.post.assert_called_once_with(
             remote_app.get_route(sample_command),
-            json=expected_request_body.model_dump(),
+            json=expected_request_body.model_dump_json(),
             headers={},
         )
 
