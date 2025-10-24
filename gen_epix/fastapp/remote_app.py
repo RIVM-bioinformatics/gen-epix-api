@@ -205,7 +205,7 @@ class RemoteApp(App):
             async def get_headers() -> dict[str, str]:
                 return await self.get_headers(cmd)
 
-            headers = anyio.run(get_headers)
+            headers = anyio.from_thread.run(get_headers)
             # headers = await self.get_headers(cmd)
             with httpx.Client(verify=self.ssl_context) as client:
                 if cmd.operation == CrudOperation.READ_ALL:

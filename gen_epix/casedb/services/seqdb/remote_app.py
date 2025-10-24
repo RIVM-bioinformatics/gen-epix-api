@@ -191,7 +191,7 @@ class SeqdbRemoteApp(RemoteApp):
             print(
                 "DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: start."
             )
-            headers = anyio.run(get_headers_async)
+            headers = anyio.from_thread.run(get_headers_async)
             route = self.get_route(cmd)
 
             # Create request body matching seqdb API expectations
