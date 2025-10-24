@@ -205,7 +205,7 @@ class SeqdbRemoteApp(RemoteApp):
             with httpx.Client(verify=self.ssl_context) as client:
                 response = client.post(
                     route,
-                    json=request_body.model_dump(),
+                    json=request_body.model_dump_json(),
                     headers=headers,
                 )
                 print(
