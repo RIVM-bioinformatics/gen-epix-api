@@ -237,8 +237,6 @@ class ColType(Enum):
     DECIMAL_5 = "DECIMAL_5"
     DECIMAL_6 = "DECIMAL_6"
     GENETIC_READS = "GENETIC_READS"
-    GENETIC_READS_FWD = "GENETIC_READS_FWD"
-    GENETIC_READS_REV = "GENETIC_READS_REV"
     GENETIC_SEQUENCE = "GENETIC_SEQUENCE"
     GENETIC_PROFILE = "GENETIC_PROFILE"
     GENETIC_DISTANCE = "GENETIC_DISTANCE"
@@ -321,8 +319,6 @@ class ColTypeSet(Enum):
     GENETIC = frozenset(
         {
             ColType.GENETIC_READS,
-            ColType.GENETIC_READS_FWD,
-            ColType.GENETIC_READS_REV,
             ColType.GENETIC_SEQUENCE,
             ColType.GENETIC_PROFILE,
             ColType.GENETIC_DISTANCE,
