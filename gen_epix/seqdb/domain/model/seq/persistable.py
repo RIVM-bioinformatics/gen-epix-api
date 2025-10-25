@@ -121,23 +121,28 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         ),
     )
     fwd_uri: str | None = Field(
-        description="The URI of the forward read set. In case of single-end reads, this is the only read set."
+        default=None,
+        description="The URI of the forward read set. In case of single-end reads, this is the only read set.",
     )
     rev_uri: str | None = Field(
         default=None, description="The URI of the reverse read set, if any."
     )
     fwd_file_id: UUID | None = Field(
-        description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY"
+        default=None,
+        description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY",
     )
     rev_file_id: UUID | None = Field(
-        description="The unique file identifier for the reverse read set, if any."
+        default=None,
+        description="The unique file identifier for the reverse read set, if any.",
     )
     fwd_reads_hash_sha256: bytes | None = Field(
+        default=None,
         description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
         min_length=32,
         max_length=32,
     )
     rev_reads_hash_sha256: bytes | None = Field(
+        default=None,
         description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
         min_length=32,
         max_length=32,
