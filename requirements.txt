@@ -20,6 +20,7 @@ fire==0.7.1
 dynaconf==3.2.11
 PyYAML==6.0.2
 types-setuptools==80.9.*
+python-multipart==0.0.20
 
 # calculation
 scipy==1.16.2

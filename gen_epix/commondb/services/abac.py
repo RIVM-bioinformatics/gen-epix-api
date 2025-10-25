@@ -210,6 +210,63 @@ class AbacService(BaseAbacService):
             for x in users
         ]
 
+    def temp_update_user_own_organization(
+        self,
+        cmd: command.UpdateUserOwnOrganizationCommand,
+    ) -> model.User:
+        """
+        Behaviour:
+        - Update User.organization
+        - Delete any OrganizationAdminPolicy for the user and their previous
+          organization
+        """
+        is_new_user = cmd.is_new_user
+        tgt_organization_id = cmd.organization_id
+        assert cmd.user is not None
+        user: model.User = cmd.user  # type: ignore[assignment]
+        assert user.id is not None
+
+        # Special case: new organization is same as current
+        if user.organization_id == tgt_organization_id and not is_new_user:
+            return user
+
+        with self.repository.uow() as uow:
+            # Delete any OrganizationAdminPolicy for the user and their previous organization
+            if not is_new_user:
+                self.repository.crud(
+                    uow,
+                    user.id,
+                    self.organization_admin_policy_model_class,
+                    None,
+                    None,
+                    CrudOperation.DELETE_ALL,
+                    filter=CompositeFilter(
+                        operator=LogicalOperator.AND,
+                        filters=[
+                            EqualsUuidFilter(key="user_id", value=user.id),
+                            EqualsUuidFilter(
+                                key="organization_id", value=user.organization_id
+                            ),
+                        ],
+                    ),
+                )
+            # Change the user organization
+            updated_user = user.model_copy()
+            updated_user.organization_id = tgt_organization_id
+            user = self.app.handle(
+                self.user_crud_command_class(
+                    user=user,
+                    objs=updated_user,
+                    operation=CrudOperation.UPDATE_ONE,
+                )
+            )
+
+        # Invalidate cache
+        # TODO: develop general system for caching and cache invalidation
+        self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
+
+        return user
+
     @cached(cache=TTLCache(maxsize=1024, ttl=300))
     def _get_user_by_id_cached(self, user_id: UUID) -> model.User:
         user: model.User = self.app.handle(

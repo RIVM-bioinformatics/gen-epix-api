@@ -112,6 +112,7 @@ class TestContent:
         )
         # Invite an org user as org admin user
         new_user = model.User(
+            key="new_user@example.com",
             email="new_user@example.com",
             organization_id=org_admin_user.organization_id,
             roles={enum.Role.ORG_USER},
@@ -119,6 +120,7 @@ class TestContent:
         new_user_invitation: model.UserInvitation = app.handle(
             command.InviteUserCommand(
                 user=org_admin_user,
+                key=new_user.key,
                 email=new_user.email,
                 organization_id=new_user.organization_id,
                 roles=new_user.roles,
@@ -243,7 +245,7 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
-                    phylogenetic_tree = app.handle(
+                    phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,

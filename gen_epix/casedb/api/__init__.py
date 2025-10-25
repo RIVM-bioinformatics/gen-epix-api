@@ -6,9 +6,6 @@ from gen_epix.casedb.api.case import (
     RetrieveAlleleProfileRequestBody as RetrieveAlleleProfileRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    RetrieveGeneticSequenceFastaRequestBody as RetrieveGeneticSequenceFastaRequestBody,
-)
-from gen_epix.casedb.api.case import (
     RetrieveGeneticSequenceRequestBody as RetrieveGeneticSequenceRequestBody,
 )
 from gen_epix.casedb.api.case import (

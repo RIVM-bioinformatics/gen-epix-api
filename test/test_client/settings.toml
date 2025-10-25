@@ -5,4 +5,4 @@ legal_entity_code = "DUMMY"
 
 [service.auth.props.root.user]
 id = "019542cc-8225-8f5d-fa30-d9c3f2629703"
-email = "root@dummy.org"
+key = "root@dummy.org"

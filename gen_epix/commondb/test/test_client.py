@@ -220,6 +220,7 @@ class TestClient:
         user_invitation: model.UserInvitation = self.handle(
             self.invite_user_command_class(
                 user=user,
+                key=f"{user_name}@{organization_name}.org",
                 email=f"{user_name}@{organization_name}.org",
                 roles={role},
                 organization_id=organization_id,
@@ -230,7 +231,9 @@ class TestClient:
         tgt_user: model.User = self.handle(
             self.register_invited_user_command_class(
                 user=self.user_class(
+                    key=f"{user_name}@{organization_name}.org",
                     email=f"{user_name}@{organization_name}.org",
+                    name=user_name,
                     organization_id=organization_id,
                     roles={role},
                 ),
@@ -261,10 +264,8 @@ class TestClient:
                 obj_ids=None,
             )
         )
-        if any(x.email == tgt_user.email for x in remaining_invitations):
-            raise ValueError(
-                f"Some user invitations remaining for email {tgt_user.email}"
-            )
+        if any(x.key == tgt_user.key for x in remaining_invitations):
+            raise ValueError(f"Some user invitations remaining for key {tgt_user.key}")
         retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
         return retval
 
@@ -777,10 +778,10 @@ class TestClient:
         }
         print("\nUsers:")
         for x in sorted(
-            users, key=lambda x: (organizations[x.organization_id].name, x.email)
+            users, key=lambda x: (organizations[x.organization_id].name, x.key)
         ):
             print(
-                f"{organizations[x.organization_id].name} / {x.email}: "
+                f"{organizations[x.organization_id].name} / {x.key}: "
                 + ", ".join([z for z in sorted(y.name for y in x.roles)])
                 + f" ({x.id})"
             )

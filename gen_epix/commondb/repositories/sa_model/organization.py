@@ -25,7 +25,8 @@ class OrganizationMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserMixin(RowMetadataMixin):
-    email: Mapped[str] = create_mapped_column(DOMAIN, model.User, "email")
+    key: Mapped[str] = create_mapped_column(DOMAIN, model.User, "key")
+    email: Mapped[str | None] = create_mapped_column(DOMAIN, model.User, "email")
     name: Mapped[str | None] = create_mapped_column(DOMAIN, model.User, "name")
     is_active: Mapped[bool] = create_mapped_column(DOMAIN, model.User, "is_active")
     roles: Mapped[set[str]] = create_mapped_column(DOMAIN, model.User, "roles")
@@ -158,7 +159,13 @@ class DataCollectionSetMemberMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserInvitationMixin(RowMetadataMixin):
-    email: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "email")
+    key: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
+    email: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.UserInvitation, "email"
+    )
+    name: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.UserInvitation, "name"
+    )
     token: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "token")
     expires_at: Mapped[datetime.datetime] = create_mapped_column(
         DOMAIN, model.UserInvitation, "expires_at"

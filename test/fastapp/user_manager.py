@@ -9,11 +9,12 @@ from gen_epix.fastapp.model import Permission, User
 
 class MockUser(BaseModel):
     id: str
-    name: str
+    key: str
     email: str
+    name: str
 
 
-MOCK_USER = MockUser(id="u1", name="John", email="info@org.nl")
+MOCK_USER = MockUser(id="u1", key="info@org.nl", email="info@org.nl", name="John")
 
 
 class UserManager(BaseUserManager):
@@ -47,7 +48,7 @@ class UserManager(BaseUserManager):
             raise exc.NoResultsError()
         new_user = self.user_class(id=user_id, **claims)
         if new_user.id in self.users:
-            raise exc.AlreadyExistingIdsError(f"{user.id} already exists")
+            raise exc.AlreadyExistingIdsError(f"{new_user.id} already exists")
         self.users[new_user.id] = new_user
         return new_user
 

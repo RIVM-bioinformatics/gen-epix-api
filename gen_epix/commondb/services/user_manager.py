@@ -12,6 +12,7 @@ from gen_epix.fastapp.services.auth.util import get_name_from_claims
 
 
 class UserManager(BaseUserManager):
+    DEFAULT_KEY_CLAIM = "__key__"
     DEFAULT_NAME_CLAIMS: list[str | list[str]] = [
         "name",
         ["first_name", "last_name"],
@@ -28,7 +29,8 @@ class UserManager(BaseUserManager):
         rbac_service: BaseRbacService,
         root_cfg: dict[str, dict[str, str]],
         automatic_new_user_cfg: dict[str, dict[str, str]] | None = None,
-        name_claims: list[str | list[str]] = DEFAULT_NAME_CLAIMS,
+        key_claim: str | None = None,
+        name_claims: list[str | list[str]] | None = None,
     ):
         self._user_class = user_class
         self._user_invitation_class = user_invitation_class
@@ -45,7 +47,8 @@ class UserManager(BaseUserManager):
         self._guest_role = self._role_enum["GUEST"]
         self._organization_service = organization_service
         self._rbac_service = rbac_service
-        self._name_claims = name_claims
+        self._key_claim = key_claim or self.DEFAULT_KEY_CLAIM
+        self._name_claims = name_claims or self.DEFAULT_NAME_CLAIMS
 
         # Generate root model objs
         self._root: dict = {}
@@ -92,7 +95,7 @@ class UserManager(BaseUserManager):
         return self._organization_service.generate_id()  # type:ignore[return-value]
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
-        return get_email_from_claims(claims)
+        return claims.get(self.DEFAULT_KEY_CLAIM)
 
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
         return get_name_from_claims(claims, self._name_claims)
@@ -112,11 +115,15 @@ class UserManager(BaseUserManager):
             if self._automatic_new_user
             else self._root["organization"].id
         )
+        key = claims.get(self._key_claim)
+        if not key:
+            raise exc.CredentialsAuthError("Key not found in claims")
         email = get_email_from_claims(claims)
-        if not email:
-            raise exc.CredentialsAuthError("Email not found in claims")
+        name = self.get_user_name_from_claims(claims)
         return self._user_class(
+            key=key,
             email=email,
+            name=name,
             is_active=True,
             roles=roles,
             organization_id=organization_id,
@@ -124,7 +131,7 @@ class UserManager(BaseUserManager):
 
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
         user: model.User = self._root["user"]
-        return user.email == get_email_from_claims(claims)
+        return user.key == claims.get(self._key_claim)
 
     def is_root_user(self, user: model.User) -> bool:  # type:ignore[override]
         return self._root_role in user.roles
@@ -230,17 +237,17 @@ class UserManager(BaseUserManager):
             # TODO: refactor this to add a separate method for a potential existing user
             is_existing_user = (
                 self._organization_service.repository.is_existing_user_by_key(
-                    uow, get_email_from_claims(claims)
+                    uow, claims.get(self._key_claim)
                 )
             )
             if is_existing_user:
                 raise exc.ServiceException(
-                    f"User with key {get_email_from_claims(claims)} already exists"
+                    f"User with key {claims.get(self._key_claim)} already exists"
                 )
             claims_user = self.get_user_instance_from_claims(claims)
             if not claims_user:
                 raise exc.ServiceException(
-                    f"Unable to create user with key {get_email_from_claims(claims)} from claims"
+                    f"Unable to create user with key {claims.get(self._key_claim)} from claims"
                 )
             claims_user.id = self.generate_id()
             user: model.User = (
@@ -309,7 +316,7 @@ class UserManager(BaseUserManager):
                 for x in user_invitations
                 if x.invited_by_user_id == created_by_user_id
                 and x.token == token
-                and x.email == user.email
+                and x.key == user.key
                 and x.organization_id == user.organization_id
                 and x.expires_at > timestamp
             ]

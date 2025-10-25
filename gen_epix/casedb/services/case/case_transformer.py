@@ -634,10 +634,11 @@ class CaseTransformer(Transformer):
             case_validation_report.validated_cases[case_index].data_issues.append(
                 model.CaseDataIssue(
                     case_type_col_id=col_pair[1],
-                    original_value=content[col_pair[1]],
+                    original_value=content.get(col_pair[1]),
                     updated_value=new_value,
                     data_rule=CaseColDataRule.DERIVED,
-                    details=f"Value derived from '{content[col_pair[0]]}'",
+                    # TODO: time dimension should always derive from the highest resolution value first
+                    details=f"Value derived from '{content.get(col_pair[0])}'",
                 )
             )
 

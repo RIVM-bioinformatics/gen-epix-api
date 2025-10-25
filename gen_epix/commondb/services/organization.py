@@ -73,14 +73,14 @@ class OrganizationService(BaseOrganizationService):
             raise exc.UnauthorizedAuthError("Command has no user")
         if user.id is None:
             raise exc.UnauthorizedAuthError("User has no ID")
-        email = cmd.email
+        key = cmd.key
         initial_roles = cmd.roles
         organization_id = cmd.organization_id
 
         with self.repository.uow() as uow:
             # Verify if user already exists
             is_existing_user = self.app.user_manager.is_existing_user_by_key(
-                cmd.email, uow
+                cmd.key, uow
             )
 
             if is_existing_user:
@@ -88,7 +88,7 @@ class OrganizationService(BaseOrganizationService):
                     self._logger.info(
                         self.create_log_message(
                             "acba1a0e",
-                            f"User {email} already exists",
+                            f"User {key} already exists",
                         )
                     )
                 raise exc.UserAlreadyExistsAuthError("User already exists")
@@ -111,7 +111,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 raise exc.InvalidIdsError("Organization does not exist")
 
-            # Verify if invitation(s) already exists for this email, and delete those
+            # Verify if invitation(s) already exists for this key, and delete those
             # TODO: Must be done within the same session to be safe,
             # so requires specific repository method
             user_invitations: list[model.UserInvitation] = self.repository.crud(
@@ -122,7 +122,7 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 CrudOperation.READ_ALL,
             )  # type: ignore
-            user_invitations = [x for x in user_invitations if x.email == email]
+            user_invitations = [x for x in user_invitations if x.key == key]
             if user_invitations:
                 self.repository.crud(
                     uow,
@@ -135,7 +135,7 @@ class OrganizationService(BaseOrganizationService):
             # Create user invitation
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),  # type: ignore[arg-type]
-                email=email,
+                key=key,
                 roles=initial_roles,
                 organization_id=organization_id,
                 invited_by_user_id=user.id,
@@ -194,11 +194,11 @@ class OrganizationService(BaseOrganizationService):
             user_invitations = [
                 x
                 for x in user_invitations
-                if x.email == new_user.email and x.expires_at > now
+                if x.key == new_user.key and x.expires_at > now
             ]
             if not user_invitations:
                 raise exc.UnauthorizedAuthError(
-                    f"No valid invitations found for user {new_user.email}",
+                    f"No valid invitations found for user {new_user.key}",
                 )
             user_invitations_with_token = [
                 x for x in user_invitations if x.token == cmd.token

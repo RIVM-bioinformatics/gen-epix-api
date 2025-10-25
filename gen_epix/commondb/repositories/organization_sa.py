@@ -34,7 +34,7 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
             return False
         assert isinstance(uow, SAUnitOfWork)
         user_row = uow.session.execute(
-            select(self.sa_user_class.id).where(self.sa_user_class.email == user_key)
+            select(self.sa_user_class.id).where(self.sa_user_class.key == user_key)
         ).all()
         return True if user_row else False
 
@@ -49,6 +49,6 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
             CrudOperation.READ_ALL,
         )
         for user in users:
-            if user.email == user_key.lower():
+            if user.key == user_key:
                 return user
         raise exc.NoResultsError()

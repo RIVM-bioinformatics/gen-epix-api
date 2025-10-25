@@ -13,7 +13,7 @@ class TestCreate:
     def test_create_user_first_root(self, env: Env) -> None:
         # Create a first root user and organization
         user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)  # type: ignore[assignment]
-        env._set_obj(user)  # type: ignore[arg-type]
+        env._set_obj(user)
         env._set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
         )

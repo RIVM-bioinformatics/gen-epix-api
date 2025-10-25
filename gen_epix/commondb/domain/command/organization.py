@@ -66,7 +66,7 @@ class DataCollectionSetDataCollectionUpdateAssociationCommand(UpdateAssociationC
 class InviteUserCommand(Command):
     """
     Creates and returns a {user_invitation} for a new user with a particular
-    email address, organization and initial role(s).
+    user key claim (e.g. email address), organization and initial role(s).
 
     A random unique token is added to the invitation, and to be provided to the
     new user for consuming the invitation.
@@ -74,14 +74,16 @@ class InviteUserCommand(Command):
 
     __doc__ = str(__doc__).format(user_invitation=model.UserInvitation.__name__)
 
-    email: str = copy_model_field(model.UserInvitation, "email")
+    key: str = copy_model_field(model.UserInvitation, "key")
+    email: str | None = copy_model_field(model.UserInvitation, "email")
+    name: str | None = copy_model_field(model.UserInvitation, "name")
     roles: set[Enum] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
 class RegisterInvitedUserCommand(Command):
     """
-    Registers (creates) the user of the command. The email and token must match
+    Registers (creates) the user of the command. The key and token must match
     that of an existing {user_invitation}. The newly registered user is assigned
     the organization and roles from the invitation. The invitation is deleted.
     """
