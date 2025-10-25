@@ -140,14 +140,12 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
         min_length=32,
         max_length=32,
-        default=None,
     )
     rev_reads_hash_sha256: bytes | None = Field(
         default=None,
         description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
         min_length=32,
         max_length=32,
-        default=None,
     )
     library_prep_protocol_id: UUID = Field(
         description="The unique identifier for the library preparation protocol. FOREIGN KEY"
@@ -268,7 +266,7 @@ class SeqAlignment(Model):
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
     )
-    seq: Seq = Field(default=None, description="The sequence.")
+    seq: Seq = Field(description="The sequence.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
     )
@@ -487,14 +485,12 @@ class SeqClassification(Model):
         description="The ID of the sequence classification protocol. FOREIGN KEY"
     )
     seq_classification_protocol: SeqClassificationProtocol = Field(
-        default=None, description="The sequence classification protocol."
+        description="The sequence classification protocol."
     )
     primary_category_id: UUID | None = Field(
         description="The ID of the category. FOREIGN KEY"
     )
-    primary_category: SeqCategory = Field(
-        default=None, description="The primary category."
-    )
+    primary_category: SeqCategory = Field(description="The primary category.")
     classification: str = Field(description="The classification of the sequence.")
     classification_format: enum.SeqClassificationFormat = Field(
         default=enum.SeqClassificationFormat.SEQ_CLASSIFICATION_FORMAT1,
@@ -534,7 +530,7 @@ class SeqTaxonomy(Model):
     primary_taxon_id: UUID = Field(
         description="The unique identifier for the primary taxon. FOREIGN KEY"
     )
-    primary_taxon: UUID = Field(default=None, description="The primary taxon.")
+    primary_taxon: Taxon | None = Field(default=None, description="The primary taxon.")
     taxonomy: str = Field(description="The taxonomy results of the sequence.")
     taxonomy_format: enum.TaxonomyFormat = Field(
         default=enum.TaxonomyFormat.TAXONOMY_FORMAT1,
