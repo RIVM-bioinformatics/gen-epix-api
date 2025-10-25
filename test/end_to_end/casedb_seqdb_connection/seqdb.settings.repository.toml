@@ -10,6 +10,10 @@ class_name = "OrganizationDictRepository"
 module = "gen_epix.seqdb.repositories"
 class_name = "SystemDictRepository"
 
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileDictRepository"
+
 [repository.seq]
 module = "gen_epix.seqdb.repositories"
 class_name = "SeqDictRepository"
