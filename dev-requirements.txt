@@ -3,7 +3,7 @@
 pandas==2.3.2
 polars==1.32.3
 xlsxwriter==3.2.9
-pytest-cov==6.3.*
+pytest-cov==7.0.*
 pytest-mock==3.15.*
 pytest-dependency==0.6.*
 pyinstrument==5.1.*

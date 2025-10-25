@@ -48,7 +48,7 @@ dependencies = [
 [project.optional-dependencies]
 dependencies = [
     "pytest",
-    "pytest-cov==6.3.*",
+    "pytest-cov==7.0.*",
     "pytest-mock==3.15.*",
     "pytest-dependency==0.6.*",
     "pyinstrument==5.1.*",
