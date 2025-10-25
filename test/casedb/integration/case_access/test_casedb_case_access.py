@@ -14,7 +14,6 @@ from uuid import UUID
 import pandas as pd
 import pytest
 
-import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain.enum import AppType
@@ -125,10 +124,7 @@ class TestCaseAccess(CaseAccessSetup):
         # Function to create a case
         def _create_case(
             row: dict[str, Any], for_create_upload: bool = False
-        ) -> (
-            model.Case
-            | gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate
-        ):
+        ) -> model.Case | model.CaseForCreateUpdate:
             case_content = {}
             for i in range(1, n_case_type_cols):
                 case_type_col_id = row[f"case.content.case_type_col_id{i}"]
@@ -137,7 +133,7 @@ class TestCaseAccess(CaseAccessSetup):
                 value = row[f"case.content.case_type_col_value{i}"]
                 case_content[case_type_col_id] = value
             if for_create_upload:
-                return gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate(
+                return model.CaseForCreateUpdate(
                     id=row["case.id"],
                     subject_id=row["case.subject_id"],
                     case_date=row["case.case_date"],

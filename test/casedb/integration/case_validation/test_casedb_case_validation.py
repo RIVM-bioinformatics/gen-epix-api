@@ -15,7 +15,6 @@ from uuid import UUID
 import pandas as pd
 import pytest
 
-import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain.enum import AppType
@@ -133,19 +132,19 @@ class TestCaseValidation(CaseValidationSetup):
         df = env.props["_case_data"]
         all_cases: dict[
             UUID,
-            gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate,
+            model.CaseForCreateUpdate,
         ] = {}
         all_validated_cases: dict[
             UUID,
-            gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate,
+            model.CaseForCreateUpdate,
         ] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["id"])
             all_cases.setdefault(
-                case_id, gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate(**row, content=case_content.get(case_id, {}))  # type: ignore[misc]
+                case_id, model.CaseForCreateUpdate(**row, content=case_content.get(case_id, {}))  # type: ignore[misc]
             )
             all_validated_cases.setdefault(
-                case_id, gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate(**row, content=validated_case_content.get(case_id, {}))  # type: ignore[misc]
+                case_id, model.CaseForCreateUpdate(**row, content=validated_case_content.get(case_id, {}))  # type: ignore[misc]
             )
 
         # Parse validate case command data
