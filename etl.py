@@ -47,9 +47,9 @@ if len(sys.argv) != 4:
     print("Example: etl.py CASEDB_ gen_epix.casedb CASEDB")
     sys.exit(1)
 
-ENVVAR_PREFIX = str(sys.argv[1]) #"CASEDB_"
-MODULE_ROOT = str(sys.argv[2]) # "gen_epix.casedb"
-APP_TYPE = AppType[sys.argv[3]] # AppType.CASEDB
+ENVVAR_PREFIX = str(sys.argv[1])  # "CASEDB_"
+MODULE_ROOT = str(sys.argv[2])  # "gen_epix.casedb"
+APP_TYPE = AppType[sys.argv[3]]  # AppType.CASEDB
 CONNECTION_TIMEOUT: float = 1
 
 importlib.import_module(f"{MODULE_ROOT}.repositories.sa_model")
@@ -66,18 +66,12 @@ if APP_TYPE not in AppTypeSet.ALL.value:
     raise ValueError(f"Invalid app type: {APP_TYPE}")
 
 original_settings_files_environ = os.environ.get(ENVVAR_PREFIX + "SETTINGS_FILES")
-original_log_config_file_environ = os.environ.get(
-    ENVVAR_PREFIX + "LOG_CONFIG_FILE"
-)
+original_log_config_file_environ = os.environ.get(ENVVAR_PREFIX + "LOG_CONFIG_FILE")
 
-print(
-    f" ===== ETL STARTED FOR {APP_TYPE.value} ====="
-)
+print(f" ===== ETL STARTED FOR {APP_TYPE.value} =====")
 
 for service_type in enum.ServiceType:
-    print(
-        f" STARTING ETL FOR {APP_TYPE.value} - {service_type.value} ====="
-    )
+    print(f" STARTING ETL FOR {APP_TYPE.value} - {service_type.value} =====")
 
     set_env_variables(APP_TYPE, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
     os.environ[ENVVAR_PREFIX + "LOG_CONFIG_FILE"] = original_log_config_file_environ
@@ -94,9 +88,7 @@ for service_type in enum.ServiceType:
     # Create dict repository, which is assumed to always be available
     dict_repository_class: Type[DictRepository] = dict_repository_cfg["class"]
     demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
-    empty_dict_file = Path(
-        str(demo_dict_file).replace(".full.", ".empty.")
-    ).resolve()
+    empty_dict_file = Path(str(demo_dict_file).replace(".full.", ".empty.")).resolve()
     zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
     start_time = datetime.datetime.now()
     dict_repository: DictRepository = (
@@ -145,7 +137,9 @@ for service_type in enum.ServiceType:
         )
     )
     user_id = sa_sql_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
-    create_demo_data_from_repository(user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT)
+    create_demo_data_from_repository(
+        user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT
+    )
     end_time = datetime.datetime.now()
     print(
         f"App {APP_TYPE.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"

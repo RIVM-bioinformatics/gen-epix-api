@@ -101,6 +101,7 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
         description="The case ids to retrieve genetic sequences for.",
     )
 
+
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     sequence_ids: list[UUID]
     props: dict[str, Any] = {}
@@ -493,9 +494,9 @@ def create_case_endpoints(
     ) -> StreamingResponse:
         user: model.User | None = None
         try:
-            user = await app.services[enum.ServiceType.AUTH].get_existing_user_from_token(
-                token=token
-            )
+            user = await app.services[
+                enum.ServiceType.AUTH
+            ].get_existing_user_from_token(token=token)
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
@@ -516,9 +517,7 @@ def create_case_endpoints(
         return StreamingResponse(
             fasta_iterable,
             media_type="application/x-fasta",
-            headers={
-                "Content-Disposition": f'attachment; filename="{file_name}"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
         )
 
     @router.post(
