@@ -56,7 +56,7 @@ class Run:
         },
         AppType.SEQDB: {
             "module_root": "gen_epix.seqdb",
-            "targets": ["organization", "system", "abac", "seq"],
+            "targets": ["organization", "system", "abac", "file", "seq"],
         },
         AppType.OMOPDB: {
             "module_root": "gen_epix.omopdb",

@@ -13,3 +13,7 @@ class_name = "SystemSARepository"
 [repository.seq]
 module = "gen_epix.seqdb.repositories"
 class_name = "SeqSARepository"
+
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileSARepository"
