@@ -330,6 +330,7 @@ def set_env_variables(
         (general_cfg_path / "logging.yaml").resolve()
     )
 
+
 def create_demo_data_from_repository(
     user_id: str,
     entities: list,
@@ -506,7 +507,9 @@ def load_demo_data(
                 name=service_type.value,
             )
         )
-        create_demo_data_from_repository(user_id, entities, dict_repository, sa_sql_repository, module_root)
+        create_demo_data_from_repository(
+            user_id, entities, dict_repository, sa_sql_repository, module_root
+        )
         end_time = datetime.datetime.now()
         if verbose:
             print(

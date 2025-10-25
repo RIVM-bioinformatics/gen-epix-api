@@ -23,6 +23,7 @@ from gen_epix.fastapp.service import BaseService
 
 class App(fastapp.App):
     """CommonDB application class."""
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.services: dict[Enum, fastapp.BaseService] = {}
@@ -30,6 +31,7 @@ class App(fastapp.App):
         self.registered_user_dependency: model.User | None = None
         self.new_user_dependency: model.User | None = None
         self.idp_user_dependency: model.User | None = None
+
 
 class AppEnv(BaseAppEnv):
     def __init__(
@@ -129,7 +131,7 @@ class AppEnv(BaseAppEnv):
                     )
                     # Add to overview of repositories
                     app.repositories[service_type] = curr_repository
-                    
+
                 # Create service, injecting app, repository, logger and props
                 curr_service: BaseService = service_class(
                     app,
@@ -191,9 +193,11 @@ class AppEnv(BaseAppEnv):
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
-            app.registered_user_dependency, app.new_user_dependency, app.idp_user_dependency = (
-                auth_service.create_user_dependencies()
-            )
+            (
+                app.registered_user_dependency,
+                app.new_user_dependency,
+                app.idp_user_dependency,
+            ) = auth_service.create_user_dependencies()
 
             # Register security policies with app
             if self._log_setup:

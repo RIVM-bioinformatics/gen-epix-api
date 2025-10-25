@@ -109,12 +109,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         result = anyio.run(run_handler)
 
         # Verify the result
@@ -171,12 +171,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         result = anyio.run(run_handler)
 
         # Verify the result
@@ -208,12 +208,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         result = anyio.run(run_handler)
 
         # Verify None is returned
@@ -241,12 +241,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         result = anyio.run(run_handler)
 
         # Verify None is returned
@@ -313,12 +313,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         anyio.run(run_handler)
 
         # Verify headers were requested and used
@@ -351,12 +351,12 @@ class TestSeqdbRemoteApp:
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        
+
         # Run the handler in anyio context to support from_thread calls
         async def run_handler():
             result = await anyio.to_thread.run_sync(handler, sample_command)
             return result
-        
+
         anyio.run(run_handler)
 
         # Verify request body construction

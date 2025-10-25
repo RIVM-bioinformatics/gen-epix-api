@@ -4,15 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Hashable
-from typing import (
-    Any,
-    Callable,
-    Generator,
-    Iterable,
-    Iterator,
-    Literal,
-    Self,
-)
+from typing import Any, Callable, Generator, Iterable, Iterator, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 
