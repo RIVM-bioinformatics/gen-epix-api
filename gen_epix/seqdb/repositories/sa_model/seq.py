@@ -430,8 +430,14 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
 
     fwd_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "fwd_uri")
     rev_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "rev_uri")
-    for_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.ReadSet, "for_reads_hash_sha256"
+    fwd_file_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ReadSet, "fwd_file_id"
+    )
+    rev_file_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ReadSet, "rev_file_id"
+    )
+    fwd_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.ReadSet, "fwd_reads_hash_sha256"
     )
     rev_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_reads_hash_sha256"

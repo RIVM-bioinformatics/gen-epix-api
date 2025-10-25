@@ -1,8 +1,8 @@
-import asyncio
 import base64
 import json
 import logging
 import ssl
+import time
 import urllib.parse
 from datetime import datetime
 from typing import Any, Type
@@ -306,12 +306,15 @@ class OidcClient(IdpClient, OpenIdConnect):
             )
 
         # Map claims according to claim_map, allowing e.g. to standardize claim names across IDPs
-        for new_claim_name, orig_claim_name in server_cfg.claim_map.items():
-            claims[new_claim_name] = claims.get(orig_claim_name)
+        for new_claim_name, orig_claim_names in server_cfg.claim_map.items():
+            for orig_claim_name in orig_claim_names:
+                claims[new_claim_name] = claims.get(orig_claim_name)
+                if claims[new_claim_name] is not None:
+                    break
 
         return claims
 
-    async def retrieve_jwt_with_client_credentials_flow(
+    def retrieve_jwt_with_client_credentials_flow(
         self,
         scope: str,
         headers: dict[str, str] | None = None,
@@ -402,7 +405,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     )
             # Wait before next retry (but not after the last attempt)
             if attempt < max_retries:
-                await asyncio.sleep(base_delay)
+                time.sleep(base_delay)
 
         # All retries failed
         print(

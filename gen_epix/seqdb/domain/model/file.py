@@ -13,8 +13,5 @@ class File(Model):
         table_name="file",
         persistable=True,
     )
-    # TODO: Check if id field is required, was in ticket but seems redundant
-    # id: UUID | None = Field(description="The id of the file.")
-    size_bytes: int = Field(description="The size of the file in bytes.")
-    hash_sha256: bytes = Field(description="The SHA256 hash of the file.")
+    id: UUID | None = Field(description="The id of the file.")
     content: bytes = Field(description="The content of the file.")

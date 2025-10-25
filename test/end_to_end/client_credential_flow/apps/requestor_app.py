@@ -48,7 +48,7 @@ class RequestorApp:
             logger.error(f"Failed to initialize RequestorApp OIDC client: {e}")
             raise
 
-    async def get_access_token(self, audience: str) -> str:
+    def get_access_token(self, audience: str) -> str:
         """Get an access token for the specified audience."""
         if not self.oidc_client:
             raise RuntimeError("OIDC client not initialized")
@@ -56,9 +56,7 @@ class RequestorApp:
         try:
             # Request token with appropriate scope
             scope = "openid read write"
-            token = await self.oidc_client.retrieve_jwt_with_client_credentials_flow(
-                scope
-            )
+            token = self.oidc_client.retrieve_jwt_with_client_credentials_flow(scope)
             logger.info(f"Retrieved access token for audience {audience}")
             return token
         except Exception as e:

@@ -451,7 +451,9 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: (
-            str | gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol | None
+            str
+            | gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol
+            | None
         ) = None,
         set_dummy_dim: bool = False,
         set_dummy_concept_set: bool = False,

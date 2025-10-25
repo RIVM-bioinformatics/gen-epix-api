@@ -5,7 +5,6 @@ from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
 
 from gen_epix.fastapp import App, exc, model
-from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import AuthProtocol
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
@@ -46,6 +45,25 @@ class AuthService(BaseAuthService):
     def idp_clients(self) -> list[IdpClient]:
         return list(self._idp_clients)
 
+    async def get_existing_user_from_token(self, token: str) -> model.User | None:
+        for idp_client in self._idp_clients:
+            jwt_claims = await idp_client.get_claims_from_jwt(token)
+            if jwt_claims:
+                try:
+                    user = await self.get_existing_user_from_claims(
+                        Claims(
+                            claims=jwt_claims,
+                            scheme="BEARER",
+                            token=token,
+                            idp_client_id=idp_client.id,
+                        )
+                    )
+                    return user
+                except exc.UnauthorizedAuthError:
+                    continue
+        # No valid user found for any of the IDP clients
+        raise exc.UnauthorizedAuthError()
+
     def create_user_dependencies(
         self,
     ) -> tuple[Type[model.User], Type[model.User], Type[IDPUser]]:
@@ -82,7 +100,7 @@ class AuthService(BaseAuthService):
                     if user:
                         return user
                 raise exc.UnauthorizedAuthError(
-                    f"Unable to create user due to missing header or claims"
+                    "Unable to create user due to missing header or claims"
                 )
 
             registered_user_dependency = Annotated[

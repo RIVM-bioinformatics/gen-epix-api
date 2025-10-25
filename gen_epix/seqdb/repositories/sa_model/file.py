@@ -19,6 +19,4 @@ class File(Base):
     __tablename__, __table_args__ = create_table_args(model.File)
 
     id: Mapped[UUID] = create_mapped_column(DOMAIN, model.File, "id")
-    size_bytes: Mapped[int] = create_mapped_column(DOMAIN, model.File, "size_bytes")
-    hash_sha256: Mapped[bytes] = create_mapped_column(DOMAIN, model.File, "hash_sha256")
     content: Mapped[bytes] = create_mapped_column(DOMAIN, model.File, "content")

@@ -1,7 +1,7 @@
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -105,9 +105,9 @@ class OidcServerCfg(Model):
     client_secret: str | None = Field(
         default=None, description="The client secret of the application"
     )
-    claim_map: dict[str, str] = Field(
+    claim_map: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Mapping of identity provider claims to standard names",
+        description="Mapping of identity provider claims to standard names. Space separated original claim names can be used as values.",
     )
     audience: str | None = Field(
         default=None,
@@ -267,14 +267,34 @@ class OidcServerCfg(Model):
     )
 
     @model_validator(mode="after")
-    def _validate(self) -> "OidcServerCfg":
+    def _validate(self) -> Self:
         """Validate that all required fields are set after model initialization."""
-        for new_claim_name, orig_claim_name in self.claim_map.items():
-            if new_claim_name == orig_claim_name:
+        for new_claim_name, orig_claim_names in self.claim_map.items():
+            if new_claim_name in orig_claim_names:
                 raise ValueError(
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
                 )
         return self
+
+    @field_validator("claim_map", mode="before")
+    @classmethod
+    def validate_claim_map(cls, claim_map):
+        """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
+        if not isinstance(claim_map, dict):
+            raise ValueError("claim_map must be a dictionary")
+        for new_claim in claim_map:
+            orig_claims = claim_map[new_claim]
+            if isinstance(orig_claims, str):
+                orig_claims = orig_claims.split(" ")
+            if not isinstance(new_claim, str):
+                raise ValueError("All keys in claim_map must be strings")
+            if not isinstance(orig_claims, list):
+                raise ValueError("All values in claim_map must be lists")
+            for orig_claim in orig_claims:
+                if not isinstance(orig_claim, str):
+                    raise ValueError("All values in claim_map lists must be strings")
+            claim_map[new_claim] = orig_claims
+        return claim_map
 
     def is_valid(self) -> bool:
         """Check if the configuration has the required fields set."""

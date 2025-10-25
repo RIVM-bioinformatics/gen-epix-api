@@ -246,7 +246,7 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
-                    phylogenetic_tree = app.handle(
+                    phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,

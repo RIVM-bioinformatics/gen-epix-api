@@ -74,6 +74,10 @@ props.user_invitation_time_to_live = 604800 # One week in seconds: 60 * 60 * 24 
 module = "gen_epix.seqdb.services"
 class_name = "SystemService"
 
+[service.file]
+module = "gen_epix.seqdb.services"
+class_name = "FileService"
+
 [service.seq]
 module = "gen_epix.seqdb.services"
 class_name = "SeqService"

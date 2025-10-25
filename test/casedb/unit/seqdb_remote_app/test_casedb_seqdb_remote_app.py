@@ -1,9 +1,10 @@
 """Unit tests for SeqdbRemoteApp create_retrieve_phylogenetic_tree_handler function."""
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
 
+import anyio
 import httpx
 import pytest
 
@@ -101,14 +102,20 @@ class TestSeqdbRemoteApp:
 
         # No need to modify command attributes - they're already set in fixture
 
-        # Mock get_headers to return test headers (async function)
-        remote_app.get_headers = AsyncMock(
+        # Mock get_headers to return test headers (now synchronous function)
+        remote_app.get_headers = Mock(
             return_value={"Authorization": "Bearer test_token"}
         )
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        result = anyio.run(run_handler)
 
         # Verify the result
         assert isinstance(result, casedb_model.PhylogeneticTree)
@@ -130,7 +137,7 @@ class TestSeqdbRemoteApp:
         mock_client.post.assert_called_once_with(
             # remote_app.host_url + "retrieve/phylogenetic_tree",
             remote_app.get_route(sample_command),
-            json=expected_request_body.model_dump(),
+            json=expected_request_body.model_dump_json(),
             headers={"Authorization": "Bearer test_token"},
         )
 
@@ -160,11 +167,17 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = AsyncMock(return_value={})
+        remote_app.get_headers = Mock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        result = anyio.run(run_handler)
 
         # Verify the result
         assert isinstance(result, casedb_model.PhylogeneticTree)
@@ -191,11 +204,17 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = AsyncMock(return_value={})
+        remote_app.get_headers = Mock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        result = anyio.run(run_handler)
 
         # Verify None is returned
         assert result is None
@@ -218,11 +237,17 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = AsyncMock(return_value={})
+        remote_app.get_headers = Mock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        result = handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        result = anyio.run(run_handler)
 
         # Verify None is returned
         assert result is None
@@ -247,13 +272,18 @@ class TestSeqdbRemoteApp:
         mock_client.__exit__.return_value = None
         mock_client_class.return_value = mock_client
 
-        remote_app.get_headers = AsyncMock(return_value={})
+        remote_app.get_headers = Mock(return_value={})
 
         # Get handler and verify exception is raised
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
 
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
         with pytest.raises(httpx.HTTPStatusError):
-            handler(sample_command)
+            anyio.run(run_handler)
 
     @patch("httpx.Client")
     def test_authentication_headers_included(
@@ -279,11 +309,17 @@ class TestSeqdbRemoteApp:
             "Authorization": "Bearer test_jwt_token",
             "Content-Type": "application/json",
         }
-        remote_app.get_headers = AsyncMock(return_value=expected_headers)
+        remote_app.get_headers = Mock(return_value=expected_headers)
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        anyio.run(run_handler)
 
         # Verify headers were requested and used
         remote_app.get_headers.assert_called_with(sample_command)
@@ -311,11 +347,17 @@ class TestSeqdbRemoteApp:
         mock_client_class.return_value = mock_client
 
         # Setup remote app mock
-        remote_app.get_headers = AsyncMock(return_value={})
+        remote_app.get_headers = Mock(return_value={})
 
         # Get handler and execute
         handler = remote_app.create_retrieve_phylogenetic_tree_handler()
-        handler(sample_command)
+
+        # Run the handler in anyio context to support from_thread calls
+        async def run_handler():
+            result = await anyio.to_thread.run_sync(handler, sample_command)
+            return result
+
+        anyio.run(run_handler)
 
         # Verify request body construction
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
@@ -327,7 +369,7 @@ class TestSeqdbRemoteApp:
 
         mock_client.post.assert_called_once_with(
             remote_app.get_route(sample_command),
-            json=expected_request_body.model_dump(),
+            json=expected_request_body.model_dump_json(),
             headers={},
         )
 

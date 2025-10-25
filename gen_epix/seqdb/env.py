@@ -1,7 +1,6 @@
 # pylint: disable=unused-import-alias
 from typing import Any
 
-
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.env import AppEnv as CommonAppEnv
 from gen_epix.seqdb.domain import DOMAIN, model

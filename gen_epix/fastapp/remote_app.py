@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Callable, Type
 from uuid import UUID
 
-import anyio
 import httpx
 from pydantic import BaseModel as PydanticBaseModel
 
@@ -130,7 +129,7 @@ class RemoteApp(App):
             )
         return route
 
-    async def get_headers(self, cmd: Command) -> dict[str, str]:
+    def get_headers(self, cmd: Command) -> dict[str, str]:
         """
         Get headers for the command. Override to include e.g. authorization header.
         """
@@ -202,11 +201,7 @@ class RemoteApp(App):
             cmd: CrudCommand,
         ) -> Any:
 
-            async def get_headers() -> dict[str, str]:
-                return await self.get_headers(cmd)
-
-            headers = anyio.run(get_headers)
-            # headers = await self.get_headers(cmd)
+            headers = self.get_headers(cmd)
             with httpx.Client(verify=self.ssl_context) as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:

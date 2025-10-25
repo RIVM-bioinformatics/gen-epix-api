@@ -23,14 +23,14 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.116.2",
+    "fastapi[standard]==0.120.0",
     "gunicorn==23.0.*",
     "starlette==0.48.0",
     "httpx==0.28.1",
     "python-jose==3.5.0",
     "sqlalchemy==2.0.43",
     "sqlalchemy_utils==0.42.0",
-    "pydantic==2.11.7",
+    "pydantic==2.12.3",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.2.11",
@@ -38,7 +38,7 @@ dependencies = [
     "scipy==1.16.2",
     "numpy==2.3.3",
     "biopython==1.85",
-    "cachetools==6.2.0",
+    "cachetools==6.2.1",
     "slowapi==0.1.9",
     "python-dateutil==2.9.*",
     "types-setuptools==80.9.*",
@@ -48,7 +48,7 @@ dependencies = [
 [project.optional-dependencies]
 dependencies = [
     "pytest",
-    "pytest-cov==6.3.*",
+    "pytest-cov==7.0.*",
     "pytest-mock==3.15.*",
     "pytest-dependency==0.6.*",
     "pyinstrument==5.1.*",

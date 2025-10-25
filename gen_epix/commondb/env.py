@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Any, Callable, Type
 
+from gen_epix import fastapp
 from gen_epix.commondb.base_env import BaseAppEnv
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, enum, model
@@ -15,10 +16,21 @@ from gen_epix.commondb.services.abac import AbacService
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
-from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
+
+
+class App(fastapp.App):
+    """CommonDB application class."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.services: dict[Enum, fastapp.BaseService] = {}
+        self.repositories: dict[Enum, fastapp.BaseRepository] = {}
+        self.registered_user_dependency: model.User | None = None
+        self.new_user_dependency: model.User | None = None
+        self.idp_user_dependency: model.User | None = None
 
 
 class AppEnv(BaseAppEnv):
@@ -87,8 +99,6 @@ class AppEnv(BaseAppEnv):
             )
 
             # Initialise repositories and services
-            services: dict[Enum, BaseService] = {}
-            repositories: dict[Enum, BaseRepository] = {}
             for service_type in self._sorted_service_types:
                 service_cfg = cfg["service"][service_type.value]
                 service_class = service_cfg["class"]
@@ -120,7 +130,8 @@ class AppEnv(BaseAppEnv):
                         entities=entities, **repository_props
                     )
                     # Add to overview of repositories
-                    repositories[service_type] = curr_repository
+                    app.repositories[service_type] = curr_repository
+
                 # Create service, injecting app, repository, logger and props
                 curr_service: BaseService = service_class(
                     app,
@@ -133,33 +144,33 @@ class AppEnv(BaseAppEnv):
                 if not self._log_setup:
                     curr_service.logger = service_logger
                 # Add to overview of services
-                services[service_type] = curr_service
+                app.services[service_type] = curr_service
 
             # Get common services and types
             system_service_type = AppEnv._get_enum_from_list(
                 self._sorted_service_types, "SYSTEM"
             )
-            system_service = services[system_service_type]
+            system_service = app.services[system_service_type]
             assert isinstance(system_service, SystemService)
             auth_service_type = AppEnv._get_enum_from_list(
                 self._sorted_service_types, "AUTH"
             )
-            auth_service = services[auth_service_type]
+            auth_service = app.services[auth_service_type]
             assert isinstance(auth_service, AuthService)
             rbac_service_type = AppEnv._get_enum_from_list(
                 self._sorted_service_types, "RBAC"
             )
-            rbac_service = services[rbac_service_type]
+            rbac_service = app.services[rbac_service_type]
             assert isinstance(rbac_service, RbacService)
             abac_service_type = AppEnv._get_enum_from_list(
                 self._sorted_service_types, "ABAC"
             )
-            abac_service = services[abac_service_type]
+            abac_service = app.services[abac_service_type]
             assert isinstance(abac_service, AbacService)
             organization_service_type = AppEnv._get_enum_from_list(
                 self._sorted_service_types, "ORGANIZATION"
             )
-            organization_service = services[organization_service_type]
+            organization_service = app.services[organization_service_type]
             assert isinstance(organization_service, OrganizationService)
 
             # Set up roles
@@ -182,9 +193,11 @@ class AppEnv(BaseAppEnv):
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
-            registered_user_dependency, new_user_dependency, idp_user_dependency = (
-                auth_service.create_user_dependencies()
-            )
+            (
+                app.registered_user_dependency,
+                app.new_user_dependency,
+                app.idp_user_dependency,
+            ) = auth_service.create_user_dependencies()
 
             # Register security policies with app
             if self._log_setup:
@@ -216,11 +229,11 @@ class AppEnv(BaseAppEnv):
 
         return {
             "app": app,
-            "services": services,
-            "repositories": repositories,
-            "registered_user_dependency": registered_user_dependency,
-            "new_user_dependency": new_user_dependency,
-            "idp_user_dependency": idp_user_dependency,
+            "services": app.services,
+            "repositories": app.repositories,
+            "registered_user_dependency": app.registered_user_dependency,
+            "new_user_dependency": app.new_user_dependency,
+            "idp_user_dependency": app.idp_user_dependency,
         }
 
     # TODO: make base class method abstract and implement here with new repository_class.create_repository method

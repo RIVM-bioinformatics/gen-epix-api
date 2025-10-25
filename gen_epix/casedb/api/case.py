@@ -1,7 +1,7 @@
-from typing import Any, Callable, NoReturn, Self
+from typing import Annotated, Any, Callable, NoReturn, Self
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
@@ -101,18 +101,6 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
     )
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve genetic sequences for.",
-    )
-
-
-class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The case type column that contains the genetic sequences to retrieve.",
-    )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
-    )
-    file_name: str = Field(
-        description="The desired filename for the FASTA download.",
     )
 
 
@@ -507,17 +495,23 @@ def create_case_endpoints(
         description=command.RetrieveGeneticSequenceFastaByCaseCommand.__doc__,
     )
     async def retrieve__genetic_sequence_fasta(
-        user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveGeneticSequenceFastaRequestBody,
+        token: Annotated[str, Form()],
+        genetic_sequence_case_type_col_id: Annotated[str, Form()],
+        case_ids: Annotated[list[UUID], Form()],
+        file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
+        user: model.User | None = None
         try:
+            user = await app.services[
+                enum.ServiceType.AUTH
+            ].get_existing_user_from_token(token=token)
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
                     genetic_sequence_case_type_col_id=(
-                        request_body.genetic_sequence_case_type_col_id
+                        genetic_sequence_case_type_col_id
                     ),
-                    case_ids=request_body.case_ids,
+                    case_ids=case_ids,
                 )
             )
         except Exception as exception:
@@ -525,15 +519,13 @@ def create_case_endpoints(
                 "d4c2e1b1",
                 user,
                 exception,
-                request_ids=request_body.case_ids,
+                request_ids=case_ids,
             )
 
         return StreamingResponse(
             fasta_iterable,
             media_type="application/x-fasta",
-            headers={
-                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
         )
 
     @router.post(
