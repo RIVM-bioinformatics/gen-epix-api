@@ -14,6 +14,4 @@ class File(Model):
         persistable=True,
     )
     id: UUID | None = Field(description="The id of the file.")
-    size_bytes: int = Field(description="The size of the file in bytes.")
-    hash_sha256: bytes = Field(description="The SHA256 hash of the file.")
     content: bytes = Field(description="The content of the file.")

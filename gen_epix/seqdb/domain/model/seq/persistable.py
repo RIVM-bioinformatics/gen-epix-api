@@ -11,6 +11,7 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     AlignmentMixin,
     CodeMixin,
@@ -102,6 +103,16 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         links=create_links(
             {
                 1: (
+                    "fwd_file_id",
+                    File,
+                    None,
+                ),
+                2: (
+                    "rev_file_id",
+                    File,
+                    None,
+                ),
+                3: (
                     "library_prep_protocol_id",
                     LibraryPrepProtocol,
                     "library_prep_protocol",
@@ -109,17 +120,25 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
-    for_uri: str | None = Field(description="The forward URI of the read set.")
-    rev_uri: str | None = Field(
-        default=None, description="The reverse URI of the paired read set, if any."
+    fwd_uri: str | None = Field(
+        description="The URI of the forward read set. In case of single-end reads, this is the only read set."
     )
-    for_reads_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by for_uri.",
+    rev_uri: str | None = Field(
+        default=None, description="The URI of the reverse read set, if any."
+    )
+    fwd_file_id: UUID | None = Field(
+        description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY"
+    )
+    rev_file_id: UUID | None = Field(
+        description="The unique file identifier for the reverse read set, if any."
+    )
+    fwd_reads_hash_sha256: bytes | None = Field(
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
         min_length=32,
         max_length=32,
     )
     rev_reads_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by rev_uri.",
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
         min_length=32,
         max_length=32,
     )
@@ -131,10 +150,6 @@ class ReadSet(Model, CodeMixin, QualityMixin):
     )
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255
-    )
-    file_id: UUID = Field(description="The unique file identifier.")
-    file_id2: UUID | None = Field(
-        description="The unique file identifier for the second read set, if any."
     )
 
 

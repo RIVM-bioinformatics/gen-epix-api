@@ -331,14 +331,14 @@ class TestClient:
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=seqmodel.ReadSet(
-                    for_uri="",
+                    fwd_uri="",
                     rev_uri=None,
-                    for_reads_hash_sha256=reads_hash_sha256,
+                    fwd_reads_hash_sha256=reads_hash_sha256,
                     rev_reads_hash_sha256=None,
                     library_prep_protocol_id=library_prep.id,  # type:ignore[arg-type]
                     sequencing_run_code="",
-                    file_id=file.id,  # type:ignore[arg-type]
-                    file_id2=None,
+                    fwd_file_id=file.id,  # type:ignore[arg-type]
+                    rev_file_id=None,
                 ),
             )
         )
@@ -368,15 +368,12 @@ class TestClient:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
         )  # type:ignore[assignment]
-        hash_sha256: bytes = hashlib.sha256(content).digest()
         file_obj: seqmodel.File = self.app.handle(
             seqcommand.FileCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=seqmodel.File(
                     id=None,
-                    size_bytes=len(content),
-                    hash_sha256=hash_sha256,
                     content=content,
                 ),
             )

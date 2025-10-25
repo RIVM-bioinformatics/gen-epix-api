@@ -219,5 +219,5 @@ class TestCreate:
         read_sets: list[model.ReadSet] = env.read_all(root1_1, model.ReadSet)  # type: ignore[assignment]
         assert len(read_sets) == 1
         assert read_sets[0].id == read_set.id
-        assert read_sets[0].file_id == file.id
+        assert read_sets[0].fwd_file_id == file.id
         assert read_sets[0].library_prep_protocol_id == library_prep.id
