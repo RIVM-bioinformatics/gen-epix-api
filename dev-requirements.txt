@@ -19,4 +19,4 @@ types-cachetools==5.5.*
 types-python-jose==3.5.*
 
 # TODO: remove if run.py no longer uses it
-uvicorn==0.36.0
+uvicorn==0.38.0
