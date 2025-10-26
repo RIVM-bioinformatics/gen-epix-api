@@ -33,7 +33,7 @@ dependencies = [
     "pydantic==2.12.3",
     "ulid-py==1.1.0",
     "fire==0.7.1",
-    "dynaconf==3.2.11",
+    "dynaconf==3.2.12",
     "PyYAML==6.0.3",
     "scipy==1.16.2",
     "numpy==2.3.4",
