@@ -18,7 +18,7 @@ ulid-py==1.1.0
 # configuration handling
 fire==0.7.1
 dynaconf==3.2.11
-PyYAML==6.0.2
+PyYAML==6.0.3
 types-setuptools==80.9.*
 python-multipart==0.0.20
 
