@@ -482,6 +482,7 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
         DOMAIN, model.Seq, "assembly_protocol_id"
     )
     raw_seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "raw_seq_id")
+    file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
 
 
 class SeqAlignment(Base, RowMetadataMixin):

@@ -706,6 +706,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.end_to_end",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_end_to_end"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.end_to_end.casedb_seqdb_connection",
             "type": "debugpy",
             "request": "launch",

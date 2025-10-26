@@ -88,13 +88,11 @@ class PhylogeneticTree(Model):
         snake_case_plural_name="phylogenetic_trees",
         persistable=False,
     )
-    tree_algorithm: enum.TreeAlgorithm = Field(
-        default=None, description="The tree algorithm"
-    )
+    tree_algorithm: enum.TreeAlgorithm = Field(description="The tree algorithm")
     seq_distance_protocol_id: UUID = Field(
         description="The ID of the sequence distance protocol. FOREIGN KEY"
     )
-    seq_distance_protocol: SeqDistanceProtocol = Field(
+    seq_distance_protocol: SeqDistanceProtocol | None = Field(
         default=None, description="The sequence distance protocol"
     )
     leaf_names: list[str] | None = Field(

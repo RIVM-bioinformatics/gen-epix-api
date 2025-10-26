@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 from decimal import Decimal
 from typing import Any, Callable, Iterable, Type
 from uuid import UUID
@@ -6,6 +7,7 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
+import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
@@ -451,7 +453,7 @@ class CaseService(BaseCaseService):
         case_abac: model.CaseAbac,
         case_ids: list[UUID],
         seq_case_type_col_id: UUID,
-    ) -> list[UUID]:
+    ) -> list[UUID | None]:
         # @ABAC: Get cases and sequence_ids
         cases = self._retrieve_cases_with_content_right(
             uow,
@@ -461,7 +463,8 @@ class CaseService(BaseCaseService):
             case_ids=case_ids,
             filter_content=True,
         )
-        return [UUID(x.content.get(seq_case_type_col_id)) for x in cases]
+        retval = [x.content.get(seq_case_type_col_id) for x in cases]
+        return [UUID(x) for x in retval if x]
 
     def retrieve_genetic_sequence_by_case(
         self,
@@ -478,13 +481,15 @@ class CaseService(BaseCaseService):
         assert case_abac is not None
 
         with repository.uow() as uow:
-            seq_ids: list[UUID] = self._get_seq_ids_from_cases(
+            seq_ids: list[UUID | None] = self._get_seq_ids_from_cases(
                 uow,
                 user,
                 case_abac,
                 case_ids,
                 seq_case_type_col_id,
             )
+            if any(x is None for x in seq_ids):
+                raise exc.NoResultsError("Not all cases have a sequence")
             # Retrieve sequences
             genetic_sequences: list[model.GeneticSequence] = self.app.handle(
                 command.RetrieveGeneticSequenceByIdCommand(
@@ -1132,3 +1137,481 @@ class CaseService(BaseCaseService):
             ],
             operator=LogicalOperator.AND,
         )
+
+    def create_reads_sets_for_cases(
+        self, cmd: command.CreateReadSetsForCasesCommand
+    ) -> list[model.ReadSet] | None:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+
+        case_ids: set[UUID] = {x.case_id for x in cmd.case_read_sets}
+        case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_read_sets}
+        read_sets_to_create: list[model.ReadSet] = []
+
+        with repository.uow() as uow:
+            cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                list(case_ids),
+                CrudOperation.READ_SOME,
+            )
+            if len(cases) != len(case_ids):
+                raise exc.InvalidArgumentsError("Some case ids do not exist")
+
+            case_type_cols: list[model.CaseTypeCol] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user.id if user else None,
+                    model.CaseTypeCol,
+                    None,
+                    list(case_type_col_ids),
+                    CrudOperation.READ_SOME,
+                )
+            )
+            if len(case_type_cols) != len(case_type_col_ids):
+                raise exc.InvalidArgumentsError(
+                    "Some case type column ids do not exist"
+                )
+            col_ids: set[UUID] = {
+                case_type_col.col_id for case_type_col in case_type_cols
+            }
+            cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                list(col_ids),
+                CrudOperation.READ_SOME,
+            )
+
+            case_by_id: dict[UUID, model.Case] = {
+                x.id: x for x in cases if x.id is not None
+            }
+            case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
+                x.id: x for x in case_type_cols if x.id is not None
+            }
+            col_by_id: dict[UUID, model.Col] = {
+                x.id: x for x in cols if x.id is not None
+            }
+
+            # Case and column-level ABAC check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=list(case_ids),
+                filter_content=True,
+                extra_access_case_type_col_ids=case_type_col_ids,
+            )
+            # filter_content=False to role back
+            # TODO: Column level ABAC check?
+
+            for case_read_sets in cmd.case_read_sets:
+                case = case_by_id[case_read_sets.case_id]
+                case_type_column = case_type_col_by_id[case_read_sets.case_type_col_id]
+                # check if case type col belongs to case type of case
+                if case_type_column.case_type_id != case.case_type_id:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {case_read_sets.case_type_col_id} not part of case type {case.case_type_id}"
+                    )
+                # Check if col is of type GENETIC_READS
+                col = col_by_id[case_type_column.col_id]
+                if col.col_type != enum.ColType.GENETIC_READS:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {col.id} is not of type GENETIC_READS"
+                    )
+                read_sets_to_create.append(
+                    model.ReadSet(
+                        library_prep_protocol_id=case_read_sets.library_prep_protocol_id
+                    )
+                )
+        # Create ReadSets in seqdb and then update them in Case
+        created_read_sets: list[model.ReadSet] = self.app.handle(
+            seqdb_command.ReadSetCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=read_sets_to_create,  # type: ignore[arg-type]
+            )
+        )
+
+        # link ReadSets to Cases via Case.content[case_type_col_id] = ReadSet.id
+        cases_to_update: list[model.Case] = []
+        # Use CaseReadSet.library_prep_protocol_id to find the case_id and case_type_col_id back
+        read_set_by_protocol: dict[UUID, model.ReadSet] = {
+            read_set.library_prep_protocol_id: read_set
+            for read_set in created_read_sets
+        }
+        for case_read_set in cmd.case_read_sets:
+            if case_read_set.library_prep_protocol_id not in read_set_by_protocol:
+                raise exc.InvalidArgumentsError(
+                    "Read set not found for library_prep_protocol_id"
+                )
+            case = case_by_id[case_read_set.case_id]
+            case.content[case_read_set.case_type_col_id] = read_set_by_protocol[  # type: ignore
+                case_read_set.library_prep_protocol_id
+            ].id
+            cases_to_update.append(case)
+
+        with self.repository.uow() as uow:
+            super(DomainBaseCaseService, self).crud(
+                command.CaseCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.UPDATE_SOME,
+                    objs=cases_to_update,  # type: ignore[arg-type]
+                )
+            )
+
+        return created_read_sets
+
+    def create_file_for_read_set(
+        self, cmd: command.CreateFileForReadSetCommand
+    ) -> UUID | None:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+        # Retrieve case, case type col and col, and perform validations
+        with repository.uow() as uow:
+            # Check case exists
+            case: model.Case = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                cmd.case_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Case and column-level ABAC check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=[cmd.case_id],
+                filter_content=True,
+                extra_access_case_type_col_ids={cmd.case_type_col_id},
+            )
+
+            # Retrieve case type column and underlying column
+            case_type_col: model.CaseTypeCol = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.CaseTypeCol,
+                None,
+                cmd.case_type_col_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Verify the column belongs to the case type of the case
+            if case_type_col.case_type_id != case.case_type_id:
+                raise exc.InvalidArgumentsError(
+                    f"Column {cmd.case_type_col_id} not part of case type {case.case_type_id}"
+                )
+
+            col: model.Col = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                case_type_col.col_id,
+                CrudOperation.READ_ONE,
+            )
+            if col.col_type != enum.ColType.GENETIC_READS:
+                raise exc.InvalidArgumentsError(
+                    f"Column {col.id} is not of type GENETIC_READS"
+                )
+
+            # Retrieve ReadSet id from case content
+            if cmd.case_type_col_id not in case.content:
+                raise exc.InvalidArgumentsError(
+                    "No ReadSet linked to case for the given case type column"
+                )
+            read_set_val = case.content[cmd.case_type_col_id]
+            read_set_id: UUID = (
+                read_set_val
+                if isinstance(read_set_val, UUID)
+                else UUID(str(read_set_val))
+            )
+
+        file_hash = hashlib.sha256(cmd.file_content).digest()
+        file_to_create = model.File(
+            size_bytes=len(cmd.file_content),
+            hash_sha256=file_hash,
+            content=cmd.file_content,
+        )
+        created_file: model.File = self.app.handle(
+            seqdb_command.FileCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=file_to_create,
+            )
+        )
+
+        # Read current ReadSet to avoid overwriting unrelated fields
+        existing_read_set: model.ReadSet = self.app.handle(
+            seqdb_command.ReadSetCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=read_set_id,
+            )
+        )
+
+        if cmd.is_fwd:
+            if existing_read_set.file_id is not None:
+                raise exc.InvalidArgumentsError(
+                    "Forward file already linked to ReadSet"
+                )
+            existing_read_set.file_id = created_file.id
+        else:
+            if existing_read_set.file_id2 is not None:
+                raise exc.InvalidArgumentsError(
+                    "Reverse file already linked to ReadSet"
+                )
+            existing_read_set.file_id2 = created_file.id
+
+        # Update ReadSet with the new file link
+        self.app.handle(
+            seqdb_command.ReadSetCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=existing_read_set,
+            )
+        )
+
+        return created_file.id
+
+    def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID | None:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+        # Retrieve case, case type col and col, and perform validations
+        with repository.uow() as uow:
+            # Check case exists
+            case: model.Case = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                cmd.case_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Case and column-level ABAC check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=[cmd.case_id],
+                filter_content=True,
+                extra_access_case_type_col_ids={cmd.case_type_col_id},
+            )
+
+            # Retrieve case type column and underlying column
+            case_type_col: model.CaseTypeCol = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.CaseTypeCol,
+                None,
+                cmd.case_type_col_id,
+                CrudOperation.READ_ONE,
+            )
+
+            # Verify the column belongs to the case type of the case
+            if case_type_col.case_type_id != case.case_type_id:
+                raise exc.InvalidArgumentsError(
+                    f"Column {cmd.case_type_col_id} not part of case type {case.case_type_id}"
+                )
+
+            col: model.Col = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                case_type_col.col_id,
+                CrudOperation.READ_ONE,
+            )
+            if col.col_type != enum.ColType.GENETIC_SEQUENCE:
+                raise exc.InvalidArgumentsError(
+                    f"Column {col.id} is not of type GENETIC_SEQUENCE"
+                )
+
+            # Retrieve Seq id from case content
+            if cmd.case_type_col_id not in case.content:
+                raise exc.InvalidArgumentsError(
+                    "No Seq linked to case for the given case type column"
+                )
+            seq_val = case.content[cmd.case_type_col_id]
+            seq_id: UUID = seq_val if isinstance(seq_val, UUID) else UUID(str(seq_val))
+
+        file_hash = hashlib.sha256(cmd.file_content).digest()
+        file_to_create = model.File(
+            size_bytes=len(cmd.file_content),
+            hash_sha256=file_hash,
+            content=cmd.file_content,
+        )
+        created_file: model.File = self.app.handle(
+            seqdb_command.FileCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=file_to_create,
+            )
+        )
+
+        # Read current Seq to avoid overwriting unrelated fields
+        existing_seq: model.Seq = self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=seq_id,
+            )
+        )
+
+        if existing_seq.file_id is not None:
+            raise exc.InvalidArgumentsError("File already linked to Seq")
+        existing_seq.file_id = created_file.id
+
+        # Update Seq with the new file link
+        self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.UPDATE_ONE,
+                objs=existing_seq,
+            )
+        )
+
+        return created_file.id
+
+    def create_seqs_for_cases(
+        self, cmd: command.CreateSeqsForCasesCommand
+    ) -> list[model.Seq]:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+        # Short-circuit: nothing to create
+        if not cmd.case_seqs:
+            return []
+
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+
+        case_ids: set[UUID] = {x.case_id for x in cmd.case_seqs}
+        case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_seqs}
+
+        with repository.uow() as uow:
+            # Retrieve and validate cases
+            cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                list(case_ids),
+                CrudOperation.READ_SOME,
+            )
+            if len(cases) != len(case_ids):
+                raise exc.InvalidArgumentsError("Some case ids do not exist")
+
+            # Case and column-level ABAC check
+            self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.WRITE_CASE,
+                case_ids=list(case_ids),
+                filter_content=True,
+                extra_access_case_type_col_ids=case_type_col_ids,
+            )
+
+            # Retrieve and validate case type columns
+            case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.CaseTypeCol,
+                None,
+                list(case_type_col_ids),
+                CrudOperation.READ_SOME,
+            )
+            if len(case_type_cols) != len(case_type_col_ids):
+                raise exc.InvalidArgumentsError(
+                    "Some case type column ids do not exist"
+                )
+
+            # Retrieve underlying columns and maps for quick lookup
+            col_ids: set[UUID] = {x.col_id for x in case_type_cols}
+            cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                list(col_ids),
+                CrudOperation.READ_SOME,
+            )
+
+            case_by_id: dict[UUID, model.Case] = {
+                x.id: x for x in cases if x.id is not None
+            }
+            case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
+                x.id: x for x in case_type_cols if x.id is not None
+            }
+            col_by_id: dict[UUID, model.Col] = {
+                x.id: x for x in cols if x.id is not None
+            }
+
+            # Although model.Seq does not have rquired fields, for future-proofing keep
+            # track of created Seq objects and case id within the same loop,
+            # since zip() is not completely safe to guarantee order in linking to a case
+            case_seq_map: dict[UUID, model.Seq] = {}
+            for case_seq in cmd.case_seqs:
+                case = case_by_id[case_seq.case_id]
+                case_type_col = case_type_col_by_id[case_seq.case_type_col_id]
+                if case_type_col.case_type_id != case.case_type_id:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {case_seq.case_type_col_id} not part of case type {case.case_type_id}"
+                    )
+                col = col_by_id[case_type_col.col_id]
+                if col.col_type != enum.ColType.GENETIC_SEQUENCE:
+                    raise exc.InvalidArgumentsError(
+                        f"Column {col.id} is not of type {enum.ColType.GENETIC_SEQUENCE.value}"
+                    )
+                case_seq_map[case_seq.case_id] = model.Seq()
+
+        created_seqs: list[model.Seq] = self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_SOME,
+                objs=case_seq_map.values(),  # type: ignore[arg-type]
+            )
+        )
+
+        # Link created Seqs to Cases via Case.content[case_type_col_id] = Seq.id
+        cases_to_update: list[model.Case] = []
+        with self.repository.uow() as uow:
+            for case_seq in cmd.case_seqs:
+                case = case_by_id[case_seq.case_id]
+                created_seq = case_seq_map[case_seq.case_id]
+                assert created_seq.id is not None
+                assert created_seq in created_seqs
+                case.content[case_seq.case_type_col_id] = (
+                    created_seq.id
+                )  # type:ignore[assignment]
+                cases_to_update.append(case)
+
+            # Persist case content updates
+            super(DomainBaseCaseService, self).crud(
+                command.CaseCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.UPDATE_SOME,
+                    objs=cases_to_update,  # type: ignore[arg-type]
+                )
+            )
+
+        return created_seqs

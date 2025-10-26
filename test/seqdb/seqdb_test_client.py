@@ -1,13 +1,17 @@
+import hashlib
 import logging
+import uuid
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from typing import Any
+from typing import Any, Type
+from uuid import UUID
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.test.test_client import TestClient
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.organization import (
     UpdateUserRequestBody,
     UserInvitationRequestBody,
@@ -26,6 +30,9 @@ class SeqdbTestClient(TestClient):
         model.UserInvitation: "email",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.DataCollection: "name",
+        model.LibraryPrepProtocol: "name",
+        model.File: "id",
+        model.ReadSet: "id",
     }
 
     DUMMY_VALUES = {}
@@ -162,37 +169,124 @@ class SeqdbTestClient(TestClient):
             **kwargs,
         )
 
-    # def create_concept(
-    #     self,
-    #     user_or_str: str | model.User,
-    #     code: str,
-    #     concept_set_or_str: str | model.ConceptSet | None = None,
-    #     set_dummy_concept_set: bool = False,
-    # ) -> model.Concept:
-    #     user: model.User = self._get_obj(
-    #         model.User, user_or_str
-    #     )  # type:ignore[assignment]
-    #     concept_set: model.ConceptSet = (
-    #         self._get_obj(model.ConceptSet, concept_set_or_str)
-    #         if concept_set_or_str
-    #         else None
-    #     )  # type:ignore[assignment]
-    #     if set_dummy_concept_set:
-    #         if concept_set:
-    #             raise ValueError(
-    #                 "concept_set_or_str must be None if set_dummy_concept_set is True"
-    #             )
-    #         concept_set_id = self.generate_id()
-    #     else:
-    #         concept_set_id = concept_set.id
-    #     concept = self.handle(
-    #         command.ConceptCrudCommand(
-    #             user=user,
-    #             operation=CrudOperation.CREATE_ONE,
-    #             objs=model.Concept(
-    #                 concept_set_id=concept_set_id,
-    #                 code=code,
-    #             ),
-    #         )
-    #     )
-    #     return self._set_obj(concept)  # type:ignore[return-value]
+    def create_library_prep_protocol(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        name: str | None = None,
+    ) -> model.LibraryPrepProtocol:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        library_prep_protocol: model.LibraryPrepProtocol = self.app.handle(
+            command.LibraryPrepProtocolCrudCommand(
+                operation=CrudOperation.CREATE_ONE,
+                user=user,
+                objs=model.LibraryPrepProtocol(
+                    code=code, name=name if name else code
+                ),  # type:ignore
+            )
+        )
+        return self._set_obj(library_prep_protocol)
+
+    def create_file(
+        self, user_or_str: str | model.User, content: bytes | str | list[str]
+    ) -> model.File:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        content: bytes
+        if isinstance(content, str):
+            content = content.encode()
+        elif isinstance(content, list):
+            content = "\n".join(content).encode()
+        else:
+            content = content
+        file_obj: model.File = self.app.handle(
+            command.FileCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.File(content=content),
+            )
+        )
+
+        return self._set_obj(file_obj)
+
+    def create_read_set(
+        self,
+        user_or_str: str | model.User,
+        library_prep_protocol_or_str: model.LibraryPrepProtocol | str | None = None,
+        fwd_uri: str | None = None,
+        rev_uri: str | None = None,
+        fwd_file_id: UUID | None = None,
+        rev_file_id: UUID | None = None,
+        fwd_reads_hash_sha256_or_content: bytes | str | None = None,
+        rev_reads_hash_sha256_or_content: bytes | str | None = None,
+        sequencing_run_code: str = "",
+        set_dummy_library_prep_protocol: bool = False,
+    ) -> model.ReadSet:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        library_prep_protocol_id: UUID
+        if set_dummy_library_prep_protocol:
+            if library_prep_protocol_or_str is not None:
+                raise ValueError(
+                    "library_prep_protocol_or_str must be None when "
+                    "set_dummy_library_prep_protocol is True"
+                )
+            library_prep_protocol_id = uuid.uuid4()
+        else:
+            library_prep_protocol_id: UUID = (  # type:ignore[union-attr]
+                self._get_obj(  # type:ignore[assignment]
+                    model.LibraryPrepProtocol, library_prep_protocol_or_str
+                )
+            ).id  # type:ignore[assignment]
+        fwd_reads_hash_sha256: bytes | None
+        if isinstance(fwd_reads_hash_sha256_or_content, str):
+            fwd_reads_hash_sha256 = hashlib.sha256(
+                fwd_reads_hash_sha256_or_content.encode()
+            ).digest()
+        else:
+            fwd_reads_hash_sha256 = fwd_reads_hash_sha256_or_content
+        rev_reads_hash_sha256: bytes | None
+        if isinstance(rev_reads_hash_sha256_or_content, str):
+            rev_reads_hash_sha256 = hashlib.sha256(
+                rev_reads_hash_sha256_or_content.encode()
+            ).digest()
+        else:
+            rev_reads_hash_sha256 = rev_reads_hash_sha256_or_content
+        read_set: model.ReadSet = self.app.handle(
+            command.ReadSetCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.ReadSet(
+                    library_prep_protocol_id=library_prep_protocol_id,
+                    fwd_uri=fwd_uri,
+                    rev_uri=rev_uri,
+                    fwd_file_id=fwd_file_id,
+                    rev_file_id=rev_file_id,
+                    fwd_reads_hash_sha256=fwd_reads_hash_sha256,
+                    rev_reads_hash_sha256=rev_reads_hash_sha256,
+                    sequencing_run_code=sequencing_run_code,
+                ),
+            )
+        )
+        assert read_set.library_prep_protocol_id == library_prep_protocol_id
+        assert read_set.fwd_reads_hash_sha256 == fwd_reads_hash_sha256
+        assert read_set.rev_reads_hash_sha256 == rev_reads_hash_sha256
+        assert read_set.fwd_file_id == fwd_file_id
+        assert read_set.rev_file_id == rev_file_id
+        assert read_set.fwd_uri == fwd_uri
+        assert read_set.rev_uri == rev_uri
+        return self._set_obj(read_set)
+
+    def get_default_kwargs(self, model_class: Type[model.Model]) -> dict:
+        if model_class == model.ReadSet:
+            return {
+                "fwd_uri": "http://reads/sample_x_1.fastq",
+                "rev_uri": "http://reads/sample_x_2.fastq",
+                "fwd_reads_hash_sha256_or_content": "a" * 64,
+                "rev_reads_hash_sha256_or_content": "b" * 64,
+            }
+        raise NotImplementedError(f"No default kwargs for model class {model_class}")

@@ -1,26 +1,33 @@
 import importlib
-from typing import Any, Iterable
+from typing import Any, Hashable, Iterable
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, exc, model
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain import enum as enum
+from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.fastapp import App
+from gen_epix.fastapp import App, CrudCommand, Model
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
-from gen_epix.seqdb.domain.command import (
-    RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
-)
-from gen_epix.seqdb.domain.enum import TreeAlgorithm as SeqdbTreeAlgorithm
-from gen_epix.seqdb.domain.model import PhylogeneticTree as SeqdbPhylogeneticTree
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppEnv
 
 
 class SeqdbService(BaseSeqdbService):
+
+    COMMAND_MAP: dict[type[command.Command], type[seqdb_command.Command]] = {
+        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
+    }
+    TREE_ALGORITHM_MAP = {
+        x: y
+        for x in enum.TreeAlgorithmType
+        for y in seqdb_enum.TreeAlgorithm
+        if x.value == y.value
+    }
 
     def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
@@ -70,27 +77,29 @@ class SeqdbService(BaseSeqdbService):
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
     ) -> model.PhylogeneticTree | None:
         user = cmd.user
+        # Prepare seqdb command and calculate tree via seqdb
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:
             leaf_names = [str(leaf_id_mapper(x)) for x in cmd.sequence_ids]
         else:
             leaf_names = None
-        seqdb_cmd = SeqdbRetrievePhylogeneticTreeCommand(
+        seqdb_cmd = seqdb_command.RetrievePhylogeneticTreeCommand(
             user=self.seqdb_user,
             seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
-            tree_algorithm=SeqdbTreeAlgorithm[cmd.tree_algorithm_code.value],
+            tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],
             seq_ids=cmd.sequence_ids,
             leaf_names=leaf_names,
         )
-        seqdb_phylogenetic_tree: SeqdbPhylogeneticTree = self.seqdb_app.handle(
+        seqdb_phylogenetic_tree: seqdb_model.PhylogeneticTree = self.seqdb_app.handle(
             seqdb_cmd
         )
+        # Convert seqdb tree model to casedb model
         phylogenetic_tree = model.PhylogeneticTree(
             tree_algorithm_code=cmd.tree_algorithm_code,
             sequence_ids=seqdb_phylogenetic_tree.seq_ids,
             leaf_ids=(
                 [UUID(x) for x in seqdb_phylogenetic_tree.leaf_names]
-                if seqdb_phylogenetic_tree.leaf_names
+                if seqdb_phylogenetic_tree.leaf_names is not None
                 else None
             ),
             newick_repr=seqdb_phylogenetic_tree.newick_repr,
@@ -151,6 +160,78 @@ class SeqdbService(BaseSeqdbService):
         )
         fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
+
+    def crud(
+        self, cmd: CrudCommand
+    ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+        """
+        Generic CRUD operation handler that forwards the command to seqdb while
+        setting the functional user.
+        """
+        casedb_user = cmd.user
+        cmd.user = self.seqdb_user
+        result = self.seqdb_app.handle(cmd)
+        cmd.user = casedb_user
+        return result  # type: ignore[no-any-return]
+
+    def retrieve_read_sets_by_id(self, read_set_id: UUID) -> list[model.ReadSet]:
+        read_sets: list[model.ReadSet] = self.seqdb_app.handle(
+            seqdb_command.ReadSetCrudCommand(
+                user=self.seqdb_user,
+                obj_ids=[read_set_id],
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        if not read_sets:
+            raise exc.NoResultsError(
+                f"ReadSet with ID {read_set_id} not found in SeqDB."
+            )
+        if len(read_sets) > 1:
+            raise exc.InvalidArgumentsError(
+                f"Multiple ReadSets found with ID {read_set_id} in SeqDB."
+            )
+
+        return read_sets
+
+    def assign_correct_file_id_to_read_set(
+        self, is_fwd: bool, created_file: model.File, read_sets: list[model.ReadSet]
+    ) -> model.ReadSet:
+        read_set: model.ReadSet = read_sets[0]
+        if is_fwd:
+            read_set.file_id = created_file.id
+        else:
+            read_set.file_id2 = created_file.id
+        return read_set
+
+    # def create_file_for_read_set(self, cmd: command.CreateFileForReadSetCommand) -> UUID | None:
+    #     # Extract read_set_id from cmd.props
+    #     props: dict[str, Any] = getattr(cmd, "props", {}) or {}
+    #     read_set_id: UUID = props.get("read_set_id")  # type: ignore[assignment]
+    #     is_fwd: bool = props.get("is_fwd", False)
+    #     created_file: model.File = self.seqdb_app.handle(
+    #         seqdb_command.FileCrudCommand(
+    #             user=self.seqdb_user,
+    #             objs=cmd.objs,
+    #             operation=CrudOperation.CREATE_ONE,
+    #         )
+    #     )
+    #     read_sets: list[model.ReadSet] = self.retrieve_read_sets_by_id(read_set_id)
+    #     # more validation in updating file id in read set?
+    #     # check if id is None? Check if codes not the same?
+    #     read_set: model.ReadSet = self.assign_correct_file_id_to_read_set(
+    #         is_fwd, created_file, read_sets
+    #     )
+    #     # introduce try/except?
+    #     # update read set in seqdb with new file id
+    #     self.seqdb_app.handle(
+    #         seqdb_command.ReadSetCrudCommand(
+    #             user=self.seqdb_user,
+    #             objs=read_set,
+    #             operation=CrudOperation.UPDATE_ONE,
+    #         )
+    #     )
+
+    #     return created_file.id
 
     # def retrieve_allele_profile(
     #     self,

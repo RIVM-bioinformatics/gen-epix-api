@@ -92,7 +92,9 @@ class CaseTransformer(Transformer):
             return NoReturn
 
     def __init__(
-        self, case_service: BaseCaseService, complete_case_type: model.CompleteCaseType
+        self,
+        case_service: BaseCaseService,
+        complete_case_type: model.CompleteCaseType,
     ):
         self.case_service = case_service
         self.complete_case_type = complete_case_type

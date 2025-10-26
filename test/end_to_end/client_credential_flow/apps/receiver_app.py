@@ -44,7 +44,8 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
                 label="OAuth Server",
                 client_id="ReceiverApp",  # This service's identifier (expected audience)
                 client_secret="receiver-secret",  # Not used for validation
-                discovery_endpoint=self.oauth_discovery_url,
+                scope="openid profile",  # Required field - default OIDC scopes
+                discovery_url=self.oauth_discovery_url,
             )
 
             self.oidc_client = OidcClient(

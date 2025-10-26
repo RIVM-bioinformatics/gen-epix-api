@@ -1,5 +1,4 @@
 from typing import ClassVar
-from uuid import UUID
 
 from pydantic import Field
 
@@ -13,5 +12,4 @@ class File(Model):
         table_name="file",
         persistable=True,
     )
-    id: UUID | None = Field(description="The id of the file.")
     content: bytes = Field(description="The content of the file.")

@@ -8,10 +8,10 @@ from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
-from gen_epix.casedb.domain.model.case.case import (
+from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim
+from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
-    CaseTypeDim,
     Col,
     Dim,
     GeneticDistanceProtocol,
