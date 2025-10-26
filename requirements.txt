@@ -8,7 +8,7 @@ httpx==0.28.1
 python-jose==3.5.0
 
 #database handling
-sqlalchemy==2.0.43
+sqlalchemy==2.0.44
 sqlalchemy_utils==0.42.0
 
 # Data models/handling
@@ -17,14 +17,14 @@ ulid-py==1.1.0
 
 # configuration handling
 fire==0.7.1
-dynaconf==3.2.11
-PyYAML==6.0.2
+dynaconf==3.2.12
+PyYAML==6.0.3
 types-setuptools==80.9.*
 python-multipart==0.0.20
 
 # calculation
 scipy==1.16.2
-numpy==2.3.3
+numpy==2.3.4
 biopython==1.85
 
 # other
