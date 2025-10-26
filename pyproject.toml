@@ -28,7 +28,7 @@ dependencies = [
     "starlette==0.48.0",
     "httpx==0.28.1",
     "python-jose==3.5.0",
-    "sqlalchemy==2.0.43",
+    "sqlalchemy==2.0.44",
     "sqlalchemy_utils==0.42.0",
     "pydantic==2.12.3",
     "ulid-py==1.1.0",
