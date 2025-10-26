@@ -120,6 +120,12 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
+    library_prep_protocol_id: UUID = Field(
+        description="The unique identifier for the library preparation protocol. FOREIGN KEY"
+    )
+    library_prep_protocol: LibraryPrepProtocol | None = Field(
+        default=None, description="The sequencing protocol."
+    )
     fwd_uri: str | None = Field(
         default=None,
         description="The URI of the forward read set. In case of single-end reads, this is the only read set.",
@@ -147,22 +153,29 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         min_length=32,
         max_length=32,
     )
-    library_prep_protocol_id: UUID = Field(
-        description="The unique identifier for the library preparation protocol. FOREIGN KEY"
-    )
-    library_prep_protocol: LibraryPrepProtocol | None = Field(
-        default=None, description="The sequencing protocol."
-    )
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255, default=None
     )
-    file_id: UUID | None = Field(
-        description="The unique file identifier.", default=None
-    )
-    file_id2: UUID | None = Field(
-        description="The unique file identifier for the second read set, if any.",
-        default=None,
-    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        if self.fwd_uri and self.rev_uri and self.fwd_uri == self.rev_uri:
+            raise ValueError("fwd_uri must be different from rev_uri")
+        if (
+            self.fwd_file_id
+            and self.rev_file_id
+            and self.fwd_file_id == self.rev_file_id
+        ):
+            raise ValueError("fwd_file_id must be different from rev_file_id")
+        if (
+            self.fwd_reads_hash_sha256
+            and self.rev_reads_hash_sha256
+            and self.fwd_reads_hash_sha256 == self.rev_reads_hash_sha256
+        ):
+            raise ValueError(
+                "fwd_reads_hash_sha256 must be different from rev_reads_hash_sha256"
+            )
+        return self
 
 
 class RawSeq(Model, SeqMixin):

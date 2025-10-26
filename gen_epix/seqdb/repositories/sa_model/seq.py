@@ -448,8 +448,6 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"
     )
-    file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.ReadSet, "file_id")
-    file_id2: Mapped[UUID] = create_mapped_column(DOMAIN, model.ReadSet, "file_id2")
 
 
 class RawSeq(Base, RowMetadataMixin, SeqMixin):
