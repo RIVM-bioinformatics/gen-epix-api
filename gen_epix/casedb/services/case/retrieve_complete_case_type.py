@@ -1,6 +1,5 @@
 from uuid import UUID
 
-import gen_epix.casedb.domain.model.case.complete_case_type
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -11,7 +10,7 @@ from gen_epix.filter import UuidSetFilter
 def case_service_retrieve_complete_case_type(
     self: BaseCaseService,
     cmd: command.RetrieveCompleteCaseTypeCommand,
-) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
+) -> model.CompleteCaseType:
     # TODO: many calls are inefficient,
     # retrieving first all objs and then filtering.
     # To be improved with e.g. CQS.
@@ -276,7 +275,7 @@ def case_service_retrieve_complete_case_type(
         }
 
     # Compose complete case type and return
-    return gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType(
+    return model.CompleteCaseType(
         **case_type.model_dump(),
         etiologies=etiologies,
         etiological_agents=etiological_agents,

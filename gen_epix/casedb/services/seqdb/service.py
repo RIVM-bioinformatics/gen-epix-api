@@ -101,7 +101,7 @@ class SeqdbService(BaseSeqdbService):
             sequence_ids=seqdb_phylogenetic_tree.seq_ids,
             leaf_ids=(
                 [UUID(x) for x in seqdb_phylogenetic_tree.leaf_names]
-                if seqdb_phylogenetic_tree.leaf_names
+                if seqdb_phylogenetic_tree.leaf_names is not None
                 else None
             ),
             newick_repr=seqdb_phylogenetic_tree.newick_repr,

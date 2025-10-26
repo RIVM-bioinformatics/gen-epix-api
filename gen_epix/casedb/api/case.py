@@ -6,8 +6,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
 
-import gen_epix.casedb.domain.model.case.complete_case_type
-import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
@@ -32,9 +30,9 @@ class ValidateCasesRequestBody(PydanticBaseModel):
         command.ValidateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases: list[
-        gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate
-    ] = copy_model_field(command.ValidateCasesCommand, "cases")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.ValidateCasesCommand, "cases"
+    )
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -56,9 +54,9 @@ class CreateCasesRequestBody(PydanticBaseModel):
         command.CreateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
-    cases: list[
-        gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate
-    ] = copy_model_field(command.CreateCasesCommand, "cases")
+    cases: list[model.CaseForCreateUpdate] = copy_model_field(
+        command.CreateCasesCommand, "cases"
+    )
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -198,14 +196,12 @@ def create_case_endpoints(
     async def complete_case_types__get_one(
         user: registered_user_dependency,  # type: ignore
         case_type_id: UUID,
-    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
+    ) -> model.CompleteCaseType:
         try:
             cmd = command.RetrieveCompleteCaseTypeCommand(
                 user=user, case_type_id=case_type_id
             )
-            retval: (
-                gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType
-            ) = app.handle(cmd)
+            retval: model.CompleteCaseType = app.handle(cmd)
         except Exception as exception:
             handle_exception("c6c17125", user, exception)
         return retval
@@ -573,18 +569,18 @@ def create_case_endpoints(
         return created_read_sets
 
     @router.post(
-        "/create_file_for_read_set/{case_id}/{case_type_col_id}/fwd",
-        operation_id="create_file_for_reads_set_fwd",
-        name="Create file for reads set - forward reads",
+        "/create_file_for_read_set/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_read_set",
+        name="Create file for reads set",
         description=command.CreateFileForReadSetCommand.__doc__,
     )
-    async def create_file_for_reads_set_fwd(
+    async def create_file_for_read_set_fwd(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
         case_type_col_id: UUID,
         file_content: str,  # TODO: change to bytes or something else
+        is_fwd: bool = True,
     ) -> UUID:
-        is_fwd: bool = True
         try:
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
@@ -602,39 +598,12 @@ def create_case_endpoints(
         return created_file_id
 
     @router.post(
-        "/create_file_for_read_set/{case_id}/{case_type_col_id}/rev",
-        operation_id="create_file_for_reads_set_rev",
-        name="Create file for reads set - reverse reads",
-        description=command.CreateFileForReadSetCommand.__doc__,
-    )
-    async def create_file_for_reads_set_rev(
-        user: registered_user_dependency,  # type: ignore
-        case_id: UUID,
-        case_type_col_id: UUID,
-        file_content: str,
-    ) -> UUID:
-        is_fwd: bool = False
-        try:
-            created_file_id: UUID = app.handle(
-                command.CreateFileForReadSetCommand(
-                    user=user,
-                    file_content=file_content.encode("utf-8"),
-                    case_id=case_id,
-                    case_type_col_id=case_type_col_id,
-                    is_fwd=is_fwd,
-                )
-            )
-        except Exception as exception:
-            handle_exception("f2e3d4c5", user, exception)
-        return created_file_id
-
-    @router.post(
         "/create_seqs_for_cases",
-        operation_id="create__seqs_for_cases",
+        operation_id="create_seqs_for_cases",
         name="Create sequences for cases",
         description=command.CreateSeqsForCasesCommand.__doc__,
     )
-    async def create__seqs_for_cases(
+    async def create_seqs_for_cases(
         user: registered_user_dependency,  # type: ignore
         case_seqs: list[model.CaseSeq],
     ) -> list[model.Seq]:

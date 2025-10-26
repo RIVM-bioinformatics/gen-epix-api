@@ -4,8 +4,6 @@ from itertools import combinations
 from typing import Any, NoReturn
 from uuid import UUID
 
-import gen_epix.casedb.domain.model.case.complete_case_type
-import gen_epix.casedb.domain.model.case.non_persistable
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import (
     CaseColDataRule,
@@ -96,7 +94,7 @@ class CaseTransformer(Transformer):
     def __init__(
         self,
         case_service: BaseCaseService,
-        complete_case_type: gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType,
+        complete_case_type: model.CompleteCaseType,
     ):
         self.case_service = case_service
         self.complete_case_type = complete_case_type
@@ -167,7 +165,7 @@ class CaseTransformer(Transformer):
             data_collection_ids=obj.data_collection_ids,
             validated_cases=[
                 model.ValidatedCase(
-                    case=gen_epix.casedb.domain.model.case.non_persistable.CaseForCreateUpdate(
+                    case=model.CaseForCreateUpdate(
                         **x.model_dump(exclude={"content"}), content={}
                     ),
                     data_issues=[],

@@ -1,6 +1,6 @@
 import logging
 from test.test_client.app_test_client import ServiceTestClient as Env
-from test.test_client.enum import TestType as TestType  # to avoid PyTest warning
+from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from uuid import UUID
 
 import pytest
@@ -23,7 +23,7 @@ def get_test_client() -> Env:
     # test_util.set_log_level("casedb", logging.INFO)
 
     return Env(
-        test_type=TestType.CASEDB_CUSTOM,
+        test_type=EnumTestType.CASEDB_CUSTOM,
         repository_type=enum.RepositoryType.DICT,
         verbose=False,
         load_target="full",

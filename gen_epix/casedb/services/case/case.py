@@ -7,7 +7,6 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
-import gen_epix.casedb.domain.model.case.complete_case_type
 import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
@@ -217,7 +216,7 @@ class CaseService(BaseCaseService):
     def retrieve_complete_case_type(
         self: DomainBaseCaseService,
         cmd: command.RetrieveCompleteCaseTypeCommand,
-    ) -> gen_epix.casedb.domain.model.case.complete_case_type.CompleteCaseType:
+    ) -> model.CompleteCaseType:
         return case_service_retrieve_complete_case_type(self, cmd)
 
     def retrieve_case_type_stats(
@@ -264,55 +263,80 @@ class CaseService(BaseCaseService):
                     f"Unauthorized case types: {case_type_ids}"
                 )
 
-            with repository.uow() as uow:
-                # @ABAC: Verify validity of filter
-                if case_query.filter:
-                    # Make sure filter keys are UUIDs
-                    case_query.filter.set_keys(
-                        lambda x: UUID(x) if isinstance(x, str) else x
-                    )
-                    cols = self._verify_case_filter(uow, user, case_query.filter)
+        with repository.uow() as uow:
 
-                # @ABAC: Retrieve all cases with read access, and content filtered on case type
-                # col read access
-                cases = self._retrieve_cases_with_content_right(
+            # @ABAC: Verify any access to all given case sets if applicable
+            if case_set_ids:
+                case_sets = self._retrieve_case_sets_with_content_right(
                     uow,
                     user.id,
                     case_abac,
-                    # user_case_access,
-                    enum.CaseRight.READ_CASE,
-                    case_ids=None,
-                    datetime_range_filter=datetime_range_filter,
-                    filter_content=True,
+                    # user_case_access
+                    enum.CaseRight.READ_CASE_SET,
+                ) + self._retrieve_case_sets_with_content_right(
+                    uow,
+                    user.id,
+                    case_abac,
+                    # user_case_access
+                    enum.CaseRight.WRITE_CASE_SET,
                 )
+                invalid_case_set_ids = case_set_ids - {x.id for x in case_sets}
+                if invalid_case_set_ids:
+                    invalid_case_set_ids_str = ", ".join(
+                        [str(x) for x in invalid_case_set_ids]
+                    )
+                    raise exc.UnauthorizedAuthError(
+                        f"Unauthorized case sets: {invalid_case_set_ids_str}"
+                    )
 
-                # Filter cases by case types
-                if case_type_ids:
-                    cases = [x for x in cases if x.case_type_id in case_type_ids]
+            # @ABAC: Verify validity of filter
+            if case_query.filter:
+                # Make sure filter keys are UUIDs
+                case_query.filter.set_keys(
+                    lambda x: UUID(x) if isinstance(x, str) else x
+                )
+                cols = self._verify_case_filter(uow, user, case_query.filter)
 
-                # Filter cases by case sets
-                if case_set_ids:
-                    case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
-                    cases = [
-                        x
-                        for x in cases
-                        if x.id in case_case_sets
-                        and case_case_sets[x.id].intersection(case_set_ids)
-                    ]
+            # @ABAC: Retrieve all cases with read access, and content filtered on case type
+            # col read access
+            cases = self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                # user_case_access,
+                enum.CaseRight.READ_CASE,
+                case_ids=None,
+                datetime_range_filter=datetime_range_filter,
+                filter_content=True,
+            )
 
-                # Filter cases by filters
-                if case_query.filter:
-                    map_fns = CaseService._get_map_functions_for_filters(cols)
-                    cases = [
-                        x
-                        for x, y in zip(
-                            cases,
-                            case_query.filter.match_rows(
-                                (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
-                            ),
-                        )
-                        if y
-                    ]
+            # Filter cases by case types
+            if case_type_ids:
+                cases = [x for x in cases if x.case_type_id in case_type_ids]
+
+            # Filter cases by case sets
+            if case_set_ids:
+                case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
+                cases = [
+                    x
+                    for x in cases
+                    if x.id in case_case_sets
+                    and case_case_sets[x.id].intersection(case_set_ids)
+                ]
+
+            # Filter cases by filters
+            if case_query.filter:
+                map_fns = CaseService._get_map_functions_for_filters(cols)
+                cases = [
+                    x
+                    for x, y in zip(
+                        cases,
+                        case_query.filter.match_rows(
+                            (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
+                        ),
+                    )
+                    if y
+                ]
 
         # TODO: consider putting these cases, with their data already filtered, in a
         # cache, so that the expected subsequent call to retrieve them can be sped up
@@ -429,7 +453,7 @@ class CaseService(BaseCaseService):
         case_abac: model.CaseAbac,
         case_ids: list[UUID],
         seq_case_type_col_id: UUID,
-    ) -> list[UUID]:
+    ) -> list[UUID | None]:
         # @ABAC: Get cases and sequence_ids
         cases = self._retrieve_cases_with_content_right(
             uow,
@@ -439,7 +463,8 @@ class CaseService(BaseCaseService):
             case_ids=case_ids,
             filter_content=True,
         )
-        return [UUID(x.content.get(seq_case_type_col_id)) for x in cases]
+        retval = [x.content.get(seq_case_type_col_id) for x in cases]
+        return [UUID(x) for x in retval if x]
 
     def retrieve_genetic_sequence_by_case(
         self,
@@ -456,13 +481,15 @@ class CaseService(BaseCaseService):
         assert case_abac is not None
 
         with repository.uow() as uow:
-            seq_ids: list[UUID] = self._get_seq_ids_from_cases(
+            seq_ids: list[UUID | None] = self._get_seq_ids_from_cases(
                 uow,
                 user,
                 case_abac,
                 case_ids,
                 seq_case_type_col_id,
             )
+            if any(x is None for x in seq_ids):
+                raise exc.NoResultsError("Not all cases have a sequence")
             # Retrieve sequences
             genetic_sequences: list[model.GeneticSequence] = self.app.handle(
                 command.RetrieveGeneticSequenceByIdCommand(

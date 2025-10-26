@@ -275,7 +275,7 @@ class CreateFileForReadSetCommand(Command):
     """
 
     is_fwd: bool = Field(
-        description="Whether the file is a forward read file.", default=False
+        description="Whether the file is a forward read file.", default=True
     )
     case_id: UUID = Field(description="The ID of the case the read set belongs to.")
     case_type_col_id: UUID = Field(

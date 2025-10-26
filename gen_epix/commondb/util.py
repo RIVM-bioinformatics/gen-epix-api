@@ -10,7 +10,6 @@ from collections.abc import Hashable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from test.test_client.enum import TestType
 from typing import Any, Iterable, Type
 
 import ulid
@@ -522,7 +521,7 @@ def get_app_cfgs(
     app_type: AppType,
     service_type_enum: Type[Enum],
     repository_type_enum: Type[Enum],
-    test_type: TestType | str,
+    test_type: Enum | str,
     dev_idp_config: DevIdpConfig = DevIdpConfig.NONE,
     general_cfg_path: Path | None = None,
     cfg_path: Path | None = None,
