@@ -120,6 +120,12 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
+    library_prep_protocol_id: UUID = Field(
+        description="The unique identifier for the library preparation protocol. FOREIGN KEY"
+    )
+    library_prep_protocol: LibraryPrepProtocol | None = Field(
+        default=None, description="The sequencing protocol."
+    )
     fwd_uri: str | None = Field(
         default=None,
         description="The URI of the forward read set. In case of single-end reads, this is the only read set.",
@@ -147,15 +153,29 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         min_length=32,
         max_length=32,
     )
-    library_prep_protocol_id: UUID = Field(
-        description="The unique identifier for the library preparation protocol. FOREIGN KEY"
-    )
-    library_prep_protocol: LibraryPrepProtocol | None = Field(
-        default=None, description="The sequencing protocol."
-    )
     sequencing_run_code: str | None = Field(
-        description="The code of the sequencing run.", max_length=255
+        description="The code of the sequencing run.", max_length=255, default=None
     )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        if self.fwd_uri and self.rev_uri and self.fwd_uri == self.rev_uri:
+            raise ValueError("fwd_uri must be different from rev_uri")
+        if (
+            self.fwd_file_id
+            and self.rev_file_id
+            and self.fwd_file_id == self.rev_file_id
+        ):
+            raise ValueError("fwd_file_id must be different from rev_file_id")
+        if (
+            self.fwd_reads_hash_sha256
+            and self.rev_reads_hash_sha256
+            and self.fwd_reads_hash_sha256 == self.rev_reads_hash_sha256
+        ):
+            raise ValueError(
+                "fwd_reads_hash_sha256 must be different from rev_reads_hash_sha256"
+            )
+        return self
 
 
 class RawSeq(Model, SeqMixin):
@@ -213,6 +233,9 @@ class Seq(Model, CodeMixin, QualityMixin):
         description="The unique identifier for the raw sequence, if available. FOREIGN KEY",
     )
     raw_seq: RawSeq | None = Field(default=None, description="The raw sequence.")
+    file_id: UUID | None = Field(
+        default=None, description="The unique file identifier."
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
@@ -256,7 +279,7 @@ class SeqAlignment(Model):
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
     )
-    seq: Seq = Field(default=None, description="The sequence.")
+    seq: Seq = Field(description="The sequence.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
     )
@@ -475,14 +498,12 @@ class SeqClassification(Model):
         description="The ID of the sequence classification protocol. FOREIGN KEY"
     )
     seq_classification_protocol: SeqClassificationProtocol = Field(
-        default=None, description="The sequence classification protocol."
+        description="The sequence classification protocol."
     )
     primary_category_id: UUID | None = Field(
         description="The ID of the category. FOREIGN KEY"
     )
-    primary_category: SeqCategory = Field(
-        default=None, description="The primary category."
-    )
+    primary_category: SeqCategory = Field(description="The primary category.")
     classification: str = Field(description="The classification of the sequence.")
     classification_format: enum.SeqClassificationFormat = Field(
         default=enum.SeqClassificationFormat.SEQ_CLASSIFICATION_FORMAT1,
@@ -522,7 +543,7 @@ class SeqTaxonomy(Model):
     primary_taxon_id: UUID = Field(
         description="The unique identifier for the primary taxon. FOREIGN KEY"
     )
-    primary_taxon: UUID = Field(default=None, description="The primary taxon.")
+    primary_taxon: Taxon | None = Field(default=None, description="The primary taxon.")
     taxonomy: str = Field(description="The taxonomy results of the sequence.")
     taxonomy_format: enum.TaxonomyFormat = Field(
         default=enum.TaxonomyFormat.TAXONOMY_FORMAT1,

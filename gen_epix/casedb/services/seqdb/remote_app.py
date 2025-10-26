@@ -1,22 +1,21 @@
+import json
 from datetime import datetime
 from logging import Logger
-from typing import Any, Callable
-from uuid import UUID
+from typing import Any
 
 import httpx
 from jose import jwt
 
-from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command import RetrievePhylogeneticTreeBySequencesCommand
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class SeqdbRemoteApp(RemoteApp):
@@ -25,18 +24,8 @@ class SeqdbRemoteApp(RemoteApp):
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
-    COMMAND_MAP: dict[type[Command], type[Command]] = {
-        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
-    }
     ROUTE_MAP: dict[type[Command], str] = {
         seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-    }
-
-    TREE_ALGORITHM_MAP = {
-        x: y
-        for x in enum.TreeAlgorithmType
-        for y in seqdb_enum.TreeAlgorithm
-        if x.value == y.value
     }
 
     def __init__(
@@ -127,12 +116,12 @@ class SeqdbRemoteApp(RemoteApp):
         # Register routes and handlers
         seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
         self.register_route(
-            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
+            seqdb_command_class,
             self.ROUTE_MAP[seqdb_command_class],
         )
         self.register_handler(
-            self.COMMAND_MAP[RetrievePhylogeneticTreeBySequencesCommand],
-            self.create_retrieve_phylogenetic_tree_handler(),
+            seqdb_command_class,
+            self.retrieve_phylogenetic_tree,
         )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
@@ -175,67 +164,37 @@ class SeqdbRemoteApp(RemoteApp):
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
         )
 
-    def create_retrieve_phylogenetic_tree_handler(self) -> Callable:
+    def retrieve_phylogenetic_tree(
+        self,
+        cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
+    ) -> seqdb_model.PhylogeneticTree | None:
+        print("DEBUG: SeqdbRemoteApp.retrieve_phylogenetic_tree: start.")
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
 
-        seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
-        # Route registration is handled during initialization
+        # Create request body matching seqdb API expectations
 
-        def handler(
-            cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
-        ) -> model.PhylogeneticTree | None:
+        request_body = RetrievePhylogeneticTreeRequestBody(
+            seq_distance_protocol_id=cmd.seq_distance_protocol_id,
+            tree_algorithm=cmd.tree_algorithm,
+            seq_ids=cmd.seq_ids,
+            leaf_codes=cmd.leaf_names,
+        )
+        print(
+            f"DEBUG: SeqdbRemoteApp.retrieve_phylogenetic_tree: request body created: {request_body}."
+        )
+
+        with httpx.Client(verify=self.ssl_context) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
             print(
-                "DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: start."
+                f"DEBUG: SeqdbRemoteApp.retrieve_phylogenetic_tree: response with status {response.status_code}: {response.content}."
             )
-            headers = self.get_headers(cmd)
-            route = self.get_route(cmd)
-
-            # Create request body matching seqdb API expectations
-            from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
-
-            request_body = RetrievePhylogeneticTreeRequestBody(
-                seq_distance_protocol_id=cmd.seq_distance_protocol_id,
-                tree_algorithm=cmd.tree_algorithm,
-                seq_ids=cmd.seq_ids,
-                leaf_codes=cmd.leaf_names,
-            )
-            print(
-                f"DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: request body created: {request_body}."
-            )
-
-            with httpx.Client(verify=self.ssl_context) as client:
-                response = client.post(
-                    route,
-                    json=request_body.model_dump_json(),
-                    headers=headers,
-                )
-                print(
-                    f"DEBUG: SeqdbRemoteApp.create_retrieve_phylogenetic_tree_handler: response with status {response.status_code}: {response.content}."
-                )
-                response.raise_for_status()
-                data = response.json()
-                if not data:
-                    return None
-
-                # Map seqdb TreeAlgorithm to casedb TreeAlgorithmType
-                tree_algorithm_code = None
-                for casedb_alg, seqdb_alg in self.TREE_ALGORITHM_MAP.items():
-                    if seqdb_alg == cmd.tree_algorithm:
-                        tree_algorithm_code = casedb_alg
-                        break
-
-                if tree_algorithm_code is None:
-                    raise ValueError(f"Unknown tree algorithm: {cmd.tree_algorithm}")
-
-                phylogenetic_tree = model.PhylogeneticTree(
-                    tree_algorithm_code=tree_algorithm_code,
-                    sequence_ids=[UUID(sid) for sid in data["sequence_ids"]],
-                    leaf_ids=(
-                        [UUID(lid) for lid in data["leaf_ids"]]
-                        if data.get("leaf_ids")
-                        else None
-                    ),
-                    newick_repr=data["newick_repr"],
-                )
-                return phylogenetic_tree
-
-        return handler
+            response.raise_for_status()
+        data = response.json()
+        if not data:
+            return None
+        return seqdb_model.PhylogeneticTree(**data)

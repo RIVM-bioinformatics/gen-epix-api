@@ -259,6 +259,53 @@ class RetrieveAlleleProfileCommand(Command):
     )
 
 
+class CreateReadSetsForCasesCommand(Command):
+    """
+    Create read sets for a set of cases based on a read set case type column.
+    """
+
+    case_read_sets: list[model.CaseReadSet] = Field(
+        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created."
+    )
+
+
+class CreateFileForReadSetCommand(Command):
+    """
+    Create a file for a read set associated with a case.
+    """
+
+    is_fwd: bool = Field(
+        description="Whether the file is a forward read file.", default=True
+    )
+    case_id: UUID = Field(description="The ID of the case the read set belongs to.")
+    case_type_col_id: UUID = Field(
+        description="The ID of the read set case type column."
+    )
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
+class CreateFileForSeqCommand(Command):
+    """
+    Create a file for a sequence associated with a case.
+    """
+
+    case_id: UUID = Field(description="The ID of the case the sequence belongs to.")
+    case_type_col_id: UUID = Field(
+        description="The ID of the genetic sequence case type column."
+    )
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
+class CreateSeqsForCasesCommand(Command):
+    """
+    Create sequences for a set of cases based on a genetic sequence case type column.
+    """
+
+    case_seqs: list[model.CaseSeq] = Field(
+        description="The CaseSequences describing for which (case_id, case_type_col_id) a Sequence is to be created."
+    )
+
+
 # CRUD
 
 

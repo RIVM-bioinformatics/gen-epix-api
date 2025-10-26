@@ -125,6 +125,10 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
+class CreateFileForReadSetRequestBody(PydanticBaseModel):
+    file_content: bytes = Field(description="The content of the file to create.")
+
+
 def create_case_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -542,6 +546,104 @@ def create_case_endpoints(
                 "a4c03b54", user, exception, request_ids=request_body.sequence_ids
             )
         return retval
+
+    @router.post(
+        "/create_read_sets_for_cases",
+        operation_id="create__read_sets_for_cases",
+        name="Create reads sets for cases",
+        description=command.CreateReadSetsForCasesCommand.__doc__,
+    )
+    async def create__read_sets_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        case_read_sets: list[model.CaseReadSet],
+    ) -> list[model.ReadSet]:
+        try:
+            created_read_sets: list[model.ReadSet] = app.handle(
+                command.CreateReadSetsForCasesCommand(
+                    user=user,
+                    case_read_sets=case_read_sets,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e3d4f5a6", user, exception)
+        return created_read_sets
+
+    @router.post(
+        "/create_file_for_read_set/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_read_set",
+        name="Create file for reads set",
+        description=command.CreateFileForReadSetCommand.__doc__,
+    )
+    async def create_file_for_read_set_fwd(
+        user: registered_user_dependency,  # type: ignore
+        case_id: UUID,
+        case_type_col_id: UUID,
+        file_content: str,  # TODO: change to bytes or something else
+        is_fwd: bool = True,
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForReadSetCommand(
+                    user=user,
+                    file_content=file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                    is_fwd=is_fwd,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d3f4e2b1", user, exception)
+        return created_file_id
+
+    @router.post(
+        "/create_seqs_for_cases",
+        operation_id="create_seqs_for_cases",
+        name="Create sequences for cases",
+        description=command.CreateSeqsForCasesCommand.__doc__,
+    )
+    async def create_seqs_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        case_seqs: list[model.CaseSeq],
+    ) -> list[model.Seq]:
+        try:
+            created_seqs: list[model.Seq] = app.handle(
+                command.CreateSeqsForCasesCommand(
+                    user=user,
+                    case_seqs=case_seqs,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a1b2c3d4", user, exception)
+        return created_seqs
+
+    @router.post(
+        "/create_file_for_seq/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_seq",
+        name="Create file for sequence",
+        description=command.CreateFileForSeqCommand.__doc__,
+    )
+    async def create_file_for_seq(
+        user: registered_user_dependency,  # type: ignore
+        case_id: UUID,
+        case_type_col_id: UUID,
+        file_content: str,  # TODO: change to bytes or something else
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForSeqCommand(
+                    user=user,
+                    file_content=file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("b5c6d7e8", user, exception)
+        return created_file_id
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

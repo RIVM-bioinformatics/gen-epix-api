@@ -8,7 +8,7 @@ from uuid import UUID
 import httpx
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.fastapp import App, model
+from gen_epix.fastapp import App, exc, model
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
@@ -143,14 +143,27 @@ class RemoteApp(App):
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
         print(
-            f"DEBUG: RemoteApp.apply_handler: command_class={command_class.__name__}, route={route}"
+            f"DEBUG: RemoteApp.apply_handler: command_class={command_class.NAME}, route={route}"
         )
         if not route:
             raise NotImplementedError(
-                f"No route registered for command: {cmd.__class__.__name__}"
+                f"No route registered for command: {cmd.__class__.NAME}"
             )
-
-        return handler(cmd)
+        try:
+            retval = handler(cmd)
+        except httpx.RequestError as e:
+            raise exc.ServiceException(
+                f"HTTP request error when handling remote command {command_class.NAME}: {e}"
+            ) from e
+        except httpx.HTTPStatusError as e:
+            raise exc.ServiceException(
+                f"HTTP status {e.response.status_code} error when handling remote command {command_class.NAME}: {e}"
+            ) from e
+        except Exception as e:
+            raise exc.ServiceException(
+                f"Error when handling remote command {command_class.NAME}: {e}"
+            ) from e
+        return retval
 
     def register_generated_crud_route(
         self,
@@ -202,6 +215,9 @@ class RemoteApp(App):
         ) -> Any:
 
             headers = self.get_headers(cmd)
+            model_class = cmd.MODEL_CLASS
+            return_model_class: type = model_class
+            is_list = False
             with httpx.Client(verify=self.ssl_context) as client:
                 if cmd.operation == CrudOperation.READ_ALL:
                     if cmd.query_filter:
@@ -218,7 +234,7 @@ class RemoteApp(App):
                         )
                     else:
                         response = client.get(base_route, headers=headers)
-                    retval = self._content_to_obj(response, model_class, is_list=True)
+                    is_list = True
                 elif cmd.operation == CrudOperation.READ_SOME:
                     assert isinstance(cmd.obj_ids, list)
                     ids = json.dumps([str(x) for x in cmd.obj_ids])
@@ -227,13 +243,12 @@ class RemoteApp(App):
                         headers=headers,
                         params={"ids": ids},
                     )
-                    retval = self._content_to_obj(response, model_class, is_list=True)
+                    is_list = True
                 elif cmd.operation == CrudOperation.READ_ONE:
                     response = client.get(
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
                     )
-                    retval = self._content_to_obj(response, model_class)
                 elif cmd.operation == CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.post(
@@ -241,7 +256,6 @@ class RemoteApp(App):
                         json=json.loads(cmd.objs.model_dump_json()),
                         headers=headers,
                     )
-                    retval = self._content_to_obj(response, model_class)
                 elif cmd.operation == CrudOperation.CREATE_SOME:
                     assert isinstance(cmd.objs, list)
                     response = client.post(
@@ -249,7 +263,7 @@ class RemoteApp(App):
                         json=[json.loads(x.model_dump_json()) for x in cmd.objs],
                         headers=headers,
                     )
-                    retval = self._content_to_obj(response, model_class, is_list=True)
+                    is_list = True
                 elif cmd.operation == CrudOperation.UPDATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.put(
@@ -257,7 +271,6 @@ class RemoteApp(App):
                         json=json.loads(cmd.objs.model_dump_json()),
                         headers=headers,
                     )
-                    retval = self._content_to_obj(response, model_class)
                 elif cmd.operation == CrudOperation.UPDATE_SOME:
                     assert isinstance(cmd.objs, list)
                     response = client.put(
@@ -265,13 +278,13 @@ class RemoteApp(App):
                         json=[json.loads(x.model_dump_json()) for x in cmd.objs],
                         headers=headers,
                     )
-                    retval = self._content_to_obj(response, model_class, is_list=True)
+                    is_list = True
                 elif cmd.operation == CrudOperation.DELETE_ONE:
                     assert isinstance(cmd.obj_ids, UUID)
                     response = client.delete(
                         f"{base_route}/{cmd.obj_ids}", headers=headers
                     )
-                    retval = self._content_to_obj(response, UUID)
+                    return_model_class = UUID
                 elif cmd.operation == CrudOperation.DELETE_SOME:
                     assert isinstance(cmd.obj_ids, list)
                     ids = json.dumps([str(x) for x in cmd.obj_ids])
@@ -280,10 +293,13 @@ class RemoteApp(App):
                         headers=headers,
                         params={"ids": ids},
                     )
-                    retval = self._content_to_obj(response, UUID, is_list=True)
+                    return_model_class = UUID
+                    is_list = True
                 else:
                     raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
-            return retval, response
+                response.raise_for_status()
+            retval = self._content_to_obj(response, return_model_class, is_list=is_list)
+            return retval
 
         return partial(
             handler,

@@ -169,6 +169,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             SeqDistance,
             SeqTaxonomy,
         ],
+        enum.ServiceType.FILE: [File],
     }
 )
 

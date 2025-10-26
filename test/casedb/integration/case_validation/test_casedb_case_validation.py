@@ -130,8 +130,14 @@ class TestCaseValidation(CaseValidationSetup):
 
         # Convert case data to cases and new_cases
         df = env.props["_case_data"]
-        all_cases: dict[UUID, model.CaseForCreateUpdate] = {}
-        all_validated_cases: dict[UUID, model.CaseForCreateUpdate] = {}
+        all_cases: dict[
+            UUID,
+            model.CaseForCreateUpdate,
+        ] = {}
+        all_validated_cases: dict[
+            UUID,
+            model.CaseForCreateUpdate,
+        ] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["id"])
             all_cases.setdefault(

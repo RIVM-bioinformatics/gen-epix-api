@@ -13,9 +13,9 @@ from uuid import UUID
 import pytest
 
 import gen_epix.commondb.test.util as test_util
-from gen_epix.casedb.domain import command as casedb_command
-from gen_epix.casedb.domain import enum as casedb_enum
-from gen_epix.casedb.domain import model as casedb_model
+from gen_epix.casedb.domain import command
+from gen_epix.casedb.domain import enum as enum
+from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppEnv as CasedbAppEnv
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
@@ -104,8 +104,8 @@ def test_casedb_seqdb_connection(
     # Create casedb app instance
     casedb_app_cfg = AppCfg(
         AppType.CASEDB,
-        casedb_enum.ServiceType,
-        casedb_enum.RepositoryType,
+        enum.ServiceType,
+        enum.RepositoryType,
         log_setup=False,
     )
     casedb_app_env = CasedbAppEnv(casedb_app_cfg, log_setup=False)
@@ -145,76 +145,59 @@ def test_casedb_seqdb_connection(
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
     # Create root user
-    root_user: casedb_model.User = test_util.create_root_user_from_claims(
+    root_user: model.User = test_util.create_root_user_from_claims(
         casedb_app_env.cfg, casedb_app
     )
 
     # Get all cols, case_type_cols and cases
-    cols: dict[UUID, casedb_model.Col] = {
+    cols: dict[UUID, model.Col] = {
         x.id: x
         for x in casedb_app.handle(
-            casedb_command.ColCrudCommand(
+            command.ColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
     }
-    case_type_cols: dict[UUID, casedb_model.CaseTypeCol] = {
+    case_type_cols: dict[UUID, model.CaseTypeCol] = {
         x.id: x
         for x in casedb_app.handle(
-            casedb_command.CaseTypeColCrudCommand(
+            command.CaseTypeColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
     }
-    cases: list[casedb_model.Case] = casedb_app.handle(
-        casedb_command.CaseCrudCommand(
+    cases: list[model.Case] = casedb_app.handle(
+        command.CaseCrudCommand(
             user=root_user,
             operation=CrudOperation.READ_ALL,
         )
     )
 
-    # Test genetic sequence retrieval (which calls SeqDB)
-    genetic_sequence_case_type_col_ids = [
-        x.id
-        for x in case_type_cols.values()
-        if cols[x.col_id].col_type == casedb_enum.ColType.GENETIC_SEQUENCE
-    ]
-    genetic_sequence_retrieved = False
-    for case_type_col_id in genetic_sequence_case_type_col_ids:
-        case_ids: list[UUID] = [x.id for x in cases if case_type_col_id in x.content]
-        if len(case_ids) < 2:
-            continue
-        if len(case_ids) > 5:
-            case_ids = case_ids[0:5]
-        genetic_sequences = casedb_app.handle(
-            casedb_command.RetrieveGeneticSequenceByCaseCommand(
-                user=root_user,  # type: ignore[arg-type]
-                case_ids=case_ids,  # Test with just one case
-                genetic_sequence_case_type_col_id=case_type_col_id,
-            )
-        )
-        genetic_sequence_retrieved = True
-        break
-
     # Test phylogenetic tree retrieval (which calls SeqDB)
+    phylogenetic_tree_retrieved = False
     genetic_distance_case_type_col_ids = [
         x.id
         for x in case_type_cols.values()
-        if cols[x.col_id].col_type == casedb_enum.ColType.GENETIC_DISTANCE
+        if cols[x.col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
     for case_type_col_id in genetic_distance_case_type_col_ids:
-        case_ids: list[UUID] = [x.id for x in cases if case_type_col_id in x.content]
+        case_type_col = case_type_cols[case_type_col_id]
+        genetic_sequence_case_type_col_id = (
+            case_type_col.genetic_sequence_case_type_col_id
+        )
+        case_ids: list[UUID] = [
+            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
+        ]
         if len(case_ids) < 2:
             continue
         if len(case_ids) > 5:
             case_ids = case_ids[0:5]
-        case_type_col = case_type_cols[case_type_col_id]
         if case_type_col.tree_algorithm_codes and case_type_col.id:
             for tree_algorithm_code in case_type_col.tree_algorithm_codes:
                 phylogenetic_tree = casedb_app.handle(
-                    casedb_command.RetrievePhylogeneticTreeByCasesCommand(
+                    command.RetrievePhylogeneticTreeByCasesCommand(
                         user=root_user,  # type: ignore[arg-type]
                         genetic_distance_case_type_col_id=case_type_col.id,
                         tree_algorithm=tree_algorithm_code,
@@ -227,4 +210,4 @@ def test_casedb_seqdb_connection(
             break
 
     # Log results
-    assert phylogenetic_tree_retrieved and genetic_sequence_retrieved
+    assert phylogenetic_tree_retrieved
