@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from typing import Any
+from typing import Any, Type
 from uuid import UUID
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
@@ -281,10 +281,12 @@ class SeqdbTestClient(TestClient):
         assert read_set.rev_uri == rev_uri
         return self._set_obj(read_set)
 
-    def get_read_set_kwargs(self) -> dict:
-        return {
-            "fwd_uri": "http://reads/sample_x_1.fastq",
-            "rev_uri": "http://reads/sample_x_2.fastq",
-            "fwd_reads_hash_sha256_or_content": "a" * 64,
-            "rev_reads_hash_sha256_or_content": "b" * 64,
-        }
+    def get_default_kwargs(self, model_class: Type[model.Model]) -> dict:
+        if model_class == model.ReadSet:
+            return {
+                "fwd_uri": "http://reads/sample_x_1.fastq",
+                "rev_uri": "http://reads/sample_x_2.fastq",
+                "fwd_reads_hash_sha256_or_content": "a" * 64,
+                "rev_reads_hash_sha256_or_content": "b" * 64,
+            }
+        raise NotImplementedError(f"No default kwargs for model class {model_class}")

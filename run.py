@@ -595,6 +595,17 @@ class Run:
             ]
         )
 
+    def test_end_to_end(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/end_to_end/casedb_seqdb_connection",
+                "test/end_to_end/client_credential_flow",
+            ]
+        )
+
     def test_end_to_end_casedb_seqdb_connection(self) -> None:
         import pytest
 

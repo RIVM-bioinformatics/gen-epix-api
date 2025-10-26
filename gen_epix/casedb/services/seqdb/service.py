@@ -3,35 +3,31 @@ from typing import Any, Hashable, Iterable
 from uuid import UUID
 
 from gen_epix.casedb.domain import command
-from gen_epix.casedb.domain import enum as casedb_enum
+from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import exc, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import App, CrudCommand, Model
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import enum as common_enum
+from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
-from gen_epix.seqdb.domain.command import (
-    RetrievePhylogeneticTreeCommand as SeqdbRetrievePhylogeneticTreeCommand,
-)
-from gen_epix.seqdb.domain.enum import TreeAlgorithm as SeqdbTreeAlgorithm
-from gen_epix.seqdb.domain.model import PhylogeneticTree as SeqdbPhylogeneticTree
 from gen_epix.seqdb.domain.model import User as SeqdbUser
 from gen_epix.seqdb.env import AppEnv
 
 
 class SeqdbService(BaseSeqdbService):
 
-    @staticmethod
-    # TODO: make explicit role by role mapping
-    def map_roles(
-        roles: set[casedb_enum.Role],
-        # target_enum: Type[common_enum.Role],
-    ) -> set[common_enum.Role]:
-        return {common_enum.Role[r.name] for r in roles}
+    COMMAND_MAP: dict[type[command.Command], type[seqdb_command.Command]] = {
+        command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
+    }
+    TREE_ALGORITHM_MAP = {
+        x: y
+        for x in enum.TreeAlgorithmType
+        for y in seqdb_enum.TreeAlgorithm
+        if x.value == y.value
+    }
 
     def __init__(self, app: App, seqdb_app_type: str, **kwargs: Any) -> None:
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
@@ -44,7 +40,7 @@ class SeqdbService(BaseSeqdbService):
                 seqdb_app_cfg = seqdb_local_app_props.pop("app_cfg")
             else:
                 seqdb_app_cfg = AppCfg(
-                    AppType.SEQDB, common_enum.ServiceType, common_enum.RepositoryType
+                    AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
                 )
             log_setup = seqdb_local_app_props.pop(
                 "log_setup", kwargs.get("logger") is not None
@@ -81,21 +77,23 @@ class SeqdbService(BaseSeqdbService):
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
     ) -> model.PhylogeneticTree | None:
         user = cmd.user
+        # Prepare seqdb command and calculate tree via seqdb
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:
             leaf_names = [str(leaf_id_mapper(x)) for x in cmd.sequence_ids]
         else:
             leaf_names = None
-        seqdb_cmd = SeqdbRetrievePhylogeneticTreeCommand(
+        seqdb_cmd = seqdb_command.RetrievePhylogeneticTreeCommand(
             user=self.seqdb_user,
             seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
-            tree_algorithm=SeqdbTreeAlgorithm[cmd.tree_algorithm_code.value],
+            tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],
             seq_ids=cmd.sequence_ids,
             leaf_names=leaf_names,
         )
-        seqdb_phylogenetic_tree: SeqdbPhylogeneticTree = self.seqdb_app.handle(
+        seqdb_phylogenetic_tree: seqdb_model.PhylogeneticTree = self.seqdb_app.handle(
             seqdb_cmd
         )
+        # Convert seqdb tree model to casedb model
         phylogenetic_tree = model.PhylogeneticTree(
             tree_algorithm_code=cmd.tree_algorithm_code,
             sequence_ids=seqdb_phylogenetic_tree.seq_ids,
@@ -166,8 +164,14 @@ class SeqdbService(BaseSeqdbService):
     def crud(
         self, cmd: CrudCommand
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
-        cmd.user.roles: set[common_enum.Role] = self.map_roles(cmd.user.roles)  # type: ignore
+        """
+        Generic CRUD operation handler that forwards the command to seqdb while
+        setting the functional user.
+        """
+        casedb_user = cmd.user
+        cmd.user = self.seqdb_user
         result = self.seqdb_app.handle(cmd)
+        cmd.user = casedb_user
         return result  # type: ignore[no-any-return]
 
     def retrieve_read_sets_by_id(self, read_set_id: UUID) -> list[model.ReadSet]:

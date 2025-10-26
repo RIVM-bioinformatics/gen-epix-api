@@ -206,7 +206,7 @@ class TestCreate:
 
     def test_create_read_set(self, env: Env) -> None:
         # Create ReadSet as root, app_admin, org_admin and org_user
-        kwargs = env.get_read_set_kwargs() | {
+        kwargs = env.get_default_kwargs(model.ReadSet) | {
             "library_prep_protocol_or_str": "library_prep_protocol1",
         }
         for exec_user in DATA_USERS:
@@ -215,7 +215,7 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_read_set_raise(self, env: Env) -> None:
         # Check that below data users cannot create ReadSet
-        kwargs = env.get_read_set_kwargs() | {
+        kwargs = env.get_default_kwargs(model.ReadSet) | {
             "library_prep_protocol_or_str": "library_prep_protocol1",
         }
         for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
@@ -223,7 +223,7 @@ class TestCreate:
                 env.create_read_set(exec_user, **kwargs)
 
     def test_create_file_for_read_set(self, env: Env) -> None:
-        kwargs = env.get_read_set_kwargs() | {
+        kwargs = env.get_default_kwargs(model.ReadSet) | {
             "library_prep_protocol_or_str": "library_prep_protocol1",
         }
         for exec_user in DATA_USERS:
@@ -271,6 +271,6 @@ class TestCreate:
         with pytest.raises(exc.InvalidLinkIdsError):
             env.create_read_set(
                 "root1_1",
-                **env.get_read_set_kwargs(),
+                **env.get_default_kwargs(model.ReadSet),
                 set_dummy_library_prep_protocol=True,
             )

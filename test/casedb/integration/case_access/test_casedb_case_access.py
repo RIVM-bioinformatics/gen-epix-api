@@ -19,12 +19,12 @@ from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.seqdb.domain import enum as common_enum
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
-    common_enum.ServiceType,
-    common_enum.RepositoryType,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
     TEST_TYPE,
 )
 CASEDB_APP_CFGS = get_app_cfgs(
