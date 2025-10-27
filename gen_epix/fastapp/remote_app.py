@@ -157,8 +157,10 @@ class RemoteApp(App):
                 f"HTTP request error when handling remote command {command_class.NAME}: {e}"
             ) from e
         except httpx.HTTPStatusError as e:
+            # Handle HTTPStatusError with proper access to response attributes
+            status_code = getattr(e.response, 'status_code', 'unknown') if hasattr(e, 'response') and e.response else 'unknown'
             raise exc.ServiceException(
-                f"HTTP status {e.response.status_code} error when handling remote command {command_class.NAME}: {e}"
+                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}"
             ) from e
         except Exception as e:
             raise exc.ServiceException(
