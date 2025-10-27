@@ -143,9 +143,6 @@ class RemoteApp(App):
     ) -> Any:
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
-        print(
-            f"DEBUG: RemoteApp.apply_handler: command_class={command_class.NAME}, route={route}"
-        )
         if not route:
             raise NotImplementedError(
                 f"No route registered for command: {cmd.__class__.NAME}"

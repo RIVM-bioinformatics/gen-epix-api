@@ -240,13 +240,11 @@ class OidcClient(IdpClient, OpenIdConnect):
         server_cfg = self.server_cfg
         # TODO: check audience claim as well?
         if claims["iss"] != server_cfg.issuer or claims.get("aud") != self.audience:
-            print(f"DEBUG: OidcClient.get_claims_from_jwt: claims['iss']: {claims['iss']}, server_cfg.issuer: {server_cfg.issuer}, claims['aud']: {claims.get('aud')}, self.audience: {self.audience}")
             # Different OIDC server
             return None
 
         iat: int = claims.get("iat", -1)
         if iat == -1 or iat > int(datetime.now().timestamp()):
-            print(f"DEBUG: OidcClient.get_claims_from_jwt: Token issued in the future")
             return None
 
         # Get key to verify signature and decode again
@@ -271,7 +269,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 msg += "signature is invalid"
             else:
                 msg += "unknown issue"
-            print(f"DEBUG: OidcClient.get_claims_from_jwt: {msg}")
             if self.logger:
                 self.logger.warning(
                     self._log_item_class(
@@ -296,7 +293,6 @@ class OidcClient(IdpClient, OpenIdConnect):
             else:
                 msg_part = "no issuer"
             if self.logger:
-                print(f"DEBUG: OidcClient.get_claims_from_jwt: JWT does not contain required claims: {msg_part}")
                 self.logger.warning(
                     self._log_item_class(
                         code="b4a1d49b",
@@ -342,9 +338,6 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         # Get token endpoint URL
         url = self.server_cfg.token_endpoint
-        print(
-            f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: token endpoint URL: {url}"
-        )
         if not isinstance(url, str):
             # Try to get from discovery document
             if self.logger:
@@ -374,9 +367,6 @@ class OidcClient(IdpClient, OpenIdConnect):
         # }
 
         # Call server with retries
-        print(
-            f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: calling IDP with {token_data}"
-        )
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
@@ -386,18 +376,12 @@ class OidcClient(IdpClient, OpenIdConnect):
                         data=token_data,
                         headers=headers,
                     )
-                    print(
-                        f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: received response {response.status_code} with content {response.content}"
-                    )
                     response.raise_for_status()
                     token_response = response.json()
                     token: str = token_response["access_token"]
                     return token
             except Exception as exception:
                 last_exception = exception
-                print(
-                    f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: exception during attempt {attempt}: {exception}"
-                )
                 if self.logger:
                     self.logger.warning(
                         self._log_item_class(
@@ -411,9 +395,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 time.sleep(base_delay)
 
         # All retries failed
-        print(
-            f"DEBUG: OidcClient[{self.server_cfg.name}].retrieve_jwt_with_client_credentials_flow: all attempts failed"
-        )
         if self.logger:
             self.logger.error(
                 self._log_item_class(
@@ -511,32 +492,19 @@ class OidcClient(IdpClient, OpenIdConnect):
         """
         Retrieve verified claims for the user based on the request.
         """
-        print(f"DEBUG: OidcClient[{self.server_cfg.name}].__call__: start.")
         if authorization := request.headers.get("authorization"):
             scheme, token = get_authorization_scheme_param(authorization)
             if scheme.upper() == "BEARER":
                 # TODO: check if this is a security risk
                 # or whether it should return an error
                 try:
-                    print(
-                        f"DEBUG: OidcClient[{self.server_cfg.name}].__call__: processing token."
-                    )
                     claims = await self.get_claims_from_jwt(token)
                     if not claims:
-                        print(
-                            f"DEBUG: OidcClient[{self.server_cfg.name}].__call__: not authenticated."
-                        )
                         return None
-                    print(
-                        f"DEBUG: OidcClient[{self.server_cfg.name}].__call__: authenticated."
-                    )
                     return Claims(
                         claims=claims, scheme=scheme, token=token, idp_client_id=self.id
                     )
                 except exc.AuthException as exception:
-                    print(
-                        f"DEBUG: OidcClient[{self.server_cfg.name}].__call__: exception."
-                    )
                     if self.logger:
                         self.logger.warning(
                             self._log_item_class(
