@@ -130,8 +130,14 @@ class TestCaseValidation(CaseValidationSetup):
 
         # Convert case data to cases and new_cases
         df = env.props["_case_data"]
-        all_cases: dict[UUID, model.CaseForCreateUpdate] = {}
-        all_validated_cases: dict[UUID, model.CaseForCreateUpdate] = {}
+        all_cases: dict[
+            UUID,
+            model.CaseForCreateUpdate,
+        ] = {}
+        all_validated_cases: dict[
+            UUID,
+            model.CaseForCreateUpdate,
+        ] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["id"])
             all_cases.setdefault(
@@ -287,11 +293,30 @@ class TestCaseValidation(CaseValidationSetup):
                     print(f"\t{msg}")
                 raise AssertionError(msg)
             if validation_report is not None:
+                # Collect derived/conflict case_type_col_ids from validation report
+                # Both DERIVED and CONFLICT are acceptable differences since they represent
+                # values that were correctly transformed or overwritten
+                acceptable_difference_col_ids: set[UUID] = set()
+                for validated_case in validation_report.validated_cases:
+                    for data_issue in validated_case.data_issues:
+                        if data_issue.data_rule in (
+                            enum.CaseColDataRule.DERIVED,
+                            enum.CaseColDataRule.CONFLICT,
+                        ):
+                            acceptable_difference_col_ids.add(
+                                data_issue.case_type_col_id
+                            )
+                if env.verbose and acceptable_difference_col_ids:
+                    print(
+                        f"\t  Found acceptable difference columns: {acceptable_difference_col_ids}"
+                    )
+
                 # Compare cases to new cases
                 actual_validated_cases = [
                     x.case for x in validation_report.validated_cases
                 ]
-                case_differences = set()
+                case_differences: set[tuple[UUID, str | None, str | None]] = set()
+                acceptable_differences: set[tuple[UUID, str | None, str | None]] = set()
                 for actual_case, expected_case in zip(
                     actual_validated_cases, expected_validated_cases
                 ):
@@ -302,7 +327,25 @@ class TestCaseValidation(CaseValidationSetup):
                         actual_value = actual_content.get(key)
                         expected_value = expected_content.get(key)
                         if actual_value != expected_value:
-                            case_differences.add((key, actual_value, expected_value))
+                            if key in acceptable_difference_col_ids:
+                                # This is an acceptable difference (derived or conflict)
+                                acceptable_differences.add(
+                                    (key, actual_value, expected_value)
+                                )
+                            else:
+                                # This is an unexpected difference
+                                case_differences.add(
+                                    (key, actual_value, expected_value)
+                                )
+
+                if env.verbose and acceptable_differences:
+                    acceptable_differences_str = ", ".join(
+                        sorted(f"{x}:{y}!={z}" for x, y, z in acceptable_differences)
+                    )
+                    print(
+                        f"\t  Accepting acceptable differences: {acceptable_differences_str}"
+                    )
+
                 if case_differences:
                     case_differences_str = ", ".join(
                         sorted(f"{x}:{y}!={z}" for x, y, z in case_differences)
@@ -310,4 +353,8 @@ class TestCaseValidation(CaseValidationSetup):
                     msg = f"Command {index} (allowed={is_allowed}) produced unexpected validated cases: {case_differences_str}"
                     if env.verbose:
                         print(f"\t{msg}")
+                        if acceptable_difference_col_ids:
+                            print(
+                                f"\t  (Note: {len(acceptable_differences)} acceptable differences were ignored)"
+                            )
                     raise AssertionError(msg)

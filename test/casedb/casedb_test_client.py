@@ -8,7 +8,7 @@ from time import sleep
 from typing import Any, Type
 from uuid import UUID
 
-import gen_epix.casedb.domain.model.case.case
+import gen_epix.casedb.domain.model.case.persistable
 from gen_epix.casedb.api.organization import (
     UpdateUserRequestBody,
     UserInvitationRequestBody,
@@ -166,6 +166,7 @@ class CasedbTestClient(TestClient):
         app_cfg.cfg["app"]["debug"] = True
         curr_cfg = app_cfg.cfg["service"]["auth"]["props"]["root"]
         curr_cfg["organization"]["name"] = "org1"
+        curr_cfg["user"]["key"] = "root1_1@org1.org"
         curr_cfg["user"]["email"] = "root1_1@org1.org"
         curr_cfg["user"]["name"] = "root1_1"
 
@@ -398,7 +399,7 @@ class CasedbTestClient(TestClient):
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
         min_scale_unit: float = 1,
-    ) -> gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol:
+    ) -> gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
@@ -411,7 +412,7 @@ class CasedbTestClient(TestClient):
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol(
+                objs=gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol(
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     min_scale_unit=min_scale_unit,
@@ -450,7 +451,9 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: (
-            str | gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol | None
+            str
+            | gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol
+            | None
         ) = None,
         set_dummy_dim: bool = False,
         set_dummy_concept_set: bool = False,
@@ -493,7 +496,7 @@ class CasedbTestClient(TestClient):
                 None
                 if not genetic_distance_protocol
                 else self._get_obj(
-                    gen_epix.casedb.domain.model.case.case.GeneticDistanceProtocol,
+                    gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol,
                     genetic_distance_protocol,
                 ).id
             )

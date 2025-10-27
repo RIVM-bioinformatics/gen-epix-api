@@ -13,3 +13,7 @@ class_name = "SystemDictRepository"
 [repository.seq]
 module = "gen_epix.seqdb.repositories"
 class_name = "SeqDictRepository"
+
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileDictRepository"

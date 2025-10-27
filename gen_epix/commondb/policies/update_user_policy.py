@@ -13,7 +13,7 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
 
         tgt_user: model.User
         if isinstance(cmd, command.InviteUserCommand):
-            if user.email == cmd.email:
+            if user.key == cmd.key:
                 # User cannot invite themselves
                 return False
             tgt_user = self.user_class(**cmd.model_dump())

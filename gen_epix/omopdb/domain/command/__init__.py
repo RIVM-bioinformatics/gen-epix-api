@@ -44,6 +44,9 @@ from gen_epix.commondb.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
 from gen_epix.commondb.domain.command import (
+    RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
+)
+from gen_epix.commondb.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
 from gen_epix.commondb.domain.command import (

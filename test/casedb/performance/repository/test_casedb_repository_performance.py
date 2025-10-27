@@ -4,7 +4,7 @@ import pstats
 import sys
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient
-from test.test_client.enum import TestType as TestType  # to avoid PyTest warning
+from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ class TestRead:
                 continue
             test_util.set_log_level("casedb", logging.ERROR)
             env = CasedbTestClient.get_test_client(
-                test_type=TestType.CASEDB_PERFORMANCE_REPOSITORY,
+                test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
                 repository_type=repository_type,
                 log_level=logging.ERROR,
             )
@@ -56,7 +56,7 @@ class TestRead:
     @classmethod
     def tearDownClass(cls) -> None:
         test_dir = CasedbTestClient.get_test_client(
-            test_type=TestType.CASEDB_PERFORMANCE_REPOSITORY,
+            test_type=EnumTestType.CASEDB_PERFORMANCE_REPOSITORY,
             repository_type=enum.RepositoryType.DICT,
         ).test_dir
         df = pd.DataFrame.from_records(PERFORMANCE_DF)

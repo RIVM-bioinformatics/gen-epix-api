@@ -1,7 +1,6 @@
 import datetime
 import gzip
 import importlib
-import json
 import logging
 import os
 import pickle
@@ -11,7 +10,6 @@ from collections.abc import Hashable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from test.test_client.enum import TestType
 from typing import Any, Iterable, Type
 
 import ulid
@@ -324,12 +322,57 @@ def set_env_variables(
     if extra_settings_files:
         settings_files.extend(extra_settings_files)
     # Set environment variables
-    os.environ[envvar_prefix + "SETTINGS_FILES"] = json.dumps(
+    os.environ[envvar_prefix + "SETTINGS_FILES"] = ",".join(
         [str(x.resolve()) for x in settings_files]
     )
     os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
         (general_cfg_path / "logging.yaml").resolve()
     )
+
+
+def create_demo_data_from_repository(
+    user_id: str,
+    entities: list,
+    dict_repository: DictRepository,
+    sa_repository: SARepository,
+    module_root: str,
+) -> None:
+    model = importlib.import_module(f"{module_root}.domain.model")
+    # Delete all first in reverse order
+    for entity in entities[::-1]:
+        model_class = entity.model_class
+        with sa_repository.uow() as sa_uow:
+            sa_repository.crud(
+                sa_uow,
+                user_id,
+                model_class,
+                None,
+                None,
+                CrudOperation.DELETE_ALL,
+            )
+    for entity in entities:
+        model_class = entity.model_class
+        with (
+            dict_repository.uow() as dict_uow,
+            sa_repository.uow() as sa_uow,
+        ):
+            objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
+                dict_uow,
+                user_id,
+                model_class,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+                return_copy=False,
+            )
+            sa_repository.crud(
+                sa_uow,
+                user_id,
+                model_class,
+                objs,
+                None,
+                CrudOperation.CREATE_SOME,
+            )
 
 
 def load_demo_data(
@@ -338,55 +381,13 @@ def load_demo_data(
     connect_timeout: float = 1,
     verbose: bool = True,
 ) -> None:
-
-    def _create_from_repository(
-        user_id: str,
-        entities: list,
-        dict_repository: DictRepository,
-        sa_repository: SARepository,
-    ) -> None:
-        # Delete all first in reverse order
-        for entity in entities[::-1]:
-            model_class = entity.model_class
-            with sa_repository.uow() as sa_uow:
-                sa_repository.crud(
-                    sa_uow,
-                    user_id,
-                    model_class,
-                    None,
-                    None,
-                    CrudOperation.DELETE_ALL,
-                )
-        for entity in entities:
-            model_class = entity.model_class
-            with (
-                dict_repository.uow() as dict_uow,
-                sa_repository.uow() as sa_uow,
-            ):
-                objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
-                    dict_uow,
-                    user_id,
-                    model_class,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                    return_copy=False,
-                )
-                sa_repository.crud(
-                    sa_uow,
-                    user_id,
-                    model_class,
-                    objs,
-                    None,
-                    CrudOperation.CREATE_SOME,
-                )
-
+    domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
     # Import the sa_model module to register the models
     importlib.import_module(f"{module_root}.repositories.sa_model")
     # Get classes and config for the app type
+
     enum = importlib.import_module(f"{module_root}.domain.enum")
-    model = importlib.import_module(f"{module_root}.domain.model")
-    domain: Domain = importlib.import_module(f"{module_root}.domain").DOMAIN
+
     set_env_variables(app_type, DevIdpConfig.MOCK, DevRepositoryConfig.DICT_DEMO)
     dict_app_cfg = AppCfg(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
@@ -465,8 +466,8 @@ def load_demo_data(
                 recreate_sqlite_file=True,
             )
         )
-        _create_from_repository(
-            user_id, entities, dict_repository, sa_sqlite_repository
+        create_demo_data_from_repository(
+            user_id, entities, dict_repository, sa_sqlite_repository, module_root
         )
         end_time = datetime.datetime.now()
         if verbose:
@@ -506,7 +507,9 @@ def load_demo_data(
                 name=service_type.value,
             )
         )
-        _create_from_repository(user_id, entities, dict_repository, sa_sql_repository)
+        create_demo_data_from_repository(
+            user_id, entities, dict_repository, sa_sql_repository, module_root
+        )
         end_time = datetime.datetime.now()
         if verbose:
             print(
@@ -518,7 +521,7 @@ def get_app_cfgs(
     app_type: AppType,
     service_type_enum: Type[Enum],
     repository_type_enum: Type[Enum],
-    test_type: TestType | str,
+    test_type: Enum | str,
     dev_idp_config: DevIdpConfig = DevIdpConfig.NONE,
     general_cfg_path: Path | None = None,
     cfg_path: Path | None = None,

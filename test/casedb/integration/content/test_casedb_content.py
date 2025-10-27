@@ -1,6 +1,6 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.test_client.enum import TestType as TestType  # to avoid PyTest warning
+from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from typing import Iterable
 
 import pytest
@@ -14,7 +14,7 @@ from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
-TEST_TYPE = TestType.CASEDB_INTEGRATION_CASE_ACCESS
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
 SKIP_ENDPOINTS = False
 VERBOSE = False
@@ -112,6 +112,7 @@ class TestContent:
         )
         # Invite an org user as org admin user
         new_user = model.User(
+            key="new_user@example.com",
             email="new_user@example.com",
             organization_id=org_admin_user.organization_id,
             roles={enum.Role.ORG_USER},
@@ -119,6 +120,7 @@ class TestContent:
         new_user_invitation: model.UserInvitation = app.handle(
             command.InviteUserCommand(
                 user=org_admin_user,
+                key=new_user.key,
                 email=new_user.email,
                 organization_id=new_user.organization_id,
                 roles=new_user.roles,
@@ -243,7 +245,7 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
-                    phylogenetic_tree = app.handle(
+                    phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
@@ -263,10 +265,18 @@ class TestContent:
                 == enum.ColType.GENETIC_SEQUENCE
             ]
             for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                has_seq_case_ids = [
+                    x.id
+                    for x in cases
+                    if x.content.get(genetic_sequence_case_type_col.id)
+                ]
+                if not has_seq_case_ids:
+                    continue
+                # Retrieve genetic sequence
                 genetic_sequences: list[model.GeneticSequence] = app.handle(
                     command.RetrieveGeneticSequenceByCaseCommand(
                         user=org_user,
-                        case_ids=case_ids[0:1],
+                        case_ids=has_seq_case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
                     )
                 )
@@ -279,12 +289,11 @@ class TestContent:
                         raise ValueError(
                             "Genetic sequence should have nucleotide_sequence attribute"
                         )
-            # Retrieve genetic sequences in FASTA format
-            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                # Retrieve genetic sequences in FASTA format
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
-                        case_ids=case_ids[0:1],
+                        case_ids=has_seq_case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
                     )
                 )
