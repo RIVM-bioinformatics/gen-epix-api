@@ -240,12 +240,13 @@ class OidcClient(IdpClient, OpenIdConnect):
         server_cfg = self.server_cfg
         # TODO: check audience claim as well?
         if claims["iss"] != server_cfg.issuer or claims.get("aud") != self.audience:
+            print(f"DEBUG: OidcClient.get_claims_from_jwt: claims['iss']: {claims['iss']}, server_cfg.issuer: {server_cfg.issuer}, claims['aud']: {claims.get('aud')}, self.audience: {self.audience}")
             # Different OIDC server
             return None
 
         iat: int = claims.get("iat", -1)
         if iat == -1 or iat > int(datetime.now().timestamp()):
-            # Token issued in the future
+            print(f"DEBUG: OidcClient.get_claims_from_jwt: Token issued in the future")
             return None
 
         # Get key to verify signature and decode again
@@ -270,6 +271,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 msg += "signature is invalid"
             else:
                 msg += "unknown issue"
+            print(f"DEBUG: OidcClient.get_claims_from_jwt: {msg}")
             if self.logger:
                 self.logger.warning(
                     self._log_item_class(
@@ -294,6 +296,7 @@ class OidcClient(IdpClient, OpenIdConnect):
             else:
                 msg_part = "no issuer"
             if self.logger:
+                print(f"DEBUG: OidcClient.get_claims_from_jwt: JWT does not contain required claims: {msg_part}")
                 self.logger.warning(
                     self._log_item_class(
                         code="b4a1d49b",
