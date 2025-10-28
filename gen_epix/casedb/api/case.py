@@ -645,6 +645,25 @@ def create_case_endpoints(
             handle_exception("b5c6d7e8", user, exception)
         return created_file_id
 
+    @router.get(
+        "/retrieve/library_prep_protocols",
+        operation_id="retrieve__library_prep_protocols",
+        name="Retrieve library preparation protocols",
+        description=command.RetrieveLibraryPrepProtocolsCommand.__doc__,
+    )
+    async def retrieve__library_prep_protocols(
+        user: registered_user_dependency,  # type: ignore
+    ) -> list[model.LibraryPrepProtocol]:
+        try:
+            retval: list[model.LibraryPrepProtocol] = app.handle(
+                command.RetrieveLibraryPrepProtocolsCommand(
+                    user=user,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e7f8a9b0", user, exception)
+        return retval
+
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,

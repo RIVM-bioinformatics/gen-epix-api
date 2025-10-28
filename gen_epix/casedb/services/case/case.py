@@ -1615,3 +1615,19 @@ class CaseService(BaseCaseService):
             )
 
         return created_seqs
+
+    def retrieve_library_prep_protocols(
+        self,
+        cmd: command.RetrieveLibraryPrepProtocolsCommand,
+    ) -> list[model.LibraryPrepProtocol]:
+        user, repository = self._get_user_and_repository(cmd)
+        assert isinstance(user, model.User) and user.id is not None
+
+        library_prep_protocols: list[model.LibraryPrepProtocol] = self.app.handle(
+            seqdb_command.LibraryPrepProtocolCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+
+        return library_prep_protocols
