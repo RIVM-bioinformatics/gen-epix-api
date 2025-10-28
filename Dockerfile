@@ -60,6 +60,9 @@ COPY . /app
 # Expose the port that the application listens on.
 EXPOSE 8000
 
+# Switch to the non-privileged user to run the application.
+USER appuser
+
 # Run the application.
 HEALTHCHECK CMD curl --fail http://127.0.0.1:8000/v1/health || exit 1
 # CMD ["fastapi", "run", "gen_epix/casedb/app.py", "--port", "8000"]
