@@ -310,14 +310,30 @@ class OidcServerCfg(Model):
         cls, claim_map: dict[str, list[str] | str]
     ) -> dict[str, list[str]]:
         """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
-        return {
-            new_claim: (
-                raw_orig_claims.split(" ")
-                if isinstance(raw_orig_claims, str)
-                else raw_orig_claims
-            )
-            for new_claim, raw_orig_claims in claim_map.items()
-        }
+        if not isinstance(claim_map, dict):
+            raise ValueError("claim_map must be a dictionary")
+        for new_claim in claim_map:
+            orig_claims = claim_map[new_claim]
+            if isinstance(orig_claims, str):
+                orig_claims = orig_claims.split(" ")
+            if not isinstance(new_claim, str):
+                raise ValueError("All keys in claim_map must be strings")
+            if not isinstance(orig_claims, list):
+                raise ValueError("All values in claim_map must be lists")
+            for orig_claim in orig_claims:
+                if not isinstance(orig_claim, str):
+                    raise ValueError("All values in claim_map lists must be strings")
+            claim_map[new_claim] = orig_claims
+        return claim_map
+
+        # return {
+        #     new_claim: (
+        #         raw_orig_claims.split(" ")
+        #         if isinstance(raw_orig_claims, str)
+        #         else raw_orig_claims
+        #     )
+        #     for new_claim, raw_orig_claims in claim_map.items()
+        # }
 
     def is_valid(self) -> bool:
         """Check if the configuration has the required fields set."""
