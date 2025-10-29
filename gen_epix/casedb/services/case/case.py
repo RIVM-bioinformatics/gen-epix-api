@@ -1365,17 +1365,17 @@ class CaseService(BaseCaseService):
         )
 
         if cmd.is_fwd:
-            if existing_read_set.file_id is not None:
+            if existing_read_set.fwd_file_id is not None:
                 raise exc.InvalidArgumentsError(
                     "Forward file already linked to ReadSet"
                 )
-            existing_read_set.file_id = created_file.id
+            existing_read_set.fwd_file_id = created_file.id
         else:
-            if existing_read_set.file_id2 is not None:
+            if existing_read_set.rev_file_id is not None:
                 raise exc.InvalidArgumentsError(
                     "Reverse file already linked to ReadSet"
                 )
-            existing_read_set.file_id2 = created_file.id
+            existing_read_set.rev_file_id = created_file.id
 
         # Update ReadSet with the new file link
         self.app.handle(
