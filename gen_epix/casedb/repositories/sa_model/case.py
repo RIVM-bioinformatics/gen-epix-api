@@ -148,6 +148,48 @@ class CaseType(Base, RowMetadataMixin):
     )
 
 
+class CaseTypeSettings(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.CaseTypeSettings)
+
+    case_type_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "case_type_id"
+    )
+    case_type_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "case_type_id"
+    )
+    case_type: Mapped[CaseType | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "case_type"
+    )
+
+    stats_time_dim_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "stats_time_dim_id"
+    )
+    stats_time_dim: Mapped[Dim | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "stats_time_dim"
+    )
+    stats_geo_dim_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "stats_geo_dim_id"
+    )
+    stats_geo_dim: Mapped[Dim | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "stats_geo_dim"
+    )
+    create_max_n_cases: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "create_max_n_cases"
+    )
+    read_max_n_cases: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "read_max_n_cases"
+    )
+    read_max_tree_size: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "read_max_tree_size"
+    )
+    update_max_n_cases: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "update_max_n_cases"
+    )
+    delete_max_n_cases: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeSettings, "delete_max_n_cases"
+    )
+
+
 class CaseTypeSetCategory(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSetCategory)
 

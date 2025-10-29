@@ -273,6 +273,86 @@ class CaseType(Model):
     )
 
 
+class CaseTypeSettings(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_type_settings",
+        table_name="case_type_settings",
+        persistable=True,
+        keys=create_keys({1: "case_type_id"}),
+        links=create_links(
+            {
+                1: ("case_type_id", CaseType, "case_type"),
+                2: ("stats_time_dim_id", Dim, "stats_time_dim"),
+                3: ("stats_geo_dim_id", Dim, "stats_geo_dim"),
+            }
+        ),
+    )
+    case_type_id: UUID = Field(
+        description=(
+            "The ID of the case type these settings apply to. One-to-one mapping. FOREIGN KEY"
+        )
+    )
+    case_type: CaseType | None = Field(
+        default=None, description="The case type for these settings"
+    )
+
+    stats_time_dim_id: UUID | None = Field(
+        default=None,
+        description=(
+            "The ID of the TIME Dim to use for statistics unless otherwise specified"
+        ),
+    )
+    stats_time_dim: Dim | None = Field(
+        default=None, description="The TIME dimension used for statistics"
+    )
+
+    stats_geo_dim_id: UUID | None = Field(
+        default=None,
+        description=(
+            "The ID of the GEO Dim to use for statistics unless otherwise specified"
+        ),
+    )
+    stats_geo_dim: Dim | None = Field(
+        default=None, description="The GEO dimension used for statistics"
+    )
+
+    create_max_n_cases: int = Field(
+        ge=0,
+        description=(
+            "Maximum number of cases that can be created in one batch. If 0, no restriction;"
+            " may be superseded by user rights."
+        ),
+    )
+    read_max_n_cases: int = Field(
+        ge=0,
+        description=(
+            "Maximum number of cases returned by a query. If 0, no restriction;"
+            " may be superseded by user rights."
+        ),
+    )
+    read_max_tree_size: int = Field(
+        ge=0,
+        description=(
+            "Maximum number of cases for which a tree may be calculated. If 0, no restriction;"
+            " may be superseded by user rights."
+        ),
+    )
+    update_max_n_cases: int = Field(
+        ge=0,
+        description=(
+            "Maximum number of cases that can be updated in one batch. If 0, no restriction;"
+            " may be superseded by user rights."
+        ),
+    )
+    delete_max_n_cases: int = Field(
+        ge=0,
+        description=(
+            "Maximum number of cases that can be deleted in one batch. If 0, no restriction;"
+            " may be superseded by user rights."
+        ),
+    )
+
+
 class CaseTypeSetCategory(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_set_categories",

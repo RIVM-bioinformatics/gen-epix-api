@@ -42,6 +42,9 @@ from gen_epix.casedb.domain.model.case.persistable import (
 from gen_epix.casedb.domain.model.case.persistable import CaseSetMember as CaseSetMember
 from gen_epix.casedb.domain.model.case.persistable import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case.persistable import CaseType as CaseType
+from gen_epix.casedb.domain.model.case.persistable import (
+    CaseTypeSettings as CaseTypeSettings,
+)
 from gen_epix.casedb.domain.model.case.persistable import CaseTypeCol as CaseTypeCol
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseTypeColSet as CaseTypeColSet,

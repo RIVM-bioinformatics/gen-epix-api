@@ -383,3 +383,7 @@ class CaseSetMemberCrudCommand(CrudCommand):
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
+
+
+class CaseTypeSettingsCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeSettings

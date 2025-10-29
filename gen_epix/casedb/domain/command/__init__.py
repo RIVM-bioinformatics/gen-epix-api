@@ -239,6 +239,9 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
 )
+from gen_epix.casedb.domain.command.case import (
+    CaseTypeSettingsCrudCommand as CaseTypeSettingsCrudCommand,
+)
 from gen_epix.commondb.domain.command import (
     RetrieveOwnPermissionsCommand as RetrieveOwnPermissionsCommand,
 )
@@ -309,6 +312,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
         ValidateCasesCommand,
+        CaseTypeSettingsCrudCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,
