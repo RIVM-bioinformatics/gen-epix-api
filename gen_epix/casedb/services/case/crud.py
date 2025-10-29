@@ -60,8 +60,60 @@ def _crud_metadata_by_admin(
     self: BaseCaseService, uow: BaseUnitOfWork, cmd: command.CrudCommand
 ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:
     """Metadata admin command handling, no ABAC applied"""
+    # Cascade deletes for delete operations
     _crud_cascade_delete(self, uow, cmd)
-    return super(DomainBaseCaseService, self).crud(cmd)  # type:ignore[return-value]
+
+    # Validate CaseTypeSettings on create/update
+    if isinstance(cmd, command.CaseTypeSettingsCrudCommand) and (
+        cmd.operation in CrudOperationSet.CREATE.value
+        or cmd.operation in CrudOperationSet.UPDATE.value
+    ):
+        assert cmd.user is not None and cmd.user.id is not None
+        settings_list: list[model.CaseTypeSettings] = cmd.get_objs()  # type: ignore[assignment]
+        for settings in settings_list:
+            _validate_case_type_settings_dims(self, uow, cmd.user.id, settings)
+
+    # Perform the primary CRUD operation
+    retval = super(DomainBaseCaseService, self).crud(cmd)
+
+    # After creating a CaseType, also create a default CaseTypeSettings row
+    if isinstance(cmd, command.CaseTypeCrudCommand) and (
+        cmd.operation in CrudOperationSet.CREATE.value
+    ):
+        assert cmd.user is not None and cmd.user.id is not None
+        created_case_types: list[model.CaseType]
+        if isinstance(retval, model.CaseType):
+            created_case_types = [retval]
+        elif isinstance(retval, list) and (
+            not retval or isinstance(retval[0], model.CaseType)
+        ):
+            created_case_types = retval  # type: ignore[assignment]
+        else:
+            created_case_types = []
+        if created_case_types:
+            default_settings = [
+                model.CaseTypeSettings(
+                    case_type_id=case_type.id,  # type: ignore[arg-type]
+                    stats_time_dim_id=None,
+                    stats_geo_dim_id=None,
+                    create_max_n_cases=0,
+                    read_max_n_cases=0,
+                    read_max_tree_size=0,
+                    update_max_n_cases=0,
+                    delete_max_n_cases=0,
+                )
+                for case_type in created_case_types
+            ]
+            self.repository.crud(
+                uow,
+                cmd.user.id,
+                model.CaseTypeSettings,
+                default_settings,
+                None,
+                CrudOperation.CREATE_SOME,
+            )
+
+    return retval  # type:ignore[return-value]
 
 
 def _crud_metadata_by_non_admin(
@@ -92,6 +144,12 @@ def _crud_metadata_by_non_admin(
         valid_case_type_ids = case_abac.get_case_types_with_any_rights()
         access_filter = self._compose_id_filter(("id", valid_case_type_ids))
         # No cascade delete to force conscious decision to delete from other models
+        return _crud_with_access_filter(self, uow, cmd, access_filter)
+
+    elif isinstance(cmd, command.CaseTypeSettingsCrudCommand):
+        # Allow reading settings only for case types the user has any rights to
+        valid_case_type_ids = case_abac.get_case_types_with_any_rights()
+        access_filter = self._compose_id_filter(("case_type_id", valid_case_type_ids))
         return _crud_with_access_filter(self, uow, cmd, access_filter)
 
     elif isinstance(cmd, command.CaseTypeSetMemberCrudCommand):
@@ -801,3 +859,88 @@ def _crud_with_access_filter(
     retval = super(DomainBaseCaseService, self).crud(cmd)
     cmd.access_filter = orig_access_filter
     return retval  # type:ignore[return-value]
+
+
+def _validate_case_type_settings_dims(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    user_id: UUID,
+    settings: model.CaseTypeSettings,
+) -> None:
+    """
+    Validate stats_time_dim_id and stats_geo_dim_id for CaseTypeSettings.
+    Both dims (if provided) must belong to a Col used by at least one CaseTypeCol
+    of the specified CaseType, and must have the correct dim_type (TIME/GEO).
+    """
+    case_type_filter = self._compose_id_filter(
+        ("case_type_id", {settings.case_type_id})
+    )
+    case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.CaseTypeCol,
+        None,
+        None,
+        CrudOperation.READ_ALL,
+        filter=case_type_filter,
+    )
+    col_ids = {x.col_id for x in case_type_cols}
+    if (settings.stats_time_dim_id or settings.stats_geo_dim_id) and not col_ids:
+        raise exc.InvalidArgumentsError(
+            f"CaseType {settings.case_type_id}: cannot set stats dims without any case type columns"
+        )
+    if col_ids:
+        cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+            uow,
+            user_id,
+            model.Col,
+            None,
+            list(col_ids),
+            CrudOperation.READ_SOME,
+        )
+        valid_dim_ids: set[UUID] = {x.dim_id for x in cols}
+    else:
+        valid_dim_ids = set()
+
+    def _read_dim(dim_id: UUID) -> model.Dim:
+        dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+            uow,
+            user_id,
+            model.Dim,
+            None,
+            [dim_id],
+            CrudOperation.READ_SOME,
+        )
+        if not dims:
+            raise exc.InvalidIdsError(
+                f"Invalid dim id provided: {dim_id}", ids=[dim_id]
+            )
+        return dims[0]
+
+    # Validate TIME dim
+    if settings.stats_time_dim_id is not None:
+        if settings.stats_time_dim_id not in valid_dim_ids:
+            raise exc.InvalidArgumentsError(
+                f"stats_time_dim_id {settings.stats_time_dim_id} must belong to a column of the case type",
+                ids=[settings.stats_time_dim_id],
+            )
+        dim_time = _read_dim(settings.stats_time_dim_id)
+        if dim_time.dim_type != enum.DimType.TIME:
+            raise exc.InvalidArgumentsError(
+                f"stats_time_dim_id {settings.stats_time_dim_id} must reference a TIME dimension",
+                ids=[settings.stats_time_dim_id],
+            )
+
+    # Validate GEO dim
+    if settings.stats_geo_dim_id is not None:
+        if settings.stats_geo_dim_id not in valid_dim_ids:
+            raise exc.InvalidArgumentsError(
+                f"stats_geo_dim_id {settings.stats_geo_dim_id} must belong to a column of the case type",
+                ids=[settings.stats_geo_dim_id],
+            )
+        dim_geo = _read_dim(settings.stats_geo_dim_id)
+        if dim_geo.dim_type != enum.DimType.GEO:
+            raise exc.InvalidArgumentsError(
+                f"stats_geo_dim_id {settings.stats_geo_dim_id} must reference a GEO dimension",
+                ids=[settings.stats_geo_dim_id],
+            )

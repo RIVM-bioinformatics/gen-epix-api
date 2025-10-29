@@ -183,3 +183,14 @@ class ServiceUnavailableError(ServiceException):
             http_props = {}
         self._init_message(message, "Service unavailable")
         self._init_http_props(http_props, 503)
+
+
+class RequestLimitExceededAuthError(AuthException):
+    def __init__(
+        self, message: str | None = None, http_props: dict[str, Any] | None = None
+    ):
+        super().__init__(message, http_props)
+        if http_props is None:
+            http_props = {}
+        self._init_message(message, "Request limit exceeded")
+        self._init_http_props(http_props, 429)
