@@ -86,6 +86,24 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
     contact_ids: list[UUID] | None = None
     props: dict[str, Any] = {}
 
+    @model_validator(mode="after")
+    def check_one_of_fields(self) -> Any:
+        if (
+            sum(
+                [
+                    self.organization_ids is not None,
+                    self.site_ids is not None,
+                    self.contact_ids is not None,
+                ]
+            )
+            != 1
+        ):
+            raise ValueError(
+                "Exactly one of organization_ids, site_ids or contact_ids must be "
+                "provided"
+            )
+        return self
+
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     genetic_distance_case_type_col_id: UUID

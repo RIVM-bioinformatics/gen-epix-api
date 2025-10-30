@@ -294,35 +294,12 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: command.RetrieveOrganizationContactCommand,
     ) -> list[model.Contact]:
-        if (
-            sum(
-                [
-                    cmd.organization_ids is not None,
-                    cmd.site_ids is not None,
-                    cmd.contact_ids is not None,
-                ]
-            )
-            != 1
-        ):
-            raise exc.InvalidArgumentsError(
-                "Exactly one of organization_ids, site_ids or contact_ids must be provided"
-            )
         user, repository = self._get_user_and_repository(cmd)
 
-        organizations: list[model.Organization]
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
             if cmd.organization_ids:
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    cmd.organization_ids,
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
                 sites = repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
@@ -330,7 +307,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -339,7 +315,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,
                 )
                 organization_ids = set(cmd.organization_ids)
                 sites = [x for x in sites if x.organization_id in organization_ids]
@@ -353,16 +328,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     cmd.site_ids,
                     CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    list({x.organization_id for x in sites}),
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -371,7 +336,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,
                 )
                 site_ids = {x.id for x in sites}
                 contacts = [x for x in contacts if x.site_id in site_ids]
@@ -384,41 +348,9 @@ class OrganizationService(BaseOrganizationService):
                         None,
                         cmd.contact_ids,
                         CrudOperation.READ_ALL,
-                        cascade_read=True,
-                        links=self.app.domain.get_model_links(
-                            model.Contact,
-                            service_type=self.app.domain.get_service_type_for_model(
-                                model.Contact
-                            ),
-                        ),
                     ),
-                )
-                sites = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Site,
-                    None,
-                    list({x.site_id for x in contacts}),
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    list({x.organization_id for x in sites}),
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
                 )
             else:
                 raise AssertionError
 
-        # Replace organization and site with cascaded version
-        site_map = {x.id: x for x in sites}
-        organization_map = {x.id: x for x in organizations}
-        for site in site_map.values():
-            site.organization = organization_map[site.organization_id]
-        for contact in contacts:
-            contact.site = site_map[contact.site_id]
         return contacts
