@@ -1240,22 +1240,18 @@ class CaseService(BaseCaseService):
             )
         )
 
-        # link ReadSets to Cases via Case.content[case_type_col_id] = ReadSet.id
         cases_to_update: list[model.Case] = []
-        # Use CaseReadSet.library_prep_protocol_id to find the case_id and case_type_col_id back
-        read_set_by_protocol: dict[UUID, model.ReadSet] = {
-            read_set.library_prep_protocol_id: read_set
-            for read_set in created_read_sets
-        }
-        for case_read_set in cmd.case_read_sets:
-            if case_read_set.library_prep_protocol_id not in read_set_by_protocol:
-                raise exc.InvalidArgumentsError(
-                    "Read set not found for library_prep_protocol_id"
-                )
+        if len(created_read_sets) != len(cmd.case_read_sets):
+            raise exc.InvalidArgumentsError(
+                "Mismatch between number of created ReadSets and input case_read_sets"
+            )
+        for case_read_set, created_read_set in zip(
+            cmd.case_read_sets, created_read_sets
+        ):
+            if created_read_set.id is None:
+                raise exc.DataException("Created ReadSet missing id")
             case = case_by_id[case_read_set.case_id]
-            case.content[case_read_set.case_type_col_id] = read_set_by_protocol[  # type: ignore
-                case_read_set.library_prep_protocol_id
-            ].id
+            case.content[case_read_set.case_type_col_id] = created_read_set.id
             cases_to_update.append(case)
 
         with self.repository.uow() as uow:
