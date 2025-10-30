@@ -423,13 +423,15 @@ class CaseService(BaseCaseService):
 
             # Filter cases by filters
             if case_query.filter:
-                map_fns = CaseService._get_map_functions_for_filters(cols)
+                filter_mapping_functions = CaseService._get_map_functions_for_filters(
+                    cols
+                )
                 cases = [
                     x
                     for x, y in zip(
                         cases,
                         case_query.filter.match_rows(
-                            (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
+                            (x.content for x in cases), map_fn=filter_mapping_functions  # type: ignore[misc]
                         ),
                     )
                     if y
@@ -494,14 +496,12 @@ class CaseService(BaseCaseService):
                         raise exc.RequestLimitExceededAuthError(
                             f"Number of cases retrieved for case type {case_type_id} ({n_cases}) exceeds the maximum allowed ({limit})"
                         )
-            # Calculate Case.case_date with user rights applied:
-            target_case_type_ids: set[UUID] = {c.case_type_id for c in cases}
+            target_case_type_ids: set[UUID] = {x.case_type_id for x in cases}
             case_type_to_time_col_ids: dict[UUID, list[UUID]] = (
                 self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
             )
             accessible_case_type_col_ids: set[UUID] = set()
             for case in cases:
-                # content keys contain CaseTypeCol ids after filter_content=True
                 accessible_case_type_col_ids.update(
                     {x for x in case.content.keys() if isinstance(x, UUID)}
                 )
@@ -1402,15 +1402,19 @@ class CaseService(BaseCaseService):
             case_type_col_ids,
             CrudOperation.READ_SOME,
         )
-        col_map: dict[UUID, model.Col] = {col.id: col for col in cols}
+        col_map: dict[UUID, model.Col] = {
+            col.id: col for col in cols if col.id is not None
+        }
         for col_id in case_type_col_ids:
             col = col_map.get(col_id)
             if col is None:
                 continue
-
             date_value = case.content.get(col_id)
             full_date = self._convert_to_full_date(date_value, col.col_type)
+            today = datetime.date.today()
             if full_date is not None:
+                if full_date > today:
+                    return today
                 return full_date
         return None
 
@@ -1427,9 +1431,7 @@ class CaseService(BaseCaseService):
         elif col_type == enum.ColType.TIME_WEEK:
             if isinstance(date_value, str):
                 year, week = map(int, date_value.split("-W"))
-                return datetime.date.fromisocalendar(
-                    year, week, 1
-                )  # Monday of the week
+                return datetime.date.fromisocalendar(year, week, 1)
         elif col_type == enum.ColType.TIME_MONTH:
             if isinstance(date_value, str):
                 year, month = map(int, date_value.split("-"))

@@ -867,11 +867,6 @@ def _validate_case_type_settings_dims(
     user_id: UUID,
     settings: model.CaseTypeSettings,
 ) -> None:
-    """
-    Validate stats_time_dim_id and stats_geo_dim_id for CaseTypeSettings.
-    Both dims (if provided) must belong to a Col used by at least one CaseTypeCol
-    of the specified CaseType, and must have the correct dim_type (TIME/GEO).
-    """
     case_type_filter = self._compose_id_filter(
         ("case_type_id", {settings.case_type_id})
     )
@@ -917,6 +912,8 @@ def _validate_case_type_settings_dims(
             )
         return dims[0]
 
+    # Both dims (TIME/GEO) must belong to a Col used by at least one CaseTypeCol
+    # of the specified CaseType, and must have the correct dim_type (TIME/GEO).
     # Validate TIME dim
     if settings.stats_time_dim_id is not None:
         if settings.stats_time_dim_id not in valid_dim_ids:
