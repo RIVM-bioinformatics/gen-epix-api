@@ -123,8 +123,6 @@ class CaseService(BaseCaseService):
                     f"Number of cases to be created ({n_cases}) exceeds the maximum allowed ({case_type_setting.create_max_n_cases}) for case type {case_type_id}"
                 )
 
-        # Calculate Case.case_date using get_case_date_case_type_col_ids and get_case_date but without any user rights applied, so that the Case.case_date is the most accurate one possible.
-
         # Convert cases for create update to cases
         # TODO: validate content and add derived values
         cases: list[model.Case] = [
@@ -400,11 +398,13 @@ class CaseService(BaseCaseService):
             }
             case_type_limits: dict[UUID, int] = {}
             limited_cases: list[model.Case] = []
+            is_max_results_exceeded: bool = False
             for case in cases:
                 case_type_id = case.case_type_id
                 limit = max_by_case_type.get(case_type_id, 0)
                 # 0 or missing => no limit
                 if limit and case_type_limits.get(case_type_id, 0) >= limit:
+                    is_max_results_exceeded = True
                     continue
                 limited_cases.append(case)
                 case_type_limits[case_type_id] = (
@@ -439,9 +439,12 @@ class CaseService(BaseCaseService):
         # TODO: consider putting these cases, with their data already filtered, in a
         # cache, so that the expected subsequent call to retrieve them can be sped up
 
-        # Return case ids
-        case_ids = [x.id for x in cases]
-        return case_ids  # type: ignore[return-value]
+        return model.CaseQueryResult(
+            case_type_id=case_type_id,
+            filter=case_query.filter,
+            cases=[x.id for x in cases if x.id is not None],
+            is_max_results_exceeded=is_max_results_exceeded,
+        )
 
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
