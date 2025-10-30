@@ -105,6 +105,26 @@ class CaseService(BaseCaseService):
                 f"User {cmd.user.id} is not allowed to create cases in the given data collection(s)"
             )
 
+        # retrieve case_type_setting for CaseType
+        with self.repository.uow() as uow:
+            case_type_setting: model.CaseTypeSettings = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                cmd.user.id,
+                model.CaseTypeSettings,
+                None,
+                [case_type_id],
+                CrudOperation.READ_ONE,
+            )
+            assert case_type_setting is not None
+            # Apply corresponding CaseTypeSettings.xxx_max_n_cases settings. Raise RequestLimitExceededAuthError when exceeded.
+            n_cases: int = len(cmd.cases)
+            if n_cases > case_type_setting.create_max_n_cases:
+                raise exc.RequestLimitExceededAuthError(
+                    f"Number of cases to be created ({n_cases}) exceeds the maximum allowed ({case_type_setting.create_max_n_cases}) for case type {case_type_id}"
+                )
+
+        # Calculate Case.case_date using get_case_date_case_type_col_ids and get_case_date but without any user rights applied, so that the Case.case_date is the most accurate one possible.
+
         # Convert cases for create update to cases
         # TODO: validate content and add derived values
         cases: list[model.Case] = [
@@ -145,6 +165,33 @@ class CaseService(BaseCaseService):
             )
             curr_cmd._policies.extend(cmd._policies)
             case_data_collection_links = self.crud(curr_cmd)
+
+            # update case date
+
+            case_type_to_col_ids = self.get_case_date_case_type_col_ids(
+                uow, cmd.user, {case_type_id}
+            )
+            case_type_col_ids = case_type_to_col_ids.get(case_type_id, [])
+
+            cases_to_update: list[model.Case] = []
+            if case_type_col_ids:
+                for case in cases:
+                    assert case.id is not None
+                    computed_case_date = self.get_case_date(
+                        uow, cmd.user, case, case_type_col_ids
+                    )
+                    if computed_case_date != case.case_date:
+                        case.case_date = computed_case_date
+                        cases_to_update.append(case)
+            if cases_to_update:
+                super(DomainBaseCaseService, self).crud(  # type: ignore[assignment]
+                    command.CaseCrudCommand(
+                        user=cmd.user,
+                        operation=CrudOperation.UPDATE_SOME,
+                        objs=cases_to_update,  # type: ignore[arg-type]
+                    )
+                )
+
         return cases
 
     def create_case_set(
@@ -233,7 +280,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         # TODO: This is an inefficient call first loading all cases, then filtering them and then keeping only the ids. To be replaced by optimized query.
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
@@ -314,6 +361,57 @@ class CaseService(BaseCaseService):
             if case_type_ids:
                 cases = [x for x in cases if x.case_type_id in case_type_ids]
 
+            target_case_type_ids: set[UUID] = (
+                set(case_type_ids)
+                if case_type_ids is not None
+                else {x.case_type_id for x in cases}
+            )
+            case_type_to_col_ids: dict[UUID, list[UUID]] = (
+                self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
+            )
+            case_dates: dict[UUID, datetime.date | None] = {}
+            for case in cases:
+                col_ids = case_type_to_col_ids.get(case.case_type_id, [])
+                calculated_case_date = (
+                    self.get_case_date(uow, user, case.id, col_ids)
+                    if case.id is not None
+                    else None
+                )
+                case_dates[case.id] = calculated_case_date or case.case_date  # type: ignore[index]
+
+            cases.sort(
+                key=lambda case: case_dates.get(case.id) or datetime.date.min,  # type: ignore[arg-type]
+                reverse=True,
+            )
+
+            case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.CaseTypeSettings,
+                None,
+                list(target_case_type_ids),
+                CrudOperation.READ_SOME,
+            )
+            max_by_case_type: dict[UUID, int] = {
+                case_type_setting.case_type_id: (
+                    case_type_setting.read_max_n_cases or 0
+                )
+                for case_type_setting in case_type_settings
+            }
+            case_type_limits: dict[UUID, int] = {}
+            limited_cases: list[model.Case] = []
+            for case in cases:
+                case_type_id = case.case_type_id
+                limit = max_by_case_type.get(case_type_id, 0)
+                # 0 or missing => no limit
+                if limit and case_type_limits.get(case_type_id, 0) >= limit:
+                    continue
+                limited_cases.append(case)
+                case_type_limits[case_type_id] = (
+                    case_type_limits.get(case_type_id, 0) + 1
+                )
+            cases = limited_cases
+
             # Filter cases by case sets
             if case_set_ids:
                 case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
@@ -366,6 +464,81 @@ class CaseService(BaseCaseService):
                 case_ids=case_ids,
                 filter_content=True,
             )
+
+            if cases:
+                by_case_type: dict[UUID, int] = {}
+                for case in cases:
+                    by_case_type[case.case_type_id] = (
+                        by_case_type.get(case.case_type_id, 0) + 1
+                    )
+                case_type_ids = list(by_case_type.keys())
+                case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user.id,
+                    model.CaseTypeSettings,
+                    None,
+                    case_type_ids,
+                    CrudOperation.READ_SOME,
+                )
+                case_type_read_limits: dict[UUID, int] = {
+                    case_type_setting.case_type_id: (
+                        case_type_setting.read_max_n_cases or 0
+                    )
+                    for case_type_setting in case_type_settings
+                }
+                for case_type_id, n_cases in by_case_type.items():
+                    limit = case_type_read_limits.get(case_type_id, 0)
+                    if limit and n_cases > limit:
+                        raise exc.RequestLimitExceededAuthError(
+                            f"Number of cases retrieved for case type {case_type_id} ({n_cases}) exceeds the maximum allowed ({limit})"
+                        )
+            # Calculate Case.case_date with user rights applied:
+            target_case_type_ids: set[UUID] = {c.case_type_id for c in cases}
+            case_type_to_time_col_ids: dict[UUID, list[UUID]] = (
+                self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
+            )
+            accessible_case_type_col_ids: set[UUID] = set()
+            for case in cases:
+                # content keys contain CaseTypeCol ids after filter_content=True
+                accessible_case_type_col_ids.update(
+                    {x for x in case.content.keys() if isinstance(x, UUID)}
+                )
+            case_type_col_to_col_id: dict[UUID, UUID] = {}
+            if accessible_case_type_col_ids:
+                case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user.id,
+                    model.CaseTypeCol,
+                    None,
+                    list(accessible_case_type_col_ids),
+                    CrudOperation.READ_SOME,
+                )
+                case_type_col_to_col_id = {
+                    case_type_col.id: case_type_col.col_id
+                    for case_type_col in case_type_cols
+                    if case_type_col.id is not None
+                }
+
+            # Recompute case_date using only accessible time columns
+            for case in cases:
+                allowed_col_ids = {
+                    case_type_col_to_col_id[x]
+                    for x in case.content.keys()
+                    if isinstance(x, UUID) and x in case_type_col_to_col_id
+                }
+                # Intersect with time-dimension col ids for the case type
+                time_col_ids = set(case_type_to_time_col_ids.get(case.case_type_id, []))
+                allowed_time_col_ids: list[UUID] = list(
+                    allowed_col_ids.intersection(time_col_ids)
+                )
+                if allowed_time_col_ids:
+                    updated_case_date = self.get_case_date(uow, user, case.id, allowed_time_col_ids)  # type: ignore[arg-type]
+                    if (
+                        updated_case_date is not None
+                        and updated_case_date != case.case_date
+                    ):
+                        case.case_date = updated_case_date
+
         return cases
 
     def retrieve_case_or_set_rights(
@@ -1137,6 +1310,140 @@ class CaseService(BaseCaseService):
             ],
             operator=LogicalOperator.AND,
         )
+
+    def get_case_date_case_type_col_ids(
+        self, uow: BaseUnitOfWork, user: model.User, case_type_ids: set[UUID]
+    ) -> dict[UUID, list[UUID]]:
+        result: dict[UUID, list[UUID]] = {
+            case_type_id: [] for case_type_id in case_type_ids
+        }
+        case_type_settings: list[model.CaseTypeSettings] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id,
+                model.CaseTypeSettings,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+            )
+        )
+
+        case_type_to_dim: dict[UUID, UUID | None] = {
+            case_type_setting.case_type_id: case_type_setting.stats_time_dim_id
+            for case_type_setting in case_type_settings
+            if case_type_setting.case_type_id in case_type_ids
+        }
+
+        stats_time_dim_ids = {
+            dim_id for dim_id in case_type_to_dim.values() if dim_id is not None
+        }
+
+        if not stats_time_dim_ids:
+            return result
+
+        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Col,
+            None,
+            None,
+            CrudOperation.READ_ALL,
+        )
+        time_col_types: set[enum.ColType] = {
+            x for x in enum.ColType if x.name.startswith("TIME_")
+        }
+        time_cols = [
+            col
+            for col in cols
+            if col.dim_id in stats_time_dim_ids and col.col_type in time_col_types
+        ]
+
+        time_cols.sort(key=lambda col: (col.rank_in_dim is None, col.rank_in_dim or 0))
+
+        dim_to_col_ids: dict[UUID, list[UUID]] = {}
+        for col in time_cols:
+            if col.dim_id not in dim_to_col_ids:
+                dim_to_col_ids[col.dim_id] = []
+            dim_to_col_ids[col.dim_id].append(col.id)
+
+        for case_type_id in case_type_ids:
+            stats_time_dim_id = case_type_to_dim.get(case_type_id)
+            if stats_time_dim_id is not None and stats_time_dim_id in dim_to_col_ids:
+                result[case_type_id] = dim_to_col_ids[stats_time_dim_id]
+
+        return result
+
+    def get_case_date(
+        self,
+        uow: BaseUnitOfWork,
+        user: model.User,
+        case_id: UUID,
+        case_type_col_ids: list[UUID],
+    ) -> datetime.date | None:
+        if not case_type_col_ids:
+            return None
+
+        case: model.Case = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Case,
+            None,
+            case_id,
+            CrudOperation.READ_ONE,
+        )
+
+        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Col,
+            None,
+            case_type_col_ids,
+            CrudOperation.READ_SOME,
+        )
+        col_map: dict[UUID, model.Col] = {col.id: col for col in cols}
+        for col_id in case_type_col_ids:
+            col = col_map.get(col_id)
+            if col is None:
+                continue
+
+            date_value = case.content.get(col_id)
+            full_date = self._convert_to_full_date(date_value, col.col_type)
+            if full_date is not None:
+                return full_date
+        return None
+
+    def _convert_to_full_date(
+        self, date_value: Any, col_type: enum.ColType
+    ) -> datetime.date | None:
+        if date_value is None:
+            return None
+        if col_type == enum.ColType.TIME_DAY:
+            if isinstance(date_value, datetime.date):
+                return date_value
+            elif isinstance(date_value, str):
+                return datetime.date.fromisoformat(date_value)
+        elif col_type == enum.ColType.TIME_WEEK:
+            if isinstance(date_value, str):
+                year, week = map(int, date_value.split("-W"))
+                return datetime.date.fromisocalendar(
+                    year, week, 1
+                )  # Monday of the week
+        elif col_type == enum.ColType.TIME_MONTH:
+            if isinstance(date_value, str):
+                year, month = map(int, date_value.split("-"))
+                return datetime.date(year, month, 1)  # First day of the month
+        elif col_type == enum.ColType.TIME_QUARTER:
+            if isinstance(date_value, str):
+                year_str, quarter_str = date_value.split("-Q")
+                year = int(year_str)
+                quarter = int(quarter_str)
+                month = (quarter - 1) * 3 + 1
+                return datetime.date(year, month, 1)  # First day of the quarter
+        elif col_type == enum.ColType.TIME_YEAR:
+            if isinstance(date_value, str):
+                year = int(date_value)
+                return datetime.date(year, 1, 1)  # First day of the year
+        return None
 
     def create_reads_sets_for_cases(
         self, cmd: command.CreateReadSetsForCasesCommand

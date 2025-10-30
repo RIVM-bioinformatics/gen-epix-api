@@ -330,9 +330,9 @@ def create_case_endpoints(
     async def retrieve__case_ids_by_query(
         user: registered_user_dependency,  # type: ignore
         request_body: model.CaseQuery,
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         try:
-            retval: list[UUID] = app.handle(
+            retval: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=user,
                     case_query=request_body,

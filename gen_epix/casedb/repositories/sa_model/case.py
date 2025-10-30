@@ -339,6 +339,7 @@ class Case(Base, RowMetadataMixin):
     )
 
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
+    code: Mapped[str | None] = create_mapped_column(DOMAIN, model.Case, "code")
 
 
 class CaseDataCollectionLink(Base, RowMetadataMixin):

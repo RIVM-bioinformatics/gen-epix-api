@@ -25,6 +25,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
+from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
 from gen_epix.casedb.domain.model.case import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case import CaseSeq as CaseSeq
@@ -39,9 +40,6 @@ from gen_epix.casedb.domain.model.case import CaseSetRights as CaseSetRights
 from gen_epix.casedb.domain.model.case import CaseSetStat as CaseSetStat
 from gen_epix.casedb.domain.model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case import CaseType as CaseType
-from gen_epix.casedb.domain.model.case import (
-    CaseTypeSettings as CaseTypeSettings,
-)
 from gen_epix.casedb.domain.model.case import CaseTypeCol as CaseTypeCol
 from gen_epix.casedb.domain.model.case import CaseTypeColSet as CaseTypeColSet
 from gen_epix.casedb.domain.model.case import (
@@ -51,6 +49,7 @@ from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
+from gen_epix.casedb.domain.model.case import CaseTypeSettings as CaseTypeSettings
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
 from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
@@ -198,6 +197,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             CaseTypeStat,
             CaseSetStat,
             CaseQuery,
+            CaseQueryResult,
             CaseSetQuery,
             CaseRights,
             CaseSetRights,
