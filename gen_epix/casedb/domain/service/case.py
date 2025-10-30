@@ -93,6 +93,10 @@ class BaseCaseService(BaseService):
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
         f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
+        f(
+            command.RetrieveLibraryPrepProtocolsCommand,
+            self.retrieve_library_prep_protocols,
+        )
 
     @abc.abstractmethod
     def validate_cases(
@@ -197,4 +201,11 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.CreateFileForSeqCommand,
     ) -> UUID | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_library_prep_protocols(
+        self,
+        cmd: command.RetrieveLibraryPrepProtocolsCommand,
+    ) -> list[model.LibraryPrepProtocol]:
         raise NotImplementedError()
