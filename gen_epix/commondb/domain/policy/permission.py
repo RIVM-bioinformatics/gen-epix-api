@@ -38,6 +38,8 @@ class RoleGenerator:
             (command.OrganizationAdminPolicyCrudCommand, PermissionTypeSet.CUD),
             # organization
             (command.OrganizationCrudCommand, PermissionTypeSet.CU),
+            (command.ContactCrudCommand, PermissionTypeSet.CUD),
+            (command.SiteCrudCommand, PermissionTypeSet.CUD),
             (
                 command.OrganizationSetOrganizationUpdateAssociationCommand,
                 PermissionTypeSet.E,
@@ -72,6 +74,8 @@ class RoleGenerator:
             (command.UserCrudCommand, PermissionTypeSet.R),
             (command.DataCollectionCrudCommand, PermissionTypeSet.R),
             (command.OrganizationCrudCommand, PermissionTypeSet.R),
+            (command.ContactCrudCommand, PermissionTypeSet.R),
+            (command.SiteCrudCommand, PermissionTypeSet.R),
             (command.RetrieveOrganizationAdminNameEmailsCommand, PermissionTypeSet.E),
             (command.RetrieveOrganizationContactCommand, PermissionTypeSet.E),
             (command.UpdateUserOwnOrganizationCommand, PermissionTypeSet.E),

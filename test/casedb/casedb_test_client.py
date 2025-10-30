@@ -1320,6 +1320,54 @@ class CasedbTestClient(TestClient):
                 raise ValueError(f"Case associations mismatch")
         return case_set
 
+    def create_site(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        organization: str | model.Organization = "org1",
+    ) -> model.Site:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[arg-type]
+        org: model.Organization = self._get_obj(
+            model.Organization, organization
+        )  # type:ignore[arg-type]
+        site = self.handle(
+            command.SiteCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Site(
+                    organization_id=org.id,  # type:ignore[arg-type]
+                    name=code,
+                ),
+            )
+        )
+        return self._set_obj(site)  # type:ignore[return-value]
+
+    def create_contact(
+        self,
+        user_or_str: str | model.User,
+        name: str,
+        site: model.Site | str,
+        email: str | None = None,
+        phone: str | None = None,
+    ) -> model.Contact:
+        user: model.User = self._get_obj(model.User, user_or_str)  # type:ignore[arg-type]
+        site: model.Site = self._get_obj(model.Site, site)  # type:ignore[arg-type]
+        contact = self.handle(
+            command.ContactCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Contact(
+                    site_id=site.id,  # type:ignore[arg-type]
+                    name=name,
+                    email=email,
+                    phone=phone,
+                ),
+            )
+        )
+        return self._set_obj(contact)  # type:ignore[return-value]
+
     def read_organization_access_case_policies_with_any_right(
         self,
         user_or_str: str | model.User,
