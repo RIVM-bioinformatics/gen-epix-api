@@ -1571,7 +1571,7 @@ class CaseService(BaseCaseService):
 
                 super(DomainBaseCaseService, self).crud(
                     command.CaseCrudCommand(
-                        user=cmd.user, operation=CrudOperation.UPDATE_SOME, objs=case
+                        user=cmd.user, operation=CrudOperation.UPDATE_ONE, objs=case
                     )
                 )
 
