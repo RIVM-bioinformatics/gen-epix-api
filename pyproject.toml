@@ -23,7 +23,7 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.120.0",
+    "fastapi[standard]==0.120.2",
     "gunicorn==23.0.*",
     "starlette==0.48.0",
     "httpx==0.28.1",
