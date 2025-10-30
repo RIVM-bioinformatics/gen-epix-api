@@ -11,7 +11,6 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     AlignmentMixin,
     CodeMixin,
@@ -102,17 +101,18 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         keys=create_keys({1: "code"}),
         links=create_links(
             {
+                #!FIXME links with None foreign keys are not supported yet
+                # 1: (
+                #     "fwd_file_id",
+                #     File,
+                #     None,
+                # ),
+                # 2: (
+                #     "rev_file_id",
+                #     File,
+                #     None,
+                # ),
                 1: (
-                    "fwd_file_id",
-                    File,
-                    None,
-                ),
-                2: (
-                    "rev_file_id",
-                    File,
-                    None,
-                ),
-                3: (
                     "library_prep_protocol_id",
                     LibraryPrepProtocol,
                     "library_prep_protocol",

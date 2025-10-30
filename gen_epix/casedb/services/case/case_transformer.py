@@ -85,6 +85,8 @@ class CaseTransformer(Transformer):
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
             return None
+        if re.match(r"[+-]?([0-9]*[.,])?[0-9]+", value) is None:
+            return NoReturn
         try:
             num_value = round(Decimal(value), n_decimals)
             return str(num_value)

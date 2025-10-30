@@ -143,9 +143,6 @@ class RemoteApp(App):
     ) -> Any:
         command_class = cmd.__class__
         route = self._routes.get(command_class, None)
-        print(
-            f"DEBUG: RemoteApp.apply_handler: command_class={command_class.NAME}, route={route}"
-        )
         if not route:
             raise NotImplementedError(
                 f"No route registered for command: {cmd.__class__.NAME}"
@@ -157,8 +154,14 @@ class RemoteApp(App):
                 f"HTTP request error when handling remote command {command_class.NAME}: {e}"
             ) from e
         except httpx.HTTPStatusError as e:
+            # Handle HTTPStatusError with proper access to response attributes
+            status_code = (
+                getattr(e.response, "status_code", "unknown")
+                if hasattr(e, "response") and e.response
+                else "unknown"
+            )
             raise exc.ServiceException(
-                f"HTTP status {e.response.status_code} error when handling remote command {command_class.NAME}: {e}"
+                f"HTTP status {status_code} error when handling remote command {command_class.NAME}: {e}"
             ) from e
         except Exception as e:
             raise exc.ServiceException(
