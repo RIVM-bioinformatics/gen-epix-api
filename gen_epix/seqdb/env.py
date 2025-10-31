@@ -2,14 +2,14 @@
 from typing import Any
 
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.env import AppEnv as CommonAppEnv
+from gen_epix.commondb.env import AppComposer as CommonAppComposer
 from gen_epix.seqdb.domain import DOMAIN, model
 from gen_epix.seqdb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.seqdb.domain.policy import RoleGenerator
 from gen_epix.seqdb.services import RbacService, UserManager
 
 
-class AppEnv(CommonAppEnv):
+class AppComposer(CommonAppComposer):
     def __init__(
         self,
         app_cfg: AppCfg,

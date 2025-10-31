@@ -7,10 +7,10 @@ from gen_epix.casedb.domain.policy import RoleGenerator
 # TODO: check if sa_model import is needed here to avoid cyclic import
 from gen_epix.casedb.services import RbacService, UserManager
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.env import AppEnv as CommonAppEnv
+from gen_epix.commondb.env import AppComposer as CommonAppComposer
 
 
-class AppEnv(CommonAppEnv):
+class AppComposer(CommonAppComposer):
     def __init__(
         self,
         app_cfg: AppCfg,

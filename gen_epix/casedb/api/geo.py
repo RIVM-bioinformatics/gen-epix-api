@@ -5,7 +5,6 @@ from fastapi import APIRouter, FastAPI
 from gen_epix.casedb.domain import enum
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
-from gen_epix.fastapp.enum import LogLevel
 
 
 def create_geo_endpoints(

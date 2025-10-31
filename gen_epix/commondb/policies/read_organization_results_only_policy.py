@@ -1,6 +1,6 @@
-from enum import Enum
 from typing import Any, Type
 
+from gen_epix.commondb.app_implementation_details import AppImplementationDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseReadOrganizationResultsOnlyPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
@@ -9,20 +9,16 @@ from gen_epix.fastapp import CrudOperation, CrudOperationSet, exc
 
 class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
 
-    def __init__(
-        self,
-        abac_service: BaseAbacService,
-        role_map: dict[Enum, Enum] | None = None,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            abac_service,
-            role_map=role_map,
-            **kwargs,
-        )
+    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+        super().__init__(abac_service, **kwargs)
+
+        app_impl: AppImplementationDetails = abac_service.app.impl
         self.user_crud_command_class: Type[command.UserCrudCommand] = (
-            command.UserCrudCommand
+            app_impl.get_mapped_class(command.UserCrudCommand)
         )
+        self.role_map = app_impl.role_map
+        self.role_set_map = app_impl.role_set_map
+
         self.has_organization_id_attr_command_classes: set[Type[command.Command]] = {
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,

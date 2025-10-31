@@ -14,33 +14,44 @@ class Role(Enum):
 class RoleSet(Enum):
     ALL = frozenset(
         {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
+            Role.ROOT.value,
+            Role.APP_ADMIN.value,
+            Role.ORG_ADMIN.value,
+            Role.REFDATA_ADMIN.value,
+            Role.ORG_USER.value,
+            Role.GUEST.value,
         }
     )
-    GE_APP_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN})
-    GE_ORG_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN})
-    GE_REFDATA_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.REFDATA_ADMIN})
-    GE_ORG_USER = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN, Role.ORG_USER})
+    GE_APP_ADMIN = frozenset({Role.ROOT.value, Role.APP_ADMIN.value})
+    GE_ORG_ADMIN = frozenset(
+        {Role.ROOT.value, Role.APP_ADMIN.value, Role.ORG_ADMIN.value}
+    )
+    GE_REFDATA_ADMIN = frozenset(
+        {Role.ROOT.value, Role.APP_ADMIN.value, Role.REFDATA_ADMIN.value}
+    )
+    GE_ORG_USER = frozenset(
+        {
+            Role.ROOT.value,
+            Role.APP_ADMIN.value,
+            Role.ORG_ADMIN.value,
+            Role.ORG_USER.value,
+        }
+    )
     GE_GUEST = frozenset(
         {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
+            Role.ROOT.value,
+            Role.APP_ADMIN.value,
+            Role.ORG_ADMIN.value,
+            Role.ORG_USER.value,
+            Role.GUEST.value,
         }
     )
-    LT_ORG_ADMIN = frozenset({Role.ORG_USER, Role.GUEST})
-    ROOT = frozenset({Role.ROOT})
-    APPLICATION = frozenset({Role.APP_ADMIN})
-    ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
-    METADATA = frozenset({Role.REFDATA_ADMIN})
-    OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
+    LT_ORG_ADMIN = frozenset({Role.ORG_USER.value, Role.GUEST.value})
+    ROOT = frozenset({Role.ROOT.value})
+    APPLICATION = frozenset({Role.APP_ADMIN.value})
+    ORGANIZATION = frozenset({Role.APP_ADMIN.value, Role.ORG_ADMIN.value})
+    METADATA = frozenset({Role.REFDATA_ADMIN.value})
+    OPERATIONAL = frozenset({Role.ORG_USER.value, Role.GUEST.value})
 
 
 class ServiceType(Enum):

@@ -201,8 +201,10 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/commondb/integration",
                 "test/casedb/integration",
-                # "test/seqdb/integration",
+                "test/seqdb/integration",
+                "test/omopdb/integration",
             ]
         )
 
@@ -325,13 +327,6 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/commondb/integration/build_db",
-            ]
-        )
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/build_db",
             ]
         )
 

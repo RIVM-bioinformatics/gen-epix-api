@@ -11,7 +11,7 @@ from gen_epix.fastapp.repositories.sa.repository import SARepository
 from gen_epix.fastapp.repository import BaseRepository
 
 
-class BaseAppEnv(abc.ABC):
+class BaseAppComposer(abc.ABC):
     def __init__(self) -> None:
         self._cfg: Dynaconf
         self._app: App

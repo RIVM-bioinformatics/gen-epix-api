@@ -34,8 +34,8 @@ class OmopdbEndpointTestClient(EndpointTestClient):
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
-        # Import the request body model here so that the APP_ENV is not created
-        # before the cfg is updated, since the APP_ENV is imported in the routers
+        # Import the request body model here so that the APP_COMPOSER is not created
+        # before the cfg is updated, since the APP_COMPOSER is imported in the routers
         from gen_epix.casedb.api import UpdateUserOwnOrganizationRequestBody
 
         request_body = UpdateUserOwnOrganizationRequestBody(

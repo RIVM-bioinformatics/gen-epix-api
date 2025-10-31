@@ -3,25 +3,36 @@ import importlib.metadata
 import re
 import string
 import tomllib
+from typing import Any, Type
 
 from cachetools import TTLCache, cached
 
+from gen_epix.commondb import policies
+from gen_epix.commondb.app_implementation_details import AppImplementationDetails
 from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain.policy import BaseHasSystemOutagePolicy
 from gen_epix.commondb.domain.service import BaseSystemService
-from gen_epix.commondb.policies.has_system_outage_policy import HasSystemOutagePolicy
 from gen_epix.commondb.util import get_project_root
 from gen_epix.fastapp import CrudOperation, EventTiming
+from gen_epix.fastapp.app import App
 
 
 class SystemService(BaseSystemService):
     REQUIREMENTS_FILE_NAME = "pyproject.toml"
+
+    def __init__(self, app: App, **kwargs: Any) -> None:
+        super().__init__(app, **kwargs)
+        app_impl: AppImplementationDetails = app.impl
+        self.has_system_outage_policy_class: Type[BaseHasSystemOutagePolicy] = (
+            app_impl.get_mapped_class(policies.HasSystemOutagePolicy)
+        )
 
     def register_policies(self) -> None:
         """
         Registers policies that checks if the system has a current outage
 
         """
-        policy = HasSystemOutagePolicy(system_service=self)
+        policy = self.has_system_outage_policy_class(system_service=self)
         for command_class in self.app.domain.commands:
             self.app.register_policy(command_class, policy, EventTiming.BEFORE)
 

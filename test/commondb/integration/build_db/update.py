@@ -19,22 +19,20 @@ class TestUpdate:
         is_not_restricted_roles = enum.RoleSet.GE_APP_ADMIN.value
         if env.verbose:
             print("\nUser updates:")
-        for role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-            role_str = role.value.lower()
-            user_str = f"{role_str}1_1"
-            user = env._get_obj(model.User, user_str)
-            is_root = role == enum.Role.ROOT
+        for role in sorted(env.role_set_map[enum.RoleSet.ALL]):
+            user_str = f"{role.lower()}1_1"
+            user: model.User = env._get_obj(model.User, user_str)
+            is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_orgs = {
                 org_id_name_map[x]
                 for x in env.get_org_ids_for_org_admin(user, on_no_admin="return")
             }
-            for tgt_role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-                tgt_role_str = tgt_role.value.lower()
+            for tgt_role in sorted(env.role_set_map[enum.RoleSet.ALL]):
                 tgt_users_str = [
-                    f"{tgt_role_str}1_1",
-                    f"{tgt_role_str}1_2",
-                    f"{tgt_role_str}2_1",
+                    f"{tgt_role.lower()}1_1",
+                    f"{tgt_role.lower()}1_2",
+                    f"{tgt_role.lower()}2_1",
                 ]
                 new_tgt_orgs = [f"org{i+1}" for i in range(0, 5)]
                 is_sub_role = tgt_role in env.role_hierarchy[role]
@@ -92,24 +90,22 @@ class TestUpdate:
         is_not_restricted_roles = enum.RoleSet.GE_APP_ADMIN.value
         if env.verbose:
             print("\nUser role updates:")
-        for role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-            role_str = role.value.lower()
-            user_str = f"{role_str}1_1"
-            user = env._get_obj(model.User, user_str)
-            is_root = role == enum.Role.ROOT
+        for role in sorted(env.role_set_map[enum.RoleSet.ALL]):
+            user_str = f"{role.lower()}1_1"
+            user: model.User = env._get_obj(model.User, user_str)
+            is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_org_ids = env.get_org_ids_for_org_admin(
                 user, on_no_admin="return"
             )
-            for tgt_role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-                tgt_role_str = tgt_role.value.lower()
+            for tgt_role in sorted(env.role_set_map[enum.RoleSet.ALL]):
                 tgt_users_str = [
-                    f"{tgt_role_str}1_1",
-                    f"{tgt_role_str}2_1",
+                    f"{tgt_role.lower()}1_1",
+                    f"{tgt_role.lower()}2_1",
                 ]
                 is_sub_role = tgt_role in env.role_hierarchy[role]
                 for tgt_user_str in tgt_users_str:
-                    tgt_user = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
                     tgt_user_org_id = tgt_user.organization_id
                     if not SKIP_RAISE:
                         msg = f"{user_str}: {tgt_user_str} no roles"
@@ -123,7 +119,7 @@ class TestUpdate:
                             )
                         ):
                             env.update_user(user, tgt_user, roles=set())
-                    for tgt_extra_role in enum.RoleSet.ALL.value:
+                    for tgt_extra_role in env.role_set_map[enum.RoleSet.ALL]:
                         # Determine if user can add tgt_extra_role to tgt_user
                         # The tgt_extra_role must have less permissions than the user's
                         # role unless the user is ROOT
@@ -148,8 +144,7 @@ class TestUpdate:
                         # Update tgt_user roles
                         tgt_roles = set(tgt_user.roles)
                         tgt_roles.add(tgt_extra_role)
-                        tgt_extra_role_str = tgt_extra_role.value
-                        msg = f"{user_str}: {tgt_user_str} + {tgt_extra_role_str}"
+                        msg = f"{user_str}: {tgt_user_str} + {tgt_extra_role}"
                         if env.verbose:
                             print(msg)
                         if is_allowed:

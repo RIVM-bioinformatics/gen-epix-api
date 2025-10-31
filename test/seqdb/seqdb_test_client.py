@@ -19,7 +19,7 @@ from gen_epix.seqdb.api.organization import (
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.policy import RoleGenerator
-from gen_epix.seqdb.env import AppEnv
+from gen_epix.seqdb.env import AppComposer
 
 
 class SeqdbTestClient(TestClient):
@@ -99,21 +99,21 @@ class SeqdbTestClient(TestClient):
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)
-        app_env = AppEnv(app_cfg, log_setup=log_setup, **kwargs)
+        app_composer = AppComposer(app_cfg, log_setup=log_setup, **kwargs)
 
         # Create endpoint test client if endpoints are to be used (including own
-        # app_env), otherwise construct app env separately
+        # app_composer), otherwise construct app env separately
         endpoint_test_client: SeqdbEndpointTestClient | None = None
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
                 app_cfg.cfg,
-                app=app_env.app,
+                app=app_composer.app,
                 create_routers_fn=create_routers,
-                registered_user_dependency=app_env.registered_user_dependency,
-                new_user_dependency=app_env.new_user_dependency,
-                idp_user_dependency=app_env.idp_user_dependency,
-                app_id=app_env.app.generate_id(),
+                registered_user_dependency=app_composer.registered_user_dependency,
+                new_user_dependency=app_composer.new_user_dependency,
+                idp_user_dependency=app_composer.idp_user_dependency,
+                app_id=app_composer.app.generate_id(),
                 setup_logger=app_cfg.setup_logger if log_setup else None,
                 api_logger=app_cfg.api_logger,
                 debug=True,
@@ -121,7 +121,7 @@ class SeqdbTestClient(TestClient):
             )
             app_last_handled_exception = LAST_HANDLED_EXCEPTION
             endpoint_test_client = SeqdbEndpointTestClient(
-                app_env.app,
+                app_composer.app,
                 fast_api,
                 app_last_handled_exception,
                 user_class=model.User,
@@ -146,7 +146,7 @@ class SeqdbTestClient(TestClient):
             test_name,
             test_dir,
             app_cfg,
-            app_env,
+            app_composer,
             roles=set(enum.Role),
             role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
             user_class=model.User,
