@@ -8,6 +8,8 @@
 
 Gen-EpiX is a platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.
 
+The platform is currently at the beta release stage and as such not yet usable for production. We are currently working to get the platform released, for use in the Netherlands as the official national platform for laboratory-based surveillance of infectious diseases. Feel free to contact us <a href="mailto:ivo.van.walle@rivm.nl">here</a> if you are interested.
+
 This repository contains the code for the backend and is one of several that together comprise the platform. See https://github.com/RIVM-bioinformatics/gen-epix for an overview of the repositories.
 
 ## Key Features
