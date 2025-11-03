@@ -97,6 +97,10 @@ class BaseCaseService(BaseService):
             command.RetrieveLibraryPrepProtocolsCommand,
             self.retrieve_library_prep_protocols,
         )
+        f(
+            command.RetrieveAssemblyProtocolsCommand,
+            self.retrieve_assembly_protocols,
+        )
 
     @abc.abstractmethod
     def validate_cases(
@@ -208,4 +212,11 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrieveLibraryPrepProtocolsCommand,
     ) -> list[model.LibraryPrepProtocol]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_assembly_protocols(
+        self,
+        cmd: command.RetrieveAssemblyProtocolsCommand,
+    ) -> list[model.AssemblyProtocol]:
         raise NotImplementedError()
