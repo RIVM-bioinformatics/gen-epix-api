@@ -4,19 +4,20 @@
 
 ---
 
-**Source Code**: https://github.com/RIVM-bioinformatics/gen-epix-api
-
----
 # Gen-EpiX: Genomic Epidemiology platform for disease X (beta version)
 
-Gen-EpiX is platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.
+Gen-EpiX is a platform for visualizing and analyzing genomic epidemiology data. It has fine-grained access controls for collaboration between multiple organizations.
+
+The platform is currently at the beta release stage and as such not yet usable for production. We are currently working to get the platform released, for use in the Netherlands as the official national platform for laboratory-based surveillance of infectious diseases. Feel free to contact us <a href="mailto:ivo.van.walle@rivm.nl">here</a> if you are interested.
+
+This repository contains the code for the backend and is one of several that together comprise the platform. See https://github.com/RIVM-bioinformatics/gen-epix for an overview of the repositories.
 
 ## Key Features
 
 - **Visualisation**: Visualize cases by time, place, person and also by genome through a phylogenetic tree coupled to the cases.
 - **Fine-grained access**: Give different organizations different access rights per disease, down to individual variables. Organizations can manage access of their own users by themselves.
 - **Search**: Search and filter cases, including on genetic similarity.
-- **Signal detection**: Detect, define and share sets of cases, signals and outbreaks.
+- **Signal detection**: Detect, define and share sets of cases, signals and outbreaks. Detection can be manual through the web application, or through your own algorithm using the API.
 - **Disease X**: Any disease and corresponding analysis variables can be added.
 - **Data**: Adheres to the Medallion data architecture design pattern. The silver layer consists of normalized and standardized patient or subject data compliant with the [OMOP Common Data Model](https://www.ohdsi.org/data-standardization), and a dedicated database for genetic sequence data and computation of phylogenetic trees. The gold layer consists of case data ready for analysis in the form of a single row of data per case.
 - **Tech**: OpenAPI compliant API, deployable on cloud or on-premise, support for multiple authentication providers. Python/FastAPI backend and default TypeScript/React frontend available from gen-epix-web.

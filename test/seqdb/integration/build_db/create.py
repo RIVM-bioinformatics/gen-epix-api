@@ -173,14 +173,6 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
-    # TODO: test_create_site
-
-    # TODO: test_create_site_raise
-
-    # TODO: test_create_contact
-
-    # TODO: test_create_contact_raise
-
     def test_create_library_protocol(self, env: Env) -> None:
         # Create library_prep_protocol as root, app_admin, refdata_admin
         for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
@@ -191,6 +183,17 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_library_prep_protocol(exec_user, "library_prep_protocol11")
+
+    def test_create_assembly_protocol(self, env: Env) -> None:
+        # Create assembly_protocol as root, app_admin, refdata_admin
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
+            env.create_assembly_protocol(exec_user, f"assembly_protocol{i + 1}")
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_assembly_protocol_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_assembly_protocol(exec_user, "assembly_protocol11")
 
     def test_create_file(self, env: Env) -> None:
         content = "file content"
@@ -235,6 +238,34 @@ class TestCreate:
             )
             env.create_read_set(
                 exec_user, fwd_file_id=fwd_file.id, rev_file_id=rev_file.id, **kwargs
+            )
+
+    def test_create_seq(self, env: Env) -> None:
+        # Create Seq as root, app_admin, org_admin and org_user
+        assembly_protocol: model.AssemblyProtocol = env.create_assembly_protocol(
+            "root1_1", "assembly_protocol99"
+        )
+        for exec_user in DATA_USERS:
+            env.create_seq(
+                exec_user,
+                assembly_protocol_or_str=assembly_protocol,
+            )
+
+    def test_create_seq_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_seq(
+                    exec_user,
+                    assembly_protocol_or_str="assembly_protocol99",
+                )
+
+    def test_create_seq_with_file(self, env: Env) -> None:
+        for exec_user in DATA_USERS:
+            file = env.create_file(exec_user, content="seq file content")
+            env.create_seq(
+                exec_user,
+                assembly_protocol_or_str="assembly_protocol99",
+                file_id=file.id,
             )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")

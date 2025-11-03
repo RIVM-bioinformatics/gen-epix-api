@@ -30,6 +30,8 @@ class TestClient:
         model.Organization: "name",
         model.DataCollection: "name",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
+        model.Site: ("name"),
+        model.Contact: ("name"),
     }
 
     def __init__(

@@ -1,9 +1,9 @@
 # python 3.13
 
 # application server
-fastapi[standard]==0.120.0
+fastapi[standard]==0.120.2
 gunicorn==23.0.*
-starlette==0.48.0
+starlette==0.49.1
 httpx==0.28.1
 python-jose==3.5.0
 
@@ -23,7 +23,7 @@ types-setuptools==80.9.*
 python-multipart==0.0.20
 
 # calculation
-scipy==1.16.2
+scipy==1.16.3
 numpy==2.3.4
 biopython==1.85
 

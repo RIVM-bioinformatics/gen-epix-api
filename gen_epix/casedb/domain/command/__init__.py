@@ -125,6 +125,9 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveLibraryPrepProtocolsCommand as RetrieveLibraryPrepProtocolsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    RetrieveAssemblyProtocolsCommand as RetrieveAssemblyProtocolsCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -317,6 +320,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         ValidateCasesCommand,
         CaseTypeSettingsCrudCommand,
         RetrieveLibraryPrepProtocolsCommand,
+        RetrieveAssemblyProtocolsCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,

@@ -314,6 +314,14 @@ class RetrieveLibraryPrepProtocolsCommand(Command):
     pass
 
 
+class RetrieveAssemblyProtocolsCommand(Command):
+    """
+    Retrieve assembly protocols from seqdb database
+    """
+
+    pass
+
+
 # CRUD
 
 

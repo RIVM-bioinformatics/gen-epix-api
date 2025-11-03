@@ -60,7 +60,10 @@ COPY . /app
 # Expose the port that the application listens on.
 EXPOSE 8000
 
-# Run the application.
+# Configure health check before switching to non-privileged user
 HEALTHCHECK CMD curl --fail http://127.0.0.1:8000/v1/health || exit 1
+
+# Switch to the non-privileged user to run the application.
+USER appuser
 # CMD ["fastapi", "run", "gen_epix/casedb/app.py", "--port", "8000"]
 # CMD ["sh", "-c", "gunicorn --preload -k uvicorn.workers.UvicornWorker gen_epix.casedb.app:FAST_API"]
