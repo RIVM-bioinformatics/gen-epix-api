@@ -176,8 +176,6 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
-    # TODO: test_create_site
-
     def test_create_site(self, env: Env) -> None:
         env.create_site("root1_1", "site1_1", "org1")
         env.create_site("root1_1", "site2_1", "org2")
