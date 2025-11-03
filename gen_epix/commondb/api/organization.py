@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
@@ -69,7 +69,7 @@ def create_organization_endpoints(
     **kwargs: Any,
 ) -> None:
     assert handle_exception
-    app_impl: AppImplementationDetails = app.impl
+    app_impl: AppImplDetails = app.impl
     user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
     user_invitation_class: type[model.UserInvitation] = app_impl.get_mapped_class(
         model.UserInvitation

@@ -706,6 +706,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.general.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.end_to_end",
             "type": "debugpy",
             "request": "launch",

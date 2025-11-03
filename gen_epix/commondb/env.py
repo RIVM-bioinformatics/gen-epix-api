@@ -8,7 +8,7 @@ from typing import Any, Callable, Type
 from dynaconf import Dynaconf
 
 from gen_epix import fastapp
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
@@ -51,11 +51,10 @@ class AppComposer(BaseAppComposer):
         policy_class_map: (
             dict[Type[fastapp.Policy], Type[fastapp.Policy]] | None
         ) = None,
-        role_map: dict[enum.Role | Enum, str] | Type[Enum] = enum.Role,
-        role_set_map: dict[enum.RoleSet | Enum, str] | Type[Enum] = enum.RoleSet,
         log_setup: bool = True,
         **kwargs: Any,
     ):
+        # Parse input
         self._app_cfg = app_cfg
         self._cfg = app_cfg.cfg
         self._domain = domain or DOMAIN
@@ -66,9 +65,14 @@ class AppComposer(BaseAppComposer):
         self._model_class_map = model_class_map or {}
         self._command_class_map = command_class_map or {}
         self._policy_class_map = policy_class_map or {}
-        self._role_map = role_map
-        self._role_set_map = role_set_map
         self._log_setup = log_setup
+
+        # Derive some properties
+        self._role_map = self._role_generator_class.get_role_map()
+        self._role_set_map = self._role_generator_class.get_role_set_map()
+        self._role_permissions_map = (
+            self._role_generator_class.get_role_permissions_map()
+        )
 
         # Compose application
         data = self.compose_application(**kwargs)
@@ -103,9 +107,8 @@ class AppComposer(BaseAppComposer):
                 )
 
             # Initialize app
-            app_impl = AppImplementationDetails(
+            app_impl = AppImplDetails(
                 sorted_service_types=list(self._sorted_service_types),
-                role_generator_class=self._role_generator_class,
                 rbac_service_class=self._rbac_service_class,
                 user_manager_class=self._user_manager_class,
                 model_class_map=self._model_class_map,
@@ -113,6 +116,7 @@ class AppComposer(BaseAppComposer):
                 policy_class_map=self._policy_class_map,
                 role_map=self._role_map,
                 role_set_map=self._role_set_map,
+                role_permissions_map=self._role_permissions_map,
             )
             app = App(
                 name=self._app_cfg.app_name,
@@ -200,11 +204,7 @@ class AppComposer(BaseAppComposer):
 
             # Set up roles
             rbac_service.register_roles(
-                {
-                    app_impl.role_map[x]: y
-                    for x, y in app_impl.role_generator_class.ROLE_PERMISSIONS.items()
-                },
-                root_role=rbac_service.root_role,  # type: ignore[arg-type]
+                app_impl.role_permissions_map, app_impl.role_map[enum.Role.ROOT]
             )
 
             # Create and set user generator, which can create new users under different scenarios

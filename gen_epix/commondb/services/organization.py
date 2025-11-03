@@ -3,7 +3,7 @@ from typing import Any, Type
 
 from cachetools import TTLCache, cached
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
@@ -28,7 +28,7 @@ class OrganizationService(BaseOrganizationService):
         **kwargs: Any,
     ) -> None:
         super().__init__(app, **kwargs)
-        app_impl: AppImplementationDetails = app.impl
+        app_impl: AppImplDetails = app.impl
         self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
         self.user_invitation_class: Type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)

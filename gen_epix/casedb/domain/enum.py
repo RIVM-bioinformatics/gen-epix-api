@@ -3,6 +3,8 @@
 
 from enum import Enum
 
+from gen_epix.commondb.domain.enum import RoleSet as RoleSet
+
 
 class ServiceType(Enum):
     AUTH = "AUTH"
@@ -67,43 +69,13 @@ class ColRelation(Enum):
 
 
 class Role(Enum):
-    ROOT = "ROOT"
-    APP_ADMIN = "APP_ADMIN"
-    ORG_ADMIN = "ORG_ADMIN"
-    REFDATA_ADMIN = "REFDATA_ADMIN"
-    ORG_USER = "ORG_USER"
-    GUEST = "GUEST"
-    ROLE1 = "ROLE1"
-
-
-class RoleSet(Enum):
-    ALL = frozenset(
-        {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        }
-    )
-    GE_APP_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN})
-    GE_ORG_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN})
-    GE_REFDATA_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.REFDATA_ADMIN})
-    GE_ORG_USER = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN, Role.ORG_USER})
-    GE_GUEST = frozenset(
-        {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        }
-    )
-    APPLICATION = frozenset({Role.APP_ADMIN})
-    ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
-    METADATA = frozenset({Role.REFDATA_ADMIN})
-    OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
+    ROOT = "CASEDB_ROOT"
+    APP_ADMIN = "CASEDB_APP_ADMIN"
+    ORG_ADMIN = "CASEDB_ORG_ADMIN"
+    REFDATA_ADMIN = "CASEDB_REFDATA_ADMIN"
+    ORG_USER = "CASEDB_ORG_USER"
+    GUEST = "CASEDB_GUEST"
+    ROLE1 = "CASEDB_ROLE1"
 
 
 class CaseRight(Enum):

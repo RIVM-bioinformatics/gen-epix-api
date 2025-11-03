@@ -7,7 +7,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
@@ -52,7 +52,7 @@ def create_system_endpoints(
 ) -> None:
 
     assert handle_exception
-    app_impl: AppImplementationDetails = app.impl
+    app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
     idp_user_dependency = app_impl.idp_user_dependency
 

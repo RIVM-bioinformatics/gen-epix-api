@@ -4,7 +4,7 @@ from collections.abc import Hashable
 from enum import Enum
 from typing import Any
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy.permission import NO_RBAC_PERMISSIONS
 from gen_epix.commondb.domain.service import BaseRbacService
@@ -16,7 +16,7 @@ class RbacService(BaseRbacService):
 
     def __init__(self, app: App, **kwargs: Any) -> None:
         super().__init__(app, **kwargs)
-        app_impl: AppImplementationDetails = app.impl
+        app_impl: AppImplDetails = app.impl
         self.role_map: dict[enum.Role | Enum, str] = app_impl.role_map
         self.role_set_map: dict[enum.RoleSet | Enum, frozenset[str]] = (
             app_impl.role_set_map

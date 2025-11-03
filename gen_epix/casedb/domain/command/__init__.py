@@ -6,9 +6,6 @@ from gen_epix.casedb.domain.command.abac import (
     OrganizationAccessCasePolicyCrudCommand as OrganizationAccessCasePolicyCrudCommand,
 )
 from gen_epix.casedb.domain.command.abac import (
-    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
-)
-from gen_epix.casedb.domain.command.abac import (
     OrganizationShareCasePolicyCrudCommand as OrganizationShareCasePolicyCrudCommand,
 )
 from gen_epix.casedb.domain.command.abac import (
@@ -113,6 +110,9 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveGeneticSequenceFastaByCaseCommand as RetrieveGeneticSequenceFastaByCaseCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    RetrieveLibraryPrepProtocolsCommand as RetrieveLibraryPrepProtocolsCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeByCasesCommand as RetrievePhylogeneticTreeByCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -120,9 +120,6 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmClassCrudCommand as TreeAlgorithmClassCrudCommand,
-)
-from gen_epix.casedb.domain.command.case import (
-    RetrieveLibraryPrepProtocolsCommand as RetrieveLibraryPrepProtocolsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
@@ -164,18 +161,6 @@ from gen_epix.casedb.domain.command.ontology import (
 from gen_epix.casedb.domain.command.ontology import (
     EtiologyCrudCommand as EtiologyCrudCommand,
 )
-from gen_epix.casedb.domain.command.organization import (
-    InviteUserCommand as InviteUserCommand,
-)
-from gen_epix.casedb.domain.command.organization import (
-    UpdateUserCommand as UpdateUserCommand,
-)
-from gen_epix.casedb.domain.command.organization import (
-    UserCrudCommand as UserCrudCommand,
-)
-from gen_epix.casedb.domain.command.organization import (
-    UserInvitationCrudCommand as UserInvitationCrudCommand,
-)
 from gen_epix.casedb.domain.command.seqdb import (
     RetrieveGeneticSequenceByIdCommand as RetrieveGeneticSequenceByIdCommand,
 )
@@ -188,7 +173,6 @@ from gen_epix.casedb.domain.command.subject import (
 from gen_epix.casedb.domain.command.subject import (
     SubjectIdentifierCrudCommand as SubjectIdentifierCrudCommand,
 )
-from gen_epix.commondb.domain import command as common_command
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
@@ -213,6 +197,10 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
+)
+from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
+from gen_epix.commondb.domain.command import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
@@ -249,8 +237,13 @@ from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
+)
+from gen_epix.commondb.domain.command import UserCrudCommand as UserCrudCommand
+from gen_epix.commondb.domain.command import (
+    UserInvitationCrudCommand as UserInvitationCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     RetrieveInviteUserConstraintsCommand as RetrieveInviteUserConstraintsCommand,
@@ -353,10 +346,4 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
     ),
 }
 
-COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {
-    common_command.UserCrudCommand: UserCrudCommand,
-    common_command.UserInvitationCrudCommand: UserInvitationCrudCommand,
-    common_command.InviteUserCommand: InviteUserCommand,
-    common_command.UpdateUserCommand: UpdateUserCommand,
-    common_command.OrganizationAdminPolicyCrudCommand: OrganizationAdminPolicyCrudCommand,
-}
+COMMON_COMMAND_MAP: dict[Type[fastapp.Command], Type[fastapp.Command]] = {}

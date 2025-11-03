@@ -1,7 +1,7 @@
 from typing import Any, Callable, Type
 from uuid import UUID
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseIsOrganizationAdminPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
@@ -13,7 +13,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
     def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
         super().__init__(abac_service, **kwargs)
 
-        app_impl: AppImplementationDetails = abac_service.app.impl
+        app_impl: AppImplDetails = abac_service.app.impl
         self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map

@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.domain.model import User as SeqdbUser
-from gen_epix.seqdb.env import AppComposer
+from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 
 class SeqdbService(BaseSeqdbService):
@@ -42,12 +42,10 @@ class SeqdbService(BaseSeqdbService):
                 seqdb_app_cfg = AppCfg(
                     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
                 )
-            log_setup = seqdb_local_app_props.pop(
+            log_setup = seqdb_local_app_props.get(
                 "log_setup", kwargs.get("logger") is not None
             )
-            seqdb_app_composer = AppComposer(
-                seqdb_app_cfg, log_setup=log_setup, **seqdb_local_app_props
-            )
+            seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=log_setup)
             seqdb_app = seqdb_app_composer.app
             seqdb_user = SeqdbUser(**seqdb_local_app_props["user"])
         elif seqdb_app_type.upper() == "REMOTE":

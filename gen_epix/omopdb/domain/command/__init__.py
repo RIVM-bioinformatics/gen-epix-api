@@ -27,6 +27,10 @@ from gen_epix.commondb.domain.command import (
 from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
+from gen_epix.commondb.domain.command import InviteUserCommand as InviteUserCommand
+from gen_epix.commondb.domain.command import (
+    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
+)
 from gen_epix.commondb.domain.command import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
@@ -59,8 +63,13 @@ from gen_epix.commondb.domain.command import SiteCrudCommand as SiteCrudCommand
 from gen_epix.commondb.domain.command import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.command import UpdateUserCommand as UpdateUserCommand
 from gen_epix.commondb.domain.command import (
     UpdateUserOwnOrganizationCommand as UpdateUserOwnOrganizationCommand,
+)
+from gen_epix.commondb.domain.command import UserCrudCommand as UserCrudCommand
+from gen_epix.commondb.domain.command import (
+    UserInvitationCrudCommand as UserInvitationCrudCommand,
 )
 from gen_epix.commondb.domain.command.abac import (
     RetrieveOrganizationsUnderAdminCommand as RetrieveOrganizationsUnderAdminCommand,
@@ -72,9 +81,6 @@ from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.omopdb.domain import enum
-from gen_epix.omopdb.domain.command.abac import (
-    OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
-)
 from gen_epix.omopdb.domain.command.omop import (
     CareSiteCrudCommand as CareSiteCrudCommand,
 )
@@ -174,18 +180,6 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import VocabularyCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     VocabularyCrudCommand as VocabularyCrudCommand,
-)
-from gen_epix.omopdb.domain.command.organization import (
-    InviteUserCommand as InviteUserCommand,
-)
-from gen_epix.omopdb.domain.command.organization import (
-    UpdateUserCommand as UpdateUserCommand,
-)
-from gen_epix.omopdb.domain.command.organization import (
-    UserCrudCommand as UserCrudCommand,
-)
-from gen_epix.omopdb.domain.command.organization import (
-    UserInvitationCrudCommand as UserInvitationCrudCommand,
 )
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {

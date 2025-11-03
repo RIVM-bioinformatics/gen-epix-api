@@ -31,13 +31,8 @@ APP_COMPOSER = AppComposer(APP_CFG)
 
 # Create fastapi
 FAST_API = create_fast_api(
-    APP_CFG.cfg,
     app=APP_COMPOSER.app,
     create_routers_fn=create_routers,
-    registered_user_dependency=APP_COMPOSER.registered_user_dependency,
-    new_user_dependency=APP_COMPOSER.new_user_dependency,
-    idp_user_dependency=APP_COMPOSER.idp_user_dependency,
-    app_id=APP_COMPOSER.app.generate_id(),
     setup_logger=APP_CFG.setup_logger,
     api_logger=APP_CFG.api_logger,
     debug=APP_CFG.cfg.app.debug,

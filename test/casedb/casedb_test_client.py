@@ -9,17 +9,13 @@ from typing import Any, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.persistable
-from gen_epix.casedb.api.organization import (
-    UpdateUserRequestBody,
-    UserInvitationRequestBody,
-)
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.policy import RoleGenerator
 from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
+from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
@@ -180,13 +176,8 @@ class CasedbTestClient(TestClient):
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
-                app_cfg.cfg,
                 app=app_composer.app,
                 create_routers_fn=create_routers,
-                registered_user_dependency=app_composer.registered_user_dependency,
-                new_user_dependency=app_composer.new_user_dependency,
-                idp_user_dependency=app_composer.idp_user_dependency,
-                app_id=app_composer.app.generate_id(),
                 setup_logger=app_cfg.setup_logger if log_setup else None,
                 api_logger=app_cfg.api_logger,
                 debug=True,
@@ -197,20 +188,6 @@ class CasedbTestClient(TestClient):
                 app_composer.app,
                 fast_api,
                 app_last_handled_exception,
-                user_class=model.User,
-                user_invitation_class=model.UserInvitation,
-                user_invitation_constraints_class=model.UserInvitationConstraints,
-                organization_admin_policy_class=model.OrganizationAdminPolicy,
-                user_crud_command_class=command.UserCrudCommand,
-                user_invitation_crud_command_class=command.UserInvitationCrudCommand,
-                organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
-                retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
-                invite_user_command_class=command.InviteUserCommand,
-                register_invited_user_command_class=command.RegisterInvitedUserCommand,
-                retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
-                update_user_command_class=command.UpdateUserCommand,
-                user_invitation_request_body=UserInvitationRequestBody,
-                update_user_request_body=UpdateUserRequestBody,
                 **kwargs,
             )
 
@@ -220,20 +197,6 @@ class CasedbTestClient(TestClient):
             test_dir,
             app_cfg,
             app_composer,
-            roles=set(enum.Role),
-            role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
-            user_class=model.User,
-            user_invitation_class=model.UserInvitation,
-            user_invitation_constraints_class=model.UserInvitationConstraints,
-            organization_admin_policy_class=model.OrganizationAdminPolicy,
-            user_crud_command_class=command.UserCrudCommand,
-            user_invitation_crud_command_class=command.UserInvitationCrudCommand,
-            organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
-            retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
-            invite_user_command_class=command.InviteUserCommand,
-            register_invited_user_command_class=command.RegisterInvitedUserCommand,
-            retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
-            update_user_command_class=command.UpdateUserCommand,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,
@@ -1430,9 +1393,9 @@ class CasedbTestClient(TestClient):
         )  # type:ignore[assignment]
         # Admin users have access to all case type set members
         if (
-            enum.Role.ROOT in user.roles
-            or enum.Role.APP_ADMIN in user.roles
-            or enum.Role.REFDATA_ADMIN in user.roles
+            self.role_map[CommonRole.ROOT] in user.roles
+            or self.role_map[CommonRole.APP_ADMIN] in user.roles
+            or self.role_map[CommonRole.REFDATA_ADMIN] in user.roles
         ):
             policies: list[model.CaseType] = self.app.handle(
                 command.CaseTypeCrudCommand(

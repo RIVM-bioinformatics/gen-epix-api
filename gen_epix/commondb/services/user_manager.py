@@ -2,7 +2,7 @@ import datetime
 from typing import Any, Type
 from uuid import UUID
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, exc, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.service.rbac import BaseRbacService
@@ -38,7 +38,7 @@ class UserManager(BaseUserManager):
         self._name_claims = name_claims or self.DEFAULT_NAME_CLAIMS
 
         # Derive some properties
-        app_impl: AppImplementationDetails = organization_service.app.impl
+        app_impl: AppImplDetails = organization_service.app.impl
         self._user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
         self._user_invitation_class: Type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)

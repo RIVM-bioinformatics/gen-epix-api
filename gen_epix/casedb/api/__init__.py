@@ -23,12 +23,12 @@ from gen_epix.casedb.api.case import (
 from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,
 )
-from gen_epix.casedb.api.organization import (
-    UpdateUserRequestBody as UpdateUserRequestBody,
-)
-from gen_epix.casedb.api.organization import (
-    UserInvitationRequestBody as UserInvitationRequestBody,
-)
 from gen_epix.commondb.api import (
     UpdateUserOwnOrganizationRequestBody as UpdateUserOwnOrganizationRequestBody,
+)
+from gen_epix.commondb.api.organization import (
+    UpdateUserRequestBody as UpdateUserRequestBody,
+)
+from gen_epix.commondb.api.organization import (
+    UserInvitationRequestBody as UserInvitationRequestBody,
 )

@@ -8,7 +8,7 @@ from cachetools import TTLCache, cached
 
 from gen_epix.commondb import policies
 from gen_epix.commondb import policies as policies
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, exc, model, policy
 from gen_epix.commondb.domain.policy import BaseReadOrganizationResultsOnlyPolicy
 from gen_epix.commondb.domain.repository.abac import BaseAbacRepository
@@ -36,7 +36,7 @@ class AbacService(BaseAbacService):
         **kwargs: Any,
     ):
         super().__init__(app, repository=repository, logger=logger, **kwargs)
-        app_impl: AppImplementationDetails = app.impl
+        app_impl: AppImplDetails = app.impl
         self.organization_admin_policy_model_class: Type[
             model.OrganizationAdminPolicy
         ] = app_impl.get_mapped_class(model.OrganizationAdminPolicy)

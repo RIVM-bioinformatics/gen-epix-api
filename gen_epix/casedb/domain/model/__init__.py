@@ -76,11 +76,6 @@ from gen_epix.casedb.domain.model.ontology import ConceptSet as ConceptSet
 from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
-from gen_epix.casedb.domain.model.organization import User as User
-from gen_epix.casedb.domain.model.organization import UserInvitation as UserInvitation
-from gen_epix.casedb.domain.model.organization import (
-    UserInvitationConstraints as UserInvitationConstraints,
-)
 from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
 from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
 from gen_epix.casedb.domain.model.seqdb import File as File
@@ -96,7 +91,6 @@ from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
-from gen_epix.commondb.domain import model as common_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
@@ -115,6 +109,11 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import User as User
+from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
+from gen_epix.commondb.domain.model import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
@@ -212,9 +211,4 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 )
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
-    common_model.User: User,
-    common_model.UserInvitation: UserInvitation,
-    common_model.UserInvitationConstraints: UserInvitationConstraints,
-    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
-}
+COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {}

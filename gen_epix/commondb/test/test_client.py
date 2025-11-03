@@ -8,7 +8,7 @@ from time import sleep
 from typing import Any, List, Type, TypeVar, cast
 from uuid import UUID
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import BaseAppCfg
 from gen_epix.commondb.domain import command, enum, model
@@ -39,8 +39,6 @@ class TestClient:
         test_dir: Path,
         app_cfg: BaseAppCfg,
         app_composer: BaseAppComposer,
-        roles: set[Enum] | None = None,
-        role_hierarchy: dict[Enum, set[Enum]] | None = None,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         use_endpoints: bool = False,
@@ -57,7 +55,7 @@ class TestClient:
         self.verbose = verbose
 
         # Get implementation details
-        app_impl: AppImplementationDetails = app_composer.app.impl
+        app_impl: AppImplDetails = app_composer.app.impl
         self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
         self.user_invitation_class: Type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)
@@ -97,28 +95,18 @@ class TestClient:
         self.role_map = app_impl.role_map
         self.rev_role_map = app_impl.rev_role_map
         self.role_set_map = app_impl.role_set_map
+        self.role_permissions_map = app_impl.role_permissions_map
         self.app = self.app_composer.app
         self.cfg = self.app.cfg
         self.services = app_impl.services
         self.repositories = app_impl.repositories
 
-        # Convert roles and role_hierarchy
-        self.roles: set[str] = set() if roles is None else {x.value for x in roles}
-        self.role_hierarchy: dict[str, frozenset[str]] = (
-            {}
-            if role_hierarchy is None
-            else {
-                self.role_map[x]: frozenset(self.role_map[z] for z in y)
-                for x, y in role_hierarchy.items()
-            }
-        )
-        self.root_role: str = self.role_map[enum.Role.ROOT]
-        self.guest_role: str = self.role_map[enum.Role.GUEST]
-
         # Set log level
         TestClient._set_log_level(app_cfg, log_level)
 
         # Set additional parameters
+        self.root_role: str = self.role_map[enum.Role.ROOT]
+        self.guest_role: str = self.role_map[enum.Role.GUEST]
         self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints = use_endpoints
@@ -505,6 +493,24 @@ class TestClient:
             if x.id in user_ids or x.organization_id in organization_ids
         ]
 
+    def is_sub_role(
+        self,
+        sub_role: str,
+        role: str,
+        allow_equal: bool = False,
+    ) -> bool:
+        """
+        Check if sub_role is indeed a sub-role of role based on the permissions
+        they each have. Set allow_equal=True to allow sub_role to be equal to role.
+        """
+        permissions = self.role_permissions_map[role]
+        sub_permissions = self.role_permissions_map[sub_role]
+        if allow_equal:
+            return sub_permissions.issubset(permissions[role])
+        return len(permissions) != len(sub_permissions) and sub_permissions.issubset(
+            permissions
+        )
+
     def read_all(
         self,
         user_or_key: model.User | str,
@@ -714,7 +720,9 @@ class TestClient:
         ):
             print(
                 f"{organizations[x.organization_id].name} / {x.key}: "
-                + ", ".join([z for z in sorted(y.name for y in x.roles)])
+                + ", ".join(
+                    [z for z in sorted(self.rev_role_map[y].name for y in x.roles)]
+                )
                 + f" ({x.id})"
             )
 

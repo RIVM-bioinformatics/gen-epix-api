@@ -8,7 +8,7 @@ from typing import Any, Type
 from cachetools import TTLCache, cached
 
 from gen_epix.commondb import policies
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.policy import BaseHasSystemOutagePolicy
 from gen_epix.commondb.domain.service import BaseSystemService
@@ -22,7 +22,7 @@ class SystemService(BaseSystemService):
 
     def __init__(self, app: App, **kwargs: Any) -> None:
         super().__init__(app, **kwargs)
-        app_impl: AppImplementationDetails = app.impl
+        app_impl: AppImplDetails = app.impl
         self.has_system_outage_policy_class: Type[BaseHasSystemOutagePolicy] = (
             app_impl.get_mapped_class(policies.HasSystemOutagePolicy)
         )

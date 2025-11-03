@@ -2,7 +2,7 @@ from typing import Any, Callable, NoReturn
 
 from fastapi import APIRouter, FastAPI
 
-from gen_epix.commondb.app_implementation_details import AppImplementationDetails
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import enum
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -17,7 +17,7 @@ def create_rbac_endpoints(
 ) -> None:
 
     assert handle_exception
-    app_impl: AppImplementationDetails = app.impl
+    app_impl: AppImplDetails = app.impl
     registered_user_dependency = app_impl.registered_user_dependency
 
     # CRUD

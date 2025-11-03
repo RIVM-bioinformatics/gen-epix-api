@@ -290,6 +290,16 @@ class Run:
             ]
         )
 
+    def test_general_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/unit/",
+            ]
+        )
+
     def test_commondb_unit(self) -> None:
         import pytest
 
