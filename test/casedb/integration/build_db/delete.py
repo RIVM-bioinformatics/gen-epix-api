@@ -8,6 +8,8 @@ from test.casedb.integration.build_db.base import (
     ROOT,
     SKIP_RAISE,
     USER_NAME_ROOTS,
+    ORG_ADMIN_OR_ABOVE_USERS,
+    BELOW_ORG_ADMIN_USERS,
 )
 
 import pytest
@@ -301,9 +303,14 @@ class TestDelete:
     def test_delete_site(self, env: Env) -> None:
         """
         RBAC permissions:
-        #TODO: confirm and document specific permissions
+        root: CRUD
+        app_admin: CUD
+        refdata_admin:
+        org_admin:
+        org_user: R
+        guest: -
         """
-        for user in APP_ADMIN_OR_ABOVE_USERS:
+        for user in ORG_ADMIN_OR_ABOVE_USERS:
             site = env.create_site(ROOT, "site99_1", "org1")
             assert site in env.read_all(
                 ROOT, model.Site
@@ -313,10 +320,15 @@ class TestDelete:
     def test_delete_contact(self, env: Env) -> None:
         """
         RBAC permissions:
-        #TODO: confirm and document specific permissions
+        root: CRUD
+        app_admin: CUD
+        refdata_admin:
+        org_admin:
+        org_user: R
+        guest: -
         """
         env.create_site(ROOT, "site99", "org1")
-        for user in APP_ADMIN_OR_ABOVE_USERS:
+        for user in ORG_ADMIN_OR_ABOVE_USERS:
             contact: model.Contact = env.create_contact(ROOT, "contact99", "site99")
             assert contact in env.read_all(
                 ROOT, model.Contact
@@ -327,10 +339,15 @@ class TestDelete:
     def test_delete_site_raise(self, env: Env) -> None:
         """
         RBAC permissions:
-        #TODO: confirm and document specific permissions
+        root: CRUD
+        app_admin: CUD
+        refdata_admin:
+        org_admin:
+        org_user: R
+        guest: -
         """
         env.create_site(ROOT, "site99_1", "org1")
-        for user in BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.Site, "site99_1")
         env.delete_object(ROOT, model.Site, "site99_1")
@@ -338,11 +355,16 @@ class TestDelete:
     def test_delete_contact_raise(self, env: Env) -> None:
         """
         RBAC permissions:
-        #TODO: confirm and document specific permissions
+        root: CRUD
+        app_admin: CUD
+        refdata_admin:
+        org_admin:
+        org_user: R
+        guest: -
         """
         env.create_site(ROOT, "site99", "org1")
         env.create_contact(ROOT, "contact99", "site99")
-        for user in BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.Contact, "contact99")
         env.delete_object(ROOT, model.Contact, "contact99")

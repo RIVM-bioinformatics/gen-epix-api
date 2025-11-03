@@ -2,6 +2,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    BELOW_ORG_ADMIN_USERS,
     DEV_REPOSITORY_CONFIG,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
@@ -186,12 +187,12 @@ class TestCreate:
         env.create_contact("root1_1", "contact3", "site2_1")
 
     def test_create_site_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_site(exec_user, "site1_11", "org1")
 
     def test_create_contact_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_contact(exec_user, "contact11", "site1_1")
 
