@@ -688,6 +688,25 @@ def create_case_endpoints(
             handle_exception("e7f8a9b0", user, exception)
         return retval
 
+    @router.get(
+        "/retrieve/assembly_protocols",
+        operation_id="retrieve__assembly_protocols",
+        name="Retrieve assembly protocols",
+        description=command.RetrieveAssemblyProtocolsCommand.__doc__,
+    )
+    async def retrieve__assembly_protocols(
+        user: registered_user_dependency,  # type: ignore
+    ) -> list[model.AssemblyProtocol]:
+        try:
+            retval: list[model.AssemblyProtocol] = app.handle(
+                command.RetrieveAssemblyProtocolsCommand(
+                    user=user,
+                )
+            )
+        except Exception as exception:
+            handle_exception("c1d2e3f4", user, exception)
+        return retval
+
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(
         app,
