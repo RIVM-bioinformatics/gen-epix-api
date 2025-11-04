@@ -1148,20 +1148,9 @@ class CaseService(BaseCaseService):
 
         case_ids: set[UUID] = {x.case_id for x in cmd.case_read_sets}
         case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_read_sets}
-        read_sets_to_create: list[model.ReadSet] = []
 
         with repository.uow() as uow:
-            cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user.id if user else None,
-                model.Case,
-                None,
-                list(case_ids),
-                CrudOperation.READ_SOME,
-            )
-            if len(cases) != len(case_ids):
-                raise exc.InvalidArgumentsError("Some case ids do not exist")
-
+            # get case_type_col data
             case_type_cols: list[model.CaseTypeCol] = (
                 self.repository.crud(  # type:ignore[assignment]
                     uow,
@@ -1172,10 +1161,10 @@ class CaseService(BaseCaseService):
                     CrudOperation.READ_SOME,
                 )
             )
-            if len(case_type_cols) != len(case_type_col_ids):
-                raise exc.InvalidArgumentsError(
-                    "Some case type column ids do not exist"
-                )
+            case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
+                x.id: x for x in case_type_cols if x.id is not None
+            }
+
             col_ids: set[UUID] = {
                 case_type_col.col_id for case_type_col in case_type_cols
             }
@@ -1187,37 +1176,65 @@ class CaseService(BaseCaseService):
                 list(col_ids),
                 CrudOperation.READ_SOME,
             )
-
-            case_by_id: dict[UUID, model.Case] = {
-                x.id: x for x in cases if x.id is not None
-            }
-            case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
-                x.id: x for x in case_type_cols if x.id is not None
-            }
             col_by_id: dict[UUID, model.Col] = {
                 x.id: x for x in cols if x.id is not None
             }
 
-            # Case and column-level ABAC check
-            self._retrieve_cases_with_content_right(
+            # get case data
+            cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
                 uow,
-                user.id,
-                case_abac,
-                enum.CaseRight.WRITE_CASE,
-                case_ids=list(case_ids),
-                filter_content=True,
-                extra_access_case_type_col_ids=case_type_col_ids,
+                user.id if user else None,
+                model.Case,
+                None,
+                list(case_ids),
+                CrudOperation.READ_SOME,
             )
-            # filter_content=False to role back
-            # TODO: Column level ABAC check?
+            case_by_id: dict[UUID, model.Case] = {
+                x.id: x for x in cases if x.id is not None
+            }
+
+            if not case_abac.is_full_access:
+                # check verify access rights (for cmd.case_read_sets loop)
+                writable_data_collections_by_case_type_col: dict[UUID, set[UUID]] = {
+                    x: case_abac.get_data_collections_with_access_right_for_case_type_col(
+                        x, enum.CaseRight.WRITE_CASE
+                    )
+                    for x in case_type_col_ids
+                }
+                # Retrieve data collections by case id for ABAC column-level write checks
+                case_to_data_collections: dict[UUID, set[UUID]] = (
+                    self._retrieve_case_data_collections_map(
+                        uow, user.id
+                    )
+                )
+                # For each requested (case, case_type_col), ensure the user has write access
+                # to that column in at least one data collection the case belongs to
+                for case_read_set in cmd.case_read_sets:
+                    # Membership includes created_in_data_collection_id
+                    case_data_collection_memberships = set(
+                        case_to_data_collections.get(case_read_set.case_id, set())
+                    )
+                    case_data_collection_memberships.add(
+                        case_by_id[case_read_set.case_id].created_in_data_collection_id
+                    )
+                    writable_in_data_collections = writable_data_collections_by_case_type_col.get(
+                        case_read_set.case_type_col_id, set()
+                    )
+                    if case_data_collection_memberships.isdisjoint(writable_in_data_collections):
+                        raise exc.UnauthorizedAuthError(
+                            "User has no WRITE_CASE access to the specified column in any data collection of the case"
+                        )
+
+            # process each case
             created_read_sets: list[model.ReadSet] = []
-            for case_read_sets in cmd.case_read_sets:
-                case = case_by_id[case_read_sets.case_id]
-                case_type_col = case_type_col_by_id[case_read_sets.case_type_col_id]
+            for case_read_set in cmd.case_read_sets:
+                case = case_by_id[case_read_set.case_id]
+                case_type_col = case_type_col_by_id[case_read_set.case_type_col_id]
                 # check if case type col belongs to case type of case
+
                 if case_type_col.case_type_id != case.case_type_id:
                     raise exc.InvalidArgumentsError(
-                        f"Column {case_read_sets.case_type_col_id} not part of case type {case.case_type_id}"
+                        f"Column {case_read_set.case_type_col_id} not part of case type {case.case_type_id}"
                     )
                 # Check if col is of type GENETIC_READS
                 col = col_by_id[case_type_col.col_id]
@@ -1231,7 +1248,7 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
                         objs=model.ReadSet(
-                            library_prep_protocol_id=case_read_sets.library_prep_protocol_id
+                            library_prep_protocol_id=case_read_set.library_prep_protocol_id
                         ),
                     )
                 )
@@ -1595,7 +1612,9 @@ class CaseService(BaseCaseService):
 
         return library_prep_protocols
 
-    def retrieve_assembly_protocols(self, cmd: command.RetrieveAssemblyProtocolsCommand) -> list[model.AssemblyProtocol]:
+    def retrieve_assembly_protocols(
+        self, cmd: command.RetrieveAssemblyProtocolsCommand
+    ) -> list[model.AssemblyProtocol]:
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
 

@@ -195,6 +195,28 @@ class CaseAbac(BaseModel):
                 )
         return data_collection_ids
 
+    def get_data_collections_with_access_right_for_case_type_col(
+        self, case_type_col_id: UUID, right: CaseRight
+    ) -> set[UUID]:
+        """
+        Get the set[data_collection_id] for which there is the given right on the given case_type_col.
+        """
+        if right not in {CaseRight.READ_CASE, CaseRight.WRITE_CASE}:
+            raise exc.InvalidArgumentsError(
+                f"Right {right.value} is invalid for case_type_col access"
+            )
+        attr_name = (
+            "read_case_type_col_ids"
+            if right == CaseRight.READ_CASE
+            else "write_case_type_col_ids"
+        )
+        return {
+            data_collection_id
+            for access_by_data_collection in self.case_type_access_abacs.values()
+            for data_collection_id, access_abac in access_by_data_collection.items()
+            if case_type_col_id in getattr(access_abac, attr_name)
+        }
+
     def is_allowed(
         self,
         case_type_id: UUID,
