@@ -476,13 +476,17 @@ class CaseService(BaseCaseService):
                         by_case_type.get(case.case_type_id, 0) + 1
                     )
                 case_type_ids = list(by_case_type.keys())
+                # FIXME: not gonna work, require case_type_settings ids for retrieval
                 case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
                     model.CaseTypeSettings,
                     None,
-                    case_type_ids,
-                    CrudOperation.READ_SOME,
+                    None,
+                    CrudOperation.READ_ALL,
+                    filter=UuidSetFilter(
+                        key="case_type_id", members=frozenset(case_type_ids)
+                    ),
                 )
                 case_type_read_limits: dict[UUID, int] = {
                     case_type_setting.case_type_id: (
