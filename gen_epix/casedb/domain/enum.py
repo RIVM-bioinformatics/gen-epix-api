@@ -26,7 +26,6 @@ class RepositoryType(Enum):
 class RegionRelationType(Enum):
     IS_SEPARATE_FROM = "IS_SEPARATE_FROM"
     IS_ADJACENT_TO = "IS_ADJACENT_TO"
-    IS_CONTAINED_IN = "IS_CONTAINED_IN"
     OVERLAPS_WITH = "OVERLAPS_WITH"
     CONTAINS = "CONTAINS"
 
@@ -197,7 +196,6 @@ class ConceptSetType(Enum):
 
 
 class ConceptRelationType(Enum):
-    IS_CONTAINED_IN = "IS_CONTAINED_IN"
     CONTAINS = "CONTAINS"
 
 
