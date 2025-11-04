@@ -69,12 +69,8 @@ def seqdb_server(
     seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=False)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
-        seqdb_app_cfg.cfg,
         app=seqdb_app,
         create_routers_fn=seqdb_create_routers,
-        registered_user_dependency=seqdb_app_composer.registered_user_dependency,
-        new_user_dependency=seqdb_app_composer.new_user_dependency,
-        idp_user_dependency=seqdb_app_composer.idp_user_dependency,
         app_id=seqdb_app_composer.app.generate_id(),
         setup_logger=seqdb_app_cfg.setup_logger,
         api_logger=seqdb_app_cfg.api_logger,

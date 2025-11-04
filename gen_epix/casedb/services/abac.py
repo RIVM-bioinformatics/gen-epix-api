@@ -6,8 +6,9 @@ from uuid import UUID
 from cachetools import TTLCache, cached
 
 from gen_epix.casedb import policies as policies
-from gen_epix.casedb.domain import command, enum, exc, model
+from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service.abac import BaseAbacService
+from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
@@ -214,7 +215,9 @@ class AbacService(BaseAbacService):
         user = self._get_user_by_id_cached(user_id)
         organization_id = user.organization_id
         # @ABAC: Special case: user has full access, defined as all active private data collection policies and all active organization access and share case policies
-        is_full_access = not enum.RoleSet.GE_APP_ADMIN.value.isdisjoint(user.roles)
+        is_full_access = not self.role_set_map[CommonRoleSet.GE_APP_ADMIN].isdisjoint(
+            user.roles
+        )
         if is_full_access:
             return model.CaseAbac(
                 is_full_access=True,

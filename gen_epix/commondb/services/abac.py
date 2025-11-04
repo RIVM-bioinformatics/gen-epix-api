@@ -58,6 +58,8 @@ class AbacService(BaseAbacService):
         self.update_user_policy_class: Type[policy.BaseUpdateUserPolicy] = (
             app_impl.get_mapped_class(policies.UpdateUserPolicy)
         )
+        self.role_map = app_impl.role_map
+        self.role_set_map = app_impl.role_set_map
 
     def crud(self, cmd: CrudCommand) -> Any:
         retval = super().crud(cmd)
