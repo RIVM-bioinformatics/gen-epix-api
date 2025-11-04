@@ -4,12 +4,12 @@ from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    BELOW_ORG_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
     ORG_ADMIN_OR_ABOVE_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
-    BELOW_ORG_ADMIN_USERS,
 )
 from uuid import UUID
 
@@ -513,11 +513,13 @@ class TestUpdate:
         for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
             env.update_object(user, model.Site, "site1_1", {"name": str(i)})
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_contact_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_object(user, model.Contact, "contact1", {"email": str(-i)})
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_site_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
