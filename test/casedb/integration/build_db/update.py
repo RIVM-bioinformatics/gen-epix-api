@@ -5,9 +5,11 @@ from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
+    ORG_ADMIN_OR_ABOVE_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
+    BELOW_ORG_ADMIN_USERS,
 )
 from uuid import UUID
 
@@ -502,6 +504,24 @@ class TestUpdate:
                     # the RBAC/ABAC permissions and should raise an error
                     with pytest.raises(exc.UnauthorizedAuthError):
                         env.update_case_type_col_set_member(user_name, member_obj)  # type: ignore[assignment]
+
+    def test_update_contact(self, env: Env) -> None:
+        for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
+            env.update_object(user, model.Contact, "contact1", {"email": str(i)})
+
+    def test_update_site(self, env: Env) -> None:
+        for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
+            env.update_object(user, model.Site, "site1_1", {"name": str(i)})
+
+    def test_update_contact_raise(self, env: Env) -> None:
+        for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.update_object(user, model.Contact, "contact1", {"email": str(-i)})
+
+    def test_update_site_raise(self, env: Env) -> None:
+        for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.update_object(user, model.Site, "site1_1", {"name": str(-i)})
 
     # def test_update_case_set(self, env: Env) -> None:
     #     # TODO

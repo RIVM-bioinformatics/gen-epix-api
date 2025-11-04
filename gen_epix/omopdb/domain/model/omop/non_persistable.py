@@ -21,12 +21,22 @@ class Subject(Model):
         persistable=False,
     )
 
-    id: UUID | None
+    id: UUID | None = Field(default=None, description="The ID of the subject.")
     person: Person | None = Field(
-        default=None,
+        default=None, description="The person associated with the subject."
     )
-    specimen_records: list[Specimen]
-    observation_records: list[Observation]
-    measurement_records: list[Measurement]
-    drug_exposure_records: list[DrugExposure]
-    location_history_records: list[LocationHistory]
+    specimen_records: list[Specimen] = Field(
+        description="The list of specimen records associated with the subject."
+    )
+    observation_records: list[Observation] = Field(
+        description="The list of observations records associated with the subject."
+    )
+    measurement_records: list[Measurement] = Field(
+        description="The list of measurements records associated with the subject."
+    )
+    drug_exposure_records: list[DrugExposure] = Field(
+        description="The list of drug exposure records associated with the subject."
+    )
+    location_history_records: list[LocationHistory] = Field(
+        description="The list of location history records associated with the subject."
+    )

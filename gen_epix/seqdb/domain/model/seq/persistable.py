@@ -69,9 +69,13 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
             }
         ),
     )
-    ref_allele_id: UUID
+    ref_allele_id: UUID = Field(
+        description="The unique identifier for the reference allele. FOREIGN KEY"
+    )
     ref_allele: Allele | None = Field(default=None, description="The reference allele.")
-    allele_id: UUID
+    allele_id: UUID = Field(
+        description="The unique identifier for the allele. FOREIGN KEY"
+    )
     allele: Allele | None = Field(default=None, description="The allele.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
@@ -668,7 +672,9 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
     )
     max_stored_distance: float = Field(description="The maximum distance to be stored")
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
-    seq_distance_protocol_type: enum.SeqDistanceProtocolType
+    seq_distance_protocol_type: enum.SeqDistanceProtocolType = Field(
+        description="The type of genetic distance protocol.",
+    )
     locus_set_id: UUID | None = Field(
         default=None,
         description="The unique identifier for the locus set, if applicable. FOREIGN KEY",

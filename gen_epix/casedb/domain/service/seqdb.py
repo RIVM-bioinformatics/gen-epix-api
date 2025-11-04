@@ -26,6 +26,7 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
         f(seqdb_command.LibraryPrepProtocolCrudCommand, self.crud)
+        f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 

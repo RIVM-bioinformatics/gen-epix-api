@@ -26,8 +26,10 @@ class SeqdbTestClient(TestClient):
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.DataCollection: "name",
         model.LibraryPrepProtocol: "name",
+        model.AssemblyProtocol: "name",
         model.File: "id",
         model.ReadSet: "id",
+        model.Seq: "id",
     }
 
     DUMMY_VALUES = {}
@@ -149,7 +151,30 @@ class SeqdbTestClient(TestClient):
                 ),  # type:ignore
             )
         )
-        return self._set_obj(library_prep_protocol)
+        return self._set_obj(library_prep_protocol)  # type:ignore[return-value]
+
+    def create_assembly_protocol(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        name: str | None = None,
+        has_manual_curation: bool = False,
+    ) -> model.AssemblyProtocol:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        assembly_protocol: model.AssemblyProtocol = self.app.handle(
+            command.AssemblyProtocolCrudCommand(
+                operation=CrudOperation.CREATE_ONE,
+                user=user,
+                objs=model.AssemblyProtocol(
+                    code=code,
+                    name=name if name else code,
+                    has_manual_curation=has_manual_curation,
+                ),  # type:ignore
+            )
+        )
+        return self._set_obj(assembly_protocol)  # type:ignore[return-value]
 
     def create_file(
         self, user_or_str: str | model.User, content: bytes | str | list[str]
@@ -243,7 +268,56 @@ class SeqdbTestClient(TestClient):
         assert read_set.rev_uri == rev_uri
         return self._set_obj(read_set)
 
-    def get_default_kwargs(self, model_class: Type[model.Model]) -> dict:
+    def create_seq(
+        self,
+        user_or_str: str | model.User,
+        sample_id: UUID | None = None,
+        read_set_id: UUID | None = None,
+        read_set2_id: UUID | None = None,
+        raw_seq_id: UUID | None = None,
+        raw_seq: model.RawSeq | None = None,
+        file_id: UUID | None = None,
+        assembly_protocol_or_str: model.AssemblyProtocol | str | None = None,
+        set_dummy_assembly_protocol: bool = False,
+    ) -> model.Seq:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+
+        if set_dummy_assembly_protocol:
+            if assembly_protocol_or_str is not None:
+                raise ValueError(
+                    "assembly_protocol_or_str must be None when "
+                    "set_dummy_assembly_protocol is True"
+                )
+            assembly_protocol_id = uuid.uuid4()
+        else:
+            assembly_protocol_id: UUID = (  # type:ignore
+                self._get_obj(  # type:ignore[assignment]
+                    model.AssemblyProtocol,
+                    assembly_protocol_or_str,  # type:ignore[arg-type]
+                )
+            ).id  # type:ignore[assignment]
+
+        seq: model.Seq = self.app.handle(
+            command.SeqCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.Seq(
+                    sample_id=sample_id,
+                    read_set_id=read_set_id,
+                    read_set2_id=read_set2_id,
+                    raw_seq_id=raw_seq_id,
+                    raw_seq=raw_seq,
+                    file_id=file_id,
+                    assembly_protocol_id=assembly_protocol_id,
+                ),
+            )
+        )
+        assert seq.assembly_protocol_id == assembly_protocol_id
+        return self._set_obj(seq)  # type:ignore[return-value]
+
+    def get_default_kwargs(self, model_class: Type[model.Model]) -> dict[str, Any]:
         if model_class == model.ReadSet:
             return {
                 "fwd_uri": "http://reads/sample_x_1.fastq",

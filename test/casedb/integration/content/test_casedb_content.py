@@ -308,6 +308,28 @@ class TestContent:
                     raise ValueError("FASTA string should start with '>'")
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
+                # Retrieve LibraryPrepProtocols
+                library_prep_protocols: list[model.LibraryPrepProtocol] = app.handle(
+                    command.RetrieveLibraryPrepProtocolsCommand(
+                        user=org_user,
+                    )
+                )
+                if not library_prep_protocols:
+                    raise ValueError("Library prep protocols should not be None")
+                for library_prep_protocol in library_prep_protocols:
+                    if not library_prep_protocol.id:
+                        raise ValueError("Library prep protocol ID should not be empty")
+                # Retrieve AssemblyProtocols
+                assembly_protocols: list[model.AssemblyProtocol] = app.handle(
+                    command.RetrieveAssemblyProtocolsCommand(
+                        user=org_user,
+                    )
+                )
+                if not assembly_protocols:
+                    raise ValueError("Assembly protocols should not be None")
+                for assembly_protocol in assembly_protocols:
+                    if not assembly_protocol.id:
+                        raise ValueError("Assembly protocol ID should not be empty")
         for case_set in case_sets:
             case_ids = app.handle(
                 command.RetrieveCasesByQueryCommand(

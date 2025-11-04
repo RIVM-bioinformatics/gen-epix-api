@@ -69,6 +69,8 @@ class RoleGenerator:
             (command.RetrieveInviteUserConstraintsCommand, PermissionTypeSet.E),
             (command.UpdateUserCommand, PermissionTypeSet.E),
             (command.UserInvitationCrudCommand, PermissionTypeSet.CRD),
+            (command.ContactCrudCommand, PermissionTypeSet.CUD),
+            (command.SiteCrudCommand, PermissionTypeSet.CUD),
             # abac
         },
         Role.ORG_USER: {
@@ -76,6 +78,8 @@ class RoleGenerator:
             (command.UserCrudCommand, PermissionTypeSet.R),
             (command.DataCollectionCrudCommand, PermissionTypeSet.R),
             (command.OrganizationCrudCommand, PermissionTypeSet.R),
+            (command.ContactCrudCommand, PermissionTypeSet.R),
+            (command.SiteCrudCommand, PermissionTypeSet.R),
             (command.RetrieveOrganizationAdminNameEmailsCommand, PermissionTypeSet.E),
             (command.RetrieveOrganizationContactCommand, PermissionTypeSet.E),
             (command.UpdateUserOwnOrganizationCommand, PermissionTypeSet.E),

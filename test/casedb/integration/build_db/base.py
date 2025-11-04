@@ -58,6 +58,18 @@ BELOW_APP_ADMIN_DATA_USERS = [
     "guest1_1",
 ]
 
+ORG_ADMIN_OR_ABOVE_USERS = [
+    "root1_1",
+    "app_admin1_1",
+    "org_admin1_1",
+]
+
+BELOW_ORG_ADMIN_USERS = [
+    "refdata_admin1_1",
+    "org_user1_1",
+    "guest1_1",
+]
+
 BELOW_USER_ADMIN_USERS = [
     "refdata_admin1_1",
     "org_user1_1",
