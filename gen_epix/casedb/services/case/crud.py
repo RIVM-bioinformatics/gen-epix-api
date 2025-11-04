@@ -91,11 +91,9 @@ def _crud_metadata_by_admin(
         else:
             created_case_types = []
         if created_case_types:
-            default_settings = [
+            default_settings: list[model.CaseTypeSettings] = [
                 model.CaseTypeSettings(
                     case_type_id=case_type.id,  # type: ignore[arg-type]
-                    stats_time_dim_id=None,
-                    stats_geo_dim_id=None,
                     create_max_n_cases=0,
                     read_max_n_cases=0,
                     read_max_tree_size=0,
@@ -104,13 +102,10 @@ def _crud_metadata_by_admin(
                 )
                 for case_type in created_case_types
             ]
-            self.repository.crud(
-                uow,
-                cmd.user.id,
-                model.CaseTypeSettings,
-                default_settings,
-                None,
-                CrudOperation.CREATE_SOME,
+            super(DomainBaseCaseService, self).crud(
+                command.CaseTypeSettingsCrudCommand(
+                    user=cmd.user, operation=CrudOperation.CREATE_SOME, objs=default_settings
+                )
             )
 
     return retval  # type:ignore[return-value]
