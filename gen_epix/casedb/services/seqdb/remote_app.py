@@ -178,7 +178,12 @@ class SeqdbRemoteApp(RemoteApp):
                 json=json.loads(request_body.model_dump_json()),
                 headers=headers,
             )
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                raise exc.ServiceException(
+                    "Failed to retrieve phylogenetic tree from seqdb service"
+                ) from e
         data = response.json()
         if not data:
             return None
