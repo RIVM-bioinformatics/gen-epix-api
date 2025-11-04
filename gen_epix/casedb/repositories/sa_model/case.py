@@ -154,13 +154,9 @@ class CaseTypeSettings(Base, RowMetadataMixin):
     case_type_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseTypeSettings, "case_type_id"
     )
-    case_type_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "case_type_id"
-    )
     case_type: Mapped[CaseType | None] = create_mapped_column(
         DOMAIN, model.CaseTypeSettings, "case_type"
     )
-
     stats_time_dim_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CaseTypeSettings, "stats_time_dim_id"
     )
