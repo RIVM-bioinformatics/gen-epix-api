@@ -1247,11 +1247,9 @@ class CaseService(BaseCaseService):
                     seqdb_command.ReadSetCrudCommand(
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
-                        objs=model.ReadSet(
-                            library_prep_protocol_id=case_read_set.library_prep_protocol_id
-                        ),
+                        objs=case_read_set.read_set,
+                        )
                     )
-                )
                 case.content[case_type_col.id] = created_read_set.id
                 super(DomainBaseCaseService, self).crud(
                     command.CaseCrudCommand(
@@ -1581,7 +1579,7 @@ class CaseService(BaseCaseService):
                     seqdb_command.SeqCrudCommand(
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
-                        objs=model.Seq(),
+                        objs=case_seq.seq,
                     )
                 )
                 case.content[case_seq.case_type_col_id] = created_seq.id  # type:ignore

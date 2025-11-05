@@ -8,6 +8,14 @@ from pydantic import Field, field_serializer
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.persistable import Case
+from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
+from gen_epix.casedb.domain.model.seqdb import (
+    LibraryPrepProtocol as LibraryPrepProtocol,
+)
+from gen_epix.casedb.domain.model.seqdb import RawSeq as RawSeq
+from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
+from gen_epix.casedb.domain.model.seqdb import Seq as Seq
+from gen_epix.casedb.domain.model.seqdb import Sample as Sample
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity
@@ -250,9 +258,46 @@ class CaseReadSet(Model):
     read_set_id: UUID | None = Field(
         description="The ID of the read set.", default=None
     )
-    library_prep_protocol_id: UUID = Field(
-        description="The ID of the library prep protocol associated with the read set."
+    read_set: ReadSet | None = Field(
+        default=None, description="The read set."
     )
+    # library_prep_protocol_id: UUID = Field(
+    #     description="The ID of the library prep protocol associated with the read set."
+    # )
+    # # non-required fields for ReadSet creation
+    # library_prep_protocol: LibraryPrepProtocol | None = Field(
+    #     default=None, description="The sequencing protocol."
+    # )
+    # fwd_uri: str | None = Field(
+    #     default=None,
+    #     description="The URI of the forward read set. In case of single-end reads, this is the only read set.",
+    # )
+    # rev_uri: str | None = Field(
+    #     default=None, description="The URI of the reverse read set, if any."
+    # )
+    # fwd_file_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY",
+    # )
+    # rev_file_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique file identifier for the reverse read set, if any.",
+    # )
+    # fwd_reads_hash_sha256: bytes | None = Field(
+    #     default=None,
+    #     description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
+    #     min_length=32,
+    #     max_length=32,
+    # )
+    # rev_reads_hash_sha256: bytes | None = Field(
+    #     default=None,
+    #     description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
+    #     min_length=32,
+    #     max_length=32,
+    # )
+    # sequencing_run_code: str | None = Field(
+    #     description="The code of the sequencing run.", max_length=255, default=None
+    # )
 
 
 class CaseSeq(Model):
@@ -267,4 +312,35 @@ class CaseSeq(Model):
         description="The ID of the case type column that the sequence is or will be associated with."
     )
     seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
-    # TODO: add required fields for Seq creation here
+    seq: Seq | None = Field(default=None, description="The sequence.")
+    # # non-required fields for Seq creation
+    # sample_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique identifier for the sample, if available. FOREIGN KEY",
+    # )
+    # sample: Sample | None = Field(default=None, description="The sample.")
+    # read_set_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique identifier for the single read set used to generate the assembly, if available. FOREIGN KEY",
+    # )
+    # read_set: ReadSet | None = Field(default=None, description="The read set.")
+    # read_set2_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique identifier for a second read set used to generate the assembly, if more than one. FOREIGN KEY",
+    # )
+    # read_set2: ReadSet | None = Field(default=None, description="The second read set.")
+    # assembly_protocol_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique identifier for the assembly protocol, if available. FOREIGN KEY",
+    # )
+    # assembly_protocol: AssemblyProtocol | None = Field(
+    #     default=None, description="The assembly protocol."
+    # )
+    # raw_seq_id: UUID | None = Field(
+    #     default=None,
+    #     description="The unique identifier for the raw sequence, if available. FOREIGN KEY",
+    # )
+    # raw_seq: RawSeq | None = Field(default=None, description="The raw sequence.")
+    # file_id: UUID | None = Field(
+    #     default=None, description="The unique file identifier."
+    # )
