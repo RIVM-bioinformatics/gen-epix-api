@@ -54,10 +54,14 @@ class RegionSetShape(Model):
             }
         ),
     )
-    region_set_id: UUID
-    region_set: RegionSet | None = None
-    scale: float
-    geo_json: str
+    region_set_id: UUID = Field(description="The ID of the region set. FOREIGN KEY")
+    region_set: RegionSet | None = Field(
+        default=None, description="The region set to which the region belongs."
+    )
+    scale: float = Field(description="The scale of the shape representation.")
+    geo_json: str = Field(
+        description="The GeoJSON representation of the region set shape."
+    )
 
 
 class Region(Model):

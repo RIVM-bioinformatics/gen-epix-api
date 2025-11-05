@@ -26,6 +26,7 @@ class App(fastapp.App):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.cfg: AppCfg | None = None
         self.services: dict[Enum, fastapp.BaseService] = {}
         self.repositories: dict[Enum, fastapp.BaseRepository] = {}
         self.registered_user_dependency: model.User | None = None
@@ -97,6 +98,7 @@ class AppEnv(BaseAppEnv):
                 logger=app_logger if self._log_setup else None,
                 id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
             )
+            app.cfg = app_cfg
 
             # Initialise repositories and services
             for service_type in self._sorted_service_types:
