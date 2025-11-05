@@ -3,7 +3,6 @@
 import abc
 import copy
 import importlib
-import json
 import logging
 import logging.config as logging_config
 import os
@@ -170,25 +169,6 @@ class AppCfg(BaseAppCfg):
                 )
             )
         self._init_load_settings()
-        # TODO: remove after debugging env setting on cloud
-        if self._log_setup:
-            self.setup_logger.info("Before validation")
-            cfg_dict = self._cfg.as_dict()
-            for sub_cfg in cfg_dict["REPOSITORY"].values():
-                for key in [
-                    "password",
-                    "user",
-                    "username",
-                    "api_key",
-                    "uid",
-                    "pwd",
-                    "connection_string",
-                    "file",
-                ]:
-                    if key in sub_cfg["props"]:
-                        sub_cfg["props"][key] = "***REDACTED***"
-            self.setup_logger.info(json.dumps(cfg_dict, indent=4))
-        # TODO: end remove
         if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
