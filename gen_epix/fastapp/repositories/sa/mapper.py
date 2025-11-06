@@ -150,6 +150,14 @@ class SAMapper(BaseSAMapper):
             self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
             == self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
         )
+        self.field_name_map = {
+            x: y
+            for x, y in zip(
+                self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+                self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            )
+        }
+        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
 
     def get_field_names_by_type(self, field_type: FieldType) -> tuple:
         """
@@ -173,6 +181,8 @@ class SAMapper(BaseSAMapper):
     def get_mapped_field_name(
         self, field_name: str, reverse: bool = False
     ) -> str | None:
+        if self._is_identical_common_field_names:
+            return field_name
         if reverse:
             return self.rev_field_name_map.get(field_name)
         return self.field_name_map.get(field_name)
