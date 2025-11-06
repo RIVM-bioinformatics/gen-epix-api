@@ -29,9 +29,6 @@ from gen_epix.casedb.repositories.sa_model.case import (
 )
 from gen_epix.casedb.repositories.sa_model.case import CaseSetMember as CaseSetMember
 from gen_epix.casedb.repositories.sa_model.case import CaseSetStatus as CaseSetStatus
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeSettings as CaseTypeSettings,
-)
 from gen_epix.casedb.repositories.sa_model.case import CaseType as CaseType
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeCol as CaseTypeCol
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTypeColSet
@@ -44,6 +41,9 @@ from gen_epix.casedb.repositories.sa_model.case import (
 )
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
+)
+from gen_epix.casedb.repositories.sa_model.case import (
+    CaseTypeSettings as CaseTypeSettings,
 )
 from gen_epix.casedb.repositories.sa_model.case import Col as Col
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim

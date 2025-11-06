@@ -29,6 +29,7 @@ class BaseCaseService(BaseService):
         command.CaseTypeColCrudCommand,
         command.CaseTypeColSetMemberCrudCommand,
         command.CaseTypeColSetCrudCommand,
+        command.CaseTypeSettingsCrudCommand,
     }
     ABAC_DATA_COMMAND_CLASSES: set[Type[command.Command]] = {
         command.CaseCrudCommand,

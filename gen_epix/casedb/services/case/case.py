@@ -111,13 +111,17 @@ class CaseService(BaseCaseService):
                 cmd.user.id,
                 model.CaseTypeSettings,
                 None,
-                [case_type_id],
+                [case_type_id],  # FIXME: filter?
                 CrudOperation.READ_ONE,
             )
-            assert case_type_setting is not None
+            if case_type_setting is None:
+                raise exc.DataException(
+                    f"CaseTypeSettings not found for case type {case_type_id}"
+                )
             # Apply corresponding CaseTypeSettings.xxx_max_n_cases settings. Raise RequestLimitExceededAuthError when exceeded.
             n_cases: int = len(cmd.cases)
-            if n_cases > case_type_setting.create_max_n_cases:
+            max_n = case_type_setting.create_max_n_cases or 0
+            if max_n > 0 and n_cases > max_n:
                 raise exc.RequestLimitExceededAuthError(
                     f"Number of cases to be created ({n_cases}) exceeds the maximum allowed ({case_type_setting.create_max_n_cases}) for case type {case_type_id}"
                 )
@@ -165,17 +169,19 @@ class CaseService(BaseCaseService):
 
             # update case date
 
-            case_type_to_col_ids = self.get_case_date_case_type_col_ids(
+            case_type_to_case_type_col_ids = self.get_case_date_case_type_col_ids(
                 uow, cmd.user, {case_type_id}
             )
-            case_type_col_ids = case_type_to_col_ids.get(case_type_id, [])
+            case_type_case_type_col_ids = case_type_to_case_type_col_ids.get(
+                case_type_id, []
+            )
 
             cases_to_update: list[model.Case] = []
-            if case_type_col_ids:
+            if case_type_case_type_col_ids:
                 for case in cases:
                     assert case.id is not None
-                    computed_case_date = self.get_case_date(
-                        uow, cmd.user, case, case_type_col_ids
+                    computed_case_date: datetime.date = self.get_case_date(  # type: ignore
+                        uow, cmd.user, case.id, case_type_case_type_col_ids
                     )
                     if computed_case_date != case.case_date:
                         case.case_date = computed_case_date
@@ -363,12 +369,16 @@ class CaseService(BaseCaseService):
                 if case_type_ids is not None
                 else {x.case_type_id for x in cases}
             )
-            case_type_to_col_ids: dict[UUID, list[UUID]] = (
+
+            case_type_to_case_type_col_ids: dict[UUID, list[UUID]] = (
                 self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
             )
             case_dates: dict[UUID, datetime.date | None] = {}
             for case in cases:
-                col_ids = case_type_to_col_ids.get(case.case_type_id, [])
+
+                case_type_col_ids = case_type_to_case_type_col_ids.get(
+                    case.case_type_id, []
+                )
                 calculated_case_date = (
                     self.get_case_date(uow, user, case.id, col_ids)
                     if case.id is not None
@@ -476,17 +486,13 @@ class CaseService(BaseCaseService):
                         by_case_type.get(case.case_type_id, 0) + 1
                     )
                 case_type_ids = list(by_case_type.keys())
-                # FIXME: not gonna work, require case_type_settings ids for retrieval
                 case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
                     model.CaseTypeSettings,
                     None,
-                    None,
-                    CrudOperation.READ_ALL,
-                    filter=UuidSetFilter(
-                        key="case_type_id", members=frozenset(case_type_ids)
-                    ),
+                    list(case_type_ids),
+                    CrudOperation.READ_SOME,
                 )
                 case_type_read_limits: dict[UUID, int] = {
                     case_type_setting.case_type_id: (
@@ -501,14 +507,17 @@ class CaseService(BaseCaseService):
                             f"Number of cases retrieved for case type {case_type_id} ({n_cases}) exceeds the maximum allowed ({limit})"
                         )
             target_case_type_ids: set[UUID] = {x.case_type_id for x in cases}
-            case_type_to_time_col_ids: dict[UUID, list[UUID]] = (
+
+            case_type_to_time_case_type_col_ids: dict[UUID, list[UUID]] = (
                 self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
             )
+
             accessible_case_type_col_ids: set[UUID] = set()
             for case in cases:
                 accessible_case_type_col_ids.update(
                     {x for x in case.content.keys() if isinstance(x, UUID)}
                 )
+
             case_type_col_to_col_id: dict[UUID, UUID] = {}
             if accessible_case_type_col_ids:
                 case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
@@ -527,24 +536,26 @@ class CaseService(BaseCaseService):
 
             # Recompute case_date using only accessible time columns
             for case in cases:
-                allowed_col_ids = {
-                    case_type_col_to_col_id[x]
-                    for x in case.content.keys()
-                    if isinstance(x, UUID) and x in case_type_col_to_col_id
-                }
-                # Intersect with time-dimension col ids for the case type
-                time_col_ids = set(case_type_to_time_col_ids.get(case.case_type_id, []))
-                allowed_time_col_ids: list[UUID] = list(
-                    allowed_col_ids.intersection(time_col_ids)
+
+                candidate_case_type_col_ids: set[UUID] = set(
+                    case_type_to_time_case_type_col_ids.get(case.case_type_id, [])
                 )
-                if allowed_time_col_ids:
-                    updated_case_date = self.get_case_date(uow, user, case.id, allowed_time_col_ids)  # type: ignore[arg-type]
+                accessible_case_type_col_ids: set[UUID] = {
+                    x for x in case.content.keys() if isinstance(x, UUID)
+                }
+                allowed_case_type_col_ids = list(
+                    candidate_case_type_col_ids.intersection(
+                        accessible_case_type_col_ids
+                    )
+                )
+
+                if allowed_case_type_col_ids:
+                    updated_case_date = self.get_case_date(uow, user, case.id, allowed_case_type_col_ids)  # type: ignore[arg-type]
                     if (
                         updated_case_date is not None
                         and updated_case_date != case.case_date
                     ):
                         case.case_date = updated_case_date
-
         return cases
 
     def retrieve_case_or_set_rights(
@@ -1015,7 +1026,7 @@ class CaseService(BaseCaseService):
     def _retrieve_case_data_collections_map(
         self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> dict[UUID, set[UUID]]:
-        return self._retrieve_association_map(  # type:ignore[return-value]
+        return self._retrieve_association_map(
             uow,
             user_id,
             model.CaseDataCollectionLink,
@@ -1027,7 +1038,7 @@ class CaseService(BaseCaseService):
     def _retrieve_case_set_data_collections_map(
         self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
     ) -> dict[UUID, set[UUID]]:
-        return self._retrieve_association_map(  # type:ignore[return-value]
+        return self._retrieve_association_map(
             uow,
             user_id,
             model.CaseSetDataCollectionLink,
@@ -1258,8 +1269,8 @@ class CaseService(BaseCaseService):
         map_fns = []
         for col in cols:
             if col.col_type == enum.ColType.TIME_DAY:
-                map_fns.append(
-                    lambda x: (
+                map_fns.append(  # type: ignore[arg-type]
+                    lambda x: (  # type: ignore[misc]
                         datetime.date.fromisoformat(x) if isinstance(x, str) else x
                     )
                 )
@@ -1278,9 +1289,9 @@ class CaseService(BaseCaseService):
                 enum.ColType.ORGANIZATION,
                 enum.ColType.OTHER,
             }:
-                map_fns.append(lambda x: x if isinstance(x, str) else str(x))
+                map_fns.append(lambda x: x if isinstance(x, str) else str(x))  # type: ignore
             elif col.col_type == enum.ColType.DECIMAL_0:
-                map_fns.append(lambda x: int(x) if isinstance(x, str) else x)
+                map_fns.append(lambda x: int(x) if isinstance(x, str) else x)  # type: ignore
             elif col.col_type in {
                 enum.ColType.DECIMAL_1,
                 enum.ColType.DECIMAL_2,
@@ -1289,10 +1300,10 @@ class CaseService(BaseCaseService):
                 enum.ColType.DECIMAL_5,
                 enum.ColType.DECIMAL_6,
             }:
-                map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
+                map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)  # type: ignore
             elif col.col_type == enum.ColType.GEO_LATLON:
-                map_fns.append(
-                    lambda x: (
+                map_fns.append(  # type: ignore
+                    lambda x: (  # type: ignore[misc]
                         (float(x.split(",")[0]), float(x.split(",")[1]))
                         if isinstance(x, str)
                         else x
@@ -1334,48 +1345,70 @@ class CaseService(BaseCaseService):
             )
         )
 
-        case_type_to_dim: dict[UUID, UUID | None] = {
-            case_type_setting.case_type_id: case_type_setting.stats_time_dim_id
-            for case_type_setting in case_type_settings
-            if case_type_setting.case_type_id in case_type_ids
+        settings_by_case_type: dict[UUID, model.CaseTypeSettings] = {
+            x.case_type_id: x
+            for x in case_type_settings
+            if x.case_type_id in case_type_ids
         }
 
-        stats_time_dim_ids = {
-            dim_id for dim_id in case_type_to_dim.values() if dim_id is not None
-        }
+        if not settings_by_case_type:
+            raise exc.DataException("No CaseTypeSettings found for case types")
 
-        if not stats_time_dim_ids:
-            return result
-
-        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
-            uow,
-            user.id,
-            model.Col,
-            None,
-            None,
-            CrudOperation.READ_ALL,
+        case_type_cols: list[model.CaseTypeCol] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id,
+                model.CaseTypeCol,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+            )
         )
-        time_col_types: set[enum.ColType] = {
-            x for x in enum.ColType if x.name.startswith("TIME_")
+
+        case_type_col_map: dict[UUID, model.CaseTypeCol] = {
+            x.id: x for x in case_type_cols
         }
-        time_cols = [
-            col
-            for col in cols
-            if col.dim_id in stats_time_dim_ids and col.col_type in time_col_types
-        ]
 
-        time_cols.sort(key=lambda col: (col.rank_in_dim is None, col.rank_in_dim or 0))
+        def _ordered_time_cols(dim_id: UUID, occurrence: int | None) -> list[UUID]:
+            time_order = [
+                enum.ColType.TIME_DAY,
+                enum.ColType.TIME_WEEK,
+                enum.ColType.TIME_MONTH,
+                enum.ColType.TIME_QUARTER,
+                enum.ColType.TIME_YEAR,
+            ]
+            time_cols = [
+                col
+                for col in case_type_cols
+                if col.col.dim_id == dim_id
+                and col.occurrence == occurrence
+                and col.col.col_type in time_order
+            ]
+            time_cols.sort(
+                key=lambda x: (
+                    time_order.index(x.col.col_type)
+                    if x.col.col_type in time_order
+                    else 99  # TODO: better solution for 99? max()?
+                )
+            )
+            return [col.id for col in time_cols]
 
-        dim_to_col_ids: dict[UUID, list[UUID]] = {}
-        for col in time_cols:
-            if col.dim_id not in dim_to_col_ids:
-                dim_to_col_ids[col.dim_id] = []
-            dim_to_col_ids[col.dim_id].append(col.id)
-
-        for case_type_id in case_type_ids:
-            stats_time_dim_id = case_type_to_dim.get(case_type_id)
-            if stats_time_dim_id is not None and stats_time_dim_id in dim_to_col_ids:
-                result[case_type_id] = dim_to_col_ids[stats_time_dim_id]
+        for case_type_id, settings in settings_by_case_type.items():
+            main_col_id = settings.stats_time_case_type_col_id
+            if not main_col_id:
+                continue
+            main_case_type_col = case_type_col_map.get(main_col_id)
+            if not main_case_type_col:
+                continue
+            dim_id = main_case_type_col.col.dim_id
+            occurrence = main_case_type_col.occurrence
+            fallback_col_ids = _ordered_time_cols(dim_id, occurrence)
+            readable_col_ids = [
+                col_id
+                for col_id in fallback_col_ids  # if self._user_can_read_case_type_col(user, case_type_col_map[col_id])
+            ]
+            if readable_col_ids:
+                result[case_type_id] = [readable_col_ids[0]]
 
         return result
 
@@ -1398,59 +1431,54 @@ class CaseService(BaseCaseService):
             CrudOperation.READ_ONE,
         )
 
-        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
-            uow,
-            user.id,
-            model.Col,
-            None,
-            case_type_col_ids,
-            CrudOperation.READ_SOME,
+        case_type_cols: list[model.CaseTypeCol] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id,
+                model.Col,
+                None,
+                case_type_col_ids,
+                CrudOperation.READ_SOME,
+            )
         )
-        col_map: dict[UUID, model.Col] = {
-            col.id: col for col in cols if col.id is not None
-        }
-        for col_id in case_type_col_ids:
-            col = col_map.get(col_id)
-            if col is None:
-                continue
-            date_value = case.content.get(col_id)
-            full_date = self._convert_to_full_date(date_value, col.col_type)
-            today = datetime.date.today()
+
+        for case_type_col in case_type_cols:
+            date_value = case.content.get(str(case_type_col.id))
+            full_date = self._convert_to_full_date(
+                date_value, case_type_col.col.col_type
+            )
             if full_date is not None:
-                if full_date > today:
-                    return today
-                return full_date
+                today = datetime.date.today()
+                return today if full_date > today else full_date
         return None
 
     def _convert_to_full_date(
         self, date_value: Any, col_type: enum.ColType
     ) -> datetime.date | None:
-        if date_value is None:
-            return None
-        if col_type == enum.ColType.TIME_DAY:
-            if isinstance(date_value, datetime.date):
-                return date_value
-            elif isinstance(date_value, str):
-                return datetime.date.fromisoformat(date_value)
-        elif col_type == enum.ColType.TIME_WEEK:
-            if isinstance(date_value, str):
-                year, week = map(int, date_value.split("-W"))
+
+        try:
+            if date_value is None:
+                return None
+            if col_type == enum.ColType.TIME_DAY:
+                if isinstance(date_value, datetime.date):
+                    return date_value
+                return datetime.date.fromisoformat(str(date_value))
+            if col_type == enum.ColType.TIME_WEEK:
+                year, week = map(int, str(date_value).split("-W"))
                 return datetime.date.fromisocalendar(year, week, 1)
-        elif col_type == enum.ColType.TIME_MONTH:
-            if isinstance(date_value, str):
-                year, month = map(int, date_value.split("-"))
-                return datetime.date(year, month, 1)  # First day of the month
-        elif col_type == enum.ColType.TIME_QUARTER:
-            if isinstance(date_value, str):
-                year_str, quarter_str = date_value.split("-Q")
+            if col_type == enum.ColType.TIME_MONTH:
+                year, month = map(int, str(date_value).split("-"))
+                return datetime.date(year, month, 1)
+            if col_type == enum.ColType.TIME_QUARTER:
+                year_str, quarter_str = str(date_value).split("-Q")
                 year = int(year_str)
-                quarter = int(quarter_str)
-                month = (quarter - 1) * 3 + 1
-                return datetime.date(year, month, 1)  # First day of the quarter
-        elif col_type == enum.ColType.TIME_YEAR:
-            if isinstance(date_value, str):
+                month = (int(quarter_str) - 1) * 3 + 1
+                return datetime.date(year, month, 1)
+            if col_type == enum.ColType.TIME_YEAR:
                 year = int(date_value)
-                return datetime.date(year, 1, 1)  # First day of the year
+                return datetime.date(year, 1, 1)
+        except Exception:
+            return None
         return None
 
     def create_reads_sets_for_cases(
@@ -1464,7 +1492,6 @@ class CaseService(BaseCaseService):
 
         case_ids: set[UUID] = {x.case_id for x in cmd.case_read_sets}
         case_type_col_ids: set[UUID] = {x.case_type_col_id for x in cmd.case_read_sets}
-        read_sets_to_create: list[model.ReadSet] = []
 
         with repository.uow() as uow:
             cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
@@ -1551,7 +1578,7 @@ class CaseService(BaseCaseService):
                         ),
                     )
                 )
-                case.content[case_type_col.id] = created_read_set.id
+                case.content[case_type_col.id] = created_read_set.id  # type:ignore
                 super(DomainBaseCaseService, self).crud(
                     command.CaseCrudCommand(
                         user=cmd.user,
@@ -1559,7 +1586,7 @@ class CaseService(BaseCaseService):
                         objs=case,
                     )
                 )
-                created_read_sets.append(created_read_set)
+                created_read_sets.append(created_read_set)  # type:ignore[arg-type]
 
         return created_read_sets
 
@@ -1911,7 +1938,9 @@ class CaseService(BaseCaseService):
 
         return library_prep_protocols
 
-    def retrieve_assembly_protocols(self, cmd: command.RetrieveAssemblyProtocolsCommand) -> list[model.AssemblyProtocol]:
+    def retrieve_assembly_protocols(
+        self, cmd: command.RetrieveAssemblyProtocolsCommand
+    ) -> list[model.AssemblyProtocol]:
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
 
