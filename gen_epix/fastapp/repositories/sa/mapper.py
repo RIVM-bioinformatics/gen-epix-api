@@ -129,18 +129,19 @@ class SAMapper(BaseSAMapper):
         **kwargs: Any,
     ):
         super().__init__(model_class, row_class, **kwargs)
-        field_name_map = field_name_map or {}
+        self.field_name_map = field_name_map or {}
+        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
         self._field_names_by_type: dict[FieldType, tuple] = {}
         self._row_field_names_by_type: dict[FieldType, tuple] = {}
         self._field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._row_field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._relationship_field_name_map: dict[str, str] = {}
         self._relationship_field_name_reverse_map: dict[str, str] = {}
-        self._init_field_names(model_class, row_class, field_name_map)
+        self._init_field_names(model_class, row_class, self.field_name_map)
         self._init_row_metadata_field_names(
             row_class, service_metadata_field_names, db_metadata_field_names
         )
-        self._init_relationship_field_names(model_class, row_class, field_name_map)
+        self._init_relationship_field_names(model_class, row_class, self.field_name_map)
         self._init_extract_primary_key(model_class)
         self._generate_service_metadata = (
             generate_service_metadata if generate_service_metadata else lambda x, y: {}
