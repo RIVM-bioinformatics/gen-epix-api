@@ -129,19 +129,18 @@ class SAMapper(BaseSAMapper):
         **kwargs: Any,
     ):
         super().__init__(model_class, row_class, **kwargs)
-        self.field_name_map = field_name_map or {}
-        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
+        field_name_map = field_name_map or {}
         self._field_names_by_type: dict[FieldType, tuple] = {}
         self._row_field_names_by_type: dict[FieldType, tuple] = {}
         self._field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._row_field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._relationship_field_name_map: dict[str, str] = {}
         self._relationship_field_name_reverse_map: dict[str, str] = {}
-        self._init_field_names(model_class, row_class, self.field_name_map)
+        self._init_field_names(model_class, row_class, field_name_map)
         self._init_row_metadata_field_names(
             row_class, service_metadata_field_names, db_metadata_field_names
         )
-        self._init_relationship_field_names(model_class, row_class, self.field_name_map)
+        self._init_relationship_field_names(model_class, row_class, field_name_map)
         self._init_extract_primary_key(model_class)
         self._generate_service_metadata = (
             generate_service_metadata if generate_service_metadata else lambda x, y: {}
@@ -150,6 +149,14 @@ class SAMapper(BaseSAMapper):
             self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
             == self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
         )
+        self.field_name_map = {
+            x: y
+            for x, y in zip(
+                self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+                self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            )
+        }
+        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
 
     def get_field_names_by_type(self, field_type: FieldType) -> tuple:
         """
@@ -173,6 +180,8 @@ class SAMapper(BaseSAMapper):
     def get_mapped_field_name(
         self, field_name: str, reverse: bool = False
     ) -> str | None:
+        if self._is_identical_common_field_names:
+            return field_name
         if reverse:
             return self.rev_field_name_map.get(field_name)
         return self.field_name_map.get(field_name)
