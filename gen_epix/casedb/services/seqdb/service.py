@@ -173,22 +173,3 @@ class SeqdbService(BaseSeqdbService):
         result = self.seqdb_app.handle(cmd)
         cmd.user = casedb_user
         return result  # type: ignore[no-any-return]
-
-    def retrieve_read_sets_by_id(self, read_set_id: UUID) -> list[model.ReadSet]:
-        read_sets: list[model.ReadSet] = self.seqdb_app.handle(
-            seqdb_command.ReadSetCrudCommand(
-                user=self.seqdb_user,
-                obj_ids=[read_set_id],
-                operation=CrudOperation.READ_SOME,
-            )
-        )
-        if not read_sets:
-            raise exc.NoResultsError(
-                f"ReadSet with ID {read_set_id} not found in SeqDB."
-            )
-        if len(read_sets) > 1:
-            raise exc.InvalidArgumentsError(
-                f"Multiple ReadSets found with ID {read_set_id} in SeqDB."
-            )
-
-        return read_sets

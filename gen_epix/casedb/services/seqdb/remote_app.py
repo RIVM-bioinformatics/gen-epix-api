@@ -1,4 +1,5 @@
 import json
+from collections.abc import Iterable
 from datetime import datetime
 from logging import Logger
 from typing import Any
@@ -26,6 +27,7 @@ class SeqdbRemoteApp(RemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
+        seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
     }
 
     def __init__(
@@ -112,14 +114,21 @@ class SeqdbRemoteApp(RemoteApp):
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
         # Register routes and handlers
-        seqdb_command_class = seqdb_command.RetrievePhylogeneticTreeCommand
         self.register_route(
-            seqdb_command_class,
-            self.ROUTE_MAP[seqdb_command_class],
+            seqdb_command.RetrievePhylogeneticTreeCommand,
+            self.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand],
+        )
+        self.register_route(
+            seqdb_command.RetrieveSeqFastaCommand,
+            self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
         )
         self.register_handler(
-            seqdb_command_class,
+            seqdb_command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
+        )
+        self.register_handler(
+            seqdb_command.RetrieveSeqFastaCommand,
+            self.retrieve_genetic_sequence_fasta_by_id,
         )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
@@ -183,3 +192,20 @@ class SeqdbRemoteApp(RemoteApp):
         if not data:
             return None
         return seqdb_model.PhylogeneticTree(**data)
+
+    def retrieve_genetic_sequence_fasta_by_id(
+        self,
+        cmd: seqdb_command.RetrieveSeqFastaCommand,
+    ) -> Iterable[str]:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+
+        request_body = {"user": cmd.user, "seq_ids": cmd.seq_ids, "wrap": cmd.wrap}
+
+        with httpx.Client(verify=self.ssl_context) as client:
+            with client.stream(  # TODO: With this remote app function, is the retrieval of fasta still streaming?
+                "POST", route, json=request_body, headers=headers
+            ) as resp:
+                resp.raise_for_status()
+                fasta = "".join(chunk.decode() for chunk in resp.iter_bytes())
+                return fasta
