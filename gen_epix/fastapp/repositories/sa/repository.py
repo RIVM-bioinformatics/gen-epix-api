@@ -424,7 +424,9 @@ class SARepository(BaseRepository):
                 stmt = select(row_class)
             if filter:
                 # Convert filter to where clause and add to statement
-                stmt = stmt.where(self.get_where_clause_from_filter(row_class, filter))
+                stmt = stmt.where(
+                    self.get_where_clause_from_filter(row_class, mapper, filter)
+                )
             if return_id:
                 row_ids = [x[0] for x in session.execute(stmt).all()]
                 if obj_filter:
@@ -633,7 +635,9 @@ class SARepository(BaseRepository):
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
-                stmt = stmt.where(self.get_where_clause_from_filter(row_class, filter))
+                stmt = stmt.where(
+                    self.get_where_clause_from_filter(row_class, mapper, filter)
+                )
             for row in session.execute(stmt):
                 yield row
 
@@ -647,12 +651,16 @@ class SARepository(BaseRepository):
         field_name_map = self.get_mapper(model_class).get_field_name_map()
         return self._split_filter_recursion(field_name_map, filter)
 
-    def get_where_clause_from_filter(self, row_class: Type, filter: Filter) -> Any:
+    def get_where_clause_from_filter(
+        self, row_class: Type, mapper: BaseSAMapper, filter: Filter
+    ) -> Any:
         invert = filter.invert
         if isinstance(filter, CompositeFilter):
             args = []
             for sub_filter in filter.filters:
-                args.append(self.get_where_clause_from_filter(row_class, sub_filter))
+                args.append(
+                    self.get_where_clause_from_filter(row_class, mapper, sub_filter)
+                )
             if filter.operator == LogicalOperator.AND:
                 return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
             if filter.operator == LogicalOperator.OR:
@@ -660,7 +668,12 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 f"Unsupported filter operator: {filter.operator.value}"
             )
-        column = getattr(row_class, filter.get_key())
+        row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
+        if row_field_name is None:
+            raise exc.InvalidArgumentsError(
+                f"Filter key '{filter.get_key()}' cannot be mapped to a row field name"
+            )
+        column = getattr(row_class, row_field_name)
         if (
             isinstance(filter, StringSetFilter)
             or isinstance(filter, NumberSetFilter)
