@@ -54,6 +54,7 @@ class BaseSAMapper(abc.ABC):
         """
         Get a field name map between model and row fields. If one of the fields does
         not exist or there is no one-to-one mapping, it is excluded from the map.
+        This is a naieve implementation that can be overridden for performance.
         """
         return {
             field_name if not reverse else row_field_name: (
@@ -66,6 +67,17 @@ class BaseSAMapper(abc.ABC):
             )
             if field_name and row_field_name
         }
+
+    @abc.abstractmethod
+    def get_mapped_field_name(
+        self, field_name: str, reverse: bool = False
+    ) -> str | None:
+        """
+        Get the mapped field name between model and row fields. If there is no
+        equivalent or no one-to-one mapping, return None.
+        This is a naieve implementation that can be overridden for performance.
+        """
+        return self.get_field_name_map(reverse).get(field_name)
 
     @abc.abstractmethod
     def get_row_field_names_by_type(self, field_type: FieldType) -> tuple:
@@ -117,18 +129,19 @@ class SAMapper(BaseSAMapper):
         **kwargs: Any,
     ):
         super().__init__(model_class, row_class, **kwargs)
-        field_name_map = field_name_map or {}
+        self.field_name_map = field_name_map or {}
+        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
         self._field_names_by_type: dict[FieldType, tuple] = {}
         self._row_field_names_by_type: dict[FieldType, tuple] = {}
         self._field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._row_field_names_by_set: dict[FieldTypeSet, tuple] = {}
         self._relationship_field_name_map: dict[str, str] = {}
         self._relationship_field_name_reverse_map: dict[str, str] = {}
-        self._init_field_names(model_class, row_class, field_name_map)
+        self._init_field_names(model_class, row_class, self.field_name_map)
         self._init_row_metadata_field_names(
             row_class, service_metadata_field_names, db_metadata_field_names
         )
-        self._init_relationship_field_names(model_class, row_class, field_name_map)
+        self._init_relationship_field_names(model_class, row_class, self.field_name_map)
         self._init_extract_primary_key(model_class)
         self._generate_service_metadata = (
             generate_service_metadata if generate_service_metadata else lambda x, y: {}
@@ -137,6 +150,14 @@ class SAMapper(BaseSAMapper):
             self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
             == self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
         )
+        self.field_name_map = {
+            x: y
+            for x, y in zip(
+                self._field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+                self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON],
+            )
+        }
+        self.rev_field_name_map = {y: x for x, y in self.field_name_map.items()}
 
     def get_field_names_by_type(self, field_type: FieldType) -> tuple:
         """
@@ -151,6 +172,20 @@ class SAMapper(BaseSAMapper):
         field names returned by the corresponding function.
         """
         return self._field_names_by_set[field_type_set]
+
+    def get_field_name_map(self, reverse: bool = False) -> dict[str, str]:
+        if reverse:
+            return self.rev_field_name_map
+        return self.field_name_map
+
+    def get_mapped_field_name(
+        self, field_name: str, reverse: bool = False
+    ) -> str | None:
+        if self._is_identical_common_field_names:
+            return field_name
+        if reverse:
+            return self.rev_field_name_map.get(field_name)
+        return self.field_name_map.get(field_name)
 
     def get_row_field_names_by_type(self, field_type: FieldType) -> tuple:
         return self._row_field_names_by_type[field_type]
