@@ -400,16 +400,15 @@ class TestRead:
                     env.read_all(user_name, model.CaseSet)
 
     def test_read_organization_contact_by_contact_ids(self, env: Env) -> None:
-        root: model.User = env._get_obj(
-            model.User, "root1_1"
-        )  # type:ignore[assignment]
-        all_contacts: list[model.Contact] = env.read_all(
-            root, model.Contact
-        )  # type:ignore[assignment]
-        selected_contacts: list[model.Contact] = all_contacts[:3]
-        selected_contact_ids: list[UUID] = [x.id for x in selected_contacts if x.id]
+        root = env._get_obj(model.User, "root1_1")
+        all_contacts: list[model.Contact] = env.read_all(root, model.Contact)
+        if not all_contacts:
+            pytest.skip("No contacts available to test contact-based retrieval")
 
-        organizations: list[model.Contact] = env.app.handle(
+        selected_contacts: list[model.Contact] = all_contacts[:3]
+        selected_contact_ids: list[UUID] = [x.id for x in selected_contacts]
+
+        retval: list[model.Contact] = env.app.handle(
             command.RetrieveOrganizationContactCommand(
                 user=root,
                 organization_ids=None,
@@ -418,35 +417,37 @@ class TestRead:
             )
         )
 
-        result_ids = {x.id for x in organizations}
+        result_ids = {x.id for x in retval}
         assert result_ids == set(selected_contact_ids)
-        assert all(x.site is None for x in organizations)
+        assert all(x.site is None for x in retval)
 
     def test_read_organization_contact_by_site_ids(self, env: Env) -> None:
-        root: model.User = env._get_obj(
-            model.User, "root1_1"
-        )  # type:ignore[assignment]
-        all_contacts: list[model.Contact] = env.read_all(
-            root, model.Contact
-        )  # type:ignore[assignment]
-        all_sites: list[model.Site] = env.read_all(
-            root, model.Site
-        )  # type:ignore[assignment]
+        root = env._get_obj(model.User, "root1_1")
+        all_contacts: list[model.Contact] = env.read_all(root, model.Contact)
+        all_sites: list[model.Site] = env.read_all(root, model.Site)
+
+        if not all_contacts or not all_sites:
+            pytest.skip(
+                "No contacts or sites available to test site-based contact retrieval"
+            )
 
         contacts_by_site: dict[UUID, set[UUID]] = {}
         site_ids_with_contacts: list[UUID] = []
         for site in all_sites:
             site_contact_ids = {x.id for x in all_contacts if x.site_id == site.id}
             if site_contact_ids:
-                contacts_by_site[site.id] = site_contact_ids  # type:ignore
-                site_ids_with_contacts.append(site.id)  # type:ignore
+                contacts_by_site[site.id] = site_contact_ids
+                site_ids_with_contacts.append(site.id)
+
+        if not site_ids_with_contacts:
+            pytest.skip("No sites have contacts; skipping test")
 
         selected_site_ids: list[UUID] = site_ids_with_contacts[:2]
         expected_contact_ids: set[UUID] = set().union(
             *(contacts_by_site[sid] for sid in selected_site_ids)
         )
 
-        organizations: list[model.Contact] = env.app.handle(
+        retval: list[model.Contact] = env.app.handle(
             command.RetrieveOrganizationContactCommand(
                 user=root,
                 organization_ids=None,
@@ -455,23 +456,23 @@ class TestRead:
             )
         )
 
-        result_ids = {x.id for x in organizations}
+        result_ids = {x.id for x in retval}
         assert result_ids == expected_contact_ids
-        assert all(x.site is None for x in organizations)
-        assert all(x.site_id in set(selected_site_ids) for x in organizations)
+        assert all(x.site is None for x in retval)
+        # Sanity check: returned contacts belong to the requested sites
+        assert all(x.site_id in set(selected_site_ids) for x in retval)
 
     def test_read_organization_contact_by_organization_ids(self, env: Env) -> None:
-        root: model.User = env._get_obj(
-            model.User, "root1_1"
-        )  # type:ignore[assignment]
-        all_contacts: list[model.Contact] = env.read_all(
-            root, model.Contact
-        )  # type:ignore[assignment]
-        all_sites: list[model.Site] = env.read_all(
-            root, model.Site
-        )  # type:ignore[assignment]
+        root = env._get_obj(model.User, "root1_1")
+        all_contacts: list[model.Contact] = env.read_all(root, model.Contact)
+        all_sites: list[model.Site] = env.read_all(root, model.Site)
 
-        sites_by_id: dict[UUID, model.Site] = {x.id: x for x in all_sites if x.id}
+        if not all_contacts or not all_sites:
+            pytest.skip(
+                "No contacts or sites available to test organization contact retrieval"
+            )
+
+        sites_by_id: dict[UUID, model.Site] = {x.id: x for x in all_sites}
         contacts_by_org: dict[UUID, set[UUID]] = {}
         for x in all_contacts:
             site = sites_by_id.get(x.site_id)
@@ -479,12 +480,15 @@ class TestRead:
                 continue
             contacts_by_org.setdefault(site.organization_id, set()).add(x.id)
 
+        if not contacts_by_org:
+            pytest.skip("No contacts mapped to any organization; skipping test")
+
         selected_org_ids: list[UUID] = list(contacts_by_org.keys())[:2]
         expected_contact_ids: set[UUID] = set().union(
             *(contacts_by_org[org_id] for org_id in selected_org_ids)
         )
 
-        organizations: list[model.Contact] = env.app.handle(
+        retval: list[model.Contact] = env.app.handle(
             command.RetrieveOrganizationContactCommand(
                 user=root,
                 organization_ids=selected_org_ids,
@@ -493,9 +497,10 @@ class TestRead:
             )
         )
 
-        result_ids = {x.id for x in organizations}
+        result_ids = {x.id for x in retval}
         assert result_ids == expected_contact_ids
-        assert all(x.site is None for x in organizations)
-        for x in organizations:
+        assert all(x.site is None for x in retval)
+        # Sanity check: returned contacts belong to the requested organizations
+        for x in retval:
             site = sites_by_id.get(x.site_id)
             assert site is not None and site.organization_id in set(selected_org_ids)

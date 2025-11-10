@@ -340,13 +340,15 @@ class OrganizationService(BaseOrganizationService):
                 site_ids = {x.id for x in sites}
                 contacts = [x for x in contacts if x.site_id in site_ids]
             elif cmd.contact_ids:
-                contacts = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Contact,
-                    None,
-                    cmd.contact_ids,
-                    CrudOperation.READ_SOME,
+                contacts = (
+                    repository.crud(  # type: ignore[assignment]
+                        uow,
+                        user.id,
+                        model.Contact,
+                        None,
+                        cmd.contact_ids,
+                        CrudOperation.READ_ALL,
+                    ),
                 )
             else:
                 raise AssertionError
