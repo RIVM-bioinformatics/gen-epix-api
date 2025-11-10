@@ -2,8 +2,9 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    BELOW_ORG_ADMIN_USERS,
+    DEV_REPOSITORY_CONFIG,
     REFDATA_ADMIN_OR_ABOVE_USERS,
-    REPOSITORY_TYPE,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
@@ -13,6 +14,7 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import enum, exc, model
+from gen_epix.commondb.domain.enum import DevRepositoryConfigSet
 
 
 class TestCreate:
@@ -175,35 +177,24 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
-    # TODO: test_create_site
+    def test_create_site(self, env: Env) -> None:
+        env.create_site("root1_1", "site1_1", "org1")
+        env.create_site("root1_1", "site2_1", "org2")
 
-    # TODO: test_create_site_raise
+    def test_create_contact(self, env: Env) -> None:
+        env.create_contact("root1_1", "contact1", "site1_1", email="c1@example.com")
+        env.create_contact("root1_1", "contact2", "site2_1")
+        env.create_contact("root1_1", "contact3", "site2_1")
 
-    # TODO: test_create_contact
-
-    # TODO: test_create_contact_raise
-
-    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_concept(self, env: Env) -> None:
-        # Create concept as root, app_admin, refdata_admin
-        env.create_concept("root1_1", "category1_1")
-        env.create_concept("app_admin1_1", "category1_2")
-        env.create_concept("refdata_admin1_1", "level2_1")
-        env.create_concept("refdata_admin1_2", "level2_2")
-        env.create_concept("refdata_admin2_1", "interval3_1")
-        env.create_concept("refdata_admin2_2", "interval3_2")
-        env.create_concept("refdata_admin1_1", "category4_1")
-        env.create_concept("refdata_admin1_2", "category4_2")
-        env.create_concept("refdata_admin1_1", "category5_1")
-        env.create_concept("refdata_admin1_2", "category5_2")
-
-    @pytest.mark.skipif(
-        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
-    )
-    def test_create_concept_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+    def test_create_site_raise(self, env: Env) -> None:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_concept(exec_user, "category1_1")
+                env.create_site(exec_user, "site1_11", "org1")
+
+    def test_create_contact_raise(self, env: Env) -> None:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_contact(exec_user, "contact11", "site1_1")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_concept_set(self, env: Env) -> None:
@@ -211,32 +202,27 @@ class TestCreate:
         env.create_concept_set(
             "root1_1",
             "concept_set1_nominal",
-            ["category1_1", "category1_2"],
             enum.ConceptSetType.NOMINAL,
         )
         env.create_concept_set(
             "app_admin1_1",
             "concept_set2_ordinal",
-            ["level2_1", "level2_2"],
             enum.ConceptSetType.ORDINAL,
         )
         env.create_concept_set(
             "refdata_admin1_1",
             "concept_set3_interval",
-            ["interval3_1", "interval3_2"],
             enum.ConceptSetType.INTERVAL,
         )
         env.create_concept_set(
             "refdata_admin1_2",
             "concept_set4_regular_language",
-            [],
             enum.ConceptSetType.REGULAR_LANGUAGE,
             regex=r"^ST(\d*)$",
         )
         env.create_concept_set(
             "refdata_admin2_1",
             "concept_set5_context_free_grammar_json",
-            [],
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
             schema_definition="{}",
         )
@@ -250,9 +236,27 @@ class TestCreate:
                 env.create_concept_set(
                     exec_user,
                     "concept_set1_nominal",
-                    {"category1_1"},
                     enum.ConceptSetType.NOMINAL,
                 )
+
+    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    def test_create_concept(self, env: Env) -> None:
+        # Create concept as root, app_admin, refdata_admin
+        env.create_concept("root1_1", "category1_1", "concept_set1_nominal")
+        env.create_concept("app_admin1_1", "category1_2", "concept_set1_nominal")
+        env.create_concept("refdata_admin1_1", "level2_1", "concept_set2_ordinal")
+        env.create_concept("refdata_admin1_2", "level2_2", "concept_set2_ordinal")
+        env.create_concept("refdata_admin2_1", "interval3_1", "concept_set3_interval")
+        env.create_concept("refdata_admin2_2", "interval3_2", "concept_set3_interval")
+
+    @pytest.mark.skipif(
+        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
+    )
+    def test_create_concept_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_concept(exec_user, "category1_1", "concept_set1_nominal")
+        # TODO: add test for creating concept under regex or context free grammar concept set, which should not be allowed
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
@@ -989,19 +993,18 @@ class TestCreate:
         # Organization admin policy already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
             env.create_org_admin_policy("app_admin1_1", "org_admin1_1", "org1")
-        # Concept already exists
-        # TODO: uncomment when concept abbreviation uniqueness is enforced
-        # with pytest.raises(exc.UniqueConstraintViolationError):
-        #     env.create_concept("root1_1", "category1_1")
         # Concept set already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_concept_set(
                     "root1_1",
                     "concept_set1_nominal",
-                    {"category1_1"},
                     enum.ConceptSetType.NOMINAL,
                 )
+        # Concept already exists
+        if not SKIP_CREATE_DATA:
+            with pytest.raises(exc.UniqueConstraintViolationError):
+                env.create_concept("root1_1", "category1_1", "concept_set1_nominal")
         # RegionSet already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
@@ -1069,9 +1072,10 @@ class TestCreate:
                     "case_type_set_category1",
                 )
         # CaseTypeCol already exists
-        if not SKIP_CREATE_DATA and REPOSITORY_TYPE not in {
-            enum.RepositoryType.SA_SQLITE
-        }:
+        if (
+            not SKIP_CREATE_DATA
+            and DEV_REPOSITORY_CONFIG not in DevRepositoryConfigSet.SA_SQLITE.value
+        ):
             # sqlite does not enforce unique constraints on nullable columns.
             # CaseTypeCol.occurrence, which is part of a unique constraint, is
             # nullable, so this this test will fail for sqlite and should therefore
@@ -1098,14 +1102,12 @@ class TestCreate:
         # UserInvitation.token is invalid
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
-        # ConceptSetMember.concept do not exist
+        # Concept.concept_set does not exist
         with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_concept_set(
+            env.create_concept(
                 "root1_1",
-                "concept_set11_nominal",
-                {"concept11"},
-                enum.ConceptSetType.NOMINAL,
-                set_dummy_concepts=True,
+                "concept11_1",
+                set_dummy_concept_set=True,
             )
         # Region.region_set does not exist
         with pytest.raises(exc.InvalidLinkIdsError):

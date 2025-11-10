@@ -9,6 +9,7 @@ from pydantic import Field, field_serializer, field_validator
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 
@@ -42,7 +43,7 @@ class UserNameEmail(fastapp.Model):
     name: str | None = Field(
         default=None, description="The full name of the user", max_length=255
     )
-    email: str = Field(description="The email of the user", max_length=320)
+    email: str | None = Field(description="The email of the user", max_length=320)
 
 
 class User(fastapp.User, Model):
@@ -50,7 +51,7 @@ class User(fastapp.User, Model):
         snake_case_plural_name="users",
         table_name="user",
         persistable=True,
-        keys=create_keys({1: "email"}),
+        keys=create_keys({1: "key"}),
         links=create_links(
             {
                 1: ("organization_id", Organization, "organization"),
@@ -61,11 +62,13 @@ class User(fastapp.User, Model):
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
-    email: str = Field(description="The email of the user, UNIQUE", max_length=320)
+    key: str = Field(description="The key of the user, UNIQUE", max_length=320)
+    email: str | None = Field(
+        default=None, description="The email of the user", max_length=320
+    )
     name: str | None = Field(
         default=None, description="The full name of the user", max_length=255
     )
-
     is_active: bool = Field(
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
@@ -79,7 +82,7 @@ class User(fastapp.User, Model):
     )
 
     def get_key(self) -> str:
-        return self.email
+        return self.key
 
     @field_validator("roles", mode="before")
     @classmethod
@@ -179,7 +182,7 @@ class Contact(Model):
         ),
     )
     # TODO: Temporary implementation, check established models for this
-    site_id: UUID | None = Field(
+    site_id: UUID = Field(
         description="The ID of the site in case the contact is site-specific. FOREIGN KEY",
     )
     site: Site | None = Field(
@@ -280,7 +283,7 @@ class UserInvitation(Model):
         snake_case_plural_name="user_invitations",
         table_name="user_invitation",
         persistable=True,
-        keys=create_keys({1: ("email", "expires_at")}),
+        keys=create_keys({1: ("key", "expires_at")}),
         links=create_links(
             {
                 1: ("organization_id", Organization, "organization"),
@@ -289,7 +292,9 @@ class UserInvitation(Model):
         ),
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    email: str = Field(description="The email of the user, UNIQUE", max_length=320)
+    key: str = copy_model_field(User, "key")
+    email: str | None = copy_model_field(User, "email")
+    name: str | None = copy_model_field(User, "name")
     token: str = Field(description="The token of the invitation", max_length=255)
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"

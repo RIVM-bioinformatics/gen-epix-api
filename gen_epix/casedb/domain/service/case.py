@@ -89,6 +89,18 @@ class BaseCaseService(BaseService):
             command.RetrieveGeneticSequenceFastaByCaseCommand,
             self.retrieve_genetic_sequence_fasta_by_case,
         )
+        f(command.CreateReadSetsForCasesCommand, self.create_reads_sets_for_cases)
+        f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
+        f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
+        f(command.CreateFileForSeqCommand, self.create_file_for_seq)
+        f(
+            command.RetrieveLibraryPrepProtocolsCommand,
+            self.retrieve_library_prep_protocols,
+        )
+        f(
+            command.RetrieveAssemblyProtocolsCommand,
+            self.retrieve_assembly_protocols,
+        )
 
     @abc.abstractmethod
     def validate_cases(
@@ -165,4 +177,46 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrieveGeneticSequenceFastaByCaseCommand,
     ) -> Iterable[str]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_reads_sets_for_cases(
+        self,
+        cmd: command.CreateReadSetsForCasesCommand,
+    ) -> list[model.ReadSet] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_file_for_read_set(
+        self,
+        cmd: command.CreateFileForReadSetCommand,
+    ) -> UUID | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_seqs_for_cases(
+        self,
+        cmd: command.CreateSeqsForCasesCommand,
+    ) -> list[model.Seq] | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_file_for_seq(
+        self,
+        cmd: command.CreateFileForSeqCommand,
+    ) -> UUID | None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_library_prep_protocols(
+        self,
+        cmd: command.RetrieveLibraryPrepProtocolsCommand,
+    ) -> list[model.LibraryPrepProtocol]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_assembly_protocols(
+        self,
+        cmd: command.RetrieveAssemblyProtocolsCommand,
+    ) -> list[model.AssemblyProtocol]:
         raise NotImplementedError()

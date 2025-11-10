@@ -1,6 +1,7 @@
 from typing import Type
 
 from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.commondb.domain.policy import (
     map_common_role_hierarchy,
     map_common_role_permission_sets,
@@ -20,7 +21,7 @@ COMMON_ROLE_MAP = {
 }
 
 
-class RoleGenerator:
+class RoleGenerator(CommonRoleGenerator):
 
     COMMON_ROLE_PERMISSION_SETS = map_common_role_permission_sets(
         COMMON_ROLE_MAP, command.COMMON_COMMAND_MAP  # type: ignore[arg-type]
@@ -69,6 +70,7 @@ class RoleGenerator:
             (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CRUD),
             (command.SampleCrudCommand, PermissionTypeSet.CRUD),
             (command.ReadSetCrudCommand, PermissionTypeSet.CRUD),
+            (command.FileCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqCrudCommand, PermissionTypeSet.CRUD),
             (command.RawSeqCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleProfileCrudCommand, PermissionTypeSet.CRUD),

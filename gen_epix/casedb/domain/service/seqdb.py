@@ -1,9 +1,11 @@
 import abc
 from typing import Iterable
+from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
+import gen_epix.seqdb.domain.command as seqdb_command
 
 
 class BaseSeqdbService(BaseService):
@@ -21,6 +23,11 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
+        f(seqdb_command.ReadSetCrudCommand, self.crud)
+        f(seqdb_command.FileCrudCommand, self.crud)
+        f(seqdb_command.LibraryPrepProtocolCrudCommand, self.crud)
+        f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
+        f(seqdb_command.SeqCrudCommand, self.crud)
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod

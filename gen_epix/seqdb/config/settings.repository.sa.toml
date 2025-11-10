@@ -1,0 +1,19 @@
+[repository.abac]
+module = "gen_epix.seqdb.repositories"
+class_name = "AbacSARepository"
+
+[repository.organization]
+module = "gen_epix.seqdb.repositories"
+class_name = "OrganizationSARepository"
+
+[repository.system]
+module = "gen_epix.seqdb.repositories"
+class_name = "SystemSARepository"
+
+[repository.seq]
+module = "gen_epix.seqdb.repositories"
+class_name = "SeqSARepository"
+
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileSARepository"

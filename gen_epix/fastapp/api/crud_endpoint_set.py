@@ -2,8 +2,9 @@ from typing import Any, Callable, Type
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from gen_epix.fastapp import App, CrudCommand
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudEndpointType
+from gen_epix.fastapp.model import CrudCommand
 from gen_epix.filter import Filter
 
 

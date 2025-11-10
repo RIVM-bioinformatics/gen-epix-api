@@ -73,14 +73,14 @@ class OrganizationService(BaseOrganizationService):
             raise exc.UnauthorizedAuthError("Command has no user")
         if user.id is None:
             raise exc.UnauthorizedAuthError("User has no ID")
-        email = cmd.email
+        key = cmd.key
         initial_roles = cmd.roles
         organization_id = cmd.organization_id
 
         with self.repository.uow() as uow:
             # Verify if user already exists
             is_existing_user = self.app.user_manager.is_existing_user_by_key(
-                cmd.email, uow
+                cmd.key, uow
             )
 
             if is_existing_user:
@@ -88,7 +88,7 @@ class OrganizationService(BaseOrganizationService):
                     self._logger.info(
                         self.create_log_message(
                             "acba1a0e",
-                            f"User {email} already exists",
+                            f"User {key} already exists",
                         )
                     )
                 raise exc.UserAlreadyExistsAuthError("User already exists")
@@ -111,7 +111,7 @@ class OrganizationService(BaseOrganizationService):
                     )
                 raise exc.InvalidIdsError("Organization does not exist")
 
-            # Verify if invitation(s) already exists for this email, and delete those
+            # Verify if invitation(s) already exists for this key, and delete those
             # TODO: Must be done within the same session to be safe,
             # so requires specific repository method
             user_invitations: list[model.UserInvitation] = self.repository.crud(
@@ -122,7 +122,7 @@ class OrganizationService(BaseOrganizationService):
                 None,
                 CrudOperation.READ_ALL,
             )  # type: ignore
-            user_invitations = [x for x in user_invitations if x.email == email]
+            user_invitations = [x for x in user_invitations if x.key == key]
             if user_invitations:
                 self.repository.crud(
                     uow,
@@ -135,7 +135,7 @@ class OrganizationService(BaseOrganizationService):
             # Create user invitation
             user_invitation = self.user_invitation_class(
                 id=self.generate_id(),  # type: ignore[arg-type]
-                email=email,
+                key=key,
                 roles=initial_roles,
                 organization_id=organization_id,
                 invited_by_user_id=user.id,
@@ -194,11 +194,11 @@ class OrganizationService(BaseOrganizationService):
             user_invitations = [
                 x
                 for x in user_invitations
-                if x.email == new_user.email and x.expires_at > now
+                if x.key == new_user.key and x.expires_at > now
             ]
             if not user_invitations:
                 raise exc.UnauthorizedAuthError(
-                    f"No valid invitations found for user {new_user.email}",
+                    f"No valid invitations found for user {new_user.key}",
                 )
             user_invitations_with_token = [
                 x for x in user_invitations if x.token == cmd.token
@@ -294,35 +294,12 @@ class OrganizationService(BaseOrganizationService):
         self,
         cmd: command.RetrieveOrganizationContactCommand,
     ) -> list[model.Contact]:
-        if (
-            sum(
-                [
-                    cmd.organization_ids is not None,
-                    cmd.site_ids is not None,
-                    cmd.contact_ids is not None,
-                ]
-            )
-            != 1
-        ):
-            raise exc.InvalidArgumentsError(
-                "Exactly one of organization_ids, site_ids or contact_ids must be provided"
-            )
         user, repository = self._get_user_and_repository(cmd)
 
-        organizations: list[model.Organization]
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
             if cmd.organization_ids:
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    cmd.organization_ids,
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
                 sites = repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
@@ -330,7 +307,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -339,7 +315,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,
                 )
                 organization_ids = set(cmd.organization_ids)
                 sites = [x for x in sites if x.organization_id in organization_ids]
@@ -353,16 +328,6 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     cmd.site_ids,
                     CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    list({x.organization_id for x in sites}),
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
                 )
                 contacts = repository.crud(  # type: ignore[assignment]
                     uow,
@@ -371,54 +336,19 @@ class OrganizationService(BaseOrganizationService):
                     None,
                     None,
                     CrudOperation.READ_ALL,
-                    cascade_read=False,
                 )
                 site_ids = {x.id for x in sites}
                 contacts = [x for x in contacts if x.site_id in site_ids]
             elif cmd.contact_ids:
-                contacts = (
-                    repository.crud(  # type: ignore[assignment]
-                        uow,
-                        user.id,
-                        model.Contact,
-                        None,
-                        cmd.contact_ids,
-                        CrudOperation.READ_ALL,
-                        cascade_read=True,
-                        links=self.app.domain.get_model_links(
-                            model.Contact,
-                            service_type=self.app.domain.get_service_type_for_model(
-                                model.Contact
-                            ),
-                        ),
-                    ),
-                )
-                sites = repository.crud(  # type: ignore[assignment]
+                contacts = repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
-                    model.Site,
+                    model.Contact,
                     None,
-                    list({x.site_id for x in contacts}),
+                    cmd.contact_ids,
                     CrudOperation.READ_SOME,
-                    cascade_read=True,
-                )
-                organizations = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Organization,
-                    None,
-                    list({x.organization_id for x in sites}),
-                    CrudOperation.READ_SOME,
-                    cascade_read=True,
                 )
             else:
                 raise AssertionError
 
-        # Replace organization and site with cascaded version
-        site_map = {x.id: x for x in sites}
-        organization_map = {x.id: x for x in organizations}
-        for site in site_map.values():
-            site.organization = organization_map[site.organization_id]
-        for contact in contacts:
-            contact.site = site_map[contact.site_id]
         return contacts

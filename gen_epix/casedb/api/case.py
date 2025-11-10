@@ -1,7 +1,7 @@
-from typing import Any, Callable, NoReturn, Self
+from typing import Annotated, Any, Callable, NoReturn, Self
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, model_validator
@@ -86,6 +86,24 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
     contact_ids: list[UUID] | None = None
     props: dict[str, Any] = {}
 
+    @model_validator(mode="after")
+    def check_one_of_fields(self) -> Any:
+        if (
+            sum(
+                [
+                    self.organization_ids is not None,
+                    self.site_ids is not None,
+                    self.contact_ids is not None,
+                ]
+            )
+            != 1
+        ):
+            raise ValueError(
+                "Exactly one of organization_ids, site_ids or contact_ids must be "
+                "provided"
+            )
+        return self
+
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     genetic_distance_case_type_col_id: UUID
@@ -99,18 +117,6 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
     )
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve genetic sequences for.",
-    )
-
-
-class RetrieveGeneticSequenceFastaRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The case type column that contains the genetic sequences to retrieve.",
-    )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
-    )
-    file_name: str = Field(
-        description="The desired filename for the FASTA download.",
     )
 
 
@@ -135,6 +141,17 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
         default=None,
         description="The case set ids to retrieve stats for, if not all.",
     )
+
+
+class CreateFileForForReadSetRequestBody(PydanticBaseModel):
+    file_content: str = Field(description="The content of the file to create.")
+    is_fwd: bool = Field(
+        description="Whether the file is for the forward reads (True) or reverse reads (False).",
+    )
+
+
+class CreateFileForSeqRequestBody(PydanticBaseModel):
+    file_content: str = Field(description="The content of the file to create.")
 
 
 def create_case_endpoints(
@@ -499,17 +516,23 @@ def create_case_endpoints(
         description=command.RetrieveGeneticSequenceFastaByCaseCommand.__doc__,
     )
     async def retrieve__genetic_sequence_fasta(
-        user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveGeneticSequenceFastaRequestBody,
+        token: Annotated[str, Form()],
+        genetic_sequence_case_type_col_id: Annotated[str, Form()],
+        case_ids: Annotated[list[UUID], Form()],
+        file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
+        user: model.User | None = None
         try:
+            user = await app.services[
+                enum.ServiceType.AUTH
+            ].get_existing_user_from_token(token=token)
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
                     genetic_sequence_case_type_col_id=(
-                        request_body.genetic_sequence_case_type_col_id
+                        genetic_sequence_case_type_col_id
                     ),
-                    case_ids=request_body.case_ids,
+                    case_ids=case_ids,
                 )
             )
         except Exception as exception:
@@ -517,15 +540,13 @@ def create_case_endpoints(
                 "d4c2e1b1",
                 user,
                 exception,
-                request_ids=request_body.case_ids,
+                request_ids=case_ids,
             )
 
         return StreamingResponse(
             fasta_iterable,
             media_type="application/x-fasta",
-            headers={
-                "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
         )
 
     @router.post(
@@ -549,6 +570,141 @@ def create_case_endpoints(
             handle_exception(  # type:ignore[call-arg]
                 "a4c03b54", user, exception, request_ids=request_body.sequence_ids
             )
+        return retval
+
+    @router.post(
+        "/create_read_sets_for_cases",
+        operation_id="create__read_sets_for_cases",
+        name="Create reads sets for cases",
+        description=command.CreateReadSetsForCasesCommand.__doc__,
+    )
+    async def create__read_sets_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        case_read_sets: list[model.CaseReadSet],
+    ) -> list[model.ReadSet]:
+        try:
+            created_read_sets: list[model.ReadSet] = app.handle(
+                command.CreateReadSetsForCasesCommand(
+                    user=user,
+                    case_read_sets=case_read_sets,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e3d4f5a6", user, exception)
+        return created_read_sets
+
+    @router.post(
+        "/create_file_for_read_set/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_read_set",
+        name="Create file for reads set",
+        description=command.CreateFileForReadSetCommand.__doc__,
+    )
+    async def create_file_for_read_set(
+        user: registered_user_dependency,  # type: ignore
+        case_id: UUID,
+        case_type_col_id: UUID,
+        request_body: CreateFileForForReadSetRequestBody,
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForReadSetCommand(
+                    user=user,
+                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                    is_fwd=request_body.is_fwd,
+                )
+            )
+        except Exception as exception:
+            handle_exception("d3f4e2b1", user, exception)
+        return created_file_id
+
+    @router.post(
+        "/create_seqs_for_cases",
+        operation_id="create_seqs_for_cases",
+        name="Create sequences for cases",
+        description=command.CreateSeqsForCasesCommand.__doc__,
+    )
+    async def create_seqs_for_cases(
+        user: registered_user_dependency,  # type: ignore
+        case_seqs: list[model.CaseSeq],
+    ) -> list[model.Seq]:
+        try:
+            created_seqs: list[model.Seq] = app.handle(
+                command.CreateSeqsForCasesCommand(
+                    user=user,
+                    case_seqs=case_seqs,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a1b2c3d4", user, exception)
+        return created_seqs
+
+    @router.post(
+        "/create_file_for_seq/{case_id}/{case_type_col_id}",
+        operation_id="create_file_for_seq",
+        name="Create file for sequence",
+        description=command.CreateFileForSeqCommand.__doc__,
+    )
+    async def create_file_for_seq(
+        user: registered_user_dependency,  # type: ignore
+        case_id: UUID,
+        case_type_col_id: UUID,
+        request_body: CreateFileForSeqRequestBody,
+    ) -> UUID:
+        try:
+            created_file_id: UUID = app.handle(
+                command.CreateFileForSeqCommand(
+                    user=user,
+                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
+                        "utf-8"
+                    ),
+                    case_id=case_id,
+                    case_type_col_id=case_type_col_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("b5c6d7e8", user, exception)
+        return created_file_id
+
+    @router.get(
+        "/retrieve/library_prep_protocols",
+        operation_id="retrieve__library_prep_protocols",
+        name="Retrieve library preparation protocols",
+        description=command.RetrieveLibraryPrepProtocolsCommand.__doc__,
+    )
+    async def retrieve__library_prep_protocols(
+        user: registered_user_dependency,  # type: ignore
+    ) -> list[model.LibraryPrepProtocol]:
+        try:
+            retval: list[model.LibraryPrepProtocol] = app.handle(
+                command.RetrieveLibraryPrepProtocolsCommand(
+                    user=user,
+                )
+            )
+        except Exception as exception:
+            handle_exception("e7f8a9b0", user, exception)
+        return retval
+
+    @router.get(
+        "/retrieve/assembly_protocols",
+        operation_id="retrieve__assembly_protocols",
+        name="Retrieve assembly protocols",
+        description=command.RetrieveAssemblyProtocolsCommand.__doc__,
+    )
+    async def retrieve__assembly_protocols(
+        user: registered_user_dependency,  # type: ignore
+    ) -> list[model.AssemblyProtocol]:
+        try:
+            retval: list[model.AssemblyProtocol] = app.handle(
+                command.RetrieveAssemblyProtocolsCommand(
+                    user=user,
+                )
+            )
+        except Exception as exception:
+            handle_exception("c1d2e3f4", user, exception)
         return retval
 
     # CRUD

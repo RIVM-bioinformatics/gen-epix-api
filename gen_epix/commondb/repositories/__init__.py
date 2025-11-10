@@ -1,3 +1,8 @@
+from gen_epix.commondb.repositories import sa_model as sa_model  # Initialize SA Models
+from gen_epix.commondb.repositories.abac_dict import (
+    AbacDictRepository as AbacDictRepository,
+)
+from gen_epix.commondb.repositories.abac_sa import AbacSARepository as AbacSARepository
 from gen_epix.commondb.repositories.organization_dict import (
     OrganizationDictRepository as OrganizationDictRepository,
 )

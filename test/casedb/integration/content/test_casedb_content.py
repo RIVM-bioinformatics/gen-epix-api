@@ -7,21 +7,42 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
+
+TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
+
+SKIP_ENDPOINTS = False
+VERBOSE = False
+DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
+
+SEQDB_APP_CFGS = get_app_cfgs(
+    AppType.SEQDB,
+    seqdb_enum.ServiceType,
+    seqdb_enum.RepositoryType,
+    TEST_TYPE,
+)
+CASEDB_APP_CFGS = get_app_cfgs(
+    AppType.CASEDB,
+    enum.ServiceType,
+    enum.RepositoryType,
+    TEST_TYPE,
+    seqdb_app_cfgs=SEQDB_APP_CFGS,
+)
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
     return Env.get_test_client(  # type: ignore[return-value]
-        test_type=EnumTestType.CASEDB_INTEGRATION_CONTENT.value,
-        repository_type=enum.RepositoryType.DICT,
-        # repository_type=enum.RepositoryType.SA_SQLITE,
-        verbose=False,
+        test_type=TEST_TYPE.value,
+        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        verbose=VERBOSE,
         log_level=logging.ERROR,
-        use_endpoints=True,
-        data_fixture_name="FULL",
+        use_endpoints=not SKIP_ENDPOINTS,
     )
 
 
@@ -91,6 +112,7 @@ class TestContent:
         )
         # Invite an org user as org admin user
         new_user = model.User(
+            key="new_user@example.com",
             email="new_user@example.com",
             organization_id=org_admin_user.organization_id,
             roles={enum.Role.ORG_USER},
@@ -98,6 +120,7 @@ class TestContent:
         new_user_invitation: model.UserInvitation = app.handle(
             command.InviteUserCommand(
                 user=org_admin_user,
+                key=new_user.key,
                 email=new_user.email,
                 organization_id=new_user.organization_id,
                 roles=new_user.roles,
@@ -222,7 +245,7 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
-                    phylogenetic_tree = app.handle(
+                    phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
@@ -242,10 +265,18 @@ class TestContent:
                 == enum.ColType.GENETIC_SEQUENCE
             ]
             for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                has_seq_case_ids = [
+                    x.id
+                    for x in cases
+                    if x.content.get(genetic_sequence_case_type_col.id)
+                ]
+                if not has_seq_case_ids:
+                    continue
+                # Retrieve genetic sequence
                 genetic_sequences: list[model.GeneticSequence] = app.handle(
                     command.RetrieveGeneticSequenceByCaseCommand(
                         user=org_user,
-                        case_ids=case_ids[0:1],
+                        case_ids=has_seq_case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
                     )
                 )
@@ -258,12 +289,11 @@ class TestContent:
                         raise ValueError(
                             "Genetic sequence should have nucleotide_sequence attribute"
                         )
-            # Retrieve genetic sequences in FASTA format
-            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+                # Retrieve genetic sequences in FASTA format
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
-                        case_ids=case_ids[0:1],
+                        case_ids=has_seq_case_ids[0:1],
                         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
                     )
                 )
@@ -275,6 +305,28 @@ class TestContent:
                     raise ValueError("FASTA string should start with '>'")
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
+                # Retrieve LibraryPrepProtocols
+                library_prep_protocols: list[model.LibraryPrepProtocol] = app.handle(
+                    command.RetrieveLibraryPrepProtocolsCommand(
+                        user=org_user,
+                    )
+                )
+                if not library_prep_protocols:
+                    raise ValueError("Library prep protocols should not be None")
+                for library_prep_protocol in library_prep_protocols:
+                    if not library_prep_protocol.id:
+                        raise ValueError("Library prep protocol ID should not be empty")
+                # Retrieve AssemblyProtocols
+                assembly_protocols: list[model.AssemblyProtocol] = app.handle(
+                    command.RetrieveAssemblyProtocolsCommand(
+                        user=org_user,
+                    )
+                )
+                if not assembly_protocols:
+                    raise ValueError("Assembly protocols should not be None")
+                for assembly_protocol in assembly_protocols:
+                    if not assembly_protocol.id:
+                        raise ValueError("Assembly protocol ID should not be empty")
         for case_set in case_sets:
             case_ids = app.handle(
                 command.RetrieveCasesByQueryCommand(

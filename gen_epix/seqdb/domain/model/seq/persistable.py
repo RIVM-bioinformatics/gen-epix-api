@@ -69,9 +69,13 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
             }
         ),
     )
-    ref_allele_id: UUID
+    ref_allele_id: UUID = Field(
+        description="The unique identifier for the reference allele. FOREIGN KEY"
+    )
     ref_allele: Allele | None = Field(default=None, description="The reference allele.")
-    allele_id: UUID
+    allele_id: UUID = Field(
+        description="The unique identifier for the allele. FOREIGN KEY"
+    )
     allele: Allele | None = Field(default=None, description="The allele.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
@@ -101,6 +105,17 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         keys=create_keys({1: "code"}),
         links=create_links(
             {
+                #!FIXME links with None foreign keys are not supported yet
+                # 1: (
+                #     "fwd_file_id",
+                #     File,
+                #     None,
+                # ),
+                # 2: (
+                #     "rev_file_id",
+                #     File,
+                #     None,
+                # ),
                 1: (
                     "library_prep_protocol_id",
                     LibraryPrepProtocol,
@@ -109,29 +124,62 @@ class ReadSet(Model, CodeMixin, QualityMixin):
             }
         ),
     )
-    uri: str = Field(description="The URI of the read set.")
-    uri2: str | None = Field(
-        default=None, description="The URI of the second paired read set, if any."
-    )
-    reads_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by uri.",
-        min_length=32,
-        max_length=32,
-    )
-    reads2_hash_sha256: bytes | None = Field(
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the read set defined by uri2.",
-        min_length=32,
-        max_length=32,
-    )
     library_prep_protocol_id: UUID = Field(
         description="The unique identifier for the library preparation protocol. FOREIGN KEY"
     )
     library_prep_protocol: LibraryPrepProtocol | None = Field(
         default=None, description="The sequencing protocol."
     )
-    sequencing_run_code: str | None = Field(
-        description="The code of the sequencing run.", max_length=255
+    fwd_uri: str | None = Field(
+        default=None,
+        description="The URI of the forward read set. In case of single-end reads, this is the only read set.",
     )
+    rev_uri: str | None = Field(
+        default=None, description="The URI of the reverse read set, if any."
+    )
+    fwd_file_id: UUID | None = Field(
+        default=None,
+        description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY",
+    )
+    rev_file_id: UUID | None = Field(
+        default=None,
+        description="The unique file identifier for the reverse read set, if any.",
+    )
+    fwd_reads_hash_sha256: bytes | None = Field(
+        default=None,
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
+        min_length=32,
+        max_length=32,
+    )
+    rev_reads_hash_sha256: bytes | None = Field(
+        default=None,
+        description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
+        min_length=32,
+        max_length=32,
+    )
+    sequencing_run_code: str | None = Field(
+        description="The code of the sequencing run.", max_length=255, default=None
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        if self.fwd_uri and self.rev_uri and self.fwd_uri == self.rev_uri:
+            raise ValueError("fwd_uri must be different from rev_uri")
+        if (
+            self.fwd_file_id
+            and self.rev_file_id
+            and self.fwd_file_id == self.rev_file_id
+        ):
+            raise ValueError("fwd_file_id must be different from rev_file_id")
+        if (
+            self.fwd_reads_hash_sha256
+            and self.rev_reads_hash_sha256
+            and self.fwd_reads_hash_sha256 == self.rev_reads_hash_sha256
+        ):
+            raise ValueError(
+                "fwd_reads_hash_sha256 must be different from rev_reads_hash_sha256"
+            )
+        return self
 
 
 class RawSeq(Model, SeqMixin):
@@ -189,6 +237,9 @@ class Seq(Model, CodeMixin, QualityMixin):
         description="The unique identifier for the raw sequence, if available. FOREIGN KEY",
     )
     raw_seq: RawSeq | None = Field(default=None, description="The raw sequence.")
+    file_id: UUID | None = Field(
+        default=None, description="The unique file identifier."
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
@@ -232,7 +283,7 @@ class SeqAlignment(Model):
     seq_id: UUID = Field(
         description="The unique identifier for the sequence. FOREIGN KEY"
     )
-    seq: Seq = Field(default=None, description="The sequence.")
+    seq: Seq = Field(description="The sequence.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
     )
@@ -451,14 +502,12 @@ class SeqClassification(Model):
         description="The ID of the sequence classification protocol. FOREIGN KEY"
     )
     seq_classification_protocol: SeqClassificationProtocol = Field(
-        default=None, description="The sequence classification protocol."
+        description="The sequence classification protocol."
     )
     primary_category_id: UUID | None = Field(
         description="The ID of the category. FOREIGN KEY"
     )
-    primary_category: SeqCategory = Field(
-        default=None, description="The primary category."
-    )
+    primary_category: SeqCategory = Field(description="The primary category.")
     classification: str = Field(description="The classification of the sequence.")
     classification_format: enum.SeqClassificationFormat = Field(
         default=enum.SeqClassificationFormat.SEQ_CLASSIFICATION_FORMAT1,
@@ -498,7 +547,7 @@ class SeqTaxonomy(Model):
     primary_taxon_id: UUID = Field(
         description="The unique identifier for the primary taxon. FOREIGN KEY"
     )
-    primary_taxon: UUID = Field(default=None, description="The primary taxon.")
+    primary_taxon: Taxon | None = Field(default=None, description="The primary taxon.")
     taxonomy: str = Field(description="The taxonomy results of the sequence.")
     taxonomy_format: enum.TaxonomyFormat = Field(
         default=enum.TaxonomyFormat.TAXONOMY_FORMAT1,
@@ -623,7 +672,9 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
     )
     max_stored_distance: float = Field(description="The maximum distance to be stored")
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
-    seq_distance_protocol_type: enum.SeqDistanceProtocolType
+    seq_distance_protocol_type: enum.SeqDistanceProtocolType = Field(
+        description="The type of genetic distance protocol.",
+    )
     locus_set_id: UUID | None = Field(
         default=None,
         description="The unique identifier for the locus set, if applicable. FOREIGN KEY",

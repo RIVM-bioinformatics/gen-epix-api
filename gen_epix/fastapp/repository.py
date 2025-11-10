@@ -24,6 +24,11 @@ class BaseRepository(abc.ABC):
     def name(self) -> str:
         return self._name
 
+    @classmethod
+    @abc.abstractmethod
+    def create_repository(cls, **kwargs: Any) -> "BaseRepository":
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def crud(
         self,

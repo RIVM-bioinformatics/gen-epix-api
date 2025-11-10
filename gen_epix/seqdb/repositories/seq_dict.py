@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Iterable
 from uuid import UUID
 
 import numpy as np
@@ -35,7 +35,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[Tuple[str, str]]:
+    ) -> Iterable[tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
 
         for seq_id in seq_ids:

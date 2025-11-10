@@ -23,8 +23,8 @@ class BaseUserManager(abc.ABC):
         claims. The email claim is used here as the default user key, override this
         method if another key should be used.
         """
-        email: str = claims["email"]
-        return email.lower()
+        email: str = claims.get("email").lower() if "email" in claims else None
+        return email.lower() if email else None
 
     @abc.abstractmethod
     def get_user_instance_from_claims(

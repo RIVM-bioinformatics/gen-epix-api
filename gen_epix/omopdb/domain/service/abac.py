@@ -1,15 +1,32 @@
-import abc
+from typing import Type
 
 from gen_epix.commondb.services import AbacService as CommonAbacService
-from gen_epix.omopdb.domain.enum import ServiceType
+from gen_epix.fastapp.model import Command
+from gen_epix.omopdb.domain import command
 
 
 class BaseAbacService(CommonAbacService):
-    SERVICE_TYPE = ServiceType.ABAC
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.ORGANIZATION_ADMIN_WRITE_COMMANDS
+    } | set()
 
-    def register_handlers(self) -> None:
-        self.register_default_crud_handlers()
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.READ_ORGANIZATION_RESULTS_ONLY_COMMANDS
+    } | set()
 
-    @abc.abstractmethod
-    def register_policies(self) -> None:
-        raise NotImplementedError
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.READ_SELF_RESULTS_ONLY_COMMANDS
+    } | set()
+
+    READ_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.READ_USER_COMMANDS
+    } | set()
+
+    UPDATE_USER_COMMANDS: set[Type[Command]] = {  # type: ignore[assignment]
+        command.COMMON_COMMAND_MAP.get(x, x)
+        for x in CommonAbacService.UPDATE_USER_COMMANDS
+    } | set()

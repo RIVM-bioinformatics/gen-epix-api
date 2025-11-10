@@ -26,7 +26,6 @@ class RepositoryType(Enum):
 class RegionRelationType(Enum):
     IS_SEPARATE_FROM = "IS_SEPARATE_FROM"
     IS_ADJACENT_TO = "IS_ADJACENT_TO"
-    IS_CONTAINED_IN = "IS_CONTAINED_IN"
     OVERLAPS_WITH = "OVERLAPS_WITH"
     CONTAINS = "CONTAINS"
 
@@ -197,7 +196,6 @@ class ConceptSetType(Enum):
 
 
 class ConceptRelationType(Enum):
-    IS_CONTAINED_IN = "IS_CONTAINED_IN"
     CONTAINS = "CONTAINS"
 
 
@@ -237,8 +235,6 @@ class ColType(Enum):
     DECIMAL_5 = "DECIMAL_5"
     DECIMAL_6 = "DECIMAL_6"
     GENETIC_READS = "GENETIC_READS"
-    GENETIC_READS_FWD = "GENETIC_READS_FWD"
-    GENETIC_READS_REV = "GENETIC_READS_REV"
     GENETIC_SEQUENCE = "GENETIC_SEQUENCE"
     GENETIC_PROFILE = "GENETIC_PROFILE"
     GENETIC_DISTANCE = "GENETIC_DISTANCE"
@@ -321,8 +317,6 @@ class ColTypeSet(Enum):
     GENETIC = frozenset(
         {
             ColType.GENETIC_READS,
-            ColType.GENETIC_READS_FWD,
-            ColType.GENETIC_READS_REV,
             ColType.GENETIC_SEQUENCE,
             ColType.GENETIC_PROFILE,
             ColType.GENETIC_DISTANCE,

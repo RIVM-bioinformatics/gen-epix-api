@@ -1,0 +1,19 @@
+[repository.abac]
+module = "gen_epix.seqdb.repositories"
+class_name = "AbacDictRepository"
+
+[repository.organization]
+module = "gen_epix.seqdb.repositories"
+class_name = "OrganizationDictRepository"
+
+[repository.system]
+module = "gen_epix.seqdb.repositories"
+class_name = "SystemDictRepository"
+
+[repository.file]
+module = "gen_epix.seqdb.repositories"
+class_name = "FileDictRepository"
+
+[repository.seq]
+module = "gen_epix.seqdb.repositories"
+class_name = "SeqDictRepository"

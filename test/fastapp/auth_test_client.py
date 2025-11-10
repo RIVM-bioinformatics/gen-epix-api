@@ -8,7 +8,7 @@ from jose import jwk
 
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
-from gen_epix.fastapp.services.auth import AuthService, OIDCClient
+from gen_epix.fastapp.services.auth import AuthService, OidcClient
 
 
 class AuthTestClient:
@@ -32,8 +32,9 @@ class AuthTestClient:
                 "label": "idp1",
                 "protocol": "OIDC",
                 "issuer": AuthTestClient.MOCK_JWK_TOKEN.payload["iss"],
-                "discovery_url": "https://idp1.org/configuration",
+                # "discovery_url": "https://idp1.org/configuration",
                 "client_id": AuthTestClient.MOCK_JWK_TOKEN.payload["aud"],
+                "claim_map": {"__key__": "email"},
                 "scope": "openid profile email",
                 "authorization_endpoint": "https://idp1.org/authenticate",
                 "token_endpoint": "https://idp1.org/token",
@@ -48,7 +49,7 @@ class AuthTestClient:
             app, service_type=ServiceType.AUTH, idps_cfg=idps_cfg
         )
         for idp_client in auth_service.idp_clients:
-            if isinstance(idp_client, OIDCClient):
+            if isinstance(idp_client, OidcClient):
                 idp_client._signing_keys = {
                     AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict["kid"]: jwk.construct(
                         AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict

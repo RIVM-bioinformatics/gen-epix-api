@@ -12,6 +12,10 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from test.test_client.util import get_test_root_output_dir
+
+import polars as pl
+import xlsxwriter
 
 
 class Linter:
@@ -33,7 +37,17 @@ class Linter:
             the gen-epix project.
     """
 
-    presets = {
+    PYLINT_CODE_PATTERN = re.compile(r": (?P<code>[A-Z]+\d+):")
+    PYLINE_MESSAGE_PARTS_PATTERN = re.compile(
+        r"^(?P<module>.*?):(?P<line>.*?):(?P<position>.*?): (?P<code>[A-Z]+\d+): (?P<message>.*)$"
+    )
+    PYLINT_SCORE_PATTERN = re.compile(
+        r"Your code has been rated at (?P<score>[\d\.]+)/10"
+    )
+    MYPY_LOCATION_PATTERN = re.compile(r"^(?P<location>.*?:(\d+):)")
+    MYPY_ERROR_CODE_PATTERN = re.compile(r"\[([a-z0-9_]+)\]")
+
+    PRESETS = {
         "mypy": [
             "mypy",
             "--no-incremental",
@@ -52,9 +66,9 @@ class Linter:
         ],
         "pylint": [
             "pylint",
-            "--max-line-length=88",
             "--fail-under=9",
             "gen_epix/",
+            "--disable=C0301",  # Ignore "line too long" warnings since black handles that
             # "test/",
         ],
         "isort": [
@@ -74,19 +88,27 @@ class Linter:
     }
 
     def run_pylint(
-        self, file: Path | str, filter_on_codes: set[str] | None = None
-    ) -> None:
-        cmd = self.presets["pylint"]
+        self,
+        file: Path | str,
+        filter_on_codes: set[str] | None = None,
+        disable_codes: set[str] | None = None,
+    ) -> str:
+        base_cmd = list(self.PRESETS["pylint"])  # copy to avoid mutation
         if isinstance(file, str):
             file = Path(file)
         if filter_on_codes:
-            cmd = cmd + ["--disable=all", "--enable=" + ",".join(filter_on_codes)]
-        self.run(cmd, file=file)
+            base_cmd += [
+                "--disable=all",
+                f"--enable={','.join(sorted(filter_on_codes))}",
+            ]
+        if disable_codes:
+            base_cmd += [f"--disable={','.join(sorted(disable_codes))}"]
+        return self.run(base_cmd, file=file)
 
     def run_mypy(
         self, file: Path | str, filter_on_codes: set[str] | None = None
     ) -> None:
-        cmd = self.presets["mypy"]
+        cmd = self.PRESETS["mypy"]
         if isinstance(file, str):
             file = Path(file)
         self.run(cmd, file=file)
@@ -101,7 +123,7 @@ class Linter:
             file = Path(file)
         with open(file, "rt") as handle:
             lines = handle.readlines()
-        pattern = re.compile(r": ([A-Z]\d{4}):")
+        pattern = self.PYLINT_CODE_PATTERN
         messages = [
             line
             for line in lines
@@ -119,9 +141,9 @@ class Linter:
             file = Path(file)
         with open(file, "rt") as handle:
             lines = handle.readlines()
-        location_pattern = re.compile(r"^(.*?:(\d+):)")
-        error_code_pattern = re.compile(r"\[(.*?)\]\r?\n?$")
-        out_lines = []
+        location_pattern = self.MYPY_LOCATION_PATTERN
+        error_code_pattern = self.MYPY_ERROR_CODE_PATTERN
+        out_lines: list[str] = []
         prev_location = ""
         is_prev_match = False
         for line in lines:
@@ -180,7 +202,8 @@ class Linter:
             If the linting tool returns a non-zero exit code, indicating that it found some
             issues with the code.
         """
-        print(f"Running program: {cmd[0]}")
+        if verbose:
+            print(f"Running program: {cmd[0]}")
 
         # Subprocess does not naturally inherit the conda environment,
         # so we need to activate it manually.
@@ -218,7 +241,7 @@ class Linter:
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
         if file_basename and isinstance(file_basename, str):
             file_basename = Path(file_basename)
-        for value in self.presets.values():
+        for value in self.PRESETS.values():
             if file_basename:
                 file = Path(f"{file_basename}.{value[0]}.txt")
                 file2 = Path(f"{file_basename}.{now_str}.{value[0]}.txt")
@@ -226,7 +249,7 @@ class Linter:
                 file = None
                 file2 = None
             output = self.run(value, file=file)
-            if file:
+            if file2:
                 file2.write_text(file.read_text())
             if output:
                 outputs.append(output)
@@ -236,3 +259,85 @@ class Linter:
             with open(file, "wt") as handle:
                 handle.write("\n".join(outputs))
             file2.write_text(file.read_text())
+
+    def analyse_pylint_code_impact(self, verbose: bool = True) -> None:
+        output_dir = get_test_root_output_dir()
+        base_report_file = output_dir / "pylint.rule_impact.base_report.txt"
+        result_file = output_dir / "pylint.rule_impact.result.xlsx"
+        temp_report_file_template = "pylint.rule_impact.disable_{code}.txt"
+
+        # Get baseline score and messages
+        if verbose:
+            print(f"Getting baseline")
+        start_time = datetime.now()
+        base_report = self.run_pylint(file=base_report_file)
+        # base_report = base_report_file.read_text()
+        end_time = datetime.now()
+        if verbose:
+            print(f"Baseline completed in {(end_time - start_time).seconds}s")
+        base_score = Linter.parse_pylint_score(base_report)
+        if base_score is None:
+            raise ValueError("Could not determine base pylint score.")
+        messages = self.parse_pylint_for_messages(base_report_file)
+        total_n_messages = len(messages)
+
+        # Parse baseline messages and get aggregated counts
+        message_list = []
+        for message in messages:
+            pattern_match = self.PYLINE_MESSAGE_PARTS_PATTERN.match(message)
+            if not pattern_match:
+                if verbose:
+                    print(f"Could not parse pylint message: {message}")
+                continue
+            message_list.append(pattern_match.groupdict())
+        message_df = pl.DataFrame(message_list)
+        code_counts_df = message_df.group_by("code").len().rename({"len": "count"})
+        module_counts_df = message_df.group_by("module").len().rename({"len": "count"})
+
+        # Run pylint disabling one code at a time
+        code_pattern = self.PYLINT_CODE_PATTERN
+        codes = sorted(set(code_pattern.findall(base_report)))
+        results: list[dict] = [
+            {
+                "code": "BASE",
+                "score": base_score,
+                "impact_score": 0.0,
+                "n_messages": None,
+            }
+        ]
+        for i, code in enumerate(codes):
+            if verbose:
+                print(f"Analyzing code {i+1}/{len(codes)}: {code}")
+            temp_report_file = output_dir / temp_report_file_template.format(code=code)
+            output = self.run_pylint(file=temp_report_file, disable_codes={code})
+            score = Linter.parse_pylint_score(output)
+            n_messages = total_n_messages - len(
+                self.parse_pylint_for_messages(temp_report_file)
+            )
+            temp_report_file.unlink(missing_ok=True)
+            impact_score = (score - base_score) if score is not None else None
+            if verbose:
+                print(f"\tImpact on score: {impact_score}")
+                print(f"\tNumber of messages: {n_messages}")
+            results.append(
+                {
+                    "code": code,
+                    "score": score,
+                    "impact_score": impact_score,
+                    "n_messages": n_messages,
+                }
+            )
+        score_df = pl.DataFrame(results)
+        score_df = score_df.sort("impact_score", descending=True)
+
+        # Write out
+        with xlsxwriter.Workbook(result_file) as workbook:
+            message_df.write_excel(workbook, worksheet="messages")
+            code_counts_df.write_excel(workbook, worksheet="code_counts")
+            module_counts_df.write_excel(workbook, worksheet="module_counts")
+            score_df.write_excel(workbook, worksheet="code_impact")
+
+    @staticmethod
+    def parse_pylint_score(report: str) -> float | None:
+        match = re.search(r"Your code has been rated at ([\d\.]+)/10", report)
+        return float(match.group(1)) if match else None

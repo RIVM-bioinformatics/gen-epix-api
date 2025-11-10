@@ -44,6 +44,9 @@ from gen_epix.commondb.domain.command import (
     RegisterInvitedUserCommand as RegisterInvitedUserCommand,
 )
 from gen_epix.commondb.domain.command import (
+    RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
+)
+from gen_epix.commondb.domain.command import (
     RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -72,6 +75,7 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.command.abac import (
     OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
 )
+from gen_epix.seqdb.domain.command.file import FileCrudCommand as FileCrudCommand
 from gen_epix.seqdb.domain.command.organization import (
     InviteUserCommand as InviteUserCommand,
 )
@@ -286,6 +290,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
         TaxonSetMemberCrudCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
+    },
+    enum.ServiceType.FILE: {
+        FileCrudCommand,
     },
     # Common commands
     enum.ServiceType.AUTH: set(

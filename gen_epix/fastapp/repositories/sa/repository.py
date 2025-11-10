@@ -44,6 +44,23 @@ from gen_epix.filter import (
 class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities = kwargs.pop("entities", [])
+        connection_string = kwargs.pop("connection_string", None)
+        file = kwargs.pop("file", None)
+        if connection_string is None:
+            if file is None:
+                raise exc.RepositoryInitializationServiceError(
+                    "Either connection_string or file must be provided"
+                )
+            connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
+        return cls.create_sa_repository(
+            entities=entities,
+            connection_string=connection_string,
+            **kwargs,
+        )
+
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
         # Add properties
@@ -99,8 +116,8 @@ class SARepository(BaseRepository):
             )
         isolation_level: IsolationLevel = kwargs.pop(
             "isolation_level", self._default_isolation_level
-        )  # type: ignore[assignment]
-        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)  # type: ignore[assignment]
+        )
+        expire_on_commit: bool = kwargs.pop("expire_on_commit", True)
         return SAUnitOfWork(
             self.get_session(
                 isolation_level=isolation_level,
@@ -122,24 +139,26 @@ class SARepository(BaseRepository):
         )
         return session
 
-    def register_mappers(self, **kwargs: Any) -> None:
+    def register_mappers(
+        self,
+        entities: list[Entity] | None = None,
+        field_name_map: dict[Type[Model], dict[str, str]] | None = None,
+        service_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        db_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        generate_service_metadata: (
+            dict[Type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
+        ) = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Default implementation to register standard mappers for a list of entities.
         """
         # Parse arguments
-        entities: list[Entity] = kwargs.pop("entities", [])  # type: ignore[assignment]
-        field_name_map: dict[Type[Model], dict[str, str]] = kwargs.pop(
-            "field_name_map", {}
-        )
-        service_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "service_metadata_field_names", {}
-        )
-        db_metadata_field_names: dict[Type[Model], tuple] = kwargs.pop(
-            "db_metadata_field_names", {}
-        )
-        generate_service_metadata: dict[
-            Type[Model], Callable[[Model, Hashable], dict[str, Any]]
-        ] = kwargs.pop("get_row_metadata", {})
+        entities = entities or []
+        field_name_map = field_name_map or {}
+        service_metadata_field_names = service_metadata_field_names or {}
+        db_metadata_field_names = db_metadata_field_names or {}
+        generate_service_metadata = generate_service_metadata or {}
 
         # Create and register mapper for each entity
         for entity in entities:
@@ -404,7 +423,9 @@ class SARepository(BaseRepository):
                 stmt = select(row_class)
             if filter:
                 # Convert filter to where clause and add to statement
-                stmt = stmt.where(self.get_where_clause_from_filter(row_class, filter))
+                stmt = stmt.where(
+                    self.get_where_clause_from_filter(row_class, mapper, filter)
+                )
             if return_id:
                 row_ids = [x[0] for x in session.execute(stmt).all()]
                 if obj_filter:
@@ -613,7 +634,9 @@ class SARepository(BaseRepository):
             stmt = select(*[getattr(row_class, x) for x in row_field_names])
             if filter:
                 # Convert filter to where clause and add to statement
-                stmt = stmt.where(self.get_where_clause_from_filter(row_class, filter))
+                stmt = stmt.where(
+                    self.get_where_clause_from_filter(row_class, mapper, filter)
+                )
             for row in session.execute(stmt):
                 yield row
 
@@ -627,12 +650,16 @@ class SARepository(BaseRepository):
         field_name_map = self.get_mapper(model_class).get_field_name_map()
         return self._split_filter_recursion(field_name_map, filter)
 
-    def get_where_clause_from_filter(self, row_class: Type, filter: Filter) -> Any:
+    def get_where_clause_from_filter(
+        self, row_class: Type, mapper: BaseSAMapper, filter: Filter
+    ) -> Any:
         invert = filter.invert
         if isinstance(filter, CompositeFilter):
             args = []
             for sub_filter in filter.filters:
-                args.append(self.get_where_clause_from_filter(row_class, sub_filter))
+                args.append(
+                    self.get_where_clause_from_filter(row_class, mapper, sub_filter)
+                )
             if filter.operator == LogicalOperator.AND:
                 return sa.and_(*args) if not invert else sa.not_(sa.and_(*args))
             if filter.operator == LogicalOperator.OR:
@@ -640,7 +667,12 @@ class SARepository(BaseRepository):
             raise exc.InvalidArgumentsError(
                 f"Unsupported filter operator: {filter.operator.value}"
             )
-        column = getattr(row_class, filter.get_key())
+        row_field_name = mapper.get_mapped_field_name(str(filter.get_key()))
+        if row_field_name is None:
+            raise exc.InvalidArgumentsError(
+                f"Filter key '{filter.get_key()}' cannot be mapped to a row field name"
+            )
+        column = getattr(row_class, row_field_name)
         if (
             isinstance(filter, StringSetFilter)
             or isinstance(filter, NumberSetFilter)
@@ -847,7 +879,7 @@ class SARepository(BaseRepository):
 
     @staticmethod
     def _select_with_id_join(
-        session: sa.orm.Session,
+        session: Session,
         get_row_id: Callable[[Type], sa.Column],
         row_class: Type,
         obj_ids: list[Hashable],

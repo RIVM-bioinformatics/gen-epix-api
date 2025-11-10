@@ -169,7 +169,9 @@ class PcrProtocol(Model, ProtocolMixin):
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
-    target_names: list[str]
+    target_names: list[str] = Field(
+        description="The names of the targets for which PCR is performed"
+    )
 
     @field_validator("target_names", mode="before")
     def _validate_target_names(cls, value: list[str] | str) -> list[str]:
@@ -185,8 +187,12 @@ class AstProtocol(Model, ProtocolMixin):
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
-    is_predicted: bool
-    antimicrobial_names: list[str]
+    is_predicted: bool = Field(
+        description="Whether the AST results are predicted from sequence data"
+    )
+    antimicrobial_names: list[str] = Field(
+        description="The names of the antimicrobials for which AST is performed"
+    )
 
     @field_validator("antimicrobial_names", mode="before")
     def _validate_antimicrobial_names(cls, value: list[str] | str) -> list[str]:
@@ -326,9 +332,9 @@ class TaxonSetMember(Model):
         ),
     )
     taxon_set_id: UUID = Field(description="The ID of the taxon set. FOREIGN KEY")
-    taxon_set: TaxonSet
+    taxon_set: TaxonSet = Field(description="The taxon set")
     taxon_id: UUID = Field(description="The ID of the taxon. FOREIGN KEY")
-    taxon: Taxon
+    taxon: Taxon = Field(description="The taxon")
 
 
 class Locus(Model):

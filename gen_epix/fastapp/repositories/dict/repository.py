@@ -5,6 +5,7 @@ import pickle
 import zipfile
 from collections.abc import Hashable
 from functools import partial
+from pathlib import Path
 from typing import Any, Callable, Iterable, Type
 from uuid import UUID
 
@@ -19,8 +20,43 @@ from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
 
 
 class DictRepository(BaseRepository):
+
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities = kwargs.pop("entities", [])
+        file = kwargs.pop("file", None)
+        file_type = kwargs.pop("file_type", None)
+        if file is None:
+            raise exc.RepositoryInitializationServiceError("No file provided")
+        if file_type is None:
+            path = Path(file)
+            suffixes = [x.lower() for x in path.suffixes]
+            if ".pkl" in suffixes:
+                file_type = "pkl"
+            elif ".json" in suffixes:
+                file_type = "json"
+            elif ".zip" in suffixes:
+                file_type = "zip"
+        file_type = file_type.lower()
+        if file_type == "pkl":
+            return DictRepository.create_repository_from_pkl(
+                repository_class=cls,
+                entities=entities,
+                pkl_file=file,
+                **kwargs,
+            )
+        elif file_type == "zip":
+            return DictRepository.create_repository_from_json(
+                repository_class=cls,
+                entities=entities,
+                zip_file=file,
+                **kwargs,
+            )
+        else:
+            raise NotImplementedError(f"Unsupported file type: {file_type}")
+
     @staticmethod
-    def from_pkl(
+    def create_repository_from_pkl(
         repository_class: Type[BaseRepository],
         entities: Iterable[Entity],
         pkl_file: str,
@@ -38,7 +74,7 @@ class DictRepository(BaseRepository):
         return repository
 
     @staticmethod
-    def from_json(
+    def create_repository_from_json(
         repository_class: Type[BaseRepository],
         entities: Iterable[Entity],
         zip_file: str,
@@ -99,6 +135,10 @@ class DictRepository(BaseRepository):
         self._init_properties(entities, db, missing_data)
 
         self._verify_extra_models_and_extract_reverse_links(extra_data)
+
+    @property
+    def db(self) -> dict[Type[Model], dict[Hashable, Model]]:
+        return self._db
 
     def _init_properties(
         self, entities: Iterable[Entity], db: dict, missing_data: str

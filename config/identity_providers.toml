@@ -1,0 +1,25 @@
+[[service.auth.props.idps_cfg]]
+name = "rivm_signicat"
+label = "RIVM (Internal, External, and Guest accounts), GGD GHOR Nederland, SURF & Rijksbreed Inloggen"
+protocol = "OIDC"
+discovery_url = "https://pre-login.rivm.nl/broker/sp/oidc/.well-known/openid-configuration"
+client_id = "POv1bEMlzAunu6LD0BcmV4pvxInkNRXY"
+client_secret = ""
+scope = "openid profile email"
+public = true
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "email preferred_username"
+
+[[service.auth.props.idps_cfg]]
+name = "mock"
+label = "aks://MOCK"
+protocol = "OIDC"
+discovery_url = "https://127.0.0.1:5443/.well-known/openid-configuration"
+client_id = "mock"
+client_secret = "mock"
+scope = "openid profile email"
+public = true
+
+[service.auth.props.idps_cfg.claim_map]
+__key__ = "sub"
