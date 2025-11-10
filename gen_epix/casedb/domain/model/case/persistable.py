@@ -481,8 +481,16 @@ class CaseTypeSettings(Model):
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
-                2: ("stats_time_dim_id", Dim, "stats_time_dim"),
-                3: ("stats_geo_dim_id", Dim, "stats_geo_dim"),
+                2: (
+                    "stats_time_case_type_col_id",
+                    CaseTypeCol,
+                    "stats_time_case_type_col",
+                ),
+                3: (
+                    "stats_geo_case_type_col_id",
+                    CaseTypeCol,
+                    "stats_geo_case_type_col",
+                ),
             }
         ),
     )

@@ -58,15 +58,18 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
-
-    stats_time_dim_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_time_dim_id"
+    stats_time_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_time_case_type_col_id"
     )
-    stats_time_dim: Dim | None = copy_model_field(CaseTypeSettings, "stats_time_dim")
-    stats_geo_dim_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_geo_dim_id"
+    stats_time_case_type_col: CaseTypeCol | None = copy_model_field(
+        CaseTypeSettings, "stats_time_case_type_col"
     )
-    stats_geo_dim: Dim | None = copy_model_field(CaseTypeSettings, "stats_geo_dim")
+    stats_geo_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_geo_case_type_col_id"
+    )
+    stats_geo_case_type_col: CaseTypeCol | None = copy_model_field(
+        CaseTypeSettings, "stats_geo_case_type_col"
+    )
     create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
     read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
     read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
