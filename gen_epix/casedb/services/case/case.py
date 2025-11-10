@@ -1203,9 +1203,7 @@ class CaseService(BaseCaseService):
                 }
                 # Retrieve data collections by case id for ABAC column-level write checks
                 case_to_data_collections: dict[UUID, set[UUID]] = (
-                    self._retrieve_case_data_collections_map(
-                        uow, user.id
-                    )
+                    self._retrieve_case_data_collections_map(uow, user.id)
                 )
                 # For each requested (case, case_type_col), ensure the user has write access
                 # to that column in at least one data collection the case belongs to
@@ -1217,10 +1215,14 @@ class CaseService(BaseCaseService):
                     case_data_collection_memberships.add(
                         case_by_id[case_read_set.case_id].created_in_data_collection_id
                     )
-                    writable_in_data_collections = writable_data_collections_by_case_type_col.get(
-                        case_read_set.case_type_col_id, set()
+                    writable_in_data_collections = (
+                        writable_data_collections_by_case_type_col.get(
+                            case_read_set.case_type_col_id, set()
+                        )
                     )
-                    if case_data_collection_memberships.isdisjoint(writable_in_data_collections):
+                    if case_data_collection_memberships.isdisjoint(
+                        writable_in_data_collections
+                    ):
                         raise exc.UnauthorizedAuthError(
                             "User has no WRITE_CASE access to the specified column in any data collection of the case"
                         )
@@ -1248,8 +1250,8 @@ class CaseService(BaseCaseService):
                         user=cmd.user,
                         operation=CrudOperation.CREATE_ONE,
                         objs=case_read_set.read_set,
-                        )
                     )
+                )
                 case.content[case_type_col.id] = created_read_set.id
                 super(DomainBaseCaseService, self).crud(
                     command.CaseCrudCommand(
@@ -1261,6 +1263,31 @@ class CaseService(BaseCaseService):
                 created_read_sets.append(created_read_set)
 
         return created_read_sets
+
+    def validate_case_access_rights_with_case_type_col(
+        self,
+        cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
+        user: model.User,
+        case_abac: model.CaseAbac,
+        uow: BaseUnitOfWork,
+        case: model.Case,
+    ):
+        writable_in_data_collections = (
+            case_abac.get_data_collections_with_access_right_for_case_type_col(
+                cmd.case_type_col_id, enum.CaseRight.WRITE_CASE
+            )
+        )
+        case_to_data_collections: dict[UUID, set[UUID]] = (
+            self._retrieve_case_data_collections_map(uow, user.id)
+        )
+        case_data_collection_memberships = set(
+            case_to_data_collections.get(cmd.case_id, set())
+        )
+        case_data_collection_memberships.add(case.created_in_data_collection_id)
+        if case_data_collection_memberships.isdisjoint(writable_in_data_collections):
+            raise exc.UnauthorizedAuthError(
+                "User has no WRITE_CASE access to the specified column in any data collection of the case"
+            )
 
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
@@ -1292,6 +1319,11 @@ class CaseService(BaseCaseService):
                 filter_content=True,
                 extra_access_case_type_col_ids={cmd.case_type_col_id},
             )
+
+            if not case_abac.is_full_access:
+                self.validate_case_access_rights_with_case_type_col(
+                    cmd, user, case_abac, uow, case
+                )
 
             # Retrieve case type column and underlying column
             case_type_col: model.CaseTypeCol = self.repository.crud(  # type: ignore[assignment]
@@ -1410,6 +1442,11 @@ class CaseService(BaseCaseService):
                 filter_content=True,
                 extra_access_case_type_col_ids={cmd.case_type_col_id},
             )
+
+            if not case_abac.is_full_access:
+                self.validate_case_access_rights_with_case_type_col(
+                    cmd, user, case_abac, uow, case
+                )
 
             # Retrieve case type column and underlying column
             case_type_col: model.CaseTypeCol = self.repository.crud(  # type: ignore[assignment]
@@ -1559,6 +1596,39 @@ class CaseService(BaseCaseService):
             col_by_id: dict[UUID, model.Col] = {
                 x.id: x for x in cols if x.id is not None
             }
+
+            if not case_abac.is_full_access:
+                writable_data_collections_by_case_type_col: dict[UUID, set[UUID]] = {
+                    x: case_abac.get_data_collections_with_access_right_for_case_type_col(
+                        x, enum.CaseRight.WRITE_CASE
+                    )
+                    for x in case_type_col_ids
+                }
+                # Retrieve data collections by case id for ABAC column-level write checks
+                case_to_data_collections: dict[UUID, set[UUID]] = (
+                    self._retrieve_case_data_collections_map(uow, user.id)
+                )
+                # For each requested (case, case_type_col), ensure the user has write access
+                # to that column in at least one data collection the case belongs to
+                for case_seq in cmd.case_seqs:
+                    # Membership includes created_in_data_collection_id
+                    case_data_collection_memberships = set(
+                        case_to_data_collections.get(case_seq.case_id, set())
+                    )
+                    case_data_collection_memberships.add(
+                        case_by_id[case_seq.case_id].created_in_data_collection_id
+                    )
+                    writable_in_data_collections = (
+                        writable_data_collections_by_case_type_col.get(
+                            case_seq.case_type_col_id, set()
+                        )
+                    )
+                    if case_data_collection_memberships.isdisjoint(
+                        writable_in_data_collections
+                    ):
+                        raise exc.UnauthorizedAuthError(
+                            "User has no WRITE_CASE access to the specified column in any data collection of the case"
+                        )
 
             created_seqs: list[model.Seq] = []
             for case_seq in cmd.case_seqs:
