@@ -2,6 +2,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    BELOW_ORG_ADMIN_USERS,
     DEV_REPOSITORY_CONFIG,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
@@ -176,13 +177,24 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
-    # TODO: test_create_site
+    def test_create_site(self, env: Env) -> None:
+        env.create_site("root1_1", "site1_1", "org1")
+        env.create_site("root1_1", "site2_1", "org2")
 
-    # TODO: test_create_site_raise
+    def test_create_contact(self, env: Env) -> None:
+        env.create_contact("root1_1", "contact1", "site1_1", email="c1@example.com")
+        env.create_contact("root1_1", "contact2", "site2_1")
+        env.create_contact("root1_1", "contact3", "site2_1")
 
-    # TODO: test_create_contact
+    def test_create_site_raise(self, env: Env) -> None:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_site(exec_user, "site1_11", "org1")
 
-    # TODO: test_create_contact_raise
+    def test_create_contact_raise(self, env: Env) -> None:
+        for exec_user in BELOW_ORG_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_contact(exec_user, "contact11", "site1_1")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_concept_set(self, env: Env) -> None:

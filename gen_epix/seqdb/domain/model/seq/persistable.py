@@ -11,7 +11,6 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     AlignmentMixin,
     CodeMixin,
@@ -70,9 +69,13 @@ class AlleleAlignment(Model, AlignmentMixin, QualityMixin):
             }
         ),
     )
-    ref_allele_id: UUID
+    ref_allele_id: UUID = Field(
+        description="The unique identifier for the reference allele. FOREIGN KEY"
+    )
     ref_allele: Allele | None = Field(default=None, description="The reference allele.")
-    allele_id: UUID
+    allele_id: UUID = Field(
+        description="The unique identifier for the allele. FOREIGN KEY"
+    )
     allele: Allele | None = Field(default=None, description="The allele.")
     alignment_protocol_id: UUID = Field(
         description="The unique identifier for the sequence alignment protocol. FOREIGN KEY"
@@ -102,17 +105,18 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         keys=create_keys({1: "code"}),
         links=create_links(
             {
+                #!FIXME links with None foreign keys are not supported yet
+                # 1: (
+                #     "fwd_file_id",
+                #     File,
+                #     None,
+                # ),
+                # 2: (
+                #     "rev_file_id",
+                #     File,
+                #     None,
+                # ),
                 1: (
-                    "fwd_file_id",
-                    File,
-                    None,
-                ),
-                2: (
-                    "rev_file_id",
-                    File,
-                    None,
-                ),
-                3: (
                     "library_prep_protocol_id",
                     LibraryPrepProtocol,
                     "library_prep_protocol",
@@ -668,7 +672,9 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
     )
     max_stored_distance: float = Field(description="The maximum distance to be stored")
     min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
-    seq_distance_protocol_type: enum.SeqDistanceProtocolType
+    seq_distance_protocol_type: enum.SeqDistanceProtocolType = Field(
+        description="The type of genetic distance protocol.",
+    )
     locus_set_id: UUID | None = Field(
         default=None,
         description="The unique identifier for the locus set, if applicable. FOREIGN KEY",
