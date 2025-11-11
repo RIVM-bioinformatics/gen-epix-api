@@ -86,6 +86,7 @@ class SeqdbRemoteApp(RemoteApp):
                 raise exc.InitializationServiceError(
                     "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
+            ssl_ctx = self.ssl_context if http_protocol == HttpProtocol.HTTPS else None
             oidc_client = OidcClient(
                 server_cfg=OidcServerCfg(
                     name="",
@@ -96,7 +97,7 @@ class SeqdbRemoteApp(RemoteApp):
                     token_endpoint=oauth_token_endpoint,
                     scope=oauth_scope,
                 ),
-                ssl_context=self.ssl_context,
+                ssl_context=ssl_ctx,
                 logger=logger,
                 log_item_class=log_item_class,
             )
@@ -172,14 +173,14 @@ class SeqdbRemoteApp(RemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-        data = response.json()
-        if not data:
-            return None
-        return seqdb_model.PhylogeneticTree(**data)
+            with httpx.Client() as client:
+                response = client.post(
+                    route,
+                    json=json.loads(request_body.model_dump_json()),
+                    headers=headers,
+                )
+                response.raise_for_status()
+            data = response.json()
+            if not data:
+                return None
+            return seqdb_model.PhylogeneticTree(**data)
