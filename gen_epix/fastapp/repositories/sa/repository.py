@@ -55,8 +55,7 @@ class SARepository(BaseRepository):
                     "Either connection_string or file must be provided"
                 )
             connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
-        return SARepository.create_sa_repository(
-            repository_class=cls,
+        return cls.create_sa_repository(
             entities=entities,
             connection_string=connection_string,
             **kwargs,
