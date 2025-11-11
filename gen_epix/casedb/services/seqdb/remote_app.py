@@ -200,12 +200,19 @@ class SeqdbRemoteApp(RemoteApp):
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
 
-        request_body = {"user": cmd.user, "seq_ids": cmd.seq_ids, "wrap": cmd.wrap}
+        request_body: dict[str, Any] = {
+            "user": cmd.user,
+            "seq_ids": cmd.seq_ids,
+            "wrap": cmd.wrap,
+        }
 
-        with httpx.Client(verify=self.ssl_context) as client:
-            with client.stream(  # TODO: With this remote app function, is the retrieval of fasta still streaming?
-                "POST", route, json=request_body, headers=headers
-            ) as resp:
-                resp.raise_for_status()
-                fasta = "".join(chunk.decode() for chunk in resp.iter_bytes())
-                return fasta
+        def _iter_fasta_generator() -> Iterable[str]:
+            with httpx.Client(verify=self.ssl_context) as client:
+                with client.stream(
+                    "POST", route, json=request_body, headers=headers
+                ) as resp:
+                    resp.raise_for_status()
+                    for chunk in resp.iter_bytes():
+                        yield chunk.decode()
+
+        return _iter_fasta_generator()
