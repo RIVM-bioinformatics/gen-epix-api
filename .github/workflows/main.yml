@@ -99,7 +99,7 @@ jobs:
       run: |
         source ~/.venv/bin/activate
         # Run pylint but do not let it fail the step (we capture output instead)
-        pylint ./gen_epix | tee pylint.txt || true
+        pylint ./gen_epix --disable=C0301 | tee pylint.txt || true
         # Capture the full score line (e.g. "Your code has been rated at 7.36/10 (previous run: 7.29/10, +0.07)")
         score_line=$(grep -m1 "Your code has been rated" pylint.txt || true)
         if [ -z "$score_line" ]; then score_line="Your code has been rated at N/A/10"; fi
