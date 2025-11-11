@@ -57,11 +57,12 @@ class SeqdbRemoteApp(RemoteApp):
             oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
         )
 
+        # Force protocol to HTTP regardless of input
         super().__init__(
             DOMAIN,
             host,
             port,
-            http_protocol=http_protocol,
+            http_protocol=HttpProtocol.HTTP,
             default_route_prefix=default_route_prefix,
             default_headers=default_headers,
             add_generated_crud_route_handlers=True,
