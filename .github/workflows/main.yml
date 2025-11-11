@@ -111,7 +111,7 @@ jobs:
       with:
         header: "Code linting"
         message: |
-          ${{ steps.pylint-run.outputs.pylint_score_line }}
+          🔬 Pylint score output: `${{ steps.pylint-run.outputs.pylint_score_line }}`
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
