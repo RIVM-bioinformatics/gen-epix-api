@@ -164,6 +164,7 @@ class SeqdbRemoteApp(RemoteApp):
     ) -> seqdb_model.PhylogeneticTree | None:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
+        print(f"[SeqdbRemoteApp] Service call URL: {route} (protocol: HTTP)")
 
         # Create request body matching seqdb API expectations
 
