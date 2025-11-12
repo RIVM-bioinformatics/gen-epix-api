@@ -32,7 +32,7 @@ class SeqdbRemoteApp(RemoteApp):
         self,
         host: str,
         port: int | None,
-        http_protocol: HttpProtocol = HttpProtocol.HTTP,
+        http_protocol: HttpProtocol = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
         ssl_cert_file: str | None = None,
