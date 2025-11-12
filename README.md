@@ -1,6 +1,6 @@
 ![Gen-EpiX Logo](./docs/assets/gen-epix_logo_full.svg)
 
-[![tests](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg)](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml) [![sonarqube](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) [![coverage](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) ![pylint](https://img.shields.io/badge/PyLint-6.65-yellow?logo=python&logoColor=white)
+[![tests](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml/badge.svg)](https://github.com/RIVM-bioinformatics/gen-epix-api/actions/workflows/main.yml) [![sonarqube](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=alert_status&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) [![coverage](https://sonarcloud.io/api/project_badges/measure?project=RIVM-bioinformatics_gen-epix-api&metric=coverage&token=2b7eb8082cf1e05fb2fd03714413c6e5f8f4b74c)](https://sonarcloud.io/dashboard?id=RIVM-bioinformatics_gen-epix-api) ![pylint](https://img.shields.io/badge/PyLint-6.66-yellow?logo=python&logoColor=white)
 
 ---
 
