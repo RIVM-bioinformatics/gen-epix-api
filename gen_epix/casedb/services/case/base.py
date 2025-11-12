@@ -1,5 +1,6 @@
 from abc import abstractmethod
-from typing import Any, Callable, Iterable, Type
+from collections.abc import Iterable
+from typing import Any, Callable
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -151,7 +152,7 @@ class BaseCaseService(DomainBaseCaseService):
     @abstractmethod
     def _read_association_with_valid_ids(
         self,
-        command_class: Type[command.CrudCommand],
+        command_class: type[command.CrudCommand],
         field_name1: str,
         field_name2: str,
         valid_ids1: set[UUID] | frozenset[UUID] | None = None,
@@ -223,7 +224,7 @@ class BaseCaseService(DomainBaseCaseService):
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
-        association_class: Type[model.Model],
+        association_class: type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
         **kwargs: Any,

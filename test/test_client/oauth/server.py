@@ -14,6 +14,7 @@ The server includes:
 
 import logging
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from test.test_client.oauth.client_store import Client, ClientStore
@@ -21,7 +22,7 @@ from test.test_client.oauth.jwks import JWKSManager
 from test.test_client.oauth.oidc_provider import OIDCProvider
 from test.test_client.oauth.token_store import Token, TokenStore
 from test.test_client.oauth.validators import OAuth2Validator
-from typing import Any, AsyncGenerator, Dict
+from typing import Any
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -152,7 +153,7 @@ async def authenticate_client(request: Request) -> Client:
 
 
 @app.get("/.well-known/openid-configuration")
-async def openid_configuration(request: Request) -> Dict[str, Any]:
+async def openid_configuration(request: Request) -> dict[str, Any]:
     """OpenID Connect Discovery endpoint."""
     base_url = f"{request.url.scheme}://{request.url.netloc}"
 
@@ -177,7 +178,7 @@ async def openid_configuration(request: Request) -> Dict[str, Any]:
 
 
 @app.get("/.well-known/jwks.json")
-async def jwks_endpoint() -> Dict[str, Any]:
+async def jwks_endpoint() -> dict[str, Any]:
     """JSON Web Key Set (JWKS) endpoint."""
     return jwks_manager.get_public_keys()
 

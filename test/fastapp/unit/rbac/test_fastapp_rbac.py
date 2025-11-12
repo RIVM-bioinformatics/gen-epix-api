@@ -12,7 +12,7 @@ from test.fastapp.enum import ServiceType
 from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient
 from test.fastapp.user_manager import UserManager
-from typing import Any, Type
+from typing import Any
 
 import pytest
 
@@ -54,7 +54,7 @@ class RBACTestClient(ServiceTestClient):
 
     def __init__(
         self,
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         logger: logging.Logger | None = None,
         **kwargs: Any,
     ) -> None:
@@ -118,7 +118,7 @@ class RBACTestClient(ServiceTestClient):
             roles=roles,
         )
 
-    def create_one(self, model_class: Type[Model], user: User | None) -> CrudCommand:
+    def create_one(self, model_class: type[Model], user: User | None) -> CrudCommand:
         crud_command_class = self.app.domain.get_crud_command_for_model(model_class)
         obj = self.get_model_instance_for_class(model_class, set_id=False)
         if isinstance(obj, Model1_2):
@@ -132,7 +132,7 @@ class RBACTestClient(ServiceTestClient):
         )
         return instance_created
 
-    def read_one(self, model_class: Type[Model], user: User | None) -> Model:
+    def read_one(self, model_class: type[Model], user: User | None) -> Model:
         crud_command_class = self.app.domain.get_crud_command_for_model(model_class)
         obj = list(self.df[model_class].values())[0]
         instance_read = self.app.handle(

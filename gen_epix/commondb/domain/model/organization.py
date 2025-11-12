@@ -1,7 +1,7 @@
 import datetime
 import json
 from enum import Enum
-from typing import ClassVar, Type
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator
@@ -58,7 +58,7 @@ class User(fastapp.User, Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -291,7 +291,7 @@ class UserInvitation(Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     key: str = copy_model_field(User, "key")
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
@@ -342,7 +342,7 @@ class UserInvitationConstraints(Model):
         snake_case_plural_name="user_invitation_constraints",
         persistable=False,
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     roles: set[enum.Role] = Field(
         description="The roles that the user may be assigned by the inviting user."
     )

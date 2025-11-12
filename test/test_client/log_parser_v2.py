@@ -1,11 +1,12 @@
 import gzip
 import json
+from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
 from test.test_client.user_journey_v2 import UserJourneyColumn, V2UserJourney
-from typing import Any, Callable, Iterable
+from typing import Any, Callable
 from uuid import UUID
 
 import pandas as pd
@@ -153,7 +154,7 @@ class V2LogParser(LogParser):
                 with (
                     gzip.open(log_file, "rb")
                     if file_extension.lower() == ".gz"
-                    else open(log_file, "rt")
+                    else open(log_file)
                 ) as handle:
                     curr_records, curr_error_lines = V2LogParser._direct_lines_parser(
                         handle, filter

@@ -1,7 +1,7 @@
 import itertools
 import json
 from collections.abc import Hashable
-from typing import Any, Callable, Type
+from typing import Any, Callable
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -85,7 +85,7 @@ class CrudEndpointGenerator:
 
     @staticmethod
     def convert_ids_string_to_list(
-        id_class: Type, ids_str: str
+        id_class: type, ids_str: str
     ) -> tuple[list | None, list[str]]:
         invalid_ids = []
         try:
@@ -761,13 +761,13 @@ class CrudEndpointGenerator:
         service_type: Hashable | set[Hashable] | None = None,
         user_dependency: Callable | None = None,
         excluded_permissions: (
-            set[Permission] | dict[Type[model.Model], PermissionTypeSet | None] | None
+            set[Permission] | dict[type[model.Model], PermissionTypeSet | None] | None
         ) = None,
         excluded_crud_operations: (
-            dict[Type[model.Model], set[CrudOperation]] | None
+            dict[type[model.Model], set[CrudOperation]] | None
         ) = None,
         excluded_crud_endpoint_types: (
-            dict[Type[model.Model], set[CrudEndpointType]] | None
+            dict[type[model.Model], set[CrudEndpointType]] | None
         ) = None,
         default_description: str | None = None,
         endpoint_string_casing: StringCasing = StringCasing.SNAKE_CASE,

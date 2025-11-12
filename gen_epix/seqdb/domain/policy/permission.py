@@ -1,5 +1,3 @@
-from typing import Type
-
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.commondb.domain.policy import (
@@ -28,7 +26,7 @@ class RoleGenerator(CommonRoleGenerator):
     )
 
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Role, set[tuple[type[command.Command], PermissionTypeSet]]
     ] = {
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]

@@ -2,7 +2,7 @@
 Transformer registry for managing and creating transformer instances.
 """
 
-from typing import Any, Callable, Type, TypeVar
+from typing import Any, Callable, TypeVar
 
 from gen_epix.transform.transformer import Transformer
 
@@ -12,11 +12,11 @@ T = TypeVar("T", bound=Transformer)
 class Registry:
     """Central registry for transformer types and factory methods."""
 
-    _transformers: dict[str, Type[Transformer]] = {}
+    _transformers: dict[str, type[Transformer]] = {}
     _factories: dict[str, Callable[..., Transformer]] = {}
 
     @classmethod
-    def register(cls, name: str, transformer_class: Type[Transformer]) -> None:
+    def register(cls, name: str, transformer_class: type[Transformer]) -> None:
         """Register a transformer class by name."""
         cls._transformers[name] = transformer_class
 
@@ -43,10 +43,10 @@ class Registry:
         return list(set(cls._transformers.keys()) | set(cls._factories.keys()))
 
     @classmethod
-    def decorator(cls, name: str) -> Callable[[Type[T]], Type[T]]:
+    def decorator(cls, name: str) -> Callable[[type[T]], type[T]]:
         """Decorator for registering transformer classes."""
 
-        def wrapper(transformer_class: Type[T]) -> Type[T]:
+        def wrapper(transformer_class: type[T]) -> type[T]:
             cls.register(name, transformer_class)
             return transformer_class
 
@@ -72,7 +72,7 @@ class Registry:
 
 
 # Convenience decorators
-def register_transformer(name: str) -> Callable[[Type[T]], Type[T]]:
+def register_transformer(name: str) -> Callable[[type[T]], type[T]]:
     """Decorator to register a transformer class."""
     return Registry.decorator(name)
 

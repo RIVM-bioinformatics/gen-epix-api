@@ -1,5 +1,6 @@
 import importlib
-from typing import Any, Hashable, Iterable
+from collections.abc import Hashable, Iterable
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command

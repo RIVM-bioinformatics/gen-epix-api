@@ -1,6 +1,6 @@
 import abc
-from collections.abc import Hashable
-from typing import Annotated, Any, Callable, Iterable, Iterator, Literal, Self
+from collections.abc import Hashable, Iterable, Iterator
+from typing import Annotated, Any, Callable, Literal, Self
 
 from pydantic import BaseModel, Field, WithJsonSchema
 

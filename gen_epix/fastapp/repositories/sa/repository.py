@@ -1,9 +1,9 @@
 import re
 import uuid
 import warnings
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Iterable, Self, Sequence, Type
+from typing import Any, Callable, Self
 
 import sqlalchemy as sa
 from sqlalchemy import Engine, delete, select
@@ -76,8 +76,8 @@ class SARepository(BaseRepository):
         }
 
         # Initialize remaining properties
-        self._mapper_by_model: dict[Type[Any], BaseSAMapper] = {}
-        self._mapper_by_row: dict[Type[Any], BaseSAMapper] = {}
+        self._mapper_by_model: dict[type[Any], BaseSAMapper] = {}
+        self._mapper_by_row: dict[type[Any], BaseSAMapper] = {}
         self._uow_context_stack: list[BaseUnitOfWork] = []
 
         # Register mappers if necessary
@@ -142,11 +142,11 @@ class SARepository(BaseRepository):
     def register_mappers(
         self,
         entities: list[Entity] | None = None,
-        field_name_map: dict[Type[Model], dict[str, str]] | None = None,
-        service_metadata_field_names: dict[Type[Model], tuple] | None = None,
-        db_metadata_field_names: dict[Type[Model], tuple] | None = None,
+        field_name_map: dict[type[Model], dict[str, str]] | None = None,
+        service_metadata_field_names: dict[type[Model], tuple] | None = None,
+        db_metadata_field_names: dict[type[Model], tuple] | None = None,
         generate_service_metadata: (
-            dict[Type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
+            dict[type[Model], Callable[[Model, Hashable], dict[str, Any]]] | None
         ) = None,
         **kwargs: Any,
     ) -> None:
@@ -183,7 +183,7 @@ class SARepository(BaseRepository):
             )
             self.register_mapper(mapper)
 
-    def get_mapper(self, model_class: Type) -> BaseSAMapper:
+    def get_mapper(self, model_class: type) -> BaseSAMapper:
         mapper = self._mapper_by_model.get(model_class)
         if not mapper:
             raise exc.RepositoryInitializationServiceError(
@@ -211,7 +211,7 @@ class SARepository(BaseRepository):
     def to_sql(
         self,
         user_id: Hashable | None,
-        model_class: Type,
+        model_class: type,
         obj: Any | Iterable[Any],
         **kwargs: Any,
     ) -> Any | list[Any]:
@@ -221,7 +221,7 @@ class SARepository(BaseRepository):
         return [mapper.dump(user_id, x, **kwargs) for x in obj]
 
     def from_sql(
-        self, model_class: Type, row: Any | Iterable[Any], **kwargs: Any
+        self, model_class: type, row: Any | Iterable[Any], **kwargs: Any
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(row, Iterable):
@@ -232,7 +232,7 @@ class SARepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: Model | Iterable[Model] | None,
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
@@ -294,13 +294,13 @@ class SARepository(BaseRepository):
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
     def create_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.create_some(model_class, user_id, [obj], **kwargs)[0]
 
     def create_some(
         self,
-        model_class: Type,
+        model_class: type,
         user_id: Hashable,
         objs: Iterable[Model],
         **kwargs: Any,
@@ -348,11 +348,11 @@ class SARepository(BaseRepository):
         created_objs = self._execute_sa(session, _execute, kwargs)
         return created_objs  # type: ignore[return-value]
 
-    def read_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> Model:
+    def read_one(self, model_class: type, obj_id: Hashable, **kwargs: Any) -> Model:
         return self.read_some(model_class, [obj_id], **kwargs)[0]
 
     def read_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
+        self, model_class: type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[Model]:
         """
         :param optimize_parameter_handling, optional kwarg:
@@ -401,7 +401,7 @@ class SARepository(BaseRepository):
         return objs
 
     def read_all(
-        self, model_class: Type, filter: Filter | None, **kwargs: Any
+        self, model_class: type, filter: Filter | None, **kwargs: Any
     ) -> list[Model]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -453,13 +453,13 @@ class SARepository(BaseRepository):
         return objs
 
     def update_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.update_some(model_class, user_id, [obj], **kwargs)[0]
 
     def update_some(
         self,
-        model_class: Type,
+        model_class: type,
         user_id: Hashable,
         objs: Iterable[Model],
         **kwargs: Any,
@@ -507,13 +507,13 @@ class SARepository(BaseRepository):
         return updated_objs
 
     def upsert_one(
-        self, model_class: Type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.upsert_some(model_class, user_id, [obj], **kwargs)[0]
 
     def upsert_some(
         self,
-        model_class: Type,
+        model_class: type,
         _user_id: Hashable,
         _objs: Iterable[Model],
         **kwargs: Any,
@@ -521,13 +521,13 @@ class SARepository(BaseRepository):
         raise NotImplementedError
 
     def delete_one(
-        self, model_class: Type, user_id: Hashable, row_id: Hashable, **kwargs: Any
+        self, model_class: type, user_id: Hashable, row_id: Hashable, **kwargs: Any
     ) -> Hashable:
         return self.delete_some(model_class, user_id, [row_id], **kwargs)[0]
 
     def delete_some(
         self,
-        model_class: Type,
+        model_class: type,
         user_id: Hashable,
         row_ids: Iterable[Hashable],
         **kwargs: Any,
@@ -559,7 +559,7 @@ class SARepository(BaseRepository):
 
     def delete_all(
         self,
-        model_class: Type,
+        model_class: type,
         user_id: Hashable,
         filter: Filter | None,
         **kwargs: Any,
@@ -588,11 +588,11 @@ class SARepository(BaseRepository):
         deleted_row_ids = self._execute_sa(session, _execute, kwargs)
         return deleted_row_ids if return_id else None
 
-    def exists_one(self, model_class: Type, obj_id: Hashable, **kwargs: Any) -> bool:
+    def exists_one(self, model_class: type, obj_id: Hashable, **kwargs: Any) -> bool:
         return self.exists_some(model_class, [obj_id], **kwargs)[0]
 
     def exists_some(
-        self, model_class: Type, obj_ids: Iterable[Hashable], **kwargs: Any
+        self, model_class: type, obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[bool]:
         session: Session = kwargs.get("session")  # type: ignore[assignment]
 
@@ -618,7 +618,7 @@ class SARepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         field_names: list[str],
         filter: Filter | None = None,
         **kwargs: Any,
@@ -637,13 +637,12 @@ class SARepository(BaseRepository):
                 stmt = stmt.where(
                     self.get_where_clause_from_filter(row_class, mapper, filter)
                 )
-            for row in session.execute(stmt):
-                yield row
+            yield from session.execute(stmt)
 
         return self._execute_sa(uow.session, _execute, kwargs)
 
     def split_filter(
-        self, model_class: Type, filter: Filter | None
+        self, model_class: type, filter: Filter | None
     ) -> tuple[Filter | None, Filter | None]:
         if not filter:
             return None, None
@@ -651,7 +650,7 @@ class SARepository(BaseRepository):
         return self._split_filter_recursion(field_name_map, filter)
 
     def get_where_clause_from_filter(
-        self, row_class: Type, mapper: BaseSAMapper, filter: Filter
+        self, row_class: type, mapper: BaseSAMapper, filter: Filter
     ) -> Any:
         invert = filter.invert
         if isinstance(filter, CompositeFilter):
@@ -787,7 +786,7 @@ class SARepository(BaseRepository):
         # Filter cannot be converted
         return None, filter
 
-    def print_db_content(self, model_class: Type[Model], **kwargs: Any) -> None:
+    def print_db_content(self, model_class: type[Model], **kwargs: Any) -> None:
         """Helper method for debugging"""
         header = kwargs.get("header", "")
         mapper = self.get_mapper(model_class)
@@ -844,7 +843,7 @@ class SARepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Iterable[Hashable],
         verify_exists: bool = True,
         verify_duplicate: bool = True,
@@ -857,9 +856,9 @@ class SARepository(BaseRepository):
         obj_ids_set = set(obj_ids)
         if verify_duplicate and len(obj_ids) != len(obj_ids_set):
             seen = set()
-            uq_obj_ids = set(
+            uq_obj_ids = {
                 x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
-            )
+            }
             duplicate_obj_ids = obj_ids_set - uq_obj_ids
             raise exc.DuplicateIdsError("obj_ids is not unique", ids=duplicate_obj_ids)
         # Verify existence of objs
@@ -880,8 +879,8 @@ class SARepository(BaseRepository):
     @staticmethod
     def _select_with_id_join(
         session: Session,
-        get_row_id: Callable[[Type], sa.Column],
-        row_class: Type,
+        get_row_id: Callable[[type], sa.Column],
+        row_class: type,
         obj_ids: list[Hashable],
     ) -> sa.sql.Select:
         """
@@ -937,7 +936,7 @@ class SARepository(BaseRepository):
     def _in_session_read_some(
         mapper: BaseSAMapper,
         session: Session,
-        row_class: Type,
+        row_class: type,
         obj_ids: list[Hashable],
         optimize_parameter_handling: bool = False,
     ) -> tuple[list[Any], list[Hashable]]:
@@ -1010,13 +1009,13 @@ class SARepository(BaseRepository):
             )
 
     @staticmethod
-    def _verify_duplicate_ids(model_class: Type, obj_ids: Iterable[Hashable]) -> None:
+    def _verify_duplicate_ids(model_class: type, obj_ids: Iterable[Hashable]) -> None:
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
             obj_ids = [obj_ids]
         seen = set()
-        uq_obj_ids = set(
+        uq_obj_ids = {
             x for x in obj_ids if x not in seen and not seen.add(x)  # type: ignore
-        )
+        }
         if len(uq_obj_ids) == len(obj_ids):
             return
         duplicate_ids = set(obj_ids) - uq_obj_ids

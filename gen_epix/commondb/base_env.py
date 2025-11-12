@@ -1,6 +1,6 @@
 import abc
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 from dynaconf import Dynaconf
 
@@ -58,7 +58,7 @@ class BaseAppEnv(abc.ABC):
         entities: list[Entity],
         repository_type: Enum,
         repository_cfg: dict[str, Any],
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         **kwargs: Any,
     ) -> BaseRepository:
         repository: BaseRepository

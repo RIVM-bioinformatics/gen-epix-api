@@ -139,7 +139,7 @@ class Linter:
     ) -> list[str]:
         if isinstance(file, str):
             file = Path(file)
-        with open(file, "rt") as handle:
+        with open(file) as handle:
             lines = handle.readlines()
         location_pattern = self.MYPY_LOCATION_PATTERN
         error_code_pattern = self.MYPY_ERROR_CODE_PATTERN

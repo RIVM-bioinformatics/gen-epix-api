@@ -4,7 +4,8 @@ Pipeline for chaining transformers with error tracking and recovery mechanisms.
 
 import logging
 import time
-from typing import Any, Callable, Iterator
+from collections.abc import Iterator
+from typing import Any, Callable
 
 from gen_epix.transform.stream_processer import StreamProcessor
 from gen_epix.transform.transform_result import TransformResult

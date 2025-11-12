@@ -1,5 +1,3 @@
-from typing import Type
-
 from gen_epix.commondb.repositories.sa_model import (
     RowMetadataMixin,
     create_field_metadata,
@@ -105,7 +103,7 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.system import Outage as Outage
 
-SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[Type[model.Model], Type]] = {
+SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]] = {
     enum.ServiceType.ABAC: {
         model.OrganizationAdminPolicy: OrganizationAdminPolicy,
     },
@@ -176,7 +174,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[Type[model.Model], Type]]
     },
 }
 
-FIELD_NAME_MAP: dict[Type, dict[str, str]] = {}
+FIELD_NAME_MAP: dict[type, dict[str, str]] = {}
 
 set_entity_repository_model_classes(
     DOMAIN,

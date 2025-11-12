@@ -13,7 +13,7 @@ class TestERM:
 
     def test_erm_images_updated(self) -> None:
         expected_hash = erm.generate_hash_for_domain_models(erm.DOMAINS)
-        with open(self.HASH_FILE, "r") as handle:
+        with open(self.HASH_FILE) as handle:
             actual_hash = json.load(handle)["models_hash"]
         assert (
             expected_hash == actual_hash

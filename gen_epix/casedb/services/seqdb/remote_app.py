@@ -175,14 +175,14 @@ class SeqdbRemoteApp(RemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-            with httpx.Client() as client:
-                response = client.post(
-                    route,
-                    json=json.loads(request_body.model_dump_json()),
-                    headers=headers,
-                )
-                response.raise_for_status()
-            data = response.json()
-            if not data:
-                return None
-            return seqdb_model.PhylogeneticTree(**data)
+        with httpx.Client() as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+        data = response.json()
+        if not data:
+            return None
+        return seqdb_model.PhylogeneticTree(**data)

@@ -63,7 +63,7 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
             command.UserCrudCommand(
                 user=cmd.user,
                 objs=None,
-                obj_ids=list(set(x.user_id for x in policies)),
+                obj_ids=list({x.user_id for x in policies}),
                 operation=CrudOperation.READ_SOME,
             )
         )

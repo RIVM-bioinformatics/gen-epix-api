@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.domain import enum
@@ -17,7 +17,7 @@ class BaseIsOrganizationAdminPolicy(Policy):
         self,
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
-        user_class: Type[User] = User,
+        user_class: type[User] = User,
         **kwargs: Any,
     ):
         self.abac_service = abac_service
@@ -29,7 +29,7 @@ class BaseIsOrganizationAdminPolicy(Policy):
     @abc.abstractmethod
     def register_retrieve_organization_ids_handler(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         handler: Callable[[Command], set[UUID]],
     ) -> None:
         raise NotImplementedError
@@ -70,7 +70,7 @@ class BaseReadUserPolicy(Policy):
         self,
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
-        organization_admin_policy_crud_command_class: Type[
+        organization_admin_policy_crud_command_class: type[
             CrudCommand
         ] = OrganizationAdminPolicyCrudCommand,
         **kwargs: Any,
@@ -89,7 +89,7 @@ class BaseUpdateUserPolicy(Policy):
         self,
         abac_service: BaseAbacService,
         role_map: dict[Enum, Enum] | None = None,
-        user_class: Type[User] = User,
+        user_class: type[User] = User,
         **kwargs: Any,
     ):
         self.abac_service = abac_service

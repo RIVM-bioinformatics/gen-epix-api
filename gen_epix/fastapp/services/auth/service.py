@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Any, Type
+from typing import Annotated, Any
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
@@ -66,7 +66,7 @@ class AuthService(BaseAuthService):
 
     def create_user_dependencies(
         self,
-    ) -> tuple[Type[model.User], Type[model.User], Type[IDPUser]]:
+    ) -> tuple[type[model.User], type[model.User], type[IDPUser]]:
 
         if not self._idp_clients:
             # No authentication -> create/retrieve root user

@@ -1,6 +1,6 @@
 from test.fastapp import enum
 from test.fastapp.model import DOMAIN, Model1_1, Model1_2, Model2_1, Model2_2
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from gen_epix import fastapp
 from gen_epix.fastapp.model import CrudCommand
@@ -22,7 +22,7 @@ class Model2_2CrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = Model2_2
 
 
-COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[Type[fastapp.Command]]] = {
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     enum.ServiceType.SERVICE1: {
         Model1_1CrudCommand,
         Model1_2CrudCommand,

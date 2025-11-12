@@ -8,4 +8,3 @@ from gen_epix.seqdb.services.organization import (
 )
 from gen_epix.seqdb.services.rbac import RbacService as RbacService
 from gen_epix.seqdb.services.seq import SeqService as SeqService
-from gen_epix.seqdb.services.file import FileService as FileService

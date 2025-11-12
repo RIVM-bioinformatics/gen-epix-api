@@ -1,13 +1,13 @@
 """Test connection between casedb, seqdb and/or omopdb"""
 
 import logging
+from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from test.end_to_end.casedb_seqdb_connection.seqdb_server_manager import (
     SeqdbServerManager,
 )
 from test.test_client.oauth.server_manager import OAuthServerManager
-from typing import Generator
 from uuid import UUID
 
 import pytest

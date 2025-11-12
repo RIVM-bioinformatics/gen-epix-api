@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Hashable
-from typing import Any, Callable, Generator, Iterable, Iterator, Literal, Self
+from collections.abc import Generator, Hashable, Iterable, Iterator
+from typing import Any, Callable, Literal, Self
 
 from pydantic import BaseModel, Field, model_validator
 

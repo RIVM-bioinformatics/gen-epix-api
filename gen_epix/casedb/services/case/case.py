@@ -1,6 +1,7 @@
 import datetime
+from collections.abc import Iterable
 from decimal import Decimal
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Callable
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -543,7 +544,7 @@ class CaseService(BaseCaseService):
 
     def _read_association_with_valid_ids(
         self,
-        command_class: Type[command.CrudCommand],
+        command_class: type[command.CrudCommand],
         field_name1: str,
         field_name2: str,
         valid_ids1: set[UUID] | frozenset[UUID] | None = None,
@@ -872,7 +873,7 @@ class CaseService(BaseCaseService):
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
-        association_class: Type[model.Model],
+        association_class: type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
         **kwargs: Any,
@@ -962,7 +963,7 @@ class CaseService(BaseCaseService):
             model.Col,
             None,
             list(
-                set(x.col_id for x in filter_case_type_cols)
+                {x.col_id for x in filter_case_type_cols}
             ),  # TODO: consider READ_SOME allowing duplicate ids
             CrudOperation.READ_SOME,
         )
@@ -1007,9 +1008,9 @@ class CaseService(BaseCaseService):
                                     ),
                                 )
                             )
-                            region_valid_values[col.region_set_id] = set(
-                                [str(x.id).lower() for x in regions]
-                            )
+                            region_valid_values[col.region_set_id] = {
+                                str(x.id).lower() for x in regions
+                            }
                         valid_values = region_valid_values[col.region_set_id]
                     # Handle invalid values
                     if valid_values is not None:
@@ -1595,7 +1596,9 @@ class CaseService(BaseCaseService):
 
         return library_prep_protocols
 
-    def retrieve_assembly_protocols(self, cmd: command.RetrieveAssemblyProtocolsCommand) -> list[model.AssemblyProtocol]:
+    def retrieve_assembly_protocols(
+        self, cmd: command.RetrieveAssemblyProtocolsCommand
+    ) -> list[model.AssemblyProtocol]:
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
 

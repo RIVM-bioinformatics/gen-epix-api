@@ -1,5 +1,3 @@
-from typing import Type
-
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role
 from gen_epix.commondb.domain.enum import Role as CommonRole
@@ -28,7 +26,7 @@ class RoleGenerator(CommonRoleGenerator):
     )
 
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Role, set[tuple[type[command.Command], PermissionTypeSet]]
     ] = {
         # TODO: remove UPDATE from association objects that do not have properties of their own such as CaseTypeSetMember
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN]

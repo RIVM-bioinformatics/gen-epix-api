@@ -1,5 +1,3 @@
-from typing import Type
-
 import sqlalchemy.orm as orm
 
 from gen_epix.commondb.repositories.sa_model import ContactMixin as ContactMixin
@@ -32,7 +30,7 @@ from gen_epix.commondb.repositories.sa_model import UserMixin as UserMixin
 from gen_epix.commondb.repositories.sa_model import create_table_args
 from gen_epix.omopdb.domain import enum, model
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 
 class Organization(Base, OrganizationMixin):

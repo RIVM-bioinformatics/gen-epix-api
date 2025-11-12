@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import Command
@@ -12,7 +12,7 @@ from gen_epix.seqdb.domain.service import BaseAbacService
 
 
 class AbacService(BaseAbacService):
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = tuple()
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
 
     def __init__(
         self,

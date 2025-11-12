@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -24,7 +24,7 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
         command.OrganizationAccessCasePolicyCrudCommand,
@@ -55,11 +55,11 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[Type[Command]] | None = None,
-        read_user_commands: set[Type[Command]] | None = None,
-        update_user_commands: set[Type[Command]] | None = None,
-        read_organization_results_only_commands: set[Type[Command]] | None = None,
-        read_self_results_only_commands: set[Type[Command]] | None = None,
+        organization_admin_write_commands: set[type[Command]] | None = None,
+        read_user_commands: set[type[Command]] | None = None,
+        update_user_commands: set[type[Command]] | None = None,
+        read_organization_results_only_commands: set[type[Command]] | None = None,
+        read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
         super().register_policies(
             organization_admin_write_commands=organization_admin_write_commands,
@@ -358,15 +358,15 @@ class AbacService(BaseAbacService):
             all_access_case_policies: list[
                 model.OrganizationAccessCasePolicy | model.UserAccessCasePolicy
             ] = (organization_access_case_policies + user_access_case_policies)
-            case_type_col_set_ids: set[UUID] = set(
+            case_type_col_set_ids: set[UUID] = {
                 x.read_case_type_col_set_id
                 for x in all_access_case_policies
                 if x.read_case_type_col_set_id
-            ) | set(
+            } | {
                 x.write_case_type_col_set_id
                 for x in all_access_case_policies
                 if x.write_case_type_col_set_id
-            )
+            }
             case_type_col_set_member_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
                 [
                     (x.case_type_col_set_id, x.case_type_col_id)

@@ -1,5 +1,3 @@
-from typing import Type
-
 from pydantic import BaseModel
 
 
@@ -22,10 +20,10 @@ class Link(BaseModel, frozen=True):
     """
 
     link_field_name: str
-    link_model_class: Type[BaseModel]
+    link_model_class: type[BaseModel]
     relationship_field_name: str | None = None
 
-    def to_tuple(self) -> tuple[str, Type[BaseModel], str | None]:
+    def to_tuple(self) -> tuple[str, type[BaseModel], str | None]:
         return (
             self.link_field_name,
             self.link_model_class,
@@ -33,7 +31,7 @@ class Link(BaseModel, frozen=True):
         )
 
     @classmethod
-    def from_tuple(cls, tuple_: tuple[str, Type[BaseModel], str | None]) -> "Link":
+    def from_tuple(cls, tuple_: tuple[str, type[BaseModel], str | None]) -> "Link":
         return cls(
             link_field_name=tuple_[0],
             link_model_class=tuple_[1],

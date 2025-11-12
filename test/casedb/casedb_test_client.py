@@ -5,7 +5,7 @@ from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.persistable
@@ -1352,7 +1352,9 @@ class CasedbTestClient(TestClient):
         email: str | None = None,
         phone: str | None = None,
     ) -> model.Contact:
-        user: model.User = self._get_obj(model.User, user_or_str)  # type:ignore[arg-type]
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[arg-type]
         site: model.Site = self._get_obj(model.Site, site)  # type:ignore[arg-type]
         contact = self.handle(
             command.ContactCrudCommand(
@@ -1752,7 +1754,7 @@ class CasedbTestClient(TestClient):
                     operation=CrudOperation.READ_ALL,
                 )
             )
-            expected_case_types = set([f"case_type{x}" for x in expected_case_types])
+            expected_case_types = {f"case_type{x}" for x in expected_case_types}
             actual_case_types = {x.name for x in case_types}
             missing_case_types = expected_case_types - actual_case_types
             extra_case_types = actual_case_types - expected_case_types
@@ -2022,7 +2024,7 @@ class CasedbTestClient(TestClient):
 
     def _get_obj(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj: (
             str
             | UUID

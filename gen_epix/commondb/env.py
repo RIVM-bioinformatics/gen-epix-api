@@ -3,7 +3,7 @@ import traceback
 # pylint: disable=unused-import-alias
 from collections.abc import Iterable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 from gen_epix import fastapp
 from gen_epix.commondb.base_env import BaseAppEnv
@@ -40,11 +40,11 @@ class AppEnv(BaseAppEnv):
         app_cfg: AppCfg,
         domain: Domain | None = None,
         sorted_service_types: tuple[Enum] | None = None,
-        role_generator_class: Type[RoleGenerator] | None = None,
-        rbac_service_class: Type[RbacService] | None = None,
-        user_manager_class: Type[UserManager] | None = None,
-        user_class: Type[model.User] | None = None,
-        user_invitation_class: Type[model.UserInvitation] | None = None,
+        role_generator_class: type[RoleGenerator] | None = None,
+        rbac_service_class: type[RbacService] | None = None,
+        user_manager_class: type[UserManager] | None = None,
+        user_class: type[model.User] | None = None,
+        user_invitation_class: type[model.UserInvitation] | None = None,
         log_setup: bool = True,
         **kwargs: Any,
     ):
@@ -110,7 +110,7 @@ class AppEnv(BaseAppEnv):
                 # Create repository if necessary
                 curr_repository = None
                 if repository_cfg:
-                    repository_class: Type[BaseRepository] = repository_cfg["class"]
+                    repository_class: type[BaseRepository] = repository_cfg["class"]
                     repository_props = repository_cfg["props"]
                     if isinstance(repository_cfg["type"], str):
                         repository_type = enum.RepositoryType(repository_cfg["type"])

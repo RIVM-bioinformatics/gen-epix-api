@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -27,31 +27,31 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = tuple()
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
 
     def __init__(
         self,
         app: App,
         repository: BaseAbacRepository,
-        organization_admin_policy_model_class: Type[
+        organization_admin_policy_model_class: type[
             model.OrganizationAdminPolicy
         ] = model.OrganizationAdminPolicy,
-        user_crud_command_class: Type[
+        user_crud_command_class: type[
             command.UserCrudCommand
         ] = command.UserCrudCommand,
-        is_organization_admin_policy_class: Type[
+        is_organization_admin_policy_class: type[
             policy.BaseIsOrganizationAdminPolicy
         ] = policies.IsOrganizationAdminPolicy,
-        read_organization_results_only_policy_class: Type[
+        read_organization_results_only_policy_class: type[
             policy.BaseReadOrganizationResultsOnlyPolicy
         ] = policies.ReadOrganizationResultsOnlyPolicy,
-        read_self_results_only_policy_class: Type[
+        read_self_results_only_policy_class: type[
             policy.BaseReadSelfResultsOnlyPolicy
         ] = policies.ReadSelfResultsOnlyPolicy,
-        read_user_policy_class: Type[
+        read_user_policy_class: type[
             policy.BaseReadUserPolicy
         ] = policies.ReadUserPolicy,
-        update_user_policy_class: Type[
+        update_user_policy_class: type[
             policy.BaseUpdateUserPolicy
         ] = policies.UpdateUserPolicy,
         logger: logging.Logger | None = None,
@@ -80,11 +80,11 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[Type[Command]] | None = None,
-        read_user_commands: set[Type[Command]] | None = None,
-        update_user_commands: set[Type[Command]] | None = None,
-        read_organization_results_only_commands: set[Type[Command]] | None = None,
-        read_self_results_only_commands: set[Type[Command]] | None = None,
+        organization_admin_write_commands: set[type[Command]] | None = None,
+        read_user_commands: set[type[Command]] | None = None,
+        update_user_commands: set[type[Command]] | None = None,
+        read_organization_results_only_commands: set[type[Command]] | None = None,
+        read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
         organization_admin_write_commands = (
             organization_admin_write_commands or self.ORGANIZATION_ADMIN_WRITE_COMMANDS
@@ -100,7 +100,7 @@ class AbacService(BaseAbacService):
         )
         f = self.app.register_policy
         policy: Policy
-        command_class: Type[Command]
+        command_class: type[Command]
         policy = self.is_organization_admin_policy_class(self)  # type:ignore[call-arg]
         for command_class in organization_admin_write_commands:
             f(command_class, policy, EventTiming.BEFORE)
@@ -165,7 +165,7 @@ class AbacService(BaseAbacService):
                     ),
                 )
             )
-        return set(x.organization_id for x in organization_admin_policies)
+        return {x.organization_id for x in organization_admin_policies}
 
     def retrieve_organization_admin_name_emails(
         self,

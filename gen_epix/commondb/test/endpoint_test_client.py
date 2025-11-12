@@ -1,7 +1,7 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Callable, Type
+from typing import Any, Callable
 from uuid import UUID
 
 # import libraries
@@ -26,42 +26,42 @@ class EndpointTestClient:
         app: App,
         fast_api: FastAPI,
         app_last_handled_exception: dict,
-        user_class: Type[model.User] = model.User,
-        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        user_invitation_constraints_class: Type[
+        user_class: type[model.User] = model.User,
+        user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
+        user_invitation_constraints_class: type[
             model.UserInvitationConstraints
         ] = model.UserInvitationConstraints,
-        organization_admin_policy_class: Type[
+        organization_admin_policy_class: type[
             model.OrganizationAdminPolicy
         ] = model.OrganizationAdminPolicy,
-        user_crud_command_class: Type[
+        user_crud_command_class: type[
             command.UserCrudCommand
         ] = command.UserCrudCommand,
-        user_invitation_crud_command_class: Type[
+        user_invitation_crud_command_class: type[
             command.UserInvitationCrudCommand
         ] = command.UserInvitationCrudCommand,
-        organization_admin_policy_crud_command_class: Type[
+        organization_admin_policy_crud_command_class: type[
             command.OrganizationAdminPolicyCrudCommand
         ] = command.OrganizationAdminPolicyCrudCommand,
-        retrieve_invite_user_constraints_command_class: Type[
+        retrieve_invite_user_constraints_command_class: type[
             command.RetrieveInviteUserConstraintsCommand
         ] = command.RetrieveInviteUserConstraintsCommand,
-        invite_user_command_class: Type[
+        invite_user_command_class: type[
             command.InviteUserCommand
         ] = command.InviteUserCommand,
-        register_invited_user_command_class: Type[
+        register_invited_user_command_class: type[
             command.RegisterInvitedUserCommand
         ] = command.RegisterInvitedUserCommand,
-        retrieve_organization_admin_name_emails_command_class: Type[
+        retrieve_organization_admin_name_emails_command_class: type[
             command.RetrieveOrganizationAdminNameEmailsCommand
         ] = command.RetrieveOrganizationAdminNameEmailsCommand,
-        update_user_command_class: Type[
+        update_user_command_class: type[
             command.UpdateUserCommand
         ] = command.UpdateUserCommand,
-        user_invitation_request_body: Type[
+        user_invitation_request_body: type[
             PydanticBaseModel
         ] = UserInvitationRequestBody,
-        update_user_request_body: Type[PydanticBaseModel] = UpdateUserRequestBody,
+        update_user_request_body: type[PydanticBaseModel] = UpdateUserRequestBody,
         register_crud_commands: bool = True,
         route_prefix: str | None = None,
     ):
@@ -90,7 +90,7 @@ class EndpointTestClient:
         self.update_user_request_body = update_user_request_body
         self.route_prefix = route_prefix or ""
         self._handlers: dict[
-            Type[Command],
+            type[Command],
             Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
         ] = {}
         if register_crud_commands:
@@ -111,7 +111,7 @@ class EndpointTestClient:
 
     def register_handler(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         handler: Callable[[Command, str, dict[str, str] | None], tuple[Any, Response]],
     ) -> None:
         self._handlers[command_class] = handler
@@ -342,7 +342,7 @@ class EndpointTestClient:
 
     @staticmethod
     def _content_to_obj(
-        response: Response, retval_class: Type, is_list: bool = False
+        response: Response, retval_class: type, is_list: bool = False
     ) -> Any:
         if response.status_code not in (200, 201):
             return None

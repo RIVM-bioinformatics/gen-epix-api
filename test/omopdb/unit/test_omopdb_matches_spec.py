@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ FIELD_METADATA_FILE = (
     / "OMOP_CDMv6.0_Field_Level.csv"
 )
 
-MODEL_BY_TABLE: dict[str, Type[model.Model]] = {
+MODEL_BY_TABLE: dict[str, type[model.Model]] = {
     # Ordered topologically based on foreign key dependencies
     # Foundation tables (no dependencies)
     "location": model.Location,

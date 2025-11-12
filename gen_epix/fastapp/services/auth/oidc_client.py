@@ -5,7 +5,7 @@ import ssl
 import time
 import urllib.parse
 from datetime import datetime
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -40,7 +40,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         server_cfg: OidcServerCfg,
         token_name: str | None = None,
         logger: logging.Logger | None = None,
-        log_item_class: Type[BaseLogItem] = LogItem,
+        log_item_class: type[BaseLogItem] = LogItem,
         discovery_url: str | None = None,
         discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,

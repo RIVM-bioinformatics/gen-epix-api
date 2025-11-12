@@ -3,7 +3,8 @@ Stream processing interfaces and base classes.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from gen_epix.transform.transform_result import TransformResult
 

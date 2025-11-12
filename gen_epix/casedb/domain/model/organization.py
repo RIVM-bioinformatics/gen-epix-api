@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from pydantic import field_serializer
 
@@ -25,7 +25,7 @@ class User(common_model.User):
             exclude={"schema_name", "_model_class"},
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     # fmt: off
     roles: set[enum.Role] = copy_model_field(common_model.User, "roles")  # type: ignore[assignment]
     # fmt: on
@@ -53,7 +53,7 @@ class UserInvitation(common_model.UserInvitation):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
+    ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     # Override invited_by_user to ensure it uses the correct User model
     # fmt: off
     invited_by_user: User | None = copy_model_field(common_model.UserInvitation, "invited_by_user")  # type: ignore[assignment]
