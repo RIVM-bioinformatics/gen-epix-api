@@ -62,7 +62,7 @@ class SeqdbRemoteApp(RemoteApp):
             DOMAIN,
             host,
             port,
-            http_protocol=HttpProtocol.HTTP,
+            http_protocol=http_protocol,
             default_route_prefix=default_route_prefix,
             default_headers=default_headers,
             add_generated_crud_route_handlers=True,
