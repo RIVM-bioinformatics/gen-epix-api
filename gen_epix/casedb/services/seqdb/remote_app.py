@@ -152,7 +152,7 @@ class SeqdbRemoteApp(RemoteApp):
                 # No expiration claim, valid forever
                 self._oauth_header_cache = (int(datetime.max.timestamp()), headers)
             else:
-                self._oauth_headers_cache = (exp, headers)
+                self._oauth_header_cache = (exp, headers)
             return headers
         raise exc.InitializationServiceError(
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
@@ -182,7 +182,7 @@ class SeqdbRemoteApp(RemoteApp):
                 headers=headers,
             )
             response.raise_for_status()
-        data = response.json()
+            data = response.json()
         if not data:
             return None
         return seqdb_model.PhylogeneticTree(**data)
