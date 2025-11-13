@@ -6,7 +6,6 @@ from uuid import UUID
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
-import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
@@ -106,18 +105,22 @@ class CaseService(BaseCaseService):
 
         # retrieve case_type_setting for CaseType
         with self.repository.uow() as uow:
-            case_type_setting: model.CaseTypeSettings = self.repository.crud(  # type: ignore[assignment]
+            case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,
                 model.CaseTypeSettings,
                 None,
-                [case_type_id],  # FIXME: filter?
-                CrudOperation.READ_ONE,
+                None,
+                CrudOperation.READ_ALL,
+                filter=UuidSetFilter(
+                    key="case_type_id", members=frozenset({case_type_id})
+                ),
             )
-            if case_type_setting is None:
+            if len(case_type_settings) != 1:
                 raise exc.DataException(
                     f"CaseTypeSettings not found for case type {case_type_id}"
                 )
+            case_type_setting: model.CaseTypeSettings = case_type_settings[0]
             # Apply corresponding CaseTypeSettings.xxx_max_n_cases settings. Raise RequestLimitExceededAuthError when exceeded.
             n_cases: int = len(cmd.cases)
             max_n = case_type_setting.create_max_n_cases or 0
@@ -169,7 +172,7 @@ class CaseService(BaseCaseService):
 
             # update case date
 
-            case_type_to_case_type_col_ids = self.get_case_date_case_type_col_ids(
+            case_type_to_case_type_col_ids = self._get_case_date_case_type_col_ids(
                 uow, cmd.user, {case_type_id}
             )
             case_type_case_type_col_ids = case_type_to_case_type_col_ids.get(
@@ -371,7 +374,7 @@ class CaseService(BaseCaseService):
             )
 
             case_type_to_case_type_col_ids: dict[UUID, list[UUID]] = (
-                self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
+                self._get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
             )
             case_dates: dict[UUID, datetime.date | None] = {}
             for case in cases:
@@ -478,39 +481,39 @@ class CaseService(BaseCaseService):
                 case_ids=case_ids,
                 filter_content=True,
             )
-
-            if cases:
-                by_case_type: dict[UUID, int] = {}
-                for case in cases:
-                    by_case_type[case.case_type_id] = (
-                        by_case_type.get(case.case_type_id, 0) + 1
-                    )
-                case_type_ids = list(by_case_type.keys())
-                case_type_settings: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.CaseTypeSettings,
-                    None,
-                    list(case_type_ids),
-                    CrudOperation.READ_SOME,
+            if not cases:
+                return []
+            if len({x.case_type_id for x in cases}) > 1:
+                raise exc.InvalidArgumentsError(
+                    "All cases must have the same case type"
                 )
-                case_type_read_limits: dict[UUID, int] = {
-                    case_type_setting.case_type_id: (
-                        case_type_setting.read_max_n_cases or 0
-                    )
-                    for case_type_setting in case_type_settings
-                }
-                for case_type_id, n_cases in by_case_type.items():
-                    limit = case_type_read_limits.get(case_type_id, 0)
-                    if limit and n_cases > limit:
-                        raise exc.RequestLimitExceededAuthError(
-                            f"Number of cases retrieved for case type {case_type_id} ({n_cases}) exceeds the maximum allowed ({limit})"
-                        )
-            target_case_type_ids: set[UUID] = {x.case_type_id for x in cases}
+                # TODO: To be adjusted to check that all case types are equal to the given case type
 
-            case_type_to_time_case_type_col_ids: dict[UUID, list[UUID]] = (
-                self.get_case_date_case_type_col_ids(uow, user, target_case_type_ids)
+            case_type_id = cases[0].case_type_id
+            case_type_settings: model.CaseTypeSettings = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.CaseTypeSettings,
+                None,
+                case_type_id,
+                CrudOperation.READ_ONE,
             )
+            if len(cases) > case_type_settings.read_max_n_cases:
+                raise exc.RequestLimitExceededAuthError(
+                    f"Number of cases retrieved for case type {case_type_id} exceeds the maximum allowed"
+                )
+            time_case_type_col_ids, date_mappers = (
+                self._get_case_date_case_type_col_ids(
+                    uow, user, case_type_id, case_type_settings.stats_time_case_type_col_id
+                )
+            )
+
+            # filter time case type col ids and date mappers to only readable case type cols
+            # use abac to see with case type cols are readable and take intersection of those
+            # loop over each case and determine case date based on accessible time columns
+            
+            # For cases without calculatable case_date:
+            # fill in a fixed date (default date) -> CaseService.DEFAULT_CASE_DATE
 
             accessible_case_type_col_ids: set[UUID] = set()
             for case in cases:
@@ -538,7 +541,7 @@ class CaseService(BaseCaseService):
             for case in cases:
 
                 candidate_case_type_col_ids: set[UUID] = set(
-                    case_type_to_time_case_type_col_ids.get(case.case_type_id, [])
+                    time_case_type_col_ids.get(case.case_type_id, [])
                 )
                 accessible_case_type_col_ids: set[UUID] = {
                     x for x in case.content.keys() if isinstance(x, UUID)
@@ -1328,27 +1331,40 @@ class CaseService(BaseCaseService):
             operator=LogicalOperator.AND,
         )
 
-    def get_case_date_case_type_col_ids(
-        self, uow: BaseUnitOfWork, user: model.User, case_type_ids: set[UUID]
-    ) -> dict[UUID, list[UUID]]:
-        result: dict[UUID, list[UUID]] = {
-            case_type_id: [] for case_type_id in case_type_ids
-        }
-        case_type_settings: list[model.CaseTypeSettings] = (
+    def _get_case_date_case_type_col_ids(
+        self,
+        uow: BaseUnitOfWork,
+        user: model.User,
+        case_type_id: UUID,
+        stats_time_case_type_col_id: UUID,
+    ) -> list[tuple[UUID, Callable]]:
+        
+        case_type_cols: list[model.CaseTypeCol] = (
             self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user.id,
-                model.CaseTypeSettings,
+                model.CaseTypeCol,
                 None,
                 None,
                 CrudOperation.READ_ALL,
+                filter=UuidSetFilter(
+                    key="case_type_id", members=frozenset({case_type_id})
+                ),
             )
         )
 
+        # 1. retrieve cols for case type cols
+        # 2. retrieve dims for cols
+        # 3. keep only case type cols with the same (dim, occurrence) as stats_time_case_type_col_id col
+        # 4. order by time granularity
+        # 5. return list of case type col ids and map functions
+
+        # map function (e.g. map from week to first day, datetime package)
+
         settings_by_case_type: dict[UUID, model.CaseTypeSettings] = {
             x.case_type_id: x
-            for x in case_type_settings
-            if x.case_type_id in case_type_ids
+            for x in case_type_cols
+            if x.case_type_id in stats_time_case_type_col_id
         }
 
         if not settings_by_case_type:
@@ -1422,6 +1438,7 @@ class CaseService(BaseCaseService):
         if not case_type_col_ids:
             return None
 
+        # TODO: handle Case_ids in stead of one case id
         case: model.Case = self.repository.crud(  # type:ignore[assignment]
             uow,
             user.id,
