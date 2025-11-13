@@ -1,6 +1,6 @@
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.env import AppEnv
+from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.util import get_package_version
@@ -27,17 +27,12 @@ SCHEMA_KWARGS = {
 
 # Get configuration data and environment
 APP_CFG = AppCfg(APP_NAME, enum.ServiceType, enum.RepositoryType)
-APP_ENV = AppEnv(APP_CFG)
+APP_COMPOSER = AppComposer(APP_CFG)
 
 # Create fastapi
 FAST_API = create_fast_api(
-    APP_CFG.cfg,
-    app=APP_ENV.app,
+    app=APP_COMPOSER.app,
     create_routers_fn=create_routers,
-    registered_user_dependency=APP_ENV.registered_user_dependency,
-    new_user_dependency=APP_ENV.new_user_dependency,
-    idp_user_dependency=APP_ENV.idp_user_dependency,
-    app_id=APP_ENV.app.generate_id(),
     setup_logger=APP_CFG.setup_logger,
     api_logger=APP_CFG.api_logger,
     debug=APP_CFG.cfg.app.debug,
@@ -45,7 +40,7 @@ FAST_API = create_fast_api(
     update_openapi_kwargs={
         "get_openapi_kwargs": SCHEMA_KWARGS,
         "fix_schema": True,
-        "auth_service": APP_ENV.services[enum.ServiceType.AUTH],
+        "auth_service": APP_COMPOSER.services[enum.ServiceType.AUTH],
     },
 )
 

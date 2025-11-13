@@ -15,25 +15,25 @@ from gen_epix.commondb.domain.model import (
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.domain.model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import User as User
+from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
+from gen_epix.commondb.domain.model import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.abac import (
-    OrganizationAdminPolicy as OrganizationAdminPolicy,
-)
 from gen_epix.seqdb.domain.model.file import File as File
-from gen_epix.seqdb.domain.model.organization import User as User
-from gen_epix.seqdb.domain.model.organization import UserInvitation as UserInvitation
-from gen_epix.seqdb.domain.model.organization import (
-    UserInvitationConstraints as UserInvitationConstraints,
-)
 from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
@@ -175,7 +175,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
+COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
     common_model.UserInvitationConstraints: UserInvitationConstraints,

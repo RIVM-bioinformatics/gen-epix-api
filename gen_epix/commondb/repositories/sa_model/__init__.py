@@ -17,6 +17,9 @@ from gen_epix.commondb.repositories.sa_model.base import (
     SERVICE_METADATA_FIELDS as SERVICE_METADATA_FIELDS,
 )
 from gen_epix.commondb.repositories.sa_model.base import (
+    NoIdRowMetadataMixin as NoIdRowMetadataMixin,
+)
+from gen_epix.commondb.repositories.sa_model.base import (
     RowMetadataMixin as RowMetadataMixin,
 )
 from gen_epix.commondb.repositories.sa_model.organization import Contact as Contact

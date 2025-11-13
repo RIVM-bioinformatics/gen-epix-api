@@ -8,6 +8,8 @@ from enum import Enum
 
 import ulid
 
+from gen_epix.commondb.domain.enum import RoleSet as RoleSet
+
 
 class TimestampFactory(Enum):
     DATETIME_NOW = lambda: datetime.datetime.now()
@@ -35,43 +37,13 @@ class RepositoryType(Enum):
 
 
 class Role(Enum):
-    ROOT = "ROOT"
-    APP_ADMIN = "APP_ADMIN"
-    ORG_ADMIN = "ORG_ADMIN"
-    REFDATA_ADMIN = "REFDATA_ADMIN"
-    ORG_USER = "ORG_USER"
-    GUEST = "GUEST"
-    ROLE1 = "ROLE1"
-
-
-class RoleSet(Enum):
-    ALL = frozenset(
-        {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.REFDATA_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        }
-    )
-    GE_APP_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN})
-    GE_ORG_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN})
-    GE_REFDATA_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.REFDATA_ADMIN})
-    GE_ORG_USER = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN, Role.ORG_USER})
-    GE_GUEST = frozenset(
-        {
-            Role.ROOT,
-            Role.APP_ADMIN,
-            Role.ORG_ADMIN,
-            Role.ORG_USER,
-            Role.GUEST,
-        }
-    )
-    APPLICATION = frozenset({Role.APP_ADMIN})
-    ORGANIZATION = frozenset({Role.APP_ADMIN, Role.ORG_ADMIN})
-    METADATA = frozenset({Role.REFDATA_ADMIN})
-    OPERATIONAL = frozenset({Role.ORG_USER, Role.GUEST})
+    ROOT = "SEQDB_ROOT"
+    APP_ADMIN = "SEQDB_APP_ADMIN"
+    ORG_ADMIN = "SEQDB_ORG_ADMIN"
+    REFDATA_ADMIN = "SEQDB_REFDATA_ADMIN"
+    ORG_USER = "SEQDB_ORG_USER"
+    GUEST = "SEQDB_GUEST"
+    ROLE1 = "SEQDB_ROLE1"
 
 
 class TreeAlgorithm(Enum):

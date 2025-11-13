@@ -4,7 +4,8 @@ from collections.abc import Hashable
 from functools import partial
 from typing import Any, Callable, NoReturn
 
-from gen_epix.fastapp import App, LogLevel, exc, model
+from gen_epix.commondb.domain import model
+from gen_epix.fastapp import App, LogLevel, exc
 from gen_epix.fastapp.api import exc as api_exc
 
 http_exception_fmap = {

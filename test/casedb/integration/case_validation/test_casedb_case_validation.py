@@ -215,7 +215,7 @@ class TestCaseValidation(CaseValidationSetup):
             assert user.id is not None
 
             # Get writable case type col ids
-            if user.roles.intersection(enum.RoleSet.GE_APP_ADMIN.value):
+            if user.roles.intersection(env.role_set_map[enum.RoleSet.GE_APP_ADMIN]):
                 write_case_type_col_ids = all_case_type_col_ids
             else:
                 org_policy: model.OrganizationAccessCasePolicy | None = (

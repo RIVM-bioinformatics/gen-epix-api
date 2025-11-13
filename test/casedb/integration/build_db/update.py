@@ -4,12 +4,12 @@ from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
+    BELOW_ORG_ADMIN_USERS,
     BELOW_USER_ADMIN_USERS,
     ORG_ADMIN_OR_ABOVE_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
-    BELOW_ORG_ADMIN_USERS,
 )
 from uuid import UUID
 
@@ -17,6 +17,8 @@ import pydantic
 import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
+from gen_epix.commondb.domain.enum import Role as CommonRole
+from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 
 
 class TestUpdate:
@@ -24,28 +26,35 @@ class TestUpdate:
 
     def test_update_user(self, env: Env) -> None:
         org_id_name_map = {x.id: x.name for x in env.db[model.Organization].values()}
-        is_not_restricted_roles = enum.RoleSet.GE_APP_ADMIN.value
+        is_not_restricted_roles = env.role_set_map[CommonRoleSet.GE_APP_ADMIN]
         if env.verbose:
             print("\nUser updates:")
-        for role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-            role_str = role.value.lower()
-            user_str = f"{role_str}1_1"
-            user = env._get_obj(model.User, user_str)
-            is_root = role == enum.Role.ROOT
+        for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
+            user_str = f"{env.rev_role_map[role].name.lower()}1_1"
+            user: model.User = env._get_obj(model.User, user_str)
+            is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_orgs = {
                 org_id_name_map[x]
                 for x in env.get_org_ids_for_org_admin(user, on_no_admin="return")
             }
-            for tgt_role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-                tgt_role_str = tgt_role.value.lower()
+            for tgt_role in sorted(env.role_set_map[CommonRoleSet.ALL]):
+                token = env.rev_role_map[tgt_role].name.lower()
                 tgt_users_str = [
-                    f"{tgt_role_str}1_1",
-                    f"{tgt_role_str}1_2",
-                    f"{tgt_role_str}2_1",
+                    f"{token}1_1",
+                    f"{token}1_2",
+                    f"{token}2_1",
                 ]
                 new_tgt_orgs = [f"org{i+1}" for i in range(0, 5)]
-                is_sub_role = tgt_role in env.role_hierarchy[role]
+                is_sub_role = env.is_sub_role(tgt_role, role)
+                if (
+                    is_sub_role
+                    and env.rev_role_map[tgt_role] == CommonRole.REFDATA_ADMIN
+                    and env.rev_role_map[role] == CommonRole.ORG_ADMIN
+                ):
+                    # Special case where REFDATA_ADMIN and ORG_ADMIN have same permissions
+                    # Occurs only for commondb
+                    is_sub_role = False
                 for tgt_user_str, new_tgt_org in zip(tgt_users_str, new_tgt_orgs):
                     tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
                     tgt_org = org_id_name_map[tgt_user.organization_id]
@@ -68,7 +77,7 @@ class TestUpdate:
                         is_update_allowed = True
                         is_org_update_allowed = True
                     elif tgt_org in org_admin_orgs:
-                        # ORG_ADMIN user can update users in their organizations under admin
+                        # ORG_ADMIN user can update users in their organizations under admin but only if they have less permissions
                         is_update_allowed = True
                         is_org_update_allowed = new_tgt_org in org_admin_orgs
                     msg = f"{user.name}: {tgt_user_str} {tgt_org}->{new_tgt_org}"
@@ -97,27 +106,34 @@ class TestUpdate:
                         env.update_user(user, tgt_user, set_dummy_organization=True)
 
     def test_update_user_role(self, env: Env) -> None:
-        is_not_restricted_roles = enum.RoleSet.GE_APP_ADMIN.value
+        is_not_restricted_roles = env.role_set_map[CommonRoleSet.GE_APP_ADMIN]
         if env.verbose:
             print("\nUser role updates:")
-        for role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-            role_str = role.value.lower()
-            user_str = f"{role_str}1_1"
-            user = env._get_obj(model.User, user_str)
-            is_root = role == enum.Role.ROOT
+        for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
+            user_str = f"{env.rev_role_map[role].name.lower()}1_1"
+            user: model.User = env._get_obj(model.User, user_str)
+            is_root = role == env.root_role
             is_not_restricted = role in is_not_restricted_roles
             org_admin_org_ids = env.get_org_ids_for_org_admin(
                 user, on_no_admin="return"
             )
-            for tgt_role in sorted(enum.RoleSet.ALL.value, key=lambda x: x.value):
-                tgt_role_str = tgt_role.value.lower()
+            for tgt_role in sorted(env.role_set_map[CommonRoleSet.ALL]):
+                token = env.rev_role_map[tgt_role].name.lower()
                 tgt_users_str = [
-                    f"{tgt_role_str}1_1",
-                    f"{tgt_role_str}2_1",
+                    f"{token}1_1",
+                    f"{token}2_1",
                 ]
-                is_sub_role = tgt_role in env.role_hierarchy[role]
+                is_sub_role = env.is_sub_role(tgt_role, role)
+                if (
+                    is_sub_role
+                    and env.rev_role_map[tgt_role] == CommonRole.REFDATA_ADMIN
+                    and env.rev_role_map[role] == CommonRole.ORG_ADMIN
+                ):
+                    # Special case where REFDATA_ADMIN and ORG_ADMIN have same permissions
+                    # Occurs only for commondb
+                    is_sub_role = False
                 for tgt_user_str in tgt_users_str:
-                    tgt_user = env._get_obj(model.User, tgt_user_str)
+                    tgt_user: model.User = env._get_obj(model.User, tgt_user_str)
                     tgt_user_org_id = tgt_user.organization_id
                     if not SKIP_RAISE:
                         msg = f"{user_str}: {tgt_user_str} no roles"
@@ -131,12 +147,21 @@ class TestUpdate:
                             )
                         ):
                             env.update_user(user, tgt_user, roles=set())
-                    for tgt_extra_role in enum.RoleSet.ALL.value:
+                    for tgt_extra_role in env.role_set_map[CommonRoleSet.ALL]:
                         # Determine if user can add tgt_extra_role to tgt_user
                         # The tgt_extra_role must have less permissions than the user's
                         # role unless the user is ROOT
                         is_self = user_str == tgt_user_str
-                        is_extra_sub_role = tgt_extra_role in env.role_hierarchy[role]
+                        is_extra_sub_role = env.is_sub_role(tgt_extra_role, role)
+                        if (
+                            is_extra_sub_role
+                            and env.rev_role_map[tgt_extra_role]
+                            == CommonRole.REFDATA_ADMIN
+                            and env.rev_role_map[role] == CommonRole.ORG_ADMIN
+                        ):
+                            # Special case where REFDATA_ADMIN and ORG_ADMIN have same permissions
+                            # Occurs only for commondb
+                            is_extra_sub_role = False
                         is_allowed = False
                         if is_root:
                             # ROOT can update anyone
@@ -156,8 +181,7 @@ class TestUpdate:
                         # Update tgt_user roles
                         tgt_roles = set(tgt_user.roles)
                         tgt_roles.add(tgt_extra_role)
-                        tgt_extra_role_str = tgt_extra_role.value
-                        msg = f"{user_str}: {tgt_user_str} + {tgt_extra_role_str}"
+                        msg = f"{user_str}: {tgt_user_str} + {tgt_extra_role}"
                         if env.verbose:
                             print(msg)
                         if is_allowed:
@@ -171,6 +195,24 @@ class TestUpdate:
                             if not SKIP_RAISE:
                                 with pytest.raises(exc.UnauthorizedAuthError):
                                     env.update_user(user, tgt_user, roles=tgt_roles)
+
+    def test_update_data_collection(self, env: Env) -> None:
+        env.create_data_collection("root1_1", "data_collection23")
+        for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
+            env.update_object(
+                user, model.DataCollection, "data_collection23", {"description": str(i)}
+            )
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_update_data_collection_raise(self, env: Env) -> None:
+        for i, user in enumerate(BELOW_APP_ADMIN_USERS):
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.update_object(
+                    user,
+                    model.DataCollection,
+                    "data_collection23",
+                    {"description": str(-i)},
+                )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_update_organization_access_case_policy(self, env: Env) -> None:
@@ -255,24 +297,23 @@ class TestUpdate:
     def test_update_temp_update_user_own_organization(self, env: Env) -> None:
         if env.verbose:
             print("\nTEMP User own organization update:")
-        for role in enum.RoleSet.ALL.value:
-            # if role == enum.Role.ROOT:
+        for role in sorted(env.role_set_map[CommonRoleSet.ALL]):
+            # if role == CommonRole.ROOT:
             #     continue
-            role_str = role.value.lower()
-            user = f"{role_str}1_1"
+            user_str = f"{env.rev_role_map[role].name.lower()}1_1"
             if env.verbose:
-                print(f"User: {user} -> org2")
+                print(f"User: {user_str} -> org2")
             user = env.temp_update_user_own_organization(
-                user, organization_or_str="org2"
+                user_str, organization_or_str="org2"
             )
             if env.verbose:
-                print(f"User: {user} -> org1")
+                print(f"User: {user_str} -> org1")
             user = env.temp_update_user_own_organization(
                 user, organization_or_str="org1"
             )
             if not SKIP_RAISE:
                 if env.verbose:
-                    print(f"User: {user} -> dummy")
+                    print(f"User: {user_str} -> dummy")
                 with pytest.raises(
                     (
                         exc.LinkConstraintViolationError,
@@ -472,11 +513,13 @@ class TestUpdate:
         for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
             env.update_object(user, model.Site, "site1_1", {"name": str(i)})
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_contact_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_object(user, model.Contact, "contact1", {"email": str(-i)})
 
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_site_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):

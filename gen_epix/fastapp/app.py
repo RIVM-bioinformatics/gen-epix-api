@@ -52,21 +52,28 @@ class App:
         pdp: PolicyDecisionPoint | None = None,
         logger: logging.Logger | None = logging.getLogger(__name__),
         user_manager: BaseUserManager | None = None,
+        cfg: Any | None = None,
+        impl: Any | None = None,
         log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         id_factory: Callable[[], Hashable] = uuid.uuid4,
+        id: str | None = None,
+        name: str | None = None,
         timestamp_factory: Callable[[], datetime] = datetime.now,
         **kwargs: Any,
     ):
         # Set input members
-        self._id: str = kwargs.get("id", str(id_factory()))
-        self._name: str = kwargs.get("name", self._id)
-        self._logger = logger
-        self._pdp: PolicyDecisionPoint = pdp or PolicyDecisionPoint()
-        self._domain = domain or Domain(self._id)
-        self._user_manager = user_manager
-        self._log_item_class = log_item_class
         self._id_factory: Callable[[], Hashable] = id_factory
+        self._id: str = id or str(self._id_factory())
+        self._name: str = name or self._id
+        self._domain = domain or Domain(self._id)
+        self._pdp: PolicyDecisionPoint = pdp or PolicyDecisionPoint()
+        self._user_manager = user_manager
+        self._cfg = cfg
+        self._impl = impl
+        self._logger = logger
+        self._log_item_class = log_item_class
         self._timestamp_factory = timestamp_factory
+
         # Initialize other members
         self._created_at = self.generate_timestamp()
         self._command_handler_map: dict[Type[Command], Callable[[Command], Any]] = {}
@@ -75,6 +82,7 @@ class App:
             EventTiming, dict[Type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
+
         # Log start
         if self._logger:
             self._logger.info(
@@ -103,6 +111,8 @@ class App:
 
     @property
     def pdp(self) -> PolicyDecisionPoint:
+        if self._pdp is None:
+            raise exc.InitializationServiceError("Policy decision point not set")
         return self._pdp
 
     @property
@@ -122,6 +132,18 @@ class App:
     @logger.setter
     def logger(self, logger: logging.Logger | None) -> None:
         self._logger = logger
+
+    @property
+    def cfg(self) -> Any:
+        if self._cfg is None:
+            raise exc.InitializationServiceError("Configuration data is not set")
+        return self._cfg
+
+    @property
+    def impl(self) -> Any:
+        if self._impl is None:
+            raise exc.InitializationServiceError("Implementation details are not set")
+        return self._impl
 
     @property
     def log_item_class(self) -> Type[BaseLogItem]:

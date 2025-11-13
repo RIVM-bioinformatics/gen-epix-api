@@ -23,18 +23,16 @@ from gen_epix.fastapp.middleware.update_response_header import (
 
 
 def create_fast_api(
-    cfg: dict | Dynaconf,
     app: App,
     create_routers_fn: Callable = create_routers,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     setup_logger: logging.Logger | None = None,
     api_logger: logging.Logger | None = None,
     debug: bool = False,
     **kwargs: Any,
 ) -> FastAPI:
+
+    cfg: dict | Dynaconf = app.cfg
 
     # Set up lifespan
     @asynccontextmanager
@@ -109,9 +107,6 @@ def create_fast_api(
     handle_exception = generate_handle_exception_function(app=app, logger=api_logger)
     routers = create_routers_fn(
         app=app,
-        registered_user_dependency=registered_user_dependency,
-        new_user_dependency=new_user_dependency,
-        idp_user_dependency=idp_user_dependency,
         handle_exception=handle_exception,
     )
     for router in routers:

@@ -8,9 +8,10 @@ from time import sleep
 from typing import Any, List, Type, TypeVar, cast
 from uuid import UUID
 
-from gen_epix.commondb.base_env import BaseAppEnv
+from gen_epix.commondb.app_impl_details import AppImplDetails
+from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import BaseAppCfg
-from gen_epix.commondb.domain import command, model
+from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.commondb.util import map_paired_elements
@@ -39,41 +40,7 @@ class TestClient:
         test_name: str,
         test_dir: Path,
         app_cfg: BaseAppCfg,
-        app_env: BaseAppEnv,
-        roles: set[Enum] | None = None,
-        role_hierarchy: dict[Hashable, set] | None = None,
-        user_class: Type[model.User] = model.User,
-        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        user_invitation_constraints_class: Type[
-            model.UserInvitationConstraints
-        ] = model.UserInvitationConstraints,
-        organization_admin_policy_class: Type[
-            model.OrganizationAdminPolicy
-        ] = model.OrganizationAdminPolicy,
-        user_crud_command_class: Type[
-            command.UserCrudCommand
-        ] = command.UserCrudCommand,
-        user_invitation_crud_command_class: Type[
-            command.UserInvitationCrudCommand
-        ] = command.UserInvitationCrudCommand,
-        organization_admin_policy_crud_command_class: Type[
-            command.OrganizationAdminPolicyCrudCommand
-        ] = command.OrganizationAdminPolicyCrudCommand,
-        retrieve_invite_user_constraints_command_class: Type[
-            command.RetrieveInviteUserConstraintsCommand
-        ] = command.RetrieveInviteUserConstraintsCommand,
-        invite_user_command_class: Type[
-            command.InviteUserCommand
-        ] = command.InviteUserCommand,
-        register_invited_user_command_class: Type[
-            command.RegisterInvitedUserCommand
-        ] = command.RegisterInvitedUserCommand,
-        retrieve_organization_admin_name_emails_command_class: Type[
-            command.RetrieveOrganizationAdminNameEmailsCommand
-        ] = command.RetrieveOrganizationAdminNameEmailsCommand,
-        update_user_command_class: Type[
-            command.UpdateUserCommand
-        ] = command.UpdateUserCommand,
+        app_composer: BaseAppComposer,
         verbose: bool = False,
         log_level: int = logging.ERROR,
         use_endpoints: bool = False,
@@ -84,41 +51,64 @@ class TestClient:
         self.test_name = test_name
         self.test_dir = test_dir
         self.app_cfg = app_cfg
-        self.app_env = app_env
+        self.app_composer = app_composer
         self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
-        self.roles = set() if roles is None else roles
-        self.role_hierarchy: dict[Hashable, set] = (
-            {} if role_hierarchy is None else role_hierarchy
-        )
-        self.user_class = user_class
-        self.user_invitation_class = user_invitation_class
-        self.user_invitation_constraints_class = user_invitation_constraints_class
-        self.organization_admin_policy_class = organization_admin_policy_class
-        self.user_crud_command_class = user_crud_command_class
-        self.user_invitation_crud_command_class = user_invitation_crud_command_class
-        self.organization_admin_policy_crud_command_class = (
-            organization_admin_policy_crud_command_class
-        )
-        self.retrieve_invite_user_constraints_command_class = (
-            retrieve_invite_user_constraints_command_class
-        )
-        self.invite_user_command_class = invite_user_command_class
-        self.register_invited_user_command_class = register_invited_user_command_class
-        self.retrieve_organization_admin_name_emails_command_class = (
-            retrieve_organization_admin_name_emails_command_class
-        )
-        self.update_user_command_class = update_user_command_class
         self.log_level = log_level
         self.verbose = verbose
+
+        # Get implementation details
+        app_impl: AppImplDetails = app_composer.app.impl
+        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_invitation_class: Type[model.UserInvitation] = (
+            app_impl.get_mapped_class(model.UserInvitation)
+        )
+        self.user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = app_impl.get_mapped_class(model.UserInvitationConstraints)
+        self.organization_admin_policy_class: Type[model.OrganizationAdminPolicy] = (
+            app_impl.get_mapped_class(model.OrganizationAdminPolicy)
+        )
+        self.user_crud_command_class: Type[command.UserCrudCommand] = (
+            app_impl.get_mapped_class(command.UserCrudCommand)
+        )
+        self.user_invitation_crud_command_class: Type[
+            command.UserInvitationCrudCommand
+        ] = app_impl.get_mapped_class(command.UserInvitationCrudCommand)
+        self.organization_admin_policy_crud_command_class: Type[
+            command.OrganizationAdminPolicyCrudCommand
+        ] = app_impl.get_mapped_class(command.OrganizationAdminPolicyCrudCommand)
+        self.retrieve_invite_user_constraints_command_class: Type[
+            command.RetrieveInviteUserConstraintsCommand
+        ] = app_impl.get_mapped_class(command.RetrieveInviteUserConstraintsCommand)
+        self.invite_user_command_class: Type[command.InviteUserCommand] = (
+            app_impl.get_mapped_class(command.InviteUserCommand)
+        )
+        self.register_invited_user_command_class: Type[
+            command.RegisterInvitedUserCommand
+        ] = app_impl.get_mapped_class(command.RegisterInvitedUserCommand)
+        self.retrieve_organization_admin_name_emails_command_class: Type[
+            command.RetrieveOrganizationAdminNameEmailsCommand
+        ] = app_impl.get_mapped_class(
+            command.RetrieveOrganizationAdminNameEmailsCommand
+        )
+        self.update_user_command_class: Type[command.UpdateUserCommand] = (
+            app_impl.get_mapped_class(command.UpdateUserCommand)
+        )
+        self.role_map = app_impl.role_map
+        self.rev_role_map = app_impl.rev_role_map
+        self.role_set_map = app_impl.role_set_map
+        self.role_permissions_map = app_impl.role_permissions_map
+        self.app = self.app_composer.app
+        self.cfg = self.app.cfg
+        self.services = app_impl.services
+        self.repositories = app_impl.repositories
 
         # Set log level
         TestClient._set_log_level(app_cfg, log_level)
 
         # Set additional parameters
-        self.app = self.app_env.app
-        self.cfg = self.app_cfg.cfg
-        self.services = self.app_env.services
-        self.repositories = self.app_env.repositories
+        self.root_role: str = self.role_map[enum.Role.ROOT]
+        self.guest_role: str = self.role_map[enum.Role.GUEST]
         self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints = use_endpoints
@@ -206,7 +196,9 @@ class TestClient:
         m = re.match(r"^(.*?)(\d+)_(\d+)$", user_name.lower())
         if not m:
             raise ValueError(f"Invalid user name {user_name}")
-        role = [x for x in self.roles if x.value.lower() == m.group(1).lower()][0]
+        role = [
+            y for x, y in self.role_map.items() if x.name.lower() == m.group(1).lower()
+        ][0]
         organization_name = "org" + m.group(2)
         organization_id: UUID
         if organization_name not in self.db[model.Organization]:
@@ -503,6 +495,24 @@ class TestClient:
             if x.id in user_ids or x.organization_id in organization_ids
         ]
 
+    def is_sub_role(
+        self,
+        sub_role: str,
+        role: str,
+        allow_equal: bool = False,
+    ) -> bool:
+        """
+        Check if sub_role is indeed a sub-role of role based on the permissions
+        they each have. Set allow_equal=True to allow sub_role to be equal to role.
+        """
+        permissions = self.role_permissions_map[role]
+        sub_permissions = self.role_permissions_map[sub_role]
+        if allow_equal:
+            return sub_permissions.issubset(permissions[role])
+        return len(permissions) != len(sub_permissions) and sub_permissions.issubset(
+            permissions
+        )
+
     def read_all(
         self,
         user_or_key: model.User | str,
@@ -712,7 +722,9 @@ class TestClient:
         ):
             print(
                 f"{organizations[x.organization_id].name} / {x.key}: "
-                + ", ".join([z for z in sorted(y.name for y in x.roles)])
+                + ", ".join(
+                    [z for z in sorted(self.rev_role_map[y].name for y in x.roles)]
+                )
                 + f" ({x.id})"
             )
 

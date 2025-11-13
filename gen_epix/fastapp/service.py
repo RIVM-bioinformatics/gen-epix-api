@@ -8,7 +8,6 @@ from typing import Any, Callable, Iterable, Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
-from gen_epix.fastapp.domain import Domain
 from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet, EventTiming
 from gen_epix.fastapp.model import (
@@ -29,37 +28,37 @@ class BaseService(abc.ABC):
     def __init__(
         self,
         app: App,
+        service_type: Hashable = None,  # TODO: service_type this required
         repository: BaseRepository | None = None,
         logger: logging.Logger | None = None,
+        id: str | None = None,
+        name: str | None = None,
+        register_handlers: bool = True,
+        id_factory: Callable[[], Hashable] | None = None,
+        timestamp_factory: Callable[[], datetime.datetime] | None = None,
         props: dict[str, Any] | None = None,
         **kwargs: Any,
     ):
-        # Parse kwargs
-        if props is None:
-            props = {}
-        id_factory: Callable[[], Hashable] = kwargs.pop("id_factory", app.generate_id)
-        timestamp_factory: Callable[[], datetime.datetime] = kwargs.pop(
-            "timestamp_factory", app.generate_timestamp
-        )
-        register_handlers = kwargs.pop("register_handlers", True)
         # Set input members
-        self._id: str = kwargs.pop("id", str(id_factory()))
-        self._service_type: Hashable = kwargs.pop(
-            "service_type", self.__class__.__name__
+        self._id_factory: Callable[[], Hashable] = id_factory or app.generate_id
+        self._timestamp_factory: Callable[[], datetime.datetime] = (
+            timestamp_factory or app.generate_timestamp
         )
-        self._name: str = Domain.get_service_name(self._service_type)
-        self._created_at: datetime.datetime = timestamp_factory()
+        self._id: str = id or str(self._id_factory())
+        self._name: str = name or str(self._id)
+        self._service_type = service_type
+        self._created_at: datetime.datetime = self._timestamp_factory()
         self._app: App = app
         self._repository: BaseRepository | None = repository
         self._logger: logging.Logger | None = logger
-        self._props: dict[str, Any] = props
-        self._id_factory: Callable[[], Hashable] = id_factory
-        self._timestamp_factory: Callable[[], datetime.datetime] = timestamp_factory
+        self._props: dict[str, Any] = props or {}
+
         # Initialize other members
         self._crud_listeners: dict[
             tuple[Type[CrudCommand], EventTiming],
             list[Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]]],
         ] = {}
+
         # Log start
         if self._logger:
             self._logger.info(
@@ -69,6 +68,7 @@ class BaseService(abc.ABC):
                     service={"created_at": self.created_at},
                 )
             )
+
         # Register service if not yet, and handlers
         self.app.domain.register_service_type(self.service_type)
         if register_handlers:
@@ -182,6 +182,7 @@ class BaseService(abc.ABC):
     def crud(
         self, cmd: CrudCommand
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
+        assert cmd.MODEL_CLASS.ENTITY is not None
         id_field_name = cmd.MODEL_CLASS.ENTITY.id_field_name
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -204,6 +205,7 @@ class BaseService(abc.ABC):
                 raise exc.InvalidArgumentsError(
                     f"No object provided for operation {cmd.operation}"
                 )
+            assert id_field_name is not None
             if isinstance(cmd.objs, list):
                 for obj in cmd.objs:
                     self.set_object_id(obj, id_field_name, id_present)
@@ -333,7 +335,8 @@ class BaseService(abc.ABC):
             ):
                 # Delete/exists one or some (delete all is not possible since there is
                 # an access filter) -> check if the ids match the access filter
-                objs: list[Model] = self.repository.crud(
+                assert cmd.user is not None
+                objs: list[Model] = self.repository.crud(  # type: ignore[assignment]
                     uow,
                     cmd.user.id,
                     cmd.MODEL_CLASS,

@@ -1,35 +1,24 @@
-from typing import Type
-
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
-from gen_epix.commondb.domain.policy import (
-    map_common_role_hierarchy,
-    map_common_role_permission_sets,
-)
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.services.rbac import BaseRbacService
 from gen_epix.seqdb.domain import command
 from gen_epix.seqdb.domain.enum import Role
 
-COMMON_ROLE_MAP = {
-    CommonRole.ROOT: Role.ROOT,
-    CommonRole.APP_ADMIN: Role.APP_ADMIN,
-    CommonRole.REFDATA_ADMIN: Role.REFDATA_ADMIN,
-    CommonRole.ORG_ADMIN: Role.ORG_ADMIN,
-    CommonRole.ORG_USER: Role.ORG_USER,
-    CommonRole.GUEST: Role.GUEST,
-}
-
 
 class RoleGenerator(CommonRoleGenerator):
 
-    COMMON_ROLE_PERMISSION_SETS = map_common_role_permission_sets(
-        COMMON_ROLE_MAP, command.COMMON_COMMAND_MAP  # type: ignore[arg-type]
+    COMMON_ROLE_ENUM_MAP = {x: Role[x.name] for x in CommonRole}
+
+    EXTRA_ROLE_SET_MAP = {}
+
+    COMMON_ROLE_PERMISSION_SETS = (
+        CommonRoleGenerator.map_from_common_role_permission_sets(
+            COMMON_ROLE_ENUM_MAP, command.COMMON_COMMAND_MAP
+        )
     )
 
-    ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
-    ] = {
+    ROLE_PERMISSION_SETS = {
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
         | {
@@ -121,8 +110,10 @@ class RoleGenerator(CommonRoleGenerator):
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }
 
-    ROLE_HIERARCHY: dict[Role, set[Role]] = map_common_role_hierarchy(COMMON_ROLE_MAP)  # type: ignore[assignment,arg-type]
+    ROLE_HIERARCHY = CommonRoleGenerator.map_from_common_role_hierarchy(
+        COMMON_ROLE_ENUM_MAP
+    )
 
     ROLE_PERMISSIONS = BaseRbacService.expand_hierarchical_role_permissions(
-        ROLE_HIERARCHY, ROLE_PERMISSION_SETS  # type: ignore[arg-type]
+        ROLE_HIERARCHY, ROLE_PERMISSION_SETS
     )

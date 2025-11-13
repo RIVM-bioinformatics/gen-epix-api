@@ -2,7 +2,6 @@ from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, model
-from gen_epix.casedb.domain.policy import COMMON_ROLE_MAP
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies import (
     IsOrganizationAdminPolicy as CommonIsOrganizationAdminPolicy,
@@ -19,8 +18,6 @@ class IsOrganizationAdminPolicy(CommonIsOrganizationAdminPolicy):
     ):
         super().__init__(
             abac_service,
-            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
-            user_class=model.User,
             **kwargs,
         )
         f = self.register_retrieve_organization_ids_handler

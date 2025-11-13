@@ -3,8 +3,6 @@ from typing import Any
 from gen_epix.commondb.policies import (
     ReadOrganizationResultsOnlyPolicy as CommonReadOrganizationResultsOnlyPolicy,
 )
-from gen_epix.seqdb.domain import command
-from gen_epix.seqdb.domain.policy import COMMON_ROLE_MAP
 from gen_epix.seqdb.domain.service import BaseAbacService
 
 
@@ -16,13 +14,7 @@ class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy)
     ):
         super().__init__(
             abac_service,
-            role_map=COMMON_ROLE_MAP,  # type: ignore[arg-type]
             **kwargs,
         )
-        self.user_crud_command_class = command.UserCrudCommand
-        self.has_organization_id_attr_command_classes = {
-            command.UserCrudCommand,
-            command.OrganizationAdminPolicyCrudCommand,
-            command.UserInvitationCrudCommand,
-        }
-        self.has_user_id_attr_command_classes = set()
+        self.has_organization_id_attr_command_classes.update(set())
+        self.has_user_id_attr_command_classes.update(set())

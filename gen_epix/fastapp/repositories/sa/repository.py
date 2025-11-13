@@ -582,7 +582,41 @@ class SARepository(BaseRepository):
                 # Get ids
                 row_ids = session.execute(select(get_row_id(row_class))).all()
                 row_ids = [x[0] for x in row_ids]
+
+            # Delete all rows
+            # TODO: commented out for sqlite workourand. Restore ASAP.
+            # session.execute(delete(row_class))
+
+            # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
+            # Check if this is SQLite and if we need to handle foreign key constraints
+            is_sqlite = "sqlite" in str(session.get_bind().url).lower()
+            needs_fk_workaround = False
+            # For SQLite with schemas (using ATTACH DATABASE), foreign key constraints
+            # can cause issues when referencing tables across schemas. Check if this table
+            # has foreign keys that might need special handling.
+            if is_sqlite and hasattr(row_class, "__table__"):
+                table = row_class.__table__
+                for fk in table.foreign_keys:
+                    # If foreign key references a table in the same schema, it should work
+                    # If it references a different schema or has schema prefix issues, we might need workaround
+                    referenced_table = fk.column.table
+                    if referenced_table.schema != table.schema or table.name in [
+                        "measurement_relation"
+                    ]:  # Known problematic tables
+                        needs_fk_workaround = True
+                        break
+            # Temporarily disable foreign key constraints if needed
+            if needs_fk_workaround:
+                session.execute(sa.text("PRAGMA foreign_keys=OFF"))
+                session.flush()
+            # Delete rows
             session.execute(delete(row_class))
+            # Re-enable foreign keys if we disabled them
+            if needs_fk_workaround:
+                session.execute(sa.text("PRAGMA foreign_keys=ON"))
+                session.flush()
+            # TODO: end of workaround for SQLite foreign key constraint issues. Remove ASAP.
+
             return row_ids
 
         deleted_row_ids = self._execute_sa(session, _execute, kwargs)
@@ -1112,6 +1146,7 @@ class SARepository(BaseRepository):
                 continue
             db_model_class = entity.db_model_class
             metadata_set.add(db_model_class.metadata)
+
         for metadata in metadata_set:
             metadata.create_all(engine)
 

@@ -3,9 +3,11 @@ from typing import Any, Type
 
 from cachetools import TTLCache, cached
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
@@ -19,6 +21,21 @@ class OrganizationService(BaseOrganizationService):
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )
+
+    def __init__(
+        self,
+        app: App,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(app, **kwargs)
+        app_impl: AppImplDetails = app.impl
+        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_invitation_class: Type[model.UserInvitation] = (
+            app_impl.get_mapped_class(model.UserInvitation)
+        )
+        self.user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = app_impl.get_mapped_class(model.UserInvitationConstraints)
 
     def crud(
         self,

@@ -5,6 +5,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
 from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
@@ -49,7 +50,7 @@ def _crud_metadata(
     """Logic for handling metadata commands"""
     # Metadata admin or above: no @ABAC applied
     assert cmd.user
-    if cmd.user.roles.intersection(enum.RoleSet.GE_REFDATA_ADMIN.value):
+    if cmd.user.roles.intersection(self.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN]):
         # Metadata admin and above have access to all metadata: no ABAC
         # applied, only RBAC
         return _crud_metadata_by_admin(self, uow, cmd)
@@ -160,7 +161,7 @@ def _crud_data(
     """Logic for handling data commands"""
     assert cmd.user
     # App admin or above: no @ABAC applied
-    if cmd.user.roles.intersection(enum.RoleSet.GE_APP_ADMIN.value):
+    if cmd.user.roles.intersection(self.role_set_map[CommonRoleSet.GE_APP_ADMIN]):
         return _crud_data_by_admin(self, uow, cmd)
     return _crud_data_by_non_admin(self, uow, cmd)
 

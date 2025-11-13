@@ -1,7 +1,10 @@
+from typing import Any, Type
 from uuid import UUID
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, exc, model
 from gen_epix.commondb.domain.policy import BaseReadUserPolicy
+from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import Command
 from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet
 from gen_epix.filter.composite import CompositeFilter
@@ -12,6 +15,17 @@ from gen_epix.filter.equals_uuid import EqualsUuidFilter
 
 class ReadUserPolicy(BaseReadUserPolicy):
     # TODO: replace by get_content implementation for more efficient application DURING execution
+
+    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+        super().__init__(abac_service, **kwargs)
+
+        app_impl: AppImplDetails = abac_service.app.impl
+        self.organization_admin_policy_crud_command_class: Type[
+            command.OrganizationAdminPolicyCrudCommand
+        ] = app_impl.get_mapped_class(command.OrganizationAdminPolicyCrudCommand)
+        self.role_map = app_impl.role_map
+        self.role_set_map = app_impl.role_set_map
+
     def filter(
         self, cmd: Command, results: model.User | list[model.User]
     ) -> model.User | list[model.User]:
