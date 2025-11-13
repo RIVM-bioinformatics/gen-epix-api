@@ -1,10 +1,6 @@
 """Refactored configuration management using Strategy Pattern."""
 
 import abc
-import copy
-import importlib
-import json
-import logging
 import logging.config as logging_config
 import os
 from enum import Enum
@@ -166,30 +162,22 @@ class AppCfg(BaseAppCfg):
         if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
-                    "d5fd558a", "Loading settings with SettingsManager"
+                    "c6010f14", "Starting setting up config data"
                 )
             )
-        self._init_load_settings()
-        # TODO: remove after debugging env setting on cloud
-        if self._log_setup:
-            self.setup_logger.info("Before validation")
-            cfg_dict = self._cfg.as_dict()
-            for sub_cfg in cfg_dict["REPOSITORY"].values():
-                for key in [
-                    "password",
-                    "user",
-                    "username",
-                    "api_key",
-                    "uid",
-                    "pwd",
-                    "connection_string",
-                    "file",
-                ]:
-                    if key in sub_cfg["props"]:
-                        sub_cfg["props"][key] = "***REDACTED***"
-            self.setup_logger.info(json.dumps(cfg_dict, indent=4))
-        # TODO: end remove
-        if self._log_setup:
+
+        # Read and set initial config data
+        if log_setup:
+            self.setup_logger.debug(
+                App.create_static_log_message("d5fd558a", "Reading initial config data")
+            )
+        self._init_read_config_data(envvar_prefix, settings_dir_envvar, settings_files)
+
+        # Set timestamp and ID factory per service
+        self._init_set_factories_for_services()
+
+        # Add secrets
+        if log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
                     "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"

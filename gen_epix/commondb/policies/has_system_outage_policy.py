@@ -22,7 +22,7 @@ class HasSystemOutagePolicy(BaseHasSystemOutagePolicy):
     def get_is_denied_exception(self) -> Type[Exception]:
         return exc.ServiceUnavailableError
 
-    @cached(cache=TTLCache(maxsize=100, ttl=100))
+    @cached(cache=TTLCache(maxsize=100, ttl=100), key=lambda self, tgt_user: tgt_user.id)
     def _is_permitted(self, tgt_user: model.User) -> bool:
         return (
             self.outage_update_permission

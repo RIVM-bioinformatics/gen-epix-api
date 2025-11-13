@@ -850,7 +850,7 @@ class CaseTransformer(Transformer):
             if concept_relation.relation == ConceptRelationType.CONTAINS:
                 # Swap concepts to convert from contains to is-contained-in
                 from_concept, to_concept = to_concept, from_concept
-            elif concept_relation.relation != ConceptRelationType.IS_CONTAINED_IN:
+            else:
                 # Only contains and is-contained-in relationships considered
                 continue
             key = (from_concept.concept_set_id, to_concept.concept_set_id)
@@ -912,7 +912,7 @@ class CaseTransformer(Transformer):
             if region_relation.relation == RegionRelationType.CONTAINS:
                 # Swap regions to convert from contains to is-contained-in
                 from_region, to_region = to_region, from_region
-            elif region_relation.relation != RegionRelationType.IS_CONTAINED_IN:
+            else:
                 # Only contains and is-contained-in relationships considered
                 continue
             key = (from_region.region_set_id, to_region.region_set_id)
