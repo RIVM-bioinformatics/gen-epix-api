@@ -102,11 +102,6 @@ class OidcClient(IdpClient, OpenIdConnect):
         if issuer == "":
             self.scheme_name = self.server_cfg.issuer or ""
 
-        # Set cfg and retrieve remaining information
-        self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
-        if issuer == "":
-            self.scheme_name = self.server_cfg.issuer or ""
-
         # Set SecurityBase properties
         authorization_endpoint = (
             self.server_cfg.authorization_endpoint or ""
