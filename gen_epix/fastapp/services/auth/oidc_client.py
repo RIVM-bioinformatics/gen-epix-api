@@ -28,6 +28,10 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcS
 
 class OidcClient(IdpClient, OpenIdConnect):
 
+    DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    DEFAULT_INTROSPECTION_AUTH_METHOD: str = "client_secret_basic"
     DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
     }
@@ -44,6 +48,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,
         ssl_context: ssl.SSLContext | bool = False,
+        introspect_token_request_headers: dict[str, str] | None = None,
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
@@ -67,6 +72,10 @@ class OidcClient(IdpClient, OpenIdConnect):
         self.logger = logger
         self._log_item_class = log_item_class
         self._signing_keys: dict[str, Key] = {}
+        self._introspection_request_headers = (
+            introspect_token_request_headers
+            or self.DEFAULT_INTROSPECTION_REQUEST_HEADERS
+        )
         self._client_credential_flow_request_headers = (
             client_credential_flow_request_headers
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
@@ -174,123 +183,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             raise exc.InitializationServiceError(msg) from exception
-
-    def _token_hash(self, token: str) -> str:
-        return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-    def _now(self) -> int:
-        return int(time.time())
-
-    def _prune_expired_cache(self, now: int | None = None) -> None:
-        time_stamp = now or self._now()
-        expired_keys = [
-            x for x, y in self._introspection_cache.items() if y["exp"] <= time_stamp
-        ]
-        for x in expired_keys:
-            self._introspection_cache.pop(x, None)
-
-    def _is_cached_inactive(self, token_hash: str) -> bool:
-        introspection_token = self._introspection_cache.get(token_hash)
-        return bool(introspection_token and introspection_token.get("active") is False)
-
-    def _should_recheck(self, token_hash: str, now: int | None = None) -> bool:
-        introspection_token = self._introspection_cache.get(token_hash)
-        if not introspection_token:
-            return True
-        interval = self.server_cfg.introspection_interval_seconds
-        last = int(introspection_token.get("last_checked", 0))
-        time_stamp = now or self._now()
-        return (time_stamp - last) >= interval
-
-    def _update_cache(
-        self,
-        token_hash: str,
-        active: bool | None,
-        exp: int,
-        now: int | None = None,
-    ) -> None:
-        self._introspection_cache[token_hash] = {
-            "active": active,
-            "last_checked": now or self._now(),
-            "exp": exp,
-        }
-
-    def _introspect_token(self, token: str) -> bool | None:
-        endpoint = self.server_cfg.introspection_endpoint
-        if not endpoint:
-            return None
-        timeout_seconds = self.server_cfg.introspection_timeout_seconds
-        # Prepare headers and body
-        headers: dict[str, str] = {
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-        data: dict[str, str] = {
-            "token": token,
-            "token_type_hint": "access_token",
-        }
-        method = (
-            self.server_cfg.introspection_auth_method or "client_secret_basic"
-        ).lower()
-        if method not in {"client_secret_basic", "client_secret_post", "none"}:
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="6f4a8e22",
-                        msg=(
-                            "Unknown introspection auth method; defaulting to client_secret_basic"
-                        ),
-                        method=method,
-                    ).dumps()
-                )
-            method = "client_secret_basic"
-        if method == "client_secret_basic":
-            # Add Basic auth
-            basic = base64.b64encode(
-                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-            ).decode()
-            headers["Authorization"] = f"Basic {basic}"
-        elif method == "client_secret_post":
-            data["client_id"] = self.server_cfg.client_id
-            if self.server_cfg.client_secret is not None:
-                data["client_secret"] = self.server_cfg.client_secret
-        elif method == "none":
-            pass
-
-        try:
-            with httpx.Client(
-                verify=self.ssl_context, timeout=timeout_seconds
-            ) as client:
-                response = client.post(endpoint, data=data, headers=headers)
-            if response.status_code != 200:
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="7a3e6d1f",
-                            msg=(
-                                "Token introspection returned non-200 status; proceeding with local validation"
-                            ),
-                            status=response.status_code,
-                        ).dumps()
-                    )
-                return None
-            payload = response.json()
-            active = payload.get("active")
-            if isinstance(active, bool):
-                return active
-            # Unexpected payload shape
-            return None
-        except Exception as exc_:  # broad: treat any failure as unknown
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="f2b3c9aa",
-                        msg=(
-                            "Token introspection failed (timeout/network/parse); proceeding with local validation"
-                        ),
-                        exception=exc_,
-                    ).dumps()
-                )
-            return None
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> Key:
         try:
@@ -412,9 +304,9 @@ class OidcClient(IdpClient, OpenIdConnect):
             and self.server_cfg.introspection_endpoint
         ):
             now = self._now()
-            self._prune_expired_cache(now)
-            token_hash = self._token_hash(jwt_token)
-            if self._is_cached_inactive(token_hash):
+            self._prune_expired_introspection_cache(now)
+            token_hash = self._get_token_hash(jwt_token)
+            if self._is_cached_introspection_token_inactive(token_hash):
                 if self.logger:
                     self.logger.warning(
                         self._log_item_class(
@@ -426,7 +318,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 raise exc.CredentialsAuthError(
                     http_props={"headers": {"WWW-Authenticate": "Bearer"}}
                 )
-            if self._should_recheck(token_hash, now):
+            if self._is_recheck_introspection(token_hash, now):
                 if self.logger:
                     self.logger.info(
                         self._log_item_class(
@@ -435,12 +327,12 @@ class OidcClient(IdpClient, OpenIdConnect):
                             token_hash=token_hash[:12],
                         ).dumps()
                     )
-                is_active = self._introspect_token(jwt_token)
+                is_active = self.introspect_token(jwt_token)
                 exp_val = int(claims.get("exp", now))
                 if is_active is True:
-                    self._update_cache(token_hash, True, exp_val, now)
+                    self._update_introspection_cache(token_hash, True, exp_val, now)
                 elif is_active is False:
-                    self._update_cache(token_hash, False, exp_val, now)
+                    self._update_introspection_cache(token_hash, False, exp_val, now)
                     if self.logger:
                         self.logger.warning(
                             self._log_item_class(
@@ -457,7 +349,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     previous_active_status = self._introspection_cache.get(
                         token_hash, {}
                     ).get("active")
-                    self._update_cache(token_hash, previous_active_status, exp_val, now)  # type: ignore[arg-type]
+                    self._update_introspection_cache(token_hash, previous_active_status, exp_val, now)  # type: ignore[arg-type]
 
         # Get issuer and sub
         issuer = claims["iss"]
@@ -633,6 +525,124 @@ class OidcClient(IdpClient, OpenIdConnect):
             scope=self.server_cfg.scope,
             public=self.server_cfg.public,
         )
+
+    def introspect_token(self, token: str) -> bool | None:
+        endpoint = self.server_cfg.introspection_endpoint
+        if not endpoint:
+            return None
+        timeout_seconds = self.server_cfg.introspection_timeout_seconds
+        # Prepare headers and body
+        headers = self._introspection_request_headers
+        data: dict[str, str] = {
+            "token": token,
+            "token_type_hint": "access_token",
+        }
+        method = (
+            self.server_cfg.introspection_auth_method
+            or self.DEFAULT_INTROSPECTION_AUTH_METHOD
+        ).lower()
+        if method not in {"client_secret_basic", "client_secret_post", "none"}:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="6f4a8e22",
+                        msg=(
+                            "Unknown introspection auth method; defaulting to client_secret_basic"
+                        ),
+                        method=method,
+                    ).dumps()
+                )
+            method = "client_secret_basic"
+        if method == "client_secret_basic":
+            # Add Basic auth
+            basic = base64.b64encode(
+                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+            ).decode()
+            headers["Authorization"] = f"Basic {basic}"
+        elif method == "client_secret_post":
+            data["client_id"] = self.server_cfg.client_id
+            if self.server_cfg.client_secret is not None:
+                data["client_secret"] = self.server_cfg.client_secret
+        elif method == "none":
+            pass
+
+        try:
+            with httpx.Client(
+                verify=self.ssl_context, timeout=timeout_seconds
+            ) as client:
+                response = client.post(endpoint, data=data, headers=headers)
+            if response.status_code != 200:
+                if self.logger:
+                    self.logger.warning(
+                        self._log_item_class(
+                            code="7a3e6d1f",
+                            msg=(
+                                "Token introspection returned non-200 status; proceeding with local validation"
+                            ),
+                            status=response.status_code,
+                        ).dumps()
+                    )
+                return None
+            payload = response.json()
+            active = payload.get("active")
+            if isinstance(active, bool):
+                return active
+            # Unexpected payload shape
+            return None
+        except Exception as exc_:  # broad: treat any failure as unknown
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="f2b3c9aa",
+                        msg=(
+                            "Token introspection failed (timeout/network/parse); proceeding with local validation"
+                        ),
+                        exception=exc_,
+                    ).dumps()
+                )
+            return None
+
+    def _get_token_hash(self, token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def _now(self) -> int:
+        return int(time.time())
+
+    def _prune_expired_introspection_cache(self, now: int | None = None) -> None:
+        time_stamp = now or self._now()
+        expired_keys = [
+            x for x, y in self._introspection_cache.items() if y["exp"] <= time_stamp
+        ]
+        for x in expired_keys:
+            self._introspection_cache.pop(x, None)
+
+    def _is_cached_introspection_token_inactive(self, token_hash: str) -> bool:
+        introspection_token = self._introspection_cache.get(token_hash)
+        return bool(introspection_token and introspection_token.get("active") is False)
+
+    def _is_recheck_introspection(
+        self, token_hash: str, now: int | None = None
+    ) -> bool:
+        introspection_token = self._introspection_cache.get(token_hash)
+        if not introspection_token:
+            return True
+        interval = self.server_cfg.introspection_interval_seconds
+        last = int(introspection_token.get("last_checked", 0))
+        time_stamp = now or self._now()
+        return (time_stamp - last) >= interval
+
+    def _update_introspection_cache(
+        self,
+        token_hash: str,
+        active: bool | None,
+        exp: int,
+        now: int | None = None,
+    ) -> None:
+        self._introspection_cache[token_hash] = {
+            "active": active,
+            "last_checked": now or self._now(),
+            "exp": exp,
+        }
 
     def _load_keys(self) -> None:
         jwks_uri = self.server_cfg.jwks_uri

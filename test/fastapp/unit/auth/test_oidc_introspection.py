@@ -39,7 +39,7 @@ class TestOidcIntrospection:
         return getattr(self.client, "_now")()
 
     def _token_hash(self) -> str:
-        return getattr(self.client, "_token_hash")(self.token)
+        return getattr(self.client, "_get_token_hash")(self.token)
 
     def test_introspection_populates_cache(self) -> None:
         counter: dict[str, int] = {"n": 0}
@@ -48,7 +48,7 @@ class TestOidcIntrospection:
             counter["n"] += 1
             return True
 
-        setattr(self.client, "_introspect_token", fake_introspect)
+        setattr(self.client, "introspect_token", fake_introspect)
 
         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
         assert claims is not None
@@ -76,7 +76,7 @@ class TestOidcIntrospection:
             "exp": now + 600,
         }
 
-        setattr(self.client, "_introspect_token", lambda _: False)
+        setattr(self.client, "introspect_token", lambda _: False)
 
         with pytest.raises(exc.CredentialsAuthError):
             asyncio.run(self.client.get_claims_from_jwt(self.token))
@@ -91,7 +91,7 @@ class TestOidcIntrospection:
             counter["n"] += 1
             return None
 
-        setattr(self.client, "_introspect_token", fake_introspect)
+        setattr(self.client, "introspect_token", fake_introspect)
 
         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
         assert claims is not None
@@ -118,7 +118,7 @@ class TestOidcIntrospection:
             counter["n"] += 1
             return True
 
-        setattr(self.client, "_introspect_token", fake_introspect)
+        setattr(self.client, "introspect_token", fake_introspect)
 
         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
         assert claims is not None
@@ -136,7 +136,7 @@ class TestOidcIntrospection:
         def fail_if_called(_token: str) -> None:
             raise AssertionError("introspection should not be called within interval")
 
-        setattr(self.client, "_introspect_token", fail_if_called)
+        setattr(self.client, "introspect_token", fail_if_called)
 
         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
         assert claims is not None
@@ -157,7 +157,7 @@ class TestOidcIntrospection:
             counter["n"] += 1
             return True
 
-        setattr(self.client, "_introspect_token", fake_introspect)
+        setattr(self.client, "introspect_token", fake_introspect)
 
         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
         assert claims is not None
