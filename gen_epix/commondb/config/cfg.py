@@ -1,6 +1,9 @@
 """Refactored configuration management using Strategy Pattern."""
 
 import abc
+import copy
+import importlib
+import logging
 import logging.config as logging_config
 import os
 from enum import Enum
@@ -162,22 +165,11 @@ class AppCfg(BaseAppCfg):
         if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
-                    "c6010f14", "Starting setting up config data"
+                    "d5fd558a", "Loading settings with SettingsManager"
                 )
             )
-
-        # Read and set initial config data
-        if log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message("d5fd558a", "Reading initial config data")
-            )
-        self._init_read_config_data(envvar_prefix, settings_dir_envvar, settings_files)
-
-        # Set timestamp and ID factory per service
-        self._init_set_factories_for_services()
-
-        # Add secrets
-        if log_setup:
+        self._init_load_settings()
+        if self._log_setup:
             self.setup_logger.debug(
                 App.create_static_log_message(
                     "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
