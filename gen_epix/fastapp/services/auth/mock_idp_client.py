@@ -32,6 +32,11 @@ class MockIDPClient(IdpClient):
     def get_identity_provider(self) -> IdentityProvider:
         raise NotImplementedError()
 
+    async def get_claims_from_jwt(
+        self, jwt_token: str
+    ) -> dict[str, str | int | bool | list[str]] | None:
+        raise NotImplementedError()
+
     def get_claims_from_userinfo(
         self, access_token: str
     ) -> dict[str, str | int | bool | list[str]]:

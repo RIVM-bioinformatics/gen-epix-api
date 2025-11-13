@@ -5,6 +5,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 
@@ -16,13 +17,12 @@ class UpdateDiseaseEtiologicalAgentRequestBody(PydanticBaseModel):
 def create_ontology_endpoints(
     router: APIRouter | FastAPI,
     app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
+    app_impl: AppImplDetails = app.impl
+    registered_user_dependency = app_impl.registered_user_dependency
 
     @router.put(
         "/diseases/{disease_id}/etiological_agents",

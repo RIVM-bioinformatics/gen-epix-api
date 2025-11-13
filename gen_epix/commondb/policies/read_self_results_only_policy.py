@@ -1,6 +1,6 @@
-from enum import Enum
 from typing import Any
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, exc
 from gen_epix.commondb.domain.policy import BaseReadSelfResultsOnlyPolicy
 from gen_epix.commondb.domain.service.abac import BaseAbacService
@@ -9,17 +9,13 @@ from gen_epix.fastapp import Command, CrudOperation, CrudOperationSet
 
 class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
 
-    def __init__(
-        self,
-        abac_service: BaseAbacService,
-        role_map: dict[Enum, Enum] | None = None,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            abac_service,
-            role_map=role_map,
-            **kwargs,
-        )
+    def __init__(self, abac_service: BaseAbacService, **kwargs: Any):
+        super().__init__(abac_service, **kwargs)
+
+        app_impl: AppImplDetails = abac_service.app.impl
+        self.role_map = app_impl.role_map
+        self.role_set_map = app_impl.role_set_map
+
         self.id_attr_by_command_class = {
             command.UserCrudCommand: "id",
             command.UserInvitationCrudCommand: "invited_by_user_id",

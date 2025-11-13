@@ -6,6 +6,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.filter import DatetimeRangeFilter, Filter
 
@@ -50,6 +51,12 @@ class BaseCaseService(DomainBaseCaseService):
             None if not x else (x if isinstance(x, str) else f"{x:.6f}")
         ),
     }
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        app_impl: AppImplDetails = self.app.impl
+        self.role_map = app_impl.role_map
+        self.role_set_map = app_impl.role_set_map
 
     @abstractmethod
     def crud(  # type:ignore[override]

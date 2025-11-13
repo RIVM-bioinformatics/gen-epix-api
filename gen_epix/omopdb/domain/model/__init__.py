@@ -2,7 +2,6 @@ from typing import Type
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
-from gen_epix.commondb.domain import model as common_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
@@ -15,19 +14,24 @@ from gen_epix.commondb.domain.model import (
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.domain.model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import User as User
+from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
+from gen_epix.commondb.domain.model import (
+    UserInvitationConstraints as UserInvitationConstraints,
+)
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.omopdb.domain import enum
-from gen_epix.omopdb.domain.model.abac import (
-    OrganizationAdminPolicy as OrganizationAdminPolicy,
-)
 from gen_epix.omopdb.domain.model.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop import Cohort as Cohort
@@ -69,11 +73,6 @@ from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
 from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
-from gen_epix.omopdb.domain.model.organization import User as User
-from gen_epix.omopdb.domain.model.organization import UserInvitation as UserInvitation
-from gen_epix.omopdb.domain.model.organization import (
-    UserInvitationConstraints as UserInvitationConstraints,
-)
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
@@ -153,9 +152,4 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_IMPL: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
-    common_model.User: User,
-    common_model.UserInvitation: UserInvitation,
-    common_model.UserInvitationConstraints: UserInvitationConstraints,
-    common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
-}
+COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {}

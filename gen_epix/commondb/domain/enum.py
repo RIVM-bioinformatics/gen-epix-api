@@ -2,13 +2,13 @@ from enum import Enum
 
 
 class Role(Enum):
-    ROOT = "ROOT"
-    APP_ADMIN = "APP_ADMIN"
-    ORG_ADMIN = "ORG_ADMIN"
-    REFDATA_ADMIN = "REFDATA_ADMIN"
-    ORG_USER = "ORG_USER"
-    GUEST = "GUEST"
-    ROLE1 = "ROLE1"
+    ROOT = "COMMONDB_ROOT"
+    APP_ADMIN = "COMMONDB_APP_ADMIN"
+    ORG_ADMIN = "COMMONDB_ORG_ADMIN"
+    REFDATA_ADMIN = "COMMONDB_REFDATA_ADMIN"
+    ORG_USER = "COMMONDB_ORG_USER"
+    GUEST = "COMMONDB_GUEST"
+    ROLE1 = "COMMONDB_ROLE1"
 
 
 class RoleSet(Enum):
@@ -25,7 +25,14 @@ class RoleSet(Enum):
     GE_APP_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN})
     GE_ORG_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN})
     GE_REFDATA_ADMIN = frozenset({Role.ROOT, Role.APP_ADMIN, Role.REFDATA_ADMIN})
-    GE_ORG_USER = frozenset({Role.ROOT, Role.APP_ADMIN, Role.ORG_ADMIN, Role.ORG_USER})
+    GE_ORG_USER = frozenset(
+        {
+            Role.ROOT,
+            Role.APP_ADMIN,
+            Role.ORG_ADMIN,
+            Role.ORG_USER,
+        }
+    )
     GE_GUEST = frozenset(
         {
             Role.ROOT,

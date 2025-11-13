@@ -1,7 +1,8 @@
 import logging
 from typing import Any
 
-from gen_epix.fastapp import App, User
+from gen_epix.commondb.domain.model import User
+from gen_epix.fastapp import App
 
 
 def set_log_level(

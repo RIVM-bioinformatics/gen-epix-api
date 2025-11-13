@@ -16,14 +16,14 @@ import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model
-from gen_epix.casedb.env import AppEnv as CasedbAppEnv
+from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum
-from gen_epix.seqdb.env import AppEnv as SeqdbAppEnv
+from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
@@ -66,16 +66,12 @@ def seqdb_server(
         seqdb_enum.RepositoryType,
         log_setup=False,
     )
-    seqdb_app_env = SeqdbAppEnv(seqdb_app_cfg, log_setup=False)
-    seqdb_app = seqdb_app_env.app
+    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=False)
+    seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
-        seqdb_app_cfg.cfg,
         app=seqdb_app,
         create_routers_fn=seqdb_create_routers,
-        registered_user_dependency=seqdb_app_env.registered_user_dependency,
-        new_user_dependency=seqdb_app_env.new_user_dependency,
-        idp_user_dependency=seqdb_app_env.idp_user_dependency,
-        app_id=seqdb_app_env.app.generate_id(),
+        app_id=seqdb_app_composer.app.generate_id(),
         setup_logger=seqdb_app_cfg.setup_logger,
         api_logger=seqdb_app_cfg.api_logger,
         debug=False,
@@ -108,8 +104,8 @@ def test_casedb_seqdb_connection(
         enum.RepositoryType,
         log_setup=False,
     )
-    casedb_app_env = CasedbAppEnv(casedb_app_cfg, log_setup=False)
-    casedb_app = casedb_app_env.app
+    casedb_app_composer = CasedbAppComposer(casedb_app_cfg, log_setup=False)
+    casedb_app = casedb_app_composer.app
 
     # Test that the OAuth server is accessible
     import httpx
@@ -146,7 +142,7 @@ def test_casedb_seqdb_connection(
 
     # Create root user
     root_user: model.User = test_util.create_root_user_from_claims(
-        casedb_app_env.cfg, casedb_app
+        casedb_app_composer.cfg, casedb_app
     )
 
     # Get all cols, case_type_cols and cases

@@ -17,12 +17,6 @@ from gen_epix.commondb.domain.policy.permission import (
     NO_RBAC_PERMISSIONS as NO_RBAC_PERMISSIONS,
 )
 from gen_epix.commondb.domain.policy.permission import RoleGenerator as RoleGenerator
-from gen_epix.commondb.domain.policy.permission import (
-    map_common_role_hierarchy as map_common_role_hierarchy,
-)
-from gen_epix.commondb.domain.policy.permission import (
-    map_common_role_permission_sets as map_common_role_permission_sets,
-)
 from gen_epix.commondb.domain.policy.rbac import (
     BaseIsPermissionSubsetNewRolePolicy as BaseIsPermissionSubsetNewRolePolicy,
 )

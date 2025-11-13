@@ -6,7 +6,7 @@ import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
+    NoIdRowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )
@@ -16,7 +16,7 @@ from gen_epix.omopdb.repositories.sa_model.base import DataLineageMixin
 Base: Type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 
-class Location(Base, RowMetadataMixin):
+class Location(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Location)
 
     location_id: Mapped[UUID] = create_mapped_column(
@@ -43,7 +43,7 @@ class Location(Base, RowMetadataMixin):
     )
 
 
-class CohortDefinition(Base, RowMetadataMixin):
+class CohortDefinition(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
 
     cohort_definition_id: Mapped[UUID] = create_mapped_column(
@@ -69,7 +69,7 @@ class CohortDefinition(Base, RowMetadataMixin):
     )
 
 
-class Cohort(Base, RowMetadataMixin):
+class Cohort(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Cohort)
 
     cohort_definition_id: Mapped[UUID | None] = create_mapped_column(
@@ -85,7 +85,7 @@ class Cohort(Base, RowMetadataMixin):
     cohort_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "cohort_id")
 
 
-class CdmSource(Base, RowMetadataMixin):
+class CdmSource(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CdmSource)
 
     cdm_source_name: Mapped[str] = create_mapped_column(
@@ -123,7 +123,7 @@ class CdmSource(Base, RowMetadataMixin):
     )
 
 
-class Vocabulary(Base, RowMetadataMixin):
+class Vocabulary(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Vocabulary)
 
     vocabulary_id: Mapped[UUID] = create_mapped_column(
@@ -143,7 +143,7 @@ class Vocabulary(Base, RowMetadataMixin):
     )
 
 
-class Domain(Base, RowMetadataMixin):
+class Domain(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Domain)
 
     domain_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Domain, "domain_id")
@@ -153,7 +153,7 @@ class Domain(Base, RowMetadataMixin):
     )
 
 
-class ConceptClass(Base, RowMetadataMixin):
+class ConceptClass(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptClass)
 
     concept_class_id: Mapped[UUID] = create_mapped_column(
@@ -167,7 +167,7 @@ class ConceptClass(Base, RowMetadataMixin):
     )
 
 
-class Concept(Base, RowMetadataMixin):
+class Concept(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Concept, "concept_id")
@@ -198,7 +198,7 @@ class Concept(Base, RowMetadataMixin):
     )
 
 
-class Relationship(Base, RowMetadataMixin):
+class Relationship(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Relationship)
 
     relationship_id: Mapped[UUID] = create_mapped_column(
@@ -221,7 +221,7 @@ class Relationship(Base, RowMetadataMixin):
     )
 
 
-class ConceptRelationship(Base, RowMetadataMixin):
+class ConceptRelationship(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptRelationship)
 
     concept_id_1: Mapped[UUID] = create_mapped_column(
@@ -247,7 +247,7 @@ class ConceptRelationship(Base, RowMetadataMixin):
     )
 
 
-class ConceptAncestor(Base, RowMetadataMixin):
+class ConceptAncestor(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptAncestor)
 
     ancestor_concept_id: Mapped[UUID] = create_mapped_column(
@@ -267,7 +267,7 @@ class ConceptAncestor(Base, RowMetadataMixin):
     )
 
 
-class ConceptSynonym(Base, RowMetadataMixin):
+class ConceptSynonym(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConceptSynonym)
 
     concept_id: Mapped[UUID] = create_mapped_column(
@@ -284,7 +284,7 @@ class ConceptSynonym(Base, RowMetadataMixin):
     )
 
 
-class DrugStrength(Base, RowMetadataMixin):
+class DrugStrength(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugStrength)
 
     drug_concept_id: Mapped[UUID] = create_mapped_column(
@@ -328,7 +328,7 @@ class DrugStrength(Base, RowMetadataMixin):
     )
 
 
-class SourceToConceptMap(Base, RowMetadataMixin):
+class SourceToConceptMap(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
 
     source_code: Mapped[str] = create_mapped_column(
@@ -363,7 +363,7 @@ class SourceToConceptMap(Base, RowMetadataMixin):
     )
 
 
-class Metadata(Base, RowMetadataMixin):
+class Metadata(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Metadata)
 
     metadata_concept_id: Mapped[UUID] = create_mapped_column(
@@ -390,7 +390,7 @@ class Metadata(Base, RowMetadataMixin):
     )
 
 
-class CareSite(Base, RowMetadataMixin):
+class CareSite(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CareSite)
 
     care_site_id: Mapped[UUID] = create_mapped_column(
@@ -416,7 +416,7 @@ class CareSite(Base, RowMetadataMixin):
     )
 
 
-class Provider(Base, RowMetadataMixin):
+class Provider(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Provider)
 
     provider_id: Mapped[UUID] = create_mapped_column(
@@ -456,7 +456,7 @@ class Provider(Base, RowMetadataMixin):
     )
 
 
-class Person(Base, DataLineageMixin, RowMetadataMixin):
+class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Person)
 
     person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Person, "person_id")
@@ -522,7 +522,7 @@ class Person(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ObservationPeriod(Base, DataLineageMixin, RowMetadataMixin):
+class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ObservationPeriod)
 
     observation_period_id: Mapped[UUID] = create_mapped_column(
@@ -548,7 +548,7 @@ class ObservationPeriod(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class PayerPlanPeriod(Base, DataLineageMixin, RowMetadataMixin):
+class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
 
     payer_plan_period_id: Mapped[UUID] = create_mapped_column(
@@ -616,7 +616,7 @@ class PayerPlanPeriod(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class VisitOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.VisitOccurrence)
 
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -672,7 +672,7 @@ class VisitOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class VisitDetail(Base, DataLineageMixin, RowMetadataMixin):
+class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.VisitDetail)
 
     visit_detail_id: Mapped[UUID] = create_mapped_column(
@@ -734,7 +734,7 @@ class VisitDetail(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ConditionOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConditionOccurrence)
 
     condition_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -793,7 +793,7 @@ class ConditionOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ProcedureOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ProcedureOccurrence)
 
     procedure_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -843,7 +843,7 @@ class ProcedureOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DrugExposure(Base, DataLineageMixin, RowMetadataMixin):
+class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugExposure)
 
     drug_exposure_id: Mapped[UUID] = create_mapped_column(
@@ -921,7 +921,7 @@ class DrugExposure(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DeviceExposure(Base, DataLineageMixin, RowMetadataMixin):
+class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DeviceExposure)
 
     device_exposure_id: Mapped[UUID] = create_mapped_column(
@@ -977,7 +977,7 @@ class DeviceExposure(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Measurement(Base, DataLineageMixin, RowMetadataMixin):
+class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Measurement)
 
     measurement_id: Mapped[UUID] = create_mapped_column(
@@ -1048,7 +1048,7 @@ class Measurement(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Observation(Base, DataLineageMixin, RowMetadataMixin):
+class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Observation)
 
     observation_id: Mapped[UUID] = create_mapped_column(
@@ -1122,7 +1122,7 @@ class Observation(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Specimen(Base, DataLineageMixin, RowMetadataMixin):
+class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Specimen)
 
     specimen_id: Mapped[UUID] = create_mapped_column(
@@ -1179,7 +1179,7 @@ class Specimen(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Note(Base, DataLineageMixin, RowMetadataMixin):
+class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Note)
 
     note_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "note_id")
@@ -1224,7 +1224,7 @@ class Note(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ConditionEra(Base, DataLineageMixin, RowMetadataMixin):
+class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.ConditionEra)
 
     condition_era_id: Mapped[UUID] = create_mapped_column(
@@ -1247,7 +1247,7 @@ class ConditionEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DrugEra(Base, DataLineageMixin, RowMetadataMixin):
+class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DrugEra)
 
     drug_era_id: Mapped[UUID] = create_mapped_column(
@@ -1277,7 +1277,7 @@ class DrugEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DoseEra(Base, DataLineageMixin, RowMetadataMixin):
+class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.DoseEra)
 
     dose_era_id: Mapped[UUID] = create_mapped_column(
@@ -1301,7 +1301,7 @@ class DoseEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class NoteNlp(Base, DataLineageMixin, RowMetadataMixin):
+class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.NoteNlp)
 
     note_nlp_id: Mapped[UUID] = create_mapped_column(
@@ -1340,7 +1340,7 @@ class NoteNlp(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Cost(Base, DataLineageMixin, RowMetadataMixin):
+class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Cost)
 
     cost_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "cost_id")
@@ -1393,7 +1393,7 @@ class Cost(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class LocationHistory(Base, DataLineageMixin, RowMetadataMixin):
+class LocationHistory(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.LocationHistory)
 
     location_id: Mapped[UUID] = create_mapped_column(
@@ -1425,7 +1425,7 @@ class LocationHistory(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class SurveyConduct(Base, DataLineageMixin, RowMetadataMixin):
+class SurveyConduct(Base, DataLineageMixin, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SurveyConduct)
 
     survey_conduct_id: Mapped[UUID] = create_mapped_column(
@@ -1502,7 +1502,7 @@ class SurveyConduct(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class FactRelationship(Base, RowMetadataMixin):
+class FactRelationship(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.FactRelationship)
 
     domain_concept_id_1: Mapped[UUID] = create_mapped_column(
@@ -1525,7 +1525,7 @@ class FactRelationship(Base, RowMetadataMixin):
     )
 
 
-class MeasurementRelation(Base, RowMetadataMixin):
+class MeasurementRelation(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.MeasurementRelation)
 
     measurement_relation_id: Mapped[UUID] = create_mapped_column(

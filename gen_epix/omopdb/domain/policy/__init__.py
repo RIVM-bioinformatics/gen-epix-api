@@ -1,14 +1,11 @@
 from gen_epix.commondb.domain.policy import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.policy.abac import (
+from gen_epix.commondb.domain.policy import (
     BaseReadOrganizationResultsOnlyPolicy as BaseReadOrganizationResultsOnlyPolicy,
 )
-from gen_epix.commondb.domain.policy.abac import (
+from gen_epix.commondb.domain.policy import (
     BaseReadSelfResultsOnlyPolicy as BaseReadSelfResultsOnlyPolicy,
 )
-from gen_epix.commondb.domain.policy.abac import (
-    BaseUpdateUserPolicy as BaseUpdateUserPolicy,
-)
-from gen_epix.omopdb.domain.policy.permission import COMMON_ROLE_MAP as COMMON_ROLE_MAP
+from gen_epix.commondb.domain.policy import BaseUpdateUserPolicy as BaseUpdateUserPolicy
 from gen_epix.omopdb.domain.policy.permission import RoleGenerator as RoleGenerator
