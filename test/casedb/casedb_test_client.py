@@ -1315,7 +1315,9 @@ class CasedbTestClient(TestClient):
         email: str | None = None,
         phone: str | None = None,
     ) -> model.Contact:
-        user: model.User = self._get_obj(model.User, user_or_str)  # type:ignore[arg-type]
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[arg-type]
         site: model.Site = self._get_obj(model.Site, site)  # type:ignore[arg-type]
         contact = self.handle(
             command.ContactCrudCommand(

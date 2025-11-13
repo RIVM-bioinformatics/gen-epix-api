@@ -13,7 +13,6 @@ from gen_epix.fastapp.services.auth.util import get_name_from_claims
 
 class UserManager(BaseUserManager):
     DEFAULT_KEY_CLAIM = "__key__"
-
     DEFAULT_NAME_CLAIMS: list[str | list[str]] = [
         "name",
         ["first_name", "last_name"],
