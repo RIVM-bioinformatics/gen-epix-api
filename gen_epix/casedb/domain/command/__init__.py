@@ -125,12 +125,6 @@ from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmClassCrudCommand as TreeAlgorithmClassCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
-    RetrieveLibraryPrepProtocolsCommand as RetrieveLibraryPrepProtocolsCommand,
-)
-from gen_epix.casedb.domain.command.case import (
-    RetrieveAssemblyProtocolsCommand as RetrieveAssemblyProtocolsCommand,
-)
-from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (

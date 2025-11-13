@@ -94,7 +94,7 @@ class ServiceException(DomainException):
         super().__init__(message)
         if http_props is None:
             http_props = {}
-        self._init_http_props(http_props, 401)
+        self._init_http_props(http_props, 500)
 
     def get_http_status_code(self) -> int:
         return int(self.http_props["status_code"])

@@ -346,7 +346,6 @@ class Run:
     def test_casedb_unit(self) -> None:
         import pytest
 
-        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [

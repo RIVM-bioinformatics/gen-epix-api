@@ -7,9 +7,7 @@ from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.fastapp import App
-from gen_epix.seqdb.api.organization import (
-    ApiPermission,
-)
+from gen_epix.seqdb.api.organization import ApiPermission
 from gen_epix.seqdb.api.seq import create_seq_endpoints
 from gen_epix.seqdb.domain import enum
 
