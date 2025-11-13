@@ -6,9 +6,7 @@ from gen_epix.casedb.api.abac import create_abac_endpoints
 from gen_epix.casedb.api.case import create_case_endpoints
 from gen_epix.casedb.api.geo import create_geo_endpoints
 from gen_epix.casedb.api.ontology import create_ontology_endpoints
-from gen_epix.casedb.api.organization import (
-    ApiPermission,
-)
+from gen_epix.casedb.api.organization import ApiPermission
 from gen_epix.casedb.api.subject import create_subject_endpoints
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.api.auth import create_auth_endpoints
