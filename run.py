@@ -159,14 +159,15 @@ class Run:
                 "test/transform/unit",
                 "test/fastapp/unit",
                 "test/commondb/unit",
+                "test/commondb/integration",
                 "test/casedb/unit",
                 "test/casedb/integration",
+                # "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
                 "test/general/docs",
                 # "test/general/code",
-                # "test/seqdb/unit",
                 # Not normally included, uncomment if needed
                 # "test/casedb/performance",
                 # "test/seqdb/performance",
@@ -572,6 +573,26 @@ class Run:
             ]
         )
 
+    def test_general_docs(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/docs",
+            ]
+        )
+
+    def test_general_code(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code",
+            ]
+        )
+
     def test_end_to_end(self) -> None:
         import pytest
 
@@ -600,26 +621,6 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/end_to_end/client_credential_flow",
-            ]
-        )
-
-    def test_general_docs(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/docs",
-            ]
-        )
-
-    def test_general_code(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/general/code",
             ]
         )
 

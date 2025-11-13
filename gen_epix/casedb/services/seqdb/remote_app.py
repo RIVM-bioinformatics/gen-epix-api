@@ -150,7 +150,7 @@ class SeqdbRemoteApp(RemoteApp):
                 # No expiration claim, valid forever
                 self._oauth_header_cache = (int(datetime.max.timestamp()), headers)
             else:
-                self._oauth_headers_cache = (exp, headers)
+                self._oauth_header_cache = (exp, headers)
             return headers
         raise exc.InitializationServiceError(
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
@@ -172,19 +172,14 @@ class SeqdbRemoteApp(RemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-        with httpx.Client(verify=self.ssl_context) as client:
+        with httpx.Client() as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
                 headers=headers,
             )
-            try:
-                response.raise_for_status()
-            except httpx.HTTPError as e:
-                raise exc.ServiceException(
-                    "Failed to retrieve phylogenetic tree from seqdb service"
-                ) from e
-        data = response.json()
+            response.raise_for_status()
+            data = response.json()
         if not data:
             return None
         return seqdb_model.PhylogeneticTree(**data)

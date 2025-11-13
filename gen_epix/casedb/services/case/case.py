@@ -1596,7 +1596,9 @@ class CaseService(BaseCaseService):
 
         return library_prep_protocols
 
-    def retrieve_assembly_protocols(self, cmd: command.RetrieveAssemblyProtocolsCommand) -> list[model.AssemblyProtocol]:
+    def retrieve_assembly_protocols(
+        self, cmd: command.RetrieveAssemblyProtocolsCommand
+    ) -> list[model.AssemblyProtocol]:
         user, repository = self._get_user_and_repository(cmd)
         assert isinstance(user, model.User) and user.id is not None
 
