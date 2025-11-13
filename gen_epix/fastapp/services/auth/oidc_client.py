@@ -249,7 +249,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     async def get_claims_from_jwt(
         self, jwt_token: str
-    ) -> dict[str, str | int | bool | list[str] | None] | None:
+    ) -> dict[str, str | int | bool | list[str]] | None:
         # Decode token without verifying signature to make sure this token is generated
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
