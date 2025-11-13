@@ -332,7 +332,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                         key_id=key_id,
                     ).dumps()
                 )
-            await self._load_keys()
+            self._load_keys()
             key = self._signing_keys.get(key_id)
             if not key:
                 if self.logger:
@@ -634,13 +634,13 @@ class OidcClient(IdpClient, OpenIdConnect):
             public=self.server_cfg.public,
         )
 
-    async def _load_keys(self) -> None:
+    def _load_keys(self) -> None:
         jwks_uri = self.server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
-            async with httpx.AsyncClient(verify=self.ssl_context) as client:
+            with httpx.Client(verify=self.ssl_context) as client:
                 # get keys
-                response = await client.get(jwks_uri)
+                response = client.get(jwks_uri)
                 response.raise_for_status()
                 response_dict = response.json()
 
