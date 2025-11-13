@@ -159,13 +159,15 @@ class Run:
                 "test/transform/unit",
                 "test/fastapp/unit",
                 "test/commondb/unit",
+                "test/commondb/integration",
                 "test/casedb/unit",
                 "test/casedb/integration",
-                "test/common/",
                 # "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
+                "test/general/docs",
+                # "test/general/code",
                 # Not normally included, uncomment if needed
                 # "test/casedb/performance",
                 # "test/seqdb/performance",
@@ -202,8 +204,10 @@ class Run:
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
+                "test/commondb/integration",
                 "test/casedb/integration",
-                # "test/seqdb/integration",
+                "test/seqdb/integration",
+                "test/omopdb/integration",
             ]
         )
 
@@ -279,13 +283,23 @@ class Run:
             ]
         )
 
-    def test_docs_unit(self) -> None:
+    def test_fastapp_performance(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/docs/unit/",
+                "test/fastapp/performance",
+            ]
+        )
+
+    def test_fastapp_performance_repository(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/performance/repository",
             ]
         )
 
@@ -329,36 +343,10 @@ class Run:
             ]
         )
 
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/build_db",
-            ]
-        )
-
-    def test_fastapp_performance(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/performance",
-            ]
-        )
-
-    def test_fastapp_performance_repository(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/fastapp/performance/repository",
-            ]
-        )
-
     def test_casedb_unit(self) -> None:
         import pytest
 
+        Run.set_env_variables(AppType.ALL, AppConfigType.NO_AUTH)
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
@@ -556,16 +544,6 @@ class Run:
             ]
         )
 
-    def test_seqdb_integration_content(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/integration/content",
-            ]
-        )
-
     def test_omopdb_unit(self) -> None:
         import pytest
 
@@ -593,6 +571,26 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/omopdb/integration/build_db",
+            ]
+        )
+
+    def test_general_docs(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/docs",
+            ]
+        )
+
+    def test_general_code(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code",
             ]
         )
 
@@ -629,13 +627,15 @@ class Run:
 
     ## Other
 
-    def other_general_generate_uuids(self, n_rows: int = 1000, n_cols: int = 100):
+    def other_general_generate_uuids(
+        self, n_rows: int = 1000, n_cols: int = 100
+    ) -> None:
         from test.test_client.util import generate_uuids
 
         generate_uuids(n_rows=n_rows, n_cols=n_cols)
 
     def other_general_run_linters(self) -> None:
-        from test.linter import Linter
+        from test.test_client.linter import Linter
 
         file_basename = Path(__file__).parent / "test" / "output" / "linter"
 
@@ -643,7 +643,7 @@ class Run:
         linter.run_all(file_basename=file_basename)
 
     def other_general_run_pylint(self) -> None:
-        from test.linter import Linter
+        from test.test_client.linter import Linter
 
         filter_on_codes = {
             "W0102",
@@ -668,13 +668,13 @@ class Run:
 
     def other_general_analyse_pylint_code_impact(self) -> None:
 
-        from test.linter import Linter
+        from test.test_client.linter import Linter
 
         linter = Linter()
         linter.analyse_pylint_code_impact()
 
     def other_general_run_mypy(self) -> None:
-        from test.linter import Linter
+        from test.test_client.linter import Linter
 
         filter_on_codes = {
             "no-untyped-def",

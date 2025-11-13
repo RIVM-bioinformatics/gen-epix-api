@@ -7,6 +7,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import exc
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.model.system import PackageMetadata
 from gen_epix.fastapp import App, LogLevel
@@ -45,15 +46,15 @@ class LicensesResponseBody(PydanticBaseModel):
 def create_system_endpoints(
     router: APIRouter | FastAPI,
     app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     service_type: enum.ServiceType = enum.ServiceType.SYSTEM,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
 
     assert handle_exception
+    app_impl: AppImplDetails = app.impl
+    registered_user_dependency = app_impl.registered_user_dependency
+    idp_user_dependency = app_impl.idp_user_dependency
 
     # Health endpoint
     @router.get(
@@ -102,7 +103,7 @@ def create_system_endpoints(
                     log_item.command_id,
                     None,
                     add_debug_info=False,
-                    user_id=user_id,  # type: ignore[arg-type]
+                    user_id=user_id,
                     **log_item.model_dump(
                         exclude_none=True, exclude={"level", "command_id"}
                     ),

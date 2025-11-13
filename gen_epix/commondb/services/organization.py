@@ -3,9 +3,11 @@ from typing import Any, Type
 
 from cachetools import TTLCache, cached
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
@@ -19,6 +21,21 @@ class OrganizationService(BaseOrganizationService):
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )
+
+    def __init__(
+        self,
+        app: App,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(app, **kwargs)
+        app_impl: AppImplDetails = app.impl
+        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_invitation_class: Type[model.UserInvitation] = (
+            app_impl.get_mapped_class(model.UserInvitation)
+        )
+        self.user_invitation_constraints_class: Type[
+            model.UserInvitationConstraints
+        ] = app_impl.get_mapped_class(model.UserInvitationConstraints)
 
     def crud(
         self,
@@ -340,15 +357,13 @@ class OrganizationService(BaseOrganizationService):
                 site_ids = {x.id for x in sites}
                 contacts = [x for x in contacts if x.site_id in site_ids]
             elif cmd.contact_ids:
-                contacts = (
-                    repository.crud(  # type: ignore[assignment]
-                        uow,
-                        user.id,
-                        model.Contact,
-                        None,
-                        cmd.contact_ids,
-                        CrudOperation.READ_ALL,
-                    ),
+                contacts = repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user.id,
+                    model.Contact,
+                    None,
+                    cmd.contact_ids,
+                    CrudOperation.READ_SOME,
                 )
             else:
                 raise AssertionError

@@ -3,6 +3,7 @@ from typing import Any, Callable, NoReturn
 from fastapi import APIRouter, FastAPI
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 
@@ -10,13 +11,12 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 def create_abac_endpoints(
     router: APIRouter | FastAPI,
     app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
+    app_impl: AppImplDetails = app.impl
+    registered_user_dependency = app_impl.registered_user_dependency
 
     @router.get(
         "/retrieve_organization_admin_name_emails",

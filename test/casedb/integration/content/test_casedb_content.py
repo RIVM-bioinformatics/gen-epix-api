@@ -7,7 +7,9 @@ import pytest
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
+from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
@@ -53,6 +55,7 @@ class TestContent:
         # profiler.start()
 
         app = env.app
+        app_impl: AppImplDetails = app.impl
         # Get root user
         root_user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)
         env._set_obj(root_user)
@@ -104,7 +107,7 @@ class TestContent:
             x
             for x in users
             if x.id in {y.user_id for y in user_access_case_policies}
-            and enum.Role.ORG_USER in x.roles
+            and app_impl.role_map[CommonRole.ORG_USER] in x.roles
             and len(x.roles) == 1
         ][0]
         org_user_permissions: set[Permission] = app.handle(
@@ -115,7 +118,7 @@ class TestContent:
             key="new_user@example.com",
             email="new_user@example.com",
             organization_id=org_admin_user.organization_id,
-            roles={enum.Role.ORG_USER},
+            roles={app_impl.role_map[CommonRole.ORG_USER]},
         )
         new_user_invitation: model.UserInvitation = app.handle(
             command.InviteUserCommand(

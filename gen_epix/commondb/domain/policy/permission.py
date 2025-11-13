@@ -1,15 +1,15 @@
 from enum import Enum
 from typing import Type
 
+from gen_epix import fastapp
 from gen_epix.commondb.domain import command
-from gen_epix.commondb.domain.command import Command
-from gen_epix.commondb.domain.enum import Role
+from gen_epix.commondb.domain.enum import Role, RoleSet
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.services.rbac import BaseRbacService
 
 # Permissions on which no RBAC is required
-NO_RBAC_PERMISSIONS: set[tuple[type[Command], PermissionType]] = {
+NO_RBAC_PERMISSIONS: set[tuple[type[fastapp.Command], PermissionType]] = {
     # Used to create a user and hence no existing user can be included in the
     # command.
     (command.RegisterInvitedUserCommand, PermissionType.EXECUTE),
@@ -29,8 +29,12 @@ NO_RBAC_PERMISSIONS: set[tuple[type[Command], PermissionType]] = {
 
 class RoleGenerator:
 
+    COMMON_ROLE_ENUM_MAP: dict[Role, Enum] = {x: x for x in Role}
+
+    EXTRA_ROLE_SET_MAP: dict[Enum, set[Enum]] = {}
+
     ROLE_PERMISSION_SETS: dict[
-        Role, set[tuple[Type[command.Command], PermissionTypeSet]]
+        Enum, set[tuple[Type[fastapp.Command], PermissionTypeSet]]
     ] = {
         # TODO: remove UPDATE from association objects that do not have properties of their own such as CaseTypeSetMember
         Role.APP_ADMIN: {
@@ -94,7 +98,7 @@ class RoleGenerator:
 
     # Tree hierarchy of roles: each role can do everything the roles below it can do.
     # Hierarchy described here per role with union of all roles below it.
-    ROLE_HIERARCHY: dict[Role, set[Role]] = {
+    ROLE_HIERARCHY: dict[Enum, set[Enum]] = {
         Role.ROOT: {
             Role.APP_ADMIN,
             Role.ORG_ADMIN,
@@ -121,28 +125,98 @@ class RoleGenerator:
         ROLE_HIERARCHY, ROLE_PERMISSION_SETS  # type: ignore[arg-type]
     )
 
-
-def map_common_role_permission_sets(
-    role_map: dict[Enum, Enum],
-    command_map: dict[Type, Type],
-) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
-    role_permission_sets = RoleGenerator.ROLE_PERMISSION_SETS
-    mapped_role_permission_sets: dict[Enum, set[tuple[type, PermissionTypeSet]]] = {}
-    for role, permission_tuples in role_permission_sets.items():
-        mapped_role = role_map[role]
-        mapped_role_permission_sets.setdefault(mapped_role, set())
-        mapped_role_permission_sets[mapped_role].update(
-            {(command_map.get(x, x), y) for (x, y) in permission_tuples}
+    @staticmethod
+    def map_from_common_role_permission_sets(
+        common_role_enum_map: dict[Role, Enum],
+        command_map: dict[Type, Type],
+    ) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
+        """
+        Helper method to map common permissions described using the commondb
+        role enum and command classes to the same permissions described using
+        the domain role enum and command classes. This allows easy reuse of
+        common permission definitions across different domains.
+        """
+        role_permission_sets = RoleGenerator.ROLE_PERMISSION_SETS
+        mapped_role_permission_sets: dict[Enum, set[tuple[type, PermissionTypeSet]]] = (
+            {}
         )
-    return mapped_role_permission_sets
+        for role, permission_tuples in role_permission_sets.items():
+            mapped_role = common_role_enum_map[role]
+            mapped_role_permission_sets.setdefault(mapped_role, set())
+            mapped_role_permission_sets[mapped_role].update(
+                {(command_map.get(x, x), y) for (x, y) in permission_tuples}
+            )
+        return mapped_role_permission_sets
 
+    @staticmethod
+    def map_from_common_role_hierarchy(
+        common_role_enum_map: dict[Role, Enum],
+    ) -> dict[Enum, set[Enum]]:
+        """
+        Helper method to map common role hierarchy described using the commondb
+        role enum to the same role hierarchy described using the domain role
+        enum. This allows easy reuse of common role hierarchy definitions
+        across different domains.
+        """
+        mapped_role_hierarchy: dict[Enum, set[Enum]] = {}
+        for role, sub_roles in RoleGenerator.ROLE_HIERARCHY.items():
+            mapped_role = common_role_enum_map[role]
+            mapped_role_hierarchy.setdefault(mapped_role, set())
+            mapped_role_hierarchy[mapped_role].update(
+                {common_role_enum_map[x] for x in sub_roles}
+            )
+        return mapped_role_hierarchy
 
-def map_common_role_hierarchy(
-    role_map: dict[Enum, Enum],
-) -> dict[Enum, set[Enum]]:
-    mapped_role_hierarchy: dict[Enum, set[Enum]] = {}
-    for role, sub_roles in RoleGenerator.ROLE_HIERARCHY.items():
-        mapped_role = role_map[role]
-        mapped_role_hierarchy.setdefault(mapped_role, set())
-        mapped_role_hierarchy[mapped_role].update({role_map[x] for x in sub_roles})
-    return mapped_role_hierarchy
+    @classmethod
+    def get_role_map(cls) -> dict[Role | Enum, str]:
+        """
+        Get a mapping from domain role enum to role string value, whereby the
+        domain role enums are replaced with their commondb equivalent where
+        applicable. This allows use of commondb role enums in commondb code
+        while still providing correct role string values for the domain.
+        """
+        rev_role_enum_map = {y: x for x, y in cls.COMMON_ROLE_ENUM_MAP.items()}
+        enum_class = list(rev_role_enum_map.keys())[0].__class__
+        rev_role_enum_map.update(
+            {x: x for x in enum_class if x not in rev_role_enum_map}
+        )
+        return {y: x.value for x, y in rev_role_enum_map.items()}
+
+    @classmethod
+    def get_role_set_map(cls) -> dict[RoleSet | Enum, frozenset[str]]:
+        """
+        Get a mapping from domain role set enum to role set string value,
+        whereby the domain role set enums are replaced with their commondb
+        equivalent where applicable. This allows use of commondb role set enums
+        in commondb code while still providing correct role set string values
+        for the domain.
+        """
+        role_set_map: dict[RoleSet | Enum, frozenset[str]] = {}
+        for x in RoleSet:
+            role_set_map[x] = frozenset(
+                [cls.COMMON_ROLE_ENUM_MAP.get(y, y).value for y in x.value]
+            )
+        role_set_map.update(
+            {
+                x: frozenset([z.value for z in y])
+                for x, y in cls.EXTRA_ROLE_SET_MAP.items()
+            }
+        )
+        return role_set_map
+
+    @classmethod
+    def get_role_permissions_map(
+        cls,
+    ) -> dict[str, set[tuple[Type[fastapp.Command], PermissionType]]]:
+        """
+        Get a mapping from domain role string value to role permissions, whereby
+        the domain role enums are replaced with their commondb equivalent where
+        applicable. This allows use of commondb role enums in commondb code while
+        still providing correct role permissions for the domain.
+        """
+        role_permissions_map: dict[
+            str, set[tuple[Type[fastapp.Command], PermissionType]]
+        ] = {}
+        for role_enum, permission_tuples in cls.ROLE_PERMISSIONS.items():
+            role_permissions_map[role_enum.value] = permission_tuples
+        return role_permissions_map

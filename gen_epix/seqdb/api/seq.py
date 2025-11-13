@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
@@ -41,13 +42,12 @@ class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
 def create_seq_endpoints(
     router: APIRouter | FastAPI,
     app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
+    app_impl: AppImplDetails = app.impl
+    registered_user_dependency = app_impl.registered_user_dependency
 
     @router.post(
         "/retrieve/phylogenetic_tree",
@@ -56,7 +56,9 @@ def create_seq_endpoints(
         description=command.RetrievePhylogeneticTreeCommand.__doc__,
     )
     async def retrieve__phylogenetic_tree(
-        user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
+        # user: registered_user_dependency, request_body: RetrievePhylogeneticTreeRequestBody  # type: ignore
+        user: registered_user_dependency,
+        request_body: RetrievePhylogeneticTreeRequestBody,  # type: ignore
     ) -> model.PhylogeneticTree:
         try:
             retval: model.PhylogeneticTree = app.handle(

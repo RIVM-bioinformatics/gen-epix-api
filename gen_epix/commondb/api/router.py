@@ -5,21 +5,16 @@ from fastapi import APIRouter
 from gen_epix.commondb.api.auth import create_auth_endpoints
 from gen_epix.commondb.api.organization import (
     ApiPermission,
-    UpdateUserRequestBody,
-    UserInvitationRequestBody,
     create_organization_endpoints,
 )
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import enum
 from gen_epix.fastapp import App
 
 
 def create_routers(
     app: App | None = None,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     router_kwargs: dict = {},
 ) -> list[APIRouter]:
@@ -41,13 +36,6 @@ def create_routers(
             "create_endpoints_fn": create_organization_endpoints,
             "endpoints_function_kwargs": {
                 "service_type": enum.ServiceType.ORGANIZATION,
-                "user_class": model.User,
-                "user_invitation_class": model.UserInvitation,
-                "invite_user_command_class": command.InviteUserCommand,
-                "retrieve_invite_user_constraints_command_class": command.RetrieveInviteUserConstraintsCommand,
-                "update_user_command_class": command.UpdateUserCommand,
-                "user_invitation_request_body_class": UserInvitationRequestBody,
-                "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,
             },
         },
@@ -68,9 +56,6 @@ def create_routers(
         create_endpoints_fn(
             router,
             app,
-            registered_user_dependency=registered_user_dependency,
-            new_user_dependency=new_user_dependency,
-            idp_user_dependency=idp_user_dependency,
             handle_exception=handle_exception,
             **endpoints_function_kwargs,
         )

@@ -57,7 +57,6 @@ class SeqdbRemoteApp(RemoteApp):
             oauth_token_refresh_margin or self.DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN
         )
 
-        # Force protocol to HTTP regardless of input
         super().__init__(
             DOMAIN,
             host,
@@ -87,7 +86,6 @@ class SeqdbRemoteApp(RemoteApp):
                 raise exc.InitializationServiceError(
                     "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
-            ssl_ctx = self.ssl_context if http_protocol == HttpProtocol.HTTPS else None
             oidc_client = OidcClient(
                 server_cfg=OidcServerCfg(
                     name="",
@@ -98,7 +96,7 @@ class SeqdbRemoteApp(RemoteApp):
                     token_endpoint=oauth_token_endpoint,
                     scope=oauth_scope,
                 ),
-                ssl_context=ssl_ctx,
+                ssl_context=self.ssl_context,
                 logger=logger,
                 log_item_class=log_item_class,
             )
@@ -164,7 +162,6 @@ class SeqdbRemoteApp(RemoteApp):
     ) -> seqdb_model.PhylogeneticTree | None:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
-        print(f"[SeqdbRemoteApp] Service call URL: {route} (protocol: HTTP)")
 
         # Create request body matching seqdb API expectations
 

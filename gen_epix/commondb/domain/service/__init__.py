@@ -6,3 +6,7 @@ from gen_epix.commondb.domain.service.rbac import BaseRbacService as BaseRbacSer
 from gen_epix.commondb.domain.service.system import (
     BaseSystemService as BaseSystemService,
 )
+from gen_epix.commondb.domain.service.user_manager import (
+    BaseUserManager as BaseUserManager,
+)
+from gen_epix.fastapp.services.auth import BaseAuthService as BaseAuthService

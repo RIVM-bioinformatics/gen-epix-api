@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Any, Type
+from typing import Annotated, Any
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
@@ -66,7 +66,7 @@ class AuthService(BaseAuthService):
 
     def create_user_dependencies(
         self,
-    ) -> tuple[Type[model.User], Type[model.User], Type[IDPUser]]:
+    ) -> tuple[model.User, model.User, IDPUser]:
 
         if not self._idp_clients:
             # No authentication -> create/retrieve root user
@@ -103,15 +103,15 @@ class AuthService(BaseAuthService):
                     "Unable to create user due to missing header or claims"
                 )
 
-            registered_user_dependency = Annotated[
+            registered_user_dependency: model.User = Annotated[  # type: ignore
                 model.User,
                 Security(dummy_get_existing_user, scopes=["openid", "profile"]),
             ]
-            new_user_dependency = Annotated[
+            new_user_dependency: model.User = Annotated[  # type: ignore
                 model.User,
                 Security(dummy_get_new_user, scopes=["openid", "profile"]),
             ]
-            idp_user_dependency = Annotated[
+            idp_user_dependency: IDPUser = Annotated[  # type: ignore
                 IDPUser,
                 Security(dummy_get_new_user, scopes=["openid", "profile"]),
             ]

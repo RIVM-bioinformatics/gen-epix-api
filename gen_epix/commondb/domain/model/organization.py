@@ -58,7 +58,6 @@ class User(fastapp.User, Model):
             }
         ),
     )
-    ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
@@ -73,7 +72,7 @@ class User(fastapp.User, Model):
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
     )
-    roles: set[enum.Role] = Field(description="The roles of the user", min_length=1)
+    roles: set[str] = Field(description="The roles of the user", min_length=1)
     organization_id: UUID = Field(
         description="The ID of the organization of the user. FOREIGN KEY"
     )
@@ -86,24 +85,20 @@ class User(fastapp.User, Model):
 
     @field_validator("roles", mode="before")
     @classmethod
-    def _validate_roles(cls, value: set[Enum] | list[str] | str) -> set[Enum]:
+    def _validate_roles(cls, value: set[str] | list[str] | str) -> set[str]:
         """
-        Validate and convert roles representation to a set[Role]. When given as a
-        string, it is assumed to be a JSON list of Role values.
+        Validate and convert roles representation to a set[str]. When given as a
+        string, it is assumed to be a JSON list.
         """
         if isinstance(value, str):
-            return {cls.ROLE_ENUM[x] for x in json.loads(value)}
+            return set(json.loads(value))
         if isinstance(value, list):
-            return {cls.ROLE_ENUM[x] for x in value}
+            return set(value)
         return value
 
-    # @field_serializer("id", mode="plain")
-    # def _serialize_id(self, value: UUID | None) -> UUID | None:
-    #     return value
-
     @field_serializer("roles", mode="plain")
-    def _serialize_roles(self, value: set[Enum]) -> list[str]:
-        return [x.value for x in value]
+    def _serialize_roles(self, value: set[str]) -> list[str]:
+        return list(value)
 
 
 class OrganizationSet(Model):
@@ -299,7 +294,7 @@ class UserInvitation(Model):
     expires_at: datetime.datetime = Field(
         description="The expiry date of the invitation"
     )
-    roles: set[enum.Role] = Field(
+    roles: set[str] = Field(
         description="The initial roles that the new user will have", min_length=1
     )
     invited_by_user_id: UUID = Field(
@@ -317,20 +312,20 @@ class UserInvitation(Model):
 
     @field_validator("roles", mode="before")
     @classmethod
-    def _validate_roles(cls, value: set[Enum] | list[str] | str) -> set[Enum]:
+    def _validate_roles(cls, value: set[str] | list[str] | str) -> set[str]:
         """
-        Validate and convert roles representation to a set[Role]. When given as a
-        string, it is assumed to be a JSON list of Role values.
+        Validate and convert roles representation to a set[str]. When given as a
+        string, it is assumed to be a JSON list.
         """
         if isinstance(value, str):
-            return {cls.ROLE_ENUM[x] for x in json.loads(value)}
+            return set(json.loads(value))
         if isinstance(value, list):
-            return {cls.ROLE_ENUM[x] for x in value}
+            return set(value)
         return value
 
     @field_serializer("roles", mode="plain")
-    def _serialize_roles(self, value: set[Enum]) -> list[str]:
-        return [x.value for x in value]
+    def _serialize_roles(self, value: set[str]) -> list[str]:
+        return list(value)
 
 
 class UserInvitationConstraints(Model):
@@ -343,7 +338,7 @@ class UserInvitationConstraints(Model):
         persistable=False,
     )
     ROLE_ENUM: ClassVar[Type[Enum]] = enum.Role
-    roles: set[enum.Role] = Field(
+    roles: set[str] = Field(
         description="The roles that the user may be assigned by the inviting user."
     )
     organization_ids: set[UUID] = Field(

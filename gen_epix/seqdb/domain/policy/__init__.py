@@ -10,5 +10,4 @@ from gen_epix.commondb.domain.policy.abac import (
 from gen_epix.commondb.domain.policy.abac import (
     BaseUpdateUserPolicy as BaseUpdateUserPolicy,
 )
-from gen_epix.seqdb.domain.policy.permission import COMMON_ROLE_MAP as COMMON_ROLE_MAP
 from gen_epix.seqdb.domain.policy.permission import RoleGenerator as RoleGenerator

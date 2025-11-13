@@ -1,8 +1,8 @@
 import datetime
-from enum import Enum
 from typing import Any, Type
 from uuid import UUID
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, exc, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.service.rbac import BaseRbacService
@@ -23,8 +23,6 @@ class UserManager(BaseUserManager):
 
     def __init__(
         self,
-        user_class: Type[model.User],
-        user_invitation_class: Type[model.UserInvitation],
         organization_service: BaseOrganizationService,
         rbac_service: BaseRbacService,
         root_cfg: dict[str, dict[str, str]],
@@ -32,23 +30,18 @@ class UserManager(BaseUserManager):
         key_claim: str | None = None,
         name_claims: list[str | list[str]] | None = None,
     ):
-        self._user_class = user_class
-        self._user_invitation_class = user_invitation_class
-        self._role_enum: Type[Enum] = user_class.ROLE_ENUM
-        if "ROOT" not in set(x.value for x in self._role_enum):
-            raise exc.InitializationServiceError(
-                "Root role is not defined in the user model"
-            )
-        if "GUEST" not in set(x.value for x in self._role_enum):
-            raise exc.InitializationServiceError(
-                "Guest role is not defined in the user model"
-            )
-        self._root_role = self._role_enum["ROOT"]
-        self._guest_role = self._role_enum["GUEST"]
+        # Assign input properties
         self._organization_service = organization_service
         self._rbac_service = rbac_service
         self._key_claim = key_claim or self.DEFAULT_KEY_CLAIM
         self._name_claims = name_claims or self.DEFAULT_NAME_CLAIMS
+
+        # Derive some properties
+        app_impl: AppImplDetails = organization_service.app.impl
+        self._user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+        self._user_invitation_class: Type[model.UserInvitation] = (
+            app_impl.get_mapped_class(model.UserInvitation)
+        )
 
         # Generate root model objs
         self._root: dict = {}
@@ -61,7 +54,7 @@ class UserManager(BaseUserManager):
             )
         if "roles" not in root_cfg["user"]:
             root_cfg["user"]["roles"] = [  # type:ignore[assignment]
-                self._root_role.name
+                self._rbac_service.root_role
             ]
         self._root["user"] = self._user_class(
             is_active=True,
@@ -76,9 +69,7 @@ class UserManager(BaseUserManager):
             self._automatic_new_user["organization"] = dict(
                 automatic_new_user_cfg["organization"]
             )
-            self._automatic_new_user["roles"] = {
-                self._role_enum[x] for x in automatic_new_user_cfg["roles"]
-            }
+            self._automatic_new_user["roles"] = set(automatic_new_user_cfg["roles"])
             if "id" not in self._automatic_new_user["organization"]:
                 raise exc.InitializationServiceError(
                     "Automatic new user organization ID is not set in the configuration"
@@ -95,7 +86,7 @@ class UserManager(BaseUserManager):
         return self._organization_service.generate_id()  # type:ignore[return-value]
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
-        return claims.get(self.DEFAULT_KEY_CLAIM)
+        return claims.get(self._key_claim)
 
     def get_user_name_from_claims(self, claims: dict[str, Any]) -> str | None:
         return get_name_from_claims(claims, self._name_claims)
@@ -108,7 +99,7 @@ class UserManager(BaseUserManager):
         roles = (
             self._automatic_new_user["roles"]
             if self._automatic_new_user
-            else {self._guest_role}
+            else {self._rbac_service.guest_role}
         )
         organization_id = (
             self._automatic_new_user["organization"]["id"]
@@ -134,7 +125,7 @@ class UserManager(BaseUserManager):
         return user.key == claims.get(self._key_claim)
 
     def is_root_user(self, user: model.User) -> bool:  # type:ignore[override]
-        return self._root_role in user.roles
+        return self._rbac_service.root_role in user.roles
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:
         assert self._organization_service.repository
@@ -189,9 +180,9 @@ class UserManager(BaseUserManager):
                         user.roles.update(value)
                     else:
                         setattr(user, key, value)
-                if self._root_role not in user.roles:
+                if self._rbac_service.root_role not in user.roles:
                     is_updated = True
-                    user.roles.add(self._root_role)
+                    user.roles.add(self._rbac_service.root_role)
                 if is_updated:
                     user = self._organization_service.repository.crud(  # type:ignore[assignment]
                         uow,
