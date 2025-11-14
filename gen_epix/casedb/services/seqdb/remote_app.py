@@ -181,7 +181,7 @@ class SeqdbRemoteApp(RemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
-        with httpx.Client() as client:
+        with httpx.Client(verify=self.ssl_context) as client:
             response = client.post(
                 route,
                 json=json.loads(request_body.model_dump_json()),
