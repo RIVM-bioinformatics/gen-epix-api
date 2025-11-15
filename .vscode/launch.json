@@ -359,6 +359,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.unit.seqdb_remote_app",
             "type": "debugpy",
             "request": "launch",
