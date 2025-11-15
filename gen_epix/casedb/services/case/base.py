@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Callable, Iterable, Type
+from typing import Any, Iterable, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -66,26 +66,26 @@ class BaseCaseService(DomainBaseCaseService):
         Override the base crud method to apply ABAC restrictions and cascade delete
         where necessary
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def validate_cases(
         self, cmd: command.ValidateCasesCommand
     ) -> model.CaseValidationReport:
         """Validate cases according to case type rules."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
         """Create new cases with validation and authorization checks."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
         """Create a new case set with associated data collection links."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_complete_case_type(
@@ -93,7 +93,7 @@ class BaseCaseService(DomainBaseCaseService):
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
         """Retrieve complete case type information including all related metadata."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_case_type_stats(
@@ -101,7 +101,7 @@ class BaseCaseService(DomainBaseCaseService):
         cmd: command.RetrieveCaseTypeStatsCommand,
     ) -> list[model.CaseTypeStat]:
         """Retrieve statistical information about case types."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_case_set_stats(
@@ -109,21 +109,21 @@ class BaseCaseService(DomainBaseCaseService):
         cmd: command.RetrieveCaseSetStatsCommand,
     ) -> list[model.CaseSetStat]:
         """Retrieve statistical information about case sets."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
     ) -> list[UUID]:
         """Retrieve case IDs based on query criteria with ABAC filtering."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_cases_by_id(
         self, cmd: command.RetrieveCasesByIdCommand
     ) -> list[model.Case]:
         """Retrieve cases by their IDs with content filtering."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_case_or_set_rights(
@@ -131,14 +131,14 @@ class BaseCaseService(DomainBaseCaseService):
         cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
     ) -> list[model.CaseRights] | list[model.CaseSetRights]:
         """Retrieve access rights for cases or case sets."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
         """Retrieve phylogenetic tree for a set of cases."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_genetic_sequence_by_case(
@@ -146,14 +146,14 @@ class BaseCaseService(DomainBaseCaseService):
         cmd: command.RetrieveGeneticSequenceByCaseCommand,
     ) -> list[model.GeneticSequence]:
         """Retrieve genetic sequences associated with cases."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
     ) -> Iterable[str]:
         """Return a streaming iterable of FASTA formatted lines for genetic sequences."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _read_association_with_valid_ids(
@@ -170,7 +170,7 @@ class BaseCaseService(DomainBaseCaseService):
         user: model.User | None = None,
     ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
         """Read association entities with ID validation."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_sets_with_content_right(
@@ -185,7 +185,7 @@ class BaseCaseService(DomainBaseCaseService):
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
         """Retrieve case sets that the user has specific content rights for."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_cases_with_content_right(
@@ -202,28 +202,40 @@ class BaseCaseService(DomainBaseCaseService):
         extra_access_case_type_col_ids: set[UUID] | None = None,
     ) -> list[model.Case]:
         """Retrieve cases that the user has specific content rights for."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of cases to their data collections."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_set_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_set_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of case sets to their data collections."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_case_sets_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        case_set_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of cases to their case sets."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_association_map(
@@ -233,41 +245,27 @@ class BaseCaseService(DomainBaseCaseService):
         association_class: Type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
-        **kwargs: Any,
+        obj_ids1: frozenset[UUID] | None = None,
+        obj_ids2: frozenset[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_sequence_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
     ) -> tuple[model.CaseTypeCol, model.Col]:
         """Retrieve sequence column data and validate it's a genetic sequence column."""
-        pass
-
-    @abstractmethod
-    def _verify_case_filter(
-        self, uow: BaseUnitOfWork, user: model.User, filter: Filter
-    ) -> list[model.Col]:
-        """Verify case filter validity and return associated columns."""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def _verify_case_set_member_case_type(
         self, user: model.User, case_set_members: list[model.CaseSetMember]
     ) -> None:
         """Verify that case set members have matching case types with their case sets."""
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def _get_map_functions_for_filters(
-        cols: Iterable[model.Col],
-    ) -> list[Callable[[Any], Any]]:
-        """Get mapping functions for filter processing based on column types."""
-        pass
+        raise NotImplementedError()
 
     @staticmethod
     @abstractmethod

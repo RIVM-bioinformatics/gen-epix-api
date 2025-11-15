@@ -100,12 +100,26 @@ class CaseAbac(BaseModel):
         there is any access or share right. The sets are guaranteed to be non-empty.
         """
         retval: dict[UUID, set[UUID]] = {}
-        for case_type_id, data in self.case_type_access_abacs.items():
-            data_collection_ids = {x for x, y in data.items() if y.has_any_rights()}
+        for (
+            case_type_id,
+            data_collection_access_abac_map,
+        ) in self.case_type_access_abacs.items():
+            data_collection_ids = {
+                x
+                for x, y in data_collection_access_abac_map.items()
+                if y.has_any_rights()
+            }
             if data_collection_ids:
                 retval[case_type_id] = data_collection_ids
-        for case_type_id, data in self.case_type_share_abacs.items():
-            data_collection_ids = {x for x, y in data.items() if y.has_any_rights()}
+        for (
+            case_type_id,
+            data_collection_share_abac_map,
+        ) in self.case_type_share_abacs.items():
+            data_collection_ids = {
+                x
+                for x, y in data_collection_share_abac_map.items()
+                if y.has_any_rights()
+            }
             if not data_collection_ids:
                 continue
             if case_type_id in retval:
@@ -121,12 +135,22 @@ class CaseAbac(BaseModel):
         least one of the data collections.
         """
         retval = set()
-        for case_type_id, data in self.case_type_access_abacs.items():
-            has_right = any(x.has_any_rights() for x in data.values())
+        for (
+            case_type_id,
+            data_collection_access_abac_map,
+        ) in self.case_type_access_abacs.items():
+            has_right = any(
+                x.has_any_rights() for x in data_collection_access_abac_map.values()
+            )
             if has_right:
                 retval.add(case_type_id)
-        for case_type_id, data in self.case_type_share_abacs.items():
-            has_right = any(x.has_any_rights() for x in data.values())
+        for (
+            case_type_id,
+            data_collection_share_abac_map,
+        ) in self.case_type_share_abacs.items():
+            has_right = any(
+                x.has_any_rights() for x in data_collection_share_abac_map.values()
+            )
             if has_right:
                 retval.add(case_type_id)
         return retval
@@ -174,12 +198,18 @@ class CaseAbac(BaseModel):
 
     def get_data_collections_with_any_rights(self) -> set[UUID]:
         data_collection_ids = set()
-        for data in self.case_type_access_abacs.values():
-            for data_collection_id, access_abac in data.items():
+        for data_collection_access_abac_map in self.case_type_access_abacs.values():
+            for (
+                data_collection_id,
+                access_abac,
+            ) in data_collection_access_abac_map.items():
                 if access_abac.has_any_rights():
                     data_collection_ids.add(data_collection_id)
-        for data in self.case_type_share_abacs.values():
-            for data_collection_id, share_abac in data.items():
+        for data_collection_share_abac_map in self.case_type_share_abacs.values():
+            for (
+                data_collection_id,
+                share_abac,
+            ) in data_collection_share_abac_map.items():
                 if not share_abac.has_any_rights():
                     continue
                 data_collection_ids.add(data_collection_id)
@@ -194,6 +224,31 @@ class CaseAbac(BaseModel):
                     share_abac.remove_case_set_from_data_collection_ids
                 )
         return data_collection_ids
+
+    def get_data_collections_with_access_right_for_case_type_col(
+        self, case_type_col_id: UUID, right: CaseRight
+    ) -> set[UUID]:
+        """
+        Get the set[data_collection_id] for which there is the given right on the given case_type_col.
+        """
+        if right == CaseRight.READ_CASE:
+            return {
+                data_collection_id
+                for access_by_data_collection in self.case_type_access_abacs.values()
+                for data_collection_id, access_abac in access_by_data_collection.items()
+                if case_type_col_id in access_abac.read_case_type_col_ids
+            }
+        elif right == CaseRight.WRITE_CASE:
+            return {
+                data_collection_id
+                for access_by_data_collection in self.case_type_access_abacs.values()
+                for data_collection_id, access_abac in access_by_data_collection.items()
+                if case_type_col_id in access_abac.write_case_type_col_ids
+            }
+        else:
+            raise exc.InvalidArgumentsError(
+                f"Right {right.value} is invalid for case_type_col access"
+            )
 
     def is_allowed(
         self,

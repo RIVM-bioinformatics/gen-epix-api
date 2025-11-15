@@ -8,6 +8,8 @@ from pydantic import Field, field_serializer
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.persistable import Case
+from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
+from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity
@@ -55,10 +57,7 @@ class CaseTypeDim(Model):
             " Empty if only a single occurrence."
         ),
     )
-    rank: int = Field(
-        default=None,
-        description="The rank of the case type dimension for ordering",
-    )
+    rank: int = Field(description="The rank of the case type dimension for ordering.")
     case_type_col_order: list[UUID] = Field(
         description="The order of the case type columns"
     )
@@ -250,9 +249,7 @@ class CaseReadSet(Model):
     read_set_id: UUID | None = Field(
         description="The ID of the read set.", default=None
     )
-    library_prep_protocol_id: UUID = Field(
-        description="The ID of the library prep protocol associated with the read set."
-    )
+    read_set: ReadSet | None = Field(default=None, description="The read set.")
 
 
 class CaseSeq(Model):
@@ -267,4 +264,4 @@ class CaseSeq(Model):
         description="The ID of the case type column that the sequence is or will be associated with."
     )
     seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
-    # TODO: add required fields for Seq creation here
+    seq: Seq | None = Field(default=None, description="The sequence.")
