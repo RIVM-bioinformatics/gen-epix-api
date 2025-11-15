@@ -1,9 +1,12 @@
+from typing import Iterable
 from uuid import UUID
 
+import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 def case_service_retrieve_phylogenetic_tree(
@@ -105,7 +108,7 @@ def case_service_retrieve_phylogenetic_tree(
             )
 
         # @ABAC: Get cases
-        cases = self._retrieve_cases_with_content_right(  # type: ignore[attr-defined]
+        cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             temp_case_abac,
@@ -140,3 +143,140 @@ def case_service_retrieve_phylogenetic_tree(
         phylogenetic_tree.sequence_ids = None
 
     return phylogenetic_tree
+
+
+def case_service_retrieve_genetic_sequence_by_case(
+    self: BaseCaseService,
+    cmd: command.RetrieveGeneticSequenceByCaseCommand,
+) -> list[model.GeneticSequence]:
+    seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
+    case_ids = cmd.case_ids
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+    if not case_ids:
+        return []
+
+    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+    assert case_abac is not None
+
+    with repository.uow() as uow:
+        seq_ids_or_none: list[UUID | None] = _get_seq_ids_from_cases(
+            self,
+            uow,
+            user,
+            case_abac,
+            case_ids,
+            seq_case_type_col_id,
+        )
+        if any(x is None for x in seq_ids_or_none):
+            raise exc.NoResultsError("Not all cases have a sequence")
+        seq_ids: list[UUID] = seq_ids_or_none  # type: ignore[assignment]
+
+        # Retrieve sequences
+        genetic_sequences: list[model.GeneticSequence] = self.app.handle(
+            command.RetrieveGeneticSequenceByIdCommand(
+                user=user,
+                seq_ids=seq_ids,
+            )
+        )
+
+    return genetic_sequences
+
+
+def case_service_retrieve_genetic_sequence_fasta_by_case(
+    self: BaseCaseService, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+) -> Iterable[str]:
+    """
+    Return a streaming iterable of FASTA formatted lines.
+    Path:
+    HTTP client
+    -> casedb endpoint
+    -> casedb service calls casedb seqdb command
+    -> seqdb command (inside casedb) calls ext_app with RetrieveSeqFastaCommand
+    -> seqdb service calls correct repository (dict or SA implementation) to stream Seq rows
+    -> seqdb service converts rows to FASTA lines on the fly
+    -> returns an iterator
+    -> casedb forwards that iterator
+    -> FastAPI wraps it in a StreamingResponse.
+    """
+    seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
+    case_ids = cmd.case_ids
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+
+    if not case_ids:
+        raise exc.InvalidArgumentsError("No case ids given")
+
+    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+    assert case_abac is not None
+
+    with repository.uow() as uow:
+
+        seq_ids_or_none: list[UUID | None] = _get_seq_ids_from_cases(
+            self,
+            uow,
+            user,
+            case_abac,
+            case_ids,
+            seq_case_type_col_id,
+        )
+        if any(x is None for x in seq_ids_or_none):
+            raise exc.NoResultsError("Not all cases have a sequence")
+        seq_ids: list[UUID] = seq_ids_or_none  # type: ignore[assignment]
+        retrieve_cmd = command.RetrieveGeneticSequenceFastaByIdCommand(
+            user=cmd.user, seq_ids=seq_ids
+        )
+        fasta_iterator: Iterable[str] = self.app.handle(retrieve_cmd)
+        return fasta_iterator
+
+
+def case_service_retrieve_library_prep_protocols(
+    self: BaseCaseService,
+    cmd: command.RetrieveLibraryPrepProtocolsCommand,
+) -> list[model.LibraryPrepProtocol]:
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+
+    library_prep_protocols: list[model.LibraryPrepProtocol] = self.app.handle(
+        seqdb_command.LibraryPrepProtocolCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_ALL,
+        )
+    )
+    return library_prep_protocols
+
+
+def case_service_retrieve_assembly_protocols(
+    self: BaseCaseService, cmd: command.RetrieveAssemblyProtocolsCommand
+) -> list[model.AssemblyProtocol]:
+    user, repository = self._get_user_and_repository(cmd)
+    assert isinstance(user, model.User) and user.id is not None
+
+    assembly_protocols: list[model.AssemblyProtocol] = self.app.handle(
+        seqdb_command.AssemblyProtocolCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_ALL,
+        )
+    )
+    return assembly_protocols
+
+
+def _get_seq_ids_from_cases(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    user: model.User,
+    case_abac: model.CaseAbac,
+    case_ids: list[UUID],
+    seq_case_type_col_id: UUID,
+) -> list[UUID | None]:
+    # @ABAC: Get cases and sequence_ids
+    cases = self._retrieve_cases_with_content_right(
+        uow,
+        user.id,  # type: ignore[arg-type]
+        case_abac,
+        enum.CaseRight.READ_CASE,
+        case_ids=case_ids,
+        filter_content=True,
+    )
+    retval = [x.content.get(seq_case_type_col_id) for x in cases]
+    return [UUID(x) for x in retval if x]

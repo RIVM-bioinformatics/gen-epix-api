@@ -8,13 +8,7 @@ from pydantic import Field, field_serializer
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.persistable import Case
-from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
-from gen_epix.casedb.domain.model.seqdb import (
-    LibraryPrepProtocol as LibraryPrepProtocol,
-)
-from gen_epix.casedb.domain.model.seqdb import RawSeq as RawSeq
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
-from gen_epix.casedb.domain.model.seqdb import Sample as Sample
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.util import copy_model_field
@@ -63,10 +57,7 @@ class CaseTypeDim(Model):
             " Empty if only a single occurrence."
         ),
     )
-    rank: int = Field(
-        default=None,
-        description="The rank of the case type dimension for ordering",
-    )
+    rank: int = Field(description="The rank of the case type dimension for ordering.")
     case_type_col_order: list[UUID] = Field(
         description="The order of the case type columns"
     )
