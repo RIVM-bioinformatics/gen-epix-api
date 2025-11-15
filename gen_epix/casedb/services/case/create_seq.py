@@ -116,10 +116,24 @@ def case_service_create_file_for_read_set_or_seq(
             )
         read_set_or_seq_id = UUID(case.content[cmd.case_type_col_id])
 
-    # Retrieve ReadSet or Seq, and verify no file linked yet
+    # Retrieve ReadSet or Seq, verify no file linked yet, and create file
+    def _create_file(
+        self: BaseCaseService,
+        cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
+    ) -> model.File:
+        created_file: model.File = self.app.handle(
+            seqdb_command.FileCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.File(content=cmd.file_content),
+            )
+        )
+        return created_file
+
     if is_read_set:
         assert isinstance(cmd, command.CreateFileForReadSetCommand)
-        read_set = self.app.handle(
+        # Verify no file linked yet
+        read_set: model.ReadSet = self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.READ_ONE,
@@ -134,32 +148,13 @@ def case_service_create_file_for_read_set_or_seq(
             raise exc.InvalidArgumentsError(
                 "The ReadSet already has a reverse file linked"
             )
-    else:
-        assert isinstance(cmd, command.CreateFileForSeqCommand)
-        seq = self.app.handle(
-            seqdb_command.SeqCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ONE,
-                obj_ids=read_set_or_seq_id,
-            )
-        )
-        if seq.file_id is not None:
-            raise exc.InvalidArgumentsError("The Seq already has a file linked")
-
-    # Create File and update ReadSet or Seq with the new file link
-    created_file: model.File = self.app.handle(
-        seqdb_command.FileCrudCommand(
-            user=cmd.user,
-            operation=CrudOperation.CREATE_ONE,
-            objs=model.File(content=cmd.file_content),
-        )
-    )
-    if is_read_set:
-        assert isinstance(cmd, command.CreateFileForReadSetCommand)
+        # Create Seq
+        created_file = _create_file(self, cmd)
+        # Update ReadSet with file ID
         if cmd.is_fwd:
-            read_set.fwd_file_id = created_file.id  # type: ignore
+            read_set.fwd_file_id = created_file.id
         else:
-            read_set.rev_file_id = created_file.id  # type: ignore
+            read_set.rev_file_id = created_file.id
         self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
@@ -168,12 +163,26 @@ def case_service_create_file_for_read_set_or_seq(
             )
         )
     else:
-        seq.file_id = created_file.id  # type: ignore
+        assert isinstance(cmd, command.CreateFileForSeqCommand)
+        # Verify no file linked yet
+        seq: model.Seq = self.app.handle(
+            seqdb_command.SeqCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ONE,
+                obj_ids=read_set_or_seq_id,
+            )
+        )
+        if seq.file_id is not None:
+            raise exc.InvalidArgumentsError("The Seq already has a file linked")
+        # Create file
+        created_file = _create_file(self, cmd)
+        # Update Seq with file ID
+        seq.file_id = created_file.id
         self.app.handle(
             seqdb_command.SeqCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.UPDATE_ONE,
-                objs=seq,  # type: ignore[arg-type]
+                objs=seq,
             )
         )
 
