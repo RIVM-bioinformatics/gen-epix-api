@@ -1,4 +1,4 @@
-from typing import Any, Iterable, NoReturn, Type
+from typing import Iterable, Type
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -14,10 +14,8 @@ from gen_epix.casedb.services.case.create_case import (
     case_service_create_cases,
 )
 from gen_epix.casedb.services.case.create_seq import (
-    case_service_create_file_for_read_set,
-    case_service_create_file_for_seq,
-    case_service_create_read_sets_for_cases,
-    case_service_create_seqs_for_cases,
+    case_service_create_file_for_read_set_or_seq,
+    case_service_create_read_sets_or_seqs_for_cases,
 )
 from gen_epix.casedb.services.case.crud import crud
 from gen_epix.casedb.services.case.read_association_with_valid_ids import (
@@ -104,21 +102,27 @@ class CaseService(BaseCaseService):
 
     def create_reads_sets_for_cases(
         self, cmd: command.CreateReadSetsForCasesCommand
-    ) -> list[model.ReadSet] | None:
-        return case_service_create_read_sets_for_cases(self, cmd)
+    ) -> list[model.ReadSet]:
+        retval: list[model.ReadSet] = case_service_create_read_sets_or_seqs_for_cases(
+            self, cmd
+        )  # type:ignore[assignment]
+        return retval
 
     def create_seqs_for_cases(
         self, cmd: command.CreateSeqsForCasesCommand
     ) -> list[model.Seq]:
-        return case_service_create_seqs_for_cases(self, cmd)
+        retval: list[model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
+            self, cmd
+        )  # type:ignore[assignment]
+        return retval
 
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
-    ) -> UUID | None:
-        return case_service_create_file_for_read_set(self, cmd)
+    ) -> UUID:
+        return case_service_create_file_for_read_set_or_seq(self, cmd)
 
-    def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID | None:
-        return case_service_create_file_for_seq(self, cmd)
+    def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID:
+        return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     def retrieve_complete_case_type(
         self: DomainBaseCaseService,
@@ -553,39 +557,54 @@ class CaseService(BaseCaseService):
         return filtered_cases
 
     def _retrieve_case_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        return self._retrieve_association_map(  # type:ignore[return-value]
+        return self._retrieve_association_map(
             uow,
             user_id,
             model.CaseDataCollectionLink,
             "case_id",
             "data_collection_id",
-            **kwargs,
+            obj_ids1=frozenset(case_ids) if case_ids else None,
+            obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
         )
 
     def _retrieve_case_set_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_set_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        return self._retrieve_association_map(  # type:ignore[return-value]
+        return self._retrieve_association_map(
             uow,
             user_id,
             model.CaseSetDataCollectionLink,
             "case_set_id",
             "data_collection_id",
-            **kwargs,
+            obj_ids1=frozenset(case_set_ids) if case_set_ids else None,
+            obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
         )
 
     def _retrieve_case_case_sets_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        case_set_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
-        return self._retrieve_association_map(  # type:ignore[return-value]
+        return self._retrieve_association_map(
             uow,
             user_id,
             model.CaseSetMember,
             "case_id",
             "case_set_id",
-            **kwargs,
+            obj_ids1=frozenset(case_ids) if case_ids else None,
+            obj_ids2=frozenset(case_set_ids) if case_set_ids else None,
         )
 
     def _retrieve_association_map(
@@ -595,13 +614,12 @@ class CaseService(BaseCaseService):
         association_class: Type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
-        **kwargs: Any,
+        obj_ids1: frozenset[UUID] | None = None,
+        obj_ids2: frozenset[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
         """
-        obj_ids1: frozenset[UUID] | None = kwargs.pop("obj_ids1", None)
-        obj_ids2: frozenset[UUID] | None = kwargs.pop("obj_ids2", None)
         # Create a filter to restrict the association objs if necessary
         filter: Filter | None
         if obj_ids1:
@@ -630,7 +648,7 @@ class CaseService(BaseCaseService):
             field_names=[link_field_name1, link_field_name2],
             filter=filter,
         )
-        association_map = map_paired_elements(value_pairs_iterable, as_set=True)
+        association_map: dict[UUID, set[UUID]] = map_paired_elements(value_pairs_iterable, as_set=True)  # type: ignore[assignment]
 
         return association_map
 
@@ -711,29 +729,3 @@ class CaseService(BaseCaseService):
             ],
             operator=LogicalOperator.AND,
         )
-
-    def validate_case_access_rights_with_case_type_col(
-        self,
-        cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
-        user: model.User,
-        case_abac: model.CaseAbac,
-        uow: BaseUnitOfWork,
-        case: model.Case,
-    ) -> NoReturn:
-        writable_in_data_collections = (
-            case_abac.get_data_collections_with_access_right_for_case_type_col(
-                cmd.case_type_col_id, enum.CaseRight.WRITE_CASE
-            )
-        )
-        case_to_data_collections: dict[UUID, set[UUID]] = (
-            self._retrieve_case_data_collections_map(uow, user.id)
-        )
-        case_data_collection_memberships = set(
-            case_to_data_collections.get(cmd.case_id, set())
-        )
-        case_data_collection_memberships.add(case.created_in_data_collection_id)
-        if case_data_collection_memberships.isdisjoint(writable_in_data_collections):
-            raise exc.UnauthorizedAuthError(
-                "User has no WRITE_CASE access to the specified column in any data collection of the case"
-            )
-        return NoReturn

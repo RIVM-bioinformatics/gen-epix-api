@@ -1,10 +1,11 @@
+from collections import Counter
 from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
-from gen_epix.casedb.domain import enum
+from gen_epix.casedb.domain import enum, exc
 from gen_epix.commondb.domain.command import (
     Command,
     CrudCommand,
@@ -265,8 +266,30 @@ class CreateReadSetsForCasesCommand(Command):
     """
 
     case_read_sets: list[model.CaseReadSet] = Field(
-        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created."
+        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
     )
+
+    @field_validator("case_read_sets", mode="after")
+    def _validate_case_read_sets(
+        cls, case_read_sets: list[model.CaseReadSet]
+    ) -> list[model.CaseReadSet]:
+        case_ids = [x.case_id for x in case_read_sets]
+        read_set_ids = [
+            x.read_set_id for x in case_read_sets if x.read_set_id is not None
+        ]
+        if read_set_ids and len(set(read_set_ids)) < len(read_set_ids):
+            raise exc.InvalidArgumentsError("CaseReadSets may not contain read_set_id")
+        if any(x.read_set is None for x in case_read_sets):
+            raise exc.InvalidArgumentsError(
+                "CaseReadSets may not have None for read_set "
+            )
+        duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
+        if duplicate_case_ids:
+            duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
+            raise exc.InvalidArgumentsError(
+                f"Some CaseReadSets have identical case_id: {duplicates_str}"
+            )
+        return case_read_sets
 
 
 class CreateFileForReadSetCommand(Command):

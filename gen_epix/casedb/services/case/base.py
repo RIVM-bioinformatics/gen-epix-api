@@ -206,21 +206,33 @@ class BaseCaseService(DomainBaseCaseService):
 
     @abstractmethod
     def _retrieve_case_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of cases to their data collections."""
         raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_set_data_collections_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_set_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of case sets to their data collections."""
         raise NotImplementedError()
 
     @abstractmethod
     def _retrieve_case_case_sets_map(
-        self, uow: BaseUnitOfWork, user_id: UUID, **kwargs: Any
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        case_set_ids: Iterable[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """Retrieve mapping of cases to their case sets."""
         raise NotImplementedError()
@@ -233,7 +245,8 @@ class BaseCaseService(DomainBaseCaseService):
         association_class: Type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
-        **kwargs: Any,
+        obj_ids1: frozenset[UUID] | None = None,
+        obj_ids2: frozenset[UUID] | None = None,
     ) -> dict[UUID, set[UUID]]:
         """
         Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
