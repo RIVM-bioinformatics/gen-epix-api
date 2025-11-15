@@ -1,6 +1,5 @@
 # pylint: disable=useless-import-alias
 
-from gen_epix.commondb.domain.service import BaseAbacService as BaseAbacService
 from gen_epix.commondb.domain.service import (
     BaseOrganizationService as BaseOrganizationService,
 )

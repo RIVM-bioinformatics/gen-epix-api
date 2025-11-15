@@ -1,6 +1,6 @@
 import abc
 import uuid
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType
@@ -11,21 +11,6 @@ from gen_epix.fastapp.model import UpdateAssociationCommand
 
 class BaseOrganizationService(BaseService):
     SERVICE_TYPE = ServiceType.ORGANIZATION
-
-    def __init__(
-        self,
-        *args: Any,
-        user_class: Type[model.User] = model.User,
-        user_invitation_class: Type[model.UserInvitation] = model.UserInvitation,
-        user_invitation_constraints_class: Type[
-            model.UserInvitationConstraints
-        ] = model.UserInvitationConstraints,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.user_class = user_class
-        self.user_invitation_class = user_invitation_class
-        self.user_invitation_constraints_class = user_invitation_constraints_class
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore

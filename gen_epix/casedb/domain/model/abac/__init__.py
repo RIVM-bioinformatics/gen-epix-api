@@ -2,9 +2,6 @@ from gen_epix.casedb.domain.model.abac.policy import (
     OrganizationAccessCasePolicy as OrganizationAccessCasePolicy,
 )
 from gen_epix.casedb.domain.model.abac.policy import (
-    OrganizationAdminPolicy as OrganizationAdminPolicy,
-)
-from gen_epix.casedb.domain.model.abac.policy import (
     OrganizationShareCasePolicy as OrganizationShareCasePolicy,
 )
 from gen_epix.casedb.domain.model.abac.policy import (
@@ -19,4 +16,7 @@ from gen_epix.casedb.domain.model.abac.rights import (
 )
 from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeShareAbac as CaseTypeShareAbac,
+)
+from gen_epix.commondb.domain.model import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
 )

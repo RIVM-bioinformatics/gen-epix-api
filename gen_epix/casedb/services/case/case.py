@@ -36,6 +36,7 @@ from gen_epix.filter.string_set import StringSetFilter
 
 
 class CaseService(BaseCaseService):
+
     def crud(  # type:ignore[override]
         self, cmd: command.CrudCommand
     ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:

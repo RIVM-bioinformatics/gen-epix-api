@@ -8,12 +8,8 @@ from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.fastapp import App
 from gen_epix.omopdb.api.omop import create_omop_endpoints
-from gen_epix.omopdb.api.organization import (
-    ApiPermission,
-    UpdateUserRequestBody,
-    UserInvitationRequestBody,
-)
-from gen_epix.omopdb.domain import command, enum, model
+from gen_epix.omopdb.api.organization import ApiPermission
+from gen_epix.omopdb.domain import enum
 
 
 def create_routers(
@@ -42,13 +38,6 @@ def create_routers(
             "create_endpoints_fn": create_organization_endpoints,
             "endpoints_function_kwargs": {
                 "service_type": enum.ServiceType.ORGANIZATION,
-                "user_class": model.User,
-                "user_invitation_class": model.UserInvitation,
-                "invite_user_command_class": command.InviteUserCommand,
-                "retrieve_invite_user_constraints_command_class": command.RetrieveInviteUserConstraintsCommand,
-                "update_user_command_class": command.UpdateUserCommand,
-                "user_invitation_request_body_class": UserInvitationRequestBody,
-                "update_user_request_body_class": UpdateUserRequestBody,
                 "api_permission_class": ApiPermission,
             },
         },
@@ -74,9 +63,6 @@ def create_routers(
         create_endpoints_fn(
             router,
             app,
-            registered_user_dependency=registered_user_dependency,
-            new_user_dependency=new_user_dependency,
-            idp_user_dependency=idp_user_dependency,
             handle_exception=handle_exception,
             **endpoints_function_kwargs,
         )

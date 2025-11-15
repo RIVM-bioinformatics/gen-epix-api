@@ -5,9 +5,6 @@ from gen_epix.casedb.repositories.sa_model.abac import (
     OrganizationAccessCasePolicy as OrganizationAccessCasePolicy,
 )
 from gen_epix.casedb.repositories.sa_model.abac import (
-    OrganizationAdminPolicy as OrganizationAdminPolicy,
-)
-from gen_epix.casedb.repositories.sa_model.abac import (
     OrganizationShareCasePolicy as OrganizationShareCasePolicy,
 )
 from gen_epix.casedb.repositories.sa_model.abac import (
@@ -65,40 +62,33 @@ from gen_epix.casedb.repositories.sa_model.ontology import (
     EtiologicalAgent as EtiologicalAgent,
 )
 from gen_epix.casedb.repositories.sa_model.ontology import Etiology as Etiology
-from gen_epix.casedb.repositories.sa_model.organization import Contact as Contact
-from gen_epix.casedb.repositories.sa_model.organization import (
-    DataCollection as DataCollection,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    DataCollectionSet as DataCollectionSet,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    DataCollectionSetMember as DataCollectionSetMember,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    IdentifierIssuer as IdentifierIssuer,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    Organization as Organization,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    OrganizationSet as OrganizationSet,
-)
-from gen_epix.casedb.repositories.sa_model.organization import (
-    OrganizationSetMember as OrganizationSetMember,
-)
-from gen_epix.casedb.repositories.sa_model.organization import Site as Site
-from gen_epix.casedb.repositories.sa_model.organization import User as User
-from gen_epix.casedb.repositories.sa_model.organization import (
-    UserInvitation as UserInvitation,
-)
 from gen_epix.casedb.repositories.sa_model.subject import Subject as Subject
 from gen_epix.casedb.repositories.sa_model.subject import (
     SubjectIdentifier as SubjectIdentifier,
 )
-from gen_epix.casedb.repositories.sa_model.system import Outage as Outage
+from gen_epix.commondb.repositories.sa_model import Contact as Contact
+from gen_epix.commondb.repositories.sa_model import DataCollection as DataCollection
 from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
+    DataCollectionSet as DataCollectionSet,
+)
+from gen_epix.commondb.repositories.sa_model import (
+    DataCollectionSetMember as DataCollectionSetMember,
+)
+from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
+from gen_epix.commondb.repositories.sa_model import Organization as Organization
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
+from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationSetMember as OrganizationSetMember,
+)
+from gen_epix.commondb.repositories.sa_model import Outage as Outage
+from gen_epix.commondb.repositories.sa_model import RowMetadataMixin
+from gen_epix.commondb.repositories.sa_model import Site as Site
+from gen_epix.commondb.repositories.sa_model import User as User
+from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
+from gen_epix.commondb.repositories.sa_model import (
     create_field_metadata,
     set_entity_repository_model_classes,
 )

@@ -286,6 +286,22 @@
             "console": "integratedTerminal",
             "justMyCode": true,
         },
+        {
+            "name": "etl casedb",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "etl.py",
+            "args": [
+                "CASEDB_",
+                "gen_epix.casedb",
+                "CASEDB",
+            ],
+            "justMyCode": true,
+            "env": {
+                "CASEDB_SETTINGS_FILES": "gen_epix/casedb/config/settings.toml, config/mock_identity_provider.toml, gen_epix/casedb/config/.example.secrets.service.toml, gen_epix/casedb/config/settings.repository.sa.toml, gen_epix/casedb/config/.example.secrets.repository.sa_sql.toml",
+                "CASEDB_LOG_CONFIG_FILE": "config/logging.yaml"
+            }
+        },
         // test
         {
             "name": "test.all",
@@ -695,17 +711,6 @@
             "justMyCode": true,
         },
         {
-            "name": "test.docs.unit",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_docs_unit"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
             "name": "test.end_to_end",
             "type": "debugpy",
             "request": "launch",
@@ -734,6 +739,28 @@
             "program": "run.py",
             "args": [
                 "test_end_to_end_client_credential_flow"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.general.docs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_docs"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.general.code",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_code"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -830,23 +857,6 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true
-        },
-        // TODO: move to ETL section and rename
-        {
-            "name": "etl casedb",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "etl.py",
-            "args": [
-                "CASEDB_",
-                "gen_epix.casedb",
-                "CASEDB",
-            ],
-            "justMyCode": true,
-            "env": {
-                "CASEDB_SETTINGS_FILES": "gen_epix/casedb/config/settings.toml, config/mock_identity_provider.toml, gen_epix/casedb/config/.example.secrets.service.toml, gen_epix/casedb/config/settings.repository.sa.toml, gen_epix/casedb/config/.example.secrets.repository.sa_sql.toml",
-                "CASEDB_LOG_CONFIG_FILE": "config/logging.yaml"
-            }
         },
         {
             "name": "other.oauth_server.start",

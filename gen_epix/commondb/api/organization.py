@@ -6,6 +6,7 @@ from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
+from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
@@ -25,7 +26,7 @@ class ApiPermission(PydanticBaseModel, frozen=True):
 
 class UserInvitationRequestBody(PydanticBaseModel):
     key: str = copy_model_field(model.UserInvitation, "key")
-    roles: set[enum.Role] = copy_model_field(model.UserInvitation, "roles")
+    roles: set[str] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
@@ -45,7 +46,7 @@ class UpdateUserRequestBody(PydanticBaseModel):
     is_active: bool | None = Field(
         description="The updated active status of the user. Not updated if not provided."
     )
-    roles: set[enum.Role] | None = Field(
+    roles: set[str] | None = Field(
         description="The updated set of roles of the user. Not updated if not provided. If provided, should have at least one element.",
     )
     organization_id: UUID | None = Field(
@@ -62,30 +63,28 @@ class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
     app: App,
-    registered_user_dependency: Callable | None = None,
-    new_user_dependency: Callable | None = None,
-    idp_user_dependency: Callable | None = None,
-    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     service_type: enum.ServiceType = enum.ServiceType.ORGANIZATION,
-    user_class: Type[model.User] = model.User,
-    user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
-    invite_user_command_class: Type[
-        command.InviteUserCommand
-    ] = command.InviteUserCommand,
-    retrieve_invite_user_constraints_command_class: Type[
-        command.RetrieveInviteUserConstraintsCommand
-    ] = command.RetrieveInviteUserConstraintsCommand,
-    update_user_command_class: Type[
-        command.UpdateUserCommand
-    ] = command.UpdateUserCommand,
-    user_invitation_request_body_class: Type[
-        UserInvitationRequestBody
-    ] = UserInvitationRequestBody,
-    update_user_request_body_class: Type[UpdateUserRequestBody] = UpdateUserRequestBody,
+    handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
     api_permission_class: Type = Permission,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
+    app_impl: AppImplDetails = app.impl
+    user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+    user_invitation_class: type[model.UserInvitation] = app_impl.get_mapped_class(
+        model.UserInvitation
+    )
+    invite_user_command_class: Type[command.InviteUserCommand] = (
+        app_impl.get_mapped_class(command.InviteUserCommand)
+    )
+    retrieve_invite_user_constraints_command_class: Type[
+        command.RetrieveInviteUserConstraintsCommand
+    ] = app_impl.get_mapped_class(command.RetrieveInviteUserConstraintsCommand)
+    update_user_command_class: Type[command.UpdateUserCommand] = (
+        app_impl.get_mapped_class(command.UpdateUserCommand)
+    )
+    registered_user_dependency = app_impl.registered_user_dependency
+    new_user_dependency = app_impl.new_user_dependency
 
     @router.post(
         "/invite_user",
@@ -94,7 +93,7 @@ def create_organization_endpoints(
         description=invite_user_command_class.__doc__,
     )
     async def invite_user(
-        user: registered_user_dependency, user_invitation: user_invitation_request_body_class  # type: ignore[valid-type] # Dynamic type annotation
+        user: registered_user_dependency, user_invitation: UserInvitationRequestBody  # type: ignore[valid-type] # Dynamic type annotation
     ) -> user_invitation_class:  # type: ignore
         try:
             retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
@@ -226,7 +225,7 @@ def create_organization_endpoints(
         description=update_user_command_class.__doc__,
     )
     async def users__put_one(
-        user: registered_user_dependency, object_id: UUID, request_body: update_user_request_body_class  # type: ignore
+        user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore
     ) -> user_class:
         try:
             cmd = update_user_command_class(

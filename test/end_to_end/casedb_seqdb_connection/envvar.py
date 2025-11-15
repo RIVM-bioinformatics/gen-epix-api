@@ -33,5 +33,5 @@ def set_envvar() -> None:
 
 
 # app_cfg = AppCfg(AppType.CASEDB, ServiceType, RepositoryType, log_setup=False)
-# app_env = AppEnv(app_cfg)
-# app = app_env.app
+# app_composer = AppComposer(app_cfg)
+# app = app_composer.app

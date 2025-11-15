@@ -6,17 +6,12 @@ from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model import (
-    OrganizationAdminPolicyMixin,
     RowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )
 
 Base: Type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
-
-
-class OrganizationAdminPolicy(Base, OrganizationAdminPolicyMixin):
-    __tablename__, __table_args__ = create_table_args(model.OrganizationAdminPolicy)
 
 
 class OrganizationAccessCasePolicy(Base, RowMetadataMixin):

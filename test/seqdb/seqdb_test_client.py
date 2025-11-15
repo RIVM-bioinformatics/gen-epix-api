@@ -12,14 +12,9 @@ from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.seqdb.api.organization import (
-    UpdateUserRequestBody,
-    UserInvitationRequestBody,
-)
 from gen_epix.seqdb.api.router import create_routers
-from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.policy import RoleGenerator
-from gen_epix.seqdb.env import AppEnv
+from gen_epix.seqdb.domain import command, model
+from gen_epix.seqdb.env import AppComposer
 
 
 class SeqdbTestClient(TestClient):
@@ -101,21 +96,16 @@ class SeqdbTestClient(TestClient):
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)
-        app_env = AppEnv(app_cfg, log_setup=log_setup, **kwargs)
+        app_composer = AppComposer(app_cfg, log_setup=log_setup, **kwargs)
 
         # Create endpoint test client if endpoints are to be used (including own
-        # app_env), otherwise construct app env separately
+        # app_composer), otherwise construct app env separately
         endpoint_test_client: SeqdbEndpointTestClient | None = None
         app_last_handled_exception: dict | None = None
         if use_endpoints:
             fast_api = create_fast_api(
-                app_cfg.cfg,
-                app=app_env.app,
+                app=app_composer.app,
                 create_routers_fn=create_routers,
-                registered_user_dependency=app_env.registered_user_dependency,
-                new_user_dependency=app_env.new_user_dependency,
-                idp_user_dependency=app_env.idp_user_dependency,
-                app_id=app_env.app.generate_id(),
                 setup_logger=app_cfg.setup_logger if log_setup else None,
                 api_logger=app_cfg.api_logger,
                 debug=True,
@@ -123,23 +113,9 @@ class SeqdbTestClient(TestClient):
             )
             app_last_handled_exception = LAST_HANDLED_EXCEPTION
             endpoint_test_client = SeqdbEndpointTestClient(
-                app_env.app,
+                app_composer.app,
                 fast_api,
                 app_last_handled_exception,
-                user_class=model.User,
-                user_invitation_class=model.UserInvitation,
-                user_invitation_constraints_class=model.UserInvitationConstraints,
-                organization_admin_policy_class=model.OrganizationAdminPolicy,
-                user_crud_command_class=command.UserCrudCommand,
-                user_invitation_crud_command_class=command.UserInvitationCrudCommand,
-                organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
-                retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
-                invite_user_command_class=command.InviteUserCommand,
-                register_invited_user_command_class=command.RegisterInvitedUserCommand,
-                retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
-                update_user_command_class=command.UpdateUserCommand,
-                user_invitation_request_body=UserInvitationRequestBody,
-                update_user_request_body=UpdateUserRequestBody,
                 **kwargs,
             )
 
@@ -148,21 +124,7 @@ class SeqdbTestClient(TestClient):
             test_name,
             test_dir,
             app_cfg,
-            app_env,
-            roles=set(enum.Role),
-            role_hierarchy=RoleGenerator.ROLE_HIERARCHY,  # type: ignore
-            user_class=model.User,
-            user_invitation_class=model.UserInvitation,
-            user_invitation_constraints_class=model.UserInvitationConstraints,
-            organization_admin_policy_class=model.OrganizationAdminPolicy,
-            user_crud_command_class=command.UserCrudCommand,
-            user_invitation_crud_command_class=command.UserInvitationCrudCommand,
-            organization_admin_policy_crud_command_class=command.OrganizationAdminPolicyCrudCommand,
-            retrieve_invite_user_constraints_command_class=command.RetrieveInviteUserConstraintsCommand,
-            invite_user_command_class=command.InviteUserCommand,
-            register_invited_user_command_class=command.RegisterInvitedUserCommand,
-            retrieve_organization_admin_name_emails_command_class=command.RetrieveOrganizationAdminNameEmailsCommand,
-            update_user_command_class=command.UpdateUserCommand,
+            app_composer,
             verbose=verbose,
             log_level=log_level,
             use_endpoints=use_endpoints,

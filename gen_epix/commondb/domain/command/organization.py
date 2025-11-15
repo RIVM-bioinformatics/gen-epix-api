@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -77,7 +76,7 @@ class InviteUserCommand(Command):
     key: str = copy_model_field(model.UserInvitation, "key")
     email: str | None = copy_model_field(model.UserInvitation, "email")
     name: str | None = copy_model_field(model.UserInvitation, "name")
-    roles: set[Enum] = copy_model_field(model.UserInvitation, "roles")
+    roles: set[str] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
 
@@ -147,7 +146,7 @@ class UpdateUserCommand(Command):
 
     tgt_user_id: UUID = Field(description="The ID of the user to update")
     is_active: bool | None = copy_model_field(model.User, "is_active")
-    roles: set[Enum] | None = copy_model_field(model.User, "roles")
+    roles: set[str] | None = copy_model_field(model.User, "roles")
     organization_id: UUID | None = Field(
         description="The organization ID the user belongs to"
     )

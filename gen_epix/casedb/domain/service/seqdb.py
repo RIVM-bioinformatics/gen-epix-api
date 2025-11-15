@@ -2,10 +2,10 @@ import abc
 from typing import Iterable
 from uuid import UUID
 
+import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
-import gen_epix.seqdb.domain.command as seqdb_command
 
 
 class BaseSeqdbService(BaseService):
