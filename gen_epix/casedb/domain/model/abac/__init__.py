@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.model.abac.policy import (
     OrganizationAccessCasePolicy as OrganizationAccessCasePolicy,
 )

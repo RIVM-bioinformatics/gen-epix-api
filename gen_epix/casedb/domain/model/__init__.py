@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac import CaseAbac as CaseAbac

@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )

@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.transform.transformers.conditional import (
     ConditionalTransformer as ConditionalTransformer,
 )

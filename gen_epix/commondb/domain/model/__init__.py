@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 import gen_epix.fastapp as fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (

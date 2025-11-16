@@ -69,6 +69,7 @@ class Linter:
             "--fail-under=9",
             "gen_epix/",
             "--disable=C0301",  # Ignore "line too long" warnings since black handles that
+            # "--disable=C0414",  # Ignore "useless-import-alias" warnings
             # "test/",
         ],
         "isort": [

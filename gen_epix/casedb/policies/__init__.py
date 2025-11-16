@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy as CaseAbacPolicy
 from gen_epix.casedb.policies.is_organization_admin_policy import (
