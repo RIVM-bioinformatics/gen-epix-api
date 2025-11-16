@@ -60,7 +60,7 @@ dependencies = [
     "cryptography==43.0.3",
     "pandas==2.3.2",
     "pandas-stubs==2.3.*",
-    "polars==1.32.3",
+    "polars==1.35.2",
     "xlsxwriter==3.2.9",
     "PyJWT==2.10.1",
     "openpyxl==3.1.*",
