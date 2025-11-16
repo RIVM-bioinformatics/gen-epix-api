@@ -30,5 +30,5 @@ biopython==1.86
 # other
 cachetools==6.2.1
 slowapi==0.1.9
-python-dateutil==2.9.0
+python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*
