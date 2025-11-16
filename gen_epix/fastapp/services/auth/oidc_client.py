@@ -159,11 +159,13 @@ class OidcClient(IdpClient, OpenIdConnect):
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
                 )
         except Exception as exception:
-            msg = f"Error accessing discovery URL for OIDC service {self.server_cfg.name}: {exception}"
             if self.logger:
                 self.logger.error(
                     self._log_item_class(
-                        code="cfe970aa", msg=msg, exception=exception
+                        code="cfe970aa",
+                        msg="Error accessing discovery URL",
+                        scheme_name=self.server_cfg.name,
+                        exception=exception,
                     ).dumps()
                 )
             raise exc.InitializationServiceError(msg) from exception
@@ -177,6 +179,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="4cff1367",
                         msg="Unable to parse header from token",
+                        scheme_name=self.scheme_name,
                         jwt=jwt_token,
                         exception=e,
                     ).dumps()
@@ -190,6 +193,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="0184bc35",
                         msg="No key ID found in token header",
+                        scheme_name=self.scheme_name,
                         jwt=jwt_token,
                     ).dumps()
                 )
@@ -199,13 +203,12 @@ class OidcClient(IdpClient, OpenIdConnect):
         # TODO: verify if fetching new signing keys is ok
         key = self._signing_keys.get(key_id)
         if not key:
-            if self.logger:
-                self.logger.info(
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
                     self._log_item_class(
                         code="e90dd1aa",
                         msg="Key ID not found among signing keys, fetching new ones",
-                        jwt=jwt_token,
-                        key_id=key_id,
+                        scheme_name=self.scheme_name,
                     ).dumps()
                 )
             self._load_keys()
@@ -216,17 +219,17 @@ class OidcClient(IdpClient, OpenIdConnect):
                         self._log_item_class(
                             code="2a5975ff",
                             msg="Key ID not found amoung newly fetched signing keys",
+                            scheme_name=self.scheme_name,
                             key_id=key_id,
                         ).dumps()
                     )
                 raise exc.UnauthorizedAuthError()
-            if self.logger:
-                self.logger.info(
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
                     self._log_item_class(
                         code="c448ead5",
                         msg="Key ID found among newly fetched signing keys",
-                        jwt=jwt_token,
-                        key_id=key_id,
+                        scheme_name=self.scheme_name,
                     ).dumps()
                 )
         return key
@@ -238,13 +241,39 @@ class OidcClient(IdpClient, OpenIdConnect):
         # by this OIDC server
         claims = jwt.get_unverified_claims(jwt_token)
         server_cfg = self.server_cfg
-        # TODO: check audience claim as well?
+
+        # Check issuer and audience
         if claims["iss"] != server_cfg.issuer or claims.get("aud") != self.audience:
             # Different OIDC server
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
+                    self._log_item_class(
+                        code="d3f5b6c1",
+                        msg="JWT issuer or audience does not match OIDC server configuration",
+                        scheme_name=self.scheme_name,
+                        token_issuer=claims["iss"],
+                        token_subject=claims.get("sub"),
+                        expected_issuer=server_cfg.issuer,
+                        token_audience=claims.get("aud"),
+                        expected_audience=self.audience,
+                    ).dumps()
+                )
             return None
 
+        # Check expiration
         iat: int = claims.get("iat", -1)
         if iat == -1 or iat > int(datetime.now().timestamp()):
+            # Token expired
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
+                    self._log_item_class(
+                        code="9f4e2c3b",
+                        msg="JWT expired",
+                        scheme_name=self.scheme_name,
+                        token_issuer=claims["iss"],
+                        iat=iat,
+                    ).dumps()
+                )
             return None
 
         # Get key to verify signature and decode again
@@ -274,7 +303,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="f4b73564",
                         msg=msg,
-                        jwt=jwt_token,
+                        scheme_name=self.scheme_name,
                         exception=exception,
                     ).dumps()
                 )
@@ -297,11 +326,22 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="b4a1d49b",
                         msg=f"JWT does not contain required claims: {msg_part}",
-                        jwt=jwt_token,
+                        scheme_name=self.scheme_name,
                     ).dumps()
                 )
             raise exc.CredentialsAuthError(
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            )
+
+        # Log for debugging
+        if self.logger and self.logger.level <= logging.DEBUG:
+            self.logger.debug(
+                self._log_item_class(
+                    code="8a7c4e92",
+                    msg="JWT is valid",
+                    scheme_name=self.scheme_name,
+                    token_issuer=claims["iss"],
+                ).dumps()
             )
 
         # Map claims according to claim_map, allowing e.g. to standardize claim names across IDPs
@@ -340,11 +380,12 @@ class OidcClient(IdpClient, OpenIdConnect):
         url = self.server_cfg.token_endpoint
         if not isinstance(url, str):
             # Try to get from discovery document
-            if self.logger:
-                self.logger.info(
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
                     self._log_item_class(
                         code="8f3a2b1c",
                         msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
+                        scheme_name=self.scheme_name,
                     ).dumps()
                 )
             self.update_server_config_from_discovery()
@@ -359,12 +400,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 f"scope={urllib.parse.quote(scope)}",
             )
         )
-        # token_data = {
-        #     "grant_type": "client_credentials",
-        #     "client_id": self.server_cfg.client_id,
-        #     "client_secret": self.server_cfg.client_secret,
-        #     "scope": scope,
-        # }
 
         # Call server with retries
         last_exception: Exception | None = None
@@ -387,6 +422,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                         self._log_item_class(
                             code="a7f3e9d2",
                             msg=f"OAuth Client Credentials flow token retrieval attempt {attempt + 1} failed for server {self.server_cfg.name}",
+                            scheme_name=self.scheme_name,
                             exception=exception,
                         ).dumps()
                     )
@@ -400,6 +436,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 self._log_item_class(
                     code="f8a3d7b2",
                     msg=f"OAuth Client Credentials flow token retrieval failed after {max_retries + 1} attempts for server {self.server_cfg.name}",
+                    scheme_name=self.scheme_name,
                 ).dumps()
             )
         raise exc.ServiceUnavailableError(
@@ -425,6 +462,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                             self._log_item_class(
                                 code="ce05d050",
                                 msg=f"Unable to get claims from {userinfo_endpoint}: claims contain error",
+                                scheme_name=self.scheme_name,
                                 claims=claims,
                             ).dumps()
                         )
@@ -436,6 +474,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="ac6c84f7",
                         msg=f"Unable to get claims from {userinfo_endpoint}",
+                        scheme_name=self.scheme_name,
                         exception=exception,
                     ).dumps()
                 )
@@ -483,6 +522,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self._log_item_class(
                         code="edab2e97",
                         msg=f"Unable to load new signing keys from {jwks_uri}",
+                        scheme_name=self.scheme_name,
                         exception=exception,
                     ).dumps()
                 )
@@ -509,6 +549,8 @@ class OidcClient(IdpClient, OpenIdConnect):
                         self.logger.warning(
                             self._log_item_class(
                                 code="ac521d94",
+                                msg="Error retrieving claims from JWT",
+                                scheme_name=self.scheme_name,
                                 exception=exception,
                             ).dumps()
                         )
@@ -520,6 +562,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                         self._log_item_class(
                             code="ecb88df4",
                             msg=f"Authorization scheme {scheme} not implemented",
+                            scheme_name=self.scheme_name,
                         ).dumps()
                     )
                 return None
@@ -528,6 +571,7 @@ class OidcClient(IdpClient, OpenIdConnect):
                 self._log_item_class(
                     code="e1dad160",
                     msg="No authorisation information provided in header",
+                    scheme_name=self.scheme_name,
                 ).dumps()
             )
         return None
