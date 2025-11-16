@@ -64,9 +64,9 @@ def seqdb_server(
         AppType.SEQDB,
         seqdb_enum.ServiceType,
         seqdb_enum.RepositoryType,
-        log_setup=False,
+        log_setup=True,
     )
-    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=False)
+    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=True)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
         app=seqdb_app,

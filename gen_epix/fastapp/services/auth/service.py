@@ -27,11 +27,18 @@ class AuthService(BaseAuthService):
         self,
         app: App,
         logger: logging.Logger | None = None,
+        setup_logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
         repository: None = None,
         **kwargs: Any,
     ):
-        super().__init__(app, repository=repository, logger=logger, **kwargs)
+        super().__init__(
+            app,
+            repository=repository,
+            logger=logger,
+            setup_logger=setup_logger,
+            **kwargs,
+        )
 
         # Initialize authentication services
         self._init_idp_clients(app, idps_cfg)
@@ -620,7 +627,7 @@ class AuthService(BaseAuthService):
                     }
                     idp_client = OidcClient(
                         OidcServerCfg(**idp_cfg),  # type: ignore
-                        logger=logger,
+                        logger=self._logger,
                         log_item_class=app.log_item_class,
                         discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again)
                     )

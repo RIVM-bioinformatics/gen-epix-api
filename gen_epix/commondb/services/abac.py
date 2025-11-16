@@ -33,9 +33,16 @@ class AbacService(BaseAbacService):
         app: App,
         repository: BaseAbacRepository,
         logger: logging.Logger | None = None,
+        setup_logger: logging.Logger | None = None,
         **kwargs: Any,
     ):
-        super().__init__(app, repository=repository, logger=logger, **kwargs)
+        super().__init__(
+            app,
+            repository=repository,
+            logger=logger,
+            setup_logger=setup_logger,
+            **kwargs,
+        )
         app_impl: AppImplDetails = app.impl
         self.organization_admin_policy_model_class: type[
             model.OrganizationAdminPolicy
