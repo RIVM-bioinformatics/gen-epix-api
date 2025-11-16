@@ -31,6 +31,7 @@ class BaseService(abc.ABC):
         service_type: Hashable = None,  # TODO: service_type this required
         repository: BaseRepository | None = None,
         logger: logging.Logger | None = None,
+        setup_logger: logging.Logger | None = None,
         id: str | None = None,
         name: str | None = None,
         register_handlers: bool = True,
@@ -51,6 +52,7 @@ class BaseService(abc.ABC):
         self._app: App = app
         self._repository: BaseRepository | None = repository
         self._logger: logging.Logger | None = logger
+        self._setup_logger: logging.Logger | None = setup_logger
         self._props: dict[str, Any] = props or {}
 
         # Initialize other members
@@ -60,8 +62,8 @@ class BaseService(abc.ABC):
         ] = {}
 
         # Log start
-        if self._logger:
-            self._logger.info(
+        if self._setup_logger:
+            self._setup_logger.info(
                 self.create_log_message(
                     "c10677fe",
                     "STARTING_SERVICE",
@@ -552,5 +554,7 @@ class BaseService(abc.ABC):
                     )
 
     def __del__(self) -> None:
-        if self.logger:
-            self.logger.info(self.create_log_message("d84f9d21", "STOPPING_SERVICE"))
+        if self._setup_logger:
+            self._setup_logger.info(
+                self.create_log_message("d84f9d21", "STOPPING_SERVICE")
+            )

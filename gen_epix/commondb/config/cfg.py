@@ -149,10 +149,12 @@ class AppCfg(BaseAppCfg):
         self._logger_prefix = logger_prefix or app_name.lower()
         self._log_config_file_envvar = log_config_file_envvar
         self._log_setup = log_setup
+        self._log_level_envvar = log_level_envvar
         self._setup_logger_level = setup_logger_level
 
         # Configure and set loggers
         self._init_configure_loggers()
+        self.set_log_level()
         if self._setup_logger_level is not None:
             self.setup_logger.setLevel(self._setup_logger_level)
         if self._log_setup:
@@ -161,15 +163,10 @@ class AppCfg(BaseAppCfg):
             )
 
         # Load settings
-        if self._log_setup:
-            self.setup_logger.debug(
-                App.create_static_log_message(
-                    "d5fd558a", "Loading settings with SettingsManager"
-                )
-            )
         self._init_load_settings()
+        self.set_log_level()
         if self._log_setup:
-            self.setup_logger.debug(
+            self.setup_logger.info(
                 App.create_static_log_message(
                     "a7b3c4d5", f"Loaded settings from {type(self._cfg).__name__}"
                 )
@@ -183,9 +180,6 @@ class AppCfg(BaseAppCfg):
                     "cdb7abcb", "Finished loading config data"
                 )
             )
-
-        # Set log level
-        self.set_log_level()
 
     def _init_configure_loggers(
         self,
@@ -332,15 +326,25 @@ class AppCfg(BaseAppCfg):
     def set_log_level(self, log_level: str | int | None = None) -> None:
         """Set log level for all loggers."""
         # Parse log level
+        log_level_envvar = f"{self._envvar_prefix}{self._log_level_envvar}"
         if log_level is None:
-            # Get log level from settings
-            log_level = self._cfg["log"]["level"]
-        else:
-            # Set new log level in settings as well
-            self._cfg["log"]["level"] = log_level
+            if log_level_envvar in os.environ:
+                # Get log level from environment variable, before settings
+                log_level = os.environ[log_level_envvar]
+            elif hasattr(self, "_cfg"):
+                # Get log level from settings, if available
+                log_level = self._cfg["log"]["level"]
+        if log_level is None:
+            # No log level available
+            return
         if isinstance(log_level, str):
             log_level = log_level.upper()
-        assert isinstance(log_level, int) or isinstance(log_level, str)
+        # Set new log level for all in settings as well
+        if hasattr(self, "_cfg"):
+            self._cfg["log"]["level"] = log_level
+        for handler in self._setup_logger.handlers:
+            handler.setLevel(log_level)
+        self._setup_logger.setLevel(log_level)
         for logger_name in self._logging_config_yaml["loggers"]:
             curr_logger = logging.getLogger(logger_name)
             if self._log_setup:
