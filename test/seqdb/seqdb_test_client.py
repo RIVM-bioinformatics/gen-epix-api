@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
@@ -317,7 +317,7 @@ class SeqdbTestClient(TestClient):
         assert seq.assembly_protocol_id == assembly_protocol_id
         return self._set_obj(seq)  # type:ignore[return-value]
 
-    def get_default_kwargs(self, model_class: Type[model.Model]) -> dict[str, Any]:
+    def get_default_kwargs(self, model_class: type[model.Model]) -> dict[str, Any]:
         if model_class == model.ReadSet:
             return {
                 "fwd_uri": "http://reads/sample_x_1.fastq",

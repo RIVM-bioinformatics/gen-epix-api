@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.policies.has_system_outage_policy import (
     HasSystemOutagePolicy as HasSystemOutagePolicy,
 )

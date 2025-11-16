@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.policy import (
     BaseIsOrganizationAdminPolicy as BaseIsOrganizationAdminPolicy,
 )

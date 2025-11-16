@@ -2,7 +2,7 @@ import base64
 from datetime import datetime, timedelta
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
@@ -24,7 +24,7 @@ class TestAuth:
     CURRENT_USER_ENDPOINT = "/secure/current_user"
 
     NOW = datetime.now()
-    INVALID_CLAIMS: Dict[str, Any] = {
+    INVALID_CLAIMS: dict[str, Any] = {
         "aud": "wrong_aud",  # client id
         "iss": "http://localhost:5003",  # authorization server
         "nbf": floor((NOW + timedelta(seconds=1000)).timestamp()),
@@ -32,7 +32,7 @@ class TestAuth:
         "iat": floor((NOW + timedelta(seconds=1000)).timestamp()),
     }
 
-    INVALID_JWK: Dict[str, str] = {
+    INVALID_JWK: dict[str, str] = {
         "alg": "RS384",
         "kid": "wrong_key_id",
         #

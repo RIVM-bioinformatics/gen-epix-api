@@ -1,5 +1,4 @@
-from typing import Type
-
+# pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac import CaseAbac as CaseAbac
@@ -119,7 +118,7 @@ from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
 # List up model classes per service and sorted according to links topology
-SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
+SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
     {  # pyright: ignore[reportAssignmentType]
         # Common models
         enum.ServiceType.AUTH: list(
@@ -211,4 +210,4 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 )
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {}
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

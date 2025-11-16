@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Any, Type
+from typing import Any
 
 from fastapi import Request
 from fastapi.security.utils import get_authorization_scheme_param
@@ -17,7 +17,7 @@ class MockIDPClient(IdpClient):
     def __init__(
         self,
         logger: logging.Logger | None = None,
-        log_item_class: Type[BaseLogItem] = LogItem,
+        log_item_class: type[BaseLogItem] = LogItem,
         **kwargs: Any,
     ):
         self._id: uuid.UUID = kwargs.get("id", uuid.uuid4())  # type: ignore[assignment]

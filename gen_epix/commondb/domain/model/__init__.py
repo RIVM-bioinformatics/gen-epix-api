@@ -1,5 +1,4 @@
-from typing import Type
-
+# pylint: disable=useless-import-alias
 import gen_epix.fastapp as fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
@@ -37,7 +36,7 @@ from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 
 SORTED_MODELS_BY_SERVICE_TYPE: dict[
-    enum.ServiceType, tuple[Type[fastapp.Model], ...]
+    enum.ServiceType, tuple[type[fastapp.Model], ...]
 ] = {
     enum.ServiceType.AUTH: (
         IdentityProvider,

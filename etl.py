@@ -29,7 +29,6 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Type
 
 from gen_epix.commondb.config.cfg import AppCfg
 from gen_epix.commondb.domain.enum import (
@@ -86,7 +85,7 @@ for service_type in enum.ServiceType:
         service_type=service_type, persistable=True
     )
     # Create dict repository, which is assumed to always be available
-    dict_repository_class: Type[DictRepository] = dict_repository_cfg["class"]
+    dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
     demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
     empty_dict_file = Path(str(demo_dict_file).replace(".full.", ".empty.")).resolve()
     zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
@@ -105,7 +104,7 @@ for service_type in enum.ServiceType:
     )
     # Create empty SA_SQL repository or loaded with demo data
     sa_sql_repository_cfg = sa_sql_app_cfg.cfg["repository"][service_type.value]
-    sa_repository_class: Type[SARepository] = sa_sql_repository_cfg["class"]
+    sa_repository_class: type[SARepository] = sa_sql_repository_cfg["class"]
     connection_string = sa_sql_repository_cfg["props"]["connection_string"]
     if "mssql" in connection_string:
         connect_args = {

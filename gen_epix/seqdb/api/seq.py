@@ -1,4 +1,5 @@
-from typing import Any, Callable, Iterable, NoReturn
+from collections.abc import Callable, Iterable
+from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI

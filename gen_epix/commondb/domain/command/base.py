@@ -2,7 +2,8 @@
 # This module defines base classes, methods are added later
 
 import datetime
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 from uuid import UUID
 
 from pydantic import Field, field_serializer

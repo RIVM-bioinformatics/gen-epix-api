@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 """
 OAuth Client Credential Flow Test Applications Package
 

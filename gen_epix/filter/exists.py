@@ -1,5 +1,5 @@
-from collections.abc import Hashable
-from typing import Any, Callable, Iterable, Literal
+from collections.abc import Callable, Hashable, Iterable
+from typing import Any, Literal
 
 from gen_epix.filter.base import Filter
 from gen_epix.filter.enum import FilterType

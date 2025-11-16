@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -26,7 +26,7 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = tuple()
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = tuple()
 
     def __init__(
         self,
@@ -37,25 +37,25 @@ class AbacService(BaseAbacService):
     ):
         super().__init__(app, repository=repository, logger=logger, **kwargs)
         app_impl: AppImplDetails = app.impl
-        self.organization_admin_policy_model_class: Type[
+        self.organization_admin_policy_model_class: type[
             model.OrganizationAdminPolicy
         ] = app_impl.get_mapped_class(model.OrganizationAdminPolicy)
-        self.user_crud_command_class: Type[command.UserCrudCommand] = (
+        self.user_crud_command_class: type[command.UserCrudCommand] = (
             app_impl.get_mapped_class(command.UserCrudCommand)
         )
-        self.is_organization_admin_policy_class: Type[
+        self.is_organization_admin_policy_class: type[
             policy.BaseIsOrganizationAdminPolicy
         ] = app_impl.get_mapped_class(policies.IsOrganizationAdminPolicy)
-        self.read_organization_results_only_policy_class: Type[
+        self.read_organization_results_only_policy_class: type[
             policy.BaseReadOrganizationResultsOnlyPolicy
         ] = app_impl.get_mapped_class(policies.ReadOrganizationResultsOnlyPolicy)
-        self.read_self_results_only_policy_class: Type[
+        self.read_self_results_only_policy_class: type[
             policy.BaseReadSelfResultsOnlyPolicy
         ] = app_impl.get_mapped_class(policies.ReadSelfResultsOnlyPolicy)
-        self.read_user_policy_class: Type[policy.BaseReadUserPolicy] = (
+        self.read_user_policy_class: type[policy.BaseReadUserPolicy] = (
             app_impl.get_mapped_class(policies.ReadUserPolicy)
         )
-        self.update_user_policy_class: Type[policy.BaseUpdateUserPolicy] = (
+        self.update_user_policy_class: type[policy.BaseUpdateUserPolicy] = (
             app_impl.get_mapped_class(policies.UpdateUserPolicy)
         )
         self.role_map = app_impl.role_map
@@ -70,11 +70,11 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[Type[Command]] | None = None,
-        read_user_commands: set[Type[Command]] | None = None,
-        update_user_commands: set[Type[Command]] | None = None,
-        read_organization_results_only_commands: set[Type[Command]] | None = None,
-        read_self_results_only_commands: set[Type[Command]] | None = None,
+        organization_admin_write_commands: set[type[Command]] | None = None,
+        read_user_commands: set[type[Command]] | None = None,
+        update_user_commands: set[type[Command]] | None = None,
+        read_organization_results_only_commands: set[type[Command]] | None = None,
+        read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
         organization_admin_write_commands = (
             organization_admin_write_commands or self.ORGANIZATION_ADMIN_WRITE_COMMANDS
@@ -90,7 +90,7 @@ class AbacService(BaseAbacService):
         )
         f = self.app.register_policy
         policy: Policy
-        command_class: Type[Command]
+        command_class: type[Command]
         policy = self.is_organization_admin_policy_class(self)
         for command_class in organization_admin_write_commands:
             f(command_class, policy, EventTiming.BEFORE)

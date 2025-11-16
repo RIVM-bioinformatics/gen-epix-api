@@ -8,7 +8,7 @@ from test.casedb.integration.case_access.base import (
     VERBOSE,
 )
 from test.commondb.util import retrieve_db_data_from_file
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import pandas as pd
@@ -48,7 +48,7 @@ def get_test_client() -> Env:
 
 
 class CaseAccessSetup:
-    ORDERED_MODEL_TO_SHEET_MAP: dict[Type[model.Model], str] = {
+    ORDERED_MODEL_TO_SHEET_MAP: dict[type[model.Model], str] = {
         model.Organization: "Organization",
         model.User: "User",
         model.UserInvitation: "UserInvitation",

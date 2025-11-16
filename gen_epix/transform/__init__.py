@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.transform.adapter import DictAdapter as DictAdapter
 from gen_epix.transform.adapter import ObjectAdapter as ObjectAdapter
 from gen_epix.transform.adapter import PolarsAdapter as PolarsAdapter

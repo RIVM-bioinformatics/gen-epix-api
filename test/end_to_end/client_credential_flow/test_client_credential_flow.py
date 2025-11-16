@@ -15,12 +15,12 @@ Test scenario:
 """
 
 import logging
+from collections.abc import Generator
 from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=import-error
     OAuthServerManager,
     ReceiverAppManager,
     RequestorApp,
 )
-from typing import Generator
 
 import httpx
 import pytest

@@ -1,6 +1,5 @@
 from collections.abc import Hashable
 from enum import Enum
-from typing import Type
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
@@ -59,13 +58,13 @@ class Domain:
         return str(service_type)
 
     @staticmethod
-    def get_command_name(command_class: Type[Command]) -> str:
+    def get_command_name(command_class: type[Command]) -> str:
         if command_class.NAME is None:
             command_class.NAME = command_class.__name__
         return command_class.NAME
 
     @staticmethod
-    def get_command_permissions(command_class: Type[Command]) -> frozenset[Permission]:
+    def get_command_permissions(command_class: type[Command]) -> frozenset[Permission]:
         if command_class._PERMISSIONS is None:
             if command_class.NAME is None:
                 raise exc.InitializationServiceError(
@@ -80,7 +79,7 @@ class Domain:
         return command_class._PERMISSIONS
 
     @staticmethod
-    def get_model_name(model_class: Type[Model]) -> str:
+    def get_model_name(model_class: type[Model]) -> str:
         if model_class.NAME is None:
             model_class.NAME = model_class.__name__
         return model_class.NAME
@@ -92,9 +91,9 @@ class Domain:
         # Initialize sets
         self._service_types: set[Hashable] = set()
         self._entities: set[Entity] = set()
-        self._models: set[Type[Model]] = set()
-        self._crud_commands: set[Type[CrudCommand]] = set()
-        self._commands: set[Type[Command]] = set()
+        self._models: set[type[Model]] = set()
+        self._crud_commands: set[type[CrudCommand]] = set()
+        self._commands: set[type[Command]] = set()
         self._permissions: set[Permission] = set()
         self._entity_dag: dict[Entity, list[Entity]] = {}
         self._dag_sorted_entities: list[Entity] = []
@@ -102,12 +101,12 @@ class Domain:
         # Initialize mappings between classes and their names
         self._service_type_for_name: dict[str, Hashable] = {}
         self._name_for_service_type: dict[Hashable, str] = {}
-        self._command_for_name: dict[str, Type[Command]] = {}
-        self._name_for_command: dict[Type[Command], str] = {}
-        self._model_for_name: dict[str, Type[Model]] = {}
-        self._name_for_model: dict[Type[Model], str] = {}
+        self._command_for_name: dict[str, type[Command]] = {}
+        self._name_for_command: dict[type[Command], str] = {}
+        self._model_for_name: dict[str, type[Model]] = {}
+        self._name_for_model: dict[type[Model], str] = {}
         self._permission_for_tuple: dict[
-            tuple[str | Type[Command], PermissionType], Permission
+            tuple[str | type[Command], PermissionType], Permission
         ] = {}
 
         # Initialize mappings between types of classes (service_type, Entity, Model,
@@ -117,37 +116,37 @@ class Domain:
         self._service_type_for_entity: dict[Entity, Hashable] = {}
         self._entities_for_service_type: dict[Hashable, set[Entity]] = {}
         # service type and Model
-        self._service_type_for_model: dict[Type[Model] | str, Hashable] = {}
-        self._models_for_service_type: dict[Hashable, set[Type[Model]]] = {}
+        self._service_type_for_model: dict[type[Model] | str, Hashable] = {}
+        self._models_for_service_type: dict[Hashable, set[type[Model]]] = {}
         # service type and Command
-        self._service_type_for_command: dict[Type[Command] | str, Hashable] = {}
-        self._commands_for_service_type: dict[Hashable, set[Type[Command]]] = {}
-        self._crud_commands_for_service_type: dict[Hashable, set[Type[CrudCommand]]] = (
+        self._service_type_for_command: dict[type[Command] | str, Hashable] = {}
+        self._commands_for_service_type: dict[Hashable, set[type[Command]]] = {}
+        self._crud_commands_for_service_type: dict[Hashable, set[type[CrudCommand]]] = (
             {}
         )
         # service type and Permission
         self._service_type_for_permission: dict[Permission, Hashable] = {}
         self._permissions_for_service_type: dict[Hashable, set[Permission]] = {}
         # Entity and Model
-        self._entity_for_model: dict[Type[Model] | str, Entity] = {}
-        self._model_for_entity: dict[Entity, Type[Model]] = {}
+        self._entity_for_model: dict[type[Model] | str, Entity] = {}
+        self._model_for_entity: dict[Entity, type[Model]] = {}
         # Entity and CrudCommand
-        self._entity_for_crud_command: dict[Type[CrudCommand] | str, Entity] = {}
-        self._crud_command_for_entity: dict[Entity, Type[CrudCommand]] = {}
+        self._entity_for_crud_command: dict[type[CrudCommand] | str, Entity] = {}
+        self._crud_command_for_entity: dict[Entity, type[CrudCommand]] = {}
         # Entity and Permission
         self._entity_for_permission: dict[Permission, Entity] = {}
         self._permissions_for_entity: dict[Entity, frozenset[Permission]] = {}
         # Model and CrudCommand
-        self._crud_command_for_model: dict[Type[Model] | str, Type[CrudCommand]] = {}
-        self._model_for_crud_command: dict[Type[CrudCommand] | str, Type[Model]] = {}
+        self._crud_command_for_model: dict[type[Model] | str, type[CrudCommand]] = {}
+        self._model_for_crud_command: dict[type[CrudCommand] | str, type[Model]] = {}
         # Model and Permission
-        self._model_for_permission: dict[Permission, Type[Model]] = {}
-        self._permissions_for_model: dict[Type[Model] | str, frozenset[Permission]] = {}
+        self._model_for_permission: dict[Permission, type[Model]] = {}
+        self._permissions_for_model: dict[type[Model] | str, frozenset[Permission]] = {}
         # Command and Permission
         self._permissions_for_command: dict[
-            Type[Command] | str, frozenset[Permission]
+            type[Command] | str, frozenset[Permission]
         ] = {}
-        self._command_for_permission: dict[Permission, Type[Command]] = {}
+        self._command_for_permission: dict[Permission, type[Command]] = {}
 
     @property
     def name(self) -> str:
@@ -170,7 +169,7 @@ class Domain:
         return frozenset(self._entities)
 
     @property
-    def commands(self) -> frozenset[Type[Command]]:
+    def commands(self) -> frozenset[type[Command]]:
         return frozenset(self._commands)
 
     @property
@@ -178,11 +177,11 @@ class Domain:
         return frozenset(self._command_for_name.keys())
 
     @property
-    def crud_commands(self) -> frozenset[Type[CrudCommand]]:
+    def crud_commands(self) -> frozenset[type[CrudCommand]]:
         return frozenset(self._crud_commands)
 
     @property
-    def models(self) -> frozenset[Type[Model]]:
+    def models(self) -> frozenset[type[Model]]:
         return frozenset(self._models)
 
     @property
@@ -191,7 +190,7 @@ class Domain:
 
     def get_commands(
         self, include_crud: bool = False, frozen: bool = True
-    ) -> set[Type[Command]] | frozenset[Type[Command]]:
+    ) -> set[type[Command]] | frozenset[type[Command]]:
         if include_crud:
             if frozen:
                 return frozenset(self._commands)
@@ -223,7 +222,7 @@ class Domain:
         return set(self._service_types)
 
     def get_service_type_for_model(
-        self, model_class: Type[Model], verify: bool = False
+        self, model_class: type[Model], verify: bool = False
     ) -> Hashable:
         if verify:
             self._verify_model_exists(model_class)
@@ -231,13 +230,13 @@ class Domain:
 
     def get_models_for_service_type(
         self, service_type: Hashable, frozen: bool = True
-    ) -> set[Type[Model]] | frozenset[Type[Model]]:
+    ) -> set[type[Model]] | frozenset[type[Model]]:
         self._verify_service_type_exists(service_type)
         if frozen:
             return frozenset(self._models_for_service_type[service_type])
         return set(self._models_for_service_type[service_type])
 
-    def get_service_type_for_command(self, command_class: Type[Command]) -> Hashable:
+    def get_service_type_for_command(self, command_class: type[Command]) -> Hashable:
         self._verify_command_exists(command_class)
         return self._service_type_for_command[command_class]
 
@@ -245,8 +244,8 @@ class Domain:
         self,
         service_type: Hashable,
         frozen: bool = True,
-        base_class: Type[Command] | None = None,
-    ) -> set[Type[Command]] | frozenset[Type[Command]]:
+        base_class: type[Command] | None = None,
+    ) -> set[type[Command]] | frozenset[type[Command]]:
         self._verify_service_type_exists(service_type)
         if frozen:
             if base_class:
@@ -270,8 +269,8 @@ class Domain:
         self,
         service_type: Hashable,
         frozen: bool = True,
-        base_class: Type[CrudCommand] | None = None,
-    ) -> set[Type[CrudCommand]] | frozenset[Type[CrudCommand]]:
+        base_class: type[CrudCommand] | None = None,
+    ) -> set[type[CrudCommand]] | frozenset[type[CrudCommand]]:
         self._verify_service_type_exists(service_type)
         if frozen:
             if base_class:
@@ -293,7 +292,7 @@ class Domain:
             )
         return frozenset(self._crud_commands_for_service_type[service_type])
 
-    def get_command_for_name(self, command_name: str) -> Type[Command]:
+    def get_command_for_name(self, command_name: str) -> type[Command]:
         self._verify_command_exists(command_name)
         return self._command_for_name[command_name]
 
@@ -315,7 +314,7 @@ class Domain:
             return frozenset(self._permissions)
         return set(self._permissions)
 
-    def get_model_excluded_permissions(self) -> dict[Type[Model], PermissionTypeSet]:
+    def get_model_excluded_permissions(self) -> dict[type[Model], PermissionTypeSet]:
         """
         For all registered CRUD commands, return a dict where the key is the
         model class and the value is a PermissionTypeSet that indicates which
@@ -342,21 +341,21 @@ class Domain:
         self._verify_permission_exists(permission)
         return self._service_type_for_permission[permission]
 
-    def get_entity_for_model(self, model_class: Type[Model]) -> Entity:
+    def get_entity_for_model(self, model_class: type[Model]) -> Entity:
         self._verify_model_exists(model_class)
         return self._entity_for_model[model_class]
 
-    def get_model_for_entity(self, entity: Entity) -> Type[Model]:
+    def get_model_for_entity(self, entity: Entity) -> type[Model]:
         self._verify_entity_exists(entity)
         return self._model_for_entity[entity]
 
     def get_entity_for_crud_command(
-        self, crud_command_class: Type[CrudCommand]
+        self, crud_command_class: type[CrudCommand]
     ) -> Entity:
         self._verify_command_exists(crud_command_class)
         return self._entity_for_crud_command[crud_command_class]
 
-    def get_crud_command_for_entity(self, entity: Entity) -> Type[CrudCommand]:
+    def get_crud_command_for_entity(self, entity: Entity) -> type[CrudCommand]:
         self._verify_entity_exists(entity)
         return self._crud_command_for_entity[entity]
 
@@ -372,23 +371,23 @@ class Domain:
             return frozenset(self._permissions_for_entity[entity])
         return set(self._permissions_for_entity[entity])
 
-    def get_crud_command_for_model(self, model_class: Type[Model]) -> Type[CrudCommand]:
+    def get_crud_command_for_model(self, model_class: type[Model]) -> type[CrudCommand]:
         self._verify_model_exists(model_class)
         return self._crud_command_for_model[model_class]
 
     def get_model_for_crud_command(
-        self, crud_command_class: Type[CrudCommand]
-    ) -> Type[Model]:
+        self, crud_command_class: type[CrudCommand]
+    ) -> type[Model]:
         self._verify_command_exists(crud_command_class)
         return self._model_for_crud_command[crud_command_class]
 
-    def get_model_for_permission(self, permission: Permission) -> Type[Model]:
+    def get_model_for_permission(self, permission: Permission) -> type[Model]:
         self._verify_permission_exists(permission)
         return self._model_for_permission[permission]
 
     def get_permissions_for_model(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         frozen: bool = True,
         permission_type_set: PermissionTypeSet | None = None,
     ) -> set[Permission] | frozenset[Permission]:
@@ -401,7 +400,7 @@ class Domain:
 
     def get_permissions_for_command(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         frozen: bool = True,
         permission_type_set: PermissionTypeSet | None = None,
     ) -> set[Permission] | frozenset[Permission]:
@@ -421,13 +420,13 @@ class Domain:
             return self._permissions_for_command[command_class]
         return set(self._permissions_for_command[command_class])
 
-    def get_command_for_permission(self, permission: Permission) -> Type[Command]:
+    def get_command_for_permission(self, permission: Permission) -> type[Command]:
         self._verify_permission_exists(permission)
         return self._command_for_permission[permission]
 
     def get_permission(
         self,
-        command_class_or_name: Type[Command] | str,
+        command_class_or_name: type[Command] | str,
         permission_type: PermissionType,
     ) -> Permission:
         self._verify_command_exists(command_class_or_name)
@@ -446,14 +445,14 @@ class Domain:
 
     def get_model_links(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         as_tuple: bool = False,
         service_type: Hashable | None = None,
         url_name: str | None = None,
         database_name: str | None = None,
         schema_name: str | None = None,
         invert: bool = False,
-    ) -> dict[int, tuple[str, Type[Model], str | None]] | dict[int, Link]:
+    ) -> dict[int, tuple[str, type[Model], str | None]] | dict[int, Link]:
         self._verify_model_exists(model_class)
         entity = self.get_entity_for_model(model_class)
         links = {}
@@ -520,7 +519,7 @@ class Domain:
         schema_name: str | None = None,
         invert: bool = False,
         reverse: bool = False,
-    ) -> list[Type[Model]]:
+    ) -> list[type[Model]]:
         return [
             x.model_class  # type: ignore
             for x in self.get_dag_sorted_entities(
@@ -548,8 +547,8 @@ class Domain:
         self,
         entity: Entity,
         service_type: Hashable | None = None,
-        model_class: Type[Model] | None = None,
-        crud_command_class: Type[CrudCommand] | None = None,
+        model_class: type[Model] | None = None,
+        crud_command_class: type[CrudCommand] | None = None,
         on_cycle: str = "raise",
     ) -> Entity:
         # Set service type Model and CrudCommand
@@ -611,8 +610,8 @@ class Domain:
         return entity
 
     def register_command(
-        self, command_class: Type[Command], service_type: Hashable | None = None
-    ) -> Type[Command]:
+        self, command_class: type[Command], service_type: Hashable | None = None
+    ) -> type[Command]:
         command_name = Domain.get_command_name(command_class)
 
         # Verify already registered Command
@@ -711,7 +710,7 @@ class Domain:
                 )
         return command_class
 
-    def _verify_model_has_entity(self, model_class: Type[Model]) -> None:
+    def _verify_model_has_entity(self, model_class: type[Model]) -> None:
         if model_class.ENTITY is None:
             raise exc.DomainException(
                 f"Entity not set for model {Domain.get_model_name(model_class)}"
@@ -726,7 +725,7 @@ class Domain:
             raise exc.DomainException(f"Service type {service_type} is not registered")
 
     def _verify_command_exists(
-        self, command_class_or_name: Type[Command] | str
+        self, command_class_or_name: type[Command] | str
     ) -> None:
         if isinstance(command_class_or_name, str):
             command_name = command_class_or_name
@@ -738,7 +737,7 @@ class Domain:
                 command_name = Domain.get_command_name(command_class)
                 raise exc.DomainException(f"Command {command_name} is not registered")
 
-    def _verify_model_exists(self, model_class_or_name: Type[Model] | str) -> None:
+    def _verify_model_exists(self, model_class_or_name: type[Model] | str) -> None:
         if isinstance(model_class_or_name, str):
             model_name = model_class_or_name
             if model_name not in self._model_for_name:

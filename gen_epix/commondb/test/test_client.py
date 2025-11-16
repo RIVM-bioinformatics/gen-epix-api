@@ -5,7 +5,7 @@ from collections.abc import Hashable
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, List, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -25,7 +25,7 @@ class TestClient:
 
     DEFAULT_ROUTE_PREFIX = "/v1"
 
-    MODEL_KEY_MAP: dict[Type[model.Model], str | tuple[str, ...]] = {
+    MODEL_KEY_MAP: dict[type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
         model.UserInvitation: "email",
         model.Organization: "name",
@@ -58,40 +58,40 @@ class TestClient:
 
         # Get implementation details
         app_impl: AppImplDetails = app_composer.app.impl
-        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
-        self.user_invitation_class: Type[model.UserInvitation] = (
+        self.user_class: type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_invitation_class: type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)
         )
-        self.user_invitation_constraints_class: Type[
+        self.user_invitation_constraints_class: type[
             model.UserInvitationConstraints
         ] = app_impl.get_mapped_class(model.UserInvitationConstraints)
-        self.organization_admin_policy_class: Type[model.OrganizationAdminPolicy] = (
+        self.organization_admin_policy_class: type[model.OrganizationAdminPolicy] = (
             app_impl.get_mapped_class(model.OrganizationAdminPolicy)
         )
-        self.user_crud_command_class: Type[command.UserCrudCommand] = (
+        self.user_crud_command_class: type[command.UserCrudCommand] = (
             app_impl.get_mapped_class(command.UserCrudCommand)
         )
-        self.user_invitation_crud_command_class: Type[
+        self.user_invitation_crud_command_class: type[
             command.UserInvitationCrudCommand
         ] = app_impl.get_mapped_class(command.UserInvitationCrudCommand)
-        self.organization_admin_policy_crud_command_class: Type[
+        self.organization_admin_policy_crud_command_class: type[
             command.OrganizationAdminPolicyCrudCommand
         ] = app_impl.get_mapped_class(command.OrganizationAdminPolicyCrudCommand)
-        self.retrieve_invite_user_constraints_command_class: Type[
+        self.retrieve_invite_user_constraints_command_class: type[
             command.RetrieveInviteUserConstraintsCommand
         ] = app_impl.get_mapped_class(command.RetrieveInviteUserConstraintsCommand)
-        self.invite_user_command_class: Type[command.InviteUserCommand] = (
+        self.invite_user_command_class: type[command.InviteUserCommand] = (
             app_impl.get_mapped_class(command.InviteUserCommand)
         )
-        self.register_invited_user_command_class: Type[
+        self.register_invited_user_command_class: type[
             command.RegisterInvitedUserCommand
         ] = app_impl.get_mapped_class(command.RegisterInvitedUserCommand)
-        self.retrieve_organization_admin_name_emails_command_class: Type[
+        self.retrieve_organization_admin_name_emails_command_class: type[
             command.RetrieveOrganizationAdminNameEmailsCommand
         ] = app_impl.get_mapped_class(
             command.RetrieveOrganizationAdminNameEmailsCommand
         )
-        self.update_user_command_class: Type[command.UpdateUserCommand] = (
+        self.update_user_command_class: type[command.UpdateUserCommand] = (
             app_impl.get_mapped_class(command.UpdateUserCommand)
         )
         self.role_map = app_impl.role_map
@@ -109,7 +109,7 @@ class TestClient:
         # Set additional parameters
         self.root_role: str = self.role_map[enum.Role.ROOT]
         self.guest_role: str = self.role_map[enum.Role.GUEST]
-        self.db: dict[Type[model.Model], dict[Hashable, model.Model]] = {}
+        self.db: dict[type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints = use_endpoints
         self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
@@ -516,7 +516,7 @@ class TestClient:
     def read_all(
         self,
         user_or_key: model.User | str,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         cascade: bool = False,
     ) -> list[model.Model]:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
@@ -533,7 +533,7 @@ class TestClient:
     def read_some(
         self,
         user_or_key: model.User | str,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj_ids: list[UUID] | set[UUID],
         cascade: bool = False,
     ) -> list[model.Model]:
@@ -556,18 +556,18 @@ class TestClient:
     def read_some_by_property(
         self,
         user_or_key: model.User | str,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         name: str,
         value: Any,
         cascade: bool = False,
-    ) -> List[model.Model]:
+    ) -> list[model.Model]:
         objs = self.read_all(user_or_key, model_class, cascade=cascade)
         return [x for x in objs if getattr(x, name) == value]
 
     def read_one_by_property(
         self,
         user_or_key: model.User | str,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         name: str,
         value: Any,
         cascade: bool = False,
@@ -584,7 +584,7 @@ class TestClient:
     def update_object(
         self,
         user_or_key: str | model.User,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj_or_key: model.Model | str,
         props: dict[str, Any | None],
         set_dummy_link: dict[str, bool] | bool = False,
@@ -612,7 +612,7 @@ class TestClient:
     def delete_object(
         self,
         user_or_key: str | model.User,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj_or_key: model.Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
     ) -> UUID:
@@ -645,7 +645,7 @@ class TestClient:
     def verify_read_all(
         self,
         user_or_str: model.User | str,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         expected_ids: set[UUID] | list[model.Model],
     ) -> None:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
@@ -778,7 +778,7 @@ class TestClient:
         assert model_class.ENTITY
         id_field_name = model_class.ENTITY.id_field_name
         assert id_field_name
-        link_map: dict[str, tuple[str, Type[model.Model]]] = {
+        link_map: dict[str, tuple[str, type[model.Model]]] = {
             x.relationship_field_name: (
                 x.link_field_name,
                 x.link_model_class,
@@ -815,7 +815,7 @@ class TestClient:
     def _get_obj_key(
         self,
         table: dict,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj: (
             str
             | UUID
@@ -855,7 +855,7 @@ class TestClient:
 
     def _get_obj(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj: (
             str
             | UUID
@@ -903,7 +903,7 @@ class TestClient:
             table[key] = obj
         return obj
 
-    def _delete_obj(self, model_class: Type[model.Model], obj_id: UUID) -> model.Model:
+    def _delete_obj(self, model_class: type[model.Model], obj_id: UUID) -> model.Model:
         if model_class not in self.db:
             self.db[model_class] = {}
         table = self.db[model_class]

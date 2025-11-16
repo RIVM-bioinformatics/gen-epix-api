@@ -1,5 +1,4 @@
-from typing import Type
-
+# pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.command.abac import (
@@ -92,7 +91,7 @@ from gen_epix.fastapp.services.auth import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 
-COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[Type[fastapp.Command]]] = {
+COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]]] = {
     enum.ServiceType.AUTH: frozenset(
         {
             GetIdentityProvidersCommand,

@@ -1,5 +1,4 @@
-from typing import Type
-
+# pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain import model as common_model
@@ -101,7 +100,7 @@ from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
 
 # List up model classes per service and sorted according to links topology
-SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
+SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
     {  # pyright: ignore[reportAssignmentType]
         # Common models
         enum.ServiceType.AUTH: list(
@@ -168,6 +167,12 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
             SeqClassification,
             SeqDistance,
             SeqTaxonomy,
+            MultipleAlignment,
+            PhylogeneticTree,
+            CompleteContig,
+            CompleteSample,
+            CompleteSeq,
+            CompleteSnpProfile,
         ],
         enum.ServiceType.FILE: [File],
     }
@@ -175,7 +180,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
     common_model.User: User,
     common_model.UserInvitation: UserInvitation,
     common_model.UserInvitationConstraints: UserInvitationConstraints,

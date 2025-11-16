@@ -1,6 +1,5 @@
-from gen_epix.casedb.repositories import sa_model as sa_model  # Initialize SA Models
-
 # pylint: disable=useless-import-alias
+from gen_epix.casedb.repositories import sa_model as sa_model  # Initialize SA Models
 from gen_epix.casedb.repositories.abac_dict import (
     AbacDictRepository as AbacDictRepository,
 )

@@ -1,5 +1,5 @@
-from collections.abc import Hashable
-from typing import Any, Callable, Iterable, Iterator, Literal
+from collections.abc import Callable, Hashable, Iterable, Iterator
+from typing import Any, Literal
 
 from pydantic import BaseModel
 

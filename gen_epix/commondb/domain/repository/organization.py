@@ -1,6 +1,6 @@
 import abc
 
-from gen_epix.commondb.domain import model  # forces models to be registered now
+from gen_epix.commondb.domain import model
 from gen_epix.fastapp import BaseRepository, BaseUnitOfWork
 
 
