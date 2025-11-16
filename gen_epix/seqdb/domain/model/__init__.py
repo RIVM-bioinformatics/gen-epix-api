@@ -166,6 +166,12 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqClassification,
             SeqDistance,
             SeqTaxonomy,
+            MultipleAlignment,
+            PhylogeneticTree,
+            CompleteContig,
+            CompleteSample,
+            CompleteSeq,
+            CompleteSnpProfile,
         ],
         enum.ServiceType.FILE: [File],
     }
