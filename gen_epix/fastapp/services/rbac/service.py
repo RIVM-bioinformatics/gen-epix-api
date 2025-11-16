@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Hashable
 from enum import Enum
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.fastapp import (
     App,
@@ -203,7 +203,7 @@ class BaseRbacService(BaseService):
             )
 
     def get_rbac_permissions_for_command_class(
-        self, command_class: Type[Command]
+        self, command_class: type[Command]
     ) -> set[Permission]:
         """
         Get the permissions for a command class that are subject to RBAC, i.e. which are
@@ -213,7 +213,7 @@ class BaseRbacService(BaseService):
         assert isinstance(all_permissions, set)
         return all_permissions - self._permissions_without_rbac
 
-    def get_command_classes_with_rbac(self) -> set[Type[Command]]:
+    def get_command_classes_with_rbac(self) -> set[type[Command]]:
         """
         Get all command classes that are subject to RBAC, i.e. for which at least one
         permission is registered to be subject to RBAC.

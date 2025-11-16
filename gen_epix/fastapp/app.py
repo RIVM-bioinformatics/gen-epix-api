@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from datetime import datetime
-from typing import Any, Callable, Type, cast
+from typing import Any, cast
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain import Domain
@@ -54,7 +54,7 @@ class App:
         user_manager: BaseUserManager | None = None,
         cfg: Any | None = None,
         impl: Any | None = None,
-        log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
+        log_item_class: type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         id_factory: Callable[[], Hashable] = uuid.uuid4,
         id: str | None = None,
         name: str | None = None,
@@ -76,10 +76,10 @@ class App:
 
         # Initialize other members
         self._created_at = self.generate_timestamp()
-        self._command_handler_map: dict[Type[Command], Callable[[Command], Any]] = {}
-        self._model_crud_command_map: dict[Type[Model], Type[CrudCommand]] = {}
+        self._command_handler_map: dict[type[Command], Callable[[Command], Any]] = {}
+        self._model_crud_command_map: dict[type[Model], type[CrudCommand]] = {}
         self._command_listeners: dict[
-            EventTiming, dict[Type[Command], list[Callable[[Command, Any], None]]]
+            EventTiming, dict[type[Command], list[Callable[[Command, Any], None]]]
         ] = {x: {} for x in EventTiming}
         self._command_stack: list[Command] = []
 
@@ -146,7 +146,7 @@ class App:
         return self._impl
 
     @property
-    def log_item_class(self) -> Type[BaseLogItem]:
+    def log_item_class(self) -> type[BaseLogItem]:
         return self._log_item_class
 
     def generate_id(self) -> Hashable:
@@ -157,7 +157,7 @@ class App:
 
     def register_command(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
     ) -> None:
         if self._logger and self._logger.level <= logging.DEBUG:
             self._logger.debug(
@@ -171,7 +171,7 @@ class App:
 
     def register_policy(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         policy: Policy,
         timing: EventTiming = EventTiming.BEFORE,
     ) -> None:
@@ -189,7 +189,7 @@ class App:
 
     def unregister_policy(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         policy: Policy,
         timing: EventTiming,
     ) -> None:
@@ -207,7 +207,7 @@ class App:
 
     def register_listener(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         listener: Callable[[Command, Any], None],
         timing: EventTiming,
     ) -> None:
@@ -237,7 +237,7 @@ class App:
 
     def unregister_listener(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         listener: Callable[[Command, Any], None],
         timing: EventTiming,
     ) -> None:
@@ -260,7 +260,7 @@ class App:
 
     def register_handler(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         handler_fn: Callable,  # Takes a Command and returns Any, no type hint here (would be Callable[[Command], Any]) to avoid linter messages
         replace: bool = True,
     ) -> None:
@@ -297,7 +297,7 @@ class App:
             )
         self._command_handler_map[command_class] = handler_fn
 
-    def get_handler(self, command_class: Type[Command]) -> Callable:
+    def get_handler(self, command_class: type[Command]) -> Callable:
         for type_ in command_class.__mro__:
             handler = self._command_handler_map.get(type_)
             if handler:
@@ -476,7 +476,7 @@ class App:
     def create_static_log_message(
         code: str,
         msg: str,
-        log_item_class: Type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
+        log_item_class: type[BaseLogItem] = DEFAULT_LOG_ITEM_CLASS,
         **kwargs: Any,
     ) -> str:
         cmd: Command | None = kwargs.pop("cmd", None)

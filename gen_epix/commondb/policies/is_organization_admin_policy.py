@@ -1,4 +1,5 @@
-from typing import Any, Callable, Type
+from collections.abc import Callable
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -14,12 +15,12 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
         super().__init__(abac_service, **kwargs)
 
         app_impl: AppImplDetails = abac_service.app.impl
-        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_class: type[model.User] = app_impl.get_mapped_class(model.User)
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
         self._get_organization_ids_handler_map: dict[
-            Type[command.Command],
+            type[command.Command],
             Callable[[command.Command], set[UUID]],
         ] = {}
         f = self.register_retrieve_organization_ids_handler
@@ -54,7 +55,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
 
     def register_retrieve_organization_ids_handler(
         self,
-        command_class: Type[command.Command],
+        command_class: type[command.Command],
         handler: Callable[[command.Command], set[UUID]],
     ) -> None:
         self._get_organization_ids_handler_map[command_class] = handler

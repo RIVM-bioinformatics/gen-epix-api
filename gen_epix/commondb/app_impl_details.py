@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Type, TypeVar, overload
+from typing import TypeVar, overload
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
@@ -42,22 +42,22 @@ class AppImplDetails(BaseModel):
         default=None,
         description="Dependency that provides a user known by the identity provider but not registered in the application",
     )
-    model_class_map: dict[Type[model.Model], Type[model.Model]] = Field(
+    model_class_map: dict[type[model.Model], type[model.Model]] = Field(
         default_factory=dict,
         description="Mapping of commondb model classes to any derived implementing model classes",
     )
-    command_class_map: dict[Type[command.Command], Type[command.Command]] = Field(
+    command_class_map: dict[type[command.Command], type[command.Command]] = Field(
         default_factory=dict,
         description="Mapping of commondb command classes to any derived implementing command classes",
     )
-    policy_class_map: dict[Type[fastapp.Policy], Type[fastapp.Policy]] = Field(
+    policy_class_map: dict[type[fastapp.Policy], type[fastapp.Policy]] = Field(
         default_factory=dict,
         description="Mapping of commondb policy classes to any derived implementing policy classes",
     )
-    rbac_service_class: Type[BaseRbacService] = Field(
+    rbac_service_class: type[BaseRbacService] = Field(
         description="Class used for RBAC service"
     )
-    user_manager_class: Type[BaseUserManager] = Field(
+    user_manager_class: type[BaseUserManager] = Field(
         description="Class used for user management"
     )
     role_map: dict[enum.Role | Enum, str] = Field(
@@ -67,7 +67,7 @@ class AppImplDetails(BaseModel):
         description="Mapping of role sets to their corresponding sets of role strings. Where possible, the key is the commondb role set enum.",
     )
     role_permissions_map: dict[
-        str, set[tuple[Type[fastapp.Command], fastapp.PermissionType]]
+        str, set[tuple[type[fastapp.Command], fastapp.PermissionType]]
     ] = Field(
         description="Mapping of roles as strings to (command, permission type) tuples",
     )
@@ -97,7 +97,7 @@ class AppImplDetails(BaseModel):
     @field_validator("role_map", mode="before")
     @classmethod
     def _validate_role_map(
-        cls, value: dict[enum.Role | Enum, str] | Type[Enum]
+        cls, value: dict[enum.Role | Enum, str] | type[Enum]
     ) -> dict[enum.Role | Enum, str]:
         if not isinstance(value, dict):
             value = {e: str(e.value) for e in value}
@@ -108,7 +108,7 @@ class AppImplDetails(BaseModel):
     @field_validator("role_set_map", mode="before")
     @classmethod
     def _validate_role_set_map(
-        cls, value: dict[enum.RoleSet | Enum, str] | Type[Enum]
+        cls, value: dict[enum.RoleSet | Enum, str] | type[Enum]
     ) -> dict[enum.RoleSet | Enum, str]:
         if not isinstance(value, dict):
             # Allow passing Enum type directly for convenience
@@ -137,18 +137,18 @@ class AppImplDetails(BaseModel):
         return value
 
     @overload
-    def get_mapped_class(self, base_class: Type[ModelType]) -> Type[ModelType]: ...
+    def get_mapped_class(self, base_class: type[ModelType]) -> type[ModelType]: ...
 
     @overload
-    def get_mapped_class(self, base_class: Type[CommandType]) -> Type[CommandType]: ...
+    def get_mapped_class(self, base_class: type[CommandType]) -> type[CommandType]: ...
 
     @overload
-    def get_mapped_class(self, base_class: Type[PolicyType]) -> Type[PolicyType]: ...
+    def get_mapped_class(self, base_class: type[PolicyType]) -> type[PolicyType]: ...
 
     def get_mapped_class(
         self,
-        base_class: Type[model.Model] | Type[command.Command] | Type[fastapp.Policy],
-    ) -> Type[model.Model] | Type[command.Command] | Type[fastapp.Policy]:
+        base_class: type[model.Model] | type[command.Command] | type[fastapp.Policy],
+    ) -> type[model.Model] | type[command.Command] | type[fastapp.Policy]:
         """
         Get the mapped class for a given base class, or return the base class if no mapping exists.
         """

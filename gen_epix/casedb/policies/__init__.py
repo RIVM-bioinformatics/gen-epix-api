@@ -1,5 +1,3 @@
-from typing import Type
-
 from gen_epix import fastapp
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy as CaseAbacPolicy
 from gen_epix.casedb.policies.is_organization_admin_policy import (
@@ -20,7 +18,7 @@ from gen_epix.commondb.policies.update_user_policy import (
     UpdateUserPolicy as UpdateUserPolicy,
 )
 
-COMMON_POLICY_MAP: dict[Type[fastapp.Policy], Type[fastapp.Policy]] = {
+COMMON_POLICY_MAP: dict[type[fastapp.Policy], type[fastapp.Policy]] = {
     common_policies.ReadOrganizationResultsOnlyPolicy: ReadOrganizationResultsOnlyPolicy,
     common_policies.ReadSelfResultsOnlyPolicy: ReadSelfResultsOnlyPolicy,
     common_policies.IsOrganizationAdminPolicy: IsOrganizationAdminPolicy,

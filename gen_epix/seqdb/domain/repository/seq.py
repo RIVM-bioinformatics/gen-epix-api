@@ -1,14 +1,11 @@
 import abc
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 import numpy as np
 
 from gen_epix.fastapp import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import (
-    model as seqdb_model,
-)  # forces models to be registered now
 
 
 class BaseSeqRepository(BaseRepository):

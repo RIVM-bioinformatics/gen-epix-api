@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -76,7 +76,7 @@ class TestCasedbCaseCreateSeq:
         return case_abac
 
     @pytest.fixture
-    def sample_case_read_sets(self) -> List[Mock]:
+    def sample_case_read_sets(self) -> list[Mock]:
         """Create sample CaseReadSet objects for testing."""
         case_id = uuid4()
         case_type_col_id = uuid4()
@@ -91,7 +91,7 @@ class TestCasedbCaseCreateSeq:
         return [case_read_set]
 
     @pytest.fixture
-    def sample_case_seqs(self) -> List[Mock]:
+    def sample_case_seqs(self) -> list[Mock]:
         """Create sample CaseSeq objects for testing."""
         case_id = uuid4()
         case_type_col_id = uuid4()
@@ -109,7 +109,7 @@ class TestCasedbCaseCreateSeq:
         """Test case_service_create_read_sets_or_seqs_for_cases function."""
 
         def test_create_read_sets_success(
-            self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: List[Mock]
+            self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: list[Mock]
         ) -> None:
             """Test successful creation of ReadSets for cases."""
             # Setup command
@@ -153,7 +153,7 @@ class TestCasedbCaseCreateSeq:
                         mock_service.app.handle.assert_called()
 
         def test_create_seqs_success(
-            self, mock_service: Mock, mock_user: Mock, sample_case_seqs: List[Mock]
+            self, mock_service: Mock, mock_user: Mock, sample_case_seqs: list[Mock]
         ) -> None:
             """Test successful creation of Seqs for cases."""
             # Setup command
@@ -530,7 +530,7 @@ class TestCasedbCaseCreateSeq:
             return Mock(spec=BaseUnitOfWork)
 
         @pytest.fixture
-        def sample_case_type_cols(self) -> Tuple[List[Mock], UUID]:
+        def sample_case_type_cols(self) -> tuple[list[Mock], UUID]:
             """Create sample CaseTypeCol objects for testing."""
             col_id = uuid4()
             case_type_col = Mock(spec=model.CaseTypeCol)
@@ -540,7 +540,7 @@ class TestCasedbCaseCreateSeq:
             return [case_type_col], col_id
 
         @pytest.fixture
-        def sample_cols_genetic_reads(self) -> List[Mock]:
+        def sample_cols_genetic_reads(self) -> list[Mock]:
             """Create sample Col objects with GENETIC_READS type for testing."""
             col = Mock(spec=model.Col)
             col.id = uuid4()
@@ -548,7 +548,7 @@ class TestCasedbCaseCreateSeq:
             return [col]
 
         @pytest.fixture
-        def sample_cols_genetic_sequence(self) -> List[Mock]:
+        def sample_cols_genetic_sequence(self) -> list[Mock]:
             """Create sample Col objects with GENETIC_SEQUENCE type for testing."""
             col = Mock(spec=model.Col)
             col.id = uuid4()
@@ -556,7 +556,7 @@ class TestCasedbCaseCreateSeq:
             return [col]
 
         @pytest.fixture
-        def sample_cases(self) -> List[Mock]:
+        def sample_cases(self) -> list[Mock]:
             """Create sample Case objects for testing."""
             case = Mock(spec=model.Case)
             case.id = uuid4()
@@ -569,9 +569,9 @@ class TestCasedbCaseCreateSeq:
             mock_service: Mock,
             mock_case_abac: Mock,
             mock_uow: Mock,
-            sample_case_type_cols: Tuple[List[Mock], UUID],
-            sample_cols_genetic_reads: List[Mock],
-            sample_cases: List[Mock],
+            sample_case_type_cols: tuple[list[Mock], UUID],
+            sample_cols_genetic_reads: list[Mock],
+            sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for ReadSets creation."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
@@ -610,9 +610,9 @@ class TestCasedbCaseCreateSeq:
             mock_service: Mock,
             mock_case_abac: Mock,
             mock_uow: Mock,
-            sample_case_type_cols: Tuple[List[Mock], UUID],
-            sample_cols_genetic_sequence: List[Mock],
-            sample_cases: List[Mock],
+            sample_case_type_cols: tuple[list[Mock], UUID],
+            sample_cols_genetic_sequence: list[Mock],
+            sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for Seqs creation."""
             cmd = Mock(spec=command.CreateSeqsForCasesCommand)
@@ -797,7 +797,7 @@ class TestCasedbCaseCreateSeq:
         """Test integrated scenarios and edge cases."""
 
         def test_abac_full_access_workflow(
-            self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: List[Mock]
+            self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: list[Mock]
         ) -> None:
             """Test the complete workflow with full ABAC access."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)

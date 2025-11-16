@@ -1,4 +1,5 @@
-from typing import Annotated, Any, Callable, NoReturn, Self
+from collections.abc import Callable
+from typing import Annotated, Any, NoReturn, Self
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, Form

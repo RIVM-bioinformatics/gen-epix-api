@@ -10,7 +10,7 @@ import ast
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Union
 
 import pytest
 
@@ -37,25 +37,25 @@ class ImportEdge:
     """Represents an import relationship in the graph."""
 
     source_module: str
-    target_key: Union[str, Tuple[str, str]]  # module_path or (module_path, symbol_name)
+    target_key: Union[str, tuple[str, str]]  # module_path or (module_path, symbol_name)
     line_number: int
-    symbol_name: Optional[str]
+    symbol_name: str | None
     is_original: bool
     is_current: bool
     file_path: str
     original_import_statement: str
-    new_edge: Optional[Tuple[str, int, str]] = None
+    new_edge: tuple[str, int, str] | None = None
 
 
 class ImportGraphAnalyzer:
     """Analyzes import relationships to find unnecessarily long imports."""
 
     def __init__(self):
-        self.module_nodes: Dict[str, ModuleNode] = {}
-        self.symbol_nodes: Dict[Tuple[str, str], SymbolNode] = {}
-        self.edges: List[ImportEdge] = []
-        self.adjacency: Dict[
-            Union[str, Tuple[str, str]], Set[Union[str, Tuple[str, str]]]
+        self.module_nodes: dict[str, ModuleNode] = {}
+        self.symbol_nodes: dict[tuple[str, str], SymbolNode] = {}
+        self.edges: list[ImportEdge] = []
+        self.adjacency: dict[
+            Union[str, tuple[str, str]], set[Union[str, tuple[str, str]]]
         ] = defaultdict(set)
 
     def add_module_node(self, module_path: str, file_path: str) -> None:
@@ -79,14 +79,14 @@ class ImportGraphAnalyzer:
 
     def has_cycle(
         self,
-        start_node: Union[str, Tuple[str, str]],
-        new_edge_target: Union[str, Tuple[str, str]],
+        start_node: Union[str, tuple[str, str]],
+        new_edge_target: Union[str, tuple[str, str]],
     ) -> bool:
         """Check if adding an edge would create a cycle."""
         # Simple DFS to check if new_edge_target can reach start_node
         visited = set()
 
-        def dfs(node: Union[str, Tuple[str, str]]) -> bool:
+        def dfs(node: Union[str, tuple[str, str]]) -> bool:
             if node == start_node:
                 return True
             if node in visited:
@@ -248,7 +248,7 @@ class ImportStatementVisitor(ast.NodeVisitor):
     def __init__(self, file_path: str, module_path: str):
         self.file_path = file_path
         self.module_path = module_path
-        self.imports: List[Tuple[int, str, Optional[str], str]] = (
+        self.imports: list[tuple[int, str, str | None, str]] = (
             []
         )  # line, module, symbol, statement
 
@@ -300,7 +300,7 @@ class ImportStatementVisitor(ast.NodeVisitor):
         return f"from {module} import {', '.join(names)}"
 
 
-def scan_python_files(root_dir: Path) -> List[Path]:
+def scan_python_files(root_dir: Path) -> list[Path]:
     """Scan for all Python files in the gen_epix package."""
     python_files = []
     gen_epix_dir = root_dir / "gen_epix"

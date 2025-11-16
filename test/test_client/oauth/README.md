@@ -287,7 +287,7 @@ class DatabaseClientStore(ClientStore):
     def __init__(self, db_connection):
         self.db = db_connection
     
-    def get_client(self, client_id: str) -> Optional[Client]:
+    def get_client(self, client_id: str) -> Client | None:
         # Query database for client
         pass
     

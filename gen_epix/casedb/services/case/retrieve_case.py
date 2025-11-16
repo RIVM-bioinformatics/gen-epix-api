@@ -1,6 +1,7 @@
 import datetime
+from collections.abc import Callable, Iterable
 from decimal import Decimal
-from typing import Any, Callable, Iterable
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model

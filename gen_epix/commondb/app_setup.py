@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Callable, NoReturn
+from collections.abc import Callable
+from typing import Any, NoReturn
 
 from dynaconf import Dynaconf
 from fastapi import FastAPI, Response

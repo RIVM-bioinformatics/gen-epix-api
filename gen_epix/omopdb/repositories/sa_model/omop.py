@@ -1,5 +1,4 @@
 from datetime import date, datetime
-from typing import Type
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -13,7 +12,7 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.omopdb.domain import DOMAIN, enum, model
 from gen_epix.omopdb.repositories.sa_model.base import DataLineageMixin
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 
 class Location(Base, NoIdRowMetadataMixin):

@@ -4,7 +4,8 @@ Advanced streaming pipeline with backpressure handling and async support.
 
 import asyncio
 from collections import deque
-from typing import Any, Callable, Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
 
 from gen_epix.transform.pipeline import Pipeline
 from gen_epix.transform.transform_result import TransformResult

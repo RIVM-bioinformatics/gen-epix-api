@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Type
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command
@@ -34,7 +33,7 @@ class RoleGenerator:
     EXTRA_ROLE_SET_MAP: dict[Enum, set[Enum]] = {}
 
     ROLE_PERMISSION_SETS: dict[
-        Enum, set[tuple[Type[fastapp.Command], PermissionTypeSet]]
+        Enum, set[tuple[type[fastapp.Command], PermissionTypeSet]]
     ] = {
         # TODO: remove UPDATE from association objects that do not have properties of their own such as CaseTypeSetMember
         Role.APP_ADMIN: {
@@ -128,7 +127,7 @@ class RoleGenerator:
     @staticmethod
     def map_from_common_role_permission_sets(
         common_role_enum_map: dict[Role, Enum],
-        command_map: dict[Type, Type],
+        command_map: dict[type, type],
     ) -> dict[Enum, set[tuple[type, PermissionTypeSet]]]:
         """
         Helper method to map common permissions described using the commondb
@@ -207,7 +206,7 @@ class RoleGenerator:
     @classmethod
     def get_role_permissions_map(
         cls,
-    ) -> dict[str, set[tuple[Type[fastapp.Command], PermissionType]]]:
+    ) -> dict[str, set[tuple[type[fastapp.Command], PermissionType]]]:
         """
         Get a mapping from domain role string value to role permissions, whereby
         the domain role enums are replaced with their commondb equivalent where
@@ -215,7 +214,7 @@ class RoleGenerator:
         still providing correct role permissions for the domain.
         """
         role_permissions_map: dict[
-            str, set[tuple[Type[fastapp.Command], PermissionType]]
+            str, set[tuple[type[fastapp.Command], PermissionType]]
         ] = {}
         for role_enum, permission_tuples in cls.ROLE_PERMISSIONS.items():
             role_permissions_map[role_enum.value] = permission_tuples

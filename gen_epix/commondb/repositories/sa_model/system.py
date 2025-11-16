@@ -1,5 +1,4 @@
 import datetime
-from typing import Type
 
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped, declarative_mixin
@@ -11,7 +10,7 @@ from gen_epix.commondb.repositories.sa_model.util import (
     create_table_args,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.SYSTEM.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.SYSTEM.value)
 
 
 @declarative_mixin

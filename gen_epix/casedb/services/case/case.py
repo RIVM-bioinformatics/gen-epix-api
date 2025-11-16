@@ -1,4 +1,4 @@
-from typing import Iterable, Type
+from collections.abc import Iterable
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -267,7 +267,7 @@ class CaseService(BaseCaseService):
 
     def _read_association_with_valid_ids(
         self,
-        command_class: Type[command.CrudCommand],
+        command_class: type[command.CrudCommand],
         field_name1: str,
         field_name2: str,
         valid_ids1: set[UUID] | frozenset[UUID] | None = None,
@@ -611,7 +611,7 @@ class CaseService(BaseCaseService):
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
-        association_class: Type[model.Model],
+        association_class: type[model.Model],
         link_field_name1: str,
         link_field_name2: str,
         obj_ids1: frozenset[UUID] | None = None,

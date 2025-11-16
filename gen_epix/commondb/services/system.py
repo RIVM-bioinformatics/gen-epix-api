@@ -3,7 +3,7 @@ import importlib.metadata
 import re
 import string
 import tomllib
-from typing import Any, Type
+from typing import Any
 
 from cachetools import TTLCache, cached
 
@@ -23,7 +23,7 @@ class SystemService(BaseSystemService):
     def __init__(self, app: App, **kwargs: Any) -> None:
         super().__init__(app, **kwargs)
         app_impl: AppImplDetails = app.impl
-        self.has_system_outage_policy_class: Type[BaseHasSystemOutagePolicy] = (
+        self.has_system_outage_policy_class: type[BaseHasSystemOutagePolicy] = (
             app_impl.get_mapped_class(policies.HasSystemOutagePolicy)
         )
 

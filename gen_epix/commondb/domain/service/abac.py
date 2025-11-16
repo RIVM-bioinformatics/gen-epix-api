@@ -1,6 +1,5 @@
 import abc
 import uuid
-from typing import Type
 
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.enum import ServiceType
@@ -12,27 +11,27 @@ from gen_epix.fastapp.model import Command
 class BaseAbacService(BaseService):
     SERVICE_TYPE = ServiceType.ABAC
 
-    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[Type[Command]] = {
+    ORGANIZATION_ADMIN_WRITE_COMMANDS: set[type[Command]] = {
         command.ContactCrudCommand,
         command.SiteCrudCommand,
     }
 
-    READ_USER_COMMANDS: set[Type[Command]] = {
+    READ_USER_COMMANDS: set[type[Command]] = {
         command.UserCrudCommand,
     }
 
-    UPDATE_USER_COMMANDS: set[Type[Command]] = {
+    UPDATE_USER_COMMANDS: set[type[Command]] = {
         command.InviteUserCommand,
         command.UpdateUserCommand,
     }
 
-    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[Type[Command]] = {
+    READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[type[Command]] = {
         command.OrganizationAdminPolicyCrudCommand,
         command.UserInvitationCrudCommand,
         command.RetrieveInviteUserConstraintsCommand,
     }
 
-    READ_SELF_RESULTS_ONLY_COMMANDS: set[Type[Command]] = set()
+    READ_SELF_RESULTS_ONLY_COMMANDS: set[type[Command]] = set()
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore

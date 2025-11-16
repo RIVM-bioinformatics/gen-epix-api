@@ -1,6 +1,5 @@
 import abc
-from typing import Iterable
-from uuid import UUID
+from collections.abc import Iterable
 
 import gen_epix.seqdb.domain.command as seqdb_command
 from gen_epix.casedb.domain import command, model

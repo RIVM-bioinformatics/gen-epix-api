@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -38,8 +38,8 @@ class UserManager(BaseUserManager):
 
         # Derive some properties
         app_impl: AppImplDetails = organization_service.app.impl
-        self._user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
-        self._user_invitation_class: Type[model.UserInvitation] = (
+        self._user_class: type[model.User] = app_impl.get_mapped_class(model.User)
+        self._user_invitation_class: type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)
         )
 

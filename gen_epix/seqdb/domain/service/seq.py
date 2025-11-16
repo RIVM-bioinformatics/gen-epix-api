@@ -1,5 +1,5 @@
 import abc
-from typing import Iterable
+from collections.abc import Iterable
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model

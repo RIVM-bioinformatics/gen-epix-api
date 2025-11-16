@@ -3,8 +3,8 @@ from __future__ import annotations
 import abc
 import datetime
 import logging
-from collections.abc import Hashable
-from typing import Any, Callable, Iterable, Type
+from collections.abc import Callable, Hashable, Iterable
+from typing import Any
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
@@ -55,7 +55,7 @@ class BaseService(abc.ABC):
 
         # Initialize other members
         self._crud_listeners: dict[
-            tuple[Type[CrudCommand], EventTiming],
+            tuple[type[CrudCommand], EventTiming],
             list[Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]]],
         ] = {}
 
@@ -121,7 +121,7 @@ class BaseService(abc.ABC):
         raise NotImplementedError()
 
     def register_default_crud_handlers(
-        self, exclude: set[Type[CrudCommand]] | None = None
+        self, exclude: set[type[CrudCommand]] | None = None
     ) -> None:
         """
         Register the crud method as the handler for all registered CRUD
@@ -143,7 +143,7 @@ class BaseService(abc.ABC):
 
     def register_crud_listener(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:
@@ -168,7 +168,7 @@ class BaseService(abc.ABC):
 
     def unregister_crud_listener(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         timing: EventTiming,
         listener: Callable[[BaseService, CrudCommand, Any], tuple[CrudCommand, Any]],
     ) -> None:

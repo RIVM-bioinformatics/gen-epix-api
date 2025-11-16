@@ -4,9 +4,10 @@ import time
 import uuid
 from abc import ABC
 from collections import Counter, defaultdict
+from collections.abc import Collection, Iterable
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Collection, Iterable
+from typing import Any
 
 import sqlalchemy as sa
 

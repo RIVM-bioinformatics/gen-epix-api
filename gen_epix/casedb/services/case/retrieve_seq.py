@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command

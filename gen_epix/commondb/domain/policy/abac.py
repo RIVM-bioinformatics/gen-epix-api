@@ -1,6 +1,6 @@
 import abc
 from collections.abc import Callable
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.domain.command import Command
@@ -20,7 +20,7 @@ class BaseIsOrganizationAdminPolicy(BaseAbacPolicy):
     @abc.abstractmethod
     def register_retrieve_organization_ids_handler(
         self,
-        command_class: Type[Command],
+        command_class: type[Command],
         handler: Callable[[Command], set[UUID]],
     ) -> None:
         raise NotImplementedError

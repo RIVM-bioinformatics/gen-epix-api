@@ -1,7 +1,8 @@
 import json
 import logging
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, NoReturn
+from typing import Any, NoReturn
 
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel

@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -728,7 +728,7 @@ def _crud_cascade_delete(
         # Not a delete opertion: nothing to do
         return
     model_class = cmd.MODEL_CLASS
-    link_model_classes: list[Type[model.Model]] | None = None
+    link_model_classes: list[type[model.Model]] | None = None
     for (
         model_base_class,
         link_model_classes_tuple,

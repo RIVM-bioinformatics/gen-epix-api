@@ -1,5 +1,3 @@
-from typing import Type
-
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
 from gen_epix.commondb.domain.model import (
@@ -75,7 +73,7 @@ from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
 from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
 
 # List up model classes per service and sorted according to links topology
-SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]] = (
+SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
     {  # pyright: ignore[reportAssignmentType]
         # Common models
         enum.ServiceType.AUTH: list(
@@ -152,4 +150,4 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[Type[fastapp.Model]]]
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
-COMMON_MODEL_MAP: dict[Type[fastapp.Model], Type[fastapp.Model]] = {}
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

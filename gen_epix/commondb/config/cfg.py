@@ -9,7 +9,6 @@ import os
 from enum import Enum
 from locale import getpreferredencoding
 from pathlib import Path
-from typing import Type
 
 import yaml  # type: ignore[import-untyped]
 from dynaconf import Dynaconf
@@ -25,8 +24,8 @@ class BaseAppCfg(abc.ABC):
     def __init__(self) -> None:
         self._name: str | None
         self._app_name: str
-        self._service_type_enum: Type[Enum]
-        self._repository_type_enum: Type[Enum]
+        self._service_type_enum: type[Enum]
+        self._repository_type_enum: type[Enum]
         self._log_setup: bool
         self._cfg: Dynaconf
         self._setup_logger: logging.Logger
@@ -45,11 +44,11 @@ class BaseAppCfg(abc.ABC):
         return self._app_name
 
     @property
-    def service_type_enum(self) -> Type[Enum]:
+    def service_type_enum(self) -> type[Enum]:
         return self._service_type_enum
 
     @property
-    def repository_type_enum(self) -> Type[Enum]:
+    def repository_type_enum(self) -> type[Enum]:
         return self._repository_type_enum
 
     @property
@@ -110,8 +109,8 @@ class AppCfg(BaseAppCfg):
     def __init__(
         self,
         app_name_or_enum: Enum | str,
-        service_type_enum: Type[Enum],
-        repository_type_enum: Type[Enum],
+        service_type_enum: type[Enum],
+        repository_type_enum: type[Enum],
         log_setup: bool = True,
         name: str | None = None,
         setup_logger_level: str | int | None = None,

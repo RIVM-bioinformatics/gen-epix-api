@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
@@ -13,18 +13,18 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         super().__init__(abac_service, **kwargs)
 
         app_impl: AppImplDetails = abac_service.app.impl
-        self.user_crud_command_class: Type[command.UserCrudCommand] = (
+        self.user_crud_command_class: type[command.UserCrudCommand] = (
             app_impl.get_mapped_class(command.UserCrudCommand)
         )
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
-        self.has_organization_id_attr_command_classes: set[Type[command.Command]] = {
+        self.has_organization_id_attr_command_classes: set[type[command.Command]] = {
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,
             command.UserInvitationCrudCommand,
         }
-        self.has_user_id_attr_command_classes: set[Type[command.Command]] = set()
+        self.has_user_id_attr_command_classes: set[type[command.Command]] = set()
 
     def filter(self, cmd: command.Command, retval: Any) -> Any:  # type: ignore[override]
         if not cmd.user or not cmd.user.id:
