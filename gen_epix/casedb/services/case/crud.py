@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, exc, model
@@ -111,7 +111,7 @@ def _crud_metadata_by_non_admin(
                 match_all2=is_delete,  # delete requires all case types
                 return_type="ids1",
                 uow=uow,
-                user=cmd.user,  # type: ignore[arg-type]
+                user=cmd.user,
             )
         )
         access_filter = self._compose_id_filter(("id", valid_case_type_set_ids))
@@ -143,7 +143,7 @@ def _crud_metadata_by_non_admin(
                 match_all2=is_delete,  # delete requires all case type cols
                 return_type="ids1",
                 uow=uow,
-                user=cmd.user,  # type: ignore[arg-type]
+                user=cmd.user,
             )
         )
         access_filter = self._compose_id_filter(("id", valid_case_type_col_set_ids))
@@ -210,12 +210,15 @@ def _crud_data_by_non_admin(
     access_filter: Filter | None = None
     case_sets: list[model.CaseSet]
     cases: list[model.Case]
+    case_data_collection_map: dict[UUID, set[UUID]] = {}
+    case_set_data_collection_map: dict[UUID, set[UUID]] = {}
+    has_access: dict[UUID, set[UUID]] = {}
     assert cmd.user is not None and cmd.user.id is not None
 
     # Handle each type of command
     if isinstance(cmd, command.CaseSetCrudCommand):
         # Determine valid case types and data collections
-        case_set_ids = cmd.get_obj_ids()
+        case_set_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
         if is_create:
             # Implemented through separate create case set command
             raise AssertionError("Unexpected operation")
@@ -226,7 +229,7 @@ def _crud_data_by_non_admin(
                 cmd.user.id,
                 case_abac,
                 enum.CaseRight.READ_CASE_SET,
-                case_set_ids=case_set_ids,  # type:ignore[arg-type]
+                case_set_ids=case_set_ids,
                 filter=cmd.query_filter,
             )
             return (
@@ -239,7 +242,7 @@ def _crud_data_by_non_admin(
                 cmd.user.id,
                 case_abac,
                 enum.CaseRight.WRITE_CASE_SET,
-                case_set_ids=case_set_ids,  # type:ignore[arg-type]
+                case_set_ids=case_set_ids,
             )
             return super(DomainBaseCaseService, self).crud(cmd)  # type: ignore[return-value]
         elif is_delete:
@@ -262,7 +265,7 @@ def _crud_data_by_non_admin(
             case_set_data_collection_map = self._retrieve_case_set_data_collections_map(
                 uow,
                 cmd.user.id,
-                obj_ids1=case_set_ids,
+                case_set_ids=case_set_ids,
             )
             # Check if the user has access to all data collections of all requested
             # case sets
@@ -291,7 +294,7 @@ def _crud_data_by_non_admin(
 
     elif isinstance(cmd, command.CaseCrudCommand):
         # Determine valid case types and data collections
-        case_ids = cmd.get_obj_ids()
+        case_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
         if is_create | is_read | is_update:
             # Implemented through separate create case set command
             raise AssertionError("Unexpected operation")
@@ -315,7 +318,7 @@ def _crud_data_by_non_admin(
             case_data_collection_map = self._retrieve_case_data_collections_map(
                 uow,
                 cmd.user.id,
-                obj_ids1=case_ids,
+                case_ids=case_ids,
             )
             # Check if the user has access to all data collections of all requested
             # cases
@@ -394,16 +397,16 @@ def _crud_data_by_non_admin(
         )
 
         # Retrieve the case sets while checking for the correct right(s)
-        case_set_ids = {x.case_set_id for x in case_set_members}
+        uq_case_set_ids = {x.case_set_id for x in case_set_members}
         case_sets = self._retrieve_case_sets_with_content_right(
             uow,
             cmd.user.id,
             case_abac,
             enum.CaseRight.READ_CASE_SET,
-            case_set_ids=list(case_set_ids),  # type: ignore[arg-type]
+            case_set_ids=list(uq_case_set_ids),
             on_invalid_case_set_id="ignore",
         )
-        if is_delete and not case_set_ids.issubset({x.id for x in case_sets}):
+        if is_delete and not uq_case_set_ids.issubset({x.id for x in case_sets}):
             # Also check the write case set right since not all case sets have the
             # read right
             case_sets += self._retrieve_case_sets_with_content_right(
@@ -411,12 +414,12 @@ def _crud_data_by_non_admin(
                 cmd.user.id,
                 case_abac,
                 enum.CaseRight.WRITE_CASE_SET,
-                case_set_ids=list(case_set_ids),  # type: ignore[arg-type]
+                case_set_ids=list(uq_case_set_ids),
                 on_invalid_case_set_id="ignore",
             )
 
         # Check if the user has access to all requested case sets
-        unauthorized_case_set_ids = case_set_ids - {x.id for x in case_sets}
+        unauthorized_case_set_ids = uq_case_set_ids - {x.id for x in case_sets}
         if unauthorized_case_set_ids:
             if is_read_all:
                 # unauthorized case set ids not applicable, filter out the case set
@@ -499,13 +502,13 @@ def _crud_data_by_non_admin(
             ((x.case_id, x.data_collection_id) for x in case_data_collection_links),
             as_set=True,
         )
-        case_ids = set(case_data_collection_map.keys())
+        uq_case_ids = set(case_data_collection_map.keys())
         cases = self.repository.crud(  # type:ignore[assignment]
             uow,
             cmd.user.id,
             model.Case,
             None,
-            list(case_ids),
+            list(uq_case_ids),
             CrudOperation.READ_SOME,
         )
         if is_read:
@@ -580,7 +583,6 @@ def _crud_data_by_non_admin(
     elif isinstance(cmd, command.CaseSetDataCollectionLinkCrudCommand):
         # Read all without filter and delete all not allowed due to potential large
         # number of case set data collection links
-        has_access: dict[UUID, set[UUID]] = {}
         if (is_read_all and not cmd.query_filter) or is_delete_all or is_update:
             raise exc.UnauthorizedAuthError(
                 f"Operation {cmd.operation.value} not allowed for case set data collection links for this user"
@@ -626,22 +628,20 @@ def _crud_data_by_non_admin(
             raise AssertionError("Unexpected operation")
 
         # Go over each case set and check if the user has the required rights to it
-        case_set_data_collection_map: dict[UUID, set[UUID]] = (
-            map_paired_elements(  # type:ignore[assignment]
-                (
-                    (x.case_set_id, x.data_collection_id)
-                    for x in case_set_data_collection_links
-                ),
-                as_set=True,
-            )
+        case_set_data_collection_map = map_paired_elements(  # type:ignore[assignment]
+            (
+                (x.case_set_id, x.data_collection_id)
+                for x in case_set_data_collection_links
+            ),
+            as_set=True,
         )
-        case_set_ids = set(case_set_data_collection_map.keys())
+        uq_case_set_ids = set(case_set_data_collection_map.keys())
         case_sets = self.repository.crud(  # type:ignore[assignment]
             uow,
             cmd.user.id,
             model.CaseSet,
             None,
-            list(case_set_ids),
+            list(uq_case_set_ids),
             CrudOperation.READ_SOME,
         )
         if is_read:
@@ -728,7 +728,7 @@ def _crud_cascade_delete(
         # Not a delete opertion: nothing to do
         return
     model_class = cmd.MODEL_CLASS
-    link_model_classes: list[Type[model.Model]] | None = None
+    link_model_classes: list[type[model.Model]] | None = None
     for (
         model_base_class,
         link_model_classes_tuple,

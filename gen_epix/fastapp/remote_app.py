@@ -1,8 +1,9 @@
 import json
 import ssl
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Type
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -171,7 +172,7 @@ class RemoteApp(App):
 
     def register_generated_crud_route(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         route_root: str | None = None,
         add_host: bool = True,
         add_prefix: bool = True,
@@ -191,7 +192,7 @@ class RemoteApp(App):
 
     def create_generated_crud_route_handler(
         self,
-        command_class: Type[CrudCommand],
+        command_class: type[CrudCommand],
         base_route: str,
         batch_route_suffix: str | None = None,
         query_route_suffix: str | None = None,
@@ -338,7 +339,7 @@ class RemoteApp(App):
 
     @staticmethod
     def _content_to_obj(
-        response: httpx.Response, retval_class: Type, is_list: bool = False
+        response: httpx.Response, retval_class: type, is_list: bool = False
     ) -> Any:
         if response.status_code not in (200, 201):
             return None

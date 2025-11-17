@@ -3,7 +3,7 @@ import ipaddress
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -47,7 +47,7 @@ PYDANTIC_SA_FIELD_METADATA_MAP: dict[str, str] = {
     "decimal_places": "scale",
 }
 
-SA_METADATA_BY_TYPE: dict[Type[TypeEngine], frozenset[str]] = {
+SA_METADATA_BY_TYPE: dict[type[TypeEngine], frozenset[str]] = {
     sa.String: frozenset({"length", "collation"}),
     sa.Unicode: frozenset({"length", "collation"}),
     sa.Text: frozenset({"collation"}),
@@ -131,14 +131,14 @@ def sqlite_utc_current_time(
 
 
 def create_sa_type_from_field_info(
-    field_info: FieldInfo, annotation: Type[Any] | None, **kwargs: dict
+    field_info: FieldInfo, annotation: type[Any] | None, **kwargs: dict
 ) -> TypeEngine:
     """
     Return a suitable SQLAlchemy type for a Pydantic field.
     """
     type_ = get_type_from_annotation(annotation)
 
-    def _create_sa_type(sa_type_class: Type[TypeEngine]) -> TypeEngine:
+    def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
         new_kwargs = (
             get_sa_type_kwargs_from_field_info(sa_type_class, field_info) | kwargs
@@ -170,7 +170,7 @@ def create_sa_type_from_field_info(
 
 
 def get_sa_type_kwargs_from_field_info(
-    sa_type_class: Type[sa.types.TypeEngine], field_info: FieldInfo
+    sa_type_class: type[sa.types.TypeEngine], field_info: FieldInfo
 ) -> dict[str, Any]:
     # Extract column kwargs from field metadata
     kwargs: dict[str, Any] = {}

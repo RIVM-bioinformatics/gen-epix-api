@@ -5,7 +5,7 @@ from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
 from time import sleep
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.case.persistable
@@ -1987,7 +1987,7 @@ class CasedbTestClient(TestClient):
 
     def _get_obj(
         self,
-        model_class: Type[model.Model],
+        model_class: type[model.Model],
         obj: (
             str
             | UUID

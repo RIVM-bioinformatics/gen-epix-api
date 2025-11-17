@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, NoReturn, Type
+from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -65,22 +66,22 @@ def create_organization_endpoints(
     app: App,
     service_type: enum.ServiceType = enum.ServiceType.ORGANIZATION,
     handle_exception: Callable[[str, Any, Exception], NoReturn] | None = None,
-    api_permission_class: Type = Permission,
+    api_permission_class: type = Permission,
     **kwargs: Any,
 ) -> None:
     assert handle_exception
     app_impl: AppImplDetails = app.impl
-    user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
+    user_class: type[model.User] = app_impl.get_mapped_class(model.User)
     user_invitation_class: type[model.UserInvitation] = app_impl.get_mapped_class(
         model.UserInvitation
     )
-    invite_user_command_class: Type[command.InviteUserCommand] = (
+    invite_user_command_class: type[command.InviteUserCommand] = (
         app_impl.get_mapped_class(command.InviteUserCommand)
     )
-    retrieve_invite_user_constraints_command_class: Type[
+    retrieve_invite_user_constraints_command_class: type[
         command.RetrieveInviteUserConstraintsCommand
     ] = app_impl.get_mapped_class(command.RetrieveInviteUserConstraintsCommand)
-    update_user_command_class: Type[command.UpdateUserCommand] = (
+    update_user_command_class: type[command.UpdateUserCommand] = (
         app_impl.get_mapped_class(command.UpdateUserCommand)
     )
     registered_user_dependency = app_impl.registered_user_dependency

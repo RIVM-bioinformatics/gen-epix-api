@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Any, Type
+from typing import Any
 
 from cachetools import TTLCache, cached
 
@@ -17,7 +17,7 @@ class OrganizationService(BaseOrganizationService):
         "user_invitation_time_to_live": 86400,  # 1 day
     }
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UserCrudCommand,
         command.UpdateUserCommand,
     )
@@ -29,11 +29,11 @@ class OrganizationService(BaseOrganizationService):
     ) -> None:
         super().__init__(app, **kwargs)
         app_impl: AppImplDetails = app.impl
-        self.user_class: Type[model.User] = app_impl.get_mapped_class(model.User)
-        self.user_invitation_class: Type[model.UserInvitation] = (
+        self.user_class: type[model.User] = app_impl.get_mapped_class(model.User)
+        self.user_invitation_class: type[model.UserInvitation] = (
             app_impl.get_mapped_class(model.UserInvitation)
         )
-        self.user_invitation_constraints_class: Type[
+        self.user_invitation_constraints_class: type[
             model.UserInvitationConstraints
         ] = app_impl.get_mapped_class(model.UserInvitationConstraints)
 

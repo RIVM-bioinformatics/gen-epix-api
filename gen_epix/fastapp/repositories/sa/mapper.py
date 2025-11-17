@@ -1,6 +1,6 @@
 import abc
-from collections.abc import Hashable
-from typing import Any, Callable, Iterable, Type
+from collections.abc import Callable, Hashable, Iterable
+from typing import Any
 
 from sqlalchemy import Row
 from sqlalchemy.orm import MappedColumn
@@ -13,8 +13,8 @@ from gen_epix.fastapp.model import Model
 class BaseSAMapper(abc.ABC):
     def __init__(
         self,
-        model_class: Type[Model],
-        row_class: Type[Row],
+        model_class: type[Model],
+        row_class: type[Row],
         **kwargs: Any,
     ):
         if model_class.ENTITY is None:
@@ -27,11 +27,11 @@ class BaseSAMapper(abc.ABC):
         self._schema_name: str | None = self._get_schema_name(row_class)
 
     @property
-    def model_class(self) -> Type[Model]:
+    def model_class(self) -> type[Model]:
         return self._model_class
 
     @property
-    def row_class(self) -> Type:
+    def row_class(self) -> type:
         return self._row_class
 
     @property
@@ -92,7 +92,7 @@ class BaseSAMapper(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_row_id(self, row: Row | Type[Row]) -> Hashable:
+    def get_row_id(self, row: Row | type[Row]) -> Hashable:
         raise NotImplementedError()
 
     def generate_service_metadata(self, obj: Model, user_id: Hashable) -> dict:
@@ -107,7 +107,7 @@ class BaseSAMapper(abc.ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _get_schema_name(row: Row | Type[Row]) -> str | None:
+    def _get_schema_name(row: Row | type[Row]) -> str | None:
         for arg in row.__table_args__:  # type: ignore[union-attr]
             if isinstance(arg, dict) and "schema" in arg:
                 return arg["schema"]  # type: ignore[no-any-return]
@@ -118,8 +118,8 @@ class SAMapper(BaseSAMapper):
 
     def __init__(
         self,
-        model_class: Type[Model],
-        row_class: Type,
+        model_class: type[Model],
+        row_class: type,
         field_name_map: dict[str, str] | None = None,
         service_metadata_field_names: tuple | None = None,
         db_metadata_field_names: tuple | None = None,
@@ -196,7 +196,7 @@ class SAMapper(BaseSAMapper):
     def get_id(self, obj: Model) -> Hashable:
         return self._get_id(obj)
 
-    def get_row_id(self, row: Row | Type[Row]) -> Hashable | MappedColumn:
+    def get_row_id(self, row: Row | type[Row]) -> Hashable | MappedColumn:
         return self._get_row_id(row)
 
     def generate_service_metadata(self, obj: Model, user_id: Hashable) -> dict:
@@ -243,7 +243,7 @@ class SAMapper(BaseSAMapper):
         return self.model_class(**mapped_dict)
 
     def _init_field_names(
-        self, model_class: Type[Model], row_class: Type, field_name_map: dict[str, str]
+        self, model_class: type[Model], row_class: type, field_name_map: dict[str, str]
     ) -> None:
         # Set model and row field names by field type
         valid_row_field_names = set(row_class.__table__.columns.keys())
@@ -286,7 +286,7 @@ class SAMapper(BaseSAMapper):
 
     def _init_row_metadata_field_names(
         self,
-        row_class: Type,
+        row_class: type,
         service_metadata_field_names: Iterable[str] | None,
         db_metadata_field_names: Iterable[str] | None,
     ) -> None:
@@ -392,7 +392,7 @@ class SAMapper(BaseSAMapper):
             )
 
     def _init_relationship_field_names(
-        self, model_class: Type[Model], row_class: Type, field_name_map: dict[str, str]
+        self, model_class: type[Model], row_class: type, field_name_map: dict[str, str]
     ) -> None:
         # Check that all link fields in the model have corresponding relationship fields in the row
         entity = model_class.ENTITY
@@ -414,7 +414,7 @@ class SAMapper(BaseSAMapper):
             self._relationship_field_name_map[field_name] = row_field_name
             self._relationship_field_name_reverse_map[row_field_name] = field_name
 
-    def _init_extract_primary_key(self, model_class: Type[Model]) -> None:
+    def _init_extract_primary_key(self, model_class: type[Model]) -> None:
         id_field_names = self._field_names_by_type[FieldType.ID]
         row_id_field_names = self._row_field_names_by_type[FieldType.ID]
         if len(id_field_names) != 1 or len(row_id_field_names) != 1:
@@ -424,6 +424,6 @@ class SAMapper(BaseSAMapper):
         id_field_name = id_field_names[0]
         row_id_field_name = row_id_field_names[0]
         self._get_id: Callable[[Model], Hashable] = lambda x: getattr(x, id_field_name)
-        self._get_row_id: Callable[[Row | Type[Row]], Hashable | MappedColumn] = (
+        self._get_row_id: Callable[[Row | type[Row]], Hashable | MappedColumn] = (
             lambda x: getattr(x, row_id_field_name)
         )

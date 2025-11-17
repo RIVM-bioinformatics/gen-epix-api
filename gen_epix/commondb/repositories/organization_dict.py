@@ -1,5 +1,5 @@
-from collections.abc import Hashable
-from typing import Any, Iterable, Type
+from collections.abc import Hashable, Iterable
+from typing import Any
 
 from gen_epix.commondb.domain import model
 from gen_epix.commondb.domain.model import Model
@@ -13,7 +13,7 @@ class OrganizationDictRepository(DictRepository, BaseOrganizationRepository):
     def __init__(
         self,
         entities: Iterable[Entity],
-        db: dict[Type[Model], dict[Hashable, Model]],
+        db: dict[type[Model], dict[Hashable, Model]],
         user_class: type[model.User] = model.User,
         user_invitation_class: type[model.UserInvitation] = model.UserInvitation,
         **kwargs: Any,

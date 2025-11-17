@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Type
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -23,7 +22,7 @@ from gen_epix.filter import (
 
 class AbacService(BaseAbacService):
 
-    CACHE_INVALIDATION_COMMANDS: tuple[Type[Command], ...] = (
+    CACHE_INVALIDATION_COMMANDS: tuple[type[Command], ...] = (
         command.UserAccessCasePolicyCrudCommand,
         command.UserShareCasePolicyCrudCommand,
         command.OrganizationAccessCasePolicyCrudCommand,
@@ -32,11 +31,11 @@ class AbacService(BaseAbacService):
 
     def register_policies(
         self,
-        organization_admin_write_commands: set[Type[Command]] | None = None,
-        read_user_commands: set[Type[Command]] | None = None,
-        update_user_commands: set[Type[Command]] | None = None,
-        read_organization_results_only_commands: set[Type[Command]] | None = None,
-        read_self_results_only_commands: set[Type[Command]] | None = None,
+        organization_admin_write_commands: set[type[Command]] | None = None,
+        read_user_commands: set[type[Command]] | None = None,
+        update_user_commands: set[type[Command]] | None = None,
+        read_organization_results_only_commands: set[type[Command]] | None = None,
+        read_self_results_only_commands: set[type[Command]] | None = None,
     ) -> None:
         super().register_policies(
             organization_admin_write_commands=organization_admin_write_commands,

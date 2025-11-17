@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.api.auth import create_auth_endpoints as create_auth_endpoints
 from gen_epix.commondb.api.organization import (
     UpdateDataCollectionSetDataCollectionRequestBody as UpdateDataCollectionSetDataCollectionRequestBody,

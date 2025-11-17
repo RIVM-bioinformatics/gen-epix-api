@@ -1,13 +1,13 @@
 """Test connection between casedb, seqdb and/or omopdb"""
 
 import logging
+from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from test.end_to_end.casedb_seqdb_connection.seqdb_server_manager import (
     SeqdbServerManager,
 )
 from test.test_client.oauth.server_manager import OAuthServerManager
-from typing import Generator
 from uuid import UUID
 
 import pytest
@@ -64,9 +64,9 @@ def seqdb_server(
         AppType.SEQDB,
         seqdb_enum.ServiceType,
         seqdb_enum.RepositoryType,
-        log_setup=False,
+        log_setup=True,
     )
-    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=False)
+    seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=True)
     seqdb_app = seqdb_app_composer.app
     seqdb_fastapi_app = create_fast_api(
         app=seqdb_app,

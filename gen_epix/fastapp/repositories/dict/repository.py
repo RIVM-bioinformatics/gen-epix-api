@@ -3,10 +3,10 @@ import gzip
 import json
 import pickle
 import zipfile
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable, Iterable
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, Iterable, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.fastapp import exc
@@ -57,7 +57,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def create_repository_from_pkl(
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         entities: Iterable[Entity],
         pkl_file: str,
         **kwargs: Any,
@@ -75,7 +75,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def create_repository_from_json(
-        repository_class: Type[BaseRepository],
+        repository_class: type[BaseRepository],
         entities: Iterable[Entity],
         zip_file: str,
         **kwargs: Any,
@@ -110,7 +110,7 @@ class DictRepository(BaseRepository):
     def __init__(
         self,
         entities: Iterable[Entity],
-        db: dict[Type[Model], dict[Hashable, Model]],
+        db: dict[type[Model], dict[Hashable, Model]],
         **kwargs: Any,
     ):
         extra_data = kwargs.pop("extra_data", "ignore")
@@ -125,11 +125,11 @@ class DictRepository(BaseRepository):
         self._timestamp_factory = timestamp_factory
         self._entities = set(entities)
         self._links: dict[
-            Type[Model],
-            list[tuple[str, Type[Model], str, int, dict[Hashable, Model] | None]],
+            type[Model],
+            list[tuple[str, type[Model], str, int, dict[Hashable, Model] | None]],
         ] = {}
-        self._get_id: dict[Type[Model], Callable[[Model], Hashable]] = {}
-        self._back_links: dict[Type[Model], list[tuple[Type[Model], str]]] = {}
+        self._get_id: dict[type[Model], Callable[[Model], Hashable]] = {}
+        self._back_links: dict[type[Model], list[tuple[type[Model], str]]] = {}
         self._value_field_names: dict[type[Model], list[str]] = {}
         self._keys_generators: dict[type[Model], dict[int, Callable[[Model], str]]] = {}
         self._init_properties(entities, db, missing_data)
@@ -137,7 +137,7 @@ class DictRepository(BaseRepository):
         self._verify_extra_models_and_extract_reverse_links(extra_data)
 
     @property
-    def db(self) -> dict[Type[Model], dict[Hashable, Model]]:
+    def db(self) -> dict[type[Model], dict[Hashable, Model]]:
         return self._db
 
     def _init_properties(
@@ -204,7 +204,7 @@ class DictRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: Model | Iterable[Model] | None,
         obj_ids: Hashable | Iterable[Hashable] | None,
         operation: CrudOperation,
@@ -290,7 +290,7 @@ class DictRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable | None,
-        model_class: Type[Model],
+        model_class: type[Model],
         field_names: list[str],
         filter: Filter | None = None,
         **kwargs: Any,
@@ -307,7 +307,7 @@ class DictRepository(BaseRepository):
         return DictUnitOfWork()
 
     def split_filter(
-        self, model_class: Type, filter: Filter | None
+        self, model_class: type, filter: Filter | None
     ) -> tuple[Filter | None, Filter | None]:
         # Entire filter can be used as where clause since the data are stored as
         # domain models
@@ -317,7 +317,7 @@ class DictRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         user_id: Hashable,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Iterable[Hashable],
         verify_exists: bool = True,
         verify_duplicate: bool = True,
@@ -332,7 +332,7 @@ class DictRepository(BaseRepository):
 
     def read_all(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         filter: Filter | None,
         cascade_read: bool = False,
         return_id: bool = False,
@@ -380,7 +380,7 @@ class DictRepository(BaseRepository):
 
     def read_one(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_id: Hashable,
         cascade_read: bool = False,
         return_id: bool = False,
@@ -398,7 +398,7 @@ class DictRepository(BaseRepository):
 
     def read_some(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Iterable[Hashable],
         cascade_read: bool = False,
         return_id: bool = False,
@@ -435,7 +435,7 @@ class DictRepository(BaseRepository):
     def upsert_some(
         self,
         user_id: Hashable,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: Model | Iterable[Model],
         raise_on_present: bool = False,
         raise_on_missing: bool = False,
@@ -519,7 +519,7 @@ class DictRepository(BaseRepository):
 
     def delete_some(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Hashable | Iterable[Hashable],
         **kwargs: Any,
     ) -> Hashable | list[Hashable] | None:
@@ -558,7 +558,7 @@ class DictRepository(BaseRepository):
         return obj_ids if is_iterable else obj_ids[0]
 
     def delete_all(
-        self, model_class: Type[Model], filter: Filter | None, **kwargs: Any
+        self, model_class: type[Model], filter: Filter | None, **kwargs: Any
     ) -> list[Hashable]:
         df = self._db[model_class]
         # Get any query filter
@@ -592,19 +592,19 @@ class DictRepository(BaseRepository):
             self._db[model_class] = {}
         return obj_ids
 
-    def exists_one(self, model_class: Type[Model], obj_id: Hashable) -> bool:
+    def exists_one(self, model_class: type[Model], obj_id: Hashable) -> bool:
         df = self._db[model_class]
         return obj_id in df
 
     def exists_some(
-        self, model_class: Type[Model], obj_ids: Iterable[Hashable]
+        self, model_class: type[Model], obj_ids: Iterable[Hashable]
     ) -> list[bool]:
         df = self._db[model_class]
         return [x in df for x in obj_ids]
 
     def _get_links(
         self, entity: Entity
-    ) -> list[tuple[str, Type[Model], str, int, dict[Hashable, Model] | None]]:
+    ) -> list[tuple[str, type[Model], str, int, dict[Hashable, Model] | None]]:
         # Return list[tuple[link_field_name, LinkModel, relationship_field_name, link_type_id, linked_df|None]]
         links = []
         for link_field_name in entity.get_link_field_names():
@@ -626,7 +626,7 @@ class DictRepository(BaseRepository):
 
     def _cascade_read(
         self,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: list[Model],
         return_copy: bool,
     ) -> None:
@@ -655,7 +655,7 @@ class DictRepository(BaseRepository):
     def _verify_upsert_objects(
         self,
         invalid_type_ids: list[Hashable],
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: list[Hashable],
         df_objs: list[Model | None],
         raise_on_present: bool,
@@ -687,7 +687,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def _verify_valid_ids(
-        model_class: Type[Model],
+        model_class: type[Model],
         obj_ids: Iterable[Hashable],
         objs: Iterable[Model | None],
     ) -> None:
@@ -697,7 +697,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def _raise_invalid_ids(
-        model_class: Type[Model], invalid_obj_ids: Iterable[Hashable]
+        model_class: type[Model], invalid_obj_ids: Iterable[Hashable]
     ) -> None:
         invalid_obj_ids_str = ", ".join(f'"{x}"' for x in invalid_obj_ids)
         raise exc.InvalidIdsError(
@@ -707,7 +707,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def _verify_duplicate_ids(
-        model_class: Type[Model], obj_ids: Iterable[Hashable]
+        model_class: type[Model], obj_ids: Iterable[Hashable]
     ) -> None:
         set_ = set()
         duplicate_ids = [x for x in obj_ids if x in set_ or set_.add(x)]  # type: ignore[func-returns-value]
@@ -716,7 +716,7 @@ class DictRepository(BaseRepository):
 
     @staticmethod
     def _raise_duplicate_ids(
-        model_class: Type[Model], duplicate_ids: Iterable[Hashable]
+        model_class: type[Model], duplicate_ids: Iterable[Hashable]
     ) -> None:
         duplicate_ids_str = ", ".join([f'"{x}"' for x in duplicate_ids])
         raise exc.DuplicateIdsError(
@@ -728,7 +728,7 @@ class DictRepository(BaseRepository):
     def _verify_duplicate_keys(
         get_id: Callable[[Model], Hashable],
         keys_generator: Callable,
-        model_class: Type[Model],
+        model_class: type[Model],
         objs: list[Model],
         df_objs: list[Model] | None,
     ) -> None:

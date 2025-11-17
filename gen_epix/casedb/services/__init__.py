@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.casedb.services.abac import AbacService as AbacService
 from gen_epix.casedb.services.case import CaseService as CaseService
 from gen_epix.casedb.services.geo import GeoService as GeoService

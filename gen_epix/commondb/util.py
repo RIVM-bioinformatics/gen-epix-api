@@ -6,11 +6,11 @@ import os
 import pickle
 import tomllib
 import uuid
-from collections.abc import Hashable
+from collections.abc import Hashable, Iterable
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Type
+from typing import Any
 
 import ulid
 from pydantic import BaseModel, Field
@@ -110,10 +110,10 @@ def get_package_version() -> str:
 def register_domain_entities(
     domain: Domain,
     sorted_service_types: Iterable[Hashable],
-    sorted_models_by_service_type: dict[Hashable, list[Type[Model]]],
-    commands_by_service_type: dict[Hashable, set[Type[Command]]],
-    common_model_map: dict[Type[Model], Type[Model]] | None = None,
-    common_command_map: dict[Type[Command], Type[Command]] | None = None,
+    sorted_models_by_service_type: dict[Hashable, list[type[Model]]],
+    commands_by_service_type: dict[Hashable, set[type[Command]]],
+    common_model_map: dict[type[Model], type[Model]] | None = None,
+    common_command_map: dict[type[Command], type[Command]] | None = None,
     set_schema_to_service_type: bool = False,
 ) -> None:
     """
@@ -171,7 +171,7 @@ def register_domain_entities(
 
 
 def copy_model_field(
-    from_model: Type[BaseModel], field_name: str, **kwargs: Any
+    from_model: type[BaseModel], field_name: str, **kwargs: Any
 ) -> Any:
     """
     Copy a field from a model
@@ -326,7 +326,7 @@ def set_env_variables(
         [str(x.resolve()) for x in settings_files]
     )
     os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
-        (general_cfg_path / "logging.yaml").resolve()
+        (cfg_path / "logging.yaml").resolve()
     )
 
 
@@ -412,7 +412,7 @@ def load_demo_data(
             service_type=service_type, persistable=True
         )
         # Create dict repository, which is assumed to always be available
-        dict_repository_class: Type[DictRepository] = dict_repository_cfg["class"]
+        dict_repository_class: type[DictRepository] = dict_repository_cfg["class"]
         demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
         empty_dict_file = Path(
             str(demo_dict_file).replace(".full.", ".empty.")
@@ -444,7 +444,7 @@ def load_demo_data(
         sa_sqlite_repository_cfg = sa_sqlite_app_cfg.cfg["repository"][
             service_type.value
         ]
-        sa_repository_class: Type[SARepository] = sa_sqlite_repository_cfg["class"]
+        sa_repository_class: type[SARepository] = sa_sqlite_repository_cfg["class"]
         demo_sa_sqlite_file = Path(sa_sqlite_repository_cfg["props"]["file"]).resolve()
         empty_sa_sqlite_file = Path(
             str(demo_sa_sqlite_file).replace(".full", ".empty")
@@ -519,8 +519,8 @@ def load_demo_data(
 
 def get_app_cfgs(
     app_type: AppType,
-    service_type_enum: Type[Enum],
-    repository_type_enum: Type[Enum],
+    service_type_enum: type[Enum],
+    repository_type_enum: type[Enum],
     test_type: Enum | str,
     dev_idp_config: DevIdpConfig = DevIdpConfig.NONE,
     general_cfg_path: Path | None = None,

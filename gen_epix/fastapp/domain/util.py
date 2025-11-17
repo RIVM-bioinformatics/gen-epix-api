@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from types import NoneType, UnionType
-from typing import Any, Callable, Type, Union
+from typing import Any, Union
 
 from typing_extensions import Annotated, get_args, get_origin
 
@@ -18,7 +19,7 @@ def create_keys(keys: dict[int, Key | str | tuple | Callable]) -> dict[int, Key]
 
 
 def create_links(
-    links: dict[int, Link | tuple[str, Type, str | None]],
+    links: dict[int, Link | tuple[str, type, str | None]],
 ) -> dict[int, Link]:
     retval = {}
     for x, y in links.items():
@@ -34,8 +35,8 @@ def create_links(
 
 
 def get_type_from_annotation(
-    annotation: Type[Any] | None,
-) -> Type:
+    annotation: type[Any] | None,
+) -> type:
     """
     Adapted from https://github.com/fastapi/sqlmodel v0.0.24
     """

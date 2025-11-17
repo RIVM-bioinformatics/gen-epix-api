@@ -29,9 +29,5 @@ def set_envvar() -> None:
     )
     os.environ["CASEDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
     os.environ["SEQDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
-    os.environ["LOG_LEVEL"] = "ERROR"
-
-
-# app_cfg = AppCfg(AppType.CASEDB, ServiceType, RepositoryType, log_setup=False)
-# app_composer = AppComposer(app_cfg)
-# app = app_composer.app
+    os.environ["CASEDB_LOG_LEVEL"] = "INFO"
+    os.environ["SEQDB_LOG_LEVEL"] = "INFO"

@@ -1,6 +1,6 @@
 import abc
 from types import TracebackType
-from typing import Self, Type
+from typing import Self
 
 
 class BaseUnitOfWork(abc.ABC):
@@ -28,7 +28,7 @@ class BaseUnitOfWork(abc.ABC):
 
     def __exit__(
         self,
-        exception_class: Type[Exception] | None,
+        exception_class: type[Exception] | None,
         exception_value: Exception | None,
         traceback: TracebackType | None,
     ) -> None:

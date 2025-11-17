@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any
 from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -20,7 +20,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         super().__init__(abac_service, **kwargs)
 
         app_impl: AppImplDetails = abac_service.app.impl
-        self.organization_admin_policy_crud_command_class: Type[
+        self.organization_admin_policy_crud_command_class: type[
             command.OrganizationAdminPolicyCrudCommand
         ] = app_impl.get_mapped_class(command.OrganizationAdminPolicyCrudCommand)
         self.role_map = app_impl.role_map

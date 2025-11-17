@@ -1,4 +1,3 @@
-from typing import Type
 from uuid import UUID
 
 import sqlalchemy.orm as orm
@@ -11,7 +10,7 @@ from gen_epix.commondb.repositories.sa_model import (
     create_table_args,
 )
 
-Base: Type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
+Base: type = orm.declarative_base(name=enum.ServiceType.ABAC.value)
 
 
 class OrganizationAccessCasePolicy(Base, RowMetadataMixin):

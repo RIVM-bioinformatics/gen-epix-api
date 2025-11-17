@@ -1,9 +1,9 @@
 import traceback
 
 # pylint: disable=unused-import-alias
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
-from typing import Any, Callable, Type
+from typing import Any
 
 from dynaconf import Dynaconf
 
@@ -41,15 +41,15 @@ class AppComposer(BaseAppComposer):
         app_cfg: AppCfg,
         domain: Domain | None = None,
         sorted_service_types: tuple[Enum] | None = None,
-        role_generator_class: Type[RoleGenerator] | None = None,
-        rbac_service_class: Type[RbacService] | None = None,
-        user_manager_class: Type[UserManager] | None = None,
-        model_class_map: dict[Type[model.Model], Type[model.Model]] | None = None,
+        role_generator_class: type[RoleGenerator] | None = None,
+        rbac_service_class: type[RbacService] | None = None,
+        user_manager_class: type[UserManager] | None = None,
+        model_class_map: dict[type[model.Model], type[model.Model]] | None = None,
         command_class_map: (
-            dict[Type[command.Command], Type[command.Command]] | None
+            dict[type[command.Command], type[command.Command]] | None
         ) = None,
         policy_class_map: (
-            dict[Type[fastapp.Policy], Type[fastapp.Policy]] | None
+            dict[type[fastapp.Policy], type[fastapp.Policy]] | None
         ) = None,
         log_setup: bool = True,
         **kwargs: Any,
@@ -93,7 +93,7 @@ class AppComposer(BaseAppComposer):
 
         # Compose application
         try:
-            if self._log_setup:
+            if self._log_setup and setup_logger:
                 setup_logger.debug(
                     App.create_static_log_message(
                         "e8665136", "Starting composing application"
@@ -137,7 +137,7 @@ class AppComposer(BaseAppComposer):
                 # Create repository if necessary
                 curr_repository = None
                 if repository_cfg:
-                    repository_class: Type[BaseRepository] = repository_cfg["class"]
+                    repository_class: type[BaseRepository] = repository_cfg["class"]
                     repository_props = repository_cfg["props"]
                     if isinstance(repository_cfg["type"], str):
                         repository_type = enum.RepositoryType(repository_cfg["type"])
@@ -148,7 +148,7 @@ class AppComposer(BaseAppComposer):
                     entities = app.domain.get_dag_sorted_entities(
                         service_type=service_type
                     )
-                    if self._log_setup:
+                    if self._log_setup and setup_logger:
                         setup_logger.debug(
                             app.create_log_message(
                                 "db89f0a5",
@@ -166,12 +166,11 @@ class AppComposer(BaseAppComposer):
                     app,
                     service_type=service_type,
                     repository=curr_repository,
-                    logger=setup_logger if self._log_setup else None,
+                    logger=service_logger,
+                    setup_logger=setup_logger if self._log_setup else None,
                     name=service_type.value,
                     **service_props,
                 )
-                if not self._log_setup:
-                    curr_service.logger = service_logger
                 # Add to overview of services
                 app_impl.services[service_type] = curr_service
 
@@ -226,7 +225,7 @@ class AppComposer(BaseAppComposer):
             ) = auth_service.create_user_dependencies()
 
             # Register policies with app
-            if self._log_setup:
+            if self._log_setup and setup_logger:
                 setup_logger.debug(
                     app.create_log_message("f329be4d", "Registering policies")
                 )
@@ -235,7 +234,7 @@ class AppComposer(BaseAppComposer):
             abac_service.register_policies()
 
             # Finalise process
-            if self._log_setup:
+            if self._log_setup and setup_logger:
                 setup_logger.debug(
                     app.create_log_message("da172304", "Finished composing application")
                 )
@@ -244,7 +243,7 @@ class AppComposer(BaseAppComposer):
 
             # Print error for deployment log, in regular log is not shown there
             traceback.print_exc()
-            if self._log_setup:
+            if self._log_setup and setup_logger:
                 setup_logger.error(
                     App.create_static_log_message(
                         "db960800",

@@ -83,11 +83,6 @@ class OidcServerCfg(Model):
         "client_secret",
         "scope",
         "public",
-        # Introspection knobs (non-spec configuration)
-        "enable_introspection",
-        "introspection_interval_seconds",
-        "introspection_timeout_seconds",
-        "introspection_auth_method",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -121,29 +116,6 @@ class OidcServerCfg(Model):
     scope: str = Field(description="The scope of the application")
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
-    )
-    enable_introspection: bool = Field(
-        default=False,
-        description=(
-            "Enable token introspection after local JWT verification. Disabled by default."
-        ),
-    )
-    introspection_interval_seconds: int = Field(
-        default=300,
-        description=(
-            "Minimum interval in seconds between introspection checks for the same token."
-        ),
-    )
-    introspection_timeout_seconds: int = Field(
-        default=2,
-        description="HTTP timeout in seconds for the introspection request.",
-    )
-    introspection_auth_method: str = Field(
-        default="client_secret_basic",
-        description=(
-            "Client authentication method for introspection endpoint. One of: "
-            "'client_secret_basic', 'client_secret_post', 'none'."
-        ),
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification
@@ -306,9 +278,7 @@ class OidcServerCfg(Model):
 
     @field_validator("claim_map", mode="before")
     @classmethod
-    def validate_claim_map(
-        cls, claim_map: dict[str, list[str] | str]
-    ) -> dict[str, list[str]]:
+    def validate_claim_map(cls, claim_map):
         """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
         if not isinstance(claim_map, dict):
             raise ValueError("claim_map must be a dictionary")
@@ -325,15 +295,6 @@ class OidcServerCfg(Model):
                     raise ValueError("All values in claim_map lists must be strings")
             claim_map[new_claim] = orig_claims
         return claim_map
-
-        # return {
-        #     new_claim: (
-        #         raw_orig_claims.split(" ")
-        #         if isinstance(raw_orig_claims, str)
-        #         else raw_orig_claims
-        #     )
-        #     for new_claim, raw_orig_claims in claim_map.items()
-        # }
 
     def is_valid(self) -> bool:
         """Check if the configuration has the required fields set."""

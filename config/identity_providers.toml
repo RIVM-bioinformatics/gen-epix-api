@@ -7,11 +7,6 @@ client_id = "POv1bEMlzAunu6LD0BcmV4pvxInkNRXY"
 client_secret = ""
 scope = "openid profile email"
 public = true
-enable_introspection = true
-introspection_endpoint = "https://pre-login.rivm.nl/broker/sp/oidc/token/introspect"
-introspection_interval_seconds = 300
-introspection_timeout_seconds = 2
-introspection_auth_method = "client_secret_basic"
 
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "email preferred_username"
@@ -25,11 +20,6 @@ client_id = "mock"
 client_secret = "mock"
 scope = "openid profile email"
 public = true
-enable_introspection = true
-introspection_endpoint = "https://localhost:5443/introspect"
-introspection_interval_seconds = 300
-introspection_timeout_seconds = 2
-introspection_auth_method = "client_secret_basic"
 
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "sub"

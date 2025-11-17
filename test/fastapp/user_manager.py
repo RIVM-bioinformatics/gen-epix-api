@@ -1,5 +1,5 @@
 from collections.abc import Hashable
-from typing import Any, Type
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ MOCK_USER = MockUser(id="u1", key="info@org.nl", email="info@org.nl", name="John
 
 class UserManager(BaseUserManager):
 
-    def __init__(self, user_class: Type[User] = User) -> None:
+    def __init__(self, user_class: type[User] = User) -> None:
         self.user_class = user_class
         self.users: dict[Hashable, User] = {}
         self.root_users: dict[Hashable, User] = {}

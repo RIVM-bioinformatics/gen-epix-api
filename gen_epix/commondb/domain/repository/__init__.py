@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.commondb.domain.repository.abac import (
     BaseAbacRepository as BaseAbacRepository,
 )

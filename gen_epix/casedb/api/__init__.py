@@ -1,3 +1,4 @@
+# pylint: disable=useless-import-alias
 from gen_epix.casedb.api.case import (
     CreateCaseSetRequestBody as CreateCaseSetRequestBody,
 )

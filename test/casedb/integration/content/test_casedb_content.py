@@ -1,7 +1,7 @@
 import logging
+from collections.abc import Iterable
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
-from typing import Iterable
 
 import pytest
 
