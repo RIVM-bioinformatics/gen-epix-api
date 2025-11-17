@@ -83,6 +83,10 @@ class OidcServerCfg(Model):
         "client_secret",
         "scope",
         "public",
+        "enable_introspection",
+        "introspection_interval_seconds",
+        "introspection_timeout_seconds",
+        "introspection_auth_method",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -116,6 +120,29 @@ class OidcServerCfg(Model):
     scope: str = Field(description="The scope of the application")
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
+    )
+    enable_introspection: bool = Field(
+        default=False,
+        description=(
+            "Enable token introspection after local JWT verification. Disabled by default."
+        ),
+    )
+    introspection_interval_seconds: int = Field(
+        default=300,
+        description=(
+            "Minimum interval in seconds between introspection checks for the same token."
+        ),
+    )
+    introspection_timeout_seconds: int = Field(
+        default=2,
+        description="HTTP timeout in seconds for the introspection request.",
+    )
+    introspection_auth_method: str = Field(
+        default="client_secret_basic",
+        description=(
+            "Client authentication method for introspection endpoint. One of: "
+            "'client_secret_basic', 'client_secret_post', 'none'."
+        ),
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification
