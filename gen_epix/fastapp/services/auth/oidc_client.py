@@ -285,8 +285,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 algorithms=server_cfg.id_token_signing_alg_values_supported,
                 audience=self.audience,
                 issuer=server_cfg.issuer,
-                # TODO: Check if this is not a security risk
-                options={"verify_at_hash": False},
             )
         except Exception as exception:
             msg = "Unable to decode JWT: "
