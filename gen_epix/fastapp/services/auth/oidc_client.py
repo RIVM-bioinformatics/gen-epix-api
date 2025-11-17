@@ -599,7 +599,9 @@ class OidcClient(IdpClient, OpenIdConnect):
                         exception=exception,
                     ).dumps()
                 )
-            raise exc.NotFoundError from exception
+            raise exc.UnauthorizedAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
 
     def introspect_token(self, token: str) -> bool | None:
         if not self.introspection_endpoint:
@@ -652,13 +654,13 @@ class OidcClient(IdpClient, OpenIdConnect):
                     self.logger.warning(
                         self._log_item_class(
                             code="7a3e6d1f",
-                            msg=(
-                                "Token introspection returned non-200 status; proceeding with local validation"
-                            ),
+                            msg=("Token introspection returned non-200 status"),
                             status=response.status_code,
                         ).dumps()
                     )
-                return None
+                raise exc.UnauthorizedAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
             payload = response.json()
             active = payload.get("active")
             if isinstance(active, bool):
@@ -670,13 +672,13 @@ class OidcClient(IdpClient, OpenIdConnect):
                 self.logger.warning(
                     self._log_item_class(
                         code="f2b3c9aa",
-                        msg=(
-                            "Token introspection failed (timeout/network/parse); proceeding with local validation"
-                        ),
+                        msg=("Token introspection failed (timeout/network/parse)"),
                         exception=exc_,
                     ).dumps()
                 )
-            return None
+            raise exc.UnauthorizedAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exc_
 
     def _get_token_hash(self, token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
