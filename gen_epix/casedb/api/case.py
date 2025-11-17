@@ -523,8 +523,9 @@ def create_case_endpoints(
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
         user: model.User | None = None
+        app_impl: AppImplDetails = app.impl
         try:
-            user = await app.services[
+            user = await app_impl.services[
                 enum.ServiceType.AUTH
             ].get_existing_user_from_token(token=token)
             fasta_iterable = app.handle(
