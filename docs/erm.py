@@ -2,7 +2,6 @@ import hashlib
 import json
 import os
 import pickle
-import tempfile
 import warnings
 from pathlib import Path
 
@@ -93,6 +92,5 @@ def generate_hash_for_domain_models(
     sorted_model_classes = []
     for domain in domains:
         sorted_model_classes.extend(domain.get_dag_sorted_models(persistable=True))
-    with tempfile.TemporaryFile(dir=dir, suffix=".pkl") as handle:
-        pickle.dump(sorted_model_classes, handle)
-        return hashlib.file_digest(handle, "sha256").hexdigest()
+    hash_code = hashlib.sha256(pickle.dumps(sorted_model_classes)).hexdigest()
+    return hash_code
