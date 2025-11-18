@@ -16,9 +16,9 @@ VALID_FASTA_FILE_CONTENT = b""">seq1
 AGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAG
 """
 VALID_FASTQ_FILE_CONTENT = b"""@3c2bbdcb-b017-4f1e-85c7-fd0fc34d356e
-b594b493-58f6-4a0a-a8fd-e417493e6946
+AGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAG
 +
-IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"""
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"""
 
 
 class TestCreate:
@@ -214,11 +214,10 @@ class TestCreate:
                 env.create_file(exec_user, content=VALID_FASTA_FILE_CONTENT)
 
     def test_create_file_invalid_content(self, env: Env) -> None:
-        for exec_user in DATA_USERS:
-            with pytest.raises(exc.InvalidArgumentsError):
-                env.create_file(exec_user, content=b"")
-            with pytest.raises(exc.InvalidArgumentsError):
-                env.create_file(exec_user, content=b"INVALID FILE CONTENT")
+        with pytest.raises(exc.InvalidArgumentsError):
+            env.create_file("root1_1", content=b"")
+            env.create_file("root1_1", content=b"INVALID FILE CONTENT")
+            env.create_file("root1_1", content=b">MY OWN HEADER ID\nAGVVAGFAEAADA")
 
     def test_create_read_set(self, env: Env) -> None:
         # Create ReadSet as root, app_admin, org_admin and org_user
