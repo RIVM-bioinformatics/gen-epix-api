@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from io import StringIO
-from typing import Any
 from uuid import UUID
 
 from Bio import SeqIO
@@ -27,7 +27,6 @@ class FileService(BaseFileService):
         self,
         cmd: command.FileCrudCommand,
     ) -> None:
-        # TODO: validation could be set stricter based on requirements
         is_create = cmd.operation in CrudOperationSet.CREATE.value
         if is_create:
             file_obj = cmd.get_objs()[0]
@@ -53,7 +52,7 @@ class FileService(BaseFileService):
                     "Unable to decode file content as UTF-8"
                 ) from e
             try:
-                sequence_records: list[Any] = list(SeqIO.parse(text_stream, sequence_format.value.lower()))  # type: ignore
+                sequence_records: Iterable = SeqIO.parse(text_stream, sequence_format.value.lower())  # type: ignore
             except Exception as e:
                 raise exc.InvalidArgumentsError(
                     f"Invalid {sequence_format.value} content: {e}"
@@ -64,10 +63,15 @@ class FileService(BaseFileService):
                     f"No records found in {sequence_format.value} file"
                 )
 
-            if sequence_format == enum.SequenceFormat.FASTQ:
-                for record in sequence_records:
+            for record in sequence_records:
+                if sequence_format == enum.SequenceFormat.FASTQ:
                     phred_quality_scores: list[int] | None = record.letter_annotations.get("phred_quality")  # type: ignore[attr-defined]
                     if phred_quality_scores is None or len(phred_quality_scores) != len(record.seq):  # type: ignore[arg-type]
                         raise exc.InvalidArgumentsError(
                             "Invalid FASTQ: quality scores missing or length mismatch with sequence"
                         )
+                # TODO: Add nucleotide validation here?
+                # if not all(nucl in "ACGTNacgtn-.*" for nucl in record.seq):
+                #     raise exc.InvalidArgumentsError(
+                #         "Invalid nucleotide characters found in sequence"
+                #     )
