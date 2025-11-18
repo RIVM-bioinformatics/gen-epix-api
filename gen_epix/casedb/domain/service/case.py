@@ -93,8 +93,8 @@ class BaseCaseService(BaseService):
         f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
-            command.RetrieveLibraryPrepProtocolsCommand,
-            self.retrieve_library_prep_protocols,
+            command.RetrieveSequencingProtocolsCommand,
+            self.retrieve_sequencing_protocols,
         )
         f(
             command.RetrieveAssemblyProtocolsCommand,
@@ -207,10 +207,10 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_library_prep_protocols(
+    def retrieve_sequencing_protocols(
         self,
-        cmd: command.RetrieveLibraryPrepProtocolsCommand,
-    ) -> list[model.LibraryPrepProtocol]:
+        cmd: command.RetrieveSequencingProtocolsCommand,
+    ) -> list[model.SequencingProtocol]:
         raise NotImplementedError()
 
     @abc.abstractmethod

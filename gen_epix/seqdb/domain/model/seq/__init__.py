@@ -71,10 +71,10 @@ from gen_epix.seqdb.domain.model.seq.profile import (
     SnpDetectionProtocol as SnpDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq.profile import SnpProfile as SnpProfile
-from gen_epix.seqdb.domain.model.seq.reads import (
-    LibraryPrepProtocol as LibraryPrepProtocol,
-)
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet as ReadSet
+from gen_epix.seqdb.domain.model.seq.reads import (
+    SequencingProtocol as SequencingProtocol,
+)
 from gen_epix.seqdb.domain.model.seq.sample import Sample as Sample
 from gen_epix.seqdb.domain.model.seq.sample import (
     SampleDataCollectionLink as SampleDataCollectionLink,

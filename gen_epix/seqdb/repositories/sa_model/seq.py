@@ -91,8 +91,8 @@ class RefSnpSetMember(Base, RowMetadataMixin):
     index: Mapped[int] = create_mapped_column(DOMAIN, model.RefSnpSetMember, "index")
 
 
-class LibraryPrepProtocol(Base, RowMetadataMixin, ProtocolMixin):
-    __tablename__, __table_args__ = create_table_args(model.LibraryPrepProtocol)
+class SequencingProtocol(Base, RowMetadataMixin, ProtocolMixin):
+    __tablename__, __table_args__ = create_table_args(model.SequencingProtocol)
 
 
 class Locus(Base, RowMetadataMixin):
@@ -472,8 +472,8 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     rev_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_reads_hash_sha256"
     )
-    library_prep_protocol_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ReadSet, "library_prep_protocol_id"
+    sequencing_protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ReadSet, "sequencing_protocol_id"
     )
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"

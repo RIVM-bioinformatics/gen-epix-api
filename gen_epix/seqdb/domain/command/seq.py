@@ -84,8 +84,8 @@ class TreeAlgorithmCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.TreeAlgorithm
 
 
-class LibraryPrepProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LibraryPrepProtocol
+class SequencingProtocolCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SequencingProtocol
 
 
 class AssemblyProtocolCrudCommand(CrudCommand):

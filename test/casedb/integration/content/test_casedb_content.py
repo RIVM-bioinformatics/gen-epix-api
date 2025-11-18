@@ -308,16 +308,16 @@ class TestContent:
                     raise ValueError("FASTA string should start with '>'")
                 if "\n" not in fasta_str:
                     raise ValueError("FASTA string should contain new lines")
-                # Retrieve LibraryPrepProtocols
-                library_prep_protocols: list[model.LibraryPrepProtocol] = app.handle(
-                    command.RetrieveLibraryPrepProtocolsCommand(
+                # Retrieve SequencingProtocols
+                sequencing_protocols: list[model.SequencingProtocol] = app.handle(
+                    command.RetrieveSequencingProtocolsCommand(
                         user=org_user,
                     )
                 )
-                if not library_prep_protocols:
+                if not sequencing_protocols:
                     raise ValueError("Library prep protocols should not be None")
-                for library_prep_protocol in library_prep_protocols:
-                    if not library_prep_protocol.id:
+                for sequencing_protocol in sequencing_protocols:
+                    if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
                 assembly_protocols: list[model.AssemblyProtocol] = app.handle(

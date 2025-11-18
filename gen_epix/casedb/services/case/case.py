@@ -32,8 +32,8 @@ from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_by_case,
     case_service_retrieve_genetic_sequence_fasta_by_case,
-    case_service_retrieve_library_prep_protocols,
     case_service_retrieve_phylogenetic_tree,
+    case_service_retrieve_sequencing_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
@@ -254,11 +254,11 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
-    def retrieve_library_prep_protocols(
+    def retrieve_sequencing_protocols(
         self,
-        cmd: command.RetrieveLibraryPrepProtocolsCommand,
-    ) -> list[model.LibraryPrepProtocol]:
-        return case_service_retrieve_library_prep_protocols(self, cmd)
+        cmd: command.RetrieveSequencingProtocolsCommand,
+    ) -> list[model.SequencingProtocol]:
+        return case_service_retrieve_sequencing_protocols(self, cmd)
 
     def retrieve_assembly_protocols(
         self, cmd: command.RetrieveAssemblyProtocolsCommand

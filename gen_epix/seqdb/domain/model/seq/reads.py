@@ -9,10 +9,10 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
 
 
-class LibraryPrepProtocol(Model, ProtocolMixin):
+class SequencingProtocol(Model, ProtocolMixin):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="library_prep_protocols",
-        table_name="library_prep_protocol",
+        snake_case_plural_name="sequencing_protocols",
+        table_name="sequencing_protocol",
         persistable=True,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -38,17 +38,17 @@ class ReadSet(Model, CodeMixin, QualityMixin):
                 #     None,
                 # ),
                 1: (
-                    "library_prep_protocol_id",
-                    LibraryPrepProtocol,
-                    "library_prep_protocol",
+                    "sequencing_protocol_id",
+                    SequencingProtocol,
+                    "sequencing_protocol",
                 ),
             }
         ),
     )
-    library_prep_protocol_id: UUID = Field(
+    sequencing_protocol_id: UUID = Field(
         description="The unique identifier for the library preparation protocol. FOREIGN KEY"
     )
-    library_prep_protocol: LibraryPrepProtocol | None = Field(
+    sequencing_protocol: SequencingProtocol | None = Field(
         default=None, description="The sequencing protocol."
     )
     fwd_uri: str | None = Field(

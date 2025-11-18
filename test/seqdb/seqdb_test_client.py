@@ -25,7 +25,7 @@ class SeqdbTestClient(TestClient):
         model.UserInvitation: "email",
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.DataCollection: "name",
-        model.LibraryPrepProtocol: "name",
+        model.SequencingProtocol: "name",
         model.AssemblyProtocol: "name",
         model.File: "id",
         model.ReadSet: "id",
@@ -133,25 +133,25 @@ class SeqdbTestClient(TestClient):
             **kwargs,
         )
 
-    def create_library_prep_protocol(
+    def create_sequencing_protocol(
         self,
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-    ) -> model.LibraryPrepProtocol:
+    ) -> model.SequencingProtocol:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
         )  # type:ignore[assignment]
-        library_prep_protocol: model.LibraryPrepProtocol = self.app.handle(
-            command.LibraryPrepProtocolCrudCommand(
+        sequencing_protocol: model.SequencingProtocol = self.app.handle(
+            command.SequencingProtocolCrudCommand(
                 operation=CrudOperation.CREATE_ONE,
                 user=user,
-                objs=model.LibraryPrepProtocol(
+                objs=model.SequencingProtocol(
                     code=code, name=name if name else code
                 ),  # type:ignore
             )
         )
-        return self._set_obj(library_prep_protocol)  # type:ignore[return-value]
+        return self._set_obj(sequencing_protocol)  # type:ignore[return-value]
 
     def create_assembly_protocol(
         self,
@@ -202,7 +202,7 @@ class SeqdbTestClient(TestClient):
     def create_read_set(
         self,
         user_or_str: str | model.User,
-        library_prep_protocol_or_str: model.LibraryPrepProtocol | str | None = None,
+        sequencing_protocol_or_str: model.SequencingProtocol | str | None = None,
         fwd_uri: str | None = None,
         rev_uri: str | None = None,
         fwd_file_id: UUID | None = None,
@@ -210,23 +210,23 @@ class SeqdbTestClient(TestClient):
         fwd_reads_hash_sha256_or_content: bytes | str | None = None,
         rev_reads_hash_sha256_or_content: bytes | str | None = None,
         sequencing_run_code: str = "",
-        set_dummy_library_prep_protocol: bool = False,
+        set_dummy_sequencing_protocol: bool = False,
     ) -> model.ReadSet:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
         )  # type:ignore[assignment]
-        library_prep_protocol_id: UUID
-        if set_dummy_library_prep_protocol:
-            if library_prep_protocol_or_str is not None:
+        sequencing_protocol_id: UUID
+        if set_dummy_sequencing_protocol:
+            if sequencing_protocol_or_str is not None:
                 raise ValueError(
-                    "library_prep_protocol_or_str must be None when "
-                    "set_dummy_library_prep_protocol is True"
+                    "sequencing_protocol_or_str must be None when "
+                    "set_dummy_sequencing_protocol is True"
                 )
-            library_prep_protocol_id = uuid.uuid4()
+            sequencing_protocol_id = uuid.uuid4()
         else:
-            library_prep_protocol_id: UUID = (  # type:ignore[union-attr]
+            sequencing_protocol_id: UUID = (  # type:ignore[union-attr]
                 self._get_obj(  # type:ignore[assignment]
-                    model.LibraryPrepProtocol, library_prep_protocol_or_str
+                    model.SequencingProtocol, sequencing_protocol_or_str
                 )
             ).id  # type:ignore[assignment]
         fwd_reads_hash_sha256: bytes | None
@@ -248,7 +248,7 @@ class SeqdbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.ReadSet(
-                    library_prep_protocol_id=library_prep_protocol_id,
+                    sequencing_protocol_id=sequencing_protocol_id,
                     fwd_uri=fwd_uri,
                     rev_uri=rev_uri,
                     fwd_file_id=fwd_file_id,
@@ -259,7 +259,7 @@ class SeqdbTestClient(TestClient):
                 ),
             )
         )
-        assert read_set.library_prep_protocol_id == library_prep_protocol_id
+        assert read_set.sequencing_protocol_id == sequencing_protocol_id
         assert read_set.fwd_reads_hash_sha256 == fwd_reads_hash_sha256
         assert read_set.rev_reads_hash_sha256 == rev_reads_hash_sha256
         assert read_set.fwd_file_id == fwd_file_id

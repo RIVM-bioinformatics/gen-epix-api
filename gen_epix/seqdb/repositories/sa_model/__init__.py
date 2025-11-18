@@ -43,9 +43,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    LibraryPrepProtocol as LibraryPrepProtocol,
-)
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
@@ -85,6 +82,9 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     SeqDistanceProtocol as SeqDistanceProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SeqTaxonomy as SeqTaxonomy
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    SequencingProtocol as SequencingProtocol,
+)
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SnpDetectionProtocol as SnpDetectionProtocol,
 )
@@ -132,7 +132,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.AstProtocol: AstProtocol,
         model.KmerDetectionProtocol: KmerDetectionProtocol,
         model.KmerProfile: KmerProfile,
-        model.LibraryPrepProtocol: LibraryPrepProtocol,
+        model.SequencingProtocol: SequencingProtocol,
         model.Locus: Locus,
         model.LocusDetectionProtocol: LocusDetectionProtocol,
         model.LocusProfile: LocusProfile,

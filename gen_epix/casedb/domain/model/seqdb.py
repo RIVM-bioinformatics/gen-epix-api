@@ -16,11 +16,11 @@ from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.util import create_keys, create_links
 from gen_epix.seqdb.domain.model import AssemblyProtocol as SeqdbAssemblyProtocol
 from gen_epix.seqdb.domain.model import File as SeqdbFile
-from gen_epix.seqdb.domain.model import LibraryPrepProtocol as SeqdbLibraryPrepProtocol
 from gen_epix.seqdb.domain.model import RawSeq as SeqdbRawSeq
 from gen_epix.seqdb.domain.model import ReadSet as SeqdbReadSet
 from gen_epix.seqdb.domain.model import Sample as SeqdbSample
 from gen_epix.seqdb.domain.model import Seq as SeqdbSeq
+from gen_epix.seqdb.domain.model import SequencingProtocol as SeqdbSequencingProtocol
 
 
 class GeneticSequence(Model):
@@ -95,10 +95,10 @@ class PhylogeneticTree(Model):
     )
 
 
-class LibraryPrepProtocol(SeqdbLibraryPrepProtocol):
+class SequencingProtocol(SeqdbSequencingProtocol):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="library_prep_protocols",
-        table_name="library_prep_protocol",
+        snake_case_plural_name="sequencing_protocols",
+        table_name="sequencing_protocol",
         persistable=False,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -121,9 +121,9 @@ class ReadSet(SeqdbReadSet):
         links=create_links(
             {
                 1: (
-                    "library_prep_protocol_id",
-                    LibraryPrepProtocol,
-                    "library_prep_protocol",
+                    "sequencing_protocol_id",
+                    SequencingProtocol,
+                    "sequencing_protocol",
                 ),
             }
         ),

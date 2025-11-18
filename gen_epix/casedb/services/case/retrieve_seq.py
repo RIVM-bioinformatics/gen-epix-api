@@ -230,20 +230,20 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
         return fasta_iterator
 
 
-def case_service_retrieve_library_prep_protocols(
+def case_service_retrieve_sequencing_protocols(
     self: BaseCaseService,
-    cmd: command.RetrieveLibraryPrepProtocolsCommand,
-) -> list[model.LibraryPrepProtocol]:
+    cmd: command.RetrieveSequencingProtocolsCommand,
+) -> list[model.SequencingProtocol]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
-    library_prep_protocols: list[model.LibraryPrepProtocol] = self.app.handle(
-        seqdb_command.LibraryPrepProtocolCrudCommand(
+    sequencing_protocols: list[model.SequencingProtocol] = self.app.handle(
+        seqdb_command.SequencingProtocolCrudCommand(
             user=cmd.user,
             operation=CrudOperation.READ_ALL,
         )
     )
-    return library_prep_protocols
+    return sequencing_protocols
 
 
 def case_service_retrieve_assembly_protocols(

@@ -671,17 +671,17 @@ def create_case_endpoints(
         return created_file_id
 
     @router.get(
-        "/retrieve/library_prep_protocols",
-        operation_id="retrieve__library_prep_protocols",
+        "/retrieve/sequencing_protocols",
+        operation_id="retrieve__sequencing_protocols",
         name="Retrieve library preparation protocols",
-        description=command.RetrieveLibraryPrepProtocolsCommand.__doc__,
+        description=command.RetrieveSequencingProtocolsCommand.__doc__,
     )
-    async def retrieve__library_prep_protocols(
+    async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.LibraryPrepProtocol]:
+    ) -> list[model.SequencingProtocol]:
         try:
-            retval: list[model.LibraryPrepProtocol] = app.handle(
-                command.RetrieveLibraryPrepProtocolsCommand(
+            retval: list[model.SequencingProtocol] = app.handle(
+                command.RetrieveSequencingProtocolsCommand(
                     user=user,
                 )
             )

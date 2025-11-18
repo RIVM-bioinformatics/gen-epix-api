@@ -174,15 +174,15 @@ class TestCreate:
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
     def test_create_library_protocol(self, env: Env) -> None:
-        # Create library_prep_protocol as root, app_admin, refdata_admin
+        # Create sequencing_protocol as root, app_admin, refdata_admin
         for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_library_prep_protocol(exec_user, f"library_prep_protocol{i + 1}")
+            env.create_sequencing_protocol(exec_user, f"sequencing_protocol{i + 1}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_library_protocol_raise(self, env: Env) -> None:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_library_prep_protocol(exec_user, "library_prep_protocol11")
+                env.create_sequencing_protocol(exec_user, "sequencing_protocol11")
 
     def test_create_assembly_protocol(self, env: Env) -> None:
         # Create assembly_protocol as root, app_admin, refdata_admin
@@ -210,7 +210,7 @@ class TestCreate:
     def test_create_read_set(self, env: Env) -> None:
         # Create ReadSet as root, app_admin, org_admin and org_user
         kwargs = env.get_default_kwargs(model.ReadSet) | {
-            "library_prep_protocol_or_str": "library_prep_protocol1",
+            "sequencing_protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in DATA_USERS:
             env.create_read_set(exec_user, **kwargs)
@@ -219,7 +219,7 @@ class TestCreate:
     def test_create_read_set_raise(self, env: Env) -> None:
         # Check that below data users cannot create ReadSet
         kwargs = env.get_default_kwargs(model.ReadSet) | {
-            "library_prep_protocol_or_str": "library_prep_protocol1",
+            "sequencing_protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
@@ -227,7 +227,7 @@ class TestCreate:
 
     def test_create_file_for_read_set(self, env: Env) -> None:
         kwargs = env.get_default_kwargs(model.ReadSet) | {
-            "library_prep_protocol_or_str": "library_prep_protocol1",
+            "sequencing_protocol_or_str": "sequencing_protocol1",
         }
         for exec_user in DATA_USERS:
             fwd_file = env.create_file(
@@ -283,9 +283,7 @@ class TestCreate:
             env.create_org_admin_policy("app_admin1_1", "org_admin1_1", "org1")
         # Library prep protocol already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
-            env.create_library_prep_protocol(
-                "refdata_admin1_1", "library_prep_protocol1"
-            )
+            env.create_sequencing_protocol("refdata_admin1_1", "sequencing_protocol1")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_object_invalid_reference(self, env: Env) -> None:
@@ -298,10 +296,10 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
         # TODO: OrganizationAdminPolicy.user does not exist
-        # ReadSet.library_prep_protocol does not exist
+        # ReadSet.sequencing_protocol does not exist
         with pytest.raises(exc.InvalidLinkIdsError):
             env.create_read_set(
                 "root1_1",
                 **env.get_default_kwargs(model.ReadSet),
-                set_dummy_library_prep_protocol=True,
+                set_dummy_sequencing_protocol=True,
             )

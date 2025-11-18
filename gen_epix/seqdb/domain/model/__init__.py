@@ -54,7 +54,6 @@ from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
-from gen_epix.seqdb.domain.model.seq import LibraryPrepProtocol as LibraryPrepProtocol
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
@@ -95,6 +94,7 @@ from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
 from gen_epix.seqdb.domain.model.seq import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
+from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
@@ -147,7 +147,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AssemblyProtocol,
             AstProtocol,
             KmerDetectionProtocol,
-            LibraryPrepProtocol,
+            SequencingProtocol,
             LocusDetectionProtocol,
             MlvaDetectionProtocol,
             PcrProtocol,

@@ -115,9 +115,6 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     KmerProfileCrudCommand as KmerProfileCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import (
-    LibraryPrepProtocolCrudCommand as LibraryPrepProtocolCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     LocusDetectionProtocolCrudCommand as LocusDetectionProtocolCrudCommand,
@@ -196,6 +193,9 @@ from gen_epix.seqdb.domain.command.seq import (
     SeqTaxonomyCrudCommand as SeqTaxonomyCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    SequencingProtocolCrudCommand as SequencingProtocolCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     SnpDetectionProtocolCrudCommand as SnpDetectionProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -238,7 +238,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         GeneratePhylogeneticTreeCommand,
         KmerDetectionProtocolCrudCommand,
         KmerProfileCrudCommand,
-        LibraryPrepProtocolCrudCommand,
+        SequencingProtocolCrudCommand,
         LocusCrudCommand,
         LocusDetectionProtocolCrudCommand,
         LocusSetCrudCommand,
