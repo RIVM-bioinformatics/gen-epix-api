@@ -201,9 +201,6 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     SnpProfileCrudCommand as SnpProfileCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import (
-    SubtypingSchemeCrudCommand as SubtypingSchemeCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import TaxonCrudCommand as TaxonCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     TaxonLocusLinkCrudCommand as TaxonLocusLinkCrudCommand,
@@ -275,7 +272,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SeqTaxonomyCrudCommand,
         SnpDetectionProtocolCrudCommand,
         SnpProfileCrudCommand,
-        SubtypingSchemeCrudCommand,
         TaxonCrudCommand,
         TaxonLocusLinkCrudCommand,
         TaxonomyProtocolCrudCommand,

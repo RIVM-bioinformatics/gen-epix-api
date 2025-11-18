@@ -190,16 +190,6 @@ class SeqDistanceProtocol(Base, RowMetadataMixin, ProtocolMixin):
     )
 
 
-class SubtypingScheme(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.SubtypingScheme)
-
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.SubtypingScheme, "code")
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.SubtypingScheme, "name")
-    description: Mapped[str] = create_mapped_column(
-        DOMAIN, model.SubtypingScheme, "description"
-    )
-
-
 class Taxon(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Taxon)
 
@@ -212,9 +202,6 @@ class Taxon(Base, RowMetadataMixin):
     )
     snomed_sctid: Mapped[int] = create_mapped_column(
         DOMAIN, model.Taxon, "snomed_sctid"
-    )
-    subtyping_scheme_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Taxon, "subtyping_scheme_id"
     )
     ncbi_ancestor_taxids: Mapped[list[int]] = create_mapped_column(
         DOMAIN, model.Taxon, "ncbi_ancestor_taxids"
@@ -468,7 +455,21 @@ class RefSeq(Base, RowMetadataMixin, SeqMixin):
 class Sample(Base, RowMetadataMixin, CodeMixin):
     __tablename__, __table_args__ = create_table_args(model.Sample)
 
+    created_in_data_collection_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Sample, "created_in_data_collection_id"
+    )
     props: Mapped[dict[str, str]] = create_mapped_column(DOMAIN, model.Sample, "props")
+
+
+class SampleDataCollectionLink(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.SampleDataCollectionLink)
+
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SampleDataCollectionLink, "sample_id"
+    )
+    data_collection_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SampleDataCollectionLink, "data_collection_id"
+    )
 
 
 class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):

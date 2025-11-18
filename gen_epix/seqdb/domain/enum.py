@@ -189,12 +189,20 @@ class AlignmentFormat(Enum):
     CIGAR = "CIGAR"
 
 
+class LocusProfileFormat(Enum):
+    LOCUS_PROFILE_FORMAT1 = "LOCUS_PROFILE_FORMAT1"
+
+
 class AlleleProfileFormat(Enum):
     SORTED_ALLELE_IDS = "SORTED_ALLELE_IDS"
 
 
 class SnpProfileFormat(Enum):
     REF_ALN_SEQ = "REF_ALN_SEQ"
+
+
+class MlvaProfileFormat(Enum):
+    MLVA_PROFILE_FORMAT1 = "MLVA_PROFILE_FORMAT1"
 
 
 class KmerProfileFormat(Enum):

@@ -62,6 +62,9 @@ from gen_epix.seqdb.repositories.sa_model.seq import RefSnp as RefSnp
 from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.repositories.sa_model.seq import Sample as Sample
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    SampleDataCollectionLink as SampleDataCollectionLink,
+)
 from gen_epix.seqdb.repositories.sa_model.seq import Seq as Seq
 from gen_epix.seqdb.repositories.sa_model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import SeqCategory as SeqCategory
@@ -81,7 +84,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     SnpDetectionProtocol as SnpDetectionProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
-from gen_epix.seqdb.repositories.sa_model.seq import SubtypingScheme as SubtypingScheme
 from gen_epix.seqdb.repositories.sa_model.seq import Taxon as Taxon
 from gen_epix.seqdb.repositories.sa_model.seq import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.repositories.sa_model.seq import (
@@ -140,6 +142,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.RefSnpSet: RefSnpSet,
         model.RefSnpSetMember: RefSnpSetMember,
         model.Sample: Sample,
+        model.SampleDataCollectionLink: SampleDataCollectionLink,
         model.Seq: Seq,
         model.SeqAlignment: SeqAlignment,
         model.SeqCategory: SeqCategory,
@@ -151,7 +154,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.SeqTaxonomy: SeqTaxonomy,
         model.SnpDetectionProtocol: SnpDetectionProtocol,
         model.SnpProfile: SnpProfile,
-        model.SubtypingScheme: SubtypingScheme,
         model.Taxon: Taxon,
         model.TaxonLocusLink: TaxonLocusLink,
         model.TaxonomyProtocol: TaxonomyProtocol,

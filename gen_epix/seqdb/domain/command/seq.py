@@ -132,10 +132,6 @@ class SeqCategoryCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqCategory
 
 
-class SubtypingSchemeCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SubtypingScheme
-
-
 class TaxonCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Taxon
 
@@ -202,10 +198,6 @@ class SeqAlignmentCrudCommand(CrudCommand):
 
 class AlleleProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfile
-
-
-class RefSnpCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RefSnp
 
 
 class RefSnpCrudCommand(CrudCommand):

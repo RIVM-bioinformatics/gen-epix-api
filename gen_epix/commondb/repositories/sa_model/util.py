@@ -179,7 +179,7 @@ def set_entity_repository_model_classes(
             )
         extra_sa_field_names = sa_field_names - field_names
         if extra_sa_field_names:
-            extra_field_names_str = ", ".join(extra_sa_field_names)
+            extra_sa_field_names_str = ", ".join(extra_sa_field_names)
             raise ValueError(
                 f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
             )
