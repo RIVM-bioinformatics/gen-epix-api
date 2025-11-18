@@ -1,11 +1,11 @@
 import logging
+import ssl
 from typing import Annotated, Any
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
 
-from gen_epix.fastapp import App, exc, model
-from gen_epix.fastapp.enum import AuthProtocol
+from gen_epix.fastapp import App, exc, model, enum
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
@@ -29,6 +29,7 @@ class AuthService(BaseAuthService):
         logger: logging.Logger | None = None,
         setup_logger: logging.Logger | None = None,
         idps_cfg: list[dict[str, str | list]] | None = None,
+        ssl_context: ssl.SSLContext | bool = True,
         repository: None = None,
         **kwargs: Any,
     ):
@@ -41,7 +42,7 @@ class AuthService(BaseAuthService):
         )
 
         # Initialize authentication services
-        self._init_idp_clients(app, idps_cfg)
+        self._init_idp_clients(app, idps_cfg, ssl_context)
         self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
 
         # Initialize no authentication user
@@ -593,20 +594,23 @@ class AuthService(BaseAuthService):
                 raise exc.UnauthorizedAuthError()
 
     def _init_idp_clients(
-        self, app: App, idps_cfg: list[dict[str, str | list]] | None
+        self,
+        app: App,
+        idps_cfg: list[dict[str, str | list]] | None,
+        ssl_context: ssl.SSLContext | bool,
     ) -> None:
         # Initialize list of all IDP clients and list of exposed IDP clients
         if not idps_cfg:
             idps_cfg = []
         idp_clients: list[IdpClient] = []
         exposed_idp_clients: list[IdpClient] = []
-        idp_names = set()
-        idp_labels = set()
+        idp_names: set[str] = set()
+        idp_labels: set[str] = set()
         logger = app.logger
         for idp_cfg in idps_cfg:
-            idp_name = idp_cfg["name"]
-            idp_label = idp_cfg["label"]
-            is_public = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)
+            idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
+            idp_label: str = idp_cfg["label"]  # type: ignore[assignment]
+            is_public: bool = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)  # type: ignore[assignment]
             if idp_name in idp_names or idp_label in idp_labels:
                 msg = (
                     "Authentication service name and/or label are not unique: "
@@ -620,8 +624,8 @@ class AuthService(BaseAuthService):
 
             oidc_discovery_doc_keys = set(OidcServerCfg.model_fields.keys())
             try:
-                protocol = AuthProtocol[str(idp_cfg["protocol"])]
-                if protocol == AuthProtocol.OIDC:
+                protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
+                if protocol == enum.AuthProtocol.OIDC:
                     discovery_doc = {
                         x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
                     }
@@ -629,7 +633,8 @@ class AuthService(BaseAuthService):
                         OidcServerCfg(**idp_cfg),  # type: ignore
                         logger=self._logger,
                         log_item_class=app.log_item_class,
-                        discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again)
+                        discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again).
+                        ssl_context=ssl_context,
                     )
                 else:
                     raise exc.InitializationServiceError(

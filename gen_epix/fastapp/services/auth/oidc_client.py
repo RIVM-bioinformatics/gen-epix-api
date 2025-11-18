@@ -1,11 +1,9 @@
 import base64
-import hashlib
 import json
 import logging
 import ssl
 import time
 import urllib.parse
-from datetime import datetime
 from typing import Any, TypedDict
 from uuid import UUID
 
@@ -17,9 +15,8 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import ExpiredSignatureError, JWTError, jwk, jwt
+from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwk, jwt
 from jose.backends.base import Key
-from jose.exceptions import JWTClaimsError
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -39,6 +36,7 @@ class OidcClient(IdpClient, OpenIdConnect):
     }
     DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
     DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
+    DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256"]
 
     def __init__(
         self,
@@ -49,18 +47,13 @@ class OidcClient(IdpClient, OpenIdConnect):
         discovery_url: str | None = None,
         discovery_doc: dict[str, Any] | None = None,
         id: UUID | None = None,
-        ssl_context: ssl.SSLContext | bool = False,  # FIXME Not allowed to be True?
+        ssl_context: ssl.SSLContext | bool = True,
         introspect_token_request_headers: dict[str, str] | None = None,
         client_credential_flow_request_headers: dict[str, str] | None = None,
         client_credential_flow_max_retries: int | None = None,
         client_credential_flow_base_delay: float | None = None,
         **kwargs: Any,
     ):
-        # TODO: force ssl_context checking
-        # if ssl_context is False:
-        #     raise exc.InitializationServiceError(
-        #         "SSL context verification (False) is not allowed for OIDC clients"
-        #     )
         # Set IdpClient properties
         issuer = server_cfg.issuer
         if issuer is None:
@@ -95,6 +88,10 @@ class OidcClient(IdpClient, OpenIdConnect):
             client_credential_flow_base_delay
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY
         )
+        self._allowed_signing_algorithms = (
+            self.server_cfg.id_token_signing_alg_values_supported
+            or self.DEFAULT_ALLOWED_SIGNING_ALGORITHMS
+        )
 
         # Introspection cache entry type
         class IntrospectionCacheEntry(TypedDict):
@@ -105,7 +102,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         self._introspection_cache: dict[str, IntrospectionCacheEntry] = {}
 
         if self.server_cfg.enable_introspection:
-            # dynamically determine the introspection endpoint, since it's not required
+            # dynamically determine the introspection endpoint
             self.introspection_endpoint: str = self._get_introspection_endpoint()
 
         # Set cfg and retrieve remaining information
@@ -269,36 +266,16 @@ class OidcClient(IdpClient, OpenIdConnect):
         claims = jwt.get_unverified_claims(jwt_token)
         server_cfg = self.server_cfg
 
-        # Check issuer and audience
-        if claims["iss"] != server_cfg.issuer or claims.get("aud") != self.audience:
-            # Different OIDC server
+        if claims["iss"] != server_cfg.issuer:
             if self.logger and self.logger.level <= logging.DEBUG:
                 self.logger.debug(
                     self._log_item_class(
-                        code="d3f5b6c1",
-                        msg="JWT issuer or audience does not match OIDC server configuration",
+                        code="7e2a1c4d",
+                        msg="JWT issuer does not match OIDC server configuration",
                         scheme_name=self.scheme_name,
                         token_issuer=claims["iss"],
                         token_subject=claims.get("sub"),
                         expected_issuer=server_cfg.issuer,
-                        token_audience=claims.get("aud"),
-                        expected_audience=self.audience,
-                    ).dumps()
-                )
-            return None
-
-        # Check expiration
-        iat: int = claims.get("iat", -1)
-        if iat == -1 or iat > int(datetime.now().timestamp()):
-            # Token expired
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="9f4e2c3b",
-                        msg="JWT expired",
-                        scheme_name=self.scheme_name,
-                        token_issuer=claims["iss"],
-                        iat=iat,
                     ).dumps()
                 )
             return None
@@ -309,16 +286,25 @@ class OidcClient(IdpClient, OpenIdConnect):
             claims = jwt.decode(
                 jwt_token,
                 key=key,
-                algorithms=server_cfg.id_token_signing_alg_values_supported,
+                algorithms=self._allowed_signing_algorithms,
                 audience=self.audience,
                 issuer=server_cfg.issuer,
+                options={
+                    "require_iat": True,
+                    "verify_iat": True,
+                    "require_exp": True,
+                    "verify_exp": True,
+                },
             )
         except Exception as exception:
             msg = "Unable to decode JWT: "
+
             if isinstance(exception, ExpiredSignatureError):
                 msg += "signature has expired"
-            elif isinstance(exception, JWTClaimsError):
-                msg += "some claims are invalid"
+            elif isinstance(exception, JOSEError):
+                msg += "general JOSE error"
+            elif isinstance(exception, JWSError):
+                msg += "general JWS error"
             elif isinstance(exception, JWTError):
                 msg += "signature is invalid"
             else:
@@ -338,56 +324,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            # dynamically determine the introspection endpoint, since it's not required
-            now = self._now()
-            self._prune_expired_introspection_cache(now)
-            token_hash = self._get_token_hash(jwt_token)
-            if self._is_cached_introspection_token_inactive(token_hash):
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="0ce44f1a",
-                            msg="Token previously marked inactive by introspection; denying",
-                            token_hash=token_hash[:12],
-                        ).dumps()
-                    )
-                raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
-            if self._is_recheck_introspection(token_hash, now):
-                if self.logger:
-                    self.logger.info(
-                        self._log_item_class(
-                            code="9deaa6b2",
-                            msg="Performing token introspection re-check",
-                            token_hash=token_hash[:12],
-                        ).dumps()
-                    )
-                is_active = self.introspect_token(jwt_token)
-                if is_active is None:
-                    # network or parse error
-                    raise exc.CredentialsAuthError(
-                        http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                    )
-                exp_val = int(claims.get("exp", now))
-                if is_active is True:
-                    self._update_introspection_cache(token_hash, True, exp_val, now)
-                else:
-                    if is_active is False:
-                        self._update_introspection_cache(
-                            token_hash, False, exp_val, now
-                        )
-                        if self.logger:
-                            self.logger.warning(
-                                self._log_item_class(
-                                    code="b1c2d3e4",
-                                    msg="Token marked inactive by introspection; denying",
-                                    token_hash=token_hash[:12],
-                                ).dumps()
-                            )
-                    raise exc.CredentialsAuthError(
-                        http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                    )
+            self.introspect_token(jwt_token, claims)
 
         # Get issuer and sub
         issuer = claims["iss"]
@@ -430,6 +367,51 @@ class OidcClient(IdpClient, OpenIdConnect):
                     break
 
         return claims
+
+    def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
+        now = self._now()
+        self._prune_expired_introspection_cache(now)
+        if self._is_cached_introspection_token_inactive(jwt_token):
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="0ce44f1a",
+                        msg="Token previously marked inactive by introspection; denying",
+                    ).dumps()
+                )
+            raise exc.CredentialsAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            )
+        if self._is_recheck_introspection(jwt_token, now):
+            if self.logger:
+                self.logger.info(
+                    self._log_item_class(
+                        code="9deaa6b2",
+                        msg="Performing token introspection re-check",
+                    ).dumps()
+                )
+            is_active = self._introspect_token_with_server(jwt_token)
+            if is_active is None:
+                # network or parse error
+                raise exc.CredentialsAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
+            exp_val = int(claims.get("exp", now))
+            if is_active:
+                self._update_introspection_cache(jwt_token, True, exp_val, now)
+            else:
+                if is_active is False:
+                    self._update_introspection_cache(jwt_token, False, exp_val, now)
+                    if self.logger:
+                        self.logger.warning(
+                            self._log_item_class(
+                                code="b1c2d3e4",
+                                msg="Token marked inactive by introspection; denying",
+                            ).dumps()
+                        )
+                raise exc.CredentialsAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
 
     def retrieve_jwt_with_client_credentials_flow(
         self,
@@ -603,14 +585,14 @@ class OidcClient(IdpClient, OpenIdConnect):
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exception
 
-    def introspect_token(self, token: str) -> bool | None:
+    def _introspect_token_with_server(self, jwt_token: str) -> bool | None:
         if not self.introspection_endpoint:
             return None
         timeout_seconds = self.server_cfg.introspection_timeout_seconds
         # Prepare headers and body
         headers = self._introspection_request_headers
         data: dict[str, str] = {
-            "token": token,
+            "token": jwt_token,
             "token_type_hint": "access_token",
         }
         method = (
@@ -680,9 +662,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             ) from exc_
 
-    def _get_token_hash(self, token: str) -> str:
-        return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
     def _now(self) -> int:
         return int(time.time())
 
@@ -694,14 +673,12 @@ class OidcClient(IdpClient, OpenIdConnect):
         for x in expired_keys:
             self._introspection_cache.pop(x, None)
 
-    def _is_cached_introspection_token_inactive(self, token_hash: str) -> bool:
-        introspection_token = self._introspection_cache.get(token_hash)
+    def _is_cached_introspection_token_inactive(self, jwt_token: str) -> bool:
+        introspection_token = self._introspection_cache.get(jwt_token)
         return bool(introspection_token and introspection_token.get("active") is False)
 
-    def _is_recheck_introspection(
-        self, token_hash: str, now: int | None = None
-    ) -> bool:
-        introspection_token = self._introspection_cache.get(token_hash)
+    def _is_recheck_introspection(self, jwt_token: str, now: int | None = None) -> bool:
+        introspection_token = self._introspection_cache.get(jwt_token)
         if not introspection_token:
             return True
         interval = self.server_cfg.introspection_interval_seconds
@@ -711,12 +688,12 @@ class OidcClient(IdpClient, OpenIdConnect):
 
     def _update_introspection_cache(
         self,
-        token_hash: str,
+        jwt_token: str,
         active: bool | None,
         exp: int,
         now: int | None = None,
     ) -> None:
-        self._introspection_cache[token_hash] = {
+        self._introspection_cache[jwt_token] = {
             "active": active,
             "last_checked": now or self._now(),
             "exp": exp,
@@ -731,17 +708,6 @@ class OidcClient(IdpClient, OpenIdConnect):
                 response = client.get(jwks_uri)
                 response.raise_for_status()
                 response_dict = response.json()
-
-                self._signing_keys = {
-                    key_data["kid"]: jwk.construct(
-                        key_data=key_data,
-                        algorithm=key_data.get(
-                            "alg", "RS256"
-                        ),  # Assume RS256 if alg is not specified
-                    )
-                    for key_data in response_dict["keys"]
-                    if key_data["use"] == "sig"
-                }
         except Exception as exception:
             if self.logger:
                 self.logger.warning(
@@ -753,6 +719,31 @@ class OidcClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             raise exc.ServiceUnavailableError() from exception
+
+        # verify keys
+        self._signing_keys = {}
+        for key_data in response_dict["keys"]:
+            if (
+                key_data.get("use") != "sig"
+                or key_data.get("kty") != "RSA"
+                or key_data.get("alg") not in self._allowed_signing_algorithms
+            ):
+                if self.logger:
+                    self.logger.warning(
+                        self._log_item_class(
+                            code="d4e5f6a7",
+                            msg="Skipping loading of signing key due to use/alg mismatch",
+                            scheme_name=self.scheme_name,
+                            key_id=key_data.get("kid"),
+                            use=key_data.get("use"),
+                            alg=key_data.get("alg"),
+                        ).dumps()
+                    )
+                raise exc.UnauthorizedAuthError("Signing key use/alg mismatch")
+
+            self._signing_keys[key_data["kid"]] = jwk.construct(
+                key_data=key_data, algorithm=key_data["alg"]
+            )
 
     async def __call__(self, request: Request) -> Claims | None:  # type: ignore
         """
