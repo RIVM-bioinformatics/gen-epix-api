@@ -297,7 +297,7 @@ class DictRepository(BaseRepository):
     ) -> Iterable[tuple]:
         all_objs_iterable = self._db[model_class].values()
         if filter:
-            for obj in filter.match_rows(all_objs_iterable, is_model=True):
+            for obj in filter.filter_rows(all_objs_iterable, is_model=True):
                 yield tuple(getattr(obj, x) for x in field_names)
         else:
             for obj in all_objs_iterable:
