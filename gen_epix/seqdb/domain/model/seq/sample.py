@@ -11,6 +11,12 @@ from gen_epix.seqdb.domain.model.seq.base import CodeMixin
 
 
 class Sample(Model, CodeMixin):
+    """
+    The original physical sample on which all measurements were performed either
+    directly or through some derived samples. Derived samples such as cultures
+    or library preps for sequencing are not modelled.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="samples",
         table_name="sample",
@@ -38,6 +44,11 @@ class Sample(Model, CodeMixin):
 
 
 class SampleDataCollectionLink(Model):
+    """
+    Association between a sample and a data collection. A sample can thus be part
+    of multiple data collections.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_data_collection_links",
         table_name="sample_data_collection_link",
@@ -53,6 +64,11 @@ class SampleDataCollectionLink(Model):
 
 
 class SampleIdentifier(Model):
+    """
+    An external identifier for a sample, issued by some identifier issuer. A sample
+    can have multiple external identifiers, but only one per identifier issuer.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sample_identifiers",
         table_name="sample_identifier",

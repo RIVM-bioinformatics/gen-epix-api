@@ -23,8 +23,8 @@ class SeqMixin:
     seq_format: Mapped[str] = get_mixin_mapped_column(
         model.SeqMixin, "seq_format", sa.String
     )
-    seq_hash_sha256: Mapped[bytes] = get_mixin_mapped_column(
-        model.SeqMixin, "seq_hash_sha256", sa.LargeBinary
+    seq_hash: Mapped[bytes] = get_mixin_mapped_column(
+        model.SeqMixin, "seq_hash", sa.LargeBinary
     )
     length: Mapped[int] = get_mixin_mapped_column(model.SeqMixin, "length", sa.Integer)
 
@@ -34,8 +34,8 @@ class AlignmentMixin:
     aln_format: Mapped[str] = get_mixin_mapped_column(
         model.AlignmentMixin, "aln_format", sa.String
     )
-    aln_hash_sha256: Mapped[bytes] = get_mixin_mapped_column(
-        model.AlignmentMixin, "aln_hash_sha256", sa.LargeBinary
+    aln_hash: Mapped[bytes] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_hash", sa.LargeBinary
     )
 
 

@@ -10,6 +10,10 @@ from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, Quali
 
 
 class SequencingProtocol(Model, ProtocolMixin):
+    """
+    The protocol used for sequencing a sample.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sequencing_protocols",
         table_name="sequencing_protocol",
@@ -19,6 +23,12 @@ class SequencingProtocol(Model, ProtocolMixin):
 
 
 class ReadSet(Model, CodeMixin, QualityMixin):
+    """
+    A set of sequencing reads, either single-end or paired-end, that is the result
+    of sequencing a sample using a sequencing protocol. The reads data itself are
+    not included in this model, but are referenced via either URIs or file links.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="read_sets",
         table_name="read_set",
@@ -66,13 +76,13 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         default=None,
         description="The unique file identifier for the reverse read set, if any.",
     )
-    fwd_reads_hash_sha256: bytes | None = Field(
+    fwd_reads_hash: bytes | None = Field(
         default=None,
         description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
         min_length=32,
         max_length=32,
     )
-    rev_reads_hash_sha256: bytes | None = Field(
+    rev_reads_hash: bytes | None = Field(
         default=None,
         description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
         min_length=32,
@@ -93,11 +103,9 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         ):
             raise ValueError("fwd_file_id must be different from rev_file_id")
         if (
-            self.fwd_reads_hash_sha256
-            and self.rev_reads_hash_sha256
-            and self.fwd_reads_hash_sha256 == self.rev_reads_hash_sha256
+            self.fwd_reads_hash
+            and self.rev_reads_hash
+            and self.fwd_reads_hash == self.rev_reads_hash
         ):
-            raise ValueError(
-                "fwd_reads_hash_sha256 must be different from rev_reads_hash_sha256"
-            )
+            raise ValueError("fwd_reads_hash must be different from rev_reads_hash")
         return self

@@ -320,8 +320,8 @@ class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     locus_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.LocusProfile, "locus_profile_format"
     )
-    locus_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.LocusProfile, "locus_profile_hash_sha256"
+    locus_profile_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_profile_hash"
     )
 
 
@@ -342,8 +342,8 @@ class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     allele_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "allele_profile_format"
     )
-    allele_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.AlleleProfile, "allele_profile_hash_sha256"
+    allele_profile_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.AlleleProfile, "allele_profile_hash"
     )
 
 
@@ -363,8 +363,8 @@ class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     snp_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile_format"
     )
-    snp_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.SnpProfile, "snp_profile_hash_sha256"
+    snp_profile_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.SnpProfile, "snp_profile_hash"
     )
 
 
@@ -381,8 +381,8 @@ class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     mlva_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_profile_format"
     )
-    mlva_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.MlvaProfile, "mlva_profile_hash_sha256"
+    mlva_profile_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "mlva_profile_hash"
     )
 
 
@@ -399,8 +399,8 @@ class KmerProfile(Base, RowMetadataMixin, QualityMixin):
     kmer_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.KmerProfile, "kmer_profile_format"
     )
-    kmer_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.KmerProfile, "kmer_profile_hash_sha256"
+    kmer_profile_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.KmerProfile, "kmer_profile_hash"
     )
 
 
@@ -466,11 +466,11 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     rev_file_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_file_id"
     )
-    fwd_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.ReadSet, "fwd_reads_hash_sha256"
+    fwd_reads_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.ReadSet, "fwd_reads_hash"
     )
-    rev_reads_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.ReadSet, "rev_reads_hash_sha256"
+    rev_reads_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.ReadSet, "rev_reads_hash"
     )
     sequencing_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_protocol_id"
@@ -573,8 +573,8 @@ class SeqClassification(Base, RowMetadataMixin):
     classification_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqClassification, "classification_format"
     )
-    classification_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.SeqClassification, "classification_hash_sha256"
+    classification_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.SeqClassification, "classification_hash"
     )
 
 
@@ -616,6 +616,6 @@ class SeqTaxonomy(Base, RowMetadataMixin):
     taxonomy_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "taxonomy_format"
     )
-    taxonomy_hash_sha256: Mapped[bytes] = create_mapped_column(
-        DOMAIN, model.SeqTaxonomy, "taxonomy_hash_sha256"
+    taxonomy_hash: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "taxonomy_hash"
     )

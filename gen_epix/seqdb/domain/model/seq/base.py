@@ -18,7 +18,7 @@ class SeqMixin:
         default=enum.SeqFormat.STR_DNA5,
         description="The format of the sequence",
     )
-    seq_hash_sha256: bytes = Field(
+    seq_hash: bytes = Field(
         description="The SHA256 hash of the lower case ASCII encoded sequence without gaps. In the case of multiple contigs, this is the hash of the lexicographically sorted and concatenated contig sequences with a single gap ('-') as separator.",
         min_length=32,
         max_length=32,
@@ -28,8 +28,8 @@ class SeqMixin:
         ge=1,
     )
 
-    @field_validator("seq_hash_sha256", mode="before")
-    def _validate_seq_hash_sha256(cls, value: str | bytes) -> bytes:
+    @field_validator("seq_hash", mode="before")
+    def _validate_seq_hash(cls, value: str | bytes) -> bytes:
         if isinstance(value, str):
             value = bytes.fromhex(value)
         return value
@@ -41,8 +41,8 @@ class SeqMixin:
         return value
 
     # TODO: adding the serializer gives issues writing as binary to the database, but not adding it may give other issues
-    # @field_serializer("seq_hash_sha256", mode="plain")
-    # def _serialize_seq_hash_sha256(self, value: str | bytes) -> str:
+    # @field_serializer("seq_hash", mode="plain")
+    # def _serialize_seq_hash(self, value: str | bytes) -> str:
     #     if isinstance(value, bytes):
     #         return value.hex()
     #     return value
@@ -79,7 +79,7 @@ class AlignmentMixin:
         default=enum.AlignmentFormat.CIGAR,
         description="The format of the alignment",
     )
-    aln_hash_sha256: bytes = Field(
+    aln_hash: bytes = Field(
         description="The SHA256 hash of the ASCII lower case aligned reference sequence followed by the aligned contig seq.",
         min_length=32,
         max_length=32,

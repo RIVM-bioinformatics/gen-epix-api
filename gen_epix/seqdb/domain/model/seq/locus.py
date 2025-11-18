@@ -36,7 +36,7 @@ class Allele(Model, SeqMixin, QualityMixin):
         snake_case_plural_name="alleles",
         table_name="allele",
         persistable=True,
-        keys=create_keys({1: ("locus_id", "seq_hash_sha256")}),
+        keys=create_keys({1: ("locus_id", "seq_hash")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
     locus_id: UUID = Field(

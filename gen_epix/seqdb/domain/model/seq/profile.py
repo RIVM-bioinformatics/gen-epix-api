@@ -65,7 +65,7 @@ class LocusProfile(Model, QualityMixin):
         default=enum.LocusProfileFormat.LOCUS_PROFILE_FORMAT1,
         description="The representation format of the loci.",
     )
-    locus_profile_hash_sha256: bytes = Field(
+    locus_profile_hash: bytes = Field(
         description="The SHA256 hash of the sorted list of allele ids as bytes.",
         min_length=32,
         max_length=32,
@@ -114,20 +114,20 @@ class AlleleProfile(Model, QualityMixin):
         default=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
         description="The representation format of the alleles.",
     )
-    allele_profile_hash_sha256: bytes = Field(
+    allele_profile_hash: bytes = Field(
         description="The SHA256 hash of the sorted list of allele ids as bytes.",
         min_length=32,
         max_length=32,
     )
 
-    @field_validator("allele_profile_hash_sha256", mode="before")
-    def _validate_allele_profile_hash_sha256(cls, value: str | bytes) -> bytes:
+    @field_validator("allele_profile_hash", mode="before")
+    def _validate_allele_profile_hash(cls, value: str | bytes) -> bytes:
         if isinstance(value, str):
             value = bytes.fromhex(value)
         return value
 
     @staticmethod
-    def get_allele_profile_hash_sha256(allele_ids: list[UUID | None]) -> bytes:
+    def get_allele_profile_hash(allele_ids: list[UUID | None]) -> bytes:
         sha256 = hashlib.sha256()
         sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
         return sha256.digest()
@@ -195,14 +195,14 @@ class SnpProfile(Model, QualityMixin):
         default=enum.SnpProfileFormat.REF_ALN_SEQ,
         description="The representation format of the SNPs.",
     )
-    snp_profile_hash_sha256: bytes = Field(
+    snp_profile_hash: bytes = Field(
         description="The SHA256 hash of the ASCII lower case reference sequence with all SNPs applied.",
         min_length=32,
         max_length=32,
     )
 
-    @field_validator("snp_profile_hash_sha256", mode="before")
-    def _validate_snp_profile_hash_sha256(cls, value: str | bytes) -> bytes:
+    @field_validator("snp_profile_hash", mode="before")
+    def _validate_snp_profile_hash(cls, value: str | bytes) -> bytes:
         if isinstance(value, str):
             value = bytes.fromhex(value)
         return value
@@ -262,7 +262,7 @@ class MlvaProfile(Model, QualityMixin):
         default=enum.MlvaProfileFormat.MLVA_PROFILE_FORMAT1,
         description="The representation format of the profile.",
     )
-    mlva_profile_hash_sha256: bytes = Field(
+    mlva_profile_hash: bytes = Field(
         description="The SHA256 hash of the ASCII sorted loci followed by their corresponding sorted counts as 32 bit signed integers.",
         min_length=32,
         max_length=32,
@@ -319,7 +319,7 @@ class KmerProfile(Model, QualityMixin):
         default=enum.KmerProfileFormat.KMER_PROFILE_FORMAT1,
         description="The representation format of the k-mers.",
     )
-    kmer_profile_hash_sha256: bytes = Field(
+    kmer_profile_hash: bytes = Field(
         description="The SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
         min_length=32,
         max_length=32,

@@ -231,10 +231,10 @@ class TestCreate:
         }
         for exec_user in DATA_USERS:
             fwd_file = env.create_file(
-                exec_user, content=kwargs["fwd_reads_hash_sha256_or_content"]
+                exec_user, content=kwargs["fwd_reads_hash_or_content"]
             )
             rev_file = env.create_file(
-                exec_user, content=kwargs["rev_reads_hash_sha256_or_content"]
+                exec_user, content=kwargs["rev_reads_hash_or_content"]
             )
             env.create_read_set(
                 exec_user, fwd_file_id=fwd_file.id, rev_file_id=rev_file.id, **kwargs

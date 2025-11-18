@@ -97,7 +97,7 @@ class SeqClassification(Model):
         default=enum.SeqClassificationFormat.SEQ_CLASSIFICATION_FORMAT1,
         description="The representation format of the classification.",
     )
-    classification_hash_sha256: bytes = Field(
+    classification_hash: bytes = Field(
         description="The SHA256 hash of the sorted list of category ids as bytes.",
         min_length=32,
         max_length=32,
@@ -176,7 +176,7 @@ class SeqTaxonomy(Model):
         default=enum.TaxonomyFormat.TAXONOMY_FORMAT1,
         description="The representation format of the taxonomy.",
     )
-    taxonomy_hash_sha256: bytes = Field(
+    taxonomy_hash: bytes = Field(
         description="The SHA256 hash of the sorted list of taxon ids as bytes.",
         min_length=32,
         max_length=32,

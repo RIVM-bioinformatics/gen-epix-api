@@ -207,8 +207,8 @@ class SeqdbTestClient(TestClient):
         rev_uri: str | None = None,
         fwd_file_id: UUID | None = None,
         rev_file_id: UUID | None = None,
-        fwd_reads_hash_sha256_or_content: bytes | str | None = None,
-        rev_reads_hash_sha256_or_content: bytes | str | None = None,
+        fwd_reads_hash_or_content: bytes | str | None = None,
+        rev_reads_hash_or_content: bytes | str | None = None,
         sequencing_run_code: str = "",
         set_dummy_sequencing_protocol: bool = False,
     ) -> model.ReadSet:
@@ -229,20 +229,16 @@ class SeqdbTestClient(TestClient):
                     model.SequencingProtocol, sequencing_protocol_or_str
                 )
             ).id  # type:ignore[assignment]
-        fwd_reads_hash_sha256: bytes | None
-        if isinstance(fwd_reads_hash_sha256_or_content, str):
-            fwd_reads_hash_sha256 = hashlib.sha256(
-                fwd_reads_hash_sha256_or_content.encode()
-            ).digest()
+        fwd_reads_hash: bytes | None
+        if isinstance(fwd_reads_hash_or_content, str):
+            fwd_reads_hash = hashlib.sha256(fwd_reads_hash_or_content.encode()).digest()
         else:
-            fwd_reads_hash_sha256 = fwd_reads_hash_sha256_or_content
-        rev_reads_hash_sha256: bytes | None
-        if isinstance(rev_reads_hash_sha256_or_content, str):
-            rev_reads_hash_sha256 = hashlib.sha256(
-                rev_reads_hash_sha256_or_content.encode()
-            ).digest()
+            fwd_reads_hash = fwd_reads_hash_or_content
+        rev_reads_hash: bytes | None
+        if isinstance(rev_reads_hash_or_content, str):
+            rev_reads_hash = hashlib.sha256(rev_reads_hash_or_content.encode()).digest()
         else:
-            rev_reads_hash_sha256 = rev_reads_hash_sha256_or_content
+            rev_reads_hash = rev_reads_hash_or_content
         read_set: model.ReadSet = self.app.handle(
             command.ReadSetCrudCommand(
                 user=user,
@@ -253,15 +249,15 @@ class SeqdbTestClient(TestClient):
                     rev_uri=rev_uri,
                     fwd_file_id=fwd_file_id,
                     rev_file_id=rev_file_id,
-                    fwd_reads_hash_sha256=fwd_reads_hash_sha256,
-                    rev_reads_hash_sha256=rev_reads_hash_sha256,
+                    fwd_reads_hash=fwd_reads_hash,
+                    rev_reads_hash=rev_reads_hash,
                     sequencing_run_code=sequencing_run_code,
                 ),
             )
         )
         assert read_set.sequencing_protocol_id == sequencing_protocol_id
-        assert read_set.fwd_reads_hash_sha256 == fwd_reads_hash_sha256
-        assert read_set.rev_reads_hash_sha256 == rev_reads_hash_sha256
+        assert read_set.fwd_reads_hash == fwd_reads_hash
+        assert read_set.rev_reads_hash == rev_reads_hash
         assert read_set.fwd_file_id == fwd_file_id
         assert read_set.rev_file_id == rev_file_id
         assert read_set.fwd_uri == fwd_uri
@@ -322,7 +318,7 @@ class SeqdbTestClient(TestClient):
             return {
                 "fwd_uri": "http://reads/sample_x_1.fastq",
                 "rev_uri": "http://reads/sample_x_2.fastq",
-                "fwd_reads_hash_sha256_or_content": "a" * 64,
-                "rev_reads_hash_sha256_or_content": "b" * 64,
+                "fwd_reads_hash_or_content": "a" * 64,
+                "rev_reads_hash_or_content": "b" * 64,
             }
         raise NotImplementedError(f"No default kwargs for model class {model_class}")
