@@ -46,7 +46,7 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         ),
     )
     sequencing_protocol_id: UUID = Field(
-        description="The unique identifier for the library preparation protocol. FOREIGN KEY"
+        description="The unique identifier for the sequencing protocol. FOREIGN KEY"
     )
     sequencing_protocol: SequencingProtocol | None = Field(
         default=None, description="The sequencing protocol."

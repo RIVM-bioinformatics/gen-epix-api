@@ -331,7 +331,7 @@ class CreateSeqsForCasesCommand(Command):
 
 class RetrieveSequencingProtocolsCommand(Command):
     """
-    Retrieve library preparation protocols from seqdb database
+    Retrieve sequencing protocols from seqdb database
     """
 
     pass

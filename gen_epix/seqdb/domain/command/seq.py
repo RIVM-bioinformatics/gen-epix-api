@@ -96,6 +96,10 @@ class LocusDetectionProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.LocusDetectionProtocol
 
 
+class MlvaDetectionProtocolCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MlvaDetectionProtocol
+
+
 class SnpDetectionProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SnpDetectionProtocol
 
@@ -180,6 +184,10 @@ class SampleCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Sample
 
 
+class SampleDataCollectionLinkCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.SampleDataCollectionLink
+
+
 class ReadSetCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.ReadSet
 
@@ -196,8 +204,16 @@ class SeqAlignmentCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.SeqAlignment
 
 
+class LocusProfileCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.LocusProfile
+
+
 class AlleleProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.AlleleProfile
+
+
+class MlvaProfileCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.MlvaProfile
 
 
 class RefSnpCrudCommand(CrudCommand):

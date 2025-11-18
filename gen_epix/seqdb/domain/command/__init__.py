@@ -119,9 +119,18 @@ from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudComma
 from gen_epix.seqdb.domain.command.seq import (
     LocusDetectionProtocolCrudCommand as LocusDetectionProtocolCrudCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    LocusProfileCrudCommand as LocusProfileCrudCommand,
+)
 from gen_epix.seqdb.domain.command.seq import LocusSetCrudCommand as LocusSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     LocusSetMemberCrudCommand as LocusSetMemberCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    MlvaDetectionProtocolCrudCommand as MlvaDetectionProtocolCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    MlvaProfileCrudCommand as MlvaProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     PcrMeasurementCrudCommand as PcrMeasurementCrudCommand,
@@ -167,6 +176,9 @@ from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
 )
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
+from gen_epix.seqdb.domain.command.seq import (
+    SampleDataCollectionLinkCrudCommand as SampleDataCollectionLinkCrudCommand,
+)
 from gen_epix.seqdb.domain.command.seq import (
     SeqAlignmentCrudCommand as SeqAlignmentCrudCommand,
 )
@@ -241,8 +253,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SequencingProtocolCrudCommand,
         LocusCrudCommand,
         LocusDetectionProtocolCrudCommand,
+        LocusProfileCrudCommand,
         LocusSetCrudCommand,
         LocusSetMemberCrudCommand,
+        MlvaDetectionProtocolCrudCommand,
+        MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
         RawSeqCrudCommand,
@@ -261,6 +276,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         SampleCrudCommand,
+        SampleDataCollectionLinkCrudCommand,
         SeqAlignmentCrudCommand,
         SeqCategoryCrudCommand,
         SeqCategorySetCrudCommand,

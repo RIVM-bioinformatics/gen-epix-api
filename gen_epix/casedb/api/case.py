@@ -12,6 +12,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 
 
@@ -108,14 +109,18 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    genetic_distance_case_type_col_id: UUID
+    genetic_distance_case_type_col_id: UUID = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand,
+        "genetic_distance_case_type_col_id",
+    )
     tree_algorithm_code: enum.TreeAlgorithmType
     case_ids: list[UUID]
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The case type column that contains the genetic sequences to retrieve.",
+    genetic_sequence_case_type_col_id: UUID = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand,
+        "genetic_sequence_case_type_col_id",
     )
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve genetic sequences for.",
@@ -123,8 +128,13 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
-    sequence_ids: list[UUID]
-    props: dict[str, Any] = {}
+    genetic_sequence_case_type_col_id: UUID = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand,
+        "genetic_sequence_case_type_col_id",
+    )
+    case_ids: list[UUID] = Field(
+        description="The case ids to retrieve genetic sequences for.",
+    )
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
@@ -518,15 +528,17 @@ def create_case_endpoints(
     )
     async def retrieve__genetic_sequence_fasta(
         token: Annotated[str, Form()],
-        genetic_sequence_case_type_col_id: Annotated[str, Form()],
+        genetic_sequence_case_type_col_id: Annotated[UUID, Form()],
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
         user: model.User | None = None
         try:
-            user = await app.services[
+            app_impl: AppImplDetails = app.impl
+            auth_service: AuthService = app_impl.services[
                 enum.ServiceType.AUTH
-            ].get_existing_user_from_token(token=token)
+            ]  # type: ignore[assignment]
+            user = await auth_service.get_existing_user_from_token(token=token)
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
@@ -563,13 +575,13 @@ def create_case_endpoints(
             retval: list[model.AlleleProfile] = app.handle(
                 command.RetrieveAlleleProfileCommand(
                     user=user,
-                    sequence_ids=request_body.sequence_ids,
-                    props=request_body.props,
+                    genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
+                    case_ids=request_body.case_ids,
                 )
             )
         except Exception as exception:
             handle_exception(  # type:ignore[call-arg]
-                "a4c03b54", user, exception, request_ids=request_body.sequence_ids
+                "a4c03b54", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
@@ -673,7 +685,7 @@ def create_case_endpoints(
     @router.get(
         "/retrieve/sequencing_protocols",
         operation_id="retrieve__sequencing_protocols",
-        name="Retrieve library preparation protocols",
+        name="Retrieve sequencing protocols",
         description=command.RetrieveSequencingProtocolsCommand.__doc__,
     )
     async def retrieve__sequencing_protocols(
