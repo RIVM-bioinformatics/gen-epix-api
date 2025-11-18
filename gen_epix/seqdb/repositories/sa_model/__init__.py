@@ -50,8 +50,13 @@ from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
+from gen_epix.seqdb.repositories.sa_model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSet as LocusSet
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSetMember as LocusSetMember
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    MlvaDetectionProtocol as MlvaDetectionProtocol,
+)
+from gen_epix.seqdb.repositories.sa_model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.repositories.sa_model.seq import RawSeq as RawSeq
@@ -130,8 +135,11 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.LibraryPrepProtocol: LibraryPrepProtocol,
         model.Locus: Locus,
         model.LocusDetectionProtocol: LocusDetectionProtocol,
+        model.LocusProfile: LocusProfile,
         model.LocusSet: LocusSet,
         model.LocusSetMember: LocusSetMember,
+        model.MlvaDetectionProtocol: MlvaDetectionProtocol,
+        model.MlvaProfile: MlvaProfile,
         model.PcrMeasurement: PcrMeasurement,
         model.PcrProtocol: PcrProtocol,
         model.RawSeq: RawSeq,

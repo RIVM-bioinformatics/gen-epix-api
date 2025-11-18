@@ -68,6 +68,10 @@ class KmerDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
     __tablename__, __table_args__ = create_table_args(model.KmerDetectionProtocol)
 
 
+class MlvaDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
+    __tablename__, __table_args__ = create_table_args(model.MlvaDetectionProtocol)
+
+
 class RefSnpSet(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.RefSnpSet)
 
@@ -299,6 +303,28 @@ class AlleleAlignment(Base, RowMetadataMixin, AlignmentMixin, QualityMixin):
     )
 
 
+class LocusProfile(Base, RowMetadataMixin, QualityMixin):
+    __tablename__, __table_args__ = create_table_args(model.LocusProfile)
+
+    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.LocusProfile, "seq_id")
+    locus_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_set_id"
+    )
+    locus_detection_protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_detection_protocol_id"
+    )
+    n_loci: Mapped[int] = create_mapped_column(DOMAIN, model.LocusProfile, "n_loci")
+    locus_profile: Mapped[str] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_profile"
+    )
+    locus_profile_format: Mapped[str] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_profile_format"
+    )
+    locus_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "locus_profile_hash_sha256"
+    )
+
+
 class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.AlleleProfile)
 
@@ -339,6 +365,24 @@ class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     )
     snp_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile_hash_sha256"
+    )
+
+
+class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
+    __tablename__, __table_args__ = create_table_args(model.MlvaProfile)
+
+    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.MlvaProfile, "seq_id")
+    mlva_detection_protocol_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "mlva_detection_protocol_id"
+    )
+    mlva_profile: Mapped[str] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "mlva_profile"
+    )
+    mlva_profile_format: Mapped[str] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "mlva_profile_format"
+    )
+    mlva_profile_hash_sha256: Mapped[bytes] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "mlva_profile_hash_sha256"
     )
 
 

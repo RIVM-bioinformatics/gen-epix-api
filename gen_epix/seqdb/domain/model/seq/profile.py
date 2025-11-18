@@ -34,7 +34,8 @@ class LocusProfile(Model, QualityMixin):
         links=create_links(
             {
                 1: ("seq_id", Seq, "seq"),
-                2: (
+                2: ("locus_set_id", LocusSet, "locus_set"),
+                3: (
                     "locus_detection_protocol_id",
                     LocusDetectionProtocol,
                     "locus_detection_protocol",
@@ -46,6 +47,10 @@ class LocusProfile(Model, QualityMixin):
         description="The unique identifier for the sequence. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
+    locus_set_id: UUID = Field(
+        description="The unique identifier for the locus set. FOREIGN KEY"
+    )
+    locus_set: LocusSet | None = Field(default=None, description="The locus set.")
     locus_detection_protocol_id: UUID = Field(
         description="The unique identifier for the locus detection protocol. FOREIGN KEY"
     )
@@ -246,21 +251,19 @@ class MlvaProfile(Model, QualityMixin):
         description="The unique identifier for the sequence. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
-    kmer_detection_protocol_id: UUID = Field(
+    mlva_detection_protocol_id: UUID = Field(
         description="The unique identifier for the MLVA detection protocol. FOREIGN KEY"
     )
     mlva_detection_protocol: MlvaDetectionProtocol | None = Field(
         default=None, description="The MLVA detection protocol."
     )
-    mlva_profile: str = Field(
-        description="The MLVA detected in the sequence and their frequency."
-    )
+    mlva_profile: str = Field(description="The number of tandem repeats per locus.")
     mlva_profile_format: enum.MlvaProfileFormat = Field(
         default=enum.MlvaProfileFormat.MLVA_PROFILE_FORMAT1,
-        description="The representation format of the MLVA.",
+        description="The representation format of the profile.",
     )
     mlva_profile_hash_sha256: bytes = Field(
-        description="The SHA256 hash of the ASCII sorted MLVA followed by their sorted frequencies as double precision floats.",
+        description="The SHA256 hash of the ASCII sorted loci followed by their corresponding sorted counts as 32 bit signed integers.",
         min_length=32,
         max_length=32,
     )
@@ -317,7 +320,7 @@ class KmerProfile(Model, QualityMixin):
         description="The representation format of the k-mers.",
     )
     kmer_profile_hash_sha256: bytes = Field(
-        description="The SHA256 hash of the ASCII sorted k-mers followed by their sorted frequencies as double precision floats.",
+        description="The SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
         min_length=32,
         max_length=32,
     )

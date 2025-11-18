@@ -62,6 +62,11 @@ from gen_epix.seqdb.domain.model.seq.profile import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
+from gen_epix.seqdb.domain.model.seq.profile import LocusProfile as LocusProfile
+from gen_epix.seqdb.domain.model.seq.profile import (
+    MlvaDetectionProtocol as MlvaDetectionProtocol,
+)
+from gen_epix.seqdb.domain.model.seq.profile import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
     SnpDetectionProtocol as SnpDetectionProtocol,
 )
