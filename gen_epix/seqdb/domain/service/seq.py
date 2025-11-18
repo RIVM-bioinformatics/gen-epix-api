@@ -31,6 +31,10 @@ class BaseSeqService(BaseService):
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
         )
+        # f(
+        #     command.FileCrudCommand,
+        #     self.handle_file_crud,
+        # )
 
     @abc.abstractmethod
     def retrieve_allele_profile(
@@ -76,3 +80,10 @@ class BaseSeqService(BaseService):
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()
+
+    # @abc.abstractmethod
+    # def handle_file_crud(
+    #     self,
+    #     cmd: command.FileCrudCommand,
+    # ) -> None:
+    #     raise NotImplementedError()
