@@ -11,6 +11,7 @@ from gen_epix.casedb.domain.model.case.persistable import (
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.util import create_keys, create_links
@@ -128,7 +129,7 @@ class ReadSet(SeqdbReadSet):
             }
         ),
     )
-
+    library_prep_protocol: LibraryPrepProtocol | None = copy_model_field(SeqdbReadSet, "library_prep_protocol")
 
 class AssemblyProtocol(SeqdbAssemblyProtocol):
     ENTITY: ClassVar = Entity(
@@ -176,3 +177,8 @@ class Seq(SeqdbSeq):
             }
         ),
     )
+    sample: Sample | None = copy_model_field(SeqdbSeq, "sample")
+    read_set: ReadSet | None = copy_model_field(SeqdbSeq, "read_set")
+    read_set2: ReadSet | None = copy_model_field(SeqdbSeq, "read_set2")
+    assembly_protocol: AssemblyProtocol | None = copy_model_field(SeqdbSeq, "assembly_protocol")
+    raw_seq: RawSeq | None = copy_model_field(SeqdbSeq, "raw_seq")
