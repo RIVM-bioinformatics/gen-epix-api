@@ -82,6 +82,7 @@ from gen_epix.seqdb.domain.model.seq import Sample as Sample
 from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
@@ -161,6 +162,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqCategory,
             Sample,
             SampleDataCollectionLink,
+            SampleIdentifier,
             RawSeq,
             ReadSet,
             Seq,

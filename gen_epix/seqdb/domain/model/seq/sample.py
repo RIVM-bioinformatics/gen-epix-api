@@ -1,10 +1,10 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.domain.model.organization import DataCollection
+from gen_epix.commondb.domain.model.organization import DataCollection, IdentifierIssuer
 from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.fastapp.domain.util import create_links
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin
@@ -50,3 +50,33 @@ class SampleDataCollectionLink(Model):
     data_collection_id: str = Field(
         description="The unique identifier for the data collection. FOREIGN KEY"
     )
+
+
+class SampleIdentifier(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="sample_identifiers",
+        table_name="sample_identifier",
+        persistable=True,
+        keys=create_keys({1: ("identifier", "identifier_issuer_id")}),
+        links=create_links(
+            {1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer")}
+        ),
+    )
+    sample_id: str = Field(
+        description="The unique identifier for the sample. FOREIGN KEY"
+    )
+    identifier_issuer_id: UUID = Field(
+        description="The ID of the identifier issuer. FOREIGN KEY"
+    )
+    identifier: str = Field(
+        description="The external identifier for the sample, with whitespace stripped from both ends.",
+        max_length=255,
+    )
+    identifier_issuer: IdentifierIssuer = Field(
+        description="The identifier issuer.",
+    )
+
+    @field_validator("identifier", mode="before")
+    @classmethod
+    def validate_identifier(cls, v: str) -> str:
+        return v.strip()

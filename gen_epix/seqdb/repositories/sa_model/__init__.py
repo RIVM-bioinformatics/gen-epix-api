@@ -67,6 +67,9 @@ from gen_epix.seqdb.repositories.sa_model.seq import Sample as Sample
 from gen_epix.seqdb.repositories.sa_model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    SampleIdentifier as SampleIdentifier,
+)
 from gen_epix.seqdb.repositories.sa_model.seq import Seq as Seq
 from gen_epix.seqdb.repositories.sa_model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import SeqCategory as SeqCategory
@@ -151,6 +154,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.RefSnpSetMember: RefSnpSetMember,
         model.Sample: Sample,
         model.SampleDataCollectionLink: SampleDataCollectionLink,
+        model.SampleIdentifier: SampleIdentifier,
         model.Seq: Seq,
         model.SeqAlignment: SeqAlignment,
         model.SeqCategory: SeqCategory,

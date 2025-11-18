@@ -516,6 +516,20 @@ class SampleDataCollectionLink(Base, RowMetadataMixin):
     )
 
 
+class SampleIdentifier(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.SampleIdentifier)
+
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SampleIdentifier, "sample_id"
+    )
+    identifier_issuer_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SampleIdentifier, "identifier_issuer_id"
+    )
+    identifier: Mapped[str] = create_mapped_column(
+        DOMAIN, model.SampleIdentifier, "identifier"
+    )
+
+
 class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.Seq)
 

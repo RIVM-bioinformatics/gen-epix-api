@@ -79,6 +79,7 @@ from gen_epix.seqdb.domain.model.seq.sample import Sample as Sample
 from gen_epix.seqdb.domain.model.seq.sample import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq.seq import CompleteContig as CompleteContig
 from gen_epix.seqdb.domain.model.seq.seq import RawSeq as RawSeq
