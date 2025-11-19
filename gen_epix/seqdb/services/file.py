@@ -1,6 +1,6 @@
+import re
 from collections.abc import Iterable
 from io import StringIO
-import re
 from uuid import UUID
 
 from Bio import SeqIO
@@ -9,16 +9,14 @@ from gen_epix.fastapp import CrudOperationSet
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.file import BaseFileService
 
+VALID_NUCLEOTIDES = re.compile(r"^[ACGTURYSWKMBDHVN\-.]+$", re.IGNORECASE)
+
 
 class FileService(BaseFileService):
 
     def crud(  # type: ignore
         self, cmd: command.CrudCommand
     ) -> list[model.Model] | model.Model | list[UUID] | UUID:
-        """
-        Override the base crud method to side effects and cascade delete
-        where necessary
-        """
         if isinstance(cmd, command.FileCrudCommand):
             self.validate_file(cmd)
 
@@ -28,8 +26,6 @@ class FileService(BaseFileService):
         self,
         cmd: command.FileCrudCommand,
     ) -> None:
-        valid_nucleotides = re.compile(r"^[ACGTURYSWKMBDHVN\-.]+$", re.IGNORECASE)
-
         is_create = cmd.operation in CrudOperationSet.CREATE.value
         if is_create:
             file_obj = cmd.get_objs()[0]
@@ -71,7 +67,7 @@ class FileService(BaseFileService):
                             "Invalid FASTQ: quality scores missing or length mismatch with sequence"
                         )
                 sequence_string: str = str(record.seq)  # type: ignore[attr-defined]
-                if not valid_nucleotides.match(sequence_string):
+                if not VALID_NUCLEOTIDES.match(sequence_string):
                     raise exc.InvalidArgumentsError(
                         f"Invalid {sequence_format.value}: sequence contains invalid characters"
                     )
