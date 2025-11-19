@@ -37,7 +37,7 @@ class OidcClient(IdpClient, OpenIdConnect):
     }
     DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
     DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
-    DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256"]
+    DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256", "PS256"]
 
     def __init__(
         self,
@@ -102,6 +102,7 @@ class OidcClient(IdpClient, OpenIdConnect):
 
         self._introspection_cache: dict[str, IntrospectionCacheEntry] = {}
 
+        # TODO: @cached(cache=TTLCache(maxsize=1024, ttl=300)) ? ?
         if self.server_cfg.enable_introspection:
             # dynamically determine the introspection endpoint
             self.introspection_endpoint: str = self._get_introspection_endpoint()
@@ -284,7 +285,7 @@ class OidcClient(IdpClient, OpenIdConnect):
         # Check expiration
         iat: int = claims.get("iat", -1)
         if iat == -1 or iat > int(datetime.now().timestamp()):
-            # Token expired
+            # Token has a future iat or no iat
             if self.logger and self.logger.level <= logging.DEBUG:
                 self.logger.debug(
                     self._log_item_class(

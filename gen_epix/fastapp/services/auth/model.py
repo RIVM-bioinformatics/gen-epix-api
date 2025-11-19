@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -303,9 +303,18 @@ class OidcServerCfg(Model):
                 )
         return self
 
+    @model_validator(mode="after")
+    def validate_introspection_interval(self) -> Self:
+        """Validate that introspection_interval_seconds is not more than 1800 seconds (30 minutes)."""
+        if self.introspection_interval_seconds > 1800:
+            raise ValueError(
+                "introspection_interval_seconds cannot be more than 1800 seconds (30 minutes)"
+            )
+        return self
+
     @field_validator("claim_map", mode="before")
     @classmethod
-    def validate_claim_map(cls, claim_map):
+    def validate_claim_map(cls, claim_map: dict) -> dict[str, list[str]]:
         """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
         if not isinstance(claim_map, dict):
             raise ValueError("claim_map must be a dictionary")
