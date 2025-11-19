@@ -78,7 +78,7 @@ class RequestorApp:
         """Create a properly formatted but invalid JWT token for testing."""
         # Create a token with invalid signature
         now = datetime.now(timezone.utc)
-        payload = {
+        payload: dict[str, str | int] = {
             "iss": "http://localhost:8000",
             "sub": self.client_id,
             "aud": audience,
