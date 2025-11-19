@@ -115,6 +115,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     KmerProfileCrudCommand as KmerProfileCrudCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    LocusCodeCrudCommand as LocusCodeCrudCommand,
+)
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     LocusDetectionProtocolCrudCommand as LocusDetectionProtocolCrudCommand,
@@ -123,9 +126,6 @@ from gen_epix.seqdb.domain.command.seq import (
     LocusProfileCrudCommand as LocusProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusSetCrudCommand as LocusSetCrudCommand
-from gen_epix.seqdb.domain.command.seq import (
-    LocusSetMemberCrudCommand as LocusSetMemberCrudCommand,
-)
 from gen_epix.seqdb.domain.command.seq import (
     MlvaDetectionProtocolCrudCommand as MlvaDetectionProtocolCrudCommand,
 )
@@ -178,6 +178,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     SampleDataCollectionLinkCrudCommand as SampleDataCollectionLinkCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    SampleIdentifierCrudCommand as SampleIdentifierCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     SeqAlignmentCrudCommand as SeqAlignmentCrudCommand,
@@ -251,11 +254,11 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         KmerDetectionProtocolCrudCommand,
         KmerProfileCrudCommand,
         SequencingProtocolCrudCommand,
+        LocusCodeCrudCommand,
         LocusCrudCommand,
         LocusDetectionProtocolCrudCommand,
         LocusProfileCrudCommand,
         LocusSetCrudCommand,
-        LocusSetMemberCrudCommand,
         MlvaDetectionProtocolCrudCommand,
         MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
@@ -277,6 +280,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveSeqFastaCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
+        SampleIdentifierCrudCommand,
         SeqAlignmentCrudCommand,
         SeqCategoryCrudCommand,
         SeqCategorySetCrudCommand,

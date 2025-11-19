@@ -36,8 +36,8 @@ from gen_epix.seqdb.domain.model.seq.distance import (
 )
 from gen_epix.seqdb.domain.model.seq.locus import Allele as Allele
 from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
+from gen_epix.seqdb.domain.model.seq.locus import LocusCode as LocusCode
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
-from gen_epix.seqdb.domain.model.seq.locus import LocusSetMember as LocusSetMember
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq.locus import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.domain.model.seq.non_persistable import (

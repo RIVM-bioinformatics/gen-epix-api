@@ -31,20 +31,6 @@ class Locus(Model):
     )
 
 
-class Allele(Model, SeqMixin, QualityMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="alleles",
-        table_name="allele",
-        persistable=True,
-        keys=create_keys({1: ("locus_id", "seq_hash")}),
-        links=create_links({1: ("locus_id", Locus, "locus")}),
-    )
-    locus_id: UUID = Field(
-        description="The unique identifier for the locus. FOREIGN KEY"
-    )
-    locus: Locus | None = Field(default=None, description="The locus.")
-
-
 class LocusSet(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_sets",
@@ -75,30 +61,36 @@ class LocusSet(Model):
         return [str(x) for x in value]
 
 
-class LocusSetMember(Model):
+class LocusCode(Model):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="locus_set_members",
-        table_name="locus_set_member",
+        snake_case_plural_name="locus_codes",
+        table_name="locus_code",
         persistable=True,
-        keys=create_keys({1: ("locus_set_id", "locus_id")}),
-        links=create_links(
-            {
-                1: ("locus_set_id", LocusSet, "locus_set"),
-                2: ("locus_id", Locus, "locus"),
-            }
-        ),
+        keys=create_keys({1: ("naming_scheme")}),
     )
-    locus_set_id: UUID = Field(
-        description="The unique identifier for the locus set. FOREIGN KEY"
+    naming_scheme: str = Field(
+        description="The naming scheme used for the locus codes.",
+        max_length=255,
     )
-    locus_set: LocusSet | None = Field(default=None, description="The locus set.")
-    locus_id: UUID = Field(
-        description="The unique identifier for the locus. FOREIGN KEY"
+    code_map: dict[str, UUID] = Field(
+        description="Mapping from locus codes to locus IDs. Each code may have a max length of 255 characters.",
     )
-    locus: Locus | None = Field(default=None, description="The locus.")
-    index: int = Field(
-        description="The index (ordinal number) of the locus in the locus set."
-    )
+
+    @field_validator("code_map", mode="before")
+    @classmethod
+    def _validate_code_map(cls, value: dict[str, UUID] | str) -> dict[str, UUID]:
+        """
+        Validate and convert code_map representation to a dict[str, UUID]. When given as a
+        string, it is assumed to be a JSON object.
+        """
+        dict_value: dict = value  # type: ignore[assignment]
+        if isinstance(value, str):
+            dict_value = json.loads(value)
+        if len(set(dict_value.values())) != len(dict_value):
+            raise ValueError("All locus IDs in code_map must be unique.")
+        if any(len(x) > 255 for x in dict_value.keys()):
+            raise ValueError("All locus codes in code_map must have max length of 255.")
+        return dict_value
 
 
 class RefAllele(Model, SeqMixin):
@@ -116,6 +108,20 @@ class RefAllele(Model, SeqMixin):
     index: int = Field(
         description="The index (ordinal number) of the reference allele for the locus."
     )
+
+
+class Allele(Model, SeqMixin, QualityMixin):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="alleles",
+        table_name="allele",
+        persistable=True,
+        keys=create_keys({1: ("locus_id", "seq_hash")}),
+        links=create_links({1: ("locus_id", Locus, "locus")}),
+    )
+    locus_id: UUID = Field(
+        description="The unique identifier for the locus. FOREIGN KEY"
+    )
+    locus: Locus | None = Field(default=None, description="The locus.")
 
 
 class TaxonLocusLink(Model):

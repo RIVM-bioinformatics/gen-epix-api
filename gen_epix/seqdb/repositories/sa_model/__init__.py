@@ -44,12 +44,12 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
+from gen_epix.seqdb.repositories.sa_model.seq import LocusCode as LocusCode
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.repositories.sa_model.seq import LocusSetMember as LocusSetMember
 from gen_epix.seqdb.repositories.sa_model.seq import (
     MlvaDetectionProtocol as MlvaDetectionProtocol,
 )
@@ -137,10 +137,10 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.KmerProfile: KmerProfile,
         model.SequencingProtocol: SequencingProtocol,
         model.Locus: Locus,
+        model.LocusCode: LocusCode,
         model.LocusDetectionProtocol: LocusDetectionProtocol,
         model.LocusProfile: LocusProfile,
         model.LocusSet: LocusSet,
-        model.LocusSetMember: LocusSetMember,
         model.MlvaDetectionProtocol: MlvaDetectionProtocol,
         model.MlvaProfile: MlvaProfile,
         model.PcrMeasurement: PcrMeasurement,

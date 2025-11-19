@@ -34,6 +34,7 @@ from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File as File
 from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
+from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleAlignment as AlleleAlignment
 from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
@@ -55,12 +56,12 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
+from gen_epix.seqdb.domain.model.seq import LocusCode as LocusCode
 from gen_epix.seqdb.domain.model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.domain.model.seq import LocusSetMember as LocusSetMember
 from gen_epix.seqdb.domain.model.seq import (
     MlvaDetectionProtocol as MlvaDetectionProtocol,
 )
@@ -105,9 +106,6 @@ from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
-from gen_epix.seqdb.domain.model.seq.alignment import (
-    AlignmentProtocol as AlignmentProtocol,
-)
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
@@ -138,7 +136,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Locus,
             TaxonLocusLink,
             LocusSet,
-            LocusSetMember,
+            LocusCode,
             RefSeq,
             RefAllele,
             RefSnp,
