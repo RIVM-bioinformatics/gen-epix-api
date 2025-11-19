@@ -1,10 +1,10 @@
 import base64
-from datetime import datetime
 import json
 import logging
 import ssl
 import time
 import urllib.parse
+from datetime import datetime
 from typing import Any, TypedDict
 from uuid import UUID
 
@@ -16,7 +16,7 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwt, jwk
+from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwk, jwt
 from jose.backends.base import Key
 
 from gen_epix.fastapp import exc
@@ -26,7 +26,7 @@ from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 
 
-class OidcClient(IdpClient, OpenIdConnect):
+class OauthIdpClient(IdpClient, OpenIdConnect):
 
     DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",

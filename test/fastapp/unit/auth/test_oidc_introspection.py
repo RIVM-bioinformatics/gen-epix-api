@@ -6,19 +6,19 @@ import pytest
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class TestOidcIntrospection:
 
-    client: OidcClient
+    client: OauthIdpClient
     token: str
 
     @classmethod
     def setup_class(cls) -> None:
         env = AuthTestClient.get_test_client()
         for idp in env.auth_service.idp_clients:
-            if isinstance(idp, OidcClient):
+            if isinstance(idp, OauthIdpClient):
                 cls.client = idp
                 break
         else:  # no break

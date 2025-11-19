@@ -11,7 +11,7 @@ import httpx
 import jwt
 
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -24,10 +24,10 @@ class RequestorApp:
         self.client_id = client_id
         self.client_secret = client_secret
         self.oauth_discovery_url = oauth_discovery_url
-        self.oidc_client: "OidcClient | None" = None
-        self._initialize_oidc_client()
+        self.oauth_idp_client: "OauthIdpClient | None" = None
+        self._initialize_oauth_idp_client()
 
-    def _initialize_oidc_client(self) -> None:
+    def _initialize_oauth_idp_client(self) -> None:
         """Initialize the OIDC client."""
         try:
             server_cfg = OidcServerCfg(
@@ -39,7 +39,7 @@ class RequestorApp:
                 discovery_url=self.oauth_discovery_url,
             )
 
-            self.oidc_client = OidcClient(
+            self.oauth_idp_client = OauthIdpClient(
                 server_cfg=server_cfg,
                 discovery_url=self.oauth_discovery_url,
             )
@@ -51,13 +51,15 @@ class RequestorApp:
 
     def get_access_token(self, audience: str) -> str:
         """Get an access token for the specified audience."""
-        if not self.oidc_client:
+        if not self.oauth_idp_client:
             raise RuntimeError("OIDC client not initialized")
 
         try:
             # Request token with appropriate scope
             scope = "openid read write"
-            token = self.oidc_client.retrieve_jwt_with_client_credentials_flow(scope)
+            token = self.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+                scope
+            )
             logger.info(f"Retrieved access token for audience {audience}")
             return token
         except Exception as e:

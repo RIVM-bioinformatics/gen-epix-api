@@ -5,7 +5,7 @@ from typing import Annotated, Any
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
 
-from gen_epix.fastapp import App, exc, model, enum
+from gen_epix.fastapp import App, enum, exc, model
 from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
@@ -16,7 +16,7 @@ from gen_epix.fastapp.services.auth.model import (
     IDPUser,
     OidcServerCfg,
 )
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class AuthService(BaseAuthService):
@@ -629,7 +629,7 @@ class AuthService(BaseAuthService):
                     discovery_doc = {
                         x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
                     }
-                    idp_client = OidcClient(
+                    idp_client = OauthIdpClient(
                         OidcServerCfg(**idp_cfg),  # type: ignore
                         logger=self._logger,
                         log_item_class=app.log_item_class,
@@ -655,7 +655,7 @@ class AuthService(BaseAuthService):
                         app.create_log_message("48b7e021", msg, exception=exception)
                     )
         for idp_client in idp_clients:  # type: ignore
-            if isinstance(idp_client, OidcClient):
+            if isinstance(idp_client, OauthIdpClient):
                 if logger:
                     logger.info(
                         app.create_log_message(

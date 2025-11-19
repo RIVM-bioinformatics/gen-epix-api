@@ -331,8 +331,10 @@ def _b64url_encode_no_pad(obj: Any) -> str:
 def test_jwt_sensitive_info_disclosure(requestor_app: RequestorApp) -> None:
     """Test that JWT tokens do not disclose sensitive information."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
@@ -351,8 +353,10 @@ def test_jwt_sensitive_info_disclosure(requestor_app: RequestorApp) -> None:
 def test_expiry_jwt_token(requestor_app: RequestorApp) -> None:
     """Test that JWT tokens have proper expiry set."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
@@ -368,15 +372,17 @@ def test_jwt_is_using_aws_cognito(
 ) -> None:
     """Test that JWT tokens are issued by AWS Cognito."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
 
     assert "iss" in decoded_token, "Token should have an issuer (iss) claim"
 
-    expected_issuer = requestor_app.oidc_client.issuer
+    expected_issuer = requestor_app.oauth_idp_client.issuer
     assert (
         decoded_token["iss"] == expected_issuer
     ), f"Token issuer should be {expected_issuer}"
@@ -385,8 +391,10 @@ def test_jwt_is_using_aws_cognito(
 def test_check_jwt_if_using_asymmetric(requestor_app: RequestorApp) -> None:
     """Test that JWT tokens are signed using asymmetric keys."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_header = jwt.get_unverified_header(jwt_token)
@@ -404,8 +412,10 @@ def test_try_changing_jwt_signing_algorithm(
 ) -> None:
     """Test that changing the JWT algorithm invalidates the token."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
     original_token = jwt_token
     _, _, signature_b64 = original_token.split(".")
@@ -429,8 +439,10 @@ def test_try_modifying_payload_without_chaning_signature(
 ) -> None:
     """Test that modifying the JWT payload invalidates the token."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_header = jwt.get_unverified_header(jwt_token)
@@ -453,8 +465,10 @@ def test_try_modifying_payload_without_chaning_signature(
 def test_try_removing_signature_part(requestor_app: RequestorApp) -> None:
     """Test that removing the JWT signature invalidates the token."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     header_b64, payload_b64, _ = jwt_token.split(".")
@@ -482,8 +496,10 @@ def test_try_jwt_header_injections(
     requestor_app: RequestorApp,
 ) -> None:
     """Parametrized test that JWT header injections ('jwk', 'kid', 'jku') are handled properly."""
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
     )
 
     decoded_header = jwt.get_unverified_header(jwt_token)
@@ -503,8 +519,10 @@ def test_try_jwt_header_injections(
 def test_verify_if_within_scope(requestor_app: RequestorApp) -> None:
     """Test that JWT tokens have correct scopes."""
 
-    jwt_token = requestor_app.oidc_client.retrieve_jwt_with_client_credentials_flow(
-        "openid read write"
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid read write"
+        )
     )
 
     decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})

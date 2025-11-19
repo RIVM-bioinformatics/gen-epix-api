@@ -8,7 +8,7 @@ from jose import jwk
 
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
-from gen_epix.fastapp.services.auth import AuthService, OidcClient
+from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
 
 
 class AuthTestClient:
@@ -49,7 +49,7 @@ class AuthTestClient:
             app, service_type=ServiceType.AUTH, idps_cfg=idps_cfg
         )
         for idp_client in auth_service.idp_clients:
-            if isinstance(idp_client, OidcClient):
+            if isinstance(idp_client, OauthIdpClient):
                 idp_client._signing_keys = {
                     AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict["kid"]: jwk.construct(
                         AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict
