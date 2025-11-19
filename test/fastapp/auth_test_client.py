@@ -4,8 +4,7 @@ from test.fastapp.user_manager import UserManager
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from jose import jwk
-
+import jwt
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient
@@ -51,7 +50,9 @@ class AuthTestClient:
         for idp_client in auth_service.idp_clients:
             if isinstance(idp_client, OauthIdpClient):
                 idp_client._signing_keys = {
-                    AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict["kid"]: jwk.construct(
+                    AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict[
+                        "kid"
+                    ]: jwt.PyJWK.from_dict(
                         AuthTestClient.MOCK_JWK_TOKEN.public_jwk_dict
                     )
                 }

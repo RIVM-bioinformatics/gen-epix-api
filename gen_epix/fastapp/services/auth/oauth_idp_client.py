@@ -4,11 +4,11 @@ import logging
 import ssl
 import time
 import urllib.parse
-from datetime import datetime
 from typing import Any, TypedDict
 from uuid import UUID
 
 import httpx
+import jwt
 from fastapi import Request
 from fastapi.openapi.models import OAuthFlowAuthorizationCode, OAuthFlows, SecurityBase
 from fastapi.security import OAuth2
@@ -16,8 +16,6 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwk, jwt
-from jose.backends.base import Key
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -72,7 +70,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         self.server_cfg = server_cfg.model_copy()
         self.logger = logger
         self._log_item_class = log_item_class
-        self._signing_keys: dict[str, Key] = {}
+        self._signing_keys: dict[str, jwt.PyJWK] = {}
         self._introspection_request_headers = (
             introspect_token_request_headers
             or self.DEFAULT_INTROSPECTION_REQUEST_HEADERS
@@ -196,10 +194,10 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 )
             raise exc.InitializationServiceError(msg) from exception
 
-    async def get_jwk_from_jwt(self, jwt_token: str) -> Key:
+    async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
         try:
             header = jwt.get_unverified_header(jwt_token)
-        except JWTError as e:
+        except jwt.PyJWTError as e:
             if self.logger:
                 self.logger.warning(
                     self._log_item_class(
@@ -265,7 +263,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
     ) -> dict[str, str | int | bool | list[str]] | None:
         # Decode token without verifying signature to make sure this token is generated
         # by this OIDC server
-        claims = jwt.get_unverified_claims(jwt_token)
+        claims = jwt.decode(jwt_token, options={"verify_signature": False})
         server_cfg = self.server_cfg
 
         if claims["iss"] != server_cfg.issuer:
@@ -283,20 +281,20 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             return None
 
         # Check expiration
-        iat: int = claims.get("iat", -1)
-        if iat == -1 or iat > int(datetime.now().timestamp()):
-            # Token has a future iat or no iat
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="9f4e2c3b",
-                        msg="JWT expired",
-                        scheme_name=self.scheme_name,
-                        token_issuer=claims["iss"],
-                        iat=iat,
-                    ).dumps()
-                )
-            return None
+        # iat: int = claims.get("iat", -1)
+        # if iat == -1 or iat > int(datetime.now().timestamp()):
+        #     # Token has a future iat or no iat
+        #     if self.logger and self.logger.level <= logging.DEBUG:
+        #         self.logger.debug(
+        #             self._log_item_class(
+        #                 code="9f4e2c3b",
+        #                 msg="JWT expired",
+        #                 scheme_name=self.scheme_name,
+        #                 token_issuer=claims["iss"],
+        #                 iat=iat,
+        #             ).dumps()
+        #         )
+        #     return None
 
         # Get key to verify signature and decode again
         key = await self.get_jwk_from_jwt(jwt_token)
@@ -317,13 +315,9 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         except Exception as exception:
             msg = "Unable to decode JWT: "
 
-            if isinstance(exception, ExpiredSignatureError):
+            if isinstance(exception, jwt.ExpiredSignatureError):
                 msg += "signature has expired"
-            elif isinstance(exception, JOSEError):
-                msg += "general JOSE error"
-            elif isinstance(exception, JWSError):
-                msg += "general JWS error"
-            elif isinstance(exception, JWTError):
+            elif isinstance(exception, jwt.PyJWTError):
                 msg += "signature is invalid"
             else:
                 msg += "unknown issue"
@@ -759,9 +753,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     )
                 raise exc.UnauthorizedAuthError("Signing key use/alg mismatch")
 
-            self._signing_keys[key_data["kid"]] = jwk.construct(
-                key_data=key_data, algorithm=key_data["alg"]
-            )
+            self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
     async def __call__(self, request: Request) -> Claims | None:  # type: ignore
         """

@@ -5,7 +5,7 @@ from logging import Logger
 from typing import Any
 
 import httpx
-from jose import jwt
+import jwt
 
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
@@ -153,7 +153,7 @@ class SeqdbRemoteApp(RemoteApp):
             headers = dict(self._default_headers)
             headers["Authorization"] = f"Bearer {jwt_token}"
             # Put header in cache together with its expiry time
-            claims = jwt.get_unverified_claims(jwt_token)
+            claims = jwt.decode(jwt_token, options={"verify_signature": False})
             exp: int | None = claims.get("exp")
             if exp is None:
                 # No expiration claim, valid forever
