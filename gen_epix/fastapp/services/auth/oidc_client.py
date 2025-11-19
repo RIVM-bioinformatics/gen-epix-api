@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 import json
 import logging
 import ssl
@@ -15,7 +16,7 @@ from fastapi.security import OAuth2
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwk, jwt
+from jose import ExpiredSignatureError, JOSEError, JWSError, JWTError, jwt, jwk
 from jose.backends.base import Key
 
 from gen_epix.fastapp import exc
@@ -276,6 +277,22 @@ class OidcClient(IdpClient, OpenIdConnect):
                         token_issuer=claims["iss"],
                         token_subject=claims.get("sub"),
                         expected_issuer=server_cfg.issuer,
+                    ).dumps()
+                )
+            return None
+
+        # Check expiration
+        iat: int = claims.get("iat", -1)
+        if iat == -1 or iat > int(datetime.now().timestamp()):
+            # Token expired
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
+                    self._log_item_class(
+                        code="9f4e2c3b",
+                        msg="JWT expired",
+                        scheme_name=self.scheme_name,
+                        token_issuer=claims["iss"],
+                        iat=iat,
                     ).dumps()
                 )
             return None
