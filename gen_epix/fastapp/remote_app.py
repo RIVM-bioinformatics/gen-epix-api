@@ -16,6 +16,7 @@ from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
+from gen_epix.fastapp.util import create_ssl_context
 
 
 class RemoteApp(App):
@@ -23,8 +24,6 @@ class RemoteApp(App):
     DEFAULT_ROUTE_PREFIX = "/"
 
     DEFAULT_REQUEST_HEADERS: dict[str, str] = {"Content-Type": "application/json"}
-
-    LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 
     def __init__(
         self,
@@ -48,7 +47,7 @@ class RemoteApp(App):
         self._routes: dict[type[Command], str] = {}
 
         # Initialise SSL context
-        self._ssl_context = RemoteApp.create_ssl_context(
+        self._ssl_context = create_ssl_context(
             host, ssl_cert_file, disable_ssl_verification
         )
 
@@ -313,29 +312,6 @@ class RemoteApp(App):
             query_route_suffix,
             ids_route_suffix,
         )
-
-    @staticmethod
-    def create_ssl_context(
-        host: str, ssl_cert_file: Path | str | None, disable_ssl_verification: bool
-    ) -> ssl.SSLContext | bool:
-        """Get SSL verification setting using similar logic to OidcClient."""
-        if disable_ssl_verification:
-            return False
-
-        # For local development hosts, disable verification
-        if host in RemoteApp.LOCAL_HOSTS:
-            return False
-
-        # If a cert file is given, use that for verification
-        if ssl_cert_file is not None:
-            if isinstance(ssl_cert_file, str):
-                ssl_cert_file = Path(ssl_cert_file)
-            ssl_context = ssl.create_default_context()
-            ssl_context.load_verify_locations(ssl_cert_file.absolute().as_posix())
-            return ssl_context
-
-        # Use default verification
-        return True
 
     @staticmethod
     def _content_to_obj(

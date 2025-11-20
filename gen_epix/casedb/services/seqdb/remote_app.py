@@ -5,14 +5,14 @@ from logging import Logger
 from typing import Any
 
 import httpx
-from jose import jwt
+import jwt
 
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
@@ -72,7 +72,7 @@ class SeqdbRemoteApp(RemoteApp):
         )
 
         # Initialize IDP client if needed
-        oidc_client: OidcClient | None = None
+        oauth_idp_client: OauthIdpClient | None = None
         if auth_protocol == AuthProtocol.NONE:
             pass
         elif auth_protocol == AuthProtocol.OAUTH2:
@@ -88,7 +88,7 @@ class SeqdbRemoteApp(RemoteApp):
                 raise exc.InitializationServiceError(
                     "OAuth scope must be provided for OAUTH2 auth protocol"
                 )
-            oidc_client = OidcClient(
+            oauth_idp_client = OauthIdpClient(
                 server_cfg=OidcServerCfg(
                     name="",
                     label="",
@@ -108,7 +108,7 @@ class SeqdbRemoteApp(RemoteApp):
             )
         self._auth_protocol = auth_protocol
         self._oauth_flow = oauth_flow
-        self._oidc_client = oidc_client
+        self._oauth_idp_client = oauth_idp_client
         self._oauth_scope = oauth_scope
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
@@ -136,7 +136,7 @@ class SeqdbRemoteApp(RemoteApp):
         if self._auth_protocol == AuthProtocol.NONE:
             return self._default_headers
         if self._auth_protocol == AuthProtocol.OAUTH2:
-            assert self._oidc_client is not None
+            assert self._oauth_idp_client is not None
             assert self._oauth_scope is not None
             # Check if cached token is still valid
             if self._oauth_header_cache and self._oauth_header_cache[0] > (
@@ -146,14 +146,14 @@ class SeqdbRemoteApp(RemoteApp):
                 return self._oauth_header_cache[1]
             # Retrieve new token
 
-            jwt_token = self._oidc_client.retrieve_jwt_with_client_credentials_flow(
+            jwt_token = self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
                 scope=self._oauth_scope
             )
             # Create headers
             headers = dict(self._default_headers)
             headers["Authorization"] = f"Bearer {jwt_token}"
             # Put header in cache together with its expiry time
-            claims = jwt.get_unverified_claims(jwt_token)
+            claims = jwt.decode(jwt_token, options={"verify_signature": False})
             exp: int | None = claims.get("exp")
             if exp is None:
                 # No expiration claim, valid forever

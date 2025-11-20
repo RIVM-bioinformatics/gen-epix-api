@@ -1,190 +1,187 @@
-# import asyncio
-# from test.fastapp.auth_test_client import AuthTestClient
-# from typing import Any
+import asyncio
+from test.fastapp.auth_test_client import AuthTestClient
+from typing import Any
 
-# import pytest
+import pytest
 
-# from gen_epix.fastapp import exc
-# from gen_epix.fastapp.services.auth.model import OidcServerCfg
-# from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp import exc
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
-# class TestOidcIntrospection:
+class TestOidcIntrospection:
 
-#     client: OidcClient
-#     token: str
+    client: OauthIdpClient
+    token: str
 
-#     @classmethod
-#     def setup_class(cls) -> None:
-#         env = AuthTestClient.get_test_client()
-#         for idp in env.auth_service.idp_clients:
-#             if isinstance(idp, OidcClient):
-#                 cls.client = idp
-#                 break
-#         else:  # no break
-#             pytest.skip("No OidcClient available")
+    @classmethod
+    def setup_class(cls) -> None:
+        env = AuthTestClient.get_test_client()
+        for idp in env.auth_service.idp_clients:
+            if isinstance(idp, OauthIdpClient):
+                cls.client = idp
+                break
+        else:  # no break
+            pytest.skip("No OidcClient available")
 
-#         cls.token = env.MOCK_JWK_TOKEN.token
-#         cls._enable_introspection()
+        cls.token = env.MOCK_JWK_TOKEN.token
+        cls._enable_introspection()
 
-#     @classmethod
-#     def _enable_introspection(cls) -> None:
-#         cls.client.server_cfg.enable_introspection = True
-#         cls.client.server_cfg.introspection_endpoint = "https://introspect.local/token"
+    @classmethod
+    def _enable_introspection(cls) -> None:
+        cls.client.server_cfg.enable_introspection = True
+        cls.client.server_cfg.introspection_endpoint = "https://introspect.local/token"
 
-#     def _cache(self) -> dict[str, dict[str, Any]]:
-#         return getattr(self.client, "_introspection_cache")
+    def _cache(self) -> dict[str, dict[str, Any]]:
+        return getattr(self.client, "_introspection_cache")
 
-#     def _now(self) -> int:
-#         return getattr(self.client, "_now")()
+    def _now(self) -> int:
+        return getattr(self.client, "_now")()
 
-#     def _token_hash(self) -> str:
-#         return getattr(self.client, "_get_token_hash")(self.token)
+    def test_introspection_populates_cache(self) -> None:
+        counter: dict[str, int] = {"n": 0}
 
-#     def test_introspection_populates_cache(self) -> None:
-#         counter: dict[str, int] = {"n": 0}
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
 
-#         def fake_introspect(_token: str) -> bool:
-#             counter["n"] += 1
-#             return True
+        setattr(self.client, "_introspect_token_with_server", fake_introspect)
 
-#         setattr(self.client, "introspect_token", fake_introspect)
+        claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims is not None
+        assert counter["n"] == 1
 
-#         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims is not None
-#         assert counter["n"] == 1
+        claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims2 is not None
+        assert counter["n"] == 1
 
-#         claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims2 is not None
-#         assert counter["n"] == 1
+    def test_introspection_inactive_denies(self) -> None:
+        now = self._now()
+        self._cache()[self.token] = {
+            "active": False,
+            "last_checked": now,
+            "exp": now + 600,
+        }
 
-#     def test_introspection_inactive_denies(self) -> None:
-#         th = self._token_hash()
-#         now = self._now()
-#         self._cache()[th] = {"active": False, "last_checked": now, "exp": now + 600}
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(self.client.get_claims_from_jwt(self.token))
 
-#         with pytest.raises(exc.CredentialsAuthError):
-#             asyncio.run(self.client.get_claims_from_jwt(self.token))
+    def test_recheck_to_inactive_then_denies(self) -> None:
+        now = self._now()
+        interval = self.client.server_cfg.introspection_interval_seconds
+        self._cache()[self.token] = {
+            "active": True,
+            "last_checked": now - (interval + 1),
+            "exp": now + 600,
+        }
 
-#     def test_recheck_to_inactive_then_denies(self) -> None:
-#         th = self._token_hash()
-#         now = self._now()
-#         interval = self.client.server_cfg.introspection_interval_seconds
-#         self._cache()[th] = {
-#             "active": True,
-#             "last_checked": now - (interval + 1),
-#             "exp": now + 600,
-#         }
+        setattr(self.client, "_introspect_token_with_server", lambda _: False)
 
-#         setattr(self.client, "introspect_token", lambda _: False)
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(self.client.get_claims_from_jwt(self.token))
 
-#         with pytest.raises(exc.CredentialsAuthError):
-#             asyncio.run(self.client.get_claims_from_jwt(self.token))
+    def test_introspection_failure(self) -> None:
+        self._cache().pop(self.token, None)
 
-#     def test_introspection_failure_does_not_block(self) -> None:
-#         th = self._token_hash()
-#         self._cache().pop(th, None)
+        counter: dict[str, int] = {"n": 0}
 
-#         counter: dict[str, int] = {"n": 0}
+        def fake_introspect(_token: str) -> None:
+            counter["n"] += 1
+            return None
 
-#         def fake_introspect(_token: str) -> None:
-#             counter["n"] += 1
-#             return None
+        setattr(self.client, "_introspect_token_with_server", fake_introspect)
 
-#         setattr(self.client, "introspect_token", fake_introspect)
+        with pytest.raises(exc.CredentialsAuthError):
+            asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert counter["n"] == 1
 
-#         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims is not None
-#         assert counter["n"] == 1
-#         entry = self._cache().get(th)
-#         assert (
-#             entry is not None
-#             and entry.get("active") is None
-#             and "last_checked" in entry
-#         )
+    def test_cache_expiry_prunes_and_triggers_recheck(self) -> None:
+        now = self._now()
+        self._cache()[self.token] = {
+            "active": True,
+            "last_checked": now - 10,
+            "exp": now - 1,
+        }
 
-#         claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims2 is not None
-#         assert counter["n"] == 1
+        counter: dict[str, int] = {"n": 0}
 
-#     def test_cache_expiry_prunes_and_triggers_recheck(self) -> None:
-#         th = self._token_hash()
-#         now = self._now()
-#         self._cache()[th] = {"active": True, "last_checked": now - 10, "exp": now - 1}
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
 
-#         counter: dict[str, int] = {"n": 0}
+        setattr(self.client, "_introspect_token_with_server", fake_introspect)
 
-#         def fake_introspect(_token: str) -> bool:
-#             counter["n"] += 1
-#             return True
+        claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims is not None
+        assert counter["n"] == 1
 
-#         setattr(self.client, "introspect_token", fake_introspect)
+        claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims2 is not None
+        assert counter["n"] == 1
 
-#         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims is not None
-#         assert counter["n"] == 1
+    def test_cached_active_within_interval_skips_recheck(self) -> None:
+        now = self._now()
+        self._cache()[self.token] = {
+            "active": True,
+            "last_checked": now,
+            "exp": now + 600,
+        }
 
-#         claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims2 is not None
-#         assert counter["n"] == 1
+        def fail_if_called(_token: str) -> None:
+            raise AssertionError("introspection should not be called within interval")
 
-#     def test_cached_active_within_interval_skips_recheck(self) -> None:
-#         th = self._token_hash()
-#         now = self._now()
-#         self._cache()[th] = {"active": True, "last_checked": now, "exp": now + 600}
+        setattr(self.client, "_introspect_token_with_server", fail_if_called)
 
-#         def fail_if_called(_token: str) -> None:
-#             raise AssertionError("introspection should not be called within interval")
+        claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims is not None
 
-#         setattr(self.client, "introspect_token", fail_if_called)
+    def test_interval_elapsed_triggers_single_recheck(self) -> None:
+        now = self._now()
+        interval = self.client.server_cfg.introspection_interval_seconds
+        self._cache()[self.token] = {
+            "active": True,
+            "last_checked": now - (interval + 1),
+            "exp": now + 600,
+        }
 
-#         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims is not None
+        counter: dict[str, int] = {"n": 0}
 
-#     def test_interval_elapsed_triggers_single_recheck(self) -> None:
-#         th = self._token_hash()
-#         now = self._now()
-#         interval = self.client.server_cfg.introspection_interval_seconds
-#         self._cache()[th] = {
-#             "active": True,
-#             "last_checked": now - (interval + 1),
-#             "exp": now + 600,
-#         }
+        def fake_introspect(_token: str) -> bool:
+            counter["n"] += 1
+            return True
 
-#         counter: dict[str, int] = {"n": 0}
+        setattr(
+            self.client,
+            "_introspect_token_with_server",
+            fake_introspect,
+        )
 
-#         def fake_introspect(_token: str) -> bool:
-#             counter["n"] += 1
-#             return True
+        claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims is not None
+        assert counter["n"] == 1
 
-#         setattr(self.client, "introspect_token", fake_introspect)
+        claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
+        assert claims2 is not None
+        assert counter["n"] == 1
 
-#         claims = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims is not None
-#         assert counter["n"] == 1
-
-#         claims2 = asyncio.run(self.client.get_claims_from_jwt(self.token))
-#         assert claims2 is not None
-#         assert counter["n"] == 1
-
-#     def test_claim_map_validator_rejects_bad_types(self) -> None:
-#         with pytest.raises(ValueError):
-#             OidcServerCfg(
-#                 claim_map="notadict", name="x", label="x", client_id="x", scope="openid"
-#             )
-#         with pytest.raises(ValueError):
-#             OidcServerCfg(
-#                 claim_map={"__key__": 123},
-#                 name="x",
-#                 label="x",
-#                 client_id="x",
-#                 scope="openid",
-#             )
-#         with pytest.raises(ValueError):
-#             OidcServerCfg(
-#                 claim_map={"__key__": ["email", 123]},
-#                 name="x",
-#                 label="x",
-#                 client_id="x",
-#                 scope="openid",
-#             )
+    def test_claim_map_validator_rejects_bad_types(self) -> None:
+        with pytest.raises(ValueError):
+            OidcServerCfg(
+                claim_map="notadict", name="x", label="x", client_id="x", scope="openid"
+            )
+        with pytest.raises(ValueError):
+            OidcServerCfg(
+                claim_map={"__key__": 123},
+                name="x",
+                label="x",
+                client_id="x",
+                scope="openid",
+            )
+        with pytest.raises(ValueError):
+            OidcServerCfg(
+                claim_map={"__key__": ["email", 123]},
+                name="x",
+                label="x",
+                client_id="x",
+                scope="openid",
+            )

@@ -1,9 +1,10 @@
+import base64
 from datetime import datetime, timedelta
 from math import floor
 
+import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from jose import jwk, jwt
 
 
 class MockJWKAndToken:
@@ -27,22 +28,26 @@ class MockJWKAndToken:
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        # Create the JWK from the public key
-        public_jwk = jwk.construct(self.public_key_pem, algorithm="RS256")
-        self.public_jwk_dict = public_jwk.to_dict()
+        # Create the JWK dict from the public key (extract n and e)
+        pub_numbers = self.public_key.public_numbers()
 
-        # Modify the JWK to match the structure of your fake JWK
-        self.public_jwk_dict.update(
-            {
-                "kty": "RSA",
-                "alg": "RS256",
-                "use": "sig",
-                "kid": "EgDRMr2n3vd3s09HMiwU",
-                "x5t": "EgDRMr2n3vd3s09HMiwU",
-                "issuer": "https://idp1.org/issuer",
-                # Add other fields as necessary
-            }
-        )
+        def _int_to_base64url(n: int) -> str:
+            b = n.to_bytes((n.bit_length() + 7) // 8, "big")
+            return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii")
+
+        n_b64 = _int_to_base64url(pub_numbers.n)
+        e_b64 = _int_to_base64url(pub_numbers.e)
+
+        self.public_jwk_dict = {
+            "kty": "RSA",
+            "alg": "RS256",
+            "use": "sig",
+            "kid": "EgDRMr2n3vd3s09HMiwU",
+            "n": n_b64,
+            "e": e_b64,
+            "x5t": "EgDRMr2n3vd3s09HMiwU",
+            "issuer": "https://idp1.org/issuer",
+        }
 
         # Create a payload for the JWT
         now = datetime.now()
