@@ -11,10 +11,10 @@ from gen_epix.fastapp import CrudOperationSet
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.file import BaseFileService
 
-VALID_NUCLEOTIDES = re.compile(r"^[ACGTURYSWKMBDHVN\-.]+$", re.IGNORECASE)
-
 
 class FileService(BaseFileService):
+
+    VALID_NUCLEOTIDES_PATTERN = re.compile(r"^[ACGTURYSWKMBDHVN\-.]+$", re.IGNORECASE)
 
     def crud(  # type: ignore
         self, cmd: command.CrudCommand
@@ -89,7 +89,7 @@ class FileService(BaseFileService):
                     "Unable to decode file content as UTF-8"
                 ) from e
             try:
-                sequence_records: Iterable = SeqIO.parse(text_stream, sequence_format.value.lower())  # type: ignore
+                sequence_records: Iterable = SeqIO.parse(text_stream, sequence_format.value.lower())  # type: ignore[no-untyped-call]
             except Exception as e:
                 raise exc.InvalidArgumentsError(
                     f"Invalid {sequence_format.value} content: {e}"
@@ -99,13 +99,17 @@ class FileService(BaseFileService):
             for record in sequence_records:
                 found_records = True
                 if sequence_format == enum.SequenceFormat.FASTQ:
-                    phred_quality_scores: list[int] | None = record.letter_annotations.get("phred_quality")  # type: ignore[attr-defined]
-                    if phred_quality_scores is None or len(phred_quality_scores) != len(record.seq):  # type: ignore[arg-type]
+                    phred_quality_scores: list[int] | None = (
+                        record.letter_annotations.get("phred_quality")
+                    )
+                    if phred_quality_scores is None or len(phred_quality_scores) != len(
+                        record.seq
+                    ):
                         raise exc.InvalidArgumentsError(
                             "Invalid FASTQ: quality scores missing or length mismatch with sequence"
                         )
-                sequence_string: str = str(record.seq)  # type: ignore[attr-defined]
-                if not VALID_NUCLEOTIDES.match(sequence_string):
+                sequence_string: str = str(record.seq)  # type: ignore[assignment]
+                if not self.VALID_NUCLEOTIDES_PATTERN.match(sequence_string):
                     raise exc.InvalidArgumentsError(
                         f"Invalid {sequence_format.value}: sequence contains invalid characters"
                     )
