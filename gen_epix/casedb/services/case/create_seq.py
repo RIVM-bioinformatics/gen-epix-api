@@ -64,7 +64,7 @@ def case_service_create_read_sets_or_seqs_for_cases(
             command_class(
                 user=cmd.user,
                 operation=CrudOperation.CREATE_SOME,
-                objs=read_sets,  # type:ignore[arg-type]
+                objs=read_sets if is_read_set else seqs,  # type: ignore[arg-type]
             )
         )
 

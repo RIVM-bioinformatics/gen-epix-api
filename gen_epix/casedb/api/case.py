@@ -146,14 +146,14 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: bytes = Field(description="The content of the file to create.")
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
     )
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: bytes = Field(description="The content of the file to create.")
 
 
 def create_case_endpoints(
@@ -611,9 +611,7 @@ def create_case_endpoints(
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
                     user=user,
-                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
-                        "utf-8"
-                    ),
+                    file_content=request_body.file_content,
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                     is_fwd=request_body.is_fwd,
@@ -660,9 +658,7 @@ def create_case_endpoints(
             created_file_id: UUID = app.handle(
                 command.CreateFileForSeqCommand(
                     user=user,
-                    file_content=request_body.file_content.encode(  # TODO: REMOVE encoding (testing only)
-                        "utf-8"
-                    ),
+                    file_content=request_body.file_content,
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                 )
