@@ -44,25 +44,17 @@ class UserManager(BaseUserManager):
         )
 
         # Generate root organization and user objects
-        self._root: dict = {}
-        self._root["organization"] = model.Organization(
+        self._root_organization = model.Organization(
             **root_cfg["organization"]  # type:ignore[arg-type]
         )
-        if self._root["organization"].id is None:
+        if self._root_organization.id is None:
             raise exc.InitializationServiceError(
                 "Root organization ID is not set in the configuration"
             )
-        if "roles" not in root_cfg["user"]:
-            root_cfg["user"]["roles"] = [  # type:ignore[assignment]
-                self._rbac_service.root_role
-            ]
-        # Always generate new ID for root user, so that e.g. it cannot conflict with existing users
-        root_cfg["user"]["id"] = str(
-            self._organization_service.generate_id()
-        )  # type:ignore[assignment]
-        self._root["user"] = self._user_class(
+        self._root_user = self._user_class(
             is_active=True,
-            organization_id=self._root["organization"].id,
+            organization_id=self._root_organization.id,
+            roles={self._rbac_service.root_role},
             **root_cfg["user"],  # type:ignore[arg-type]
         )
 
@@ -108,7 +100,7 @@ class UserManager(BaseUserManager):
         organization_id = (
             self._automatic_new_user["organization"]["id"]
             if self._automatic_new_user
-            else self._root["organization"].id
+            else self._root_organization.id
         )
         key = claims.get(self._key_claim)
         if not key:
@@ -125,23 +117,18 @@ class UserManager(BaseUserManager):
         )
 
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
-        user: model.User = self._root["user"]
-        return user.key == claims.get(self._key_claim)
+        return self._root_user.key == claims.get(self._key_claim)
 
     def is_root_user(self, user: model.User) -> bool:  # type:ignore[override]
         return self._rbac_service.root_role in user.roles
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:
         assert self._organization_service.repository
-        # Update email and name in config
-        cfg_root_user: model.User = self._root["user"]
-        cfg_root_user.email = get_email_from_claims(claims)
-        cfg_root_user.name = self.get_user_name_from_claims(claims)
 
         # Handle transactions
         with self._organization_service.repository.uow() as uow:
             # Create root organization if necessary
-            cfg_root_organization: model.Organization = self._root["organization"]
+            cfg_root_organization: model.Organization = self._root_organization
             is_existing_organization = self._organization_service.repository.crud(
                 uow,
                 None,
@@ -160,50 +147,33 @@ class UserManager(BaseUserManager):
                     CrudOperation.CREATE_ONE,
                 )
 
-            # Create root user if necessary
+            # Create root user
             is_existing_root_user = (
                 self._organization_service.repository.is_existing_user_by_key(
                     uow, claims.get(self._key_claim)
                 )
             )
-            user: model.User
             if is_existing_root_user:
-                # Retrieve root user
-                user = self._organization_service.retrieve_user_by_key(
-                    claims.get(self._key_claim)  # type:ignore[arg-type]
+                raise exc.InitializationServiceError(
+                    "Root user with the specified key already exists"
                 )
-                is_updated = False
-                if user.organization_id != cfg_root_organization.id:
-                    is_updated = True
-                    user.organization_id = cfg_root_organization.id
-                if user.email != cfg_root_user.email:
-                    is_updated = True
-                    user.email = cfg_root_user.email
-                if user.name != cfg_root_user.name:
-                    is_updated = True
-                    user.name = cfg_root_user.name
-                if self._rbac_service.root_role not in user.roles:
-                    is_updated = True
-                    user.roles.add(self._rbac_service.root_role)
-                if is_updated:
-                    user = self._organization_service.repository.crud(  # type:ignore[assignment]
-                        uow,
-                        user.id,
-                        self._user_class,
-                        user,
-                        None,
-                        CrudOperation.UPDATE_ONE,
-                    )
-            else:
-                # Create root user
-                user = self._organization_service.repository.crud(  # type:ignore[assignment]
+            # Create and store root user
+            root_user = self._root_user.model_copy()
+            root_user.id = (
+                self._organization_service.generate_id()
+            )  # type:ignore[assignment]
+            root_user.email = get_email_from_claims(claims)
+            root_user.name = self.get_user_name_from_claims(claims)
+            user: model.User = (
+                self._organization_service.repository.crud(  # type:ignore[assignment]
                     uow,
-                    cfg_root_user.id,
+                    root_user.id,
                     self._user_class,
-                    cfg_root_user,
+                    root_user,
                     None,
                     CrudOperation.CREATE_ONE,
                 )
+            )
 
         return user
 

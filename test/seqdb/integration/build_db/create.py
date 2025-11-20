@@ -9,7 +9,6 @@ from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 import pytest
 
-import gen_epix.commondb.test.util as test_util
 from gen_epix.seqdb.domain import exc, model
 
 
@@ -18,7 +17,8 @@ class TestCreate:
 
     def test_create_user_first_root(self, env: Env) -> None:
         # Create a first root user and organization
-        user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)  # type: ignore[assignment]
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
+        user.name = "root1_1"
         env._set_obj(user)
         env._set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
