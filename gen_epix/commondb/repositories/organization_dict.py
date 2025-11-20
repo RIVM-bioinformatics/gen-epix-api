@@ -30,13 +30,13 @@ class OrganizationDictRepository(DictRepository, BaseOrganizationRepository):
             return False
         for user in self._db[self.user_class].values():
             assert isinstance(user, self.user_class)
-            if user.key == user_key:
+            if user.key == user_key.lower():
                 return True
         return False
 
     def retrieve_user_by_key(self, uow: BaseUnitOfWork, user_key: str) -> model.User:
         for user in self._db[self.user_class].values():
             assert isinstance(user, self.user_class)
-            if user.key == user_key:
+            if user.key == user_key.lower():
                 return user
         raise exc.NoResultsError()
