@@ -35,7 +35,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
     }
     DEFAULT_CLIENT_CREDENTIAL_FLOW_MAX_RETRIES: int = 3
     DEFAULT_CLIENT_CREDENTIAL_FLOW_BASE_DELAY: float = 1.0  # in seconds
-    DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256", "PS256"]
+    DEFAULT_ALLOWED_SIGNING_ALGORITHMS: list[str] = ["RS256"]
 
     def __init__(
         self,
@@ -279,22 +279,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             return None
-
-        # Check expiration
-        # iat: int = claims.get("iat", -1)
-        # if iat == -1 or iat > int(datetime.now().timestamp()):
-        #     # Token has a future iat or no iat
-        #     if self.logger and self.logger.level <= logging.DEBUG:
-        #         self.logger.debug(
-        #             self._log_item_class(
-        #                 code="9f4e2c3b",
-        #                 msg="JWT expired",
-        #                 scheme_name=self.scheme_name,
-        #                 token_issuer=claims["iss"],
-        #                 iat=iat,
-        #             ).dumps()
-        #         )
-        #     return None
 
         # Get key to verify signature and decode again
         key = await self.get_jwk_from_jwt(jwt_token)
@@ -603,10 +587,14 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         timeout_seconds = self.server_cfg.introspection_timeout_seconds
         # Prepare headers and body
         headers = self._introspection_request_headers
-        data: dict[str, str] = {
-            "token": jwt_token,
-            "token_type_hint": "access_token",
-        }
+        data: str = "&".join(
+            (
+                f"token={urllib.parse.quote(jwt_token)}",
+                f"client_id={urllib.parse.quote(self.server_cfg.client_id)}",
+                f"client_secret=",
+                f"token_type_hint=access_token",
+            )
+        )
         method = (
             self.server_cfg.introspection_auth_method
             or self.DEFAULT_INTROSPECTION_AUTH_METHOD
@@ -625,17 +613,12 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             method = "client_secret_basic"
         if method == "client_secret_basic":
             # Add Basic auth
-            basic = base64.b64encode(
-                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-            ).decode()
-            headers["Authorization"] = f"Basic {basic}"
-        elif method == "client_secret_post":
-            data["client_id"] = self.server_cfg.client_id
-            if self.server_cfg.client_secret is not None:
-                data["client_secret"] = self.server_cfg.client_secret
-        elif method == "none":
-            pass
-
+            headers["Authorization"] = (
+                "Basic "
+                + base64.b64encode(
+                    f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+                ).decode()
+            )
         try:
             with httpx.Client(
                 verify=self.ssl_context, timeout=timeout_seconds
@@ -736,24 +719,11 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         self._signing_keys = {}
         for key_data in response_dict["keys"]:
             if (
-                key_data.get("use") != "sig"
-                or key_data.get("kty") != "RSA"
-                or key_data.get("alg") not in self._allowed_signing_algorithms
+                key_data.get("use") in ["sig"]
+                and key_data.get("kty") == "RSA"
+                and key_data.get("alg") in self._allowed_signing_algorithms
             ):
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="d4e5f6a7",
-                            msg="Skipping loading of signing key due to use/alg mismatch",
-                            scheme_name=self.scheme_name,
-                            key_id=key_data.get("kid"),
-                            use=key_data.get("use"),
-                            alg=key_data.get("alg"),
-                        ).dumps()
-                    )
-                raise exc.UnauthorizedAuthError("Signing key use/alg mismatch")
-
-            self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
+                self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
     async def __call__(self, request: Request) -> Claims | None:  # type: ignore
         """

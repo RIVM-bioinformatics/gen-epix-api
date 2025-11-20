@@ -14,6 +14,7 @@ Test scenario:
 7. RequestorApp uses invalid token to call ReceiverApp endpoint (failure case)
 """
 
+import asyncio
 import base64
 import json
 import logging
@@ -25,6 +26,7 @@ from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=imp
     RequestorApp,
 )
 from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import httpx
 import jwt
@@ -531,6 +533,94 @@ def test_verify_if_within_scope(requestor_app: RequestorApp) -> None:
     scopes = decoded_token["scope"].split()
     expected_scopes = {"openid"}  # potentially more scopes here later
     assert expected_scopes.issubset(set(scopes))
+
+
+def test_get_jwk_from_jwt_returns_existing_key(
+    requestor_app: RequestorApp,
+) -> None:
+    """Test that get_jwk_from_jwt returns the correct JWK for a given JWT."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    jwk = asyncio.run(requestor_app.oauth_idp_client.get_jwk_from_jwt(jwt_token))
+
+    assert jwk is not None
+    assert jwk.public_key_use == "sig"
+    assert jwk.key_type == "RSA"
+
+
+@pytest.mark.parametrize(
+    "invalid_key",
+    [
+        # key with wrong `use`
+        {
+            "use": "enc",
+            "kty": "RSA",
+            "alg": "RS256",
+            "kid": "bad-use-kid",
+            "n": "dummy_n",
+            "e": "AQAB",
+        },
+        # key with unsupported `kty`
+        {
+            "use": "sig",
+            "kty": "EC",
+            "alg": "RS256",
+            "kid": "bad-kty-kid",
+            "crv": "P-256",
+            "x": "dummy",
+            "y": "dummy",
+        },
+        # key with disallowed `alg`
+        {
+            "use": "sig",
+            "kty": "RSA",
+            "alg": "HS256",
+            "kid": "bad-alg-kid",
+            "n": "dummy_n",
+            "e": "AQAB",
+        },
+    ],
+)
+def test_load_keys_ignores_invalid_key(
+    requestor_app: RequestorApp, invalid_key: dict
+) -> None:
+    """Ensure invalid keys (wrong `use`, unsupported `kty`, disallowed `alg`) are ignored."""
+
+    requestor_app.oauth_idp_client.server_cfg.jwks_uri = (
+        "https://idp.example/.well-known/jwks.json"
+    )
+
+    valid_key = {
+        "use": "sig",
+        "kty": "RSA",
+        "alg": "RS256",
+        "kid": "valid-kid",
+        "n": "dummy_n",
+        "e": "AQAB",
+    }
+
+    mock_client = MagicMock()
+    mock_response = Mock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"keys": [invalid_key, valid_key]}
+    mock_client.get.return_value = mock_response
+    mock_client.__enter__.return_value = mock_client
+    mock_client.__exit__.return_value = None
+
+    with patch("httpx.Client", return_value=mock_client):
+        # Keep PyJWK.from_dict simple and return the dict directly for these tests
+        with patch("jwt.PyJWK.from_dict", side_effect=lambda d: d):
+            requestor_app.oauth_idp_client._signing_keys.clear()
+            requestor_app.oauth_idp_client._load_keys()
+
+    assert invalid_key["kid"] not in requestor_app.oauth_idp_client._signing_keys
+    assert valid_key == requestor_app.oauth_idp_client._signing_keys.get("valid-kid")
+    assert len(requestor_app.oauth_idp_client._signing_keys) == 1
 
 
 if __name__ == "__main__":
