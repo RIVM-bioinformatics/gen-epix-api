@@ -14,14 +14,12 @@ pylint==4.0.*
 mypy==1.18.*
 black==25.11.*
 cryptography==46.0.3
-PyJWT==2.10.1
 oauthlib==3.3.1
 
 # stubs
 pandas-stubs==2.3.*
 openpyxl==3.1.*
 types-cachetools==6.2.*
-types-python-jose==3.5.*
 
 # TODO: remove if run.py no longer uses it
 uvicorn==0.38.0
