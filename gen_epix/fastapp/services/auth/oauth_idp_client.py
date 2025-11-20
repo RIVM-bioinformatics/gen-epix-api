@@ -590,8 +590,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         data: str = "&".join(
             (
                 f"token={urllib.parse.quote(jwt_token)}",
-                f"client_id={urllib.parse.quote(self.server_cfg.client_id)}",
-                f"client_secret=",
                 f"token_type_hint=access_token",
             )
         )
@@ -620,6 +618,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 ).decode()
             )
         try:
+            # TODO: Fix introspection unauthorized error (currently introspection disabled by default)
             with httpx.Client(
                 verify=self.ssl_context, timeout=timeout_seconds
             ) as client:
