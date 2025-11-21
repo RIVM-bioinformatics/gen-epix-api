@@ -9,8 +9,16 @@ from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 import pytest
 
-import gen_epix.commondb.test.util as test_util
 from gen_epix.seqdb.domain import exc, model
+
+VALID_FASTA_FILE_CONTENT = b""">seq1
+AGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAG
+AGCTAGCTAGCTAGCACAC
+"""
+VALID_FASTQ_FILE_CONTENT = b"""@3c2bbdcb-b017-4f1e-85c7-fd0fc34d356e
+AGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAG
++
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"""
 
 
 class TestCreate:
@@ -18,7 +26,8 @@ class TestCreate:
 
     def test_create_user_first_root(self, env: Env) -> None:
         # Create a first root user and organization
-        user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)  # type: ignore[assignment]
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
+        user.name = "root1_1"
         env._set_obj(user)
         env._set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
@@ -196,16 +205,20 @@ class TestCreate:
                 env.create_assembly_protocol(exec_user, "assembly_protocol11")
 
     def test_create_file(self, env: Env) -> None:
-        content = "file content"
         for exec_user in DATA_USERS:
-            env.create_file(exec_user, content=content)
+            env.create_file(exec_user, content=VALID_FASTA_FILE_CONTENT)
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_file_raise(self, env: Env) -> None:
-        content = "file content"
         for exec_user in BELOW_APP_ADMIN_METADATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_file(exec_user, content=content)
+                env.create_file(exec_user, content=VALID_FASTA_FILE_CONTENT)
+
+    def test_create_file_invalid_content(self, env: Env) -> None:
+        with pytest.raises(exc.InvalidArgumentsError):
+            env.create_file("root1_1", content=b"")
+            env.create_file("root1_1", content=b"INVALID FILE CONTENT")
+            env.create_file("root1_1", content=b">MY OWN HEADER ID\nAGVVAGFAEAADA")
 
     def test_create_read_set(self, env: Env) -> None:
         # Create ReadSet as root, app_admin, org_admin and org_user
@@ -230,12 +243,8 @@ class TestCreate:
             "library_prep_protocol_or_str": "library_prep_protocol1",
         }
         for exec_user in DATA_USERS:
-            fwd_file = env.create_file(
-                exec_user, content=kwargs["fwd_reads_hash_sha256_or_content"]
-            )
-            rev_file = env.create_file(
-                exec_user, content=kwargs["rev_reads_hash_sha256_or_content"]
-            )
+            fwd_file = env.create_file(exec_user, content=VALID_FASTQ_FILE_CONTENT)
+            rev_file = env.create_file(exec_user, content=VALID_FASTQ_FILE_CONTENT)
             env.create_read_set(
                 exec_user, fwd_file_id=fwd_file.id, rev_file_id=rev_file.id, **kwargs
             )
@@ -261,7 +270,7 @@ class TestCreate:
 
     def test_create_seq_with_file(self, env: Env) -> None:
         for exec_user in DATA_USERS:
-            file = env.create_file(exec_user, content="seq file content")
+            file = env.create_file(exec_user, content=VALID_FASTA_FILE_CONTENT)
             env.create_seq(
                 exec_user,
                 assembly_protocol_or_str="assembly_protocol99",

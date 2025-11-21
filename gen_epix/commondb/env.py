@@ -22,6 +22,7 @@ from gen_epix.commondb.services.user_manager import UserManager
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.service import BaseService
+from gen_epix.fastapp.util import create_ssl_context
 
 
 class App(fastapp.App):
@@ -126,6 +127,9 @@ class AppComposer(BaseAppComposer):
                 logger=app_logger if self._log_setup else None,
                 id_factory=cfg["service"]["defaults"]["props"]["id_factory"],
             )
+            ssl_context = create_ssl_context(
+                host=cfg["app"]["host"], ssl_cert_file=cfg["app"].get("ssl_cert_file")
+            )
 
             # Initialise repositories and services
             for service_type in self._sorted_service_types:
@@ -169,6 +173,7 @@ class AppComposer(BaseAppComposer):
                     logger=service_logger,
                     setup_logger=setup_logger if self._log_setup else None,
                     name=service_type.value,
+                    ssl_context=ssl_context,
                     **service_props,
                 )
                 # Add to overview of services
