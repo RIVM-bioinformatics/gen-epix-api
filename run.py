@@ -167,14 +167,14 @@ class Run:
                 "test/omopdb/unit",
                 "test/omopdb/integration",
                 "test/general/docs",
-                # "test/general/code",
+                "test/end_to_end",
                 # Not normally included, uncomment if needed
                 # "test/casedb/performance",
                 # "test/seqdb/performance",
                 # "test/omopdb/performance",
                 # "test/commondb/performance",
                 # "test/fastapp/performance",
-                # "test/end_to_end",
+                # "test/general/code",
             ]
         )
 
