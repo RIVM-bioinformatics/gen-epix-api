@@ -24,13 +24,14 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - uses: actions/checkout@v5
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        with:
+          fetch-depth: 0
 
       - name: Bump version in pyproject.toml
         run: |
           VERSION=${{ steps.release.outputs.new_version }}
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        if: ${{ (steps.release.outputs.prs_created == 'true') }}
 
       - name: Commit version bump
         uses: stefanzweifel/git-auto-commit-action@v7
@@ -39,8 +40,7 @@ jobs:
           commit_options: "--no-verify --signoff"
           file_pattern: "pyproject.toml"
           push_options: "--force"
-          branch: main
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        if: ${{ (steps.release.outputs.prs_created == 'true') }}
 
       - name: Set up Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
