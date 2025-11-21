@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.services.auth import OidcClient
+from gen_epix.fastapp.services.auth import OauthIdpClient
 
 
 @pytest.fixture(scope="module", name="env")
@@ -82,7 +82,7 @@ class TestAuth:
     @pytest.mark.parametrize("key,value", INVALID_JWK.items(), ids=INVALID_JWK.keys())
     def test_invalid_jwk(self, env: AuthTestClient, key: str, value: str) -> None:
         for idp_client in env.auth_service.idp_clients:
-            if isinstance(idp_client, OidcClient):
+            if isinstance(idp_client, OauthIdpClient):
                 idp_client._load_keys = MagicMock(return_value=None)
             else:
                 raise NotImplementedError
@@ -98,16 +98,16 @@ class TestOidcClientCredentials:
     """Test the OidcClient retrieve_jwt_with_client_credentials_flow method."""
 
     @pytest.fixture
-    def oidc_client(self, env: AuthTestClient) -> OidcClient:
+    def oauth_idp_client(self, env: AuthTestClient) -> OauthIdpClient:
         """Get an OidcClient instance from the test environment."""
         for idp_client in env.auth_service.idp_clients:
-            if isinstance(idp_client, OidcClient):
+            if isinstance(idp_client, OauthIdpClient):
                 return idp_client
         raise RuntimeError("No OidcClient found in test environment")
 
     @patch("httpx.Client")
     def test_successful_token_retrieval(
-        self, mock_client_class: Mock, oidc_client: OidcClient
+        self, mock_client_class: Mock, oauth_idp_client: OauthIdpClient
     ) -> None:
         """Test successful JWT token retrieval with client credentials flow."""
         # Setup mock HTTP client
@@ -122,10 +122,10 @@ class TestOidcClientCredentials:
         mock_client_class.return_value = mock_client
 
         # Set up a valid token endpoint
-        oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
+        oauth_idp_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
         # Call the method (no await needed - method is now synchronous)
-        result = oidc_client.retrieve_jwt_with_client_credentials_flow("openid")
+        result = oauth_idp_client.retrieve_jwt_with_client_credentials_flow("openid")
 
         # Verify result
         assert result == "test_access_token_123"
@@ -158,7 +158,7 @@ class TestOidcClientCredentials:
 
     @patch("httpx.Client")
     def test_http_error_with_retries(
-        self, mock_client_class: Mock, oidc_client: OidcClient
+        self, mock_client_class: Mock, oauth_idp_client: OauthIdpClient
     ) -> None:
         """Test that HTTP errors trigger retries and eventually raise ServiceUnavailableError."""
         # Setup mock HTTP client that always fails
@@ -174,13 +174,13 @@ class TestOidcClientCredentials:
         mock_client_class.return_value = mock_client
 
         # Set up a valid token endpoint
-        oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
+        oauth_idp_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
         # Mock time.sleep to speed up the test
         with patch("time.sleep") as mock_sleep:
             # Call the method and expect it to raise an exception
             with pytest.raises(exc.ServiceUnavailableError):
-                oidc_client.retrieve_jwt_with_client_credentials_flow(
+                oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
                     "openid", max_retries=2, base_delay=0.1
                 )
 
@@ -191,28 +191,28 @@ class TestOidcClientCredentials:
 
     @patch("httpx.Client")
     def test_missing_token_endpoint(
-        self, mock_client_class: Mock, oidc_client: OidcClient
+        self, mock_client_class: Mock, oauth_idp_client: OauthIdpClient
     ) -> None:
         """Test that missing token endpoint raises ServiceUnavailableError."""
         # Set token endpoint to None
-        oidc_client.server_cfg.token_endpoint = None
+        oauth_idp_client.server_cfg.token_endpoint = None
 
         # Mock update_server_config_from_discovery to still have None token_endpoint
         with patch.object(
-            oidc_client, "update_server_config_from_discovery"
+            oauth_idp_client, "update_server_config_from_discovery"
         ) as mock_update:
             # Call the method and expect it to raise an exception
             with pytest.raises(
                 exc.ServiceUnavailableError, match="Token endpoint URL is not set"
             ):
-                oidc_client.retrieve_jwt_with_client_credentials_flow("openid")
+                oauth_idp_client.retrieve_jwt_with_client_credentials_flow("openid")
 
             # Verify that discovery update was attempted
             mock_update.assert_called_once()
 
     @patch("httpx.Client")
     def test_invalid_response_format(
-        self, mock_client_class: Mock, oidc_client: OidcClient
+        self, mock_client_class: Mock, oauth_idp_client: OauthIdpClient
     ) -> None:
         """Test handling of invalid response format (missing access_token)."""
         # Setup mock HTTP client with invalid response
@@ -229,17 +229,17 @@ class TestOidcClientCredentials:
         mock_client_class.return_value = mock_client
 
         # Set up a valid token endpoint
-        oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
+        oauth_idp_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
         # Mock time.sleep to speed up the test
         with patch("time.sleep"):
             # Call the method and expect it to raise an exception due to KeyError
             with pytest.raises(exc.ServiceUnavailableError):
-                oidc_client.retrieve_jwt_with_client_credentials_flow("openid")
+                oauth_idp_client.retrieve_jwt_with_client_credentials_flow("openid")
 
     @patch("httpx.Client")
     def test_network_failure(
-        self, mock_client_class: Mock, oidc_client: OidcClient
+        self, mock_client_class: Mock, oauth_idp_client: OauthIdpClient
     ) -> None:
         """Test handling of network failures during token retrieval."""
         # Setup mock HTTP client that raises a connection error
@@ -250,13 +250,13 @@ class TestOidcClientCredentials:
         mock_client_class.return_value = mock_client
 
         # Set up a valid token endpoint
-        oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
+        oauth_idp_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
         # Mock time.sleep to speed up the test
         with patch("time.sleep") as mock_sleep:
             # Call the method and expect it to raise an exception
             with pytest.raises(exc.ServiceUnavailableError):
-                oidc_client.retrieve_jwt_with_client_credentials_flow(
+                oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
                     "openid", max_retries=1, base_delay=0.1
                 )
 
@@ -264,7 +264,7 @@ class TestOidcClientCredentials:
             assert mock_client.post.call_count == 2  # max_retries + 1
             assert mock_sleep.call_count == 1
 
-    def test_custom_parameters(self, oidc_client: OidcClient) -> None:
+    def test_custom_parameters(self, oauth_idp_client: OauthIdpClient) -> None:
         """Test that custom headers, max_retries, and base_delay are properly used."""
         custom_headers = {"Custom-Header": "test-value"}
 
@@ -281,10 +281,10 @@ class TestOidcClientCredentials:
             mock_client_class.return_value = mock_client
 
             # Set up a valid token endpoint
-            oidc_client.server_cfg.token_endpoint = "https://idp1.org/token"
+            oauth_idp_client.server_cfg.token_endpoint = "https://idp1.org/token"
 
             # Call with custom parameters
-            result = oidc_client.retrieve_jwt_with_client_credentials_flow(
+            result = oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
                 "custom_scope",
                 headers=custom_headers,
                 max_retries=5,
