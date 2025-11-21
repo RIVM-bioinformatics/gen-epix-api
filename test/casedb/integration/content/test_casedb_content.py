@@ -5,7 +5,6 @@ from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest wa
 
 import pytest
 
-import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
@@ -57,7 +56,7 @@ class TestContent:
         app = env.app
         app_impl: AppImplDetails = app.impl
         # Get root user
-        root_user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)
+        root_user = env.get_root_user()
         env._set_obj(root_user)
         root_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=root_user)

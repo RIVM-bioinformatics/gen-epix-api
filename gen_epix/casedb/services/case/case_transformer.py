@@ -889,24 +889,17 @@ class CaseTransformer(Transformer):
 
         # Retrieve region relations
         region_contained_in: dict[tuple[UUID, UUID], dict[UUID, UUID]] = {}
-        for region_relation in app.handle(
+        region_relations = app.handle(
             command.RegionRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
-                query_filter=CompositeFilter(
-                    filters=[
-                        UuidSetFilter(
-                            key="from_region_id",
-                            members=frozenset(regions.keys()),
-                        ),
-                        UuidSetFilter(
-                            key="to_region_id",
-                            members=frozenset(regions.keys()),
-                        ),
-                    ],
-                    operator=LogicalOperator.AND,
-                ),
             )
-        ):
+        )
+        region_relations = [
+            x
+            for x in region_relations
+            if x.from_region_id in regions and x.to_region_id in regions
+        ]
+        for region_relation in region_relations:
             from_region = regions[region_relation.from_region_id]
             to_region = regions[region_relation.to_region_id]
             if region_relation.relation == RegionRelationType.CONTAINS:

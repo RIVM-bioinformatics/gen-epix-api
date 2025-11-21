@@ -32,6 +32,19 @@
             "justMyCode": true
         },
         {
+            "name": "api.casedb.local.idps.sa_sql_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api",
+                "CASEDB",
+                "IDPS",
+                "SA_SQL"
+            ],
+            "justMyCode": true
+        },
+        {
             "name": "api.casedb.local.mock.dict_demo",
             "type": "debugpy",
             "request": "launch",

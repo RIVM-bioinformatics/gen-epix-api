@@ -27,6 +27,10 @@ from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcS
 
 class OauthIdpClient(IdpClient, OpenIdConnect):
 
+    DEFAULT_INTROSPECTION_REQUEST_HEADERS: dict[str, str] = {
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    DEFAULT_INTROSPECTION_AUTH_METHOD: str = "client_secret_basic"
     DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS: dict[str, str] = {
         "Content-Type": "application/x-www-form-urlencoded",
     }
@@ -359,6 +363,51 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
         return claims
 
+    def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
+        now = self._now()
+        self._prune_expired_introspection_cache(now)
+        if self._is_cached_introspection_token_inactive(jwt_token):
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="0ce44f1a",
+                        msg="Token previously marked inactive by introspection; denying",
+                    ).dumps()
+                )
+            raise exc.CredentialsAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            )
+        if self._is_recheck_introspection(jwt_token, now):
+            if self.logger:
+                self.logger.info(
+                    self._log_item_class(
+                        code="9deaa6b2",
+                        msg="Performing token introspection re-check",
+                    ).dumps()
+                )
+            is_active = self._introspect_token_with_server(jwt_token)
+            if is_active is None:
+                # network or parse error
+                raise exc.CredentialsAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
+            exp_val = int(claims.get("exp", now))
+            if is_active:
+                self._update_introspection_cache(jwt_token, True, exp_val, now)
+            else:
+                if is_active is False:
+                    self._update_introspection_cache(jwt_token, False, exp_val, now)
+                    if self.logger:
+                        self.logger.warning(
+                            self._log_item_class(
+                                code="b1c2d3e4",
+                                msg="Token marked inactive by introspection; denying",
+                            ).dumps()
+                        )
+                raise exc.CredentialsAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
+
     def retrieve_jwt_with_client_credentials_flow(
         self,
         scope: str,
@@ -501,6 +550,147 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             scope=self.server_cfg.scope,
             public=self.server_cfg.public,
         )
+
+    def _get_introspection_endpoint(self) -> str:
+        if self.server_cfg.introspection_endpoint:
+            return self.server_cfg.introspection_endpoint
+        # dynamically determine from discovery document
+        try:
+            url: str | None = self.server_cfg.discovery_url
+            if not url:
+                raise exc.AuthException(
+                    "Token introspection was enabled but endpoint URL is not set and could also not be determined from discovery URL"
+                )
+            with httpx.Client(verify=self.ssl_context) as client:
+                response = client.get(url)
+                discovery_doc = response.json()
+            introspection_endpoint: str = discovery_doc.get("introspection_endpoint")
+            return introspection_endpoint
+        except Exception as exception:
+            if self.logger:
+                self.logger.error(
+                    self._log_item_class(
+                        code="d1234abc",
+                        msg="Error accessing discovery URL to determine introspection endpoint",
+                        scheme_name=self.scheme_name,
+                        exception=exception,
+                    ).dumps()
+                )
+            raise exc.UnauthorizedAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exception
+
+    def _introspect_token_with_server(self, jwt_token: str) -> bool | None:
+        if not self.introspection_endpoint:
+            return None
+        timeout_seconds = self.server_cfg.introspection_timeout_seconds
+        # Prepare headers and body
+        headers = self._introspection_request_headers
+        data: str = "&".join(
+            (
+                f"token={urllib.parse.quote(jwt_token)}",
+                f"token_type_hint=access_token",
+            )
+        )
+        method = (
+            self.server_cfg.introspection_auth_method
+            or self.DEFAULT_INTROSPECTION_AUTH_METHOD
+        ).lower()
+        if method not in {"client_secret_basic", "client_secret_post", "none"}:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="6f4a8e22",
+                        msg=(
+                            "Unknown introspection auth method; defaulting to client_secret_basic"
+                        ),
+                        method=method,
+                    ).dumps()
+                )
+            method = "client_secret_basic"
+        if method == "client_secret_basic":
+            # Add Basic auth
+            headers["Authorization"] = (
+                "Basic "
+                + base64.b64encode(
+                    f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+                ).decode()
+            )
+        try:
+            # TODO: Fix introspection unauthorized error (currently introspection disabled by default)
+            with httpx.Client(
+                verify=self.ssl_context, timeout=timeout_seconds
+            ) as client:
+                response = client.post(
+                    self.introspection_endpoint, data=data, headers=headers
+                )
+            if response.status_code != 200:
+                if self.logger:
+                    self.logger.warning(
+                        self._log_item_class(
+                            code="7a3e6d1f",
+                            msg=("Token introspection returned non-200 status"),
+                            status=response.status_code,
+                        ).dumps()
+                    )
+                raise exc.UnauthorizedAuthError(
+                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+                )
+            payload = response.json()
+            active = payload.get("active")
+            if isinstance(active, bool):
+                return active
+            # Unexpected payload shape
+            return None
+        except Exception as exc_:  # broad: treat any failure as unknown
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="f2b3c9aa",
+                        msg=("Token introspection failed (timeout/network/parse)"),
+                        exception=exc_,
+                    ).dumps()
+                )
+            raise exc.UnauthorizedAuthError(
+                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
+            ) from exc_
+
+    def _now(self) -> int:
+        return int(time.time())
+
+    def _prune_expired_introspection_cache(self, now: int | None = None) -> None:
+        time_stamp = now or self._now()
+        expired_keys = [
+            x for x, y in self._introspection_cache.items() if y["exp"] <= time_stamp
+        ]
+        for x in expired_keys:
+            self._introspection_cache.pop(x, None)
+
+    def _is_cached_introspection_token_inactive(self, jwt_token: str) -> bool:
+        introspection_token = self._introspection_cache.get(jwt_token)
+        return bool(introspection_token and introspection_token.get("active") is False)
+
+    def _is_recheck_introspection(self, jwt_token: str, now: int | None = None) -> bool:
+        introspection_token = self._introspection_cache.get(jwt_token)
+        if not introspection_token:
+            return True
+        interval = self.server_cfg.introspection_interval_seconds
+        last = int(introspection_token.get("last_checked", 0))
+        time_stamp = now or self._now()
+        return (time_stamp - last) >= interval
+
+    def _update_introspection_cache(
+        self,
+        jwt_token: str,
+        active: bool | None,
+        exp: int,
+        now: int | None = None,
+    ) -> None:
+        self._introspection_cache[jwt_token] = {
+            "active": active,
+            "last_checked": now or self._now(),
+            "exp": exp,
+        }
 
     def _load_keys(self) -> None:
         jwks_uri = self.server_cfg.jwks_uri

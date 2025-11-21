@@ -124,7 +124,6 @@ class OidcServerCfg(Model):
             "Enable token introspection after local JWT verification. Disabled by default."
         ),
     )
-
     # OpenID Provider Metadata fields from Section 3 of the specification
 
     # REQUIRED fields, made optional here as they may be absent until discovery is done
@@ -295,6 +294,15 @@ class OidcServerCfg(Model):
                 raise ValueError(
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def validate_introspection_interval(self) -> Self:
+        """Validate that introspection_interval_seconds is not more than 1800 seconds (30 minutes)."""
+        if self.introspection_interval_seconds > 1800:
+            raise ValueError(
+                "introspection_interval_seconds cannot be more than 1800 seconds (30 minutes)"
+            )
         return self
 
     @field_validator("claim_map", mode="before")
