@@ -4,10 +4,7 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+permissions: write-all
 
 jobs:
   release-please:
