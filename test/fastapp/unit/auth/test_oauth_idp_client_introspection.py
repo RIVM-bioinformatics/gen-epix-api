@@ -10,7 +10,7 @@ from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
-class TestOauthIdpIntrospection:
+class TestOauthIdpClientIntrospection:
 
     CLIENT: OauthIdpClient
     TOKEN: str
@@ -31,11 +31,6 @@ class TestOauthIdpIntrospection:
     @classmethod
     def _enable_introspection(cls) -> None:
         cls.CLIENT.server_cfg.enable_introspection = True
-        # Do not set `introspection_endpoint` on the server config (it is
-        # dynamically retrieved by `TokenIntrospectionManager`). Instead we will
-        # patch the manager's endpoint retrieval below.
-        # Ensure a TokenIntrospectionManager is attached (it's only created in
-        # `OauthIdpClient.__init__` when `server_cfg.enable_introspection` was True).
         if not hasattr(cls.CLIENT, "token_introspection_manger") or (
             getattr(cls.CLIENT, "token_introspection_manger") is None
         ):
