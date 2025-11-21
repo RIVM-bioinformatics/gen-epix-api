@@ -38,8 +38,9 @@ jobs:
       - name: Switch to release-please branch
         run: |
           # Get the PR branch name from release-please outputs
-          if [ -n "${{ steps.release.outputs.pr }}" ]; then
-            BRANCH_NAME=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.headBranchName // empty')
+          PR_DATA="${{ steps.release.outputs.pr }}"
+          if [ -n "$PR_DATA" ]; then
+            BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.headBranchName // empty')
           fi
 
           # Fallback: look for release-please branches
