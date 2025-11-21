@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [7.0.2](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.1...v7.0.2) (2025-11-21)
+
+
+### Bug Fixes
+
+* make release work again (3) ([c289fb5](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c289fb5fa3f4337aec0c82d2b40abaf54e46e808))
+* make release work again (4) ([433a2b8](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/433a2b8144e5bdc4b9925191ca811614e1dc9716))
+* make release work again (5) ([14568dc](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/14568dc3827c93a647b21ee0e566817ee9461b55))
+* make release work again (6) ([af1e589](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/af1e589c2e303dbee1308e1fbdc10010682bfe42))
+* make release work again (7) ([de61f84](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/de61f84c99df08edd4a180df25788fd77fe8aaf1))
+
 ## [7.0.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.0...v7.0.1) (2025-11-21)
 
 
