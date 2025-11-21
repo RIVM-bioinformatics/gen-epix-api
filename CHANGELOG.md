@@ -1,10 +1,5 @@
 # CHANGELOG
 
-<!-- version list -->
-
-## v6.1.0 (2025-09-17)
-
-
 ## v6.0.0 (2025-09-08)
 
 ### Bug Fixes
@@ -17,7 +12,6 @@
 
 - **deps**: Remove comments
   ([`2441bc2`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/2441bc257c51c4b53ecf847f118d53803b4b3ed2))
-
 
 ## v5.0.0 (2025-08-17)
 
@@ -263,7 +257,6 @@
   ([#68](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/68),
   [`a41b9cc`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/a41b9ccc4a54ad29edeb32d8a7b94dc3206e7ad0))
 
-
 ## v4.0.0 (2025-08-17)
 
 ### Bug Fixes
@@ -488,7 +481,6 @@
   ([#64](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/64),
   [`df465bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/df465bf402be29500943083bd5603fa29f72bd67))
 
-
 ## v3.0.0 (2025-08-16)
 
 ### Bug Fixes
@@ -700,7 +692,6 @@
   ([#61](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/61),
   [`f37ff8d`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f37ff8d4c6aa7bc210aa7f387c73f363d269eb69))
 
-
 ## v2.0.0 (2025-08-16)
 
 ### Bug Fixes
@@ -888,7 +879,6 @@
   ([#54](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/54),
   [`31aed74`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/31aed74c785cfca82a1f92f3d499303234e7f70b))
 
-
 ## v1.0.0 (2025-08-15)
 
 ### Bug Fixes
@@ -1064,7 +1054,6 @@
   ([#46](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/46),
   [`20a3fc2`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/20a3fc2835308437ed254ff01d9062b700462d8c))
 
-
 ## v0.1.10 (2025-08-12)
 
 ### Bug Fixes
@@ -1077,14 +1066,12 @@
 - **config**: Migrate config renovate.json
   ([`0e66873`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0e66873f7d51ff7547309c2a2fbcfc3e5ce372f9))
 
-
 ## v0.1.9 (2025-08-12)
 
 ### Bug Fixes
 
 - Add correct renovate config
   ([`676412e`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/676412ef1e36bf372d2c901f7e46b6ef27e5b662))
-
 
 ## v0.1.8 (2025-08-11)
 
@@ -1121,7 +1108,6 @@
   ([#18](https://github.com/RIVM-bioinformatics/gen-epix-api/pull/18),
   [`938b5bf`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/938b5bfe1d58b99d6f0f954a348b30b4741080fa))
 
-
 ## v0.1.7 (2025-06-04)
 
 ### Bug Fixes
@@ -1151,14 +1137,12 @@
 - Readme.md - fixing images and badges
   ([`d1575e6`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/d1575e6f19169473dab001be9164801b718043e6))
 
-
 ## v0.1.6 (2025-06-04)
 
 ### Bug Fixes
 
 - .github.workflows.release.yaml - pull the newly commited version into build before publishing
   ([`7fdf0a7`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/7fdf0a7b178b4ae5b81fb65b436fabf5c8be17db))
-
 
 ## v0.1.5 (2025-06-04)
 
@@ -1172,14 +1156,12 @@
 - Output `released` variable to next workflow job
   ([`f9300ab`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/f9300abe45ca1853431d2a6f292acab4ed8f9c4e))
 
-
 ## v0.1.4 (2025-06-04)
 
 ### Bug Fixes
 
 - .github.workflows.release.yaml - restore old build method
   ([`ac1a5b7`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/ac1a5b711cdcb0679ad0e3b592c55b425f6075e0))
-
 
 ## v0.1.3 (2025-06-04)
 
@@ -1188,14 +1170,12 @@
 - .github.workflows.release.yaml - only upload to pypi in case of a new release
   ([`126781a`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/126781a5b8548036399bb24c12bf1cd4e6e87234))
 
-
 ## v0.1.2 (2025-06-04)
 
 ### Bug Fixes
 
 - Make casedb/omopdb/seqdb OPENAPI gen epix version dynamic
   ([`78cc66a`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/78cc66a72efd980014f23b1df073fda6783d9564))
-
 
 ## v0.1.1 (2025-06-04)
 
@@ -1204,14 +1184,12 @@
 - Remove running main workflow on push to avoid running the workflow twice
   ([`b8ba4cb`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/b8ba4cb138f8c694e3dc34b7b6fac67988cb678d))
 
-
 ## v0.1.0 (2025-06-04)
 
 ### Features
 
 - Add distribution to repo
   ([`0703b87`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0703b87c8fb670a32309c3d89e24584c033b1055))
-
 
 ## v0.0.1 (2025-06-03)
 
@@ -1237,7 +1215,6 @@
 
 - Reconfigured release workflow using different examples
   ([`8d2f05f`](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/8d2f05f17412fb8c8fc63eac7f282ccc635bef2d))
-
 
 ## v0.0.0 (2025-06-03)
 
