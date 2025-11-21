@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from gen_epix.fastapp import exc
-from gen_epix.fastapp.services.auth.introspection import TokenIntrospectionManager
+from gen_epix.fastapp.services.auth.token_introspection_manager import TokenIntrospectionManager
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
