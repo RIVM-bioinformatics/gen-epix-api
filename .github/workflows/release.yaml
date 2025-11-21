@@ -32,7 +32,8 @@ jobs:
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
         if: ${{ (steps.release.outputs.release_created == 'true') }}
 
-      - uses: stefanzweifel/git-auto-commit-action@v7
+      - name: Commit version bump
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: bump version in pyproject.toml to ${{ steps.release.outputs.new_version }}"
           commit_options: "--no-verify --signoff"
