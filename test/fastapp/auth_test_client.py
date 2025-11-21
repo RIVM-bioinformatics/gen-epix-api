@@ -42,6 +42,7 @@ class AuthTestClient:
                 "response_types_supported": ["code"],
                 "subject_types_supported": ["public"],
                 "id_token_signing_alg_values_supported": ["RS256"],
+                "enable_introspection": False, # disable introspection in unit testing
             }
         ]
         auth_service = AuthService(
