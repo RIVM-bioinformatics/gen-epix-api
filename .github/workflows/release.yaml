@@ -33,7 +33,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ (steps.release.outputs.prs_created == 'true') }}
 
       - name: Switch to release-please branch
         run: |
