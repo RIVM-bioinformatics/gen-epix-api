@@ -37,16 +37,8 @@ jobs:
 
       - name: Switch to release-please branch
         run: |
-          # Get the PR branch name from release-please outputs
-          PR_DATA="${{ steps.release.outputs.pr }}"
-          if [ -n "$PR_DATA" ]; then
-            BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.headBranchName // empty')
-          fi
-
-          # Fallback: look for release-please branches
-          if [ -z "$BRANCH_NAME" ]; then
-            BRANCH_NAME=$(git branch -r | grep 'origin/release-please--' | head -1 | sed 's/.*origin\///')
-          fi
+          # Look for release-please branches
+          BRANCH_NAME=$(git branch -r | grep 'origin/release-please--' | head -1 | sed 's/.*origin\///' || echo "")
 
           if [ -n "$BRANCH_NAME" ]; then
             echo "Switching to branch: $BRANCH_NAME"
