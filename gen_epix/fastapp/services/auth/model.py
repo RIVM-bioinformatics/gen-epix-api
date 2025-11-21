@@ -119,7 +119,7 @@ class OidcServerCfg(Model):
         default=False, description="Whether the identity provider is public"
     )
     enable_introspection: bool = Field(
-        default=True,
+        default=False,
         description=(
             "Enable token introspection after local JWT verification. Disabled by default."
         ),

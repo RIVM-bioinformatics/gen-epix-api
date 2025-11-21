@@ -41,8 +41,7 @@ class AuthTestClient:
                 "userinfo_endpoint": "https://idp1.org/userinfo",
                 "response_types_supported": ["code"],
                 "subject_types_supported": ["public"],
-                "id_token_signing_alg_values_supported": ["RS256"],
-                "enable_introspection": False, # disable introspection in unit testing
+                "id_token_signing_alg_values_supported": ["RS256"]
             }
         ]
         auth_service = AuthService(
