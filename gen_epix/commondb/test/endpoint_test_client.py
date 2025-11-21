@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
-from jose import jwt
+import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import UpdateUserRequestBody, UserInvitationRequestBody

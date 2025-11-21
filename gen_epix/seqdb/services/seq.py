@@ -2,10 +2,13 @@ import hashlib
 import json
 import sys
 from collections.abc import Callable, Hashable, Iterable
+from io import BytesIO, TextIOWrapper
+from typing import Any
 from uuid import UUID
 
 import numpy as np
 import scipy
+from Bio import SeqIO
 from Bio.Phylo.BaseTree import Clade
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from scipy.cluster.hierarchy import ClusterNode
@@ -519,3 +522,4 @@ class SeqService(BaseSeqService):
         )
         newick = f"({newick}"
         return newick
+

@@ -28,3 +28,5 @@ class BaseUserManager(ServiceUserManager):
         self._rbac_service = rbac_service
         self._key_claim = key_claim or self.DEFAULT_KEY_CLAIM
         self._name_claims = name_claims or self.DEFAULT_NAME_CLAIMS
+        self._root_cfg = root_cfg
+        self._automatic_new_user_cfg = automatic_new_user_cfg

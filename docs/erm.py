@@ -5,12 +5,13 @@ import pickle
 import warnings
 from pathlib import Path
 
-import erdantic as erd
-
 from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
 from gen_epix.fastapp import Domain
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.seqdb.domain import DOMAIN as SEQDB_DOMAIN
+
+# import erdantic as erd
+
 
 # Disable Graphviz Pango plugin warnings on Windows
 # This prevents "Could not load gvplugin_pango.dll" warnings

@@ -12,7 +12,9 @@ from gen_epix.fastapp.services.auth.model import Claims as Claims
 from gen_epix.fastapp.services.auth.model import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth.model import IDPUser as IDPUser
 from gen_epix.fastapp.services.auth.model import OidcServerCfg as OidcServerCfg
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient as OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import (
+    OauthIdpClient as OauthIdpClient,
+)
 from gen_epix.fastapp.services.auth.service import AuthService as AuthService
 from gen_epix.fastapp.services.auth.util import (
     get_email_from_claims as get_email_from_claims,

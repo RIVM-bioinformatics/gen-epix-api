@@ -168,6 +168,10 @@ class TestClient:
         else:
             return self.app.handle(cmd)
 
+    def retrieve_user_by_key(self, user_key: str) -> model.User:
+        user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
+        return user
+
     def create_organization(
         self, user_or_str: str | model.User, organization_name: str
     ) -> model.Organization:
@@ -293,6 +297,7 @@ class TestClient:
         organization: model.Organization = self._get_obj(
             model.Organization, organization_or_str
         )  # type:ignore[assignment]
+        assert organization.id is not None
         organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
             self.organization_admin_policy_crud_command_class(
                 user=user,
@@ -350,7 +355,7 @@ class TestClient:
         user_or_str: str | model.User,
         tgt_user_or_str: str | model.User,
         is_active: bool | None = None,
-        roles: set[Enum] | None = None,
+        roles: set[str] | None = None,
         organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
@@ -368,7 +373,10 @@ class TestClient:
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization_or_str).id
+            organization: model.Organization = self._get_obj(
+                model.Organization, organization_or_str
+            )  # type:ignore[assignment]
+            organization_id = organization.id
         has_updates = False
         if is_active is not None and tgt_user.is_active != is_active:
             has_updates = True
@@ -380,13 +388,14 @@ class TestClient:
             has_updates = True
             tgt_user.organization_id = organization_id
         sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
+        assert tgt_user.id is not None
         updated_tgt_user = self.handle(
             self.update_user_command_class(
                 user=user,
                 tgt_user_id=tgt_user.id,
-                is_active=is_active,
-                roles=roles,
-                organization_id=organization_id,
+                is_active=tgt_user.is_active,
+                roles=tgt_user.roles,
+                organization_id=tgt_user.organization_id,
             )
         )
         updated_tgt_user.name = tgt_user.name
@@ -395,13 +404,11 @@ class TestClient:
         )
         return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
 
-    def get_root_user(self) -> model.User:
-        return self.user_class(
-            organization_id=self.cfg["service"]["auth"]["props"]["root"][
-                "organization"
-            ]["id"],
-            **self.cfg["service"]["auth"]["props"]["root"]["user"],
-        )
+    def get_root_user(self, user_key: str | None = None) -> model.User:
+        if user_key is None:
+            user_key = self.cfg["service"]["auth"]["props"]["root"]["user"]["key"]
+        user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
+        return user
 
     def get_org_ids_for_org_admin(
         self,
@@ -410,7 +417,7 @@ class TestClient:
         on_no_admin: str = "raise",
     ) -> list[model.Organization]:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [  # type: ignore[assignment]
             x
             for x in self.db[self.organization_admin_policy_class].values()
             if x.user_id == user.id

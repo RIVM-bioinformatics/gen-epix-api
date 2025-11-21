@@ -14,15 +14,22 @@ Test scenario:
 7. RequestorApp uses invalid token to call ReceiverApp endpoint (failure case)
 """
 
+import asyncio
+import base64
+import json
 import logging
+import time
 from collections.abc import Generator
 from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=import-error
     OAuthServerManager,
     ReceiverAppManager,
     RequestorApp,
 )
+from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import httpx
+import jwt
 import pytest
 
 # Configure logging
@@ -307,6 +314,313 @@ def test_client_management_endpoints(
         assert response.status_code == 404
 
     logger.info("✅ Client management endpoints test passed")
+
+
+def _b64url_encode_no_pad(obj: Any) -> str:
+    """Encode JSON-able object, bytes or str to base64url without padding."""
+    if isinstance(obj, (dict, list)):
+        raw = json.dumps(obj, separators=(",", ":"), sort_keys=False).encode("utf-8")
+    elif isinstance(obj, (bytes, bytearray)):
+        raw = bytes(obj)
+    elif isinstance(obj, str):
+        raw = obj.encode("utf-8")
+    else:
+        # Fallback to JSON serialization for other types
+        raw = json.dumps(obj, separators=(",", ":"), sort_keys=False).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("utf-8")
+
+
+def test_jwt_sensitive_info_disclosure(requestor_app: RequestorApp) -> None:
+    """Test that JWT tokens do not disclose sensitive information."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
+
+    # Check for sensitive fields
+    sensitive_fields = [
+        requestor_app.client_secret,
+        requestor_app.client_id,
+    ]
+    for field in sensitive_fields:
+        assert (
+            field not in decoded_token
+        ), f"Token should not contain sensitive field: {field}"
+
+
+def test_expiry_jwt_token(requestor_app: RequestorApp) -> None:
+    """Test that JWT tokens have proper expiry set."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
+
+    assert "exp" in decoded_token, "Token should have an expiry (exp) claim"
+
+    current_time = int(time.time())
+    assert decoded_token["exp"] > current_time, "Token expiry should be in the future"
+
+
+def test_jwt_is_using_aws_cognito(
+    oauth_server: OAuthServerManager, requestor_app: RequestorApp
+) -> None:
+    """Test that JWT tokens are issued by AWS Cognito."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
+
+    assert "iss" in decoded_token, "Token should have an issuer (iss) claim"
+
+    expected_issuer = requestor_app.oauth_idp_client.issuer
+    assert (
+        decoded_token["iss"] == expected_issuer
+    ), f"Token issuer should be {expected_issuer}"
+
+
+def test_check_jwt_if_using_asymmetric(requestor_app: RequestorApp) -> None:
+    """Test that JWT tokens are signed using asymmetric keys."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_header = jwt.get_unverified_header(jwt_token)
+
+    assert "alg" in decoded_header, "Token header should have an alg field"
+
+    alg = decoded_header["alg"]
+    assert alg in [
+        "RS256",
+    ], "Token should be signed with an asymmetric algorithm"
+
+
+def test_try_changing_jwt_signing_algorithm(
+    oauth_server: OAuthServerManager, requestor_app: RequestorApp
+) -> None:
+    """Test that changing the JWT algorithm invalidates the token."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+    original_token = jwt_token
+    _, _, signature_b64 = original_token.split(".")
+
+    decoded_header = jwt.get_unverified_header(jwt_token)
+    decoded_payload = jwt.decode(jwt_token, options={"verify_signature": False})
+    decoded_header["alg"] = "HS256"
+
+    modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{signature_b64}"
+
+    endpoint_url = f"http://localhost:8001/test_client_credential_flow"
+    response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
+
+    assert (
+        response.status_code == 401
+    ), f"Expected 401, got {response.status_code}: {response.text}"
+
+
+def test_try_modifying_payload_without_chaning_signature(
+    requestor_app: RequestorApp,
+) -> None:
+    """Test that modifying the JWT payload invalidates the token."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_header = jwt.get_unverified_header(jwt_token)
+    decoded_payload = jwt.decode(jwt_token, options={"verify_signature": False})
+    decoded_payload["aud"] = "ModifiedAudience"
+
+    original_token = jwt_token
+    _, _, signature_b64 = original_token.split(".")
+
+    modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{signature_b64}"
+
+    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
+
+    assert (
+        response.status_code == 401
+    ), f"Expected 401, got {response.status_code}: {response.text}"
+
+
+def test_try_removing_signature_part(requestor_app: RequestorApp) -> None:
+    """Test that removing the JWT signature invalidates the token."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    header_b64, payload_b64, _ = jwt_token.split(".")
+    modified_token = f"{header_b64}.{payload_b64}."
+
+    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
+
+    assert (
+        response.status_code == 401
+    ), f"Expected 401, got {response.status_code}: {response.text}"
+
+
+@pytest.mark.parametrize(
+    "header_field, injection",
+    [
+        ("jwk", {"kty": "RSA", "kid": "injected-key-id"}),
+        ("kid", "injected-key-id"),
+        ("jku", "http://malicious.example.com/jwks.json"),
+    ],
+)
+def test_try_jwt_header_injections(
+    header_field: str,
+    injection: str | dict[str, str],
+    requestor_app: RequestorApp,
+) -> None:
+    """Parametrized test that JWT header injections ('jwk', 'kid', 'jku') are handled properly."""
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    decoded_header = jwt.get_unverified_header(jwt_token)
+    decoded_payload = jwt.decode(jwt_token, options={"verify_signature": False})
+    decoded_header[header_field] = injection
+
+    modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{jwt_token.split('.')[2]}"
+
+    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
+
+    assert (
+        response.status_code == 401
+    ), f"Expected 401 for injected header '{header_field}', got {response.status_code}: {response.text}"
+
+
+def test_verify_if_within_scope(requestor_app: RequestorApp) -> None:
+    """Test that JWT tokens have correct scopes."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid read write"
+        )
+    )
+
+    decoded_token = jwt.decode(jwt_token, options={"verify_signature": False})
+    assert "scope" in decoded_token
+
+    scopes = decoded_token["scope"].split()
+    expected_scopes = {"openid"}  # potentially more scopes here later
+    assert expected_scopes.issubset(set(scopes))
+
+
+def test_get_jwk_from_jwt_returns_existing_key(
+    requestor_app: RequestorApp,
+) -> None:
+    """Test that get_jwk_from_jwt returns the correct JWK for a given JWT."""
+
+    jwt_token = (
+        requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+            "openid"
+        )
+    )
+
+    jwk = asyncio.run(requestor_app.oauth_idp_client.get_jwk_from_jwt(jwt_token))
+
+    assert jwk is not None
+    assert jwk.public_key_use == "sig"
+    assert jwk.key_type == "RSA"
+
+
+@pytest.mark.parametrize(
+    "invalid_key",
+    [
+        # key with wrong `use`
+        {
+            "use": "enc",
+            "kty": "RSA",
+            "alg": "RS256",
+            "kid": "bad-use-kid",
+            "n": "dummy_n",
+            "e": "AQAB",
+        },
+        # key with unsupported `kty`
+        {
+            "use": "sig",
+            "kty": "EC",
+            "alg": "RS256",
+            "kid": "bad-kty-kid",
+            "crv": "P-256",
+            "x": "dummy",
+            "y": "dummy",
+        },
+        # key with disallowed `alg`
+        {
+            "use": "sig",
+            "kty": "RSA",
+            "alg": "HS256",
+            "kid": "bad-alg-kid",
+            "n": "dummy_n",
+            "e": "AQAB",
+        },
+    ],
+)
+def test_load_keys_ignores_invalid_key(
+    requestor_app: RequestorApp, invalid_key: dict
+) -> None:
+    """Ensure invalid keys (wrong `use`, unsupported `kty`, disallowed `alg`) are ignored."""
+
+    requestor_app.oauth_idp_client.server_cfg.jwks_uri = (
+        "https://idp.example/.well-known/jwks.json"
+    )
+
+    valid_key = {
+        "use": "sig",
+        "kty": "RSA",
+        "alg": "RS256",
+        "kid": "valid-kid",
+        "n": "dummy_n",
+        "e": "AQAB",
+    }
+
+    mock_client = MagicMock()
+    mock_response = Mock()
+    mock_response.raise_for_status.return_value = None
+    mock_response.json.return_value = {"keys": [invalid_key, valid_key]}
+    mock_client.get.return_value = mock_response
+    mock_client.__enter__.return_value = mock_client
+    mock_client.__exit__.return_value = None
+
+    with patch("httpx.Client", return_value=mock_client):
+        # Keep PyJWK.from_dict simple and return the dict directly for these tests
+        with patch("jwt.PyJWK.from_dict", side_effect=lambda d: d):
+            requestor_app.oauth_idp_client._signing_keys.clear()
+            requestor_app.oauth_idp_client._load_keys()
+
+    assert invalid_key["kid"] not in requestor_app.oauth_idp_client._signing_keys
+    assert valid_key == requestor_app.oauth_idp_client._signing_keys.get("valid-kid")
+    assert len(requestor_app.oauth_idp_client._signing_keys) == 1
 
 
 if __name__ == "__main__":

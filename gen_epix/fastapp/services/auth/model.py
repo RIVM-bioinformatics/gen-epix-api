@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -83,6 +83,10 @@ class OidcServerCfg(Model):
         "client_secret",
         "scope",
         "public",
+        "enable_introspection",
+        "introspection_interval_seconds",
+        "introspection_timeout_seconds",
+        "introspection_auth_method",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -116,6 +120,29 @@ class OidcServerCfg(Model):
     scope: str = Field(description="The scope of the application")
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
+    )
+    enable_introspection: bool = Field(
+        default=False,
+        description=(
+            "Enable token introspection after local JWT verification. Disabled by default."
+        ),
+    )
+    introspection_interval_seconds: int = Field(
+        default=300,
+        description=(
+            "Minimum interval in seconds between introspection checks for the same token."
+        ),
+    )
+    introspection_timeout_seconds: int = Field(
+        default=2,
+        description="HTTP timeout in seconds for the introspection request.",
+    )
+    introspection_auth_method: str = Field(
+        default="client_secret_basic",
+        description=(
+            "Client authentication method for introspection endpoint. One of: "
+            "'client_secret_basic', 'client_secret_post', 'none'."
+        ),
     )
 
     # OpenID Provider Metadata fields from Section 3 of the specification
@@ -276,9 +303,18 @@ class OidcServerCfg(Model):
                 )
         return self
 
+    @model_validator(mode="after")
+    def validate_introspection_interval(self) -> Self:
+        """Validate that introspection_interval_seconds is not more than 1800 seconds (30 minutes)."""
+        if self.introspection_interval_seconds > 1800:
+            raise ValueError(
+                "introspection_interval_seconds cannot be more than 1800 seconds (30 minutes)"
+            )
+        return self
+
     @field_validator("claim_map", mode="before")
     @classmethod
-    def validate_claim_map(cls, claim_map):
+    def validate_claim_map(cls, claim_map: dict) -> dict[str, list[str]]:
         """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
         if not isinstance(claim_map, dict):
             raise ValueError("claim_map must be a dictionary")

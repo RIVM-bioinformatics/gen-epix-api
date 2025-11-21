@@ -245,3 +245,8 @@ class SeqDistanceResultFormat(Enum):
 class SeqDistanceFormat(Enum):
     SEQ_ID_DISTANCE_DICT = "SEQ_ID_DISTANCE_DICT"
     PROFILE_ID_DISTANCE_DICT = "PROFILE_ID_DISTANCE_DICT"
+
+
+class SequenceFormat(Enum):
+    FASTA = "FASTA"
+    FASTQ = "FASTQ"
