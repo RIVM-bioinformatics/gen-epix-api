@@ -19,27 +19,28 @@ jobs:
       - uses: googleapis/release-please-action@v4.2.0
         id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
       - uses: actions/checkout@v5
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        with:
+          fetch-depth: 0
 
       - name: Bump version in pyproject.toml
         run: |
           VERSION=${{ steps.release.outputs.new_version }}
           sed -i "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        if: ${{ (steps.release.outputs.prs_created == 'true') }}
 
-      - uses: stefanzweifel/git-auto-commit-action@v7
+      - name: Commit version bump
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: bump version in pyproject.toml to ${{ steps.release.outputs.new_version }}"
           commit_options: "--no-verify --signoff"
           file_pattern: "pyproject.toml"
           push_options: "--force"
-          branch: main
-        if: ${{ (steps.release.outputs.release_created == 'true') }}
+        if: ${{ (steps.release.outputs.prs_created == 'true') }}
 
       - name: Set up Python
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
@@ -72,3 +73,4 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
+        if: ${{ (steps.release.outputs.release_created == 'true') }}
