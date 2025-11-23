@@ -24,7 +24,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SEQ.value)
 # TODO: add SA relationship calls
 
 
-class Allele(Base, RowMetadataMixin, SeqMixin, QualityMixin):
+class Allele(Base, RowMetadataMixin, SeqMixin):
     __tablename__, __table_args__ = create_table_args(model.Allele)
 
     locus_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Allele, "locus_id")
@@ -61,7 +61,7 @@ class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     allele_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "allele_profile_format"
     )
-    allele_profile_hash: Mapped[bytes] = create_mapped_column(
+    allele_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "allele_profile_hash"
     )
 
@@ -143,7 +143,7 @@ class KmerProfile(Base, RowMetadataMixin, QualityMixin):
     kmer_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.KmerProfile, "kmer_profile_format"
     )
-    kmer_profile_hash: Mapped[bytes] = create_mapped_column(
+    kmer_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.KmerProfile, "kmer_profile_hash"
     )
 
@@ -152,20 +152,24 @@ class Locus(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Locus)
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.Locus, "code")
-    gene_code: Mapped[str] = create_mapped_column(DOMAIN, model.Locus, "gene_code")
-    product_name: Mapped[str] = create_mapped_column(
-        DOMAIN, model.Locus, "product_name"
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.Locus, "name")
+    description: Mapped[str] = create_mapped_column(DOMAIN, model.Locus, "description")
+    locus_type: Mapped[enum.LocusType] = create_mapped_column(
+        DOMAIN, model.Locus, "locus_type"
+    )
+    gene_product_code: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Locus, "gene_product_code"
     )
 
 
-class LocusCode(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.LocusCode)
+class LocusCodeMap(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.LocusCodeMap)
 
     naming_scheme: Mapped[str] = create_mapped_column(
-        DOMAIN, model.LocusCode, "naming_scheme"
+        DOMAIN, model.LocusCodeMap, "naming_scheme"
     )
     code_map: Mapped[dict[str, UUID]] = create_mapped_column(
-        DOMAIN, model.LocusCode, "code_map"
+        DOMAIN, model.LocusCodeMap, "code_map"
     )
 
 
@@ -190,7 +194,7 @@ class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     locus_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.LocusProfile, "locus_profile_format"
     )
-    locus_profile_hash: Mapped[bytes] = create_mapped_column(
+    locus_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.LocusProfile, "locus_profile_hash"
     )
 
@@ -223,7 +227,7 @@ class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     mlva_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_profile_format"
     )
-    mlva_profile_hash: Mapped[bytes] = create_mapped_column(
+    mlva_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_profile_hash"
     )
 
@@ -254,13 +258,10 @@ class PcrProtocol(Base, RowMetadataMixin, ProtocolMixin):
     )
 
 
-class RawSeq(Base, RowMetadataMixin, SeqMixin):
-    __tablename__, __table_args__ = create_table_args(model.RawSeq)
-
-
 class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.ReadSet)
 
+    sample_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.ReadSet, "sample_id")
     fwd_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "fwd_uri")
     rev_uri: Mapped[str] = create_mapped_column(DOMAIN, model.ReadSet, "rev_uri")
     fwd_file_id: Mapped[UUID] = create_mapped_column(
@@ -269,10 +270,10 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     rev_file_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_file_id"
     )
-    fwd_reads_hash: Mapped[bytes] = create_mapped_column(
+    fwd_reads_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "fwd_reads_hash"
     )
-    rev_reads_hash: Mapped[bytes] = create_mapped_column(
+    rev_reads_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_reads_hash"
     )
     sequencing_protocol_id: Mapped[UUID] = create_mapped_column(
@@ -280,6 +281,9 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     )
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"
+    )
+    has_linked_reads: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.ReadSet, "has_linked_reads"
     )
 
 
@@ -373,8 +377,22 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     assembly_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Seq, "assembly_protocol_id"
     )
-    raw_seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "raw_seq_id")
-    file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
+    contigs: Mapped[list[model.Contig]] = create_mapped_column(
+        DOMAIN, model.Seq, "contigs"
+    )
+    seq_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "seq_hash")
+    n_contigs: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n_contigs")
+    length: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "length")
+    max_contig_length: Mapped[int] = create_mapped_column(
+        DOMAIN, model.Seq, "max_contig_length"
+    )
+    min_contig_length: Mapped[int] = create_mapped_column(
+        DOMAIN, model.Seq, "min_contig_length"
+    )
+    median_contig_length: Mapped[float] = create_mapped_column(
+        DOMAIN, model.Seq, "median_contig_length"
+    )
+    n50: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n50")
 
 
 class SeqAlignment(Base, RowMetadataMixin):
@@ -424,7 +442,7 @@ class SeqClassification(Base, RowMetadataMixin):
     classification_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqClassification, "classification_format"
     )
-    classification_hash: Mapped[bytes] = create_mapped_column(
+    classification_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqClassification, "classification_hash"
     )
 
@@ -497,7 +515,7 @@ class SeqTaxonomy(Base, RowMetadataMixin):
     taxonomy_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "taxonomy_format"
     )
-    taxonomy_hash: Mapped[bytes] = create_mapped_column(
+    taxonomy_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "taxonomy_hash"
     )
 
@@ -526,7 +544,7 @@ class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     snp_profile_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile_format"
     )
-    snp_profile_hash: Mapped[bytes] = create_mapped_column(
+    snp_profile_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_profile_hash"
     )
 
@@ -549,17 +567,6 @@ class Taxon(Base, RowMetadataMixin):
     )
     ancestor_taxon_ids: Mapped[list[UUID]] = create_mapped_column(
         DOMAIN, model.Taxon, "ancestor_taxon_ids"
-    )
-
-
-class TaxonLocusLink(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.TaxonLocusLink)
-
-    taxon_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.TaxonLocusLink, "taxon_id"
-    )
-    locus_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.TaxonLocusLink, "locus_id"
     )
 
 

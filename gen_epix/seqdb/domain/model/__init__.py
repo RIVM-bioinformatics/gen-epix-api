@@ -50,13 +50,14 @@ from gen_epix.seqdb.domain.model.seq import CompleteContig as CompleteContig
 from gen_epix.seqdb.domain.model.seq import CompleteSample as CompleteSample
 from gen_epix.seqdb.domain.model.seq import CompleteSeq as CompleteSeq
 from gen_epix.seqdb.domain.model.seq import CompleteSnpProfile as CompleteSnpProfile
+from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
 from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
-from gen_epix.seqdb.domain.model.seq import LocusCode as LocusCode
+from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
@@ -72,7 +73,6 @@ from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
-from gen_epix.seqdb.domain.model.seq import RawSeq as RawSeq
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
@@ -100,7 +100,6 @@ from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProt
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
-from gen_epix.seqdb.domain.model.seq import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.domain.model.seq import TaxonomyProtocol as TaxonomyProtocol
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
@@ -134,9 +133,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             TaxonSet,
             TaxonSetMember,
             Locus,
-            TaxonLocusLink,
             LocusSet,
-            LocusCode,
+            LocusCodeMap,
             RefSeq,
             RefAllele,
             RefSnp,
@@ -161,7 +159,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Sample,
             SampleDataCollectionLink,
             SampleIdentifier,
-            RawSeq,
             ReadSet,
             Seq,
             Allele,

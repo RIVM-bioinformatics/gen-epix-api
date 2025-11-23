@@ -11,6 +11,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import ulid
 from pydantic import BaseModel, Field
@@ -400,7 +401,8 @@ def load_demo_data(
     sa_sql_app_cfg = AppCfg(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
+    # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
+    user_id = UUID("00000000-0000-0000-0000-000000000000")
     for service_type in enum.ServiceType:
         # # TODO: TEMPORARY for debugging, remove later
         # if service_type.value != "CASE":

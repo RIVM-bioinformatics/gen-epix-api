@@ -74,9 +74,9 @@ class FileService(BaseFileService):
             # Determine sequence format from header byte
             match header:
                 case b">":
-                    sequence_format: enum.SequenceFormat = enum.SequenceFormat.FASTA
+                    sequence_format: enum.FileFormat = enum.FileFormat.FASTA
                 case b"@":
-                    sequence_format = enum.SequenceFormat.FASTQ
+                    sequence_format = enum.FileFormat.FASTQ
                 case _:
                     raise exc.InvalidArgumentsError(
                         "Unsupported file format: expected FASTA (lines start with >) or FASTQ (records start with @)"
@@ -98,7 +98,7 @@ class FileService(BaseFileService):
             found_records: bool = False
             for record in sequence_records:
                 found_records = True
-                if sequence_format == enum.SequenceFormat.FASTQ:
+                if sequence_format == enum.FileFormat.FASTQ:
                     phred_quality_scores: list[int] | None = (
                         record.letter_annotations.get("phred_quality")
                     )
@@ -113,7 +113,7 @@ class FileService(BaseFileService):
                     raise exc.InvalidArgumentsError(
                         f"Invalid {sequence_format.value}: sequence contains invalid characters"
                     )
-                if sequence_format == enum.SequenceFormat.FASTA:
+                if sequence_format == enum.FileFormat.FASTA:
                     # SequnceFormat.FASTA doesn't need more than one record to validate
                     break
 

@@ -116,7 +116,7 @@ from gen_epix.seqdb.domain.command.seq import (
     KmerProfileCrudCommand as KmerProfileCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    LocusCodeCrudCommand as LocusCodeCrudCommand,
+    LocusCodeMapCrudCommand as LocusCodeMapCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import LocusCrudCommand as LocusCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -138,7 +138,6 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     PcrProtocolCrudCommand as PcrProtocolCrudCommand,
 )
-from gen_epix.seqdb.domain.command.seq import RawSeqCrudCommand as RawSeqCrudCommand
 from gen_epix.seqdb.domain.command.seq import ReadSetCrudCommand as ReadSetCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     RefAlleleCrudCommand as RefAlleleCrudCommand,
@@ -218,9 +217,6 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import TaxonCrudCommand as TaxonCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
-    TaxonLocusLinkCrudCommand as TaxonLocusLinkCrudCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     TaxonomyProtocolCrudCommand as TaxonomyProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import TaxonSetCrudCommand as TaxonSetCrudCommand
@@ -254,7 +250,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         KmerDetectionProtocolCrudCommand,
         KmerProfileCrudCommand,
         SequencingProtocolCrudCommand,
-        LocusCodeCrudCommand,
+        LocusCodeMapCrudCommand,
         LocusCrudCommand,
         LocusDetectionProtocolCrudCommand,
         LocusProfileCrudCommand,
@@ -263,7 +259,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
-        RawSeqCrudCommand,
         ReadSetCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
@@ -293,7 +288,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SnpDetectionProtocolCrudCommand,
         SnpProfileCrudCommand,
         TaxonCrudCommand,
-        TaxonLocusLinkCrudCommand,
         TaxonomyProtocolCrudCommand,
         TaxonSetCrudCommand,
         TaxonSetMemberCrudCommand,

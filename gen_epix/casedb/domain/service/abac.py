@@ -63,6 +63,7 @@ class BaseAbacService(CommonAbacService):
         command.CreateReadSetsForCasesCommand,
         command.CreateFileForReadSetCommand,
         command.CreateFileForSeqCommand,
+        command.CreateSeqForCaseCommand,
         command.CreateSeqsForCasesCommand,
         # command.CaseDataCollectionUpdateAssociationCommand,
         command.CreateCaseSetCommand,

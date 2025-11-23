@@ -47,6 +47,7 @@ from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
+from gen_epix.casedb.domain.model.case import CaseTypeSettings as CaseTypeSettings
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
 from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
@@ -80,7 +81,6 @@ from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProto
 from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
-from gen_epix.casedb.domain.model.seqdb import RawSeq as RawSeq
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Sample as Sample
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
@@ -151,11 +151,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             GeneticSequence,
             PhylogeneticTree,
             SequencingProtocol,
-            ReadSet,
-            File,
-            RawSeq,
-            Sample,
             AssemblyProtocol,
+            File,
+            Sample,
+            ReadSet,
             Seq,
         ],
         enum.ServiceType.SUBJECT: [
@@ -178,6 +177,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseTypeCol,
             CaseTypeColSet,
             CaseTypeColSetMember,
+            CaseTypeSettings,
             CompleteCaseType,
             Case,
             CaseForCreateUpdate,

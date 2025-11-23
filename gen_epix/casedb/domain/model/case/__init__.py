@@ -57,6 +57,9 @@ from gen_epix.casedb.domain.model.case.persistable import (
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
+from gen_epix.casedb.domain.model.case.persistable import (
+    CaseTypeSettings as CaseTypeSettings,
+)
 from gen_epix.casedb.domain.model.case.persistable import Col as Col
 from gen_epix.casedb.domain.model.case.persistable import Dim as Dim
 from gen_epix.casedb.domain.model.case.persistable import (

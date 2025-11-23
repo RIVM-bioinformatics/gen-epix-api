@@ -146,6 +146,8 @@ class Protocol(Enum):
 
 class TaxonRank(Enum):
     NO_RANK = "NO_RANK"
+    ACELLULAR_ROOT = "ACELLULAR_ROOT"
+    REALM = "REALM"
     DOMAIN = "DOMAIN"
     SUPERKINGDOM = "SUPERKINGDOM"
     KINGDOM = "KINGDOM"
@@ -165,10 +167,17 @@ class TaxonRank(Enum):
     SPECIES_GROUP = "SPECIES_GROUP"
     SPECIES_SUBGROUP = "SPECIES_SUBGROUP"
     SPECIES = "SPECIES"
+    SEROGROUP = "SEROGROUP"
+    SEROTYPE = "SEROTYPE"
+    BIOTYPE = "BIOTYPE"
+    VARIETAS = "VARIETAS"
+    FORMA_SPECIALIS = "FORMA_SPECIALIS"
     SUBSPECIES = "SUBSPECIES"
+    GENOTYPE = "GENOTYPE"
     STRAIN = "STRAIN"
     CLADE = "CLADE"
     TRIBE = "TRIBE"
+    ISOLATE = "ISOLATE"
 
 
 class QualityControlResult(Enum):
@@ -180,9 +189,43 @@ class QualityControlResult(Enum):
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
 
 
+class LocusType(Enum):
+    GENE = "GENE"
+    INTERGENIC_REGION = "INTERGENIC_REGION"
+    TANDEM_REPEAT = "TANDEM_REPEAT"
+    PCR = "PCR"
+    OTHER = "OTHER"
+    UNKNOWN = "UNKNOWN"
+
+
+class SeqAlphabet(Enum):
+    IUPAC_DNA = frozenset("acgturyswkmbdhvn")
+    IUPAC_DNA_AMBIGUITY = frozenset("uryswkmbdhvn")
+    DNA5 = frozenset("acgtn")
+    DNA4 = frozenset("acgt")
+
+
+class DnaAmbiguityMap(Enum):
+    A = frozenset("a")
+    C = frozenset("c")
+    G = frozenset("g")
+    T = frozenset("t")
+    R = frozenset("ag")
+    Y = frozenset("ct")
+    S = frozenset("gc")
+    W = frozenset("at")
+    K = frozenset("gt")
+    M = frozenset("ac")
+    B = frozenset("cgt")
+    D = frozenset("agt")
+    H = frozenset("act")
+    V = frozenset("acg")
+    N = frozenset("acgt")
+
+
 class SeqFormat(Enum):
     HASH_ONLY = "HASH_ONLY"  # Only the hash code of the sequence is known or stored
-    STR_DNA5 = "STR_DNA5"  # String of ACTGN
+    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters
 
 
 class AlignmentFormat(Enum):
@@ -247,6 +290,14 @@ class SeqDistanceFormat(Enum):
     PROFILE_ID_DISTANCE_DICT = "PROFILE_ID_DISTANCE_DICT"
 
 
-class SequenceFormat(Enum):
+class SeqFileFormat(Enum):
+    FASTA = "FASTA"
+
+
+class ReadsFileFormat(Enum):
+    FASTQ = "FASTQ"
+
+
+class FileFormat(Enum):
     FASTA = "FASTA"
     FASTQ = "FASTQ"

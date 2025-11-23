@@ -2,7 +2,7 @@ import hashlib
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, field_serializer, field_validator
+from pydantic import Field, field_serializer
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
@@ -65,11 +65,13 @@ class LocusProfile(Model, QualityMixin):
         default=enum.LocusProfileFormat.LOCUS_PROFILE_FORMAT1,
         description="The representation format of the loci.",
     )
-    locus_profile_hash: bytes = Field(
-        description="The SHA256 hash of the sorted list of allele ids as bytes.",
-        min_length=32,
-        max_length=32,
+    locus_profile_hash: UUID = Field(
+        description="The first 128 bits of the SHA256 hash of the sorted list of allele ids as bytes.",
     )
+
+    @field_serializer("locus_profile_hash")
+    def _serialize_locus_profile_hash(self, value: UUID) -> str:
+        return str(value)
 
 
 class AlleleProfile(Model, QualityMixin):
@@ -114,17 +116,13 @@ class AlleleProfile(Model, QualityMixin):
         default=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
         description="The representation format of the alleles.",
     )
-    allele_profile_hash: bytes = Field(
-        description="The SHA256 hash of the sorted list of allele ids as bytes.",
-        min_length=32,
-        max_length=32,
+    allele_profile_hash: UUID = Field(
+        description="The first 128 bits of the SHA256 hash of the sorted list of allele ids as bytes.",
     )
 
-    @field_validator("allele_profile_hash", mode="before")
-    def _validate_allele_profile_hash(cls, value: str | bytes) -> bytes:
-        if isinstance(value, str):
-            value = bytes.fromhex(value)
-        return value
+    @field_serializer("allele_profile_hash")
+    def _serialize_allele_profile_hash(self, value: UUID) -> str:
+        return str(value)
 
     @staticmethod
     def get_allele_profile_hash(allele_ids: list[UUID | None]) -> bytes:
@@ -195,23 +193,17 @@ class SnpProfile(Model, QualityMixin):
         default=enum.SnpProfileFormat.REF_ALN_SEQ,
         description="The representation format of the SNPs.",
     )
-    snp_profile_hash: bytes = Field(
-        description="The SHA256 hash of the ASCII lower case reference sequence with all SNPs applied.",
-        min_length=32,
-        max_length=32,
+    snp_profile_hash: UUID = Field(
+        description="The first 128 bits of the SHA256 hash of the ASCII lower case reference sequence with all SNPs applied.",
     )
 
-    @field_validator("snp_profile_hash", mode="before")
-    def _validate_snp_profile_hash(cls, value: str | bytes) -> bytes:
-        if isinstance(value, str):
-            value = bytes.fromhex(value)
-        return value
+    @field_serializer("snp_profile_hash")
+    def _serialize_snp_profile_hash(self, value: UUID) -> str:
+        return str(value)
 
     @field_serializer("snp_profile_format", mode="plain")
-    def _serialize_snp_profile_format(self, value: str | enum.SnpProfileFormat) -> str:
-        if isinstance(value, enum.SnpProfileFormat):
-            return value.value
-        return value
+    def _serialize_snp_profile_format(self, value: enum.SnpProfileFormat) -> str:
+        return value.value
 
 
 class MlvaDetectionProtocol(Model, ProtocolMixin):
@@ -262,11 +254,13 @@ class MlvaProfile(Model, QualityMixin):
         default=enum.MlvaProfileFormat.MLVA_PROFILE_FORMAT1,
         description="The representation format of the profile.",
     )
-    mlva_profile_hash: bytes = Field(
-        description="The SHA256 hash of the ASCII sorted loci followed by their corresponding sorted counts as 32 bit signed integers.",
-        min_length=32,
-        max_length=32,
+    mlva_profile_hash: UUID = Field(
+        description="The first 128 bits of the SHA256 hash of the ASCII sorted loci followed by their corresponding sorted counts as 32 bit signed integers.",
     )
+
+    @field_serializer("mlva_profile_hash")
+    def _serialize_mlva_profile_hash(self, value: UUID) -> str:
+        return str(value)
 
 
 class KmerDetectionProtocol(Model, ProtocolMixin):
@@ -319,11 +313,13 @@ class KmerProfile(Model, QualityMixin):
         default=enum.KmerProfileFormat.KMER_PROFILE_FORMAT1,
         description="The representation format of the k-mers.",
     )
-    kmer_profile_hash: bytes = Field(
-        description="The SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
-        min_length=32,
-        max_length=32,
+    kmer_profile_hash: UUID = Field(
+        description="The first 128 bits of the SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
     )
+
+    @field_serializer("kmer_profile_hash")
+    def _serialize_kmer_profile_hash(self, value: UUID) -> str:
+        return str(value)
 
 
 class CompleteAlleleProfile(Model):

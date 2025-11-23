@@ -1,12 +1,14 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 
 class SequencingProtocol(Model, ProtocolMixin):
@@ -22,11 +24,15 @@ class SequencingProtocol(Model, ProtocolMixin):
     )
 
 
-class ReadSet(Model, CodeMixin, QualityMixin):
+class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     """
     A set of sequencing reads, either single-end or paired-end, that is the result
     of sequencing a sample using a sequencing protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
+
+    The reads data need not be referenced on creation of this instance, to allow
+    for deferred upload of the reads data. The has_linked_reads property can be used
+    to check whether the reads data have been linked to this instance.
     """
 
     ENTITY: ClassVar = Entity(
@@ -36,22 +42,14 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         keys=create_keys({1: "code"}),
         links=create_links(
             {
-                #!FIXME links with None foreign keys are not supported yet
-                # 1: (
-                #     "fwd_file_id",
-                #     File,
-                #     None,
-                # ),
-                # 2: (
-                #     "rev_file_id",
-                #     File,
-                #     None,
-                # ),
-                1: (
+                1: ("sample_id", Sample, "sample"),
+                2: (
                     "sequencing_protocol_id",
                     SequencingProtocol,
                     "sequencing_protocol",
                 ),
+                3: ("fwd_file_id", File, "fwd_file"),
+                4: ("rev_file_id", File, "rev_file"),
             }
         ),
     )
@@ -72,25 +70,40 @@ class ReadSet(Model, CodeMixin, QualityMixin):
         default=None,
         description="The unique file identifier for the forward read set. In case of single-end reads, this is the only read set. FOREIGN KEY",
     )
+    fwd_file: File | None = Field(
+        default=None, description="The file representing the forward read set."
+    )
     rev_file_id: UUID | None = Field(
         default=None,
         description="The unique file identifier for the reverse read set, if any.",
     )
-    fwd_reads_hash: bytes | None = Field(
-        default=None,
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
-        min_length=32,
-        max_length=32,
+    rev_file: File | None = Field(
+        default=None, description="The file representing the reverse read set."
     )
-    rev_reads_hash: bytes | None = Field(
+    fwd_reads_hash: UUID | None = Field(
         default=None,
-        description="The SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
-        min_length=32,
-        max_length=32,
+        description="The first 128 bits of the SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
+    )
+    rev_reads_hash: UUID | None = Field(
+        default=None,
+        description="The first 128 bits of the SHA256 hash of the uncompressed FASTQ file representation of the reverse read set.",
     )
     sequencing_run_code: str | None = Field(
         description="The code of the sequencing run.", max_length=255, default=None
     )
+
+    @computed_field(
+        description="Whether the read set has any linked reads data, either via URIs or file links."
+    )
+    @property
+    def has_linked_reads(self) -> bool:
+        """"""
+        return (
+            self.fwd_uri is not None
+            or self.fwd_file_id is not None
+            or self.rev_uri is not None
+            or self.rev_file_id is not None
+        )
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:

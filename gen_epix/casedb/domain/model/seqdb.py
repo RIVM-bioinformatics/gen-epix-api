@@ -17,7 +17,6 @@ from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.util import create_keys, create_links
 from gen_epix.seqdb.domain.model import AssemblyProtocol as SeqdbAssemblyProtocol
 from gen_epix.seqdb.domain.model import File as SeqdbFile
-from gen_epix.seqdb.domain.model import RawSeq as SeqdbRawSeq
 from gen_epix.seqdb.domain.model import ReadSet as SeqdbReadSet
 from gen_epix.seqdb.domain.model import Sample as SeqdbSample
 from gen_epix.seqdb.domain.model import Seq as SeqdbSeq
@@ -105,11 +104,29 @@ class SequencingProtocol(SeqdbSequencingProtocol):
     )
 
 
+class AssemblyProtocol(SeqdbAssemblyProtocol):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="assembly_protocols",
+        table_name="assembly_protocol",
+        persistable=False,
+        keys=create_keys({1: "code", 2: ("name", "version")}),
+    )
+
+
 class File(SeqdbFile):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",
         table_name="file",
         persistable=False,
+    )
+
+
+class Sample(SeqdbSample):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="samples",
+        table_name="sample",
+        persistable=False,
+        keys=create_keys({1: "code"}),
     )
 
 
@@ -121,39 +138,24 @@ class ReadSet(SeqdbReadSet):
         keys=create_keys({1: "code"}),
         links=create_links(
             {
-                1: (
+                1: ("sample_id", Sample, "sample"),
+                2: (
                     "sequencing_protocol_id",
                     SequencingProtocol,
                     "sequencing_protocol",
                 ),
+                3: (
+                    "fwd_file_id",
+                    File,
+                    "fwd_file",
+                ),
+                4: (
+                    "rev_file_id",
+                    File,
+                    "rev_file",
+                ),
             }
         ),
-    )
-    library_prep_protocol: LibraryPrepProtocol | None = copy_model_field(SeqdbReadSet, "library_prep_protocol")
-
-class AssemblyProtocol(SeqdbAssemblyProtocol):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="assembly_protocols",
-        table_name="assembly_protocol",
-        persistable=False,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
-class RawSeq(SeqdbRawSeq):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="raw_seqs",
-        table_name="raw_seq",
-        persistable=False,
-    )
-
-
-class Sample(SeqdbSample):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="samples",
-        table_name="sample",
-        persistable=False,
-        keys=create_keys({1: "code"}),
     )
 
 
@@ -173,12 +175,12 @@ class Seq(SeqdbSeq):
                 2: ("read_set_id", ReadSet, "read_set"),
                 3: ("read_set2_id", ReadSet, "read_set2"),
                 4: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
-                5: ("raw_seq_id", RawSeq, "raw_seq"),
             }
         ),
     )
     sample: Sample | None = copy_model_field(SeqdbSeq, "sample")
     read_set: ReadSet | None = copy_model_field(SeqdbSeq, "read_set")
     read_set2: ReadSet | None = copy_model_field(SeqdbSeq, "read_set2")
-    assembly_protocol: AssemblyProtocol | None = copy_model_field(SeqdbSeq, "assembly_protocol")
-    raw_seq: RawSeq | None = copy_model_field(SeqdbSeq, "raw_seq")
+    assembly_protocol: AssemblyProtocol | None = copy_model_field(
+        SeqdbSeq, "assembly_protocol"
+    )

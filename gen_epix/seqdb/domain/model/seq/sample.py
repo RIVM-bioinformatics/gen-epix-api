@@ -1,3 +1,4 @@
+import json
 from typing import ClassVar
 from uuid import UUID
 
@@ -12,9 +13,12 @@ from gen_epix.seqdb.domain.model.seq.base import CodeMixin
 
 class Sample(Model, CodeMixin):
     """
-    The original physical sample on which all measurements were performed either
-    directly or through some derived samples. Derived samples such as cultures
+    The original physical sample (specimen) on which all measurements were performed
+    either directly or through some derived samples. Derived samples such as cultures
     or library preps for sequencing are not modelled.
+
+    Descriptive properties of the sample, such as the sampling date, are not
+    modelled explicitly but can be stored in the props attribute as key-value pairs.
     """
 
     ENTITY: ClassVar = Entity(
@@ -33,14 +37,27 @@ class Sample(Model, CodeMixin):
         ),
     )
     created_in_data_collection_id: UUID = Field(
-        description="The ID of the data collection where the case was created. FOREIGN KEY",
+        description="The ID of the data collection where the sample was created. FOREIGN KEY",
     )
     created_in_data_collection: DataCollection | None = Field(
-        default=None, description="The data collection where the case was created"
+        default=None, description="The data collection where the sample was created"
     )
-    props: dict[str, str] = Field(
+    props: dict[str, str | int | float | None] = Field(
         default_factory=dict, description="The properties of the sample."
     )
+
+    @field_validator("props", mode="before")
+    def _validate_props(cls, value: str | dict) -> dict:
+        if isinstance(value, str):
+            value = json.loads(value)
+        return value
+
+
+class HasSampleMixin:
+    sample_id: UUID = Field(
+        description="The unique identifier for the sample from which these results were obtained. FOREIGN KEY"
+    )
+    sample: Sample | None = Field(default=None, description="The sample.")
 
 
 class SampleDataCollectionLink(Model):

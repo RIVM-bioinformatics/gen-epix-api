@@ -57,6 +57,9 @@ from gen_epix.casedb.domain.command.case import (
 from gen_epix.casedb.domain.command.case import (
     CaseTypeSetMemberCrudCommand as CaseTypeSetMemberCrudCommand,
 )
+from gen_epix.casedb.domain.command.case import (
+    CaseTypeSettingsCrudCommand as CaseTypeSettingsCrudCommand,
+)
 from gen_epix.casedb.domain.command.case import ColCrudCommand as ColCrudCommand
 from gen_epix.casedb.domain.command.case import CreateCasesCommand as CreateCasesCommand
 from gen_epix.casedb.domain.command.case import (
@@ -70,6 +73,9 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     CreateReadSetsForCasesCommand as CreateReadSetsForCasesCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    CreateSeqForCaseCommand as CreateSeqForCaseCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     CreateSeqsForCasesCommand as CreateSeqsForCasesCommand,
@@ -269,9 +275,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     enum.ServiceType.CASE: {
         CaseCrudCommand,
         CaseDataCollectionLinkCrudCommand,
-        CreateCasesCommand,
         CaseSetCategoryCrudCommand,
-        CreateCaseSetCommand,
         CaseSetCrudCommand,
         CaseSetDataCollectionLinkCrudCommand,
         CaseSetMemberCrudCommand,
@@ -285,14 +289,19 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CaseTypeSetCategoryCrudCommand,
         CaseTypeSetCrudCommand,
         CaseTypeSetMemberCrudCommand,
+        CaseTypeSettingsCrudCommand,
         ColCrudCommand,
+        CreateCasesCommand,
+        CreateCaseSetCommand,
+        CreateFileForReadSetCommand,
+        CreateFileForSeqCommand,
+        CreateReadSetsForCasesCommand,
+        CreateSeqForCaseCommand,
+        CreateSeqsForCasesCommand,
         DimCrudCommand,
         GeneticDistanceProtocolCrudCommand,
         RetrieveAlleleProfileCommand,
-        CreateReadSetsForCasesCommand,
-        CreateSeqsForCasesCommand,
-        CreateFileForReadSetCommand,
-        CreateFileForSeqCommand,
+        RetrieveAssemblyProtocolsCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,
@@ -301,14 +310,13 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveCaseTypeStatsCommand,
         RetrieveCompleteCaseTypeCommand,
         RetrieveGeneticSequenceByCaseCommand,
+        RetrieveGeneticSequenceFastaByCaseCommand,
         RetrievePhylogeneticTreeByCasesCommand,
         RetrievePhylogeneticTreeBySequencesCommand,
-        RetrieveGeneticSequenceFastaByCaseCommand,
+        RetrieveSequencingProtocolsCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
         ValidateCasesCommand,
-        RetrieveSequencingProtocolsCommand,
-        RetrieveAssemblyProtocolsCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,
@@ -318,9 +326,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveContainingRegionCommand,
     },
     enum.ServiceType.ONTOLOGY: {
-        ConceptSetCrudCommand,
         ConceptCrudCommand,
         ConceptRelationCrudCommand,
+        ConceptSetCrudCommand,
         DiseaseCrudCommand,
         DiseaseEtiologicalAgentUpdateAssociationCommand,
         EtiologicalAgentCrudCommand,

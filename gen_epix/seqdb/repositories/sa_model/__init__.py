@@ -44,7 +44,7 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
-from gen_epix.seqdb.repositories.sa_model.seq import LocusCode as LocusCode
+from gen_epix.seqdb.repositories.sa_model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
@@ -56,7 +56,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 from gen_epix.seqdb.repositories.sa_model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import PcrProtocol as PcrProtocol
-from gen_epix.seqdb.repositories.sa_model.seq import RawSeq as RawSeq
 from gen_epix.seqdb.repositories.sa_model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.repositories.sa_model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.repositories.sa_model.seq import RefSeq as RefSeq
@@ -93,7 +92,6 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
 from gen_epix.seqdb.repositories.sa_model.seq import Taxon as Taxon
-from gen_epix.seqdb.repositories.sa_model.seq import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.repositories.sa_model.seq import (
     TaxonomyProtocol as TaxonomyProtocol,
 )
@@ -137,7 +135,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.KmerProfile: KmerProfile,
         model.SequencingProtocol: SequencingProtocol,
         model.Locus: Locus,
-        model.LocusCode: LocusCode,
+        model.LocusCodeMap: LocusCodeMap,
         model.LocusDetectionProtocol: LocusDetectionProtocol,
         model.LocusProfile: LocusProfile,
         model.LocusSet: LocusSet,
@@ -145,7 +143,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.MlvaProfile: MlvaProfile,
         model.PcrMeasurement: PcrMeasurement,
         model.PcrProtocol: PcrProtocol,
-        model.RawSeq: RawSeq,
         model.ReadSet: ReadSet,
         model.RefAllele: RefAllele,
         model.RefSeq: RefSeq,
@@ -167,7 +164,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.SnpDetectionProtocol: SnpDetectionProtocol,
         model.SnpProfile: SnpProfile,
         model.Taxon: Taxon,
-        model.TaxonLocusLink: TaxonLocusLink,
         model.TaxonomyProtocol: TaxonomyProtocol,
         model.TaxonSet: TaxonSet,
         model.TaxonSetMember: TaxonSetMember,

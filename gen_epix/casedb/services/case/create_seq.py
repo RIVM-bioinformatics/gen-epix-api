@@ -14,7 +14,11 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 def case_service_create_read_sets_or_seqs_for_cases(
     self: BaseCaseService,
-    cmd: command.CreateReadSetsForCasesCommand | command.CreateSeqsForCasesCommand,
+    cmd: (
+        command.CreateReadSetsForCasesCommand
+        | command.CreateSeqsForCasesCommand
+        | command.CreateSeqForCaseCommand
+    ),
 ) -> list[model.ReadSet] | list[model.Seq]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
@@ -29,6 +33,11 @@ def case_service_create_read_sets_or_seqs_for_cases(
         read_sets = [x.read_set for x in cmd.case_read_sets]  # type:ignore
         case_ids = [x.case_id for x in cmd.case_read_sets]
         case_type_col_ids = [x.case_type_col_id for x in cmd.case_read_sets]
+    elif isinstance(cmd, command.CreateSeqForCaseCommand):
+        is_read_set = False
+        seqs = [cmd.case_seq]  # type:ignore
+        case_ids = [cmd.case_seq.case_id]
+        case_type_col_ids = [cmd.case_seq.case_type_col_id]
     elif isinstance(cmd, command.CreateSeqsForCasesCommand):
         is_read_set = False
         seqs = [x.seq for x in cmd.case_seqs]  # type:ignore
@@ -194,6 +203,7 @@ def _get_cases_for_create_read_sets_or_seqs(
     self: BaseCaseService,
     cmd: (
         command.CreateReadSetsForCasesCommand
+        | command.CreateSeqForCaseCommand
         | command.CreateSeqsForCasesCommand
         | command.CreateFileForReadSetCommand
         | command.CreateFileForSeqCommand
@@ -240,7 +250,12 @@ def _get_cases_for_create_read_sets_or_seqs(
     ):
         expected_col_type = enum.ColType.GENETIC_READS
     elif isinstance(
-        cmd, (command.CreateSeqsForCasesCommand, command.CreateFileForSeqCommand)
+        cmd,
+        (
+            command.CreateSeqForCaseCommand,
+            command.CreateSeqsForCasesCommand,
+            command.CreateFileForSeqCommand,
+        ),
     ):
         expected_col_type = enum.ColType.GENETIC_SEQUENCE
     else:

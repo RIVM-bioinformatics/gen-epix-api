@@ -36,10 +36,9 @@ from gen_epix.seqdb.domain.model.seq.distance import (
 )
 from gen_epix.seqdb.domain.model.seq.locus import Allele as Allele
 from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
-from gen_epix.seqdb.domain.model.seq.locus import LocusCode as LocusCode
+from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
-from gen_epix.seqdb.domain.model.seq.locus import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.domain.model.seq.non_persistable import (
     CompleteSample as CompleteSample,
 )
@@ -82,7 +81,7 @@ from gen_epix.seqdb.domain.model.seq.sample import (
 from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq.seq import CompleteContig as CompleteContig
-from gen_epix.seqdb.domain.model.seq.seq import RawSeq as RawSeq
+from gen_epix.seqdb.domain.model.seq.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq.seq import RefSnp as RefSnp
 from gen_epix.seqdb.domain.model.seq.seq import RefSnpSet as RefSnpSet

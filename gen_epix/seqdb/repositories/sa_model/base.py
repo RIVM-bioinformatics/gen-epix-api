@@ -1,5 +1,8 @@
+from uuid import UUID
+
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped
+from sqlalchemy_utils.types.uuid import UUIDType
 
 from gen_epix.commondb.repositories.sa_model import get_mixin_mapped_column
 from gen_epix.seqdb.domain import model
@@ -23,8 +26,8 @@ class SeqMixin:
     seq_format: Mapped[str] = get_mixin_mapped_column(
         model.SeqMixin, "seq_format", sa.String
     )
-    seq_hash: Mapped[bytes] = get_mixin_mapped_column(
-        model.SeqMixin, "seq_hash", sa.LargeBinary
+    seq_hash: Mapped[UUID] = get_mixin_mapped_column(
+        model.SeqMixin, "seq_hash", UUIDType
     )
     length: Mapped[int] = get_mixin_mapped_column(model.SeqMixin, "length", sa.Integer)
 
@@ -34,8 +37,8 @@ class AlignmentMixin:
     aln_format: Mapped[str] = get_mixin_mapped_column(
         model.AlignmentMixin, "aln_format", sa.String
     )
-    aln_hash: Mapped[bytes] = get_mixin_mapped_column(
-        model.AlignmentMixin, "aln_hash", sa.LargeBinary
+    aln_hash: Mapped[UUID] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_hash", UUIDType
     )
 
 

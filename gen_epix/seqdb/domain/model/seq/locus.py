@@ -1,37 +1,88 @@
 import json
-from typing import ClassVar
+from functools import cached_property
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, field_validator
+from pydantic import (
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-from gen_epix.seqdb.domain.model.seq.base import QualityMixin, SeqMixin
-from gen_epix.seqdb.domain.model.seq.taxon import Taxon
+from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.model.seq.base import SeqMixin
 
 
 class Locus(Model):
+    """
+    A genetic locus, e.g. a gene or other genomic region of interest.
+
+    A locus is immutable: once created, it cannot be deleted. Its properties
+    should not change semantically either. As such, locus IDs can safely be
+    referenced in other models and outside of the application.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="loci",
         table_name="locus",
         persistable=True,
         keys=create_keys({1: "code"}),
     )
-    code: str = Field(description="The code of the locus.", max_length=255)
-    gene_code: str | None = Field(
+    code: str = Field(
+        description="A standard code for the locus. UNIQUE", max_length=255
+    )
+    name: str | None = Field(
+        default=None, description="The name of the locus.", max_length=255
+    )
+    description: str | None = Field(
+        default=None, description="A description of the locus."
+    )
+    locus_type: enum.LocusType = Field(
+        default=enum.LocusType.UNKNOWN, description="The type of the locus."
+    )
+    gene_product_code: str | None = Field(
         default=None,
-        description="The code of the gene, if the locus corresponds to one and a code is available.",
+        description="A code for the gene product, only in case the locus is a gene and if available. An empty string is treated as None.",
         max_length=255,
     )
-    product_name: str | None = Field(
-        default=None,
-        description="The name of the gene product, if available.",
-        max_length=255,
-    )
+
+    @field_validator("gene_product_code", mode="before")
+    @classmethod
+    def _validate_gene_product_code(cls, value: str | None) -> str | None:
+        if isinstance(value, str) and len(value) == 0:
+            return None
+        return value
+
+    @model_validator(mode="after")
+    def _validate_locus(self) -> Self:
+        if self.locus_type != enum.LocusType.GENE and self.gene_product_code:
+            raise ValueError("gene_product_code must be provided for locus_type GENE.")
+        return self
+
+    @field_serializer("locus_type", mode="plain")
+    def _serialize_locus_type(self, value: str | enum.LocusType) -> str:
+        if isinstance(value, enum.LocusType):
+            return value.value
+        return value
 
 
 class LocusSet(Model):
+    """
+    An ordered set of loci. This can be used to define e.g. schemes for wgMLST typing
+    or other locus-based analyses. Because the set is ordered, i.e. a list of unique
+    locus IDS, it can also be used to define the order of loci in allele profiles and
+    other analyses.
+
+    A locus set is immutable: once created, it cannot be deleted or updated. As such,
+    locus set IDs and names can safely be referenced in other models and outside of the
+    application.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_sets",
         table_name="locus_set",
@@ -40,10 +91,15 @@ class LocusSet(Model):
     )
     code: str = Field(description="The code of the locus set.", max_length=255)
     name: str = Field(description="The name of the locus set.", max_length=255)
-    n_loci: int = Field(description="The number of loci in the locus set.")
     locus_ids: list[UUID] = Field(
         description="The ordered IDs of the loci in the locus set."
     )
+
+    @computed_field(description="The number of loci in the locus set.")
+    @cached_property
+    def n_loci(self) -> int:
+        """"""
+        return len(self.locus_ids)
 
     @field_validator("locus_ids", mode="before")
     @classmethod
@@ -61,10 +117,17 @@ class LocusSet(Model):
         return [str(x) for x in value]
 
 
-class LocusCode(Model):
+class LocusCodeMap(Model):
+    """
+    A mapping from locus codes to locus IDs for a specific naming scheme.
+    This can be used e.g. to translate locus codes used by a particular
+    application to the IDs used in this application, thereby facilitating
+    interoperability.
+    """
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="locus_codes",
-        table_name="locus_code",
+        snake_case_plural_name="locus_code_maps",
+        table_name="locus_code_map",
         persistable=True,
         keys=create_keys({1: ("naming_scheme")}),
     )
@@ -86,14 +149,26 @@ class LocusCode(Model):
         dict_value: dict = value  # type: ignore[assignment]
         if isinstance(value, str):
             dict_value = json.loads(value)
-        if len(set(dict_value.values())) != len(dict_value):
-            raise ValueError("All locus IDs in code_map must be unique.")
         if any(len(x) > 255 for x in dict_value.keys()):
             raise ValueError("All locus codes in code_map must have max length of 255.")
         return dict_value
 
 
 class RefAllele(Model, SeqMixin):
+    """
+    A reference allele for a locus. This can be an actual sequence or an
+    artificial construct, typically then a consensus sequence. It can be used
+    e.g. as a reference for alignment of other alleles for the locus or for
+    reducing storage requirements of alleles.
+
+    A reference allele is immutable: once created, it cannot be deleted or updated. As
+    such, reference allele IDs can safely be referenced in other models and outside of
+    the application.
+
+    The ID of the reference allele is equal to the hash of the sequence. As such, the
+    ID of the reference allele can be computed outside of the application as well.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ref_alleles",
         table_name="ref_allele",
@@ -101,6 +176,7 @@ class RefAllele(Model, SeqMixin):
         keys=create_keys({1: ("locus_id", "index")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
+
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
     )
@@ -109,8 +185,35 @@ class RefAllele(Model, SeqMixin):
         description="The index (ordinal number) of the reference allele for the locus."
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
+        return SeqMixin._validate_model_and_id(values)
 
-class Allele(Model, SeqMixin, QualityMixin):
+
+class Allele(Model, SeqMixin):
+    """
+    An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
+    Any IUPAC ambiguity codes are allowed in the sequence.
+
+    An allele is immutable: once created, it cannot be deleted or updated. As such,
+    allele IDs can safely be referenced in other models and outside of the application.
+
+    The ID of the allele is equal to the hash of the sequence. As such, the ID of the
+    allele can be computed outside of the application as well, e.g., to improve
+    performance. In case of a collision, i.e., two different sequences yielding the same
+    hash, the newer allele cannot be persisted. The probability of such collisions is
+    extremely low: about 10^15 alleles would need to be stored for a one-in-a-billion
+    chance of a collision. If such a collision does occur, you could send it to your
+    nearest cryptographer, as they will be thrilled to investigate it. A word of
+    caution though: this will lead to the discovery that SHA256 is cryptographically
+    broken, which in turn will lead to the discovery that P=NP. This will lead to the
+    collapse of modern cryptography as we know it, triggering a period of global chaos
+    that will eventually lead to nuclear armageddon and bring about the end of human
+    civilization as we know it. It may be good therefore to think twice before
+    reporting such collisions.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="alleles",
         table_name="allele",
@@ -118,27 +221,17 @@ class Allele(Model, SeqMixin, QualityMixin):
         keys=create_keys({1: ("locus_id", "seq_hash")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
+
+    NULL_ALLELE_ID: ClassVar[UUID] = UUID("00000000-0000-0000-0000-000000000000")
+
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
     )
     locus: Locus | None = Field(default=None, description="The locus.")
 
-
-class TaxonLocusLink(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="taxon_locus_links",
-        table_name="taxon_locus_link",
-        persistable=True,
-        keys=create_keys({1: ("taxon_id", "locus_id")}),
-        links=create_links(
-            {1: ("taxon_id", Taxon, "taxon"), 2: ("locus_id", Locus, "locus")}
-        ),
-    )
-    taxon_id: UUID = Field(
-        description="The unique identifier for the taxon. FOREIGN KEY"
-    )
-    taxon: Taxon | None = Field(default=None, description="The taxon.")
-    locus_id: UUID = Field(
-        description="The unique identifier for the locus. FOREIGN KEY"
-    )
-    locus: Locus | None = Field(default=None, description="The locus.")
+    @model_validator(mode="before")
+    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
+        values = SeqMixin._validate_model_and_id(values)
+        if values.get("id") == cls.NULL_ALLELE_ID:
+            raise ValueError("Allele ID cannot be the NULL_ALLELE_ID.")
+        return values

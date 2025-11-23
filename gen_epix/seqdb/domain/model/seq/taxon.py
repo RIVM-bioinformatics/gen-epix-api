@@ -10,17 +10,29 @@ from gen_epix.seqdb.domain import enum
 
 
 class Taxon(Model):
+    """
+    A taxonomic unit (taxon) in the taxonomic hierarchy. A single unified taxonomy
+    is modelled rather than multiple separate taxonomies such as NCBI Taxonomy
+    and ICTV taxonomy. The corresponding taxon codes for these taxonomies, as
+    well as SNOMED-CT organism codes, can be added. The responsibility for creating
+    a single unified taxonomy lies outside of the application.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxa",
         table_name="taxon",
         persistable=True,
         keys=create_keys({1: "code"}),
     )
+
+    NCBI_TAXON_PREFIX: ClassVar[str] = "NCBI:txid"
+
     code: str = Field(description="The code of the taxon", max_length=255)
     name: str = Field(description="The name of the taxon", max_length=255)
     rank: enum.TaxonRank = Field(description="The rank of the taxon")
     ncbi_taxid: int | None = Field(
-        default=None, description="The NCBI Taxonomy ID of the taxon"
+        default=None,
+        description="The NCBI Taxonomy ID of the taxon, as an int excluding the NCBI:txid prefix",
     )
     ictv_ictv_id: str | None = Field(
         default=None, description="The ICTV ID of the taxon", max_length=255
@@ -30,17 +42,31 @@ class Taxon(Model):
     )
     ncbi_ancestor_taxids: list[int] | None = Field(
         default=None,
-        description="The NCBI taxon IDs of the ancestors, sorted from highest to lowest rank",
+        description="The NCBI taxon IDs, excluding the NCBI:txid prefix, of the ancestors, sorted from highest to lowest rank",
     )
     ancestor_taxon_ids: list[UUID] = Field(
         description="The IDs of the ancestor taxa, sorted from highest to lowest rank"
     )
 
+    @field_validator("ncbi_taxid", mode="before")
+    @classmethod
+    def _validate_ncbi_taxid(cls, value: int | float | str) -> int:
+        if isinstance(value, str):
+            return int(value.replace(cls.NCBI_TAXON_PREFIX, ""))
+        return int(value)
+
     @field_validator("ncbi_ancestor_taxids", mode="before")
     @classmethod
     def _validate_ncbi_ancestor_taxids(cls, value: list[int] | str) -> list[int]:
         if isinstance(value, str):
-            return [int(x) for x in json.loads(value)]
+            return [
+                (
+                    int(x)
+                    if isinstance(x, (int, float))
+                    else int(x.replace(cls.NCBI_TAXON_PREFIX, ""))
+                )
+                for x in json.loads(value)
+            ]
         return value
 
     @field_validator("ancestor_taxon_ids", mode="before")
@@ -50,12 +76,30 @@ class Taxon(Model):
             return [UUID(x) for x in json.loads(value)]
         return value
 
+    @field_validator("rank", mode="before")
+    @classmethod
+    def _validate_rank(cls, value: str | enum.TaxonRank) -> enum.TaxonRank:
+        """
+        Validate and convert rank representation to a TaxonRank enum value. When given
+        as a string, it is converted to upper case and spaces are replaced with
+        underscores to support NCBI rank names as input.
+        """
+        if isinstance(value, str):
+            value = value.upper().replace(" ", "_")
+            return enum.TaxonRank(value)
+        return value
+
     @field_serializer("ancestor_taxon_ids", mode="plain")
     def _serialize_ancestor_taxon_ids(self, value: list[UUID]) -> list[str]:
         return [str(x) for x in value]
 
 
 class TaxonSet(Model):
+    """
+    A set of taxa, for example a set of taxa that are relevant for a specific
+    analysis or application.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_sets",
         table_name="taxon_set",
@@ -67,6 +111,10 @@ class TaxonSet(Model):
 
 
 class TaxonSetMember(Model):
+    """
+    A member of a taxon set, representing the inclusion of a specific taxon in a taxon set.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="taxon_set_members",
         table_name="taxon_set_member",

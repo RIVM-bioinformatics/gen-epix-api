@@ -678,6 +678,27 @@ def create_case_endpoints(
             handle_exception("b5c6d7e8", user, exception)
         return created_file_id
 
+    @router.post(
+        "/create_seq_for_case",
+        operation_id="create_seq_for_case",
+        name="Create a sequence for a case",
+        description=command.CreateSeqForCaseCommand.__doc__,
+    )
+    async def create_seq_for_case(
+        user: registered_user_dependency,  # type: ignore
+        case_seq: model.CaseSeq,
+    ) -> UUID:
+        try:
+            created_seqs: list[model.Seq] = app.handle(
+                command.CreateSeqForCaseCommand(
+                    user=user,
+                    case_seq=case_seq,
+                )
+            )
+        except Exception as exception:
+            handle_exception("a1b2c3d4", user, exception)
+        return created_seqs
+
     @router.get(
         "/retrieve/sequencing_protocols",
         operation_id="retrieve__sequencing_protocols",

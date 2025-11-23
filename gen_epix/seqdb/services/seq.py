@@ -2,13 +2,10 @@ import hashlib
 import json
 import sys
 from collections.abc import Callable, Hashable, Iterable
-from io import BytesIO, TextIOWrapper
-from typing import Any
 from uuid import UUID
 
 import numpy as np
 import scipy
-from Bio import SeqIO
 from Bio.Phylo.BaseTree import Clade
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from scipy.cluster.hierarchy import ClusterNode
@@ -330,16 +327,17 @@ class SeqService(BaseSeqService):
         wrap = cmd.wrap or 0
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
-            for seq_id, raw_seq in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
-                header = f">{seq_id}\n"
-                if not wrap:
-                    yield f"{header}{raw_seq}\n"
-                seq_length = len(raw_seq)
-                n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
-                yield header + "\n".join(
-                    raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
-                    for i in range(n_chunks)
-                )
+            for seq_id, contigs in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
+                for contig_seq_hash, raw_seq in contigs:
+                    header = f">{seq_id}:{contig_seq_hash}\n"
+                    if not wrap:
+                        yield f"{header}{raw_seq}\n"
+                    seq_length = len(raw_seq)
+                    n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
+                    yield header + "\n".join(
+                        raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
+                        for i in range(n_chunks)
+                    )
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(
@@ -522,4 +520,3 @@ class SeqService(BaseSeqService):
         )
         newick = f"({newick}"
         return newick
-

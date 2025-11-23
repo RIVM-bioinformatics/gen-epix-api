@@ -1,6 +1,7 @@
 from test.seqdb.integration.build_db.base import (
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_METADATA_USERS,
+    BELOW_APP_ADMIN_USERS,
     DATA_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
     SKIP_RAISE,
@@ -182,7 +183,23 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
-    def test_create_library_protocol(self, env: Env) -> None:
+    def test_create_data_collection(self, env: Env) -> None:
+        # Create data_collection as root, app_admin
+        env.create_data_collection("root1_1", "data_collection1")
+        env.create_data_collection("app_admin1_1", "data_collection2")
+        env.create_data_collection("app_admin1_2", "data_collection3")
+        env.create_data_collection("app_admin2_1", "data_collection4")
+        env.create_data_collection("app_admin2_2", "data_collection5")
+        if env.verbose:
+            env.print_data_collections()
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_data_collection_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_data_collection(exec_user, "data_collection11")
+
+    def test_create_sequencing_protocol(self, env: Env) -> None:
         # Create sequencing_protocol as root, app_admin, refdata_admin
         for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.create_sequencing_protocol(exec_user, f"sequencing_protocol{i + 1}")

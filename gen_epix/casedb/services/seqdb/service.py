@@ -117,34 +117,25 @@ class SeqdbService(BaseSeqdbService):
         )
         return seqs
 
-    def _retrieve_rawseq_objects_by_ids(
-        self, raw_seq_ids: list[UUID]
-    ) -> list[seqdb_model.RawSeq]:
-        raw_seqs: list[seqdb_model.RawSeq] = self.seqdb_app.handle(
-            seqdb_command.RawSeqCrudCommand(
-                user=self.seqdb_user,
-                obj_ids=raw_seq_ids,
-                operation=CrudOperation.READ_SOME,
-            )
-        )
-        return raw_seqs
-
     def retrieve_genetic_sequences(
         self, cmd: command.RetrieveGeneticSequenceByIdCommand
     ) -> list[model.GeneticSequence]:
         # naive implementation that retrieves sequences by ID
         seqs: list[seqdb_model.Seq] = self._retrieve_seq_objects_by_ids(cmd.seq_ids)
-        raw_seq_ids = [seq.raw_seq_id for seq in seqs]
-        raw_seqs: list[seqdb_model.RawSeq] = self._retrieve_rawseq_objects_by_ids(
-            list(set(raw_seq_ids))  # type: ignore[arg-type]
+        file_ids = [seq.file_id for seq in seqs if seq.file_id is not None]
+        files: list[seqdb_model.File] = self._retrieve_file_objects_by_ids(
+            list(set(file_ids))  # type: ignore[arg-type]
         )
-        raw_seq_map = {x.id: x for x in raw_seqs}
+        file_map = {x.id: x for x in files}
         # Convert raw sequences to model.GeneticSequence
         genetic_sequences = [
+            # TODO: handle parsing a single raw sequence from the file
             model.GeneticSequence(
-                id=seq.id, nucleotide_sequence=raw_seq_map[raw_seq_id].seq, distances={}
+                id=seq.id,
+                nucleotide_sequence=file_map[file_id].content.decode(encoding="utf-8"),
+                distances={},
             )
-            for seq, raw_seq_id in zip(seqs, raw_seq_ids)
+            for seq, file_id in zip(seqs, file_ids)
         ]
         return genetic_sequences
 

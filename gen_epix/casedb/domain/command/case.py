@@ -319,13 +319,23 @@ class CreateFileForSeqCommand(Command):
     file_content: bytes = Field(description="The content of the file to create.")
 
 
+class CreateSeqForCaseCommand(Command):
+    """
+    Create a sequence for a case based on a genetic sequence case type column.
+    """
+
+    case_seq: model.CaseSeq = Field(
+        description="The CaseSequence describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
+    )
+
+
 class CreateSeqsForCasesCommand(Command):
     """
     Create sequences for a set of cases based on a genetic sequence case type column.
     """
 
     case_seqs: list[model.CaseSeq] = Field(
-        description="The CaseSequences describing for which (case_id, case_type_col_id) a Sequence is to be created."
+        description="The CaseSequences describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
     )
 
 
@@ -374,6 +384,10 @@ class CaseTypeSetCrudCommand(CrudCommand):
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
+
+
+class CaseTypeSettingsCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeSettings
 
 
 class DimCrudCommand(CrudCommand):

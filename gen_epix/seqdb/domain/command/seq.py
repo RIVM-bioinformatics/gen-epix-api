@@ -116,8 +116,8 @@ class KmerProfileCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.KmerProfile
 
 
-class LocusCodeCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocusCode
+class LocusCodeMapCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.LocusCodeMap
 
 
 class LocusCrudCommand(CrudCommand):
@@ -150,10 +150,6 @@ class PcrMeasurementCrudCommand(CrudCommand):
 
 class PcrProtocolCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.PcrProtocol
-
-
-class RawSeqCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.RawSeq
 
 
 class ReadSetCrudCommand(CrudCommand):
@@ -246,10 +242,6 @@ class TaxonomyProtocolCrudCommand(CrudCommand):
 
 class TaxonCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Taxon
-
-
-class TaxonLocusLinkCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.TaxonLocusLink
 
 
 class TaxonSetCrudCommand(CrudCommand):
