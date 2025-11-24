@@ -45,6 +45,8 @@ class AuthService(BaseAuthService):
         # Initialize authentication services
         self._pending_idp_clients: list[dict[str, str | list]] = []
         self._pending_lock = threading.Lock()
+        self._idp_clients_by_name: dict[str, IdpClient]
+        self._idp_clients_by_label: dict[str, IdpClient]
 
         self._init_idp_clients(app, idps_cfg, ssl_context)
         self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
@@ -621,6 +623,8 @@ class AuthService(BaseAuthService):
         exposed_idp_clients: list[IdpClient] = []
         idp_names: set[str] = set()
         idp_labels: set[str] = set()
+        idp_clients_by_name: dict[str, IdpClient] = {}
+        idp_clients_by_label: dict[str, IdpClient] = {}
         logger = app.logger
         for idp_cfg in idps_cfg:
             idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
@@ -656,6 +660,11 @@ class AuthService(BaseAuthService):
                         f"Protocol {protocol.value} not implemented"
                     )
                 idp_clients.append(idp_client)
+                # use name and client maps to match existing idp clients to new configs
+                # comparing idp_client.server_cfg == new_idp_cfg is not reliable due to possible differences in cfg structures
+                # (e.g. not every idp uses OidcServerCfg)
+                idp_clients_by_name[idp_name] = idp_client
+                idp_clients_by_label[idp_label] = idp_client
                 if is_public:
                     exposed_idp_clients.append(idp_client)
             except Exception as exception:
@@ -670,7 +679,7 @@ class AuthService(BaseAuthService):
                         app.create_log_message("48b7e021", msg, exception=exception)
                     )
                 with self._pending_lock:
-                    self._pending_idp_clients.append(idp_client)
+                    self._pending_idp_clients.append(idp_cfg)
         for idp_client in idp_clients:  # type: ignore
             if isinstance(idp_client, OauthIdpClient):
                 if logger:
@@ -687,6 +696,8 @@ class AuthService(BaseAuthService):
                 )
         self._idp_clients = idp_clients
         self._exposed_idp_clients = exposed_idp_clients
+        self._idp_clients_by_name = idp_clients_by_name
+        self._idp_clients_by_label = idp_clients_by_label
 
     def _attempt_init_single_idp_client(
         self, idp_cfg: dict[str, str | list]
@@ -738,13 +749,14 @@ class AuthService(BaseAuthService):
         for idp_cfg in retry_clients:
             idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
             idp_label: str = idp_cfg["label"]  # type: ignore[assignment]
-            # avoid re-adding already existing clients
+            # avoid re-adding already existing clients using self._idp_clients_by_label and self._idp_clients_by_name
+            # TODO: if every idp in the future uses OidcServerCfg, the comparison can be modified to idp_name == existing_idp.server_cfg.name
             if any(
-                getattr(getattr(x, "server_cfg", None), "name", None) == idp_name
-                for x in self._idp_clients
+                idp_name == existing_name
+                for existing_name in self._idp_clients_by_name.keys()
             ) or any(
-                getattr(getattr(x, "server_cfg", None), "label", None) == idp_label
-                for x in self._idp_clients
+                idp_label == existing_label
+                for existing_label in self._idp_clients_by_label.keys()
             ):
                 with self._pending_lock:
                     try:

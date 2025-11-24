@@ -10,6 +10,7 @@ import pytest
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.services.auth import OauthIdpClient
+from dynaconf.utils.boxing import DynaBox
 
 
 @pytest.fixture(scope="module", name="env")
@@ -94,7 +95,7 @@ class TestAuth:
         assert response.status_code in (401, 403)
 
     def test_idp_retry_mechanism_adds_late_idp(self, env: AuthTestClient) -> None:
-        new_idp_cfg: dict[str, Any] = {
+        new_idp_cfg = DynaBox({
             "name": "late_idp",
             "label": "late_idp",
             "protocol": "OIDC",
@@ -109,7 +110,7 @@ class TestAuth:
             "response_types_supported": ["code"],
             "subject_types_supported": ["public"],
             "id_token_signing_alg_values_supported": ["RS256"],
-        }
+        })
         # assert only the OauthIdpClient from the initial config is present
         assert len(env.auth_service._idp_clients) == 1
 
@@ -122,7 +123,7 @@ class TestAuth:
     def test_idp_retry_handling_preserves_existing_clients(
         self, env: AuthTestClient
     ) -> None:
-        new_idp_cfg: dict[str, Any] = {
+        new_idp_cfg = DynaBox({
             "name": "idp1",
             "label": "idp1",
             "protocol": "OIDC",
@@ -137,7 +138,7 @@ class TestAuth:
             "response_types_supported": ["code"],
             "subject_types_supported": ["public"],
             "id_token_signing_alg_values_supported": ["RS256"],
-        }
+        })
 
         env.auth_service._pending_idp_clients.append(new_idp_cfg)
         env.auth_service._retry_pending_idp_clients()
