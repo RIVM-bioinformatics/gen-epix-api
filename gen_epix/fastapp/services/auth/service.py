@@ -1,5 +1,6 @@
 import logging
 import ssl
+import threading
 from typing import Annotated, Any
 
 from fastapi import Depends, Request, Security
@@ -42,6 +43,9 @@ class AuthService(BaseAuthService):
         )
 
         # Initialize authentication services
+        self._pending_idp_clients: list[dict[str, str | list]] = []
+        self._pending_lock = threading.Lock()
+
         self._init_idp_clients(app, idps_cfg, ssl_context)
         self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
 
@@ -448,6 +452,17 @@ class AuthService(BaseAuthService):
         self,
         cmd: GetIdentityProvidersCommand,
     ) -> list[IdentityProvider]:
+        try:
+            self._retry_pending_idp_clients()
+        except Exception:
+            # ensure this call never raises because of IDP initialization attempts
+            if self._logger:
+                self._logger.exception(
+                    self.create_log_message(
+                        "b2c6a1d4",
+                        "Unexpected error while retrying pending IDPs",
+                    )
+                )
         identity_providers = [x.get_identity_provider() for x in self._idp_clients]
         if cmd.public:
             return [x for x in identity_providers if x.public]
@@ -654,6 +669,8 @@ class AuthService(BaseAuthService):
                     logger.error(
                         app.create_log_message("48b7e021", msg, exception=exception)
                     )
+                with self._pending_lock:
+                    self._pending_idp_clients.append(idp_client)
         for idp_client in idp_clients:  # type: ignore
             if isinstance(idp_client, OauthIdpClient):
                 if logger:
@@ -670,3 +687,93 @@ class AuthService(BaseAuthService):
                 )
         self._idp_clients = idp_clients
         self._exposed_idp_clients = exposed_idp_clients
+
+    def _attempt_init_single_idp_client(
+        self, idp_cfg: dict[str, str | list]
+    ) -> IdpClient | None:
+        try:
+            protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
+            if protocol == enum.AuthProtocol.OIDC:
+                discovery_doc = {
+                    x: y
+                    for x, y in idp_cfg.items()
+                    if x in set(OidcServerCfg.model_fields.keys())
+                }
+                idp_client = OauthIdpClient(
+                    OidcServerCfg(**idp_cfg),  # type: ignore
+                    logger=self._logger,
+                    log_item_class=self.app.log_item_class,
+                    discovery_doc=discovery_doc,
+                    ssl_context=True,
+                )
+                return idp_client
+            else:
+                if self._logger:
+                    self._logger.error(
+                        self.create_log_message(
+                            "b1f4c3d2",
+                            f"Protocol {protocol.value} not implemented",
+                        )
+                    )
+                return None
+        except Exception as exception:
+            if self._logger:
+                self._logger.debug(
+                    self.create_log_message(
+                        "e2c6f4a5",
+                        "Pending IDP still not initialized",
+                        idp_name=idp_cfg.get("name"),
+                        exception=exception,
+                    )
+                )
+        return None
+
+    def _retry_pending_idp_clients(self) -> None:
+        with self._pending_lock:
+            if not self._pending_idp_clients:
+                return
+            retry_clients = list(self._pending_idp_clients)
+        newly_added: list[IdpClient] = []
+        newly_exposed: list[IdpClient] = []
+        for idp_cfg in retry_clients:
+            idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
+            idp_label: str = idp_cfg["label"]  # type: ignore[assignment]
+            # avoid re-adding already existing clients
+            if any(
+                getattr(getattr(x, "server_cfg", None), "name", None) == idp_name
+                for x in self._idp_clients
+            ) or any(
+                getattr(getattr(x, "server_cfg", None), "label", None) == idp_label
+                for x in self._idp_clients
+            ):
+                with self._pending_lock:
+                    try:
+                        self._pending_idp_clients.remove(idp_cfg)
+                    except ValueError:
+                        pass
+                continue
+            idp_client = self._attempt_init_single_idp_client(idp_cfg)
+            if idp_client:
+                newly_added.append(idp_client)
+                is_public: bool = idp_cfg.get(
+                    "is_exposed", self.DEFAULT_IS_PUBLIC_IDP
+                )  # type: ignore[assignment]
+                if is_public:
+                    newly_exposed.append(idp_client)
+                with self._pending_lock:
+                    try:
+                        self._pending_idp_clients.remove(idp_cfg)
+                    except ValueError:
+                        pass
+        if newly_added:
+            self._idp_clients.extend(newly_added)
+            self._exposed_idp_clients.extend(newly_exposed)
+            self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
+            for idp_client in newly_added:
+                if isinstance(idp_client, OauthIdpClient) and self._logger:
+                    self._logger.info(
+                        self.create_log_message(
+                            "c3f4e2b1",
+                            f"Recovered authentication client on {idp_client.issuer}",
+                        )
+                    )

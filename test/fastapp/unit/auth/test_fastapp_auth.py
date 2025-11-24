@@ -93,6 +93,61 @@ class TestAuth:
         )
         assert response.status_code in (401, 403)
 
+    def test_idp_retry_mechanism_adds_late_idp(self, env: AuthTestClient) -> None:
+        new_idp_cfg: dict[str, Any] = {
+            "name": "late_idp",
+            "label": "late_idp",
+            "protocol": "OIDC",
+            "issuer": "https://late-idp.org/",
+            "client_id": "late-client",
+            "claim_map": {"__key__": "email"},
+            "scope": "openid",
+            "authorization_endpoint": "https://late-idp.org/auth",
+            "token_endpoint": "https://late-idp.org/token",
+            "jwks_uri": "https://late-idp.org/certs",
+            "userinfo_endpoint": "https://late-idp.org/userinfo",
+            "response_types_supported": ["code"],
+            "subject_types_supported": ["public"],
+            "id_token_signing_alg_values_supported": ["RS256"],
+        }
+        # assert only the OauthIdpClient from the initial config is present
+        assert len(env.auth_service._idp_clients) == 1
+
+        env.auth_service._pending_idp_clients.append(new_idp_cfg)
+        env.auth_service._retry_pending_idp_clients()
+
+        assert len(env.auth_service._pending_idp_clients) == 0
+        assert len(env.auth_service._idp_clients) == 2
+
+    def test_idp_retry_handling_preserves_existing_clients(
+        self, env: AuthTestClient
+    ) -> None:
+        new_idp_cfg: dict[str, Any] = {
+            "name": "idp1",
+            "label": "idp1",
+            "protocol": "OIDC",
+            "issuer": "https://late-idp.org/",
+            "client_id": "late-client",
+            "claim_map": {"__key__": "email"},
+            "scope": "openid",
+            "authorization_endpoint": "https://late-idp.org/auth",
+            "token_endpoint": "https://late-idp.org/token",
+            "jwks_uri": "https://late-idp.org/certs",
+            "userinfo_endpoint": "https://late-idp.org/userinfo",
+            "response_types_supported": ["code"],
+            "subject_types_supported": ["public"],
+            "id_token_signing_alg_values_supported": ["RS256"],
+        }
+
+        env.auth_service._pending_idp_clients.append(new_idp_cfg)
+        env.auth_service._retry_pending_idp_clients()
+
+        assert len(env.auth_service._idp_clients) == 2
+        # assert the pending idp was removed since if was trying to add duplicates
+        assert (
+            len(env.auth_service._pending_idp_clients) == 0
+        )  # cleared in previous test
+
 
 class TestOidcClientCredentials:
     """Test the OidcClient retrieve_jwt_with_client_credentials_flow method."""
