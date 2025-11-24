@@ -80,6 +80,7 @@ from gen_epix.commondb.domain.command.rbac import (
     RetrieveSubRolesCommand as RetrieveSubRolesCommand,
 )
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.command.file import CreateFileCommand as CreateFileCommand
 from gen_epix.seqdb.domain.command.file import FileCrudCommand as FileCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     AlignmentProtocolCrudCommand as AlignmentProtocolCrudCommand,
@@ -295,6 +296,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         TreeAlgorithmCrudCommand,
     },
     enum.ServiceType.FILE: {
+        CreateFileCommand,
         FileCrudCommand,
     },
     # Common commands

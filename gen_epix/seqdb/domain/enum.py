@@ -199,13 +199,34 @@ class LocusType(Enum):
 
 
 class SeqAlphabet(Enum):
-    IUPAC_DNA = frozenset("acgturyswkmbdhvn")
-    IUPAC_DNA_AMBIGUITY = frozenset("uryswkmbdhvn")
-    DNA5 = frozenset("acgtn")
-    DNA4 = frozenset("acgt")
+    """
+    Standard sequence alphabets and their variants.
+    """
+
+    DNA = frozenset("acgt")
+    DNA_INCL_GAP = frozenset("acgt-")
+    DNA_INCL_N = frozenset("acgtn")
+    DNA_INCL_N_AND_GAP = frozenset("acgtn-")
+    DNA_INCL_AMBIGUOUS = frozenset("acgturyswkmbdhvn")
+    DNA_INCL_AMBIGUOUS_AND_GAP = frozenset("acgturyswkmbdhvn-")
+    DNA_AMBIGUOUS = frozenset("uryswkmbdhvn")
+    DNA_AMBIGUOUS_2 = frozenset("ryswkm")
+    DNA_AMBIGUOUS_3 = frozenset("bdhv")
+    DNA_AMBIGUOUS_4 = frozenset("n")
+    DNA_AMBIGUOUS_2_3 = frozenset("uryswkmbdhv")
+    DNA_AMBIGUOUS_2_4 = frozenset("ryswkmn")
+    DNA_AMBIGUOUS_3_4 = frozenset("bdhvn")
+    RNA = frozenset("acgu")
+    RNA_INCL_GAP = frozenset("acgu-")
+    RNA_INCL_N = frozenset("acgun")
+    RNA_INCL_N_AND_GAP = frozenset("acgun-")
 
 
 class DnaAmbiguityMap(Enum):
+    """
+    Maps an ambiguity code to the set of nucleotides it represents.
+    """
+
     A = frozenset("a")
     C = frozenset("c")
     G = frozenset("g")
@@ -223,9 +244,23 @@ class DnaAmbiguityMap(Enum):
     N = frozenset("acgt")
 
 
+class DnaReverseAmbiguityMap(Enum):
+    """
+    Maps a nucleotide to itself and all ambiguity codes that include it.
+    """
+
+    A = frozenset("arwmdhvn")
+    C = frozenset("cysmbhvn")
+    G = frozenset("grskbdvn")
+    T = frozenset("tywkbdhn")
+
+
 class SeqFormat(Enum):
     HASH_ONLY = "HASH_ONLY"  # Only the hash code of the sequence is known or stored
-    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters
+    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters without gaps
+    STR_DNA_INCL_GAP = (
+        "STR_DNA_INCL_GAP"  # String of IUPAC DNA characters including gaps
+    )
 
 
 class AlignmentFormat(Enum):
@@ -301,3 +336,8 @@ class ReadsFileFormat(Enum):
 class FileFormat(Enum):
     FASTA = "FASTA"
     FASTQ = "FASTQ"
+
+
+class FileCompression(Enum):
+    NONE = "NONE"
+    GZIP = "GZIP"

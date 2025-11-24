@@ -8,6 +8,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.enum as seqdb_enum
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.create_seq import (
@@ -152,49 +153,6 @@ class TestCasedbCaseCreateSeq:
                         assert str(created_read_set.id) in mock_case.content.values()
                         mock_service.app.handle.assert_called()
 
-        def test_create_seq_success(
-            self, mock_service: Mock, mock_user: Mock, sample_case_seq: Mock
-        ) -> None:
-            """Test successful creation of Seqs for cases."""
-            # Setup command
-            cmd = Mock(spec=command.CreateSeqForCaseCommand)
-            cmd.user = mock_user
-            cmd.case_seq = sample_case_seq
-
-            # Setup mocks
-            mock_case = Mock(spec=model.Case)
-            mock_case.content = {}
-
-            created_seq = Mock(spec=model.Seq)
-            created_seq.id = uuid4()
-
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ) as mock_get_abac:
-                mock_abac = Mock()
-                mock_get_abac.return_value = mock_abac
-
-                with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
-                ) as mock_get_cases:
-                    mock_get_cases.return_value = [mock_case]
-                    mock_service.app.handle.return_value = [created_seq]
-
-                    # Mock the super() call to avoid base service issues
-                    with patch(
-                        "gen_epix.casedb.services.case.create_seq.super"
-                    ) as mock_super:
-                        mock_super.return_value.crud.return_value = None
-
-                        # Execute function
-                        result = case_service_create_read_sets_or_seqs_for_cases(
-                            mock_service, cmd
-                        )
-
-                        # Verify results
-                        assert result == [created_seq]
-                        assert str(created_seq.id) in mock_case.content.values()
-
         def test_create_seqs_success(
             self, mock_service: Mock, mock_user: Mock, sample_case_seqs: list[Mock]
         ) -> None:
@@ -280,6 +238,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.is_fwd = False  # Test reverse file
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -311,7 +272,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_read_set
                             else:  # UPDATE_ONE
                                 return mock_read_set
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -335,6 +296,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.is_fwd = False
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
@@ -371,6 +335,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.is_fwd = True
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -402,7 +369,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_read_set
                             else:  # UPDATE_ONE
                                 return mock_read_set
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -427,6 +394,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
+            cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -457,7 +427,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_seq
                             else:  # UPDATE_ONE
                                 return mock_seq
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -480,6 +450,9 @@ class TestCasedbCaseCreateSeq:
             cmd.user = mock_user
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {}  # Missing the required case_type_col_id
@@ -506,6 +479,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.is_fwd = True
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
@@ -536,6 +512,9 @@ class TestCasedbCaseCreateSeq:
             cmd.user = mock_user
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
+            cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
@@ -647,47 +626,6 @@ class TestCasedbCaseCreateSeq:
             )
 
             assert result == sample_cases
-
-        def test_get_case_success_for_seq(
-            self,
-            mock_service: Mock,
-            mock_case_abac: Mock,
-            mock_uow: Mock,
-            sample_case_type_cols: tuple[list[Mock], UUID],
-            sample_cols_genetic_sequence: list[Mock],
-            sample_case: Mock,
-        ) -> None:
-            """Test successful retrieval of cases for Seqs creation."""
-            cmd = Mock(spec=command.CreateSeqForCaseCommand)
-            case_type_cols, col_id = sample_case_type_cols
-            case_type_cols[0].col_id = col_id
-            sample_cols_genetic_sequence[0].id = col_id
-            sample_case.case_type_id = case_type_cols[0].case_type_id
-
-            # Configure repository.crud to return appropriate objects
-            def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
-                model_class = args[2]
-                if model_class == model.CaseTypeCol:
-                    return case_type_cols
-                elif model_class == model.Col:
-                    return sample_cols_genetic_sequence
-                elif model_class == model.Case:
-                    return [sample_case]
-                return []
-
-            mock_service.repository.crud.side_effect = crud_side_effect
-
-            result = _get_cases_for_create_read_sets_or_seqs(
-                mock_service,
-                cmd,
-                mock_case_abac,
-                mock_uow,
-                uuid4(),
-                [sample_case.id],
-                [case_type_cols[0].id],
-            )
-
-            assert result[0] == sample_case
 
         def test_get_cases_success_for_seqs(
             self,

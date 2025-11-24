@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from datetime import datetime
 from logging import Logger
 from typing import Any
+from uuid import UUID
 
 import httpx
 import jwt
@@ -28,6 +29,7 @@ class SeqdbRemoteApp(RemoteApp):
     ROUTE_MAP: dict[type[Command], str] = {
         seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
         seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
+        seqdb_command.CreateFileCommand: "create/file",
     }
 
     def __init__(
@@ -122,6 +124,10 @@ class SeqdbRemoteApp(RemoteApp):
             seqdb_command.RetrieveSeqFastaCommand,
             self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
         )
+        self.register_route(
+            seqdb_command.CreateFileCommand,
+            self.ROUTE_MAP[seqdb_command.CreateFileCommand],
+        )
         self.register_handler(
             seqdb_command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
@@ -129,6 +135,10 @@ class SeqdbRemoteApp(RemoteApp):
         self.register_handler(
             seqdb_command.RetrieveSeqFastaCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
+        )
+        self.register_handler(
+            seqdb_command.CreateFileCommand,
+            self.create_file,
         )
 
     def get_headers(self, cmd: Command) -> dict[str, str]:
@@ -146,8 +156,10 @@ class SeqdbRemoteApp(RemoteApp):
                 return self._oauth_header_cache[1]
             # Retrieve new token
 
-            jwt_token = self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
-                scope=self._oauth_scope
+            jwt_token = (
+                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+                    scope=self._oauth_scope
+                )
             )
             # Create headers
             headers = dict(self._default_headers)
@@ -216,3 +228,27 @@ class SeqdbRemoteApp(RemoteApp):
                         yield chunk.decode()
 
         return _iter_fasta_generator()
+
+    def create_file(
+        self,
+        cmd: seqdb_command.CreateFileCommand,
+    ) -> UUID:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+
+        request_body: dict[str, Any] = {
+            "user": cmd.user,
+            "file_content": cmd.file.content,
+            "file_format": cmd.format.value,
+            "file_compression": cmd.compression.value,
+        }
+
+        with httpx.Client(verify=self.ssl_context) as client:
+            response = client.post(
+                route,
+                json=request_body,
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return UUID(data)

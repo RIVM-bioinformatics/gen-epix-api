@@ -2,7 +2,7 @@ import json
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import DataCollection, IdentifierIssuer
@@ -46,11 +46,19 @@ class Sample(Model, CodeMixin):
         default_factory=dict, description="The properties of the sample."
     )
 
-    @field_validator("props", mode="before")
-    def _validate_props(cls, value: str | dict) -> dict:
-        if isinstance(value, str):
-            value = json.loads(value)
-        return value
+    @model_validator(mode="before")
+    def _validate_model(cls, values: dict) -> dict:
+        # Strip code of whitespace
+        code = values.get("code")
+        if code is not None:
+            values["code"] = code.strip()
+        # Ensure props is a dict
+        props = values.get("props")
+        if isinstance(props, str):
+            values["props"] = json.loads(props)
+        elif props is None:
+            values["props"] = {}
+        return values
 
 
 class HasSampleMixin:

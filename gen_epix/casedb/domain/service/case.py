@@ -91,7 +91,6 @@ class BaseCaseService(BaseService):
         )
         f(command.CreateReadSetsForCasesCommand, self.create_reads_sets_for_cases)
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
-        f(command.CreateSeqForCaseCommand, self.create_seq_for_case)
         f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
@@ -192,13 +191,6 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.CreateFileForReadSetCommand,
     ) -> UUID:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def create_seq_for_case(
-        self,
-        cmd: command.CreateSeqForCaseCommand,
-    ) -> model.Seq:
         raise NotImplementedError()
 
     @abc.abstractmethod

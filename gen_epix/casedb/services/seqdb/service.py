@@ -123,8 +123,12 @@ class SeqdbService(BaseSeqdbService):
         # naive implementation that retrieves sequences by ID
         seqs: list[seqdb_model.Seq] = self._retrieve_seq_objects_by_ids(cmd.seq_ids)
         file_ids = [seq.file_id for seq in seqs if seq.file_id is not None]
-        files: list[seqdb_model.File] = self._retrieve_file_objects_by_ids(
-            list(set(file_ids))  # type: ignore[arg-type]
+        files: list[seqdb_model.File] = self._seqdb_app.handle(
+            seqdb_command.FileCrudCommand(
+                user=cmd.user,
+                obj_ids=list(set(file_ids)),  # type: ignore[arg-type]
+                operation=CrudOperation.READ_SOME,
+            )
         )
         file_map = {x.id: x for x in files}
         # Convert raw sequences to model.GeneticSequence

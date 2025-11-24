@@ -18,6 +18,7 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
     CodeMixin,
     ProtocolMixin,
@@ -67,8 +68,9 @@ class RefSeq(Model, SeqMixin):
     )
 
     @model_validator(mode="before")
-    def _validate_model_and_id(cls, values: dict[str, Any]) -> dict[str, Any]:
-        return SeqMixin._validate_model_and_id(values)
+    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """"""
+        return SeqMixin._validate_mixin_and_id(values)
 
 
 class AssemblyProtocol(Model, ProtocolMixin):
@@ -106,15 +108,30 @@ class Contig(BaseModel, SeqMixin):
 
     @model_validator(mode="before")
     def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        return SeqMixin._validate_model(values)
+        """"""
+        return SeqMixin._validate_mixin(values)
 
 
 class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     """
     A DNA sequence, typically representing an assembled genome or a part thereof. A
-    sequence consists of one or more contigs.
+    sequence consists of one or more contiguous sequences (contigs).
 
-    A sequence is immutable: once created, it cannot be deleted or updated. As such,
+    The actual sequence data need not be provided on creation of this instance, to
+    allow for deferred upload and processing of the sequence data. The is_available
+    property can be used to check whether the sequence data have been processed and
+    added to the sequence as contigs.
+
+    A sequence that is available, is also immutable: once created and the contigs have
+    been added, it cannot be deleted or semantically updated. As such, sequence IDs can
+    safely be referenced in other models and outside of the application. The
+    representation of the contigs that make up the sequence may still be updated to e.g.
+    optimize storage or performance, but the actual sequence data will not change.
+
+    The sequence hash of the sequence can be computed outside of the application as
+    well,  based on the sorted sequence hashes of the contigs that make up the
+    sequence, thereby providing an easy way to search for existing exactly matching
+    sequences.
     """
 
     ENTITY: ClassVar = Entity(
@@ -129,11 +146,28 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         links=create_links(
             {
                 1: ("sample_id", Sample, "sample"),
-                2: ("read_set_id", ReadSet, "read_set"),
-                3: ("read_set2_id", ReadSet, "read_set2"),
-                4: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
+                2: ("file_id", File, "file"),
+                3: ("read_set_id", ReadSet, "read_set"),
+                4: ("read_set2_id", ReadSet, "read_set2"),
+                5: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
             }
         ),
+    )
+    uri: str | None = Field(
+        default=None, description="The URI of the sequence data, if available."
+    )
+    file_id: UUID | None = Field(
+        default=None,
+        description="The unique file identifier for the sequence data. FOREIGN KEY",
+    )
+    file: File | None = Field(
+        default=None, description="The file representing the sequence data."
+    )
+    file_format: enum.SeqFileFormat | None = Field(
+        default=None, description="The format of the sequence file."
+    )
+    file_compression: enum.FileCompression | None = Field(
+        default=None, description="The compression of the sequence file."
     )
     read_set_id: UUID | None = Field(
         default=None,
@@ -142,27 +176,37 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     read_set: ReadSet | None = Field(default=None, description="The read set.")
     read_set2_id: UUID | None = Field(
         default=None,
-        description="The unique identifier for a second read set used to generate the assembly, if more than one. FOREIGN KEY",
+        description="The unique identifier for a potential second read set used to generate the assembly. FOREIGN KEY",
     )
     read_set2: ReadSet | None = Field(default=None, description="The second read set.")
     assembly_protocol_id: UUID | None = Field(
         default=None,
-        description="The unique identifier for the assembly protocol, if available. FOREIGN KEY",
+        description="The unique identifier for the assembly protocol used to generate the sequence from reads, if available. FOREIGN KEY",
     )
     assembly_protocol: AssemblyProtocol | None = Field(
         default=None, description="The assembly protocol."
     )
     contigs: list[Contig] = Field(
-        description="The contigs that make up the sequence. At least one contig must be provided and no duplicate contigs are allowed.",
-        min_length=1,
+        default_factory=list,
+        description="The contigs that make up the sequence. No duplicate contigs are allowed. If zero contigs are provided, the sequence is considered to be not available yet.",
     )
 
-    @computed_field(
-        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes as 128-bit values concatenated together."
+    @computed_field(  # type: ignore[prop-decorator]
+        description="Whether the sequence has its contigs processed and available."
+    )
+    @property
+    def is_available(self) -> bool:
+        """"""
+        return len(self.contigs) > 0
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The first 128 bits of the SHA256 hash of the sorted contig seq hashes concatenated together. If the sequence has no contigs, the null UUID is returned."
     )
     @cached_property
     def seq_hash(self) -> UUID:
         """"""
+        if not self.contigs:
+            return SeqMixin.NULL_SEQ_HASH
         # Get sorted list of contig seq_hashes as bytes
         contig_hashes_bytes = sorted(x.seq_hash.bytes for x in self.contigs)
         # Concatenate the bytes
@@ -170,35 +214,47 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         # Compute SHA256 hash and take first 16 bytes (128 bits)
         return UUID(hashlib.sha256(concatenated).digest()[:16].hex())
 
-    @computed_field(description="The number of contigs in the sequence.")
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The number of contigs in the sequence. Zero if not available."
+    )
     @cached_property
     def n_contigs(self) -> int:
         """"""
         return len(self.contigs)
 
-    @computed_field(description="The total length of all contigs in the sequence.")
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The total length of all contigs in the sequence. Zero if not available."
+    )
     @cached_property
     def length(self) -> int:
         """"""
-        return sum(contig.length for contig in self.contigs)
+        return sum(contig.length for contig in self.contigs) if self.contigs else 0
 
-    @computed_field(description="The length of the longest contig in the sequence.")
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The length of the longest contig in the sequence. Zero if not available."
+    )
     @cached_property
     # TODO: consider making this a computed field, add similar fields
     def max_contig_length(self) -> int:
         """"""
-        return max(contig.length for contig in self.contigs)
+        return max(contig.length for contig in self.contigs) if self.contigs else 0
 
-    @computed_field(description="The length of the shortest contig in the sequence.")
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The length of the shortest contig in the sequence. Zero if not available."
+    )
     @cached_property
     def min_contig_length(self) -> int:
         """"""
-        return min(contig.length for contig in self.contigs)
+        return min(contig.length for contig in self.contigs) if self.contigs else 0
 
-    @computed_field(description="The median length of the contigs in the sequence.")
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The median length of the contigs in the sequence. Zero if not available."
+    )
     @cached_property
     def median_contig_length(self) -> float:
         """"""
+        if not self.contigs:
+            return 0.0
         lengths = sorted(contig.length for contig in self.contigs)
         n = len(lengths)
         if n % 2 == 0:
@@ -206,43 +262,49 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         else:
             return float(lengths[n // 2])
 
-    @computed_field(
-        description="The N50 of the sequence assembly. N50 is the length of the shortest contig such that the sum of contigs of this length or longer is at least 50% of the total assembly length."
+    @computed_field(  # type: ignore[prop-decorator]
+        description="The N50 of the sequence assembly. N50 is the length of the shortest contig such that the sum of contigs of this length or longer is at least 50% of the total assembly length. Zero if not available."
     )
     @cached_property
     def n50(self) -> int:
         """"""
+        if not self.contigs:
+            return 0
         # Sort contigs by length in descending order
         sorted_lengths = sorted(
             (contig.length for contig in self.contigs), reverse=True
         )
-
         # Calculate 50% of total assembly length
         half_total = self.length / 2
-
         # Find the breakpoint where cumulative sum reaches 50%
         cumulative_sum = 0
         for length in sorted_lengths:
             cumulative_sum += length
             if cumulative_sum >= half_total:
                 return length
+        raise RuntimeError("Unreachable code reached in n50 calculation")
 
-        # Fallback (should not happen with valid data)
-        return sorted_lengths[-1] if sorted_lengths else 0
+    @field_validator("file_format", mode="before")
+    @classmethod
+    def _validate_file_format(
+        cls, value: enum.SeqFileFormat | str | None
+    ) -> enum.SeqFileFormat | None:
+        if isinstance(value, str):
+            return enum.SeqFileFormat(value)
+        return value
 
-    @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if self.read_set_id is None:
-            if self.read_set2_id is not None:
-                raise ValueError(
-                    "read_set2_id may only be provided if read_set_id is provided"
-                )
-        elif self.read_set2_id == self.read_set_id:
-            raise ValueError("read_set2_id must be different from read_set_id")
-        return self
+    @field_validator("file_compression", mode="before")
+    @classmethod
+    def _validate_file_compression(
+        cls, value: enum.FileCompression | str | None
+    ) -> enum.FileCompression | None:
+        if isinstance(value, str):
+            return enum.FileCompression(value)
+        return value
 
     @field_validator("contigs", mode="before")
     def _validate_contigs(cls, value: list[Contig] | str) -> list[Contig]:
+        """"""
         if isinstance(value, str):
             value = [Contig.model_validate(x) for x in json.loads(value)]
         # Check for duplicate contig sequences
@@ -255,8 +317,28 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
             seen_hashes.add(contig.seq_hash)
         return value
 
+    @model_validator(mode="after")
+    def _validate_state(self) -> Self:
+        """"""
+        if self.file_id is not None:
+            if self.file_format is None:
+                raise ValueError("file_format must be provided when linking a file")
+            if self.file_compression is None:
+                self.file_compression = enum.FileCompression.NONE
+        if self.uri is not None and self.file_id is not None:
+            raise ValueError("Cannot have both uri and file_id")
+        if self.read_set_id is None:
+            if self.read_set2_id is not None:
+                raise ValueError(
+                    "Cannot have read_set2_id if read_set_id is not provided"
+                )
+        elif self.read_set2_id == self.read_set_id:
+            raise ValueError("read_set2_id must be different from read_set_id")
+        return self
+
     @field_serializer("contigs")
     def _serialize_contigs(self, value: list[Contig]) -> str:
+        """"""
         return json.dumps([contig.model_dump() for contig in value])
 
 

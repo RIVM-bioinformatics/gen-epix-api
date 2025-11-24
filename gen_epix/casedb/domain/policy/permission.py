@@ -122,7 +122,6 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveAssemblyProtocolsCommand, PermissionTypeSet.E),
             (command.ValidateCasesCommand, PermissionTypeSet.E),
             (command.CreateReadSetsForCasesCommand, PermissionTypeSet.E),
-            (command.CreateSeqForCaseCommand, PermissionTypeSet.E),
             (command.CreateSeqsForCasesCommand, PermissionTypeSet.E),
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             (command.CreateFileForSeqCommand, PermissionTypeSet.E),

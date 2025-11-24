@@ -188,7 +188,7 @@ class RefAllele(Model, SeqMixin):
     @model_validator(mode="before")
     @classmethod
     def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        return SeqMixin._validate_model_and_id(values)
+        return SeqMixin._validate_mixin_and_id(values)
 
 
 class Allele(Model, SeqMixin):
@@ -222,8 +222,6 @@ class Allele(Model, SeqMixin):
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
 
-    NULL_ALLELE_ID: ClassVar[UUID] = UUID("00000000-0000-0000-0000-000000000000")
-
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
     )
@@ -231,7 +229,7 @@ class Allele(Model, SeqMixin):
 
     @model_validator(mode="before")
     def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        values = SeqMixin._validate_model_and_id(values)
-        if values.get("id") == cls.NULL_ALLELE_ID:
-            raise ValueError("Allele ID cannot be the NULL_ALLELE_ID.")
+        values = SeqMixin._validate_mixin_and_id(values)
+        if values.get("id") == cls.NULL_SEQ_HASH:
+            raise ValueError("Allele ID cannot be the NULL_SEQ_HASH.")
         return values

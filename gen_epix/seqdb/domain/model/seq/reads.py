@@ -1,11 +1,12 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, model_validator
+from pydantic import Field, computed_field, field_validator, model_validator
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
@@ -30,8 +31,8 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     of sequencing a sample using a sequencing protocol. The reads data itself are
     not included in this model, but are referenced via either URIs or file links.
 
-    The reads data need not be referenced on creation of this instance, to allow
-    for deferred upload of the reads data. The has_linked_reads property can be used
+    The actual reads data need not be referenced on creation of this instance, to allow
+    for deferred upload of the reads data. The is_available property can be used
     to check whether the reads data have been linked to this instance.
     """
 
@@ -80,6 +81,12 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
     rev_file: File | None = Field(
         default=None, description="The file representing the reverse read set."
     )
+    file_format: enum.ReadsFileFormat | None = Field(
+        default=None, description="The format of the reads files."
+    )
+    file_compression: enum.FileCompression | None = Field(
+        default=None, description="The compression of the reads files."
+    )
     fwd_reads_hash: UUID | None = Field(
         default=None,
         description="The first 128 bits of the SHA256 hash of the uncompressed FASTQ file representation of the forward read set.",
@@ -92,11 +99,11 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
         description="The code of the sequencing run.", max_length=255, default=None
     )
 
-    @computed_field(
-        description="Whether the read set has any linked reads data, either via URIs or file links."
+    @computed_field(  # type:ignore[prop-decorator]
+        description="Whether the read set has any linked reads data available, either via URIs or file links."
     )
     @property
-    def has_linked_reads(self) -> bool:
+    def is_available(self) -> bool:
         """"""
         return (
             self.fwd_uri is not None
@@ -104,6 +111,24 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
             or self.rev_uri is not None
             or self.rev_file_id is not None
         )
+
+    @field_validator("file_format", mode="before")
+    @classmethod
+    def _validate_file_format(
+        cls, value: enum.ReadsFileFormat | str | None
+    ) -> enum.ReadsFileFormat | None:
+        if isinstance(value, str):
+            return enum.ReadsFileFormat(value)
+        return value
+
+    @field_validator("file_compression", mode="before")
+    @classmethod
+    def _validate_file_compression(
+        cls, value: enum.FileCompression | str | None
+    ) -> enum.FileCompression | None:
+        if isinstance(value, str):
+            return enum.FileCompression(value)
+        return value
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
@@ -121,4 +146,13 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
             and self.fwd_reads_hash == self.rev_reads_hash
         ):
             raise ValueError("fwd_reads_hash must be different from rev_reads_hash")
+        if self.fwd_file_id is not None or self.rev_file_id is not None:
+            if self.file_format is None:
+                raise ValueError("file_format must be provided when linking read files")
+            if self.file_compression is None:
+                self.file_compression = enum.FileCompression.NONE
+        if (self.fwd_uri is not None or self.rev_uri is not None) and (
+            self.fwd_file_id is not None or self.rev_file_id is not None
+        ):
+            raise ValueError("Cannot have both uri and file_id")
         return self

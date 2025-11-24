@@ -1,7 +1,7 @@
 import hashlib
 import json
 import uuid
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
 
 from pydantic import Field, field_serializer, field_validator
@@ -38,6 +38,8 @@ class QualityMixin:
 
 class SeqMixin:
 
+    NULL_SEQ_HASH: ClassVar[UUID] = UUID("00000000-0000-0000-0000-000000000000")
+
     seq: str = Field(
         description="The sequence in the representation defined by seq_format"
     )
@@ -62,7 +64,7 @@ class SeqMixin:
         return str(value)
 
     @staticmethod
-    def _validate_model(values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_mixin(values: dict[str, Any]) -> dict[str, Any]:
         """
         Derive the sequence hash if not provided, or otherwise verify that it is
         correctly derived if possible.
@@ -98,7 +100,7 @@ class SeqMixin:
             computed_length = len(seq)
             # Make seq lower case and validate characters
             seq = seq.lower()
-            invalid_chars = set(seq) - enum.SeqAlphabet.IUPAC_DNA.value
+            invalid_chars = set(seq) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS.value
             if invalid_chars:
                 raise ValueError(
                     f"Sequence contains invalid characters for {seq_format.value} format: {"".join(sorted(invalid_chars))}"
@@ -129,7 +131,7 @@ class SeqMixin:
         return values
 
     @staticmethod
-    def _validate_model_and_id(values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_mixin_and_id(values: dict[str, Any]) -> dict[str, Any]:
         """
         Derive the sequence hash if not provided, or otherwise verify that it is
         correctly derived if possible.
@@ -137,7 +139,7 @@ class SeqMixin:
         Set the ID equal to the sequence hash if not given or otherwise verify that it
         is identical.
         """
-        values = SeqMixin._validate_model(values)
+        values = SeqMixin._validate_mixin(values)
         id_ = values.get("id")
         if isinstance(id_, str):
             id_ = UUID(id_)

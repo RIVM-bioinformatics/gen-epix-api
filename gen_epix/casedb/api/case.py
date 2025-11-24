@@ -14,14 +14,19 @@ from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
-    case_type_set_members: list[model.CaseTypeSetMember]
+    case_type_set_members: list[model.CaseTypeSetMember] = Field(
+        description="The members of the case type set."
+    )
 
 
 class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
-    case_type_col_set_members: list[model.CaseTypeColSetMember]
+    case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
+        description="The members of the case type col set."
+    )
 
 
 class ValidateCasesRequestBody(PydanticBaseModel):
@@ -84,13 +89,21 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
 
 
 class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
-    organization_ids: list[UUID] | None = None
-    site_ids: list[UUID] | None = None
-    contact_ids: list[UUID] | None = None
-    props: dict[str, Any] = {}
+    organization_ids: list[UUID] | None = Field(
+        default=None, description="The organization IDs to retrieve contacts for."
+    )
+    site_ids: list[UUID] | None = Field(
+        default=None, description="The site IDs to retrieve contacts for."
+    )
+    contact_ids: list[UUID] | None = Field(
+        default=None, description="The contact IDs to retrieve contacts for."
+    )
+    props: dict[str, Any] = Field(
+        default_factory=dict, description="Additional properties for the request."
+    )
 
     @model_validator(mode="after")
-    def check_one_of_fields(self) -> Any:
+    def _validate_model(self) -> Any:
         if (
             sum(
                 [
@@ -113,8 +126,12 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
         command.RetrievePhylogeneticTreeByCasesCommand,
         "genetic_distance_case_type_col_id",
     )
-    tree_algorithm_code: enum.TreeAlgorithmType
-    case_ids: list[UUID]
+    tree_algorithm_code: enum.TreeAlgorithmType = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand, "tree_algorithm"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand, "case_ids"
+    )
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
@@ -122,8 +139,8 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
         command.RetrieveGeneticSequenceByCaseCommand,
         "genetic_sequence_case_type_col_id",
     )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
     )
 
 
@@ -132,8 +149,8 @@ class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
         command.RetrieveGeneticSequenceByCaseCommand,
         "genetic_sequence_case_type_col_id",
     )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
     )
 
 
@@ -156,14 +173,28 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: bytes = Field(description="The content of the file to create.")
+    file_content: bytes = copy_model_field(
+        command.CreateFileForReadSetCommand, "file_content"
+    )
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
+    )
+    file_format: seqdb_enum.ReadsFileFormat = copy_model_field(
+        command.CreateFileForReadSetCommand, "file_format"
+    )
+    file_compression: seqdb_enum.FileCompression = copy_model_field(
+        command.CreateFileForReadSetCommand, "file_compression"
     )
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
     file_content: bytes = Field(description="The content of the file to create.")
+    file_format: seqdb_enum.SeqFileFormat = copy_model_field(
+        command.CreateFileForSeqCommand, "file_format"
+    )
+    file_compression: seqdb_enum.FileCompression = copy_model_field(
+        command.CreateFileForSeqCommand, "file_compression"
+    )
 
 
 def create_case_endpoints(
@@ -677,27 +708,6 @@ def create_case_endpoints(
         except Exception as exception:
             handle_exception("b5c6d7e8", user, exception)
         return created_file_id
-
-    @router.post(
-        "/create_seq_for_case",
-        operation_id="create_seq_for_case",
-        name="Create a sequence for a case",
-        description=command.CreateSeqForCaseCommand.__doc__,
-    )
-    async def create_seq_for_case(
-        user: registered_user_dependency,  # type: ignore
-        case_seq: model.CaseSeq,
-    ) -> UUID:
-        try:
-            created_seqs: list[model.Seq] = app.handle(
-                command.CreateSeqForCaseCommand(
-                    user=user,
-                    case_seq=case_seq,
-                )
-            )
-        except Exception as exception:
-            handle_exception("a1b2c3d4", user, exception)
-        return created_seqs
 
     @router.get(
         "/retrieve/sequencing_protocols",

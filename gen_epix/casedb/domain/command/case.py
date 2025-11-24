@@ -13,6 +13,7 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 # Non-CRUD
 
@@ -305,6 +306,14 @@ class CreateFileForReadSetCommand(Command):
         description="The ID of the read set case type column."
     )
     file_content: bytes = Field(description="The content of the file to create.")
+    file_format: seqdb_enum.ReadsFileFormat = Field(
+        default=seqdb_enum.ReadsFileFormat.FASTQ,
+        description="The format of the reads file.",
+    )
+    file_compression: seqdb_enum.FileCompression = Field(
+        default=seqdb_enum.FileCompression.NONE,
+        description="The compression of the reads file.",
+    )
 
 
 class CreateFileForSeqCommand(Command):
@@ -317,15 +326,13 @@ class CreateFileForSeqCommand(Command):
         description="The ID of the genetic sequence case type column."
     )
     file_content: bytes = Field(description="The content of the file to create.")
-
-
-class CreateSeqForCaseCommand(Command):
-    """
-    Create a sequence for a case based on a genetic sequence case type column.
-    """
-
-    case_seq: model.CaseSeq = Field(
-        description="The CaseSequence describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
+    file_format: seqdb_enum.SeqFileFormat = Field(
+        default=seqdb_enum.SeqFileFormat.FASTA,
+        description="The format of the sequence file.",
+    )
+    file_compression: seqdb_enum.FileCompression = Field(
+        default=seqdb_enum.FileCompression.NONE,
+        description="The compression of the sequence file.",
     )
 
 

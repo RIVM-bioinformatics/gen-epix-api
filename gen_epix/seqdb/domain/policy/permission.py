@@ -22,7 +22,6 @@ class RoleGenerator(CommonRoleGenerator):
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN] | set(),
         Role.REFDATA_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.REFDATA_ADMIN]
         | {
-            # seq.metadata CRUD commands
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.AssemblyProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.AstProtocolCrudCommand, PermissionTypeSet.CRU),
@@ -62,6 +61,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.AstMeasurementCrudCommand, PermissionTypeSet.CRUD),
             (command.AstPredictionCrudCommand, PermissionTypeSet.CRUD),
             (command.AstProtocolCrudCommand, PermissionTypeSet.R),
+            (command.CreateFileCommand, PermissionTypeSet.E),
             (command.FileCrudCommand, PermissionTypeSet.CRD),
             (command.KmerProfileCrudCommand, PermissionTypeSet.CRUD),
             (command.LocusCrudCommand, PermissionTypeSet.R),

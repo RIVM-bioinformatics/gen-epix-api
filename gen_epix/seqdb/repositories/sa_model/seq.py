@@ -270,6 +270,12 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     rev_file_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "rev_file_id"
     )
+    file_format: Mapped[enum.ReadsFileFormat] = create_mapped_column(
+        DOMAIN, model.ReadSet, "file_format"
+    )
+    file_compression: Mapped[enum.FileCompression] = create_mapped_column(
+        DOMAIN, model.ReadSet, "file_compression"
+    )
     fwd_reads_hash: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ReadSet, "fwd_reads_hash"
     )
@@ -282,8 +288,8 @@ class ReadSet(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     sequencing_run_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.ReadSet, "sequencing_run_code"
     )
-    has_linked_reads: Mapped[bool] = create_mapped_column(
-        DOMAIN, model.ReadSet, "has_linked_reads"
+    is_available: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.ReadSet, "is_available"
     )
 
 
@@ -372,6 +378,14 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.Seq)
 
     sample_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "sample_id")
+    uri: Mapped[str] = create_mapped_column(DOMAIN, model.Seq, "uri")
+    file_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "file_id")
+    file_format: Mapped[enum.SeqFileFormat] = create_mapped_column(
+        DOMAIN, model.Seq, "file_format"
+    )
+    file_compression: Mapped[enum.FileCompression] = create_mapped_column(
+        DOMAIN, model.Seq, "file_compression"
+    )
     read_set_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set_id")
     read_set2_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set2_id")
     assembly_protocol_id: Mapped[UUID] = create_mapped_column(
@@ -381,6 +395,7 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
         DOMAIN, model.Seq, "contigs"
     )
     seq_hash: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "seq_hash")
+    is_available: Mapped[bool] = create_mapped_column(DOMAIN, model.Seq, "is_available")
     n_contigs: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "n_contigs")
     length: Mapped[int] = create_mapped_column(DOMAIN, model.Seq, "length")
     max_contig_length: Mapped[int] = create_mapped_column(
