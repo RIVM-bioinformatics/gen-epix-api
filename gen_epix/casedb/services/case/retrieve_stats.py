@@ -18,6 +18,7 @@ def case_service_retrieve_case_type_stats(
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
     case_type_ids = cmd.case_type_ids
+
     with repository.uow() as uow:
         cases: list[model.Case] = (
             self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
@@ -34,6 +35,10 @@ def case_service_retrieve_case_type_stats(
             cases = [x for x in cases if x.case_type_id in case_type_ids]
         else:
             case_type_ids = {x.case_type_id for x in cases}
+
+        case_type_to_col_ids: dict[UUID, list[UUID]] = (
+            self.get_case_date_case_type_col_ids(uow, user, case_type_ids)  # type: ignore[attr-defined]
+        )
         # Derive stats
         empty_stat = {
             "n_cases": 0,
@@ -43,7 +48,10 @@ def case_service_retrieve_case_type_stats(
         stats = {x: dict(empty_stat) for x in case_type_ids}
         for case in cases:
             case_type_id = case.case_type_id
-            date_ = case.case_date
+            case_type_col_ids = case_type_to_col_ids.get(case_type_id, [])
+            date_ = self.get_case_date(uow, user, case.id, case_type_col_ids)  # type: ignore[attr-defined]
+            if date_ is None:
+                continue
             stat = stats[case_type_id]
             if stat["n_cases"] == 0:
                 stat["n_cases"] = 1
@@ -56,7 +64,8 @@ def case_service_retrieve_case_type_stats(
         # Convert first/last date to month only
         for stat in stats.values():
             for key in ("first_case_month", "last_case_month"):
-                stat[key] = stat[key].isoformat()[0:7]  # type: ignore[union-attr]
+                if stat[key] is not None:
+                    stat[key] = stat[key].isoformat()[0:7]  # type: ignore[union-attr]
         # Get case type stats
         case_type_stats = [
             model.CaseTypeStat(case_type_id=x, **stats[x]) for x in case_type_ids  # type: ignore[arg-type]

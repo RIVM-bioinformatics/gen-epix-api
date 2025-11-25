@@ -265,3 +265,22 @@ class CaseSeq(Model):
     )
     seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
     seq: Seq | None = Field(default=None, description="The sequence.")
+
+
+class CaseQueryResult(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_query_results",
+        persistable=False,
+    )
+    case_type_id: UUID = Field(
+        description="The ID of the case type to which the query was applied."
+    )
+    filter: TypedCompositeFilter = Field(
+        description="The requested query, provided back"
+    )
+    cases: list[UUID] = Field(
+        description="The IDs of the cases matching the query, possibly limited by CaseSettings.read_max_n_cases. If limited, the most recent cases according to CaseSettings.stats_time_dim_id are returned"
+    )
+    is_max_results_exceeded: bool = Field(
+        description="Whether the number of results was limited."
+    )

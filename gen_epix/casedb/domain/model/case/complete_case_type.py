@@ -12,12 +12,14 @@ from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
+    CaseTypeSettings,
     Col,
     Dim,
     GeneticDistanceProtocol,
     TreeAlgorithm,
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity
 
 
@@ -55,6 +57,39 @@ class CompleteCaseType(CaseType):
     )
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
+    )
+    stats_time_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_time_case_type_col_id"
+    )
+    stats_time_case_type_col: CaseTypeCol | None = copy_model_field(
+        CaseTypeSettings, "stats_time_case_type_col"
+    )
+    stats_geo_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_geo_case_type_col_id"
+    )
+    stats_geo_case_type_col: CaseTypeCol | None = copy_model_field(
+        CaseTypeSettings, "stats_geo_case_type_col"
+    )
+    create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
+    read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
+    read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
+    update_max_n_cases: int = copy_model_field(CaseTypeSettings, "update_max_n_cases")
+    delete_max_n_cases: int = copy_model_field(CaseTypeSettings, "delete_max_n_cases")
+
+    stats_time_case_type_col_ids: list[UUID] | None = Field(
+        description=(
+            "The list of case type column IDs within the stats_time_dim_id. "
+            "occurrence None or lowest occurrence in case of more than one, "
+            "from highest to lowest resolution (TIME_DAY, WEEK, MONTH, QUARTER, YEAR). "
+            "Empty list of stats_time_dim_id is None."
+        ),
+    )
+    stats_geo_case_type_col_ids: list[UUID] | None = Field(
+        description=(
+            "The list of case type column IDs within the stats_geo_dim_id. "
+            "occurrence None or lowest occurrence in case of more than one, "
+            "from highest to lowest resolution (using CaseTypeCol.Col.RegionSet.resolution)."
+        ),
     )
 
     @model_validator(mode="after")

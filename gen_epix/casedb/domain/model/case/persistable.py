@@ -648,6 +648,9 @@ class Case(Model):
     content: dict[UUID, str] = Field(
         description="The column data of the case as {col_id: str_value}"
     )
+    code: str | None = Field(
+        default=None, description="A code for the case for further reference."
+    )
 
     @field_serializer("content", mode="plain")
     def _serialize_content(self, value: dict[UUID, str]) -> dict[str, str]:

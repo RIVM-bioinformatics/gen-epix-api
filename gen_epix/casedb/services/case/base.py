@@ -115,7 +115,7 @@ class BaseCaseService(DomainBaseCaseService):
     @abstractmethod
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         """Retrieve case IDs based on query criteria with ABAC filtering."""
         raise NotImplementedError()
 

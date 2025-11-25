@@ -142,7 +142,7 @@ class BaseCaseService(BaseService):
     @abc.abstractmethod
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         raise NotImplementedError()
 
     @abc.abstractmethod
