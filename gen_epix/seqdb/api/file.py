@@ -1,9 +1,11 @@
+import base64
 from collections.abc import Callable
 from typing import Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.util import copy_model_field
@@ -13,7 +15,7 @@ from gen_epix.seqdb.domain import command, enum, model
 
 
 class CreateFileRequestBody(PydanticBaseModel):
-    content: bytes = copy_model_field(model.File, "content")
+    content: str = Field(description="The content of the file.")
     format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
     compression: enum.FileCompression = copy_model_field(
         command.CreateFileCommand, "compression"
@@ -44,7 +46,9 @@ def create_file_endpoints(
             retval: UUID = app.handle(
                 command.CreateFileCommand(
                     user=user,
-                    file=model.File(content=request_body.content),
+                    file=model.File(
+                        content=base64.b64decode(request_body.content),
+                    ),
                     format=request_body.format,
                     compression=request_body.compression,
                 )
