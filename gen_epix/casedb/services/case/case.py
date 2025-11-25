@@ -504,61 +504,24 @@ class CaseService(BaseCaseService):
                 )
             time_case_type_col_ids, date_mappers = (
                 self._get_case_date_case_type_col_ids(
-                    uow, user, case_type_id, case_type_settings.stats_time_case_type_col_id
+                    uow,
+                    user,
+                    case_type_id,
+                    case_type_settings.stats_time_case_type_col_id,
                 )
             )
 
-            # filter time case type col ids and date mappers to only readable case type cols
+            
+            
+
+            # TODO: filter time case type col ids and date mappers to only readable case type cols
             # use abac to see with case type cols are readable and take intersection of those
             # loop over each case and determine case date based on accessible time columns
-            
+
             # For cases without calculatable case_date:
             # fill in a fixed date (default date) -> CaseService.DEFAULT_CASE_DATE
 
-            accessible_case_type_col_ids: set[UUID] = set()
-            for case in cases:
-                accessible_case_type_col_ids.update(
-                    {x for x in case.content.keys() if isinstance(x, UUID)}
-                )
 
-            case_type_col_to_col_id: dict[UUID, UUID] = {}
-            if accessible_case_type_col_ids:
-                case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.CaseTypeCol,
-                    None,
-                    list(accessible_case_type_col_ids),
-                    CrudOperation.READ_SOME,
-                )
-                case_type_col_to_col_id = {
-                    case_type_col.id: case_type_col.col_id
-                    for case_type_col in case_type_cols
-                    if case_type_col.id is not None
-                }
-
-            # Recompute case_date using only accessible time columns
-            for case in cases:
-
-                candidate_case_type_col_ids: set[UUID] = set(
-                    time_case_type_col_ids.get(case.case_type_id, [])
-                )
-                accessible_case_type_col_ids: set[UUID] = {
-                    x for x in case.content.keys() if isinstance(x, UUID)
-                }
-                allowed_case_type_col_ids = list(
-                    candidate_case_type_col_ids.intersection(
-                        accessible_case_type_col_ids
-                    )
-                )
-
-                if allowed_case_type_col_ids:
-                    updated_case_date = self.get_case_date(uow, user, case.id, allowed_case_type_col_ids)  # type: ignore[arg-type]
-                    if (
-                        updated_case_date is not None
-                        and updated_case_date != case.case_date
-                    ):
-                        case.case_date = updated_case_date
         return cases
 
     def retrieve_case_or_set_rights(
@@ -1338,7 +1301,7 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
         stats_time_case_type_col_id: UUID,
     ) -> list[tuple[UUID, Callable]]:
-        
+
         case_type_cols: list[model.CaseTypeCol] = (
             self.repository.crud(  # type:ignore[assignment]
                 uow,
@@ -1352,122 +1315,107 @@ class CaseService(BaseCaseService):
                 ),
             )
         )
-
         # 1. retrieve cols for case type cols
+        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Col,
+            None,
+            list(set(x.col_id for x in case_type_cols)),
+            CrudOperation.READ_SOME,
+        )
         # 2. retrieve dims for cols
+        dims: list[model.Dim] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Dim,
+            None,
+            list(set(x.dim_id for x in cols)),
+            CrudOperation.READ_SOME,
+        )
         # 3. keep only case type cols with the same (dim, occurrence) as stats_time_case_type_col_id col
         # 4. order by time granularity
         # 5. return list of case type col ids and map functions
 
-        # map function (e.g. map from week to first day, datetime package)
+        # Retrieve the main case type col to get (dim, occurrence)
+        main_case_type_col = next(
+            (ctc for ctc in case_type_cols if ctc.id == stats_time_case_type_col_id),
+            None,
+        )
+        if not main_case_type_col or not main_case_type_col.col:
+            return []
+        dim_id = main_case_type_col.col.dim_id
+        occurrence = main_case_type_col.occurrence
 
-        settings_by_case_type: dict[UUID, model.CaseTypeSettings] = {
-            x.case_type_id: x
-            for x in case_type_cols
-            if x.case_type_id in stats_time_case_type_col_id
-        }
+        # Filter case type cols with same (dim, occurrence) and time col_type
+        time_order = [
+            enum.ColType.TIME_DAY,
+            enum.ColType.TIME_WEEK,
+            enum.ColType.TIME_MONTH,
+            enum.ColType.TIME_QUARTER,
+            enum.ColType.TIME_YEAR,
+        ]
+        filtered_case_type_cols = [
+            ctc
+            for ctc in case_type_cols
+            if ctc.col
+            and ctc.col.dim_id == dim_id
+            and ctc.occurrence == occurrence
+            and ctc.col.col_type in time_order
+        ]
+        # Order by time granularity (from finest to coarsest)
+        filtered_case_type_cols.sort(key=lambda ctc: time_order.index(ctc.col.col_type))
 
-        if not settings_by_case_type:
-            raise exc.DataException("No CaseTypeSettings found for case types")
+        # Return list of (case_type_col_id, identity_map_function)
+        return [
+            (ctc.id, lambda x: x)
+            for ctc in filtered_case_type_cols
+            if ctc.id is not None
+        ]
 
+    def get_case_date(
+        self,
+        uow: BaseUnitOfWork,
+        user: model.User,
+        case_ids: list[UUID],
+        case_type_col_ids: list[UUID],
+    ) -> datetime.date | dict[UUID | None, datetime.date | None] | None:
+        if not case_type_col_ids:
+            return None
+
+        cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.Case,
+            None,
+            case_ids,
+            CrudOperation.READ_SOME,
+        )
         case_type_cols: list[model.CaseTypeCol] = (
             self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user.id,
                 model.CaseTypeCol,
                 None,
-                None,
-                CrudOperation.READ_ALL,
-            )
-        )
-
-        case_type_col_map: dict[UUID, model.CaseTypeCol] = {
-            x.id: x for x in case_type_cols
-        }
-
-        def _ordered_time_cols(dim_id: UUID, occurrence: int | None) -> list[UUID]:
-            time_order = [
-                enum.ColType.TIME_DAY,
-                enum.ColType.TIME_WEEK,
-                enum.ColType.TIME_MONTH,
-                enum.ColType.TIME_QUARTER,
-                enum.ColType.TIME_YEAR,
-            ]
-            time_cols = [
-                col
-                for col in case_type_cols
-                if col.col.dim_id == dim_id
-                and col.occurrence == occurrence
-                and col.col.col_type in time_order
-            ]
-            time_cols.sort(
-                key=lambda x: (
-                    time_order.index(x.col.col_type)
-                    if x.col.col_type in time_order
-                    else 99  # TODO: better solution for 99? max()?
-                )
-            )
-            return [col.id for col in time_cols]
-
-        for case_type_id, settings in settings_by_case_type.items():
-            main_col_id = settings.stats_time_case_type_col_id
-            if not main_col_id:
-                continue
-            main_case_type_col = case_type_col_map.get(main_col_id)
-            if not main_case_type_col:
-                continue
-            dim_id = main_case_type_col.col.dim_id
-            occurrence = main_case_type_col.occurrence
-            fallback_col_ids = _ordered_time_cols(dim_id, occurrence)
-            readable_col_ids = [
-                col_id
-                for col_id in fallback_col_ids  # if self._user_can_read_case_type_col(user, case_type_col_map[col_id])
-            ]
-            if readable_col_ids:
-                result[case_type_id] = [readable_col_ids[0]]
-
-        return result
-
-    def get_case_date(
-        self,
-        uow: BaseUnitOfWork,
-        user: model.User,
-        case_id: UUID,
-        case_type_col_ids: list[UUID],
-    ) -> datetime.date | None:
-        if not case_type_col_ids:
-            return None
-
-        # TODO: handle Case_ids in stead of one case id
-        case: model.Case = self.repository.crud(  # type:ignore[assignment]
-            uow,
-            user.id,
-            model.Case,
-            None,
-            case_id,
-            CrudOperation.READ_ONE,
-        )
-
-        case_type_cols: list[model.CaseTypeCol] = (
-            self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user.id,
-                model.Col,
-                None,
                 case_type_col_ids,
                 CrudOperation.READ_SOME,
             )
         )
-
-        for case_type_col in case_type_cols:
-            date_value = case.content.get(str(case_type_col.id))
-            full_date = self._convert_to_full_date(
-                date_value, case_type_col.col.col_type
-            )
-            if full_date is not None:
-                today = datetime.date.today()
-                return today if full_date > today else full_date
-        return None
+        result: dict[UUID | None, datetime.date | None] = {}
+        for case in cases:
+            for case_type_col in case_type_cols:
+                date_value = case.content.get(case_type_col.id)
+                if case_type_col.col:
+                    full_date = self._convert_to_full_date(
+                        date_value, case_type_col.col.col_type
+                    )
+                    if full_date is not None:
+                        today = datetime.date.today()
+                        result[case.id] = today if full_date > today else full_date
+                        break
+            else:
+                result[case.id] = None
+        return result
 
     def _convert_to_full_date(
         self, date_value: Any, col_type: enum.ColType
