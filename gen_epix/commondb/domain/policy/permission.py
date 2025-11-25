@@ -54,6 +54,7 @@ class RoleGenerator:
                 command.DataCollectionSetMemberCrudCommand,
                 PermissionTypeSet.CRUD,
             ),  # TODO: READ permission can be set broader once this entity is actually used
+            (command.IdentifierIssuerCrudCommand, PermissionTypeSet.CU),
             (
                 command.OrganizationIdentifierIssuerLinkCrudCommand,
                 PermissionTypeSet.CUD,

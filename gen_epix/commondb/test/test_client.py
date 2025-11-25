@@ -332,7 +332,7 @@ class TestClient:
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.IdentifierIssuer(
                     code=code,
-                    name=name,
+                    name=name or code,
                     description=description,
                 ),
             )
