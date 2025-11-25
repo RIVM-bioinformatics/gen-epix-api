@@ -150,7 +150,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         return case_service_retrieve_cases_by_query(self, cmd)
 
     def retrieve_cases_by_id(

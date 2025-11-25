@@ -145,3 +145,5 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
         }
     ),
 }
+
+COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}

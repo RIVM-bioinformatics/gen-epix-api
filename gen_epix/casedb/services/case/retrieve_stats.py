@@ -49,7 +49,7 @@ def case_service_retrieve_case_type_stats(
         for case in cases:
             case_type_id = case.case_type_id
             case_type_col_ids = case_type_to_col_ids.get(case_type_id, [])
-            date_ = self.get_case_date(uow, user, case.id, case_type_col_ids)  # type: ignore[attr-defined]
+            date_ = case_service_get_case_date(self, uow, user, [case.id], case_type_col_ids)  # type: ignore[attr-defined]
             if date_ is None:
                 continue
             stat = stats[case_type_id]
