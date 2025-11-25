@@ -100,6 +100,9 @@ from gen_epix.commondb.domain.model import (
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.domain.model import (
     OrganizationSetMember as OrganizationSetMember,

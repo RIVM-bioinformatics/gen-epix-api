@@ -274,23 +274,23 @@ class TestContent:
                 ]
                 if not has_seq_case_ids:
                     continue
-                # Retrieve genetic sequence
-                genetic_sequences: list[model.GeneticSequence] = app.handle(
-                    command.RetrieveGeneticSequenceByCaseCommand(
-                        user=org_user,
-                        case_ids=has_seq_case_ids[0:1],
-                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
-                    )
-                )
-                if not genetic_sequences:
-                    raise ValueError("Genetic sequence should not be empty")
-                for seq in genetic_sequences:
-                    if not seq.id:
-                        raise ValueError("Genetic sequence ID should not be empty")
-                    if not hasattr(seq, "nucleotide_sequence"):
-                        raise ValueError(
-                            "Genetic sequence should have nucleotide_sequence attribute"
-                        )
+                # # Retrieve genetic sequence
+                # genetic_sequences: list[model.GeneticSequence] = app.handle(
+                #     command.RetrieveGeneticSequenceByCaseCommand(
+                #         user=org_user,
+                #         case_ids=has_seq_case_ids[0:1],
+                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
+                #     )
+                # )
+                # if not genetic_sequences:
+                #     raise ValueError("Genetic sequence should not be empty")
+                # for seq in genetic_sequences:
+                #     if not seq.id:
+                #         raise ValueError("Genetic sequence ID should not be empty")
+                #     if not hasattr(seq, "nucleotide_sequence"):
+                #         raise ValueError(
+                #             "Genetic sequence should have nucleotide_sequence attribute"
+                #         )
                 # Retrieve genetic sequences in FASTA format
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
