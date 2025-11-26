@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.util import map_paired_elements
@@ -15,61 +15,72 @@ def case_service_retrieve_case_type_stats(
 ) -> list[model.CaseTypeStat]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
     case_type_ids = cmd.case_type_ids
 
-    with repository.uow() as uow:
-        cases: list[model.Case] = (
-            self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
-                uow,
-                user.id,
-                case_abac,
-                # user_case_access,
-                enum.CaseRight.READ_CASE,
-                datetime_range_filter=cmd.datetime_range_filter,
-                filter_content=False,
+    # @ABAC: check READ_CASE right on case types
+    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+    assert case_abac is not None
+    read_case_type_ids = case_abac.get_case_types_with_access_right(
+        enum.CaseRight.READ_CASE
+    )
+    if case_type_ids is None:
+        # No case types provided -> use all case types with read access
+        case_type_ids = read_case_type_ids
+    else:
+        unauthorized_case_type_ids = case_type_ids - read_case_type_ids
+        if unauthorized_case_type_ids:
+            unauthorized_case_type_ids_str = ", ".join(
+                str(x) for x in unauthorized_case_type_ids
             )
-        )
-        if case_type_ids is not None:
-            cases = [x for x in cases if x.case_type_id in case_type_ids]
-        else:
-            case_type_ids = {x.case_type_id for x in cases}
+            raise exc.UnauthorizedAuthError(
+                f"User {user.id} does not have READ_CASE right for case types: {unauthorized_case_type_ids_str}"
+            )
 
-        case_type_to_col_ids: dict[UUID, list[UUID]] = (
-            self.get_case_date_case_type_col_ids(uow, user, case_type_ids)  # type: ignore[attr-defined]
+    with repository.uow() as uow:
+
+        # Get all case type settings
+        case_type_settings_list: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
+            uow,
+            user.id,
+            model.CaseTypeSettings,
+            None,
+            list(case_type_ids),
+            CrudOperation.READ_SOME,
         )
-        # Derive stats
-        empty_stat = {
-            "n_cases": 0,
-            "first_case_month": None,
-            "last_case_month": None,
-        }
-        stats = {x: dict(empty_stat) for x in case_type_ids}
-        for case in cases:
-            case_type_id = case.case_type_id
-            case_type_col_ids = case_type_to_col_ids.get(case_type_id, [])
-            date_ = case_service_get_case_date(self, uow, user, [case.id], case_type_col_ids)  # type: ignore[attr-defined]
-            if date_ is None:
+
+        # Retrieve cases per case type settings and thus case type, and calculate stats
+        case_type_stats: list[model.CaseTypeStat] = []
+        for case_type_settings in case_type_settings_list:
+            if case_type_settings.stats_time_case_type_col_id is None:
+                # No time column defined, cannot calculate stats
                 continue
-            stat = stats[case_type_id]
-            if stat["n_cases"] == 0:
-                stat["n_cases"] = 1
-                stat["first_case_month"] = date_  # type: ignore[assignment]
-                stat["last_case_month"] = date_  # type: ignore[assignment]
-            else:
-                stat["n_cases"] += 1  # type:ignore[operator]
-                stat["first_case_month"] = min(stat["first_case_month"], date_)  # type: ignore[type-var,assignment]
-                stat["last_case_month"] = max(stat["last_case_month"], date_)  # type: ignore[type-var,assignment]
-        # Convert first/last date to month only
-        for stat in stats.values():
-            for key in ("first_case_month", "last_case_month"):
-                if stat[key] is not None:
-                    stat[key] = stat[key].isoformat()[0:7]  # type: ignore[union-attr]
-        # Get case type stats
-        case_type_stats = [
-            model.CaseTypeStat(case_type_id=x, **stats[x]) for x in case_type_ids  # type: ignore[arg-type]
-        ]
+            # Retrieve cases for case type
+            case_type_id = case_type_settings.case_type_id
+            cases: list[model.Case] = (
+                self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
+                    uow,
+                    user.id,
+                    case_abac,
+                    # user_case_access,
+                    enum.CaseRight.READ_CASE,
+                    case_type_settings.case_type_id,
+                    case_type_settings=case_type_settings,
+                    datetime_range_filter=cmd.datetime_range_filter,
+                )
+            )
+            # Calculate stats
+            case_type_stat = model.CaseTypeStat(
+                case_type_id=case_type_id,
+                n_cases=sum(x.count for x in cases if x.count),
+                first_case_date=min(
+                    x.case_date for x in cases if x.case_date is not None
+                ),
+                last_case_date=max(
+                    x.case_date for x in cases if x.case_date is not None
+                ),
+            )
+            case_type_stats.append(case_type_stat)
+
     return case_type_stats
 
 
@@ -79,6 +90,15 @@ def case_service_retrieve_case_set_stats(
 ) -> list[model.CaseSetStat]:
     user, repository = self._get_user_and_repository(cmd)
     case_set_ids = cmd.case_set_ids
+
+    # TODO: adjust analogous to case_service_retrieve_case_type_stats:
+    # - Read all case sets while checking access rights. RetrieveCaseSetStatsCommand.case_set_ids should be mandatory.
+    # - Get unique case type ids from case sets
+    # - Loop over case type ids and retrieve cases for all case sets of that case type
+    # - Calculate stats per case set
+
+    # TODO: update the code below as described above
+
     # Create filter, even if no case_set_ids are provided, to avoid unallowed read
     # all without filter
     query_filter: Filter | None = None

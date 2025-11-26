@@ -407,15 +407,28 @@ def _crud_data_by_non_admin(
 
         # All operations require read access to the case: retrieve the cases while
         # checking for this read right to determine this
-        cases = self._retrieve_cases_with_content_right(
-            uow,
-            cmd.user.id,
-            case_abac,
-            enum.CaseRight.READ_CASE,
-            case_ids=list({x.case_id for x in case_set_members}),
-            filter_content=False,
-            on_invalid_case_id=("ignore" if is_read_all or is_delete_all else "raise"),
-        )
+        if case_set_members:
+            case: model.Case = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                cmd.user.id,
+                model.Case,
+                None,
+                case_set_members[0].case_id,
+                CrudOperation.READ_ONE,
+            )
+            # TODO: handle situation where there are multiple case types in case set members: e.g. read all cases per case type
+            cases = self._retrieve_cases_with_content_right(
+                uow,
+                cmd.user.id,
+                case_abac,
+                enum.CaseRight.READ_CASE,
+                case_type_id=case.case_type_id,
+                case_ids=list({x.case_id for x in case_set_members}),
+                filter_content=False,
+                on_invalid_case_id=(
+                    "ignore" if is_read_all or is_delete_all else "raise"
+                ),
+            )
 
         # Retrieve the case sets while checking for the correct right(s)
         uq_case_set_ids = {x.case_set_id for x in case_set_members}

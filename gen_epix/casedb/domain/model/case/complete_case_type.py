@@ -61,21 +61,14 @@ class CompleteCaseType(CaseType):
     stats_time_case_type_col_id: UUID | None = copy_model_field(
         CaseTypeSettings, "stats_time_case_type_col_id"
     )
-    stats_time_case_type_col: CaseTypeCol | None = copy_model_field(
-        CaseTypeSettings, "stats_time_case_type_col"
-    )
     stats_geo_case_type_col_id: UUID | None = copy_model_field(
         CaseTypeSettings, "stats_geo_case_type_col_id"
-    )
-    stats_geo_case_type_col: CaseTypeCol | None = copy_model_field(
-        CaseTypeSettings, "stats_geo_case_type_col"
     )
     create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
     read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
     read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
     update_max_n_cases: int = copy_model_field(CaseTypeSettings, "update_max_n_cases")
     delete_max_n_cases: int = copy_model_field(CaseTypeSettings, "delete_max_n_cases")
-
     stats_time_case_type_col_ids: list[UUID] | None = Field(
         description=(
             "The list of case type column IDs within the stats_time_dim_id. "

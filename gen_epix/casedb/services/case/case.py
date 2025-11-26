@@ -1,4 +1,5 @@
-from collections.abc import Iterable
+import datetime
+from collections.abc import Callable, Iterable
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -8,6 +9,10 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.case_date import (
+    case_service_calculate_case_date,
+    case_service_get_case_date_case_type_col_mappers,
+)
 from gen_epix.casedb.services.case.case_transformer import CaseTransformer
 from gen_epix.casedb.services.case.create_case import (
     case_service_create_case_set,
@@ -304,8 +309,8 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
-        case_set_ids: list[UUID] | None = None,
         case_type_ids: set[UUID] | None = None,
+        case_set_ids: list[UUID] | None = None,
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
@@ -416,19 +421,59 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
+        case_type_id: UUID,
+        case_type_settings: model.CaseTypeSettings | None = None,
         case_ids: list[UUID] | None = None,
-        case_type_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
+        calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
     ) -> list[model.Case]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         if right not in enum.CaseRightSet.CASE_CONTENT.value:
-            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+            raise ValueError(f"Invalid case abac right: {right.value}")
         if on_invalid_case_id not in {"raise", "ignore"}:
-            raise exc.InvalidArgumentsError(
-                f"Invalid on_invalid_case_id: {on_invalid_case_id}"
+            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
+        if not filter_content and calculate_case_date:
+            raise ValueError("Cannot calculate case date when filter_content is False")
+
+        # @ABAC: verify access to case type
+        access_data_collections = case_abac.get_combinations_with_access_right(
+            right
+        ).get(case_type_id, set())
+        is_full_access = case_abac.is_full_access
+        data_collection_col_access = case_abac.case_type_access_abacs[case_type_id]
+        if not access_data_collections and not is_full_access:
+            raise exc.UnauthorizedAuthError(
+                f"User {user_id} has no access to case type {case_type_id}"
+            )
+
+        # Verify max number of cases
+        case_date_case_type_col_mappers: (
+            dict[UUID, Callable[[str], datetime.datetime]] | None
+        ) = {}
+        max_n_cases: int = int(float("inf"))
+        if case_type_settings is not None:
+            if right == enum.CaseRight.READ_CASE:
+                max_n_cases = case_type_settings.read_max_n_cases
+            elif right == enum.CaseRight.WRITE_CASE:
+                max_n_cases = case_type_settings.update_max_n_cases
+            else:
+                raise NotImplementedError(f"Unsupported case right: {right}")
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers(
+                    self,
+                    uow,
+                    user_id,
+                    case_type_id,
+                    case_type_settings.stats_time_case_type_col_id,
+                )
+            )
+
+        if case_ids and len(case_ids) > max_n_cases:
+            raise exc.RequestLimitExceededAuthError(
+                f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
             )
 
         # Retrieve all cases, potentially filtered by datetime range
@@ -452,7 +497,23 @@ class CaseService(BaseCaseService):
                 case_ids,
                 CrudOperation.READ_SOME,
             )
+            if not all(x.case_type_id == case_type_id for x in cases):
+                raise exc.InvalidArgumentsError(
+                    f"Some cases have invalid case type ids: {case_ids}"
+                )
         else:
+            if datetime_range_filter:
+                filter = CompositeFilter(
+                    operator=LogicalOperator.AND,
+                    filters=[
+                        UuidSetFilter(
+                            key="case_type_id", members=frozenset({case_type_id})
+                        ),
+                        datetime_range_filter,
+                    ],
+                )
+            else:
+                filter = datetime_range_filter
             cases = self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
@@ -460,63 +521,31 @@ class CaseService(BaseCaseService):
                 None,
                 None,
                 CrudOperation.READ_ALL,
-                filter=datetime_range_filter,
+                filter=filter,
             )
 
-        # Filter on case_type_ids if any or verify that all cases have a valid
-        # case_type_id if case_ids is given
-        # TODO: add more efficient implementation by adding this as a filter in the
-        # call to the repository
-        if case_type_ids is not None:
-            if case_ids:
-                if not all(x.case_type_id in case_type_ids for x in cases):
-                    raise exc.InvalidArgumentsError(
-                        f"Some cases have invalid case type ids: {case_ids}"
-                    )
-                if on_invalid_case_id == "raise":
-                    if not all(x.case_type_id in case_type_ids for x in cases):
-                        raise exc.InvalidArgumentsError(
-                            f"Some cases have invalid case type ids: {case_ids}"
-                        )
-                elif on_invalid_case_id == "ignore":
-                    pass
-                else:
-                    raise AssertionError(
-                        f"Invalid on_invalid_case_id: {on_invalid_case_id}"
-                    )
-            cases = [x for x in cases if x.case_type_id in case_type_ids]
-
-        # Special case: full_access
+        # Special case: full_access -> nothing left to filter
         if case_abac.is_full_access:
             return cases
 
-        # @ABAC: filter cases to which the user has read access, and optionally also
+        # @ABAC: filter cases to which the user has access, and optionally also
         # the content (case type cols)
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
-        has_access = case_abac.get_combinations_with_access_right(right)
         filtered_cases = []
+        count = 0
         for case in cases:
-            # Check if user has any access to case
-            case_type_id = case.case_type_id
-            if case_type_id not in has_access:
-                if case_ids:
-                    if on_invalid_case_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested cases"
-                        )
-                    elif on_invalid_case_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_id: {on_invalid_case_id}"
-                        )
-                continue
             # Check if user has access to any data collection of the case
-            data_collection_ids = case_data_collections.get(
-                case.id, set()  # type:ignore[arg-type]
-            )
-            data_collection_ids.add(case.created_in_data_collection_id)
-            if not data_collection_ids.intersection(has_access[case_type_id]):
+            is_unauthorized_case = False
+            if case.id not in case_data_collections:
+                is_unauthorized_case = True
+            else:
+                data_collection_ids: set[UUID] = case_data_collections.get(
+                    case.id, set()
+                )
+                data_collection_ids.add(case.created_in_data_collection_id)
+                if not data_collection_ids.intersection(access_data_collections):
+                    is_unauthorized_case = True
+            if is_unauthorized_case:
                 if case_ids:
                     if on_invalid_case_id == "raise":
                         raise exc.UnauthorizedAuthError(
@@ -529,13 +558,16 @@ class CaseService(BaseCaseService):
                             f"Invalid on_invalid_case_id: {on_invalid_case_id}"
                         )
                 continue
+            # Stop if maximum number of cases reached
+            count += case.count if case.count is not None else 1
+            if count > max_n_cases:
+                break
             # Keep case
             filtered_cases.append(case)
             # Continue to next case if case content need not be filtered
             if not filter_content:
                 continue
             # Determine which case type cols the user has access to
-            data_collection_col_access = case_abac.case_type_access_abacs[case_type_id]
             case_type_col_ids = set()
             for data_collection_id in data_collection_ids:
                 # Add case type cols with access to the case for this data
@@ -560,6 +592,11 @@ class CaseService(BaseCaseService):
             case.content = {
                 x: y for x, y in case.content.items() if x in case_type_col_ids
             }
+
+        # Calculate case date if necessary
+        if calculate_case_date and case_date_case_type_col_mappers:
+            case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
+
         return filtered_cases
 
     def _retrieve_case_data_collections_map(

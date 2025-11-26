@@ -180,8 +180,8 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
+        case_type_id: UUID | None = None,
         case_set_ids: list[UUID] | None = None,
-        case_type_ids: set[UUID] | None = None,
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
@@ -195,11 +195,13 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
+        case_type_id: UUID,
+        case_type_settings: model.CaseTypeSettings | None = None,
         case_ids: list[UUID] | None = None,
-        case_type_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
+        calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
     ) -> list[model.Case]:
         """Retrieve cases that the user has specific content rights for."""

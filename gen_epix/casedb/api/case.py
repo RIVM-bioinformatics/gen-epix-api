@@ -122,6 +122,15 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
         return self
 
 
+class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveCasesByIdCommand, "case_type_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveCasesByIdCommand, "case_ids"
+    )
+
+
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     genetic_distance_case_type_col_id: UUID = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand,
@@ -416,13 +425,14 @@ def create_case_endpoints(
     )
     async def retrieve__cases_by_ids(
         user: registered_user_dependency,  # type: ignore
-        request_body: list[UUID],
+        request_body: RetrieveCasesByIdsRequestBody,
     ) -> list[model.Case]:
         try:
             retval: list[model.Case] = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=user,
-                    case_ids=request_body,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
                 )
             )
         except Exception as exception:

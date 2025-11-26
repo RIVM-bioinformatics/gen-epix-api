@@ -142,8 +142,9 @@ class RetrieveCasesByIdCommand(Command):
     Retrieve cases by their IDs.
     """
 
+    case_type_id: UUID = Field(description="The case type id to retrieve cases for.")
     case_ids: list[UUID] = Field(
-        description="The case ids to retrieve cases for. UNIQUE"
+        description="The case ids to retrieve cases for. All cases must belong to the given case type. UNIQUE"
     )
 
     @field_validator("case_ids", mode="after")
