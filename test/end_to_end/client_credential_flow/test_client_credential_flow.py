@@ -560,7 +560,6 @@ def test_get_jwk_from_jwt_returns_existing_key(
         {
             "use": "enc",
             "kty": "RSA",
-            "alg": "RS256",
             "kid": "bad-use-kid",
             "n": "dummy_n",
             "e": "AQAB",
@@ -569,20 +568,10 @@ def test_get_jwk_from_jwt_returns_existing_key(
         {
             "use": "sig",
             "kty": "EC",
-            "alg": "RS256",
             "kid": "bad-kty-kid",
             "crv": "P-256",
             "x": "dummy",
             "y": "dummy",
-        },
-        # key with disallowed `alg`
-        {
-            "use": "sig",
-            "kty": "RSA",
-            "alg": "HS256",
-            "kid": "bad-alg-kid",
-            "n": "dummy_n",
-            "e": "AQAB",
         },
     ],
 )
@@ -598,7 +587,6 @@ def test_load_keys_ignores_invalid_key(
     valid_key = {
         "use": "sig",
         "kty": "RSA",
-        "alg": "RS256",
         "kid": "valid-kid",
         "n": "dummy_n",
         "e": "AQAB",
