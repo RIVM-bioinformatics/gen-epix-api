@@ -453,7 +453,7 @@ class CaseService(BaseCaseService):
         case_date_case_type_col_mappers: (
             dict[UUID, Callable[[str], datetime.datetime]] | None
         ) = {}
-        max_n_cases: int = int(float("inf"))
+        max_n_cases: float = float("inf")
         if case_type_settings is not None:
             if right == enum.CaseRight.READ_CASE:
                 max_n_cases = case_type_settings.read_max_n_cases
@@ -503,7 +503,7 @@ class CaseService(BaseCaseService):
                 )
         else:
             if datetime_range_filter:
-                filter = CompositeFilter(
+                case_filter = CompositeFilter(
                     operator=LogicalOperator.AND,
                     filters=[
                         UuidSetFilter(
@@ -513,7 +513,7 @@ class CaseService(BaseCaseService):
                     ],
                 )
             else:
-                filter = datetime_range_filter
+                case_filter = datetime_range_filter
             cases = self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
@@ -521,7 +521,7 @@ class CaseService(BaseCaseService):
                 None,
                 None,
                 CrudOperation.READ_ALL,
-                filter=filter,
+                filter=case_filter,
             )
 
         # Special case: full_access -> nothing left to filter
@@ -539,6 +539,7 @@ class CaseService(BaseCaseService):
             if case.id not in case_data_collections:
                 is_unauthorized_case = True
             else:
+                assert case.id is not None
                 data_collection_ids: set[UUID] = case_data_collections.get(
                     case.id, set()
                 )

@@ -48,7 +48,7 @@ def case_service_retrieve_cases_by_query(
 
     with repository.uow() as uow:
 
-        case_type_settings = _retrieve_case_type_settings(self, case_type_id)
+        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
 
         # @ABAC: Verify any access to all given case sets if applicable
         if case_set_ids:
@@ -158,7 +158,7 @@ def case_service_retrieve_cases_by_id(
     assert case_abac is not None
 
     with repository.uow() as uow:
-        case_type_settings = _retrieve_case_type_settings(self, case_type_id)
+        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
 
         cases = self._retrieve_cases_with_content_right(
             uow,
@@ -172,6 +172,8 @@ def case_service_retrieve_cases_by_id(
         )
         if not cases:
             return []
+
+        # TODO: Add case_type_settings.read_max_n_cases check?
 
     return cases
 
@@ -463,7 +465,7 @@ def _get_map_functions_for_filters(
 
 
 def _retrieve_case_type_settings(
-    self: BaseCaseService, case_type_id: UUID
+    self: BaseCaseService, uow: BaseUnitOfWork, user: model.User, case_type_id: UUID
 ) -> model.CaseTypeSettings:
     # Get time stats case type col ids and mappers based on case type settings
     case_type_settings_list: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]

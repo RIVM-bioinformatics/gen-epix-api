@@ -408,27 +408,36 @@ def _crud_data_by_non_admin(
         # All operations require read access to the case: retrieve the cases while
         # checking for this read right to determine this
         if case_set_members:
-            case: model.Case = self.repository.crud(  # type:ignore[assignment]
+            # Retrieve all referenced cases to determine their case_type_id
+            member_case_ids = list({x.case_id for x in case_set_members})
+            member_cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
                 uow,
                 cmd.user.id,
                 model.Case,
                 None,
-                case_set_members[0].case_id,
-                CrudOperation.READ_ONE,
+                member_case_ids,
+                CrudOperation.READ_SOME,
             )
-            # TODO: handle situation where there are multiple case types in case set members: e.g. read all cases per case type
-            cases = self._retrieve_cases_with_content_right(
-                uow,
-                cmd.user.id,
-                case_abac,
-                enum.CaseRight.READ_CASE,
-                case_type_id=case.case_type_id,
-                case_ids=list({x.case_id for x in case_set_members}),
-                filter_content=False,
-                on_invalid_case_id=(
-                    "ignore" if is_read_all or is_delete_all else "raise"
-                ),
-            )
+            # Group case IDs by case_type_id to avoid mixed-type errors downstream
+            case_ids_by_type: dict[UUID, list[UUID]] = {}
+            for c in member_cases:
+                if c.id is not None:
+                    case_ids_by_type.setdefault(c.case_type_id, []).append(c.id)
+
+            # For each case_type_id group, enforce content right checks
+            for ct_id, ids in case_ids_by_type.items():
+                self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
+                    uow,
+                    cmd.user.id,
+                    case_abac,
+                    enum.CaseRight.READ_CASE,
+                    case_type_id=ct_id,
+                    case_ids=ids,
+                    filter_content=False,
+                    on_invalid_case_id=(
+                        "ignore" if is_read_all or is_delete_all else "raise"
+                    ),
+                )
 
         # Retrieve the case sets while checking for the correct right(s)
         uq_case_set_ids = {x.case_set_id for x in case_set_members}

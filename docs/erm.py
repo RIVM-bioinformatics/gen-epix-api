@@ -3,8 +3,6 @@ import os
 import warnings
 from pathlib import Path
 
-import erdantic as erd
-
 from docs.erm_hash import generate_hash_for_domain_models
 from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
 from gen_epix.fastapp import Domain

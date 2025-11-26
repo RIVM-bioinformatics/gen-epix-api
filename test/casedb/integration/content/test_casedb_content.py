@@ -215,7 +215,7 @@ class TestContent:
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(
-                        case_type_ids={complete_case_type.id},
+                        case_type_id=complete_case_type.id,
                         filter=(
                             TypedCompositeFilter(
                                 type="COMPOSITE",
@@ -330,18 +330,19 @@ class TestContent:
                     if not assembly_protocol.id:
                         raise ValueError("Assembly protocol ID should not be empty")
         for case_set in case_sets:
-            case_ids = app.handle(
+            case_ids: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(
-                        case_set_ids={case_set.id},
+                        case_type_id=case_set.case_type_id,
                     ),
                 )
-            )
+            ).case_ids
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
                     case_ids=case_ids,
+                    case_type_id=case_set.case_type_id,
                 )
             )
 

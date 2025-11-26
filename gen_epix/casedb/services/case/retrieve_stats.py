@@ -5,7 +5,6 @@ from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.base import Filter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 
@@ -44,10 +43,13 @@ def case_service_retrieve_case_type_stats(
             user.id,
             model.CaseTypeSettings,
             None,
-            list(case_type_ids),
-            CrudOperation.READ_SOME,
+            None,
+            CrudOperation.READ_ALL,
+            filter=UuidSetFilter(
+                key="case_type_id",
+                members=case_type_ids,
+            ),
         )
-
         # Retrieve cases per case type settings and thus case type, and calculate stats
         case_type_stats: list[model.CaseTypeStat] = []
         for case_type_settings in case_type_settings_list:

@@ -120,9 +120,8 @@ def case_service_get_case_date_case_type_col_mappers(
         return {}
     # TODO: naieve implementation, optimize if needed through e.g. a single dedicated repository call
     # Get all case type cols for the case type
-    case_type_cols_map: dict[UUID, model.CaseTypeCol] = {
-        x.id: x
-        for x in self.repository.crud(  # type:ignore[assignment]
+    case_type_cols: list[model.CaseTypeCol] = (
+        self.repository.crud(  # type:ignore[assignment]
             uow,
             user_id,
             model.CaseTypeCol,
@@ -131,6 +130,9 @@ def case_service_get_case_date_case_type_col_mappers(
             CrudOperation.READ_ALL,
             filter=UuidSetFilter(key="case_type_id", members=frozenset({case_type_id})),
         )
+    )
+    case_type_cols_map: dict[UUID, model.CaseTypeCol] = {
+        x.id: x for x in case_type_cols if x.id is not None
     }
     if stats_time_case_type_col_id not in case_type_cols_map:
         # Should not occur: stats_time_case_type_col_id must be valid for case_type_id
@@ -138,17 +140,15 @@ def case_service_get_case_date_case_type_col_mappers(
             f"stats_time_case_type_col_id {stats_time_case_type_col_id} is not valid for case_type_id {case_type_id}"
         )
     # Get all cols for case type cols
-    cols_map: dict[UUID, model.Col] = {
-        x.id: x
-        for x in self.repository.crud(  # type:ignore[assignment]
-            uow,
-            user_id,
-            model.Col,
-            None,
-            list(set(x.col_id for x in case_type_cols_map.values())),
-            CrudOperation.READ_SOME,
-        )
-    }
+    cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+        uow,
+        user_id,
+        model.Col,
+        None,
+        list(set(x.col_id for x in case_type_cols_map.values())),
+        CrudOperation.READ_SOME,
+    )
+    cols_map: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
     # Get dim_id and occurrence of stats_time_case_type_col_id
     dim_id = cols_map[case_type_cols_map[stats_time_case_type_col_id].col_id].dim_id
     occurrence = case_type_cols_map[stats_time_case_type_col_id].occurrence
@@ -161,7 +161,7 @@ def case_service_get_case_date_case_type_col_mappers(
         and x.occurrence == occurrence
         and cols_map[x.col_id].col_type in enum.ColTypeSet.TIME.value
     ]
-    if stats_time_case_type_col_id not in case_type_cols:
+    if stats_time_case_type_col_id not in {x.id for x in case_type_cols}:
         # Should not occur: stats_time_case_type_col_id must be of type time
         raise ValueError(
             f"stats_time_case_type_col_id {stats_time_case_type_col_id} is not of type time"
@@ -176,11 +176,11 @@ def case_service_get_case_date_case_type_col_mappers(
     stats_time_case_type_col_index = next(
         i for i, x in enumerate(case_type_cols) if x.id == stats_time_case_type_col_id
     )
-    case_type_cols_map = case_type_cols[stats_time_case_type_col_index:]
+    selected_case_type_cols = case_type_cols[stats_time_case_type_col_index:]
     # Create return value dictionary of case type col ids to a mapping function that converts the string date
     retval = {
         x.id: CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[cols_map[x.col_id].col_type]
-        for x in case_type_cols_map
+        for x in selected_case_type_cols
     }
 
     return retval
