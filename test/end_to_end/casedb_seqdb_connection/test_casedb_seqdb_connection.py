@@ -7,7 +7,7 @@ from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
 from test.end_to_end.casedb_seqdb_connection.seqdb_server_manager import (
     SeqdbServerManager,
 )
-from test.test_client.oauth.server_manager import OAuthServerManager
+from test.test_client.oauth.common_server_manager import CommonServerManager
 from uuid import UUID
 
 import pytest
@@ -15,6 +15,7 @@ import pytest
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
+from test.test_client.enum import ServerType
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
@@ -30,10 +31,13 @@ SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
 
 @pytest.fixture(scope="function")
-def oauth_server() -> Generator[OAuthServerManager, None, None]:
+def oauth_server() -> Generator[CommonServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
-    with OAuthServerManager(
-        port=8000, ssl_keyfile=SSL_KEYFILE, ssl_certfile=SSL_CERTFILE
+    with CommonServerManager(
+        service=ServerType.OAUTH,
+        port=8000,
+        ssl_keyfile=SSL_KEYFILE,
+        ssl_certfile=SSL_CERTFILE
     ) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
@@ -53,8 +57,8 @@ def oauth_server() -> Generator[OAuthServerManager, None, None]:
 
 @pytest.fixture(scope="function")
 def seqdb_server(
-    oauth_server: OAuthServerManager,
-) -> Generator[SeqdbServerManager, None, None]:
+    oauth_server: CommonServerManager,
+) -> Generator[CommonServerManager, None, None]:
     """Start SeqDB server on port 8001."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
@@ -77,8 +81,9 @@ def seqdb_server(
         debug=False,
     )
 
-    with SeqdbServerManager(
-        seqdb_fastapi_app,
+    with CommonServerManager(
+        service=ServerType.SEQDB,
+        app=seqdb_fastapi_app,
         host="127.0.0.1",
         port=8001,
         ssl_certfile=SSL_CERTFILE,
@@ -88,9 +93,8 @@ def seqdb_server(
             pytest.fail("Failed to start SeqDB server")
         yield server
 
-
 def test_casedb_seqdb_connection(
-    oauth_server: OAuthServerManager, seqdb_server: SeqdbServerManager
+    oauth_server: CommonServerManager, seqdb_server: SeqdbServerManager
 ) -> None:
     """Test CaseDB to SeqDB connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb

@@ -12,5 +12,4 @@ from ....test_client.oauth.server_manager import (
     OAuthServerManager as OAuthServerManager,
 )
 from .receiver_app import ReceiverApp as ReceiverApp
-from .receiver_app_manager import ReceiverAppManager as ReceiverAppManager
 from .requestor_app import RequestorApp as RequestorApp

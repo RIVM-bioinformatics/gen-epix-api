@@ -21,14 +21,15 @@ import logging
 import time
 from collections.abc import Generator
 from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=import-error
-    OAuthServerManager,
-    ReceiverAppManager,
     RequestorApp,
 )
+from test.test_client.oauth.common_server_manager import CommonServerManager
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
+from test.test_client.enum import ServerType
+
 import jwt
 import pytest
 
@@ -41,9 +42,12 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def oauth_server() -> Generator[OAuthServerManager, None, None]:
+def oauth_server() -> Generator[CommonServerManager, None, None]:
     """Start and manage OAuth server for the test session."""
-    with OAuthServerManager(port=8000) as server:
+    with CommonServerManager(
+        service=ServerType.OAUTH,
+        port=8000
+    ) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
 
@@ -108,12 +112,16 @@ def oauth_server() -> Generator[OAuthServerManager, None, None]:
 
 @pytest.fixture(scope="session")
 def receiver_app(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
-) -> Generator[ReceiverAppManager, None, None]:
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+) -> Generator[CommonServerManager, None, None]:
     """Start and manage ReceiverApp for the test session."""
     discovery_url = oauth_server.get_discovery_url()
 
-    with ReceiverAppManager(port=8001, oauth_discovery_url=discovery_url) as app:
+    with CommonServerManager(
+        service=ServerType.OAUTH_RECEIVER,
+        port=8001,
+        oauth_discovery_url=discovery_url
+    ) as app:
         if not app.start():
             pytest.fail("Failed to start ReceiverApp")
         yield app
@@ -121,7 +129,7 @@ def receiver_app(
 
 @pytest.fixture(scope="session")
 def requestor_app(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
 ) -> RequestorApp:
     """Create RequestorApp instance."""
     discovery_url = oauth_server.get_discovery_url()
@@ -134,8 +142,8 @@ def requestor_app(
 
 
 def test_oauth_client_credentials_flow_success(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
-    receiver_app: ReceiverAppManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
     requestor_app: RequestorApp,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test successful OAuth Client Credentials flow."""
@@ -162,8 +170,8 @@ def test_oauth_client_credentials_flow_success(
 
 
 def test_oauth_client_credentials_flow_invalid_token(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name,unused-argument
-    receiver_app: ReceiverAppManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name,unused-argument
+    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
     requestor_app: RequestorApp,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test OAuth Client Credentials flow with invalid token."""
@@ -184,7 +192,7 @@ def test_oauth_client_credentials_flow_invalid_token(
 
 
 def test_oauth_client_credentials_flow_missing_token(
-    receiver_app: ReceiverAppManager,  # pylint: disable=redefined-outer-name
+    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test OAuth Client Credentials flow with missing token."""
 
@@ -203,7 +211,7 @@ def test_oauth_client_credentials_flow_missing_token(
 
 
 def test_oauth_discovery_endpoint(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test that OAuth discovery endpoint is working."""
 
@@ -236,7 +244,7 @@ def test_oauth_discovery_endpoint(
 
 
 def test_oauth_jwks_endpoint(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test that JWKS endpoint is working."""
 
@@ -262,7 +270,7 @@ def test_oauth_jwks_endpoint(
 
 
 def test_client_management_endpoints(
-    oauth_server: OAuthServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test client management endpoints."""
 
@@ -370,7 +378,7 @@ def test_expiry_jwt_token(requestor_app: RequestorApp) -> None:
 
 
 def test_jwt_is_using_aws_cognito(
-    oauth_server: OAuthServerManager, requestor_app: RequestorApp
+    oauth_server: CommonServerManager, requestor_app: RequestorApp
 ) -> None:
     """Test that JWT tokens are issued by AWS Cognito."""
 
@@ -410,7 +418,7 @@ def test_check_jwt_if_using_asymmetric(requestor_app: RequestorApp) -> None:
 
 
 def test_try_changing_jwt_signing_algorithm(
-    oauth_server: OAuthServerManager, requestor_app: RequestorApp
+    oauth_server: CommonServerManager, requestor_app: RequestorApp
 ) -> None:
     """Test that changing the JWT algorithm invalidates the token."""
 
