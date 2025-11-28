@@ -8,6 +8,7 @@ from gen_epix.commondb.api.organization import create_organization_endpoints
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.fastapp import App
+from gen_epix.seqdb.api.file import create_file_endpoints
 from gen_epix.seqdb.api.organization import ApiPermission
 from gen_epix.seqdb.api.seq import create_seq_endpoints
 from gen_epix.seqdb.domain import enum
@@ -52,6 +53,10 @@ def create_routers(
             "name": "seq",
             "create_endpoints_fn": create_seq_endpoints,
         },
+        {
+            "name": "file",
+            "create_endpoints_fn": create_file_endpoints,
+        },        
     ]
     routers: list[APIRouter] = []
     for curr_router_data in router_data:
