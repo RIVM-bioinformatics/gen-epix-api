@@ -1,3 +1,4 @@
+import base64
 from collections.abc import Callable
 from typing import Annotated, Any, NoReturn, Self
 from uuid import UUID
@@ -146,14 +147,14 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: bytes = Field(description="The content of the file to create.")
+    file_content: str = Field(description="The content of the file to create (base64 encoded bytes).")
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
     )
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    file_content: bytes = Field(description="The content of the file to create.")
+    file_content: str = Field(description="The content of the file to create (base64 encoded bytes).")
 
 
 def create_case_endpoints(
@@ -611,7 +612,7 @@ def create_case_endpoints(
             created_file_id: UUID = app.handle(
                 command.CreateFileForReadSetCommand(
                     user=user,
-                    file_content=request_body.file_content,
+                    file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                     is_fwd=request_body.is_fwd,
@@ -658,7 +659,7 @@ def create_case_endpoints(
             created_file_id: UUID = app.handle(
                 command.CreateFileForSeqCommand(
                     user=user,
-                    file_content=request_body.file_content,
+                    file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                 )
