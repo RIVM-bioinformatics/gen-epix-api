@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [7.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.5...v7.1.0) (2025-11-28)
+
+
+### Features
+
+* add file crud endpoints to seqdb ([5b6d9a3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/5b6d9a3c1654ffc24fed6bc14cd7824015d1e935))
+
 ## [7.0.5](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.4...v7.0.5) (2025-11-27)
 
 
