@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [7.1.2](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.1...v7.1.2) (2025-11-28)
+
+
+### Bug Fixes
+
+* make file_content in request body of type string instead of bytes ([0af71e4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0af71e438eea3e507b99f81ff9503a0e29007e7f))
+
 ## [7.1.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.0...v7.1.1) (2025-11-28)
 
 
