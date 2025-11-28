@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [7.0.5](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.4...v7.0.5) (2025-11-27)
+
+
+### Bug Fixes
+
+* fix dependencies ([9c23e3f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/9c23e3fc2c4f811b5f38c7be0581f992844b83a4))
+* remove alg check from token validation ([49faed7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/49faed74eb0d3ab302a9023f3d11425e283e3516))
+
 ## [7.0.4](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.3...v7.0.4) (2025-11-21)
 
 

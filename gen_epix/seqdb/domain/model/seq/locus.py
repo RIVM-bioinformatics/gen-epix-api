@@ -153,6 +153,10 @@ class LocusCodeMap(Model):
             raise ValueError("All locus codes in code_map must have max length of 255.")
         return dict_value
 
+    @field_serializer("code_map", mode="plain")
+    def _serialize_locus_ids(self, value: dict[str, UUID]) -> dict[str, str]:
+        return {x: str(y) for x, y in value.items()}
+
 
 class RefAllele(Model, SeqMixin):
     """
