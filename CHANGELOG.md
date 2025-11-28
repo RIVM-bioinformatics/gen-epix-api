@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [7.1.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.0...v7.1.1) (2025-11-28)
+
+
+### Bug Fixes
+
+* commondb /update_user added ([#239](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/239)) ([c469517](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c469517351cd6e25f82a27ee49cbf7fec4ebd0a1))
+
 ## [7.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.5...v7.1.0) (2025-11-28)
 
 
