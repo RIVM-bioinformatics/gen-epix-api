@@ -47,6 +47,8 @@ class CaseTransformer(Transformer):
         re.IGNORECASE,
     )
 
+    DECIMAL_PATTERN = re.compile(r"^[+-]?([0-9]*[.,])?[0-9]+$")
+
     TIME_YEAR_PATTERN = re.compile(r"^\d{4}$")
     TIME_QUARTER_PATTERN = re.compile(r"^\d{4}-Q[1-4]$")
     TIME_MONTH_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -85,7 +87,7 @@ class CaseTransformer(Transformer):
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
             return None
-        if re.match(r"[+-]?([0-9]*[.,])?[0-9]+", value) is None:
+        if CaseTransformer.DECIMAL_PATTERN.match(value) is None:
             return NoReturn
         try:
             num_value = round(Decimal(value), n_decimals)
@@ -300,21 +302,28 @@ class CaseTransformer(Transformer):
         for case_type_dim in self.complete_case_type.case_type_dims:
             dim_type = self.complete_case_type.dims[case_type_dim.dim_id]
             case_type_col_ids = case_type_dim.case_type_col_order
-            # Generate all ordered pairs of case type col IDs in this case type dimension, in both directions
-            # TODO: do not generate the pairs for types of dimensions that are not handled
-            col_pairs = list(combinations(case_type_col_ids, 2)) + list(
-                combinations(case_type_col_ids[::-1], 2)
-            )
             # Handle each type of dimension
             if dim_type.dim_type == enum.DimType.GEO:
+                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
                 self._transform_geo_value_pairs(
                     col_pairs, case_validation_report, contents, updated_contents
                 )
             elif dim_type.dim_type == enum.DimType.TIME:
+                # Sort col_pairs by time resolution descending (DAY, WEEK, MONTH, QUARTER, YEAR)
+                case_type_col_ids.sort(
+                    key=lambda x: enum.ColTypeOrder.TIME_RESOLUTION_DESC.value.get(
+                        self.complete_case_type.cols[
+                            self.complete_case_type.case_type_cols[x].col_id
+                        ].col_type,
+                        len(case_type_col_ids),
+                    )
+                )
+                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
                 self._transform_time_value_pairs(
                     col_pairs, case_validation_report, contents, updated_contents
                 )
             elif dim_type.dim_type == enum.DimType.NUMBER:
+                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
                 self._transform_number_value_pairs(
                     col_pairs, case_validation_report, contents, updated_contents
                 )
@@ -928,88 +937,11 @@ class CaseTransformer(Transformer):
         )
         return organizations
 
-
-# TODO: for reference, remove when no longer needed
-# def tfm_geo_resolution(
-#     region_id_contained_in: dict[tuple[str, str], str],
-#     values1: Iterable[str | None],
-#     region_set_id2: str,
-#     orig_values2: Iterable[str | None] | None,
-# ) -> tuple[list[str | None], list[tuple[str | None, str | None]]]:
-#     new_values2 = [
-#         None if x is None else region_id_contained_in.get((x, region_set_id2))
-#         for x in values1
-#     ]
-#     if orig_values2 is None:
-#         diff_values = []
-#     else:
-#         # Only replace original values with a non-null value
-#         new_values2 = [y if x is None else x for x, y in zip(new_values2, orig_values2)]
-#         diff_values = [
-#             (x, y)
-#             for x, y in zip(orig_values2, new_values2)
-#             if x is not None and y is not None and y != x
-#         ]
-#     return new_values2, diff_values
-
-
-# def tfm_age_category(
-#     age_categories1: dict[str : tuple[float, float]] | None,
-#     values1: Iterable[str | None],
-#     age_categories2: dict[str : tuple[float, float]] | None,
-#     orig_values2: Iterable[str | None] | None,
-# ) -> tuple[list[str | None], list[tuple[str | None, str | None]]]:
-#     n = len(values1)
-#     if not age_categories1:
-#         # Variable 1 numeric
-#         if not age_categories2:
-#             # Variable 2 numeric -> no action, keep 2
-#             new_values2 = list(orig_values2)
-#         else:
-#             # Variable 2 ordinal -> map to number to age category
-#             new_values2 = [None] * n
-#             for i, value1 in enumerate(values1):
-#                 if value1 is None:
-#                     continue
-#                 for age_category_id2, bounds2 in age_categories2.items():
-#                     if bounds2[0] <= value1 < bounds2[1]:
-#                         new_values2[i] = age_category_id2
-#                         break
-#     else:
-#         # Variable 1 ordinal
-#         if not age_categories2:
-#             # Variable 2 numeric -> no action, keep 2
-#             new_values2 = list(orig_values2)
-#         else:
-#             # Variable 2 ordinal -> map to age category 1 to age category 2
-#             # but only if all age categories 1 fit within an age category 2
-#             # to avoid consistently removing some values and thereby introducing bias
-#             age_category_map = {}
-#             is_complete_mapping = True
-#             for age_category1, bounds1 in age_categories1.items():
-#                 for age_category2, bounds2 in age_categories2.items():
-#                     if bounds1[0] >= bounds2[0] and bounds1[1] <= bounds2[1]:
-#                         # Age category 1 maps to age category 2
-#                         age_category_map[age_category1] = age_category2
-#                         break
-#                 if age_category1 not in age_category_map:
-#                     is_complete_mapping = False
-#             if not is_complete_mapping:
-#                 new_values2 = list(orig_values2)
-#             else:
-#                 new_values2 = [None] * n
-#                 for i, value1 in enumerate(values1):
-#                     if value1 is None:
-#                         continue
-#                     new_values2[i] = age_category_map[value1]
-#     if orig_values2 is None:
-#         diff_values = []
-#     else:
-#         # Only replace original values with a non-null value
-#         new_values2 = [y if x is None else x for x, y in zip(new_values2, orig_values2)]
-#         diff_values = [
-#             (x, y)
-#             for x, y in zip(orig_values2, new_values2)
-#             if x is not None and y is not None and y != x
-#         ]
-#     return new_values2, diff_values
+    @staticmethod
+    def _get_col_pairs(case_type_col_ids: list[UUID]) -> list[tuple[UUID, UUID]]:
+        """
+        Generate all pairs of case type col IDs in both directions.
+        """
+        return list(combinations(case_type_col_ids, 2)) + list(
+            combinations(case_type_col_ids[::-1], 2)
+        )
