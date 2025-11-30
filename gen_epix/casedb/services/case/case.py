@@ -50,6 +50,7 @@ from gen_epix.filter import Filter, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import LogicalOperator
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
 
 
 class CaseService(BaseCaseService):
@@ -443,7 +444,9 @@ class CaseService(BaseCaseService):
             right
         ).get(case_type_id, set())
         is_full_access = case_abac.is_full_access
-        data_collection_col_access = case_abac.case_type_access_abacs[case_type_id]
+        data_collection_col_access = case_abac.case_type_access_abacs.get(
+            case_type_id, {}
+        )
         if not access_data_collections and not is_full_access:
             raise exc.UnauthorizedAuthError(
                 f"User {user_id} has no access to case type {case_type_id}"
@@ -502,18 +505,14 @@ class CaseService(BaseCaseService):
                     f"Some cases have invalid case type ids: {case_ids}"
                 )
         else:
+            case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
             if datetime_range_filter:
                 case_filter = CompositeFilter(
                     operator=LogicalOperator.AND,
-                    filters=[
-                        UuidSetFilter(
-                            key="case_type_id", members=frozenset({case_type_id})
-                        ),
-                        datetime_range_filter,
-                    ],
+                    filters=[case_type_filter, datetime_range_filter],
                 )
             else:
-                case_filter = datetime_range_filter
+                case_filter = case_type_filter
             cases = self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,

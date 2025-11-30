@@ -1,8 +1,9 @@
 import abc
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
-from gen_epix.casedb.domain import command, model
+from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.domain.repository import BaseCaseRepository
 from gen_epix.fastapp import BaseService
@@ -10,6 +11,12 @@ from gen_epix.fastapp import BaseService
 
 class BaseCaseService(BaseService):
     SERVICE_TYPE = ServiceType.CASE
+
+    DEFAULT_CREATE_MAX_N_CASES = 1000
+    DEFAULT_READ_MAX_N_CASES = 1000
+    DEFAULT_READ_MAX_TREE_SIZE = 1000
+    DEFAULT_UPDATE_MAX_N_CASES = 1000
+    DEFAULT_DELETE_MAX_N_CASES = 1000
 
     NO_ABAC_COMMAND_CLASSES: set[type[command.Command]] = {
         command.TreeAlgorithmClassCrudCommand,
@@ -54,6 +61,64 @@ class BaseCaseService(BaseService):
             model.CaseSetMember,
         ),
     }
+
+    def __init__(
+        self,
+        *args: Any,
+        default_create_max_n_cases: int | None = None,
+        default_read_max_n_cases: int | None = None,
+        default_read_max_tree_size: int | None = None,
+        default_update_max_n_cases: int | None = None,
+        default_delete_max_n_cases: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+        self._default_create_max_n_cases = (
+            default_create_max_n_cases
+            if default_create_max_n_cases is not None
+            else self.DEFAULT_CREATE_MAX_N_CASES
+        )
+        self._default_read_max_n_cases = (
+            default_read_max_n_cases
+            if default_read_max_n_cases is not None
+            else self.DEFAULT_READ_MAX_N_CASES
+        )
+        self._default_read_max_tree_size = (
+            default_read_max_tree_size
+            if default_read_max_tree_size is not None
+            else self.DEFAULT_READ_MAX_TREE_SIZE
+        )
+        self._default_update_max_n_cases = (
+            default_update_max_n_cases
+            if default_update_max_n_cases is not None
+            else self.DEFAULT_UPDATE_MAX_N_CASES
+        )
+        self._default_delete_max_n_cases = (
+            default_delete_max_n_cases
+            if default_delete_max_n_cases is not None
+            else self.DEFAULT_DELETE_MAX_N_CASES
+        )
+        if self._default_create_max_n_cases < 0:
+            raise exc.InitializationServiceError(
+                "default_create_max_n_cases must be non-negative"
+            )
+        if self._default_read_max_n_cases < 0:
+            raise exc.InitializationServiceError(
+                "default_read_max_n_cases must be non-negative"
+            )
+        if self._default_read_max_tree_size < 0:
+            raise exc.InitializationServiceError(
+                "default_read_max_tree_size must be non-negative"
+            )
+        if self._default_update_max_n_cases < 0:
+            raise exc.InitializationServiceError(
+                "default_update_max_n_cases must be non-negative"
+            )
+        if self._default_delete_max_n_cases < 0:
+            raise exc.InitializationServiceError(
+                "default_delete_max_n_cases must be non-negative"
+            )
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore

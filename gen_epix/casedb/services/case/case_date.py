@@ -46,51 +46,6 @@ CONVERT_ISO_DATE_TO_FIRST_DAY_MAP: dict[
 }
 
 
-# def case_service_get_case_date(
-#     self: BaseCaseService,
-#     uow: BaseUnitOfWork,
-#     user: model.User,
-#     case_ids: list[UUID],
-#     case_type_col_ids: list[UUID],
-# ) -> datetime.date | dict[UUID | None, datetime.date | None] | None:
-#     if not case_type_col_ids:
-#         return None
-
-#     cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
-#         uow,
-#         user.id,
-#         model.Case,
-#         None,
-#         case_ids,
-#         CrudOperation.READ_SOME,
-#     )
-#     case_type_cols: list[model.CaseTypeCol] = (
-#         self.repository.crud(  # type:ignore[assignment]
-#             uow,
-#             user.id,
-#             model.CaseTypeCol,
-#             None,
-#             case_type_col_ids,
-#             CrudOperation.READ_SOME,
-#         )
-#     )
-#     result: dict[UUID | None, datetime.date | None] = {}
-#     for case in cases:
-#         for case_type_col in case_type_cols:
-#             date_value = case.content.get(case_type_col.id)
-#             if case_type_col.col:
-#                 full_date = _convert_to_full_date(
-#                     date_value, case_type_col.col.col_type
-#                 )
-#                 if full_date is not None:
-#                     today = datetime.date.today()
-#                     result[case.id] = today if full_date > today else full_date
-#                     break
-#         else:
-#             result[case.id] = None
-#     return result
-
-
 def case_service_get_case_date_case_type_col_mappers(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
@@ -177,12 +132,21 @@ def case_service_get_case_date_case_type_col_mappers(
         i for i, x in enumerate(case_type_cols) if x.id == stats_time_case_type_col_id
     )
     selected_case_type_cols = case_type_cols[stats_time_case_type_col_index:]
-    # Create return value dictionary of case type col ids to a mapping function that converts the string date
-    retval = {
-        x.id: CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[cols_map[x.col_id].col_type]
-        for x in selected_case_type_cols
-    }
 
+    return case_service_get_case_date_case_type_col_mappers_from_cols(
+        selected_case_type_cols, cols_map
+    )
+
+
+def case_service_get_case_date_case_type_col_mappers_from_cols(
+    case_type_cols: list[model.CaseTypeCol] | None, cols_map: dict[UUID, model.Col]
+) -> dict[UUID, Callable[[str], datetime.datetime]]:
+    if case_type_cols is None:
+        return {}
+    retval: dict[UUID, Callable[[str], datetime.datetime]] = {  # type: ignore[assignment]
+        x.id: CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[cols_map[x.col_id].col_type]
+        for x in case_type_cols
+    }
     return retval
 
 
@@ -199,41 +163,11 @@ def case_service_calculate_case_date(
     be taken into account for calculating the case date.
     """
     if not case_date_case_type_col_mappers:
-        return None
+        return
 
     for case in cases:
         for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
-            iso_time_value: str | None = case.content.get(case_type_col_id)
-            if iso_time_value is None:
+            iso_datetime_value: str | None = case.content.get(case_type_col_id)
+            if iso_datetime_value is None:
                 continue
-            case.case_date = mapper(iso_time_value)
-
-
-# def _convert_to_full_date(
-#     date_value: Any, col_type: enum.ColType
-# ) -> datetime.date | None:
-
-#     try:
-#         if date_value is None:
-#             return None
-#         if col_type == enum.ColType.TIME_DAY:
-#             if isinstance(date_value, datetime.date):
-#                 return date_value
-#             return datetime.date.fromisoformat(str(date_value))
-#         if col_type == enum.ColType.TIME_WEEK:
-#             year, week = map(int, str(date_value).split("-W"))
-#             return datetime.date.fromisocalendar(year, week, 1)
-#         if col_type == enum.ColType.TIME_MONTH:
-#             year, month = map(int, str(date_value).split("-"))
-#             return datetime.date(year, month, 1)
-#         if col_type == enum.ColType.TIME_QUARTER:
-#             year_str, quarter_str = str(date_value).split("-Q")
-#             year = int(year_str)
-#             month = (int(quarter_str) - 1) * 3 + 1
-#             return datetime.date(year, month, 1)
-#         if col_type == enum.ColType.TIME_YEAR:
-#             year = int(date_value)
-#             return datetime.date(year, 1, 1)
-#     except Exception:
-#         return None
-#     return None
+            case.case_date = mapper(iso_datetime_value)

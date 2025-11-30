@@ -174,7 +174,7 @@ class TestContent:
         case_type_stats = app.handle(
             command.RetrieveCaseTypeStatsCommand(user=org_user)
         )
-        # Get case and case set stats
+        # Get case type and and case set stats
         case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
         # Go over all case types with data
         has_cases_case_type_ids = {
@@ -189,6 +189,7 @@ class TestContent:
                     case_type_id=case_type.id,
                 )
             )
+            assert complete_case_type.id is not None
             if len(complete_case_type.case_type_cols) <= 1:
                 continue
             # Retrieve cases based on a filter
@@ -211,7 +212,7 @@ class TestContent:
                             },
                         )
                     )
-            case_ids = app.handle(
+            case_query_result: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(
@@ -228,6 +229,7 @@ class TestContent:
                     ),
                 )
             )
+            case_ids = case_query_result.case_ids
             case_ids = case_ids[0:10]
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
@@ -246,6 +248,7 @@ class TestContent:
                 == enum.ColType.GENETIC_DISTANCE
             ]
             for dist_case_type_col in dist_case_type_cols:
+                assert dist_case_type_col is not None
                 for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
@@ -257,6 +260,7 @@ class TestContent:
                     )
                     if phylogenetic_tree.sequence_ids:
                         raise ValueError("Sequence IDs should not be returned")
+                    assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
             # Retrieve genetic sequence
