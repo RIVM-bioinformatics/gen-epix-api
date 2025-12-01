@@ -15,6 +15,7 @@ class TestType(Enum):
     SEQDB_INTEGRATION_BUILD_DB = "SEQDB_INTEGRATION_BUILD_DB"
     DOCS_ERM = "DOCS_ERM"
 
+
 class ServerType(Enum):
     COMMONDB = "COMMONDB"
     CASEDB = "CASEDB"
@@ -33,9 +34,4 @@ class ServerTypeGroup(Enum):
             ServerType.OMOPDB,
         }
     )
-    AUTH = frozenset(
-        {
-            ServerType.OAUTH,
-            ServerType.OAUTH_RECEIVER
-        }
-    )
+    AUTH = frozenset({ServerType.OAUTH, ServerType.OAUTH_RECEIVER})

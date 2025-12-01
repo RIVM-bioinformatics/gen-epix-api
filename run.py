@@ -625,6 +625,16 @@ class Run:
             ]
         )
 
+    def test_end_to_end_token_introspection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/end_to_end/token_introspection",
+            ]
+        )
+
     ## Other
 
     def other_general_generate_uuids(
@@ -728,32 +738,9 @@ class Run:
 
     def other_oauth_server_start(self) -> None:
 
-        from test.test_client.oauth.server import app
-        from test.test_client.oauth.common_server_manager import CommonServerManager
-        from test.test_client.enum import ServerType
+        from test.test_client.oauth.start_server import start_server
 
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        logger = logging.getLogger(__name__)
-
-        with CommonServerManager(
-            service=ServerType.OAUTH,
-            app=app,
-            host="127.0.0.1",
-            port=8080,
-        ) as server:
-            if not server.start():
-                logger.error("Failed to start OAuth server")
-                return
-            logger.info("OAuth server is running. Press Ctrl+C to stop.")
-            try:
-                while True:
-                    pass
-            except KeyboardInterrupt:
-                logger.info("Stopping OAuth server...")
+        start_server()
 
     def other_oauth_server_client_demo(self) -> None:
         from test.test_client.oauth.demo_client import demo_client_credentials_flow

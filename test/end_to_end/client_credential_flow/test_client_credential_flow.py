@@ -23,13 +23,12 @@ from collections.abc import Generator
 from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=import-error
     RequestorApp,
 )
+from test.test_client.enum import ServerType
 from test.test_client.oauth.common_server_manager import CommonServerManager
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import httpx
-from test.test_client.enum import ServerType
-
 import jwt
 import pytest
 
@@ -38,16 +37,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# Pytest fixtures and tests
-
-
 @pytest.fixture(scope="session")
 def oauth_server() -> Generator[CommonServerManager, None, None]:
     """Start and manage OAuth server for the test session."""
-    with CommonServerManager(
-        service=ServerType.OAUTH,
-        port=8000
-    ) as server:
+    with CommonServerManager(service=ServerType.OAUTH, port=8080) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
 
@@ -118,9 +111,7 @@ def receiver_app(
     discovery_url = oauth_server.get_discovery_url()
 
     with CommonServerManager(
-        service=ServerType.OAUTH_RECEIVER,
-        port=8001,
-        oauth_discovery_url=discovery_url
+        service=ServerType.OAUTH_RECEIVER, port=8001, oauth_discovery_url=discovery_url
     ) as app:
         if not app.start():
             pytest.fail("Failed to start ReceiverApp")

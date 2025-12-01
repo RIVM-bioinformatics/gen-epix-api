@@ -19,6 +19,8 @@ import argparse
 import logging
 import os
 import sys
+from test.test_client.enum import ServerType
+from test.test_client.oauth.common_server_manager import CommonServerManager
 
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +28,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from test.test_client.oauth.server import app
 
-    import uvicorn
 except ImportError as e:
     print(f"❌ Missing dependencies: {e}")
     print("Please install required packages:")
@@ -86,23 +87,25 @@ def start_server(
     print("=" * 60)
     print("Press Ctrl+C to stop the server\n")
 
-    try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="debug" if debug else "info",
-            reload=reload,
-            access_log=True,
-            ssl_keyfile=ssl_keyfile,
-            ssl_certfile=ssl_certfile,
-        )
-    except KeyboardInterrupt:
-        logger.info("🛑 Server stopped by user")
-        print("\n👋 OAuth server stopped. Goodbye!")
-    except Exception as e:
-        logger.error(f"❌ Server error: {e}")
-        sys.exit(1)
+    with CommonServerManager(
+        service=ServerType.OAUTH,
+        app=app,
+        host="127.0.0.1",
+        port=8080,
+    ) as server:
+        if not server.start():
+            logger.error("Failed to start OAuth server")
+            return
+        logger.info("OAuth server is running. Press Ctrl+C to stop.")
+        try:
+            while True:
+                pass
+        except KeyboardInterrupt:
+            logger.info("🛑 Server stopped by user")
+            print("\n👋 OAuth server stopped. Goodbye!")
+        except Exception as e:
+            logger.error("❌ Server error: %s", e)
+            sys.exit(1)
 
 
 def main() -> None:
