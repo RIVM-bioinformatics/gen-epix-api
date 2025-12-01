@@ -183,7 +183,9 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
     )
@@ -196,7 +198,9 @@ class CreateFileForForReadSetRequestBody(PydanticBaseModel):
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
     file_format: seqdb_enum.SeqFileFormat = copy_model_field(
         command.CreateFileForSeqCommand, "file_format"
     )

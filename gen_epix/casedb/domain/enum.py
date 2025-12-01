@@ -326,3 +326,13 @@ class CaseColDataRule(Enum):
     UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"
+
+
+class CaseColDataRuleSet(Enum):
+    PREVENTS_UPLOAD = frozenset(
+        {
+            CaseColDataRule.INVALID,
+            CaseColDataRule.UNAUTHORIZED,
+            CaseColDataRule.CONFLICT,
+        }
+    )
