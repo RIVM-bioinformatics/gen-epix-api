@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## [7.1.2](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.1...v7.1.2) (2025-11-28)
+
+
+### Bug Fixes
+
+* make file_content in request body of type string instead of bytes ([0af71e4](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/0af71e438eea3e507b99f81ff9503a0e29007e7f))
+
+## [7.1.1](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.1.0...v7.1.1) (2025-11-28)
+
+
+### Bug Fixes
+
+* commondb /update_user added ([#239](https://github.com/RIVM-bioinformatics/gen-epix-api/issues/239)) ([c469517](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/c469517351cd6e25f82a27ee49cbf7fec4ebd0a1))
+
+## [7.1.0](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.5...v7.1.0) (2025-11-28)
+
+
+### Features
+
+* add file crud endpoints to seqdb ([5b6d9a3](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/5b6d9a3c1654ffc24fed6bc14cd7824015d1e935))
+
+## [7.0.5](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.4...v7.0.5) (2025-11-27)
+
+
+### Bug Fixes
+
+* fix dependencies ([9c23e3f](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/9c23e3fc2c4f811b5f38c7be0581f992844b83a4))
+* remove alg check from token validation ([49faed7](https://github.com/RIVM-bioinformatics/gen-epix-api/commit/49faed74eb0d3ab302a9023f3d11425e283e3516))
+
 ## [7.0.4](https://github.com/RIVM-bioinformatics/gen-epix-api/compare/v7.0.3...v7.0.4) (2025-11-21)
 
 

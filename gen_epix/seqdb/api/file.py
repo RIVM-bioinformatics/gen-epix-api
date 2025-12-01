@@ -15,7 +15,9 @@ from gen_epix.seqdb.domain import command, enum, model
 
 
 class CreateFileRequestBody(PydanticBaseModel):
-    content: str = Field(description="The content of the file.")
+    content: str = Field(
+        description="The content of the file  as base64 encoded bytes."
+    )
     format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
     compression: enum.FileCompression = copy_model_field(
         command.CreateFileCommand, "compression"

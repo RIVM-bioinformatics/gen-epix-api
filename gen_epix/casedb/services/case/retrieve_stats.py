@@ -5,7 +5,6 @@ from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.filter.base import Filter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 
@@ -44,16 +43,19 @@ def case_service_retrieve_case_type_stats(
             user.id,
             model.CaseTypeSettings,
             None,
-            list(case_type_ids),
-            CrudOperation.READ_SOME,
+            None,
+            CrudOperation.READ_ALL,
+            filter=UuidSetFilter(
+                key="case_type_id",
+                members=case_type_ids,
+            ),
         )
-
         # Retrieve cases per case type settings and thus case type, and calculate stats
         case_type_stats: list[model.CaseTypeStat] = []
         for case_type_settings in case_type_settings_list:
-            if case_type_settings.stats_time_case_type_col_id is None:
-                # No time column defined, cannot calculate stats
-                continue
+            # if case_type_settings.stats_time_case_type_col_id is None:
+            #     # No time column defined, cannot calculate stats
+            #     continue
             # Retrieve cases for case type
             case_type_id = case_type_settings.case_type_id
             cases: list[model.Case] = (
@@ -66,18 +68,21 @@ def case_service_retrieve_case_type_stats(
                     case_type_settings.case_type_id,
                     case_type_settings=case_type_settings,
                     datetime_range_filter=cmd.datetime_range_filter,
+                    calculate_case_date=True,
+                    apply_max_n_cases=False,
                 )
             )
             # Calculate stats
+            case_dates = [x.case_date for x in cases if x.case_date is not None]
             case_type_stat = model.CaseTypeStat(
                 case_type_id=case_type_id,
-                n_cases=sum(x.count for x in cases if x.count),
-                first_case_date=min(
-                    x.case_date for x in cases if x.case_date is not None
+                n_cases=(
+                    sum(1 if x.count is None else x.count for x in cases)
+                    if cases
+                    else 0
                 ),
-                last_case_date=max(
-                    x.case_date for x in cases if x.case_date is not None
-                ),
+                first_case_date=min(case_dates) if case_dates else None,
+                last_case_date=max(case_dates) if case_dates else None,
             )
             case_type_stats.append(case_type_stat)
 

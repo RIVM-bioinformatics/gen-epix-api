@@ -114,7 +114,7 @@ def case_service_retrieve_phylogenetic_tree(
             temp_case_abac,
             enum.CaseRight.READ_CASE,
             case_ids=case_ids,
-            case_type_ids={case_type_id},
+            case_type_id=case_type_id,
             filter_content=True,
         )
 
