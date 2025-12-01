@@ -625,16 +625,6 @@ class Run:
             ]
         )
 
-    def test_end_to_end_token_introspection(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/end_to_end/token_introspection",
-            ]
-        )
-
     ## Other
 
     def other_general_generate_uuids(

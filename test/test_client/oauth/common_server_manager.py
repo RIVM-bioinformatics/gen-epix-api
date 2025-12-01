@@ -350,25 +350,6 @@ class CommonServerManager:
         else:
             self.stop_uvicorn_server()
 
-    def print_debug_info(self) -> None:
-        print(f"🌐 Server URL: {self.base_url}")
-        if self.service in ServerTypeGroup.AUTH.value:
-            print(f"📖 AUTH Service information:")
-            print(f"🔍 Discovery: {self.get_discovery_url()}")
-            print(f"🔑 JWKS: {self.base_url}/.well-known/jwks.json")
-            print("\n📋 Pre-configured Demo Clients:")
-            print("   • demo-client / demo-secret (scopes: read, write, openid, profile)")
-            print("   • test-client / test-secret (scopes: read, openid)")
-            print("\n🧪 Test the server:")
-            print("   python demo_client.py")
-            print("\n⚡ Available endpoints:")
-            print("   POST /oauth/token        - Token endpoint")
-            print("   POST /oauth/introspect   - Token introspection")
-            print("   GET  /oauth/userinfo     - UserInfo endpoint")
-        else:
-            print(f"📖 API Docs: {self.base_url}/docs")
-        print("   GET  /health             - Health check")
-
     def __enter__(self) -> "CommonServerManager":
         return self
 
