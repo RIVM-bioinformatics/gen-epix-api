@@ -234,6 +234,7 @@ class TestContent:
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
+                    case_type_id=complete_case_type.id,
                     case_ids=case_ids,
                 )
             )

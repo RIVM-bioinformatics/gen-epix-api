@@ -1,39 +1,29 @@
-import json
-from collections.abc import Iterable
 from datetime import datetime
 from logging import Logger
 from typing import Any
-from uuid import UUID
 
-import httpx
 import jwt
 
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
+from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
-from gen_epix.seqdb.domain import DOMAIN
-from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import model as seqdb_model
 
 
-class SeqdbRemoteApp(RemoteApp):
+class CommondbRemoteApp(RemoteApp):
 
     DEFAULT_ROUTE_PREFIX = "/v1/"
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
-    ROUTE_MAP: dict[type[Command], str] = {
-        seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
-        seqdb_command.CreateFileCommand: "create/file",
-    }
+    ROUTE_MAP: dict[type[Command], str] = {}
 
     def __init__(
         self,
+        domain: Domain,
         host: str,
         port: int | None,
         http_protocol: HttpProtocol = HttpProtocol.HTTPS,
@@ -62,7 +52,7 @@ class SeqdbRemoteApp(RemoteApp):
         )
 
         super().__init__(
-            DOMAIN,
+            domain,
             host,
             port,
             http_protocol=http_protocol,
@@ -115,32 +105,6 @@ class SeqdbRemoteApp(RemoteApp):
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
-        # Register routes and handlers
-        self.register_route(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand],
-        )
-        self.register_route(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
-        )
-        self.register_route(
-            seqdb_command.CreateFileCommand,
-            self.ROUTE_MAP[seqdb_command.CreateFileCommand],
-        )
-        self.register_handler(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
-        )
-        self.register_handler(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.retrieve_genetic_sequence_fasta_by_id,
-        )
-        self.register_handler(
-            seqdb_command.CreateFileCommand,
-            self.create_file,
-        )
-
     def get_headers(self, cmd: Command) -> dict[str, str]:
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
@@ -176,79 +140,3 @@ class SeqdbRemoteApp(RemoteApp):
         raise exc.InitializationServiceError(
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
         )
-
-    def retrieve_phylogenetic_tree(
-        self,
-        cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
-    ) -> seqdb_model.PhylogeneticTree | None:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        # Create request body matching seqdb API expectations
-
-        request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=cmd.seq_distance_protocol_id,
-            tree_algorithm=cmd.tree_algorithm,
-            seq_ids=cmd.seq_ids,
-            leaf_codes=cmd.leaf_names,
-        )
-
-        with httpx.Client(verify=self.ssl_context) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        if not data:
-            return None
-        return seqdb_model.PhylogeneticTree(**data)
-
-    def retrieve_genetic_sequence_fasta_by_id(
-        self,
-        cmd: seqdb_command.RetrieveSeqFastaCommand,
-    ) -> Iterable[str]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            "seq_ids": cmd.seq_ids,
-            "wrap": cmd.wrap,
-        }
-
-        def _iter_fasta_generator() -> Iterable[str]:
-            with httpx.Client(verify=self.ssl_context) as client:
-                with client.stream(
-                    "POST", route, json=request_body, headers=headers
-                ) as resp:
-                    resp.raise_for_status()
-                    for chunk in resp.iter_bytes():
-                        yield chunk.decode()
-
-        return _iter_fasta_generator()
-
-    def create_file(
-        self,
-        cmd: seqdb_command.CreateFileCommand,
-    ) -> UUID:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            "file_content": cmd.file.content,
-            "file_format": cmd.format.value,
-            "file_compression": cmd.compression.value,
-        }
-
-        with httpx.Client(verify=self.ssl_context) as client:
-            response = client.post(
-                route,
-                json=request_body,
-                headers=headers,
-            )
-            response.raise_for_status()
-            data = response.json()
-        return UUID(data)
