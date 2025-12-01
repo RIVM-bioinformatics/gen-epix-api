@@ -207,3 +207,42 @@ def test_casedb_seqdb_connection(
 
     # Log results
     assert phylogenetic_tree_retrieved
+
+    genetic_sequence_case_type_cols = [
+        x
+        for x in case_type_cols.values()
+        if cols[x.col_id].col_type
+        == enum.ColType.GENETIC_SEQUENCE
+    ]
+    for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+        has_seq_case_ids = [
+            x.id
+            for x in cases
+            if x.content.get(genetic_sequence_case_type_col.id)
+        ]
+        if not has_seq_case_ids:
+            continue
+
+    fasta_retrieved = False
+    # Collect genetic sequence case type columns
+
+    if has_seq_case_ids:
+        fasta_iter = casedb_app.handle(
+            command.RetrieveGeneticSequenceFastaByIdCommand(
+                user=root_user,  # type: ignore[arg-type]
+                seq_ids=has_seq_case_ids[0:1],
+                wrap=False,
+            )
+        )
+        # Read a few chunks to validate FASTA-like content
+        chunks_read = 0
+        for chunk in fasta_iter:
+            # Expect FASTA header or sequence lines
+            if chunk.strip():
+                assert chunk.startswith(">") or chunk.strip().isalpha()
+                fasta_retrieved = True
+            chunks_read += 1
+            if chunks_read >= 10:
+                break
+
+    assert fasta_retrieved

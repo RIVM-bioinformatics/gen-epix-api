@@ -28,7 +28,7 @@ class SeqdbRemoteApp(RemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
+        seqdb_command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
         seqdb_command.CreateFileCommand: "create/file",
     }
 
@@ -214,7 +214,8 @@ class SeqdbRemoteApp(RemoteApp):
 
         request_body: dict[str, Any] = {
             "user": cmd.user,
-            "seq_ids": cmd.seq_ids,
+            # Convert UUIDs to strings for JSON serialization
+            "seq_ids": [str(x) for x in cmd.seq_ids],
             "wrap": cmd.wrap,
         }
 
