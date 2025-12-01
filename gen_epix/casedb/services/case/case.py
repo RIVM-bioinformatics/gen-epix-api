@@ -470,6 +470,7 @@ class CaseService(BaseCaseService):
         filter_content: bool = True,
         calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
+        apply_max_n_cases: bool = True,
     ) -> list[model.Case]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         if right not in enum.CaseRightSet.CASE_CONTENT.value:
@@ -497,7 +498,7 @@ class CaseService(BaseCaseService):
             dict[UUID, Callable[[str], datetime.datetime]] | None
         ) = {}
         max_n_cases: float = float("inf")
-        if case_type_settings is not None:
+        if apply_max_n_cases and case_type_settings is not None:
             if right == enum.CaseRight.READ_CASE:
                 max_n_cases = case_type_settings.read_max_n_cases
             elif right == enum.CaseRight.WRITE_CASE:
