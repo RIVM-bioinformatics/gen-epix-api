@@ -1,0 +1,27 @@
+[repository.abac]
+module = "gen_epix.commondb.repositories"
+class_name = "AbacDictRepository"
+
+[repository.organization]
+module = "gen_epix.commondb.repositories"
+class_name = "OrganizationDictRepository"
+
+[repository.system]
+module = "gen_epix.commondb.repositories"
+class_name = "SystemDictRepository"
+
+[repository.case]
+module = "gen_epix.commondb.repositories"
+class_name = "CaseDictRepository"
+
+[repository.geo]
+module = "gen_epix.commondb.repositories"
+class_name = "GeoDictRepository"
+
+[repository.ontology]
+module = "gen_epix.commondb.repositories"
+class_name = "OntologyDictRepository"
+
+[repository.subject]
+module = "gen_epix.commondb.repositories"
+class_name = "SubjectDictRepository"

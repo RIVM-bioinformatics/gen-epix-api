@@ -768,6 +768,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.end_to_end.token_introspection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_end_to_end_token_introspection"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.general.docs",
             "type": "debugpy",
             "request": "launch",
