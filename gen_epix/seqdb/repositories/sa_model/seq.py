@@ -165,9 +165,7 @@ class Locus(Base, RowMetadataMixin):
 class LocusCodeMap(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.LocusCodeMap)
 
-    naming_scheme: Mapped[str] = create_mapped_column(
-        DOMAIN, model.LocusCodeMap, "naming_scheme"
-    )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.LocusCodeMap, "code")
     code_map: Mapped[dict[str, UUID]] = create_mapped_column(
         DOMAIN, model.LocusCodeMap, "code_map"
     )

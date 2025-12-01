@@ -129,9 +129,9 @@ class LocusCodeMap(Model):
         snake_case_plural_name="locus_code_maps",
         table_name="locus_code_map",
         persistable=True,
-        keys=create_keys({1: ("naming_scheme")}),
+        keys=create_keys({1: ("code")}),
     )
-    naming_scheme: str = Field(
+    code: str = Field(
         description="The naming scheme used for the locus codes.",
         max_length=255,
     )
