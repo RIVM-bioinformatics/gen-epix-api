@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Iterable
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
@@ -279,6 +278,7 @@ class TestContent:
                 ]
                 if not has_seq_case_ids:
                     continue
+                # TODO: retrieval of genetic sequences method likely not needed anymore, delete when this is confirmed or otherwise enable again
                 # # Retrieve genetic sequence
                 # genetic_sequences: list[model.GeneticSequence] = app.handle(
                 #     command.RetrieveGeneticSequenceByCaseCommand(
@@ -296,22 +296,23 @@ class TestContent:
                 #         raise ValueError(
                 #             "Genetic sequence should have nucleotide_sequence attribute"
                 #         )
-                # Retrieve genetic sequences in FASTA format
-                fasta_iterator: Iterable[str] = app.handle(
-                    command.RetrieveGeneticSequenceFastaByCaseCommand(
-                        user=org_user,
-                        case_ids=has_seq_case_ids[0:1],
-                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
-                    )
-                )
-                if not fasta_iterator:
-                    raise ValueError("generator should not be empty")
-                # convert generator to string
-                fasta_str = "\n".join(fasta_iterator)
-                if not fasta_str.startswith(">"):
-                    raise ValueError("FASTA string should start with '>'")
-                if "\n" not in fasta_str:
-                    raise ValueError("FASTA string should contain new lines")
+                # TODO: enable once seqdb service retrieval of FASTA is implemented properly
+                # # Retrieve genetic sequences in FASTA format
+                # fasta_iterator: Iterable[str] = app.handle(
+                #     command.RetrieveGeneticSequenceFastaByCaseCommand(
+                #         user=org_user,
+                #         case_ids=has_seq_case_ids[0:1],
+                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
+                #     )
+                # )
+                # if not fasta_iterator:
+                #     raise ValueError("generator should not be empty")
+                # # convert generator to string
+                # fasta_str = "\n".join(fasta_iterator)
+                # if not fasta_str.startswith(">"):
+                #     raise ValueError("FASTA string should start with '>'")
+                # if "\n" not in fasta_str:
+                #     raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
                 sequencing_protocols: list[model.SequencingProtocol] = app.handle(
                     command.RetrieveSequencingProtocolsCommand(

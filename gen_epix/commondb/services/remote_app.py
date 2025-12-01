@@ -1,10 +1,15 @@
+import importlib
 from datetime import datetime
+from enum import Enum
 from logging import Logger
 from typing import Any
 
 import jwt
 
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
+from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
@@ -140,3 +145,75 @@ class CommondbRemoteApp(RemoteApp):
         raise exc.InitializationServiceError(
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
         )
+
+    @staticmethod
+    def create_local_or_remote_app(
+        app_type: enum.AppType,
+        app_setup_type: str,  # "LOCAL" or "REMOTE"
+        local_app_props: dict[str, Any] | None = None,
+        remote_app_props: dict[str, Any] | None = None,
+        app_composer_class: type | None = None,
+        user_class: type[model.User] | None = None,
+        service_type_enum: type[Enum] | None = None,
+        repository_type_enum: type[Enum] | None = None,
+        logger: Logger | None = None,
+    ) -> tuple[App, model.User | None]:
+        # Parse input
+        app_setup_type = app_setup_type.upper()
+        if app_setup_type not in ("LOCAL", "REMOTE"):
+            raise exc.InitializationServiceError(
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
+            )
+        # Create local or remote app
+        app: App
+        user: user_class | None  # type: ignore[reportInvalidTypeForm]
+        if app_setup_type == "LOCAL":
+            # Parse local app props
+            if (
+                local_app_props is None
+                or app_composer_class is None
+                or user_class is None
+                or service_type_enum is None
+                or repository_type_enum is None
+            ):
+                raise exc.InitializationServiceError(
+                    "local_app_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup."
+                )
+            if "user" not in local_app_props:
+                raise exc.InitializationServiceError(
+                    "local_app_props must contain 'user' key for LOCAL app setup."
+                )
+            # Get app config
+            if "app_cfg" in local_app_props:
+                app_cfg = local_app_props.pop("app_cfg")
+            else:
+                app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            log_setup = local_app_props.get("log_setup", logger is not None)
+            # Create local app and user
+            app_composer = app_composer_class(app_cfg, log_setup=log_setup)
+            app = app_composer.app
+            user = user_class(**local_app_props["user"])
+        elif app_setup_type == "REMOTE":
+            # Parse remote app props
+            if remote_app_props is None:
+                raise exc.InitializationServiceError(
+                    "remote_app_props must be provided for REMOTE app setup."
+                )
+            if "module" not in remote_app_props or "class_name" not in remote_app_props:
+                raise exc.InitializationServiceError(
+                    "remote_app_props must contain 'module' and 'class_name' keys for REMOTE app setup."
+                )
+            # Create remote app
+            remote_app_module = remote_app_props.pop("module")
+            remote_app_class_name = remote_app_props.pop("class_name")
+            remote_app_class = getattr(
+                importlib.import_module(remote_app_module), remote_app_class_name
+            )
+            app = remote_app_class(**remote_app_props)
+            # No user for remote app, this is handled via authentication to the actual remote service
+            user = None
+        else:
+            raise exc.InitializationServiceError(
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
+            )
+        return app, user
