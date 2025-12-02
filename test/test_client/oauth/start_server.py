@@ -90,8 +90,10 @@ def start_server(
     with CommonServerManager(
         service=ServerType.OAUTH,
         app=app,
-        host="127.0.0.1",
-        port=8080,
+        host=host,
+        port=port,
+        ssl_keyfile=ssl_keyfile,
+        ssl_certfile=ssl_certfile,
     ) as server:
         if not server.start():
             logger.error("Failed to start OAuth server")

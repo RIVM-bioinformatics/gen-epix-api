@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 class CommonServerManager:
     """
     Common Server manager to handle multiple servers including:
-    ) 1. casedb
-    ) 2. seqdb
-    ) 3. omopdb
-    ) 4. commondb
-    ) 5. oauth server
+    - casedb
+    - seqdb
+    - omopdb
+    - commondb
+    - oauth server
     """
 
     DEFAULT_PORTS: dict[ServerType, int] = {
@@ -145,6 +145,8 @@ class CommonServerManager:
                 f"--port={self.port}",
                 f"--oauth_discovery_url={self.oauth_discovery_url}",
             ]
+        else:
+            raise ValueError("Invalid service type for OAuth server")
 
         popen_kwargs = self._create_process_kwargs()
 
@@ -205,6 +207,8 @@ class CommonServerManager:
             raise RuntimeError("get_discovery_url is only supported for OAuth server")
 
     def delete_client(self, client_id: str) -> bool:
+        if self.service not in ServerTypeGroup.AUTH.value:
+            raise RuntimeError("delete_client is only supported for OAuth server")
         try:
             with httpx.Client(timeout=10.0) as client:
                 response = client.delete(f"{self.base_url}/admin/clients/{client_id}")
@@ -229,7 +233,7 @@ class CommonServerManager:
             config: uvicorn.Config = uvicorn.Config(
                 app=self.app,
                 host=self.host,
-                port=self.port,  # Use 0 to auto-assign an available port
+                port=self.port,
                 log_level="info",
                 access_log=False,
                 ssl_certfile=self.ssl_certfile,
@@ -258,7 +262,6 @@ class CommonServerManager:
             return self.start_oauth_server()
         else:
             return self.start_uvicorn_server()
-
 
     def _wait_for_server(self, timeout: int = 10) -> bool:
         start_time = time.time()
@@ -331,6 +334,7 @@ class CommonServerManager:
                             getpgid(self.process.pid), sigkill
                         )  # pylint: disable=not-callable
                 except ProcessLookupError:
+                    # Process group already does not exist; safe to ignore during cleanup
                     pass
             elif os.name == "nt":
                 self.process.kill()

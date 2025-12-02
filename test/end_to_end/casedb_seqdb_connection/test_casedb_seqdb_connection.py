@@ -4,9 +4,6 @@ import logging
 from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
-from test.end_to_end.casedb_seqdb_connection.seqdb_server_manager import (
-    SeqdbServerManager,
-)
 from test.test_client.oauth.common_server_manager import CommonServerManager
 from uuid import UUID
 
@@ -93,8 +90,9 @@ def seqdb_server(
             pytest.fail("Failed to start SeqDB server")
         yield server
 
+
 def test_casedb_seqdb_connection(
-    oauth_server: CommonServerManager, seqdb_server: SeqdbServerManager
+    oauth_server: CommonServerManager, seqdb_server: CommonServerManager
 ) -> None:
     """Test CaseDB to SeqDB connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
