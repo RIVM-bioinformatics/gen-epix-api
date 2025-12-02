@@ -10,6 +10,7 @@ from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseServ
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 def case_service_create_read_sets_or_seqs_for_cases(
@@ -122,10 +123,11 @@ def case_service_create_file_for_read_set_or_seq(
         cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
     ) -> model.File:
         created_file: model.File = self.app.handle(
-            seqdb_command.FileCrudCommand(
+            seqdb_command.CreateFileCommand(
                 user=cmd.user,
-                operation=CrudOperation.CREATE_ONE,
-                objs=model.File(content=cmd.file_content),
+                file=model.File(content=cmd.file_content),
+                format=seqdb_enum.FileFormat(cmd.file_format.value),
+                compression=cmd.file_compression,
             )
         )
         return created_file
@@ -240,7 +242,8 @@ def _get_cases_for_create_read_sets_or_seqs(
     ):
         expected_col_type = enum.ColType.GENETIC_READS
     elif isinstance(
-        cmd, (command.CreateSeqsForCasesCommand, command.CreateFileForSeqCommand)
+        cmd,
+        (command.CreateSeqsForCasesCommand, command.CreateFileForSeqCommand),
     ):
         expected_col_type = enum.ColType.GENETIC_SEQUENCE
     else:

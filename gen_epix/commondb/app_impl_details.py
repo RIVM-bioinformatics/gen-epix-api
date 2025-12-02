@@ -1,4 +1,5 @@
 from enum import Enum
+from functools import cached_property
 from typing import TypeVar, overload
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
@@ -72,24 +73,38 @@ class AppImplDetails(BaseModel):
         description="Mapping of roles as strings to (command, permission type) tuples",
     )
 
-    @computed_field
+    @computed_field(
+        description="Reverse mapping of role strings to their corresponding roles."
+    )
+    @cached_property
     def rev_role_map(self) -> dict[str, enum.Role | Enum]:
+        """"""
         return {x: y for y, x in self.role_map.items()}
 
-    @computed_field
+    @computed_field(
+        description="Dependency that provides the currently registered user."
+    )
+    @cached_property
     def registered_user_dependency(self) -> model.User:
+        """"""
         if self.registered_user_dependency_or_none is None:
             raise ValueError("registered_user_dependency is not set")
         return self.registered_user_dependency_or_none
 
-    @computed_field
+    @computed_field(description="Dependency that provides a new user.")
+    @cached_property
     def new_user_dependency(self) -> model.User:
+        """"""
         if self.new_user_dependency_or_none is None:
             raise ValueError("new_user_dependency is not set")
         return self.new_user_dependency_or_none
 
-    @computed_field
+    @computed_field(
+        description="Dependency that provides a user known by the identity provider but not registered in the application."
+    )
+    @cached_property
     def idp_user_dependency(self) -> model.User:
+        """"""
         if self.idp_user_dependency_or_none is None:
             raise ValueError("idp_user_dependency is not set")
         return self.idp_user_dependency_or_none

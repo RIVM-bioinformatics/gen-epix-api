@@ -8,6 +8,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.enum as seqdb_enum
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.create_seq import (
@@ -237,6 +238,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.is_fwd = False  # Test reverse file
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -268,7 +272,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_read_set
                             else:  # UPDATE_ONE
                                 return mock_read_set
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -292,6 +296,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.is_fwd = False
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
@@ -328,6 +335,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
             cmd.is_fwd = True
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -359,7 +369,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_read_set
                             else:  # UPDATE_ONE
                                 return mock_read_set
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -384,6 +394,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.file_content = b"test content"
+            cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -414,7 +427,7 @@ class TestCasedbCaseCreateSeq:
                                 return mock_seq
                             else:  # UPDATE_ONE
                                 return mock_seq
-                        elif isinstance(cmd_arg, seqdb_command.FileCrudCommand):
+                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
                             return created_file
                         return Mock()
 
@@ -437,6 +450,9 @@ class TestCasedbCaseCreateSeq:
             cmd.user = mock_user
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {}  # Missing the required case_type_col_id
@@ -463,6 +479,9 @@ class TestCasedbCaseCreateSeq:
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
             cmd.is_fwd = True
+            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
@@ -493,6 +512,9 @@ class TestCasedbCaseCreateSeq:
             cmd.user = mock_user
             cmd.case_id = uuid4()
             cmd.case_type_col_id = uuid4()
+            cmd.file_format = seqdb_enum.SeqFileFormat.FASTA
+            cmd.file_compression = seqdb_enum.FileCompression.NONE
+            cmd._policies = []
 
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}

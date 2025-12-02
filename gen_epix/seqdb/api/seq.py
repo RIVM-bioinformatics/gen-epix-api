@@ -8,6 +8,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
@@ -38,6 +39,15 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     seq_ids: list[UUID]
     locus_set_id: UUID
+
+
+class UpsertCompleteSamplesRequestBody(command.UpsertCompleteSamplesCommand):
+    alleles: list[model.Allele] | None = copy_model_field(
+        command.UpsertCompleteSamplesCommand, "alleles"
+    )
+    complete_samples: list[model.CompleteSample] = copy_model_field(
+        command.UpsertCompleteSamplesCommand, "complete_samples"
+    )
 
 
 def create_seq_endpoints(
@@ -139,6 +149,26 @@ def create_seq_endpoints(
                     user=user,
                     seq_ids=request_body.seq_ids,
                     locus_set_id=request_body.locus_set_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/upsert/complete_samples",
+        operation_id="upsert__complete_samples",
+        name="UpsertCompleteSamples",
+        description=command.UpsertCompleteSamplesCommand.__doc__,
+    )
+    async def upsert__complete_samples(
+        user: registered_user_dependency, request_body: UpsertCompleteSamplesRequestBody  # type: ignore
+    ) -> list[UUID]:
+        try:
+            retval: list[UUID] = app.handle(
+                command.UpsertCompleteSamplesCommand(
+                    user=user,
+                    **request_body.model_dump(),
                 )
             )
         except Exception as exception:

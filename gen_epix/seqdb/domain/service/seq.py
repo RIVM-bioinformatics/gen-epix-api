@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -30,6 +31,10 @@ class BaseSeqService(BaseService):
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
+        )
+        f(
+            command.UpsertCompleteSamplesCommand,
+            self.upsert_complete_samples,
         )
 
     @abc.abstractmethod
@@ -75,4 +80,11 @@ class BaseSeqService(BaseService):
 
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def upsert_complete_samples(
+        self,
+        cmd: command.UpsertCompleteSamplesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()
