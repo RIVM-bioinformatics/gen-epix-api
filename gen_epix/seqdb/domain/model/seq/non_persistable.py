@@ -1,67 +1,32 @@
-from typing import ClassVar, Self
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import Entity
+from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.seq.metadata import RefSnp
-from gen_epix.seqdb.domain.model.seq.persistable import (
-    AstMeasurement,
+from gen_epix.seqdb.domain.model.seq.classification import (
     AstPrediction,
-    PcrMeasurement,
-    ReadSet,
     SeqClassification,
-    SeqDistanceProtocol,
     SeqTaxonomy,
 )
-
-
-class CompleteContig(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_contigs",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    seq: str = Field(description="The contig sequence.")
-    qc: enum.QualityControlResult = Field(
-        description="The quality control result of the contig sequence."
-    )
-    index: int = Field(description="The index of the contig in the sequence.")
-
-
-class CompleteAlleleProfile(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_allele_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    locus_set_id: UUID = Field(description="The ID of the locus set.")
-    locus_ids: list[UUID] = Field(description="The IDs of the loci.")
-    allele_ids: list[UUID | None] = Field(
-        description="The IDs of the alleles for each locus."
-    )
-    multiple_allele_ids: dict[UUID, list[UUID]] = Field(
-        description="Mapping of locus ID to multiple allele IDs."
-    )
-    allele_count_by_qc: dict[enum.QualityControlResult, int] = Field(
-        description="Mapping of quality control result to allele count."
-    )
-
-
-class CompleteSnpProfile(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_snp_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    ref_snps: list[RefSnp] = Field(description="The list of reference SNPs.")
-    snps: str = Field(description="The SNPs in the profile.")
-    snp_profile: str = Field(description="The SNP profile string.")
-    snp_profile_format: enum.SnpProfileFormat = Field(
-        description="The format of the SNP profile."
-    )
+from gen_epix.seqdb.domain.model.seq.distance import SeqDistance
+from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
+from gen_epix.seqdb.domain.model.seq.profile import (
+    AlleleProfile,
+    CompleteAlleleProfile,
+    CompleteSnpProfile,
+    KmerProfile,
+    LocusProfile,
+    MlvaProfile,
+    SnpProfile,
+)
+from gen_epix.seqdb.domain.model.seq.reads import ReadSet
+from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
+from gen_epix.seqdb.domain.model.seq.seq import CompleteContig, Seq
 
 
 class CompleteSeq(Model):
@@ -103,103 +68,76 @@ class CompleteSeq(Model):
     )
 
 
-class CompleteSample(Model):
+class ExternalSampleIdentifier(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="external_sample_identifiers",
+        persistable=False,
+    )
+    identifier: str = copy_model_field(SampleIdentifier, "identifier")
+    identifier_issuer_id: UUID = copy_model_field(
+        SampleIdentifier, "identifier_issuer_id"
+    )
+
+
+class CompleteSample(Sample):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_samples",
         persistable=False,
     )
-    primary_seq_id: UUID | None = Field(
-        default=None, description="The ID of the primary sequence."
+    NAME = "CompleteSample"
+    sample_identifiers: list[ExternalSampleIdentifier] | None = Field(
+        default=None,
+        description="The list of external identifiers associated with the sample. Empty list if none exist, None if not set.",
     )
-    primary_taxon_id: UUID | None = Field(
-        default=None, description="The ID of the primary taxon."
+    data_collection_ids: list[UUID] | None = Field(
+        default=None,
+        description="The list of data collection IDs associated with the sample, limited to those that the user has or should have the appropriate access rights to. Empty list if none exist, None if not set.",
     )
-    seqs: list[CompleteSeq] | None = Field(
-        default=None, description="The list of sequences associated with the sample."
+    read_sets: list[ReadSet] | None = Field(
+        default=None,
+        description="The list of read sets associated with the sample. Empty list if none exist, None if not set.",
+    )
+    seqs: list[Seq] | None = Field(
+        default=None,
+        description="The list of sequences associated with the sample. Empty list if none exist, None if not set.",
+    )
+    seq_taxonomies: list[SeqTaxonomy] | None = Field(
+        default=None,
+        description="The list of taxonomies associated with the sample. Empty list if none exist, None if not set.",
+    )
+    seq_classifications: list[SeqClassification] | None = Field(
+        default=None,
+        description="The list of classifications associated with the sample. Empty list if none exist, None if not set.",
+    )
+    locus_profiles: list[LocusProfile] | None = Field(
+        default=None,
+        description="The list of locus profiles associated with the sample. Empty list if none exist, None if not set.",
+    )
+    allele_profiles: list[AlleleProfile] | None = Field(
+        default=None,
+        description="The list of allele profiles associated with the sample. Empty list if none exist, None if not set.",
+    )
+    snp_profiles: list[SnpProfile] | None = Field(
+        default=None,
+        description="The list of SNP profiles associated with the sample. Empty list if none exist, None if not set.",
+    )
+    mlva_profiles: list[MlvaProfile] | None = Field(
+        default=None,
+        description="The list of MLVA profiles associated with the sample. Empty list if none exist, None if not set.",
+    )
+    kmer_profiles: list[KmerProfile] | None = Field(
+        default=None,
+        description="The list of k-mer profiles associated with the sample. Empty list if none exist, None if not set.",
+    )
+    distances: list[SeqDistance] | None = Field(
+        default=None,
+        description="The list of genetic distances associated with the sample. Empty list if none exist, None if not set.",
     )
     pcr_measurements: list[PcrMeasurement] | None = Field(
         default=None,
-        description="The list of PCR measurements associated with the sample.",
+        description="The list of PCR measurements associated with the sample. Empty list if none exist, None if not set.",
     )
     ast_measurements: list[AstMeasurement] | None = Field(
         default=None,
-        description="The list of AST measurements associated with the sample.",
-    )
-
-
-class PhylogeneticTree(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="phylogenetic_trees",
-        persistable=False,
-    )
-    tree_algorithm: enum.TreeAlgorithm = Field(description="The tree algorithm")
-    seq_distance_protocol_id: UUID = Field(
-        description="The ID of the sequence distance protocol. FOREIGN KEY"
-    )
-    seq_distance_protocol: SeqDistanceProtocol | None = Field(
-        default=None, description="The sequence distance protocol"
-    )
-    leaf_names: list[str] | None = Field(
-        default=None,
-        description="The list of names of the leaves of the phylogenetic tree to be put in the tree representation instead of seq_ids. Must have the same length as seq_ids.",
-    )
-    seq_ids: list[UUID] | None = Field(
-        default=None,
-        description="The list of unique identifiers of the sequence of each leaf of the phylogenetic tree.",
-    )
-    newick_repr: str = Field(
-        description="The Newick representation of the phylogenetic tree."
-    )
-
-    @model_validator(mode="after")
-    def _validate_state(self) -> Self:
-        if self.leaf_names:
-            if len(set(self.leaf_names)) < len(self.leaf_names):
-                raise ValueError("Duplicate leaf_codes")
-        if self.seq_ids:
-            if len(set(self.seq_ids)) < len(self.seq_ids):
-                raise ValueError("Duplicate seq_ids")
-            if self.leaf_names and len(self.seq_ids) != len(self.leaf_names):
-                raise ValueError(
-                    "seq_ids and leaf_codes must have the same length if leaf_codes is provided."
-                )
-        return self
-
-
-class MultipleAlignment(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="multiple_alignments",
-        persistable=False,
-    )
-    alignment_protocol_id: UUID = Field(
-        description="The ID of the alignment protocol. FOREIGN KEY"
-    )
-    seq_ids: list[UUID] = Field(
-        description="The list of sequence IDs included in the multiple alignment."
-    )
-    n_seqs: int = Field(description="The number of sequences in the alignment.")
-    n_contigs: list[int] = Field(
-        description="The number of contigs for each sequence in the alignment."
-    )
-    contig_seqs: list[list[str]] = Field(
-        description="The list of contig sequences for each sequence in the alignment."
-    )
-    n_alignments: int = Field(description="The number of alignments.")
-    n_columns: list[int] = Field(
-        description="The number of columns for each alignment."
-    )
-    start_columns: list[list[int]] = Field(
-        description="The start column positions for each alignment."
-    )
-    contig_ordinals: list[list[int]] = Field(
-        description="The ordinals of the contigs for each sequence in the alignment."
-    )
-    contig_start_positions: list[list[int]] = Field(
-        description="The start positions of the contigs for each sequence in the alignment."
-    )
-    contig_directions: list[list[bool]] = Field(
-        description="The directions of the contigs for each sequence in the alignment."
-    )
-    lengths: list[list[int]] = Field(
-        description="The lengths of the contigs for each sequence in the alignment."
+        description="The list of AST measurements associated with the sample. Empty list if none exist, None if not set.",
     )

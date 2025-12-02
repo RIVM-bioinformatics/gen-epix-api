@@ -707,6 +707,7 @@ class Domain:
                     entity,
                     model_class=model_class,
                     crud_command_class=crud_command_class,
+                    service_type=service_type,
                 )
         return command_class
 

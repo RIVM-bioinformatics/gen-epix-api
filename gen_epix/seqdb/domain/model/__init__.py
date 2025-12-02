@@ -17,6 +17,9 @@ from gen_epix.commondb.domain.model import Organization as Organization
 from gen_epix.commondb.domain.model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
+from gen_epix.commondb.domain.model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.domain.model import (
     OrganizationSetMember as OrganizationSetMember,
@@ -50,25 +53,29 @@ from gen_epix.seqdb.domain.model.seq import CompleteContig as CompleteContig
 from gen_epix.seqdb.domain.model.seq import CompleteSample as CompleteSample
 from gen_epix.seqdb.domain.model.seq import CompleteSeq as CompleteSeq
 from gen_epix.seqdb.domain.model.seq import CompleteSnpProfile as CompleteSnpProfile
+from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
 from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
-from gen_epix.seqdb.domain.model.seq import LibraryPrepProtocol as LibraryPrepProtocol
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
+from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
+from gen_epix.seqdb.domain.model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.domain.model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.domain.model.seq import LocusSetMember as LocusSetMember
+from gen_epix.seqdb.domain.model.seq import (
+    MlvaDetectionProtocol as MlvaDetectionProtocol,
+)
+from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignment
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
-from gen_epix.seqdb.domain.model.seq import RawSeq as RawSeq
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
@@ -76,6 +83,10 @@ from gen_epix.seqdb.domain.model.seq import RefSnp as RefSnp
 from gen_epix.seqdb.domain.model.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.domain.model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.domain.model.seq import Sample as Sample
+from gen_epix.seqdb.domain.model.seq import (
+    SampleDataCollectionLink as SampleDataCollectionLink,
+)
+from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
@@ -88,11 +99,10 @@ from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
 from gen_epix.seqdb.domain.model.seq import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
+from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
-from gen_epix.seqdb.domain.model.seq import SubtypingScheme as SubtypingScheme
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
-from gen_epix.seqdb.domain.model.seq import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.domain.model.seq import TaxonomyProtocol as TaxonomyProtocol
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
@@ -122,14 +132,12 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         + [],
         enum.ServiceType.FILE: [File],
         enum.ServiceType.SEQ: [
-            SubtypingScheme,
             Taxon,
             TaxonSet,
             TaxonSetMember,
             Locus,
-            TaxonLocusLink,
             LocusSet,
-            LocusSetMember,
+            LocusCodeMap,
             RefSeq,
             RefAllele,
             RefSnp,
@@ -139,8 +147,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AssemblyProtocol,
             AstProtocol,
             KmerDetectionProtocol,
-            LibraryPrepProtocol,
+            SequencingProtocol,
             LocusDetectionProtocol,
+            MlvaDetectionProtocol,
             PcrProtocol,
             SeqClassificationProtocol,
             SeqDistanceProtocol,
@@ -151,12 +160,15 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqCategorySet,
             SeqCategory,
             Sample,
-            RawSeq,
+            SampleDataCollectionLink,
+            SampleIdentifier,
             ReadSet,
             Seq,
             Allele,
+            LocusProfile,
             AlleleProfile,
             KmerProfile,
+            MlvaProfile,
             SnpProfile,
             AstMeasurement,
             AstPrediction,

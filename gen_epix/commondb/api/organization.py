@@ -220,12 +220,12 @@ def create_organization_endpoints(
         return retval
 
     @router.put(
-        "/users/{object_id}",
-        operation_id="users__put_one",
+        "/update_user/{object_id}",
+        operation_id="update_user",
         name="UpdateUser",
         description=update_user_command_class.__doc__,
     )
-    async def users__put_one(
+    async def update_user(
         user: registered_user_dependency, object_id: UUID, request_body: UpdateUserRequestBody  # type: ignore
     ) -> user_class:
         try:

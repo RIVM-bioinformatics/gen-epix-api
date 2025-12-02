@@ -719,7 +719,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             if (
                 key_data.get("use") in ["sig"]
                 and key_data.get("kty") == "RSA"
-                and key_data.get("alg") in self._allowed_signing_algorithms
             ):
                 self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 

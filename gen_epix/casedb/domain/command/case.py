@@ -13,6 +13,7 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.commondb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 # Non-CRUD
 
@@ -90,6 +91,7 @@ class CreateCasesCommand(ValidateCasesCommand):
     """
     Create the corresponding cases and return them.
     """
+    NAME = "CreateCasesCommand"
 
     pass
 
@@ -141,8 +143,9 @@ class RetrieveCasesByIdCommand(Command):
     Retrieve cases by their IDs.
     """
 
+    case_type_id: UUID = Field(description="The case type id to retrieve cases for.")
     case_ids: list[UUID] = Field(
-        description="The case ids to retrieve cases for. UNIQUE"
+        description="The case ids to retrieve cases for. All cases must belong to the given case type. UNIQUE"
     )
 
     @field_validator("case_ids", mode="after")
@@ -305,6 +308,14 @@ class CreateFileForReadSetCommand(Command):
         description="The ID of the read set case type column."
     )
     file_content: bytes = Field(description="The content of the file to create.")
+    file_format: seqdb_enum.ReadsFileFormat = Field(
+        default=seqdb_enum.ReadsFileFormat.FASTQ,
+        description="The format of the reads file.",
+    )
+    file_compression: seqdb_enum.FileCompression = Field(
+        default=seqdb_enum.FileCompression.NONE,
+        description="The compression of the reads file.",
+    )
 
 
 class CreateFileForSeqCommand(Command):
@@ -317,6 +328,14 @@ class CreateFileForSeqCommand(Command):
         description="The ID of the genetic sequence case type column."
     )
     file_content: bytes = Field(description="The content of the file to create.")
+    file_format: seqdb_enum.SeqFileFormat = Field(
+        default=seqdb_enum.SeqFileFormat.FASTA,
+        description="The format of the sequence file.",
+    )
+    file_compression: seqdb_enum.FileCompression = Field(
+        default=seqdb_enum.FileCompression.NONE,
+        description="The compression of the sequence file.",
+    )
 
 
 class CreateSeqsForCasesCommand(Command):
@@ -325,13 +344,13 @@ class CreateSeqsForCasesCommand(Command):
     """
 
     case_seqs: list[model.CaseSeq] = Field(
-        description="The CaseSequences describing for which (case_id, case_type_col_id) a Sequence is to be created."
+        description="The CaseSequences describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
     )
 
 
-class RetrieveLibraryPrepProtocolsCommand(Command):
+class RetrieveSequencingProtocolsCommand(Command):
     """
-    Retrieve library preparation protocols from seqdb database
+    Retrieve sequencing protocols from seqdb database
     """
 
     pass
@@ -374,6 +393,10 @@ class CaseTypeSetCrudCommand(CrudCommand):
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
+
+
+class CaseTypeSettingsCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeSettings
 
 
 class DimCrudCommand(CrudCommand):
@@ -422,3 +445,7 @@ class CaseSetMemberCrudCommand(CrudCommand):
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
+
+
+class CaseTypeSettingsCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeSettings
