@@ -79,12 +79,26 @@ class SampleDataCollectionLink(Model):
         table_name="sample_data_collection_link",
         persistable=True,
         keys=create_keys({1: ("sample_id", "data_collection_id")}),
+        links=create_links(
+            {
+                1: ("sample_id", Sample, "sample"),
+                2: (
+                    "data_collection_id",
+                    DataCollection,
+                    "data_collection",
+                ),
+            }
+        ),
     )
-    sample_id: str = Field(
+    sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
     )
-    data_collection_id: str = Field(
+    sample: Sample | None = Field(default=None, description="The sample.")
+    data_collection_id: UUID = Field(
         description="The unique identifier for the data collection. FOREIGN KEY"
+    )
+    data_collection: DataCollection | None = Field(
+        default=None, description="The data collection."
     )
 
 
@@ -100,21 +114,25 @@ class SampleIdentifier(Model):
         persistable=True,
         keys=create_keys({1: ("identifier", "identifier_issuer_id")}),
         links=create_links(
-            {1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer")}
+            {
+                1: ("sample_id", Sample, "sample"),
+                2: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+            }
         ),
     )
-    sample_id: str = Field(
+    sample_id: UUID = Field(
         description="The unique identifier for the sample. FOREIGN KEY"
     )
+    sample: Sample | None = Field(default=None, description="The sample.")
     identifier_issuer_id: UUID = Field(
         description="The ID of the identifier issuer. FOREIGN KEY"
+    )
+    identifier_issuer: IdentifierIssuer = Field(
+        description="The identifier issuer.",
     )
     identifier: str = Field(
         description="The external identifier for the sample, with whitespace stripped from both ends.",
         max_length=255,
-    )
-    identifier_issuer: IdentifierIssuer = Field(
-        description="The identifier issuer.",
     )
 
     @field_validator("identifier", mode="before")

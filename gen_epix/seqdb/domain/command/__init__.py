@@ -230,6 +230,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    UpsertCompleteSamplesCommand as UpsertCompleteSamplesCommand,
+)
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     # Specific commands
@@ -260,6 +263,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
+        UpsertCompleteSamplesCommand,
         ReadSetCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
