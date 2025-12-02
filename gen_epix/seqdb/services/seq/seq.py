@@ -345,7 +345,7 @@ class SeqService(BaseSeqService):
     def upsert_complete_samples(
         self,
         cmd: command.UpsertCompleteSamplesCommand,
-    ) -> list[model.CompleteSample]:
+    ) -> list[UUID]:
         return seq_service_upsert_complete_samples(self, cmd)
 
     @staticmethod

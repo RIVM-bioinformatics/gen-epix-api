@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -85,5 +86,5 @@ class BaseSeqService(BaseService):
     def upsert_complete_samples(
         self,
         cmd: command.UpsertCompleteSamplesCommand,
-    ) -> list[model.CompleteSample]:
+    ) -> list[UUID]:
         raise NotImplementedError()
