@@ -206,7 +206,16 @@ def case_service_create_file_for_read_set_or_seq(
         # Create file
         created_file = _create_file(self, cmd)
         # Update Seq with file ID (no reads-hash field specified for Seq)
+        try:
+            uncompressed = _get_uncompressed_content(
+                cmd.file_content, cmd.file_compression
+            )
+            reads_hash_uuid = _compute_reads_hash_uuid(uncompressed)
+        except Exception as e:
+            raise exc.InvalidArgumentsError(f"Failed to compute reads hash: {e}")
+
         seq.file_id = created_file.id
+        seq.file_hash = reads_hash_uuid
 
         self.app.handle(
             seqdb_command.SeqCrudCommand(

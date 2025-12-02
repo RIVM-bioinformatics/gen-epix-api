@@ -384,6 +384,9 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     file_compression: Mapped[enum.FileCompression] = create_mapped_column(
         DOMAIN, model.Seq, "file_compression"
     )
+    file_hash: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Seq, "file_hash"
+    )
     read_set_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set_id")
     read_set2_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set2_id")
     assembly_protocol_id: Mapped[UUID] = create_mapped_column(
