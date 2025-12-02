@@ -14,7 +14,10 @@ from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
+from gen_epix.seqdb.api import (
+    RetrievePhylogeneticTreeRequestBody,
+    RetrieveSeqFastaRequestBody,
+)
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import model as seqdb_model
@@ -28,7 +31,7 @@ class SeqdbRemoteApp(RemoteApp):
 
     ROUTE_MAP: dict[type[Command], str] = {
         seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
+        seqdb_command.RetrieveSeqFastaCommand: "retrieve/seq_fasta",
         seqdb_command.CreateFileCommand: "create/file",
     }
 
@@ -210,19 +213,22 @@ class SeqdbRemoteApp(RemoteApp):
         cmd: seqdb_command.RetrieveSeqFastaCommand,
     ) -> Iterable[str]:
         headers = self.get_headers(cmd)
+
         route = self.get_route(cmd)
 
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            # Convert UUIDs to strings for JSON serialization
-            "seq_ids": [str(x) for x in cmd.seq_ids],
-            "wrap": cmd.wrap,
-        }
+        request_body = RetrieveSeqFastaRequestBody(
+            seq_ids=cmd.seq_ids,
+            file_name="dummy.fasta",
+        )
 
         def _iter_fasta_generator() -> Iterable[str]:
             with httpx.Client(verify=self.ssl_context) as client:
                 with client.stream(
-                    "POST", route, json=request_body, headers=headers
+                    "POST",
+                    route,
+                    # Convert Pydantic model to a JSON-serializable dict
+                    json=json.loads(request_body.model_dump_json()),
+                    headers=headers,
                 ) as resp:
                     resp.raise_for_status()
                     for chunk in resp.iter_bytes():
