@@ -216,24 +216,23 @@ def test_casedb_seqdb_connection(
     ]
     for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
         has_seq_case_ids = [
-            x.id
+            x.content[genetic_sequence_case_type_col.id]
             for x in cases
             if x.content.get(genetic_sequence_case_type_col.id)
         ]
         if not has_seq_case_ids:
             continue
-
-    fasta_retrieved = False
-    # Collect genetic sequence case type columns
-
+    
+    fasta_retrieved: bool = False
     if has_seq_case_ids:
         fasta_iter = casedb_app.handle(
             command.RetrieveGeneticSequenceFastaByIdCommand(
                 user=root_user,  # type: ignore[arg-type]
-                seq_ids=has_seq_case_ids[0:1],
+                seq_ids=has_seq_case_ids,
                 wrap=False,
             )
         )
+
         # Read a few chunks to validate FASTA-like content
         chunks_read = 0
         for chunk in fasta_iter:
