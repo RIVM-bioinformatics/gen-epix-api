@@ -1,14 +1,13 @@
-import importlib
 from collections.abc import Hashable, Iterable
 from typing import Any
 from uuid import UUID
 
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
-from gen_epix.casedb.domain import exc, model
+from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain.service import BaseSeqdbService
-from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.services import CommondbRemoteApp
 from gen_epix.fastapp import App, CrudCommand, Model
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
@@ -34,33 +33,17 @@ class SeqdbService(BaseSeqdbService):
         seqdb_local_app_props = kwargs.pop("seqdb_local_app", {})
         seqdb_remote_app_props = kwargs.pop("seqdb_remote_app", {})
         super().__init__(app, **kwargs)
-        seqdb_app: App
-        seqdb_user: SeqdbUser | None
-        if seqdb_app_type.upper() == "LOCAL":
-            if "app_cfg" in seqdb_local_app_props:
-                seqdb_app_cfg = seqdb_local_app_props.pop("app_cfg")
-            else:
-                seqdb_app_cfg = AppCfg(
-                    AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType
-                )
-            log_setup = seqdb_local_app_props.get(
-                "log_setup", kwargs.get("logger") is not None
-            )
-            seqdb_app_composer = SeqdbAppComposer(seqdb_app_cfg, log_setup=log_setup)
-            seqdb_app = seqdb_app_composer.app
-            seqdb_user = SeqdbUser(**seqdb_local_app_props["user"])
-        elif seqdb_app_type.upper() == "REMOTE":
-            remote_app_module = seqdb_remote_app_props.pop("module")
-            remote_app_class_name = seqdb_remote_app_props.pop("class_name")
-            remote_app_class = getattr(
-                importlib.import_module(remote_app_module), remote_app_class_name
-            )
-            seqdb_app = remote_app_class(**seqdb_remote_app_props)
-            seqdb_user = None
-        else:
-            raise exc.InitializationServiceError(
-                f"Invalid seqdb_app_type: {seqdb_app_type}. Must be 'LOCAL' or 'REMOTE'."
-            )
+        seqdb_app, seqdb_user = CommondbRemoteApp.create_local_or_remote_app(
+            AppType.SEQDB,
+            app_setup_type=seqdb_app_type,
+            local_app_props=seqdb_local_app_props,
+            remote_app_props=seqdb_remote_app_props,
+            user_class=SeqdbUser,
+            app_composer_class=SeqdbAppComposer,
+            service_type_enum=seqdb_enum.ServiceType,
+            repository_type_enum=seqdb_enum.RepositoryType,
+            logger=kwargs.get("logger"),
+        )
         self._seqdb_app = seqdb_app
         self._seqdb_user = seqdb_user
 

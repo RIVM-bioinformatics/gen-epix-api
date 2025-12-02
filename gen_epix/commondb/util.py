@@ -34,7 +34,7 @@ def generate_ulid() -> uuid.UUID:
     return ulid.api.new().uuid
 
 
-def get_project_root() -> Path:
+def get_package_root() -> Path:
     """
     Get the root path of the project by looking for pyproject.toml.
 
@@ -276,10 +276,11 @@ def set_env_variables(
             AppType.SEQDB, dev_idp_config_enum, dev_repository_config_enum
         )
     # Initialise some
+    package_root = get_package_root()
     if general_cfg_path is None:
-        general_cfg_path = Path.cwd() / "config"
+        general_cfg_path = package_root / "config"
     if cfg_path is None:
-        cfg_path = Path.cwd() / "gen_epix" / app_type_str / "config"
+        cfg_path = package_root / "gen_epix" / app_type_str / "config"
     envvar_prefix = app_type_str.upper() + "_"
     settings_files: list[Path] = []
     # General settings

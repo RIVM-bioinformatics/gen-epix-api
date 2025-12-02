@@ -98,7 +98,6 @@ class PhylogeneticTree(Model):
 class SequencingProtocol(SeqdbSequencingProtocol):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sequencing_protocols",
-        table_name="sequencing_protocol",
         persistable=False,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -107,7 +106,6 @@ class SequencingProtocol(SeqdbSequencingProtocol):
 class AssemblyProtocol(SeqdbAssemblyProtocol):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="assembly_protocols",
-        table_name="assembly_protocol",
         persistable=False,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -116,7 +114,6 @@ class AssemblyProtocol(SeqdbAssemblyProtocol):
 class File(SeqdbFile):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",
-        table_name="file",
         persistable=False,
     )
 
@@ -124,7 +121,6 @@ class File(SeqdbFile):
 class Sample(SeqdbSample):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="samples",
-        table_name="sample",
         persistable=False,
         keys=create_keys({1: "code"}),
     )
@@ -157,7 +153,9 @@ class ReadSet(SeqdbReadSet):
             }
         ),
     )
-    sequencing_protocol: SequencingProtocol | None = copy_model_field(SeqdbReadSet, "sequencing_protocol")
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(
+        SeqdbReadSet, "sequencing_protocol"
+    )
     sample: Sample | None = copy_model_field(SeqdbReadSet, "sample")
 
 
