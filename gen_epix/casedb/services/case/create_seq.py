@@ -1,3 +1,5 @@
+import gzip
+import hashlib
 from uuid import UUID
 
 import gen_epix.casedb.domain.command as command
@@ -132,6 +134,18 @@ def case_service_create_file_for_read_set_or_seq(
         )
         return created_file
 
+    def _get_uncompressed_content(
+        content: bytes, compression: seqdb_enum.FileCompression | None
+    ) -> bytes:
+        if compression is None or compression == seqdb_enum.FileCompression.NONE:
+            return content
+        if compression == seqdb_enum.FileCompression.GZIP:
+            return gzip.decompress(content)
+        raise exc.InvalidArgumentsError(f"Unsupported compression: {compression}")
+
+    def _compute_reads_hash_uuid(uncompressed: bytes) -> UUID:
+        return UUID(hashlib.sha256(uncompressed).digest()[:16].hex())
+
     if is_read_set:
         assert isinstance(cmd, command.CreateFileForReadSetCommand)
         # Verify no file linked yet
@@ -152,11 +166,24 @@ def case_service_create_file_for_read_set_or_seq(
             )
         # Create Seq
         created_file = _create_file(self, cmd)
-        # Update ReadSet with file ID
+
+        # Compute and set reads hash based on uncompressed FASTQ representation
+        try:
+            uncompressed = _get_uncompressed_content(
+                cmd.file_content, cmd.file_compression
+            )
+            reads_hash_uuid = _compute_reads_hash_uuid(uncompressed)
+        except Exception as e:
+            raise exc.InvalidArgumentsError(f"Failed to compute reads hash: {e}")
+
+        # Update ReadSet with file ID and hash
         if cmd.is_fwd:
             read_set.fwd_file_id = created_file.id
+            read_set.fwd_reads_hash = reads_hash_uuid
         else:
             read_set.rev_file_id = created_file.id
+            read_set.rev_reads_hash = reads_hash_uuid
+
         self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
@@ -178,8 +205,9 @@ def case_service_create_file_for_read_set_or_seq(
             raise exc.InvalidArgumentsError("The Seq already has a file linked")
         # Create file
         created_file = _create_file(self, cmd)
-        # Update Seq with file ID
+        # Update Seq with file ID (no reads-hash field specified for Seq)
         seq.file_id = created_file.id
+
         self.app.handle(
             seqdb_command.SeqCrudCommand(
                 user=cmd.user,
