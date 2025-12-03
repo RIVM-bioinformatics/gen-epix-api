@@ -2,6 +2,7 @@ import logging
 import ssl
 import threading
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import Depends, Request, Security
 from fastapi.security import SecurityScopes
@@ -43,13 +44,14 @@ class AuthService(BaseAuthService):
         )
 
         # Initialize authentication services
-        self._pending_idp_clients: list[dict[str, str | list]] = []
-        self._pending_lock = threading.Lock()
-        self._idp_clients_by_name: dict[str, IdpClient]
-        self._idp_clients_by_label: dict[str, IdpClient]
+        self._idp_client_by_id: dict[UUID, IdpClient] = {}
+        self._idp_client_by_name: dict[str, IdpClient] = {}
+        self._idp_clients: list[IdpClient] = []
+        self._exposed_idp_clients: list[IdpClient] = []
 
+        self._pending_idp_client_cfgs: list[dict[str, str | list]] = []
+        self._pending_idp_clients_lock = threading.Lock()
         self._init_idp_clients(app, idps_cfg, ssl_context)
-        self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
 
         # Initialize no authentication user
         self._no_auth_user: model.User
@@ -456,13 +458,14 @@ class AuthService(BaseAuthService):
     ) -> list[IdentityProvider]:
         try:
             self._retry_pending_idp_clients()
-        except Exception:
+        except Exception as e:
             # ensure this call never raises because of IDP initialization attempts
             if self._logger:
-                self._logger.exception(
+                self._logger.warning(
                     self.create_log_message(
                         "b2c6a1d4",
                         "Unexpected error while retrying pending IDPs",
+                        exception=e,
                     )
                 )
         identity_providers = [x.get_identity_provider() for x in self._idp_clients]
@@ -492,8 +495,16 @@ class AuthService(BaseAuthService):
         if user_manager:
             # Use user manager to create user
             new_user = user_manager.get_user_instance_from_claims(claims.claims)
-            if new_user:
-                return new_user
+            if new_user is None:
+                if self._logger:
+                    self._logger.warning(
+                        self.create_log_message(
+                            "c1e4f2b3",
+                            "User manager could not create user from claims",
+                            claim_keys=sorted(list(claims.claims.keys())),
+                        )
+                    )
+                raise exc.UnauthorizedAuthError("Unable to create user from claims")
         else:
             # No user manager configured, create user obj directly from claims
             new_user = model.User(**claims.claims)  # type: ignore
@@ -582,9 +593,10 @@ class AuthService(BaseAuthService):
 
             # Automatically create the user if configured
             try:
-                user = user_manager.create_user_from_claims(claims.claims)
-                if not user:
+                user_or_none = user_manager.create_user_from_claims(claims.claims)
+                if not user_or_none:
                     raise exc.UnauthorizedAuthError()
+                user = user_or_none
                 if self._logger:
                     self._logger.info(
                         self.create_log_message(
@@ -610,101 +622,15 @@ class AuthService(BaseAuthService):
                     )
                 raise exc.UnauthorizedAuthError()
 
-    def _init_idp_clients(
-        self,
-        app: App,
-        idps_cfg: list[dict[str, str | list]] | None,
-        ssl_context: ssl.SSLContext | bool,
-    ) -> None:
-        # Initialize list of all IDP clients and list of exposed IDP clients
-        if not idps_cfg:
-            idps_cfg = []
-        idp_clients: list[IdpClient] = []
-        exposed_idp_clients: list[IdpClient] = []
-        idp_names: set[str] = set()
-        idp_labels: set[str] = set()
-        idp_clients_by_name: dict[str, IdpClient] = {}
-        idp_clients_by_label: dict[str, IdpClient] = {}
-        logger = app.logger
-        for idp_cfg in idps_cfg:
-            idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
-            idp_label: str = idp_cfg["label"]  # type: ignore[assignment]
-            is_public: bool = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)  # type: ignore[assignment]
-            if idp_name in idp_names or idp_label in idp_labels:
-                msg = (
-                    "Authentication service name and/or label are not unique: "
-                    f"{idp_cfg['name']}, {idp_cfg['label']}"
-                )
-                if logger:
-                    logger.error(app.create_log_message("30a9a272", msg))
-                raise exc.InitializationServiceError(msg)
-            idp_names.add(idp_name)
-            idp_labels.add(idp_label)
-
-            oidc_discovery_doc_keys = set(OidcServerCfg.model_fields.keys())
-            try:
-                protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
-                if protocol == enum.AuthProtocol.OIDC:
-                    discovery_doc = {
-                        x: y for x, y in idp_cfg.items() if x in oidc_discovery_doc_keys
-                    }
-                    idp_client = OauthIdpClient(
-                        OidcServerCfg(**idp_cfg),  # type: ignore
-                        logger=self._logger,
-                        log_item_class=app.log_item_class,
-                        discovery_doc=discovery_doc,  # Provide again to avoid fetching from discovery URL (again).
-                        ssl_context=ssl_context,
-                    )
-                else:
-                    raise exc.InitializationServiceError(
-                        f"Protocol {protocol.value} not implemented"
-                    )
-                idp_clients.append(idp_client)
-                # use name and client maps to match existing idp clients to new configs
-                # comparing idp_client.server_cfg == new_idp_cfg is not reliable due to possible differences in cfg structures
-                # (e.g. not every idp uses OidcServerCfg)
-                idp_clients_by_name[idp_name] = idp_client
-                idp_clients_by_label[idp_label] = idp_client
-                if is_public:
-                    exposed_idp_clients.append(idp_client)
-            except Exception as exception:
-                # Unable to initialize authentication service: do not raise
-                # an error to avoid entire app not starting up
-                msg = (
-                    "Could not initialize authentication client for service "
-                    f"{idp_cfg['name']}"
-                )
-                if logger:
-                    logger.error(
-                        app.create_log_message("48b7e021", msg, exception=exception)
-                    )
-                with self._pending_lock:
-                    self._pending_idp_clients.append(idp_cfg)
-        for idp_client in idp_clients:  # type: ignore
-            if isinstance(idp_client, OauthIdpClient):
-                if logger:
-                    logger.info(
-                        app.create_log_message(
-                            "7e0b64cc",
-                            f"Authentication client on {idp_client.issuer} initialized",
-                        )
-                    )
-            else:
-                raise exc.InitializationServiceError(
-                    f"Authentication client of type {type(idp_client)} "
-                    "not implemented"
-                )
-        self._idp_clients = idp_clients
-        self._exposed_idp_clients = exposed_idp_clients
-        self._idp_clients_by_name = idp_clients_by_name
-        self._idp_clients_by_label = idp_clients_by_label
-
-    def _attempt_init_single_idp_client(
-        self, idp_cfg: dict[str, str | list]
-    ) -> IdpClient | None:
+    def _init_idp_client(self, idp_cfg: dict[str, str | list]) -> IdpClient | None:
+        """
+        Try to initialize a single IDP client from its configuration.
+        If unsuccessful, log and return None.
+        """
         try:
             protocol = enum.AuthProtocol[str(idp_cfg["protocol"])]
             if protocol == enum.AuthProtocol.OIDC:
+                # TODO: only select actual discovery doc keys, should be class variable of OidcServerCfg containing a set of property names
                 discovery_doc = {
                     x: y
                     for x, y in idp_cfg.items()
@@ -719,73 +645,131 @@ class AuthService(BaseAuthService):
                 )
                 return idp_client
             else:
-                if self._logger:
-                    self._logger.error(
-                        self.create_log_message(
-                            "b1f4c3d2",
-                            f"Protocol {protocol.value} not implemented",
-                        )
+                raise NotImplementedError(
+                    f"Initialization of Protocol {protocol.value} not implemented"
+                )
+        except NotImplementedError as not_implemented_error:
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "9f5b6c3e",
+                        f"IDP {idp_cfg.get('name')} could not be initialized",
+                        exception=not_implemented_error,
                     )
-                return None
+                )
+            raise NotImplementedError from not_implemented_error
         except Exception as exception:
             if self._logger:
-                self._logger.debug(
+                self._logger.warning(
                     self.create_log_message(
                         "e2c6f4a5",
-                        "Pending IDP still not initialized",
-                        idp_name=idp_cfg.get("name"),
+                        f"IDP {idp_cfg.get("name")} could not be initialized",
                         exception=exception,
                     )
                 )
         return None
 
+    def _init_idp_clients(
+        self,
+        app: App,
+        idp_cfgs: list[dict[str, str | list]] | None,
+        ssl_context: ssl.SSLContext | bool,
+    ) -> None:
+        # Parse input
+        logger = app.logger
+        if not idp_cfgs:
+            idp_cfgs = []
+        self._validate_idp_cfgs(app, idp_cfgs)
+        # Try to initialize all IDP clients
+        for idp_cfg in idp_cfgs:
+            # Attempt to initialize IDP client
+            idp_client = self._init_idp_client(idp_cfg)
+            if not idp_client:
+                # Initialization failed, add to pending list
+                with self._pending_idp_clients_lock:
+                    self._pending_idp_client_cfgs.append(idp_cfg)
+                continue
+            # Add initialized IDP client to lists and dicts
+            idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
+            is_public: bool = idp_cfg.get("is_exposed", self.DEFAULT_IS_PUBLIC_IDP)  # type: ignore[assignment]
+            self._idp_clients.append(idp_client)
+            self._idp_client_by_id[idp_client.id] = idp_client
+            self._idp_client_by_name[idp_name] = idp_client
+            if is_public:
+                self._exposed_idp_clients.append(idp_client)
+            # Log successful initialization
+            if logger:
+                logger.info(
+                    app.create_log_message(
+                        "7e0b64cc",
+                        f"IDP client {idp_name} initialized",
+                    )
+                )
+
+    def _validate_idp_cfgs(
+        self, app: App, idp_cfgs: list[dict[str, str | list]]
+    ) -> None:
+        """
+        Verify non-unique names and labels in the provided IDP configurations and
+        raise InitializationServiceError if duplicates are found
+        """
+        for key in ["name", "label"]:
+            duplicate_values: set[str] = set()
+            seen_values: set[str] = set()
+            for x in idp_cfgs:
+                value: str = x[key]  # type: ignore[assignment]
+                if value in seen_values:
+                    duplicate_values.add(value)
+                else:
+                    seen_values.add(value)
+            if duplicate_values:
+                duplicate_values_str = ", ".join(sorted(duplicate_values))
+                msg = f"Authentication services do not have unique f{key}: {duplicate_values_str}"
+                if app.logger:
+                    app.logger.error(app.create_log_message("d4e8f3b1", msg))
+                raise exc.InitializationServiceError(msg)
+
     def _retry_pending_idp_clients(self) -> None:
-        with self._pending_lock:
-            if not self._pending_idp_clients:
+        with self._pending_idp_clients_lock:
+            if not self._pending_idp_client_cfgs:
                 return
-            retry_clients = list(self._pending_idp_clients)
-        newly_added: list[IdpClient] = []
-        newly_exposed: list[IdpClient] = []
+            retry_clients = list(self._pending_idp_client_cfgs)
         for idp_cfg in retry_clients:
             idp_name: str = idp_cfg["name"]  # type: ignore[assignment]
-            idp_label: str = idp_cfg["label"]  # type: ignore[assignment]
-            # avoid re-adding already existing clients using self._idp_clients_by_label and self._idp_clients_by_name
-            # TODO: if every idp in the future uses OidcServerCfg, the comparison can be modified to idp_name == existing_idp.server_cfg.name
-            if any(
-                idp_name == existing_name
-                for existing_name in self._idp_clients_by_name.keys()
-            ) or any(
-                idp_label == existing_label
-                for existing_label in self._idp_clients_by_label.keys()
-            ):
-                with self._pending_lock:
+            # Avoid re-adding already existing clients
+            # Remove lock and skip if in the meantime another thread initialized it
+            if idp_name in self._idp_client_by_name:
+                with self._pending_idp_clients_lock:
                     try:
-                        self._pending_idp_clients.remove(idp_cfg)
+                        self._pending_idp_client_cfgs.remove(idp_cfg)
                     except ValueError:
                         pass
                 continue
-            idp_client = self._attempt_init_single_idp_client(idp_cfg)
-            if idp_client:
-                newly_added.append(idp_client)
-                is_public: bool = idp_cfg.get(
-                    "is_exposed", self.DEFAULT_IS_PUBLIC_IDP
-                )  # type: ignore[assignment]
-                if is_public:
-                    newly_exposed.append(idp_client)
-                with self._pending_lock:
-                    try:
-                        self._pending_idp_clients.remove(idp_cfg)
-                    except ValueError:
-                        pass
-        if newly_added:
-            self._idp_clients.extend(newly_added)
-            self._exposed_idp_clients.extend(newly_exposed)
-            self._idp_client_by_id = {x.id: x for x in self._idp_clients or []}
-            for idp_client in newly_added:
-                if isinstance(idp_client, OauthIdpClient) and self._logger:
-                    self._logger.info(
-                        self.create_log_message(
-                            "c3f4e2b1",
-                            f"Recovered authentication client on {idp_client.issuer}",
-                        )
+            # Attempt to initialize IDP client
+            idp_client = self._init_idp_client(idp_cfg)
+            if not idp_client:
+                # Could not be initialized
+                continue
+            # Add newly initialized client
+            self._idp_clients.append(idp_client)
+            self._idp_client_by_id[idp_client.id] = idp_client
+            self._idp_client_by_name[idp_name] = idp_client
+            is_public: bool = idp_cfg.get(
+                "is_exposed", self.DEFAULT_IS_PUBLIC_IDP
+            )  # type: ignore[assignment]
+            if is_public:
+                self._exposed_idp_clients.append(idp_client)
+            # Remove lock
+            with self._pending_idp_clients_lock:
+                try:
+                    self._pending_idp_client_cfgs.remove(idp_cfg)
+                except ValueError:
+                    pass
+            # Log
+            if self._logger:
+                self._logger.info(
+                    self.create_log_message(
+                        "c3f4e2b1",
+                        f"IDP {idp_cfg.get('name')} initialized after retry",
                     )
+                )

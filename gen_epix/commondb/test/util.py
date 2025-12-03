@@ -20,6 +20,17 @@ def set_log_level(
     _set_log_level("httpx")
 
 
+def get_existing_root_user(cfg: dict, app: App) -> User:
+    user_manager = app.user_manager
+    if user_manager is None:
+        raise ValueError("User generator not found")
+    root_user_cfg: dict = cfg["service"]["auth"]["props"]["root"]["user"]
+    user: User = user_manager.retrieve_user_by_key(  # type:ignore[assignment]
+        root_user_cfg["key"]
+    )
+    return user
+
+
 def create_root_user_from_claims(cfg: dict, app: App) -> User:
     user_manager = app.user_manager
     if user_manager is None:
