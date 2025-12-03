@@ -43,9 +43,9 @@ class RetrieveCompleteSampleCommand(Command):
     pass
 
 
-class RetrieveCompleteSeqCommand(Command):
+class RetrieveCompleteSamplesCommand(Command):
 
-    seq_ids: list[UUID]
+    sample_ids: list[UUID]
 
 
 class RetrieveCompleteSnpProfileCommand(Command):
