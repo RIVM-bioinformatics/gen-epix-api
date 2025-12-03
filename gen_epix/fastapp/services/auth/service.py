@@ -724,7 +724,7 @@ class AuthService(BaseAuthService):
                     seen_values.add(value)
             if duplicate_values:
                 duplicate_values_str = ", ".join(sorted(duplicate_values))
-                msg = f"Authentication services do not have unique f{key}: {duplicate_values_str}"
+                msg = f"Authentication services do not have unique {key}: {duplicate_values_str}"
                 if app.logger:
                     app.logger.error(app.create_log_message("d4e8f3b1", msg))
                 raise exc.InitializationServiceError(msg)
