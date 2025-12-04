@@ -12,8 +12,8 @@ from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.util import copy_model_field
-from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
+from gen_epix.fastapp.domain import Entity
 
 
 class CaseForCreateUpdate(Model):

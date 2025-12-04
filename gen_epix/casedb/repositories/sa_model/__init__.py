@@ -39,9 +39,6 @@ from gen_epix.casedb.repositories.sa_model.case import (
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeSettings as CaseTypeSettings,
-)
 from gen_epix.casedb.repositories.sa_model.case import Col as Col
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
@@ -158,13 +155,11 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,
-        model.CaseTypeSettings: CaseTypeSettings,
         model.Col: Col,
         model.Dim: Dim,
         model.GeneticDistanceProtocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
-        model.CaseTypeSettings: CaseTypeSettings,
     },
 }
 

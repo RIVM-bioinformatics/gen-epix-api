@@ -1,7 +1,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac.rights import (
@@ -12,7 +12,6 @@ from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
     CaseTypeDim,
-    CaseTypeSettings,
     Col,
     Dim,
     GeneticDistanceProtocol,
@@ -58,32 +57,14 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
-    stats_time_case_type_col_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_time_case_type_col_id"
+    stats_time_case_type_dim_id: UUID | None = Field(
+        description="The case type dimension ID to use for time-based statistics unless otherwise specified"
     )
-    stats_geo_case_type_col_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_geo_case_type_col_id"
+    stats_geo_case_type_dim_id: UUID | None = Field(
+        description="The case type dimension ID to use for geo-based statistics unless otherwise specified"
     )
-    stats_time_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_time_case_type_col_id and that the user has read rights to for at least one data collection. The list is ordered from highest to lowest resolution (day, week, month, quarter, year). This is the list used to calculate the case date. Empty if no stats_time_case_type_col_id is set, empty list if no read rights to any of these columns.",
-    )
-    stats_geo_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_geo_case_type_col_id and that the user has read rights to for at least one data collection. The list is not ordered. Empty if no stats_geo_case_type_col_id is set, empty list if no read rights to any of these columns.",
-    )
-    create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
-    read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
-    read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
-    update_max_n_cases: int = copy_model_field(CaseTypeSettings, "update_max_n_cases")
-    delete_max_n_cases: int = copy_model_field(CaseTypeSettings, "delete_max_n_cases")
-
-    @model_validator(mode="after")
-    def derive_case_type_col_order(self) -> "CompleteCaseType":
-        ordered: list[UUID] = []
-        seen: set[UUID] = set()
-        for dim in self.case_type_dims:
-            for cid in dim.case_type_col_order:
-                if cid not in seen:
-                    ordered.append(cid)
-                    seen.add(cid)
-        self.case_type_col_order = ordered
-        return self
+    create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
+    read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")
+    read_max_tree_size: int = copy_model_field(CaseType, "read_max_tree_size")
+    update_max_n_cases: int = copy_model_field(CaseType, "update_max_n_cases")
+    delete_max_n_cases: int = copy_model_field(CaseType, "delete_max_n_cases")

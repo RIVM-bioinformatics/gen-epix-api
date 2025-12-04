@@ -275,6 +275,41 @@ class CaseType(Model):
     etiological_agent: EtiologicalAgent | None = Field(
         default=None, description="The etiological agent"
     )
+    create_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    read_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    read_max_tree_size: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    update_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    delete_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
 
 
 class CaseTypeSetCategory(Model):
@@ -525,89 +560,6 @@ class CaseTypeCol(Model):  # type: ignore
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
         return None if value is None else [x.value for x in value]
-
-
-class CaseTypeSettings(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_settings",
-        table_name="case_type_settings",
-        persistable=True,
-        keys=create_keys({1: "case_type_id"}),
-        links=create_links(
-            {
-                1: ("case_type_id", CaseType, "case_type"),
-                2: (
-                    "stats_time_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_time_case_type_col",
-                ),
-                3: (
-                    "stats_geo_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_geo_case_type_col",
-                ),
-            }
-        ),
-    )
-    case_type_id: UUID = Field(
-        description=(
-            "The ID of the case type these settings apply to. One-to-one mapping. FOREIGN KEY"
-        )
-    )
-    case_type: CaseType | None = Field(
-        default=None, description="The case type for these settings"
-    )
-
-    stats_time_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the TIME case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_time_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The TIME case type col used for statistics"
-    )
-
-    stats_geo_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the GEO case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_geo_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The GEO case type col used for statistics"
-    )
-
-    create_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_tree_size: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    update_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    delete_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
 
 
 class CaseTypeColSet(Model):

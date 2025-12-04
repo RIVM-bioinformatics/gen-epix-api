@@ -147,43 +147,20 @@ class CaseType(Base, RowMetadataMixin):
     etiological_agent_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CaseType, "etiological_agent_id"
     )
-
-
-class CaseTypeSettings(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeSettings)
-
-    case_type_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "case_type_id"
-    )
-    case_type: Mapped[CaseType | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "case_type"
-    )
-    stats_time_case_type_col_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_time_case_type_col_id"
-    )
-    stats_time_case_type_col: Mapped[model.CaseTypeCol | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_time_case_type_col"
-    )
-    stats_geo_case_type_col_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_geo_case_type_col_id"
-    )
-    stats_geo_case_type_col: Mapped[model.CaseTypeCol | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_geo_case_type_col"
-    )
     create_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "create_max_n_cases"
+        DOMAIN, model.CaseType, "create_max_n_cases"
     )
     read_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "read_max_n_cases"
+        DOMAIN, model.CaseType, "read_max_n_cases"
     )
     read_max_tree_size: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "read_max_tree_size"
+        DOMAIN, model.CaseType, "read_max_tree_size"
     )
     update_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "update_max_n_cases"
+        DOMAIN, model.CaseType, "update_max_n_cases"
     )
     delete_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "delete_max_n_cases"
+        DOMAIN, model.CaseType, "delete_max_n_cases"
     )
 
 
