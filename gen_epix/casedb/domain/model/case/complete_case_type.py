@@ -1,7 +1,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac.rights import (
@@ -62,12 +62,6 @@ class CompleteCaseType(CaseType):
     )
     stats_geo_case_type_dim_id: UUID | None = Field(
         description="The case type dimension ID to use for geo-based statistics unless otherwise specified"
-    )
-    stats_time_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_time_case_type_dim_id and that the user has read rights to for at least one data collection. The list is ordered from highest to lowest resolution (day, week, month, quarter, year). This is the list used to calculate the case date. Empty if no stats_time_case_type_dim_id is set, empty list if no read rights to any of these columns.",
-    )
-    stats_geo_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_geo_case_type_dim_id and that the user has read rights to for at least one data collection. The list is not ordered. Empty if no stats_geo_case_type_dim_id is set, empty list if no read rights to any of these columns.",
     )
     create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
     read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")

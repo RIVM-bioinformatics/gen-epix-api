@@ -45,6 +45,9 @@ from gen_epix.casedb.services.case.crud_case_type_col_set import (
 from gen_epix.casedb.services.case.crud_case_type_col_set_member import (
     case_service_crud_case_type_col_set_member,
 )
+from gen_epix.casedb.services.case.crud_case_type_dim import (
+    case_service_crud_case_type_dim,
+)
 from gen_epix.casedb.services.case.crud_case_type_set import (
     case_service_crud_case_type_set,
 )
@@ -1003,6 +1006,20 @@ class CaseService(BaseCaseService):
     ):
         """Handle CRUD operations for CaseTypeSettings entities."""
         return case_service_crud_case_type_settings(self, cmd)
+
+    def crud_case_type_dim(
+        self, cmd: command.CaseTypeDimCrudCommand
+    ) -> (
+        list[model.CaseTypeDim]
+        | model.CaseTypeDim
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeDim entities."""
+        return case_service_crud_case_type_dim(self, cmd)
 
     def crud_col(
         self, cmd: command.ColCrudCommand

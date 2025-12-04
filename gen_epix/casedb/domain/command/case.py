@@ -91,6 +91,7 @@ class CreateCasesCommand(ValidateCasesCommand):
     """
     Create the corresponding cases and return them.
     """
+
     NAME = "CreateCasesCommand"
 
     pass
@@ -399,6 +400,10 @@ class CaseTypeSettingsCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSettings
 
 
+class CaseTypeDimCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeDim
+
+
 class DimCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Dim
 
@@ -445,7 +450,3 @@ class CaseSetMemberCrudCommand(CrudCommand):
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
-
-
-class CaseTypeSettingsCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeSettings
