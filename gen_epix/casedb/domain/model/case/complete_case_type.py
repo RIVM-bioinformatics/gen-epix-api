@@ -8,7 +8,6 @@ from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
-from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
@@ -16,6 +15,7 @@ from gen_epix.casedb.domain.model.case.persistable import (
     Dim,
     GeneticDistanceProtocol,
     TreeAlgorithm,
+    CaseTypeDim,
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.commondb.util import copy_model_field
