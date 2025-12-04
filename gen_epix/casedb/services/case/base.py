@@ -102,7 +102,6 @@ class BaseCaseService(DomainBaseCaseService):
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
         case_type_id: UUID,
-        case_type_settings: model.CaseTypeSettings | None = None,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",

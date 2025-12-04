@@ -465,27 +465,3 @@ def _get_map_functions_for_filters(
         else:
             raise exc.InvalidArgumentsError(f"Unsupported column type: {col.col_type}")
     return map_fns
-
-
-def _retrieve_case_type_settings(
-    self: BaseCaseService, uow: BaseUnitOfWork, user: model.User, case_type_id: UUID
-) -> model.CaseTypeSettings:
-    # Get time stats case type col ids and mappers based on case type settings
-    case_type_settings_list: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
-        uow,
-        user.id,
-        model.CaseTypeSettings,
-        None,
-        None,
-        CrudOperation.READ_ALL,
-        filter=UuidSetFilter(
-            key="case_type_id",
-            members=frozenset({case_type_id}),
-        ),
-    )
-    if not case_type_settings_list:
-        raise exc.InvalidArgumentsError(
-            f"No case type settings for case type {case_type_id}"
-        )
-    case_type_settings = case_type_settings_list[0]
-    return case_type_settings
