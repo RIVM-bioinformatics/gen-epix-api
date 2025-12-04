@@ -179,9 +179,11 @@ class Col(Model):
         ),
         max_length=255,
     )
-    rank_in_dim: int | None = Field(
-        default=None,
-        description="The rank of the column within the dimension, if relevant.",
+    rank: int = Field(
+        description=(
+            "The rank of the column within the dimension, introducing a partial ordering. "
+            "The rank for two columns of the same dimension can be identical."
+        )
     )
     label: str | None = Field(
         default=None,
@@ -272,6 +274,41 @@ class CaseType(Model):
     etiological_agent: EtiologicalAgent | None = Field(
         default=None, description="The etiological agent"
     )
+    create_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    read_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    read_max_tree_size: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    update_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
+    delete_max_n_cases: int = Field(
+        ge=0,
+        default=0,
+        description=(
+            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
+        ),
+    )
 
 
 class CaseTypeSetCategory(Model):
@@ -352,16 +389,57 @@ class CaseTypeSetMember(Model):
     case_type: CaseType | None = Field(default=None, description="The case type")
 
 
-class CaseTypeCol(Model):  # type: ignore
+class CaseTypeDim(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_type_dims",
+        persistable=True,
+        keys=create_keys({1: ("case_type_id", "dim_id", "occurrence")}),
+        links=create_links(
+            {
+                1: ("case_type_id", CaseType, "case_type"),
+                2: ("dim_id", Dim, "dim"),
+            }
+        ),
+    )
+    id: UUID = Field(description="The ID of the first case type column.")
+    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
+    occurrence: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "The occurrence index of the dimension for this case type. Mandatory, minimum value is 1."
+            " For example, for first and second vaccination time it would be 1 and 2."
+            " Default is 1 if only a single occurrence."
+        ),
+    )
+    rank: int = Field(description="The rank of the case type dimension for ordering.")
+    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The case type")
+    is_time_stats_dim: bool = Field(
+        default=False,
+        description=(
+            "Whether this case type dimension is used as time dimension for statistics."
+        ),
+    )
+    is_geo_stats_dim: bool = Field(
+        default=False,
+        description=(
+            "Whether this case type dimension is used as geo dimension for statistics."
+        ),
+    )
+
+
+class CaseTypeCol(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_cols",
         table_name="case_type_col",
         persistable=True,
-        keys=create_keys({1: ("case_type_id", "col_id", "occurrence")}),
+        keys=create_keys({1: ("case_type_id", "col_id", "case_type_dim_id")}),
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
                 2: ("col_id", Col, "col"),
+                3: ("case_type_dim_id", CaseTypeDim, "case_type_dim"),
             }
         ),
     )
@@ -369,13 +447,11 @@ class CaseTypeCol(Model):  # type: ignore
     case_type: CaseType | None = Field(default=None, description="The case type")
     col_id: UUID = Field(description="The ID of the column. FOREIGN KEY")
     col: Col | None = Field(default=None, description="The column")
-    occurrence: int | None = Field(
-        default=None,
-        description=(
-            "The index of the occurrence of the column for this case type."
-            " E.g. for first and second vaccination date it would be 1 and 2."
-            " Empty or 1 if only a single occurrence."
-        ),
+    case_type_dim_id: UUID = Field(
+        description="The ID of the case type dimension. FOREIGN KEY"
+    )
+    case_type_dim: CaseTypeDim | None = Field(
+        default=None, description="The case type dimension"
     )
     code: str = Field(
         description=(
@@ -385,13 +461,6 @@ class CaseTypeCol(Model):  # type: ignore
             "'Specimen.Sampling.Date' for occurrence null"
         ),
         max_length=255,
-    )
-    rank: int | None = Field(
-        default=None,
-        description=(
-            "The rank of the column for this case type for ordering, "
-            "if different from the general dimension and column rank."
-        ),
     )
     label: str | None = Field(
         default=None,
@@ -471,89 +540,6 @@ class CaseTypeCol(Model):  # type: ignore
         self, value: list[enum.TreeAlgorithmType] | None
     ) -> list[str] | None:
         return None if value is None else [x.value for x in value]
-
-
-class CaseTypeSettings(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_settings",
-        table_name="case_type_settings",
-        persistable=True,
-        keys=create_keys({1: "case_type_id"}),
-        links=create_links(
-            {
-                1: ("case_type_id", CaseType, "case_type"),
-                2: (
-                    "stats_time_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_time_case_type_col",
-                ),
-                3: (
-                    "stats_geo_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_geo_case_type_col",
-                ),
-            }
-        ),
-    )
-    case_type_id: UUID = Field(
-        description=(
-            "The ID of the case type these settings apply to. One-to-one mapping. FOREIGN KEY"
-        )
-    )
-    case_type: CaseType | None = Field(
-        default=None, description="The case type for these settings"
-    )
-
-    stats_time_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the TIME case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_time_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The TIME case type col used for statistics"
-    )
-
-    stats_geo_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the GEO case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_geo_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The GEO case type col used for statistics"
-    )
-
-    create_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_tree_size: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    update_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    delete_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
 
 
 class CaseTypeColSet(Model):

@@ -111,9 +111,7 @@ class Col(Base, RowMetadataMixin):
         DOMAIN, model.Col, "code_suffix"
     )
     code: Mapped[str] = create_mapped_column(DOMAIN, model.Col, "code")
-    rank_in_dim: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.Col, "rank_in_dim"
-    )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.Col, "rank")
     label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "label")
     col_type: Mapped[enum.ColType] = create_mapped_column(DOMAIN, model.Col, "col_type")
     concept_set_id: Mapped[UUID | None] = create_mapped_column(
@@ -146,43 +144,20 @@ class CaseType(Base, RowMetadataMixin):
     etiological_agent_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CaseType, "etiological_agent_id"
     )
-
-
-class CaseTypeSettings(Base, RowMetadataMixin):
-    __tablename__, __table_args__ = create_table_args(model.CaseTypeSettings)
-
-    case_type_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "case_type_id"
-    )
-    case_type: Mapped[CaseType | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "case_type"
-    )
-    stats_time_case_type_col_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_time_case_type_col_id"
-    )
-    stats_time_case_type_col: Mapped[model.CaseTypeCol | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_time_case_type_col"
-    )
-    stats_geo_case_type_col_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_geo_case_type_col_id"
-    )
-    stats_geo_case_type_col: Mapped[model.CaseTypeCol | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "stats_geo_case_type_col"
-    )
     create_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "create_max_n_cases"
+        DOMAIN, model.CaseType, "create_max_n_cases"
     )
     read_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "read_max_n_cases"
+        DOMAIN, model.CaseType, "read_max_n_cases"
     )
     read_max_tree_size: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "read_max_tree_size"
+        DOMAIN, model.CaseType, "read_max_tree_size"
     )
     update_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "update_max_n_cases"
+        DOMAIN, model.CaseType, "update_max_n_cases"
     )
     delete_max_n_cases: Mapped[int] = create_mapped_column(
-        DOMAIN, model.CaseTypeSettings, "delete_max_n_cases"
+        DOMAIN, model.CaseType, "delete_max_n_cases"
     )
 
 
@@ -232,6 +207,29 @@ class CaseTypeSetMember(Base, RowMetadataMixin):
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
 
 
+class CaseTypeDim(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.CaseTypeDim)
+
+    id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeDim, "id")
+    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeDim, "dim_id")
+    occurrence: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "occurrence"
+    )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseTypeDim, "rank")
+    case_type_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "case_type_id"
+    )
+    is_time_stats_dim: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "is_time_stats_dim"
+    )
+    is_geo_stats_dim: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "is_geo_stats_dim"
+    )
+
+    case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
+    dim: Mapped[Dim] = relationship(Dim, foreign_keys=[dim_id])
+
+
 class CaseTypeCol(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.CaseTypeCol)
 
@@ -239,18 +237,14 @@ class CaseTypeCol(Base, RowMetadataMixin):
         DOMAIN, model.CaseTypeCol, "case_type_id"
     )
     col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeCol, "col_id")
-    occurrence: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "occurrence"
+    case_type_dim_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeCol, "case_type_dim_id"
     )
     code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeCol, "code")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "description"
     )
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "rank")
     label: Mapped[str | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "label")
-    description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "description"
-    )
     min_value: Mapped[float | None] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "min_value"
     )
@@ -287,6 +281,9 @@ class CaseTypeCol(Base, RowMetadataMixin):
 
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
     col: Mapped[Col] = relationship(Col, foreign_keys=[col_id])
+    case_type_dim: Mapped[CaseTypeDim] = relationship(
+        CaseTypeDim, foreign_keys=[case_type_dim_id]
+    )
 
 
 class CaseTypeColSet(Base, RowMetadataMixin):

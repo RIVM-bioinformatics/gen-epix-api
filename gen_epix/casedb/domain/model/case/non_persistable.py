@@ -12,8 +12,8 @@ from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.util import copy_model_field
-from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
+from gen_epix.fastapp.domain import Entity
 
 
 class CaseForCreateUpdate(Model):
@@ -40,27 +40,6 @@ class CaseForCreateUpdate(Model):
         self, value: dict[UUID, str | None]
     ) -> dict[str, str | None]:
         return {str(x): y for x, y in value.items()}
-
-
-class CaseTypeDim(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_dims",
-        persistable=False,
-    )
-    id: UUID = Field(description="The ID of the first case type column.")
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    occurrence: int | None = Field(
-        default=None,
-        description=(
-            "The index of the occurrence of the dimension for this case type."
-            " E.g. for first and second vaccination time it would be 1 and 2."
-            " Empty if only a single occurrence."
-        ),
-    )
-    rank: int = Field(description="The rank of the case type dimension for ordering.")
-    case_type_col_order: list[UUID] = Field(
-        description="The order of the case type columns"
-    )
 
 
 class CaseTypeStat(fastapp.Model):
