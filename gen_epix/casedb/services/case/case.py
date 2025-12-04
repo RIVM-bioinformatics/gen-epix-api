@@ -57,9 +57,6 @@ from gen_epix.casedb.services.case.crud_case_type_set_category import (
 from gen_epix.casedb.services.case.crud_case_type_set_member import (
     case_service_crud_case_type_set_member,
 )
-from gen_epix.casedb.services.case.crud_case_type_settings import (
-    case_service_crud_case_type_settings,
-)
 from gen_epix.casedb.services.case.crud_col import case_service_crud_col
 from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
@@ -992,20 +989,6 @@ class CaseService(BaseCaseService):
     ):
         """Handle CRUD operations for CaseTypeSetMember entities."""
         return case_service_crud_case_type_set_member(self, cmd)
-
-    def crud_case_type_settings(
-        self, cmd: command.CaseTypeSettingsCrudCommand
-    ) -> (
-        list[model.CaseTypeSettings]
-        | model.CaseTypeSettings
-        | list[UUID]
-        | UUID
-        | list[bool]
-        | bool
-        | None
-    ):
-        """Handle CRUD operations for CaseTypeSettings entities."""
-        return case_service_crud_case_type_settings(self, cmd)
 
     def crud_case_type_dim(
         self, cmd: command.CaseTypeDimCrudCommand

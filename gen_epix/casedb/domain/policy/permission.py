@@ -23,18 +23,7 @@ class RoleGenerator(CommonRoleGenerator):
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN]
         | {
             # case
-            (
-                command.CaseSetCrudCommand,
-                PermissionTypeSet.C,
-            ),
-            (
-                command.CaseTypeSettingsCrudCommand,
-                PermissionTypeSet.CUD,
-            ),  # Other users can only use dedicated command
-            (
-                command.CaseTypeDimCrudCommand,
-                PermissionTypeSet.CUD,
-            ),
+            (command.CaseSetCrudCommand, PermissionTypeSet.C),
             (
                 command.CaseCrudCommand,
                 PermissionTypeSet.C,
@@ -63,6 +52,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CaseTypeColSetCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
+            (command.CaseTypeDimCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
             (
                 command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
@@ -133,7 +123,6 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CreateSeqsForCasesCommand, PermissionTypeSet.E),
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             (command.CreateFileForSeqCommand, PermissionTypeSet.E),
-            (command.CaseTypeSettingsCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeDimCrudCommand, PermissionTypeSet.R),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),

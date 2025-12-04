@@ -62,27 +62,6 @@ class BaseCaseService(DomainBaseCaseService):
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
-    # CaseCrudCommand,
-    # CaseDataCollectionLinkCrudCommand,
-    # CaseSetCategoryCrudCommand,
-    # CaseSetCrudCommand,
-    # CaseSetDataCollectionLinkCrudCommand,
-    # CaseSetMemberCrudCommand,
-    # CaseSetStatusCrudCommand,
-    # CaseTypeColCrudCommand,
-    # CaseTypeColSetCrudCommand,
-    # CaseTypeColSetMemberCrudCommand,
-    # CaseTypeCrudCommand,
-    # CaseTypeSetCategoryCrudCommand,
-    # CaseTypeSetCrudCommand,
-    # CaseTypeSetMemberCrudCommand,
-    # CaseTypeSettingsCrudCommand,
-    # ColCrudCommand,
-    # DimCrudCommand,
-    # GeneticDistanceProtocolCrudCommand,
-    # TreeAlgorithmClassCrudCommand,
-    # TreeAlgorithmCrudCommand,
-
     @abstractmethod
     def _read_association_with_valid_ids(
         self,

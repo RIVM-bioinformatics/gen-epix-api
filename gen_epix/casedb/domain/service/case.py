@@ -35,7 +35,6 @@ class BaseCaseService(BaseService):
         command.CaseTypeColCrudCommand,
         command.CaseTypeColSetMemberCrudCommand,
         command.CaseTypeColSetCrudCommand,
-        command.CaseTypeSettingsCrudCommand,
         command.CaseTypeDimCrudCommand,
     }
     ABAC_DATA_COMMAND_CLASSES: set[type[command.Command]] = {
@@ -148,7 +147,6 @@ class BaseCaseService(BaseService):
         f(command.CaseTypeSetCategoryCrudCommand, self.crud_case_type_set_category)
         f(command.CaseTypeSetCrudCommand, self.crud_case_type_set)
         f(command.CaseTypeSetMemberCrudCommand, self.crud_case_type_set_member)
-        f(command.CaseTypeSettingsCrudCommand, self.crud_case_type_settings)
         f(command.CaseTypeDimCrudCommand, self.crud_case_type_dim)
         f(command.ColCrudCommand, self.crud_col)
         f(command.DimCrudCommand, self.crud_dim)
@@ -397,21 +395,6 @@ class BaseCaseService(BaseService):
         | None
     ):
         """Handle CRUD operations for CaseTypeSetMember entities."""
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def crud_case_type_settings(
-        self, cmd: command.CaseTypeSettingsCrudCommand
-    ) -> (
-        list[model.CaseTypeSettings]
-        | model.CaseTypeSettings
-        | list[UUID]
-        | UUID
-        | list[bool]
-        | bool
-        | None
-    ):
-        """Handle CRUD operations for CaseTypeSettings entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod

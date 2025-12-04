@@ -428,10 +428,6 @@ class CaseTypeSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
-class CaseTypeSettingsCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeSettings
-
-
 class ColCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Col
 
