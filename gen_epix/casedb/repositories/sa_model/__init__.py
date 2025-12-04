@@ -31,6 +31,7 @@ from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTyp
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
+from gen_epix.casedb.repositories.sa_model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetCategory as CaseTypeSetCategory,
@@ -153,6 +154,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeCol: CaseTypeCol,
         model.CaseTypeColSet: CaseTypeColSet,
         model.CaseTypeColSetMember: CaseTypeColSetMember,
+        model.CaseTypeDim: CaseTypeDim,
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,

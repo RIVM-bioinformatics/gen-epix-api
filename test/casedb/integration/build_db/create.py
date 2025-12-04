@@ -449,13 +449,7 @@ class TestCreate:
                 )
             # DimType.IDENTIFIER can have identifier columns under it
             dim = f"id{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.ID_DIRECT,
-                    enum.ColType.ID_PSEUDONYMISED,
-                    enum.ColType.ID_ANONYMISED,
-                ]
-            ):
+            for j, col_type in enumerate(enum.ColTypeSet.ID.value):
                 j += 1
                 col_type_str = col_type.value.lower()
                 env.create_col(

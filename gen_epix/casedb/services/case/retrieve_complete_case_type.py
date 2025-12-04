@@ -169,9 +169,7 @@ def case_service_retrieve_complete_case_type(
         # Get case_type_col_order
         # TODO: to be tested
         max_dim_rank = max([0] + [x.rank for x in dims.values() if x.rank])
-        max_col_rank_in_dim = max(
-            [0] + [x.rank_in_dim for x in cols.values() if x.rank_in_dim]
-        )
+        max_col_rank = max([0] + [x.rank for x in cols.values() if x.rank])
         max_case_type_col_rank = max(
             [0] + [x.rank for x in case_type_cols.values() if x.rank]
         )
@@ -186,11 +184,7 @@ def case_service_retrieve_complete_case_type(
                     if dims[cols[x.col_id].dim_id].rank
                     else max_dim_rank
                 ),
-                (
-                    cols[x.col_id].rank_in_dim
-                    if cols[x.col_id].rank_in_dim
-                    else max_col_rank_in_dim
-                ),
+                (cols[x.col_id].rank if cols[x.col_id].rank else max_col_rank),
                 x.occurrence if x.occurrence else max_case_type_col_occurrence,
             )
             for x in case_type_cols.values()
@@ -201,16 +195,16 @@ def case_service_retrieve_complete_case_type(
         # Get case_type_dims as the list ordered by the (dim, occurrence)
         # that occurs first in case_type_col_order
         dict_: dict[tuple[UUID, int | None], list] = {}
-        # dict[tuple[dim_id, occurrence], list[rank, [tuple[case_type_col_id, col.rank_in_dim]]]]
+        # dict[tuple[dim_id, occurrence], list[rank, [tuple[case_type_col_id, col.rank]]]]
         for case_type_col_id in case_type_col_order:
             # Add to dict_
             case_type_col = case_type_cols[case_type_col_id]
             col = cols[case_type_col.col_id]
             tuple_ = (col.dim_id, case_type_col.occurrence)
             if tuple_ in dict_:
-                dict_[tuple_][1].append((case_type_col_id, col.rank_in_dim))
+                dict_[tuple_][1].append((case_type_col_id, col.rank))
                 continue
-            dict_[tuple_] = [len(dict_), [(case_type_col_id, col.rank_in_dim)]]
+            dict_[tuple_] = [len(dict_), [(case_type_col_id, col.rank)]]
         case_type_dim_order = list(dict_.keys())
         case_type_dim_order.sort(key=lambda x: dict_[x][0])
         case_type_dims = [

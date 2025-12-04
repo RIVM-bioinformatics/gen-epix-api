@@ -90,9 +90,11 @@ class CasedbTestClient(TestClient):
         enum.ColType.TIME_YEAR: "1900",
         enum.ColType.GEO_LATLON: "-90.000, -180.0000",
         enum.ColType.GEO_REGION: None,
-        enum.ColType.ID_DIRECT: "name1",
-        enum.ColType.ID_PSEUDONYMISED: "id1",
-        enum.ColType.ID_ANONYMISED: "bd11ae5c",
+        enum.ColType.ID_PERSON: "name1",
+        enum.ColType.ID_SAMPLE: "sample1",
+        enum.ColType.ID_CASE: "case1",
+        enum.ColType.ID_EVENT: "event1",
+        enum.ColType.ID_GENETIC_SEQUENCE: "seq1",
         enum.ColType.DECIMAL_0: "1",
         enum.ColType.DECIMAL_1: "1.1",
         enum.ColType.DECIMAL_2: "1.22",
@@ -432,7 +434,7 @@ class CasedbTestClient(TestClient):
         if not m:
             raise ValueError(f"Invalid code {code}")
         dim = m.group(1) + m.group(2)
-        rank_in_dim = int(m.group(3))
+        rank = int(m.group(3))
         dim_id = (
             self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id
         )
@@ -475,7 +477,7 @@ class CasedbTestClient(TestClient):
                     label=code,
                     dim_id=dim_id,
                     col_type=col_type,
-                    rank_in_dim=rank_in_dim,
+                    rank=rank,
                     concept_set_id=concept_set_id,
                     region_set_id=region_set_id,
                     genetic_distance_protocol_id=genetic_distance_protocol_id,

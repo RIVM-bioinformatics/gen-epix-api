@@ -82,6 +82,9 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
         model.GeneticDistanceProtocol,
         "seqdb_max_stored_distance",
     )
+    seqdb_is_integer_distance: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.GeneticDistanceProtocol, "seqdb_is_integer_distance"
+    )
     min_scale_unit: Mapped[float] = create_mapped_column(
         DOMAIN, model.GeneticDistanceProtocol, "min_scale_unit"
     )
@@ -111,9 +114,7 @@ class Col(Base, RowMetadataMixin):
         DOMAIN, model.Col, "code_suffix"
     )
     code: Mapped[str] = create_mapped_column(DOMAIN, model.Col, "code")
-    rank_in_dim: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.Col, "rank_in_dim"
-    )
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Col, "rank")
     label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "label")
     col_type: Mapped[enum.ColType] = create_mapped_column(DOMAIN, model.Col, "col_type")
     concept_set_id: Mapped[UUID | None] = create_mapped_column(
@@ -238,10 +239,10 @@ class CaseTypeCol(Base, RowMetadataMixin):
     case_type_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "case_type_id"
     )
-    col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeCol, "col_id")
-    occurrence: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "occurrence"
+    case_type_dim_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeCol, "case_type_dim_id"
     )
+    col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeCol, "col_id")
     code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeCol, "code")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "description"
@@ -313,6 +314,27 @@ class CaseTypeColSetMember(Base, RowMetadataMixin):
     )
     case_type_col: Mapped[CaseTypeCol] = relationship(
         CaseTypeCol, foreign_keys=[case_type_col_id]
+    )
+
+
+class CaseTypeDim(Base, RowMetadataMixin):
+    __tablename__, __table_args__ = create_table_args(model.CaseTypeDim)
+
+    case_type_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "case_type_id"
+    )
+    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeDim, "dim_id")
+    occurrence: Mapped[int] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "occurrence"
+    )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeDim, "code")
+    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.CaseTypeDim, "label")
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "description"
+    )
+    rank: Mapped[int] = create_mapped_column(DOMAIN, model.CaseTypeDim, "rank")
+    is_case_date_dim: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "is_case_date_dim"
     )
 
 
