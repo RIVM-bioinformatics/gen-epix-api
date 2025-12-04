@@ -27,7 +27,7 @@ def case_service_crud_case_type_dim(
     | None
 ):
     """Handle CRUD operations for CaseTypeDim entities."""
-    # Start unit of work
+
     with self.repository.uow() as uow:
         assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
@@ -69,15 +69,14 @@ def _crud_create_case_type_dim(
     uow: BaseUnitOfWork,
 ) -> None:
     """
-    i. check if other CaseTypeDims for the same CaseType and Dim exist
-         - if yes, set occurrence to max existing occurrence + 1
-        - if no, set occurrence to 1
-    ii. if is_time_stats_dim or is_geo_stats_dim is True, check that the linked Dim is of correct type
-    iii. Check if another CaseTypeDim for the same CaseType has is_time_stats_dim or is_geo_stats_dim set to True
-            - if yes, set that other CaseTypeDim's flag to False
+    Apply validation logic for CaseTypeDim creation:
+    - Check if other CaseTypeDims for the same CaseType and Dim exist
+    - Check if is_time_stats_dim or is_geo_stats_dim is True
+        and that the linked Dim is of correct type
+    - Check if another CaseTypeDim for the same CaseType has
+        is_time_stats_dim or is_geo_stats_dim set to True
     """
     for case_type_dim in case_type_dim_list:
-        # (a) Occurrence logic
         existing_dims: list[model.CaseTypeDim] = (
             self.repository.crud(  # type:ignore[assignment]
                 uow,
@@ -99,7 +98,7 @@ def _crud_create_case_type_dim(
             max_occ = max(x.occurrence for x in existing_dims)
             case_type_dim.occurrence = max_occ + 1
 
-        # (b) Dim type check for stats dims
+        # Dim type check for stats dims
         if case_type_dim.is_time_stats_dim or case_type_dim.is_geo_stats_dim:
             dim: model.Dim | None = None
             dim_list: list[model.Dim] = self.repository.crud(  # type:ignore[assignment]
@@ -127,7 +126,7 @@ def _crud_create_case_type_dim(
                     ids=[case_type_dim.dim_id],
                 )
 
-        # (c) Only one stats dim per case type
+        # Only one stats dim per case type
         if case_type_dim.is_time_stats_dim:
             other_time_dims: list[model.CaseTypeDim] = (
                 self.repository.crud(  # type:ignore[assignment]
@@ -138,11 +137,12 @@ def _crud_create_case_type_dim(
                     None,
                     CrudOperation.READ_ALL,
                     filter=self._compose_id_filter(
-                        ("case_type_id", {case_type_dim.case_type_id}),
-                        ("is_time_stats_dim", {True}),
+                        ("case_type_id", {case_type_dim.case_type_id})
                     ),
                 )
             )
+            # filter columns that have is_time_stats_dim = True
+            other_time_dims = [x for x in other_time_dims if x.is_time_stats_dim]
             for other in other_time_dims:
                 if other.id != case_type_dim.id:
                     # Set other to False
@@ -166,10 +166,11 @@ def _crud_create_case_type_dim(
                     CrudOperation.READ_ALL,
                     filter=self._compose_id_filter(
                         ("case_type_id", {case_type_dim.case_type_id}),
-                        ("is_geo_stats_dim", {True}),
                     ),
                 )
             )
+            # filter columns that have is_geo_stats_dim = True
+            other_geo_dims = [x for x in other_geo_dims if x.is_geo_stats_dim]
             for other in other_geo_dims:
                 if other.id != case_type_dim.id:
                     other.is_geo_stats_dim = False
@@ -190,9 +191,10 @@ def _crud_update_case_type_dim(
     uow: BaseUnitOfWork,
 ) -> None:
     """
-    i. Check if the linked Dim may not be updated (write-once)
-    ii. Check if another CaseTypeDim for the same CaseType has is_time_stats_dim or is_geo_stats_dim set to True
-            - if yes, set that other CaseTypeDim's flag to False
+    Apply validation logic for CaseTypeDim updates:
+    - Check if the linked Dim may not be updated (write-once)
+    - Check if another CaseTypeDim for the same CaseType has 
+        is_time_stats_dim or is_geo_stats_dim set to True
     """
     for updated in case_type_dim_list:
         # Read current stored entity to compare immutable fields
@@ -212,13 +214,13 @@ def _crud_update_case_type_dim(
             )
         existing = existing_list[0]
 
-        # (a) Prevent changing linked Dim (write-once)
+        # Prevent changing linked Dim (write-once)
         if updated.dim_id != existing.dim_id:
             raise exc.InvalidArgumentsError(
                 "dim_id is immutable and cannot be updated", ids=[updated.id]
             )
 
-        # (b) Ensure exclusivity for is_time_stats_dim within same CaseType
+        # Ensure exclusivity for is_time_stats_dim within same CaseType
         if updated.is_time_stats_dim:
             other_time_dims: list[model.CaseTypeDim] = (
                 self.repository.crud(  # type:ignore[assignment]
@@ -230,10 +232,11 @@ def _crud_update_case_type_dim(
                     CrudOperation.READ_ALL,
                     filter=self._compose_id_filter(
                         ("case_type_id", {existing.case_type_id}),
-                        ("is_time_stats_dim", {True}),
                     ),
                 )
             )
+            # filter dims that have is_time_stats_dim = True
+            other_time_dims = [x for x in other_time_dims if x.is_time_stats_dim]
             for other in other_time_dims:
                 if other.id != updated.id:
                     other.is_time_stats_dim = False
@@ -246,7 +249,7 @@ def _crud_update_case_type_dim(
                         CrudOperation.UPDATE_ONE,
                     )
 
-        # (b) Ensure exclusivity for is_geo_stats_dim within same CaseType
+        # Ensure exclusivity for is_geo_stats_dim within same CaseType
         if updated.is_geo_stats_dim:
             other_geo_dims: list[model.CaseTypeDim] = (
                 self.repository.crud(  # type:ignore[assignment]
@@ -258,10 +261,11 @@ def _crud_update_case_type_dim(
                     CrudOperation.READ_ALL,
                     filter=self._compose_id_filter(
                         ("case_type_id", {existing.case_type_id}),
-                        ("is_geo_stats_dim", {True}),
                     ),
                 )
             )
+            # filter dims that have is_geo_stats_dim = True
+            other_geo_dims = [x for x in other_geo_dims if x.is_geo_stats_dim]
             for other in other_geo_dims:
                 if other.id != updated.id:
                     other.is_geo_stats_dim = False
