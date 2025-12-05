@@ -43,9 +43,9 @@ class RetrieveCompleteSampleCommand(Command):
     pass
 
 
-class RetrieveCompleteSeqCommand(Command):
+class RetrieveCompleteSamplesCommand(Command):
 
-    seq_ids: list[UUID]
+    sample_ids: list[UUID]
 
 
 class RetrieveCompleteSnpProfileCommand(Command):
@@ -73,6 +73,10 @@ class RetrievePhylogeneticTreeCommand(Command):
 
 
 class RetrieveSeqFastaCommand(Command):
+    """
+    Retrieve the sequences for the given sequence IDs in FASTA format
+    as an iterable that yields one contig at a time.
+    """
 
     seq_ids: list[UUID] = Field(
         description="List of sequence IDs to retrieve in FASTA format.",

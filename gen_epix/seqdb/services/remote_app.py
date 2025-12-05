@@ -5,9 +5,12 @@ from uuid import UUID
 
 import httpx
 
-from gen_epix.commondb.services import CommondbRemoteApp as CommondbRemoteApp
+from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp.model import Command
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
+from gen_epix.seqdb.api import (
+    RetrievePhylogeneticTreeRequestBody,
+    RetrieveSeqFastaRequestBody,
+)
 from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import model as seqdb_model
@@ -15,15 +18,18 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 class SeqdbRemoteApp(CommondbRemoteApp):
 
+    DEFAULT_ROUTE_PREFIX = "/v1"
+
+    DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
+
     ROUTE_MAP: dict[type[Command], str] = {
-        seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
-        seqdb_command.CreateFileCommand: "create/file",
+        seqdb_command.RetrievePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
+        seqdb_command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
+        seqdb_command.CreateFileCommand: "/create/file",
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
-
         # Register routes and handlers
         self.register_route(
             seqdb_command.RetrievePhylogeneticTreeCommand,
@@ -83,18 +89,21 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         cmd: seqdb_command.RetrieveSeqFastaCommand,
     ) -> Iterable[str]:
         headers = self.get_headers(cmd)
+
         route = self.get_route(cmd)
 
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            "seq_ids": cmd.seq_ids,
-            "wrap": cmd.wrap,
-        }
+        request_body = RetrieveSeqFastaRequestBody(
+            seq_ids=cmd.seq_ids,
+            file_name="dummy.fasta",
+        )
 
         def _iter_fasta_generator() -> Iterable[str]:
             with httpx.Client(verify=self.ssl_context) as client:
                 with client.stream(
-                    "POST", route, json=request_body, headers=headers
+                    "POST",
+                    route,
+                    json=json.loads(request_body.model_dump_json()),
+                    headers=headers,
                 ) as resp:
                     resp.raise_for_status()
                     for chunk in resp.iter_bytes():

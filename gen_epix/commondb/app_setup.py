@@ -5,6 +5,7 @@ from typing import Any, NoReturn
 from dynaconf import Dynaconf
 from fastapi import FastAPI, Response
 from fastapi.concurrency import asynccontextmanager
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import RedirectResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -71,13 +72,16 @@ def create_fast_api(
     )
 
     # Add middleware
-    # Rate limiting
     if not debug:
+        # Rate limiting
         fast_api.state.limiter = limiter.limiter
         fast_api.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
         # The SlowAPIMiddleware is added to fast_api globally to limit the number of requests
         # The limiter can be applied to specific routes by adding the decorator @limiter.limit
         fast_api.add_middleware(SlowAPIMiddleware)
+
+        # GZip compression
+        fast_api.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
     # Response header handling
     if not debug:

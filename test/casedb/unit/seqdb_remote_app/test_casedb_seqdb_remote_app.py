@@ -68,7 +68,7 @@ class TestSeqdbRemoteApp:
         expected_route = (
             remote_app.host_url
             + remote_app._default_route_prefix
-            + "retrieve/phylogenetic_tree"
+            + "/retrieve/phylogenetic_tree"
         )
 
         # Verify the route is registered
@@ -330,7 +330,7 @@ class TestSeqdbRemoteApp:
         assert seqdb_command.RetrievePhylogeneticTreeCommand in remote_app.ROUTE_MAP
         assert (
             remote_app.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand]
-            == "retrieve/phylogenetic_tree"
+            == "/retrieve/phylogenetic_tree"
         )
 
     def test_retrieve_phylogenetic_tree_method_exists(

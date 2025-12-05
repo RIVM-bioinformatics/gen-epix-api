@@ -169,6 +169,10 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     file_compression: enum.FileCompression | None = Field(
         default=None, description="The compression of the sequence file."
     )
+    file_hash: UUID | None = Field(
+        default=None,
+        description="The first 128 bits of the SHA256 hash of the uncompressed sequence file representation.",
+    )
     read_set_id: UUID | None = Field(
         default=None,
         description="The unique identifier for the single read set used to generate the assembly, if available. FOREIGN KEY",

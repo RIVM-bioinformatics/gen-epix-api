@@ -312,21 +312,12 @@ class SeqService(BaseSeqService):
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
-    def retrieve_sample(
-        self, cmd: command.RetrieveCompleteSampleCommand
-    ) -> model.CompleteSample | list[model.CompleteSample]:
-        raise NotImplementedError()
-
-    def retrieve_seq(
-        self, cmd: command.RetrieveCompleteSeqCommand
-    ) -> model.CompleteSeq | list[model.CompleteSeq]:
+    def retrieve_complete_samples(
+        self, cmd: command.RetrieveCompleteSamplesCommand
+    ) -> list[model.CompleteSample]:
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
-        """
-        Retrieve the raw sequences for the given sequence IDs in FASTA format
-        as an iterable that yields one sequence at a time.
-        """
         wrap = cmd.wrap or 0
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
