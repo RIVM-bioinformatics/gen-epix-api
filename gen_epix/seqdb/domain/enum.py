@@ -146,6 +146,8 @@ class Protocol(Enum):
 
 class TaxonRank(Enum):
     NO_RANK = "NO_RANK"
+    ACELLULAR_ROOT = "ACELLULAR_ROOT"
+    REALM = "REALM"
     DOMAIN = "DOMAIN"
     SUPERKINGDOM = "SUPERKINGDOM"
     KINGDOM = "KINGDOM"
@@ -165,10 +167,17 @@ class TaxonRank(Enum):
     SPECIES_GROUP = "SPECIES_GROUP"
     SPECIES_SUBGROUP = "SPECIES_SUBGROUP"
     SPECIES = "SPECIES"
+    SEROGROUP = "SEROGROUP"
+    SEROTYPE = "SEROTYPE"
+    BIOTYPE = "BIOTYPE"
+    VARIETAS = "VARIETAS"
+    FORMA_SPECIALIS = "FORMA_SPECIALIS"
     SUBSPECIES = "SUBSPECIES"
+    GENOTYPE = "GENOTYPE"
     STRAIN = "STRAIN"
     CLADE = "CLADE"
     TRIBE = "TRIBE"
+    ISOLATE = "ISOLATE"
 
 
 class QualityControlResult(Enum):
@@ -180,13 +189,86 @@ class QualityControlResult(Enum):
         return self in {QualityControlResult.PASS, QualityControlResult.WARN}
 
 
+class LocusType(Enum):
+    GENE = "GENE"
+    INTERGENIC_REGION = "INTERGENIC_REGION"
+    TANDEM_REPEAT = "TANDEM_REPEAT"
+    PCR = "PCR"
+    OTHER = "OTHER"
+    UNKNOWN = "UNKNOWN"
+
+
+class SeqAlphabet(Enum):
+    """
+    Standard sequence alphabets and their variants.
+    """
+
+    DNA = frozenset("acgt")
+    DNA_INCL_GAP = frozenset("acgt-")
+    DNA_INCL_N = frozenset("acgtn")
+    DNA_INCL_N_AND_GAP = frozenset("acgtn-")
+    DNA_INCL_AMBIGUOUS = frozenset("acgturyswkmbdhvn")
+    DNA_INCL_AMBIGUOUS_AND_GAP = frozenset("acgturyswkmbdhvn-")
+    DNA_AMBIGUOUS = frozenset("uryswkmbdhvn")
+    DNA_AMBIGUOUS_2 = frozenset("ryswkm")
+    DNA_AMBIGUOUS_3 = frozenset("bdhv")
+    DNA_AMBIGUOUS_4 = frozenset("n")
+    DNA_AMBIGUOUS_2_3 = frozenset("uryswkmbdhv")
+    DNA_AMBIGUOUS_2_4 = frozenset("ryswkmn")
+    DNA_AMBIGUOUS_3_4 = frozenset("bdhvn")
+    RNA = frozenset("acgu")
+    RNA_INCL_GAP = frozenset("acgu-")
+    RNA_INCL_N = frozenset("acgun")
+    RNA_INCL_N_AND_GAP = frozenset("acgun-")
+
+
+class DnaAmbiguityMap(Enum):
+    """
+    Maps an ambiguity code to the set of nucleotides it represents.
+    """
+
+    A = frozenset("a")
+    C = frozenset("c")
+    G = frozenset("g")
+    T = frozenset("t")
+    R = frozenset("ag")
+    Y = frozenset("ct")
+    S = frozenset("gc")
+    W = frozenset("at")
+    K = frozenset("gt")
+    M = frozenset("ac")
+    B = frozenset("cgt")
+    D = frozenset("agt")
+    H = frozenset("act")
+    V = frozenset("acg")
+    N = frozenset("acgt")
+
+
+class DnaReverseAmbiguityMap(Enum):
+    """
+    Maps a nucleotide to itself and all ambiguity codes that include it.
+    """
+
+    A = frozenset("arwmdhvn")
+    C = frozenset("cysmbhvn")
+    G = frozenset("grskbdvn")
+    T = frozenset("tywkbdhn")
+
+
 class SeqFormat(Enum):
     HASH_ONLY = "HASH_ONLY"  # Only the hash code of the sequence is known or stored
-    STR_DNA5 = "STR_DNA5"  # String of ACTGN
+    STR_DNA = "STR_DNA"  # String of IUPAC DNA characters without gaps
+    STR_DNA_INCL_GAP = (
+        "STR_DNA_INCL_GAP"  # String of IUPAC DNA characters including gaps
+    )
 
 
 class AlignmentFormat(Enum):
     CIGAR = "CIGAR"
+
+
+class LocusProfileFormat(Enum):
+    LOCUS_PROFILE_FORMAT1 = "LOCUS_PROFILE_FORMAT1"
 
 
 class AlleleProfileFormat(Enum):
@@ -195,6 +277,10 @@ class AlleleProfileFormat(Enum):
 
 class SnpProfileFormat(Enum):
     REF_ALN_SEQ = "REF_ALN_SEQ"
+
+
+class MlvaProfileFormat(Enum):
+    MLVA_PROFILE_FORMAT1 = "MLVA_PROFILE_FORMAT1"
 
 
 class KmerProfileFormat(Enum):
@@ -239,6 +325,19 @@ class SeqDistanceFormat(Enum):
     PROFILE_ID_DISTANCE_DICT = "PROFILE_ID_DISTANCE_DICT"
 
 
-class SequenceFormat(Enum):
+class SeqFileFormat(Enum):
+    FASTA = "FASTA"
+
+
+class ReadsFileFormat(Enum):
+    FASTQ = "FASTQ"
+
+
+class FileFormat(Enum):
     FASTA = "FASTA"
     FASTQ = "FASTQ"
+
+
+class FileCompression(Enum):
+    NONE = "NONE"
+    GZIP = "GZIP"
