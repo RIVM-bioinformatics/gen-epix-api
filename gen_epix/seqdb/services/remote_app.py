@@ -55,31 +55,6 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             seqdb_command.CreateFileCommand,
             self.create_file,
         )
-        # Register routes and handlers
-        self.register_route(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand],
-        )
-        self.register_route(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
-        )
-        self.register_route(
-            seqdb_command.CreateFileCommand,
-            self.ROUTE_MAP[seqdb_command.CreateFileCommand],
-        )
-        self.register_handler(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
-        )
-        self.register_handler(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.retrieve_genetic_sequence_fasta_by_id,
-        )
-        self.register_handler(
-            seqdb_command.CreateFileCommand,
-            self.create_file,
-        )
 
     def retrieve_phylogenetic_tree(
         self,
