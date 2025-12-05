@@ -12,7 +12,7 @@ sqlalchemy==2.0.44
 sqlalchemy_utils==0.42.0
 
 # Data models/handling
-pydantic==2.12.4
+pydantic==2.12.5
 ulid-py==1.1.0
 
 # configuration handling
