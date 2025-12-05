@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oidc_client import OidcClient
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 class ReceiverApp:  # pylint: disable=too-few-public-methods
     """FastAPI app that receives and validates access tokens."""
 
-    def __init__(self, port: int = 8001, oauth_discovery_url: str = ""):
+    def __init__(self, port: int = 9001, oauth_discovery_url: str = ""):
         self.port = port
         self.oauth_discovery_url = oauth_discovery_url
         self.app = FastAPI(title="ReceiverApp", lifespan=self._lifespan)
-        self.oidc_client: "OidcClient | None" = None
+        self.oauth_idp_client: OauthIdpClient | None = None
         self.base_url = f"http://localhost:{port}"
         self._setup_routes()
 
@@ -48,7 +48,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
                 discovery_url=self.oauth_discovery_url,
             )
 
-            self.oidc_client = OidcClient(
+            self.oauth_idp_client = OauthIdpClient(
                 server_cfg=server_cfg,
                 discovery_url=self.oauth_discovery_url,
             )
@@ -69,14 +69,14 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
         ) -> JSONResponse:
             """Protected endpoint that validates access tokens."""
             try:
-                if not self.oidc_client:
+                if not self.oauth_idp_client:
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="OIDC client not initialized",
                     )
 
                 # Get claims from the token - this validates signature, issuer, audience, and expiry
-                claims_data = await self.oidc_client.get_claims_from_jwt(
+                claims_data = await self.oauth_idp_client.get_claims_from_jwt(
                     token.credentials
                 )
 

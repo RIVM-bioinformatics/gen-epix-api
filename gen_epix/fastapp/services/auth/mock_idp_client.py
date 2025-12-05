@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import Request
 from fastapi.security.utils import get_authorization_scheme_param
-from jose import jwt
+import jwt
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.log import BaseLogItem, LogItem
@@ -49,7 +49,7 @@ class MockIDPClient(IdpClient):
                 # TODO: check if this is a security risk
                 # or whether it should return an error
                 try:
-                    claims = jwt.get_unverified_claims(token)
+                    claims = jwt.decode(token, options={"verify_signature": False})
                     if not claims:
                         return None
                     return Claims(

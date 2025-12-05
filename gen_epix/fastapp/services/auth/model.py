@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
@@ -83,6 +83,7 @@ class OidcServerCfg(Model):
         "client_secret",
         "scope",
         "public",
+        "enable_introspection"
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -117,7 +118,12 @@ class OidcServerCfg(Model):
     public: bool = Field(
         default=False, description="Whether the identity provider is public"
     )
-
+    enable_introspection: bool = Field(
+        default=False,
+        description=(
+            "Enable token introspection after local JWT verification. Disabled by default."
+        ),
+    )
     # OpenID Provider Metadata fields from Section 3 of the specification
 
     # REQUIRED fields, made optional here as they may be absent until discovery is done
@@ -166,9 +172,6 @@ class OidcServerCfg(Model):
     )
 
     # OPTIONAL fields
-    introspection_endpoint: str | None = Field(
-        default=None, description="URL of the OP's Token Introspection Endpoint"
-    )
     response_modes_supported: list[str] | None = Field(
         default=None,
         description="JSON array containing a list of the OAuth 2.0 response_mode values that this OP supports",
@@ -265,6 +268,23 @@ class OidcServerCfg(Model):
         default=None,
         description="URL that the OpenID Provider provides to the person registering the Client to read about the OpenID Provider's terms of service",
     )
+    introspection_interval_seconds: int | None = Field(
+        default=None,
+        description=(
+            "Minimum interval in seconds between introspection checks for the same token."
+        ),
+    )
+    introspection_timeout_seconds: int | None = Field(
+        default=None,
+        description="HTTP timeout in seconds for the introspection request.",
+    )
+    introspection_auth_method: str | None = Field(
+        default=None,
+        description=(
+            "Client authentication method for introspection endpoint. One of: "
+            "'client_secret_basic', 'client_secret_post', 'none'."
+        ),
+    )
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
@@ -278,7 +298,7 @@ class OidcServerCfg(Model):
 
     @field_validator("claim_map", mode="before")
     @classmethod
-    def validate_claim_map(cls, claim_map):
+    def validate_claim_map(cls, claim_map: dict) -> dict[str, list[str]]:
         """Validate the claim_map field to ensure it is a dictionary of string keys to list of string values."""
         if not isinstance(claim_map, dict):
             raise ValueError("claim_map must be a dictionary")

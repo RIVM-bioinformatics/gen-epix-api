@@ -18,6 +18,9 @@ from gen_epix.commondb.domain.model.organization import (
 )
 from gen_epix.commondb.domain.model.organization import Organization as Organization
 from gen_epix.commondb.domain.model.organization import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
+from gen_epix.commondb.domain.model.organization import (
     OrganizationSet as OrganizationSet,
 )
 from gen_epix.commondb.domain.model.organization import (
@@ -51,6 +54,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         DataCollectionSet,
         DataCollectionSetMember,
         IdentifierIssuer,
+        OrganizationIdentifierIssuerLink,
         Site,
         Contact,
         UserNameEmail,
@@ -63,3 +67,5 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

@@ -310,9 +310,29 @@ class ColTypeSet(Enum):
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
+class ColTypeOrder(Enum):
+    TIME_RESOLUTION_DESC = {
+        ColType.TIME_DAY: 1,
+        ColType.TIME_WEEK: 2,
+        ColType.TIME_MONTH: 3,
+        ColType.TIME_QUARTER: 4,
+        ColType.TIME_YEAR: 5,
+    }
+
+
 class CaseColDataRule(Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
     UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"
+
+
+class CaseColDataRuleSet(Enum):
+    PREVENTS_UPLOAD = frozenset(
+        {
+            CaseColDataRule.INVALID,
+            CaseColDataRule.UNAUTHORIZED,
+            CaseColDataRule.CONFLICT,
+        }
+    )

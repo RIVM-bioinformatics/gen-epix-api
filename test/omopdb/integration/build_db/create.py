@@ -1,8 +1,7 @@
-from test.seqdb.integration.build_db.base import SKIP_RAISE
+from test.omopdb.integration.build_db.base import BELOW_APP_ADMIN_USERS, SKIP_RAISE
 
 import pytest
 
-import gen_epix.commondb.test.util as test_util
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.omopdb.domain import exc, model
 
@@ -12,7 +11,8 @@ class TestCreate:
 
     def test_create_user_first_root(self, env: Env) -> None:
         # Create a first root user and organization
-        user: model.User = test_util.create_root_user_from_claims(env.cfg, env.app)  # type: ignore[assignment]
+        user: model.User = env.retrieve_user_by_key("root1_1@org1.org")  # type: ignore[assignment]
+        user.name = "root1_1"
         env._set_obj(user)
         env._set_obj(
             env.read_one_by_property("root1_1", model.Organization, "name", "org1")
@@ -166,6 +166,22 @@ class TestCreate:
                 env.create_org_admin_policy(exec_user, "org_user2_1", "org1")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
+
+    def test_create_data_collection(self, env: Env) -> None:
+        # Create data_collection as root, app_admin
+        env.create_data_collection("root1_1", "data_collection1")
+        env.create_data_collection("app_admin1_1", "data_collection2")
+        env.create_data_collection("app_admin1_2", "data_collection3")
+        env.create_data_collection("app_admin2_1", "data_collection4")
+        env.create_data_collection("app_admin2_2", "data_collection5")
+        if env.verbose:
+            env.print_data_collections()
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_data_collection_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_data_collection(exec_user, "data_collection11")
 
     # TODO: test_create_site
 

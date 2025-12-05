@@ -54,7 +54,7 @@ class CasedbTestClient(TestClient):
         model.CaseTypeCol: "code",
         model.CaseTypeColSet: "name",
         model.DataCollection: "name",
-        model.Case: "case_date",
+        model.Case: "code",
         model.CaseSetCategory: "name",
         model.CaseSetStatus: "name",
         model.CaseSet: "name",
@@ -281,6 +281,7 @@ class CasedbTestClient(TestClient):
         self,
         user_or_str: str | model.User,
         code: str,
+        resolution: int = 1,
     ) -> model.RegionSet:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -293,6 +294,7 @@ class CasedbTestClient(TestClient):
                     code=code,
                     name=code,
                     region_code_as_label=False,
+                    resolution=resolution,
                 ),
             )
         )
@@ -597,6 +599,43 @@ class CasedbTestClient(TestClient):
             )
         )
         return self._set_obj(case_type)  # type:ignore[return-value]
+
+    def create_case_type_settings(
+        self,
+        user_or_str: str | model.User,
+        case_type: str | model.CaseType,
+        stats_time_case_type_col: str | model.CaseTypeCol,
+        stats_geo_case_type_col: str | model.CaseTypeCol,
+        create_max_n_cases: int = 1000,
+        read_max_n_cases: int = 1000,
+        read_max_tree_size: int = 1000,
+        update_max_n_cases: int = 1000,
+        delete_max_n_cases: int = 1000,
+    ) -> model.CaseTypeSettings:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        case_type_settings = self.handle(
+            command.CaseTypeSettingsCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.CaseTypeSettings(
+                    case_type_id=self._get_obj(model.CaseType, case_type).id,
+                    stats_time_case_type_col_id=self._get_obj(
+                        model.CaseTypeCol, stats_time_case_type_col
+                    ).id,
+                    stats_geo_case_type_col_id=self._get_obj(
+                        model.CaseTypeCol, stats_geo_case_type_col
+                    ).id,
+                    create_max_n_cases=create_max_n_cases,
+                    read_max_n_cases=read_max_n_cases,
+                    read_max_tree_size=read_max_tree_size,
+                    update_max_n_cases=update_max_n_cases,
+                    delete_max_n_cases=delete_max_n_cases,
+                ),
+            )
+        )
+        return self._set_obj(case_type_settings)  # type:ignore[return-value]
 
     def create_case_type_set_member(
         self,
@@ -1096,7 +1135,8 @@ class CasedbTestClient(TestClient):
                         case_type_id=case_type.id,
                         # subject_id=self.generate_id(),
                         created_in_data_collection_id=created_in_data_collection_id,
-                        case_date=self._convert_case_code_to_date(code),
+                        # case_date=self._convert_case_code_to_date(code),
+                        code=code,
                         content=content,
                     )
                 ],

@@ -33,6 +33,11 @@ class TestClient:
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.Site: ("name"),
         model.Contact: ("name"),
+        model.IdentifierIssuer: "code",
+        model.OrganizationIdentifierIssuerLink: (
+            "organization_id",
+            "identifier_issuer_id",
+        ),
     }
 
     def __init__(
@@ -168,6 +173,10 @@ class TestClient:
         else:
             return self.app.handle(cmd)
 
+    def retrieve_user_by_key(self, user_key: str) -> model.User:
+        user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
+        return user
+
     def create_organization(
         self, user_or_str: str | model.User, organization_name: str
     ) -> model.Organization:
@@ -293,6 +302,7 @@ class TestClient:
         organization: model.Organization = self._get_obj(
             model.Organization, organization_or_str
         )  # type:ignore[assignment]
+        assert organization.id is not None
         organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
             self.organization_admin_policy_crud_command_class(
                 user=user,
@@ -305,6 +315,62 @@ class TestClient:
             )
         )
         return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
+
+    def create_identifier_issuer(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> model.IdentifierIssuer:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        identifier_issuer = self.handle(
+            command.IdentifierIssuerCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.IdentifierIssuer(
+                    code=code,
+                    name=name or code,
+                    description=description,
+                ),
+            )
+        )
+        return self._set_obj(identifier_issuer)  # type:ignore[return-value]
+
+    def create_organization_identifier_issuer_link(
+        self,
+        user_or_str: str | model.User,
+        organization_or_str: str | model.Organization,
+        identifier_issuer_or_str: str | model.IdentifierIssuer,
+    ) -> model.OrganizationIdentifierIssuerLink:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        organization: model.Organization = self._get_obj(
+            model.Organization, organization_or_str
+        )  # type:ignore[assignment]
+        identifier_issuer: model.IdentifierIssuer = self._get_obj(
+            model.IdentifierIssuer, identifier_issuer_or_str
+        )  # type:ignore[assignment]
+        assert organization.id is not None
+        assert identifier_issuer.id is not None
+        organization_identifier_issuer_link: model.OrganizationIdentifierIssuerLink = (
+            self.app.handle(
+                command.OrganizationIdentifierIssuerLinkCrudCommand(
+                    user=user,
+                    operation=CrudOperation.CREATE_ONE,
+                    objs=model.OrganizationIdentifierIssuerLink(
+                        organization_id=organization.id,
+                        identifier_issuer_id=identifier_issuer.id,
+                    ),
+                )
+            )
+        )
+        return self._set_obj(
+            organization_identifier_issuer_link
+        )  # type:ignore[return-value]
 
     def read_all_user_invitations(
         self, user_or_str: str | model.User
@@ -350,7 +416,7 @@ class TestClient:
         user_or_str: str | model.User,
         tgt_user_or_str: str | model.User,
         is_active: bool | None = None,
-        roles: set[Enum] | None = None,
+        roles: set[str] | None = None,
         organization_or_str: str | None = None,
         set_dummy_organization: bool = False,
     ) -> model.User:
@@ -368,7 +434,10 @@ class TestClient:
         else:
             if set_dummy_organization:
                 raise ValueError("Organization given and set_dummy_organization True")
-            organization_id = self._get_obj(model.Organization, organization_or_str).id
+            organization: model.Organization = self._get_obj(
+                model.Organization, organization_or_str
+            )  # type:ignore[assignment]
+            organization_id = organization.id
         has_updates = False
         if is_active is not None and tgt_user.is_active != is_active:
             has_updates = True
@@ -380,13 +449,14 @@ class TestClient:
             has_updates = True
             tgt_user.organization_id = organization_id
         sleep(0.000000001)  # To avoid having same _modified_at as tgt_user
+        assert tgt_user.id is not None
         updated_tgt_user = self.handle(
             self.update_user_command_class(
                 user=user,
                 tgt_user_id=tgt_user.id,
-                is_active=is_active,
-                roles=roles,
-                organization_id=organization_id,
+                is_active=tgt_user.is_active,
+                roles=tgt_user.roles,
+                organization_id=tgt_user.organization_id,
             )
         )
         updated_tgt_user.name = tgt_user.name
@@ -395,13 +465,11 @@ class TestClient:
         )
         return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
 
-    def get_root_user(self) -> model.User:
-        return self.user_class(
-            organization_id=self.cfg["service"]["auth"]["props"]["root"][
-                "organization"
-            ]["id"],
-            **self.cfg["service"]["auth"]["props"]["root"]["user"],
-        )
+    def get_root_user(self, user_key: str | None = None) -> model.User:
+        if user_key is None:
+            user_key = self.cfg["service"]["auth"]["props"]["root"]["user"]["key"]
+        user: model.User = self.app.user_manager.retrieve_user_by_key(user_key)  # type: ignore[assignment]
+        return user
 
     def get_org_ids_for_org_admin(
         self,
@@ -410,7 +478,7 @@ class TestClient:
         on_no_admin: str = "raise",
     ) -> list[model.Organization]:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        org_admin_policies: list[model.OrganizationAdminPolicy] = [
+        org_admin_policies: list[model.OrganizationAdminPolicy] = [  # type: ignore[assignment]
             x
             for x in self.db[self.organization_admin_policy_class].values()
             if x.user_id == user.id
@@ -751,6 +819,48 @@ class TestClient:
         ):
             print(
                 f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type:ignore[union-attr]
+            )
+
+    def print_identifier_issuers(self) -> None:
+        identifier_issuers: list[model.IdentifierIssuer] = self.read_all(  # type: ignore[assignment]
+            "root1_1", model.IdentifierIssuer
+        )
+        print("\nIdentifierIssuers:")
+        for x in sorted(identifier_issuers, key=lambda x: x.code):
+            print(f"{x.code}: name={x.name} ({x.id})")
+
+    def print_organization_identifier_issuer_links(self) -> None:
+        organization_identifier_issuer_links: list[
+            model.OrganizationIdentifierIssuerLink
+        ] = self.read_all(  # type: ignore[assignment]
+            "root1_1", model.OrganizationIdentifierIssuerLink
+        )
+        organization_ids = set(
+            x.organization_id for x in organization_identifier_issuer_links
+        )
+        identifier_issuer_ids = set(
+            x.identifier_issuer_id for x in organization_identifier_issuer_links
+        )
+        organizations: dict[UUID, model.Organization] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_some("root1_1", model.Organization, organization_ids)
+        }
+        identifier_issuers: dict[UUID, model.IdentifierIssuer] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_some(
+                "root1_1", model.IdentifierIssuer, identifier_issuer_ids
+            )
+        }
+        print("\nOrganizationIdentifierIssuerLinks:")
+        for x in sorted(
+            organization_identifier_issuer_links,
+            key=lambda x: (
+                organizations[x.organization_id].name,
+                identifier_issuers[x.identifier_issuer_id].code,
+            ),  # type:ignore[union-attr]
+        ):
+            print(
+                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"  # type:ignore[union-attr]
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
