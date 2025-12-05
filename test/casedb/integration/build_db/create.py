@@ -636,6 +636,29 @@ class TestCreate:
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    def test_create_case_type_dim(self, env: Env) -> None:
+        # Create case_type_dim as root, app_admin, refdata_admin
+        for i in range(1, 6):
+            case_type = f"case_type{i}"
+            for j in range(1, 6):
+                env.create_case_type_dim(
+                    "root1_1", f"{case_type}_text{j}"
+                )
+                env.create_case_type_dim(
+                    "root1_1", f"{case_type}_number{j}")
+                env.create_case_type_dim(
+                    "refdata_admin1_1", f"{case_type}_time{j}")
+                env.create_case_type_dim(
+                    "refdata_admin1_1", f"{case_type}_geo{j}")
+                env.create_case_type_dim(
+                    "refdata_admin1_1", f"{case_type}_id{j}")
+                env.create_case_type_dim(
+                    "refdata_admin1_1", f"{case_type}_org{j}")
+                env.create_case_type_dim(
+                    "refdata_admin1_1", f"{case_type}_other{j}")
+
+
+    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin
         cols: list[model.Col] = env.read_all(
@@ -663,22 +686,20 @@ class TestCreate:
                         enum.TreeAlgorithmType.SLINK,
                     }
                 case_type_col = env.create_case_type_col(
-                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs
+                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs,
                 )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            case_type_col = env.create_case_type_col(
-                "root1_1",
-                f"case_type{i}_text1_8_time_year_2",
-                col="text1_8_time_year",
-                occurrence=2,
-            )
-            case_type_col = env.create_case_type_col(
-                "app_admin1_1",
-                f"case_type{i}_text1_8_time_year_3",
-                col="text1_8_time_year",
-                occurrence=3,
-            )
+            # case_type_col = env.create_case_type_col(
+            #     "root1_1",
+            #     f"case_type{i}_text1_8_time_year_2",
+            #     col="text1_8_time_year",
+            # )
+            # case_type_col = env.create_case_type_col(
+            #     "app_admin1_1",
+            #     f"case_type{i}_text1_8_time_year_3",
+            #     col="text1_8_time_year",
+            # )
         # if env.verbose:
         #     env.print_case_type_cols()
 

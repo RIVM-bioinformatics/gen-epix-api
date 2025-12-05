@@ -99,7 +99,7 @@ def _crud_create_case_type_dim(
             case_type_dim.occurrence = max_occ + 1
 
         # Dim type check for stats dims
-        if case_type_dim.is_time_stats_dim or case_type_dim.is_geo_stats_dim:
+        if case_type_dim.is_case_date_dim:
             dim: model.Dim | None = None
             dim_list: list[model.Dim] = self.repository.crud(  # type:ignore[assignment]
                 uow,
@@ -115,19 +115,14 @@ def _crud_create_case_type_dim(
                     ids=[case_type_dim.dim_id],
                 )
             dim = dim_list[0]
-            if case_type_dim.is_time_stats_dim and dim.dim_type != enum.DimType.TIME:
+            if case_type_dim.is_case_date_dim and dim.dim_type != enum.DimType.TIME:
                 raise exc.InvalidArgumentsError(
                     f"Dim {dim.code} must be of type TIME for is_time_stats_dim=True",
                     ids=[case_type_dim.dim_id],
                 )
-            if case_type_dim.is_geo_stats_dim and dim.dim_type != enum.DimType.GEO:
-                raise exc.InvalidArgumentsError(
-                    f"Dim {dim.code} must be of type GEO for is_geo_stats_dim=True",
-                    ids=[case_type_dim.dim_id],
-                )
 
         # Only one stats dim per case type
-        if case_type_dim.is_time_stats_dim:
+        if case_type_dim.is_case_date_dim:
             other_time_dims: list[model.CaseTypeDim] = (
                 self.repository.crud(  # type:ignore[assignment]
                     uow,
@@ -142,38 +137,11 @@ def _crud_create_case_type_dim(
                 )
             )
             # filter columns that have is_time_stats_dim = True
-            other_time_dims = [x for x in other_time_dims if x.is_time_stats_dim]
+            other_time_dims = [x for x in other_time_dims if x.is_case_date_dim]
             for other in other_time_dims:
                 if other.id != case_type_dim.id:
                     # Set other to False
-                    other.is_time_stats_dim = False
-                    self.repository.crud(
-                        uow,
-                        cmd.user.id,
-                        model.CaseTypeDim,
-                        other,
-                        [other.id],
-                        CrudOperation.UPDATE_ONE,
-                    )
-        if case_type_dim.is_geo_stats_dim:
-            other_geo_dims: list[model.CaseTypeDim] = (
-                self.repository.crud(  # type:ignore[assignment]
-                    uow,
-                    cmd.user.id,
-                    model.CaseTypeDim,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                    filter=self._compose_id_filter(
-                        ("case_type_id", {case_type_dim.case_type_id}),
-                    ),
-                )
-            )
-            # filter columns that have is_geo_stats_dim = True
-            other_geo_dims = [x for x in other_geo_dims if x.is_geo_stats_dim]
-            for other in other_geo_dims:
-                if other.id != case_type_dim.id:
-                    other.is_geo_stats_dim = False
+                    other.is_case_date_dim = False
                     self.repository.crud(
                         uow,
                         cmd.user.id,

@@ -51,6 +51,7 @@ class CasedbTestClient(TestClient):
         model.GeneticDistanceProtocol: "name",
         model.Dim: "code",
         model.Col: "code",
+        model.CaseTypeDim: "code",
         model.CaseTypeCol: "code",
         model.CaseTypeColSet: "name",
         model.DataCollection: "name",
@@ -383,6 +384,7 @@ class CasedbTestClient(TestClient):
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     min_scale_unit=min_scale_unit,
+                    seqdb_is_integer_distance=True
                 ),
             )
         )
@@ -706,16 +708,59 @@ class CasedbTestClient(TestClient):
             self._set_obj(case_type_set_member)
         return self._set_obj(case_type_set)  # type:ignore[return-value]
 
+    def create_case_type_dim(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        occurrence: int | None = None,
+        dim: str | model.Dim | None = None,
+        set_dummy_case_type: bool = False,
+        set_dummy_dim: bool = False,
+    ) -> model.CaseTypeDim:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
+        if not m:
+            raise ValueError(f"Invalid code {code}")
+        if set_dummy_case_type:
+            case_type_id = self.generate_id()
+        else:
+            case_type = self._get_obj(model.CaseType, m.group(1))
+            case_type_id = case_type.id
+        if set_dummy_dim:
+            dim_id = self.generate_id()
+        else:
+            if dim:
+                dim_obj: model.Dim = self._get_obj(model.Dim, dim)
+            else:
+                dim_obj: model.Dim = self._get_obj(model.Dim, m.group(2))
+            dim_id = dim_obj.id
+        case_type_dim = self.handle(
+            command.CaseTypeDimCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.CaseTypeDim(
+                    case_type_id=case_type_id,
+                    dim_id=dim_id,
+                    code=code,
+                    occurrence=occurrence if occurrence is not None else 0,
+                    rank=0,
+                ),
+            )
+        )
+        return self._set_obj(case_type_dim)  # type:ignore[return-value]
+
     def create_case_type_col(
         self,
         user_or_str: str | model.User,
         code: str,
         genetic_sequence_case_type_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
-        occurrence: int | None = None,
         col: str | model.Col | None = None,
         set_dummy_case_type: bool = False,
         set_dummy_col: bool = False,
+        set_dummy_case_type_dim: bool = False,
     ) -> model.CaseTypeCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -736,6 +781,21 @@ class CasedbTestClient(TestClient):
             else:
                 col: model.Col = self._get_obj(model.Col, m.group(2))
             col_id = col.id
+        if set_dummy_case_type_dim:
+            case_type_dim_id = self.generate_id()
+        else:
+            if col.dim_id is None:
+                raise ValueError(f"Col has no dim_id: {col}")
+            dim_obj: model.Dim = self._get_obj(model.Dim, col.dim_id)
+            if dim_obj is None:
+                raise ValueError(f"Dim not found for col: {col}")
+
+            case_type_dim = self._get_obj(
+                model.CaseTypeDim,
+                f"{m.group(1)}_{dim_obj.code}",
+                # case_type5_text5 / 'case_type1_text1_6_text'
+            )
+            case_type_dim_id = case_type_dim.id
         case_type_col = self.handle(
             command.CaseTypeColCrudCommand(
                 user=user,
@@ -746,7 +806,8 @@ class CasedbTestClient(TestClient):
                     code=code,
                     genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
                     tree_algorithm_codes=tree_algorithm_codes,
-                    occurrence=occurrence,
+                    case_type_dim_id=case_type_dim_id,
+                    rank=1,
                 ),
             )
         )
