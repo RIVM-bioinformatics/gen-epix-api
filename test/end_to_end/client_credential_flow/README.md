@@ -163,7 +163,7 @@ python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oau
 
 ## Test Environment
 
-- Python 3.13.7
+- Python 3.14.1
 - FastAPI with OIDC support
 - JWT token handling with RS256 signatures
 - Process-based isolation for realistic testing
