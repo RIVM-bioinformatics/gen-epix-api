@@ -6,7 +6,7 @@ import sqlalchemy as sa
 
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.fastapp.repositories import SARepository, SAUnitOfWork
-from gen_epix.seqdb.domain import enum, exc, model
+from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.repositories import sa_model
 
@@ -45,19 +45,16 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
+    ) -> Iterable[tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
         assert isinstance(uow, SAUnitOfWork)
-        mapper = self.get_mapper(model.Seq)
-        stmt = sa.select(sa_model.Seq).where(sa_model.Seq.id.in_(seq_ids))
+        stmt = (
+            sa.select(sa_model.Seq.id, sa_model.RawSeq.seq)
+            .join(sa_model.RawSeq, sa_model.Seq.raw_seq_id == sa_model.RawSeq.id)
+            .where(sa_model.Seq.id.in_(seq_ids))
+        )
+
         result = uow.session.execute(stmt)
-        for sa_seq in result:
-            seq: model.Seq = mapper.load(sa_seq)  # type: ignore[assignment]
-            contig_list = []
-            for contig in seq.contigs:
-                if contig.seq_format != enum.SeqFormat.STR_DNA:
-                    raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
-                    )
-                contig_list.append((contig.seq_hash, contig.seq))
-            yield (seq.id, contig_list)
+        for seq_id, raw_seq in result:
+            print(f"Yielding seq_id={seq_id} with raw_seq length={len(raw_seq)}")
+            yield (seq_id, raw_seq)

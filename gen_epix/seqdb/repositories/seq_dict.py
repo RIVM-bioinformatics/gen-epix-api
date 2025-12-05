@@ -5,7 +5,7 @@ import numpy as np
 
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import enum, exc, model
+from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 
 
@@ -35,17 +35,13 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
+    ) -> Iterable[tuple[str, str]]:
         self.raise_on_duplicate_ids(seq_ids)
 
-        seqs: list[model.Seq] = self.read_some(model.Seq, seq_ids)  # type: ignore[assignment]
-        for seq in seqs:
-            assert seq.id is not None
-            contig_list = []
-            for contig in seq.contigs:
-                if contig.seq_format != enum.SeqFormat.STR_DNA:
-                    raise exc.InitializationServiceError(
-                        f"FASTA export not supported for {contig.seq_format.value} format"
-                    )
-                contig_list.append((contig.seq_hash, contig.seq))
-            yield (seq.id, contig_list)
+        for seq_id in seq_ids:
+            seq: model.Seq = self.read_one(model.Seq, seq_id)  # type: ignore[assignment]
+            raw_seq: model.RawSeq = self.read_one(  # type: ignore[assignment]
+                model.RawSeq,
+                seq.raw_seq_id,
+            )
+            yield (seq.id, raw_seq.seq)  # type: ignore[misc]

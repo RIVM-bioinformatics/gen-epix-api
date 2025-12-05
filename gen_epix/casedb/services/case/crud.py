@@ -61,23 +61,8 @@ def _crud_metadata_by_admin(
     self: BaseCaseService, uow: BaseUnitOfWork, cmd: command.CrudCommand
 ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:
     """Metadata admin command handling, no ABAC applied"""
-    # Cascade deletes for delete operations
     _crud_cascade_delete(self, uow, cmd)
-
-    # Validate CaseTypeSettings on create/update
-    if isinstance(cmd, command.CaseTypeSettingsCrudCommand) and (
-        cmd.operation in CrudOperationSet.CREATE.value
-        or cmd.operation in CrudOperationSet.UPDATE.value
-    ):
-        assert cmd.user is not None and cmd.user.id is not None
-        settings_list: list[model.CaseTypeSettings] = cmd.get_objs()  # type: ignore[assignment]
-        for settings in settings_list:
-            _validate_case_type_settings(self, uow, cmd.user.id, settings)
-
-    # Perform the primary CRUD operation
-    retval = super(DomainBaseCaseService, self).crud(cmd)
-
-    return retval  # type:ignore[return-value]
+    return super(DomainBaseCaseService, self).crud(cmd)  # type:ignore[return-value]
 
 
 def _crud_metadata_by_non_admin(
@@ -108,12 +93,6 @@ def _crud_metadata_by_non_admin(
         valid_case_type_ids = case_abac.get_case_types_with_any_rights()
         access_filter = self._compose_id_filter(("id", valid_case_type_ids))
         # No cascade delete to force conscious decision to delete from other models
-        return _crud_with_access_filter(self, uow, cmd, access_filter)
-
-    elif isinstance(cmd, command.CaseTypeSettingsCrudCommand):
-        # Allow reading settings only for case types the user has any rights to
-        valid_case_type_ids = case_abac.get_case_types_with_any_rights()
-        access_filter = self._compose_id_filter(("case_type_id", valid_case_type_ids))
         return _crud_with_access_filter(self, uow, cmd, access_filter)
 
     elif isinstance(cmd, command.CaseTypeSetMemberCrudCommand):
@@ -407,39 +386,15 @@ def _crud_data_by_non_admin(
 
         # All operations require read access to the case: retrieve the cases while
         # checking for this read right to determine this
-        if case_set_members:
-            # Retrieve all referenced cases to determine their case_type_id
-            member_case_ids = list({x.case_id for x in case_set_members})
-            member_cases: list[model.Case] = (
-                self.repository.crud(  # type:ignore[assignment]
-                    uow,
-                    cmd.user.id,
-                    model.Case,
-                    None,
-                    member_case_ids,
-                    CrudOperation.READ_SOME,
-                )
-            )
-            # Group case IDs by case_type_id to avoid mixed-type errors downstream
-            case_ids_by_type: dict[UUID, list[UUID]] = {}
-            for c in member_cases:
-                if c.id is not None:
-                    case_ids_by_type.setdefault(c.case_type_id, []).append(c.id)
-
-            # For each case_type_id group, enforce content right checks
-            for ct_id, ids in case_ids_by_type.items():
-                self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
-                    uow,
-                    cmd.user.id,
-                    case_abac,
-                    enum.CaseRight.READ_CASE,
-                    case_type_id=ct_id,
-                    case_ids=ids,
-                    filter_content=False,
-                    on_invalid_case_id=(
-                        "ignore" if is_read_all or is_delete_all else "raise"
-                    ),
-                )
+        cases = self._retrieve_cases_with_content_right(
+            uow,
+            cmd.user.id,
+            case_abac,
+            enum.CaseRight.READ_CASE,
+            case_ids=list({x.case_id for x in case_set_members}),
+            filter_content=False,
+            on_invalid_case_id=("ignore" if is_read_all or is_delete_all else "raise"),
+        )
 
         # Retrieve the case sets while checking for the correct right(s)
         uq_case_set_ids = {x.case_set_id for x in case_set_members}
@@ -847,70 +802,3 @@ def _crud_with_access_filter(
     retval = super(DomainBaseCaseService, self).crud(cmd)
     cmd.access_filter = orig_access_filter
     return retval  # type:ignore[return-value]
-
-
-def _validate_case_type_settings(
-    self: BaseCaseService,
-    uow: BaseUnitOfWork,
-    user_id: UUID,
-    settings: model.CaseTypeSettings,
-) -> None:
-    case_type_cols: list[model.CaseTypeCol] = self.repository.crud(  # type: ignore[assignment]
-        uow,
-        user_id,
-        model.CaseTypeCol,
-        None,
-        None,
-        CrudOperation.READ_ALL,
-        filter=self._compose_id_filter(("case_type_id", {settings.case_type_id})),
-    )
-    col_ids = {x.col_id for x in case_type_cols}
-
-    def _read_col(col_id: UUID) -> model.Col:
-        cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user_id,
-            model.Col,
-            None,
-            [col_id],
-            CrudOperation.READ_SOME,
-        )
-        if not cols:
-            raise exc.InvalidIdsError(
-                f"Invalid col id provided: {col_id}", ids=[col_id]
-            )
-        return cols[0]
-
-    # Both dims (TIME/GEO) must belong to a Col used by at least one CaseTypeCol
-    # of the specified CaseType, and must have the correct dim_type (TIME/GEO).
-    # Validate TIME dim
-    if settings.stats_time_case_type_col_id is not None:
-        if settings.stats_time_case_type_col_id not in col_ids:
-            raise exc.InvalidArgumentsError(
-                f"stats_time_dim_id {settings.stats_time_case_type_col_id} must belong to a column of the case type",
-                ids=[settings.stats_time_case_type_col_id],
-            )
-        col_time = _read_col(settings.stats_time_case_type_col_id)
-        if col_time.col_type not in {
-            x for x in enum.ColType if x.name.startswith("TIME_")
-        }:
-            raise exc.InvalidArgumentsError(
-                f"stats_time_dim_id {settings.stats_time_case_type_col_id} must reference a TIME dimension",
-                ids=[settings.stats_time_case_type_col_id],
-            )
-
-    # Validate GEO dim
-    if settings.stats_geo_case_type_col_id is not None:
-        if settings.stats_geo_case_type_col_id not in col_ids:
-            raise exc.InvalidArgumentsError(
-                f"stats_geo_dim_id {settings.stats_geo_case_type_col_id} must belong to a column of the case type",
-                ids=[settings.stats_geo_case_type_col_id],
-            )
-        col_geo = _read_col(settings.stats_geo_case_type_col_id)
-        if col_geo.col_type not in {
-            x for x in enum.ColType if x.name.startswith("GEO_")
-        }:
-            raise exc.InvalidArgumentsError(
-                f"stats_geo_dim_id {settings.stats_geo_case_type_col_id} must reference a GEO dimension",
-                ids=[settings.stats_geo_case_type_col_id],
-            )

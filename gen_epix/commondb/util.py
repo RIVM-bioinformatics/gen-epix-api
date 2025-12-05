@@ -11,7 +11,6 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 import ulid
 from pydantic import BaseModel, Field
@@ -34,7 +33,7 @@ def generate_ulid() -> uuid.UUID:
     return ulid.api.new().uuid
 
 
-def get_package_root() -> Path:
+def get_project_root() -> Path:
     """
     Get the root path of the project by looking for pyproject.toml.
 
@@ -276,11 +275,10 @@ def set_env_variables(
             AppType.SEQDB, dev_idp_config_enum, dev_repository_config_enum
         )
     # Initialise some
-    package_root = get_package_root()
     if general_cfg_path is None:
-        general_cfg_path = package_root / "config"
+        general_cfg_path = Path.cwd() / "config"
     if cfg_path is None:
-        cfg_path = package_root / "gen_epix" / app_type_str / "config"
+        cfg_path = Path.cwd() / "gen_epix" / app_type_str / "config"
     envvar_prefix = app_type_str.upper() + "_"
     settings_files: list[Path] = []
     # General settings
@@ -402,8 +400,7 @@ def load_demo_data(
     sa_sql_app_cfg = AppCfg(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
-    # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
-    user_id = UUID("00000000-0000-0000-0000-000000000000")
+    user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
     for service_type in enum.ServiceType:
         # # TODO: TEMPORARY for debugging, remove later
         # if service_type.value != "CASE":

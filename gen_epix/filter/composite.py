@@ -46,7 +46,6 @@ class CompositeFilter(Filter):
         | UuidSetFilter
         | NoFilter
         | CompositeFilter
-        | Filter,
     ] = Field(description="The list of filters.", min_length=1, frozen=True)
     key: str | None = Field(default=None)
     operator: enum.LogicalOperator = Field(

@@ -58,18 +58,22 @@ python run.py api OMOPDB MOCK DICT_EMPTY       # OMOP with mock auth and empty d
 # - CASEDB: 8000
 # - SEQDB: 8001  
 # - OMOPDB: 8002
+# - COMMONDB: 8000
 ```
 
 ### Testing
 ```bash
 python run.py test_all                    # Full test suite
-python run.py test_all_unit               # Unit tests only
+python run.py test_casedb_integration     # Service-specific tests
+python run.py test_all_unit              # Unit tests only
+python run.py test_integration_content    # Content integration tests
+python run.py test_remote_app_unit        # Remote service connection tests
 ```
 
 ### Data Loading
 ```bash
 python run.py etl_load_demo_data all     # Load demo data for all services
-python run.py etl_load_demo_data casedb  # Load demo data for casedb only
+python run.py etl_load_demo_data casedb  # Service-specific data
 ```
 
 ## Project-Specific Conventions

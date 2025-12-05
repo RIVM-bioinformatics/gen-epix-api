@@ -4,7 +4,7 @@ from typing import Any
 
 import sqlalchemy as sa
 from pydantic import BaseModel
-from pydantic.fields import ComputedFieldInfo, FieldInfo
+from pydantic.fields import FieldInfo
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from gen_epix.commondb.domain.model import Model
@@ -51,27 +51,10 @@ def create_mapped_column(
 ) -> MappedColumn[Any]:
     assert model_class.ENTITY is not None
     entity: Entity = model_class.ENTITY
-    computed_or_field_info: FieldInfo | ComputedFieldInfo
-    annotation: type[Any] | None
-    if field_name in model_class.model_fields:
-        field_info: FieldInfo = model_class.model_fields[field_name]
-        annotation = field_info.annotation
-        is_required = field_info.is_required()
-        computed_or_field_info = field_info
-    elif field_name in model_class.model_computed_fields:
-        computed_field_info: ComputedFieldInfo = model_class.model_computed_fields[
-            field_name
-        ]
-        annotation = computed_field_info.return_type
-        is_required = True
-        computed_or_field_info = computed_field_info
-    else:
-        raise ValueError(
-            f"Field '{field_name}' not found in model '{model_class.__name__}'"
-        )
-    sa_type = create_sa_type_from_field_info(computed_or_field_info, annotation)
-    nullable = kwargs.get("nullable", not is_required)
-    doc = kwargs.pop("doc", computed_or_field_info.description)
+    field_info: FieldInfo = model_class.model_fields[field_name]
+    sa_type = create_sa_type_from_field_info(field_info, field_info.annotation)
+    nullable = kwargs.get("nullable", not field_info.is_required())
+    doc = kwargs.pop("doc", field_info.description)
     link_entity = entity.get_link_entity(field_name)
     if link_entity and domain.get_service_type_for_entity(
         link_entity
@@ -196,7 +179,7 @@ def set_entity_repository_model_classes(
             )
         extra_sa_field_names = sa_field_names - field_names
         if extra_sa_field_names:
-            extra_sa_field_names_str = ", ".join(extra_sa_field_names)
+            extra_field_names_str = ", ".join(extra_sa_field_names)
             raise ValueError(
                 f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
             )

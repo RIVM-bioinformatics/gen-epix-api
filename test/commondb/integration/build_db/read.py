@@ -94,5 +94,3 @@ class TestRead:
         for exec_user in NO_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.read_organization_admin_name_emails(exec_user)
-
-    # TODO: read identifier_issuer, organization_identifier_issuer_link (own organization only for some users)

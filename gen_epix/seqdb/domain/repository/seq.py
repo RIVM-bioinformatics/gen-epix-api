@@ -24,9 +24,5 @@ class BaseSeqRepository(BaseRepository):
         self,
         uow: BaseUnitOfWork,
         seq_ids: list[UUID],
-    ) -> Iterable[tuple[UUID, list[tuple[UUID, str]]]]:
-        """
-        Retrieve an Iterable[tuple[seq_id, list[tuple[contig_hash, contig_seq]]]] that
-        can be converted into FASTA format through a streaming approach.
-        """
+    ) -> Iterable[tuple[str, str]]:
         raise NotImplementedError()

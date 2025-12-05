@@ -38,9 +38,6 @@ from gen_epix.casedb.repositories.sa_model.case import (
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeSettings as CaseTypeSettings,
-)
 from gen_epix.casedb.repositories.sa_model.case import Col as Col
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
@@ -81,9 +78,6 @@ from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.repositories.sa_model import (
-    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
-)
 from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
@@ -118,7 +112,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
-        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,
@@ -156,13 +149,11 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,
-        model.CaseTypeSettings: CaseTypeSettings,
         model.Col: Col,
         model.Dim: Dim,
         model.GeneticDistanceProtocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
-        model.CaseTypeSettings: CaseTypeSettings,
     },
 }
 

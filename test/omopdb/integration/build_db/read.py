@@ -1,4 +1,4 @@
-from test.omopdb.integration.build_db.base import (
+from test.seqdb.integration.build_db.base import (
     DATA_USERS,
     GUEST_USERS,
     NO_DATA_USERS,

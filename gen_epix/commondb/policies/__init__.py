@@ -1,5 +1,4 @@
 # pylint: disable=useless-import-alias
-from gen_epix import fastapp
 from gen_epix.commondb.policies.has_system_outage_policy import (
     HasSystemOutagePolicy as HasSystemOutagePolicy,
 )
@@ -16,5 +15,3 @@ from gen_epix.commondb.policies.read_user_policy import ReadUserPolicy as ReadUs
 from gen_epix.commondb.policies.update_user_policy import (
     UpdateUserPolicy as UpdateUserPolicy,
 )
-
-COMMON_POLICY_MAP: dict[type[fastapp.Policy], type[fastapp.Policy]] = {}

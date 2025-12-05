@@ -8,7 +8,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from pydantic import BaseModel
-from pydantic.fields import ComputedFieldInfo, FieldInfo
+from pydantic.fields import FieldInfo
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import expression
 from sqlalchemy.sql.compiler import SQLCompiler
@@ -131,17 +131,12 @@ def sqlite_utc_current_time(
 
 
 def create_sa_type_from_field_info(
-    field_info: FieldInfo | ComputedFieldInfo,
-    annotation: type[Any] | None,
-    **kwargs: dict,
+    field_info: FieldInfo, annotation: type[Any] | None, **kwargs: dict
 ) -> TypeEngine:
     """
     Return a suitable SQLAlchemy type for a Pydantic field.
     """
-    if isinstance(field_info, FieldInfo):
-        type_ = get_type_from_annotation(annotation)
-    else:
-        type_ = field_info.return_type
+    type_ = get_type_from_annotation(annotation)
 
     def _create_sa_type(sa_type_class: type[TypeEngine]) -> TypeEngine:
         # Get column kwargs for this type, overridden by kwargs
@@ -175,15 +170,14 @@ def create_sa_type_from_field_info(
 
 
 def get_sa_type_kwargs_from_field_info(
-    sa_type_class: type[sa.types.TypeEngine], field_info: FieldInfo | ComputedFieldInfo
+    sa_type_class: type[sa.types.TypeEngine], field_info: FieldInfo
 ) -> dict[str, Any]:
     # Extract column kwargs from field metadata
     kwargs: dict[str, Any] = {}
-    if isinstance(field_info, FieldInfo):
-        for metadata in field_info.metadata:
-            for pydantic_name, sa_name in PYDANTIC_SA_FIELD_METADATA_MAP.items():
-                if hasattr(metadata, pydantic_name):
-                    kwargs[sa_name] = getattr(metadata, pydantic_name)
+    for metadata in field_info.metadata:
+        for pydantic_name, sa_name in PYDANTIC_SA_FIELD_METADATA_MAP.items():
+            if hasattr(metadata, pydantic_name):
+                kwargs[sa_name] = getattr(metadata, pydantic_name)
     # Restrict column kwargs to allowed ones for this particular column type
     if sa_type_class not in SA_METADATA_BY_TYPE:
         raise NotImplementedError(

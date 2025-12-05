@@ -26,10 +26,6 @@ class RoleGenerator(CommonRoleGenerator):
             (
                 command.CaseSetCrudCommand,
                 PermissionTypeSet.C,
-            ),
-            (
-                command.CaseTypeSettingsCrudCommand,
-                PermissionTypeSet.CUD,
             ),  # Other users can only use dedicated command
             (
                 command.CaseCrudCommand,
@@ -122,14 +118,13 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
-            (command.RetrieveSequencingProtocolsCommand, PermissionTypeSet.E),
+            (command.RetrieveLibraryPrepProtocolsCommand, PermissionTypeSet.E),
             (command.RetrieveAssemblyProtocolsCommand, PermissionTypeSet.E),
             (command.ValidateCasesCommand, PermissionTypeSet.E),
             (command.CreateReadSetsForCasesCommand, PermissionTypeSet.E),
             (command.CreateSeqsForCasesCommand, PermissionTypeSet.E),
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             (command.CreateFileForSeqCommand, PermissionTypeSet.E),
-            (command.CaseTypeSettingsCrudCommand, PermissionTypeSet.R),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),
             (command.ConceptSetCrudCommand, PermissionTypeSet.R),

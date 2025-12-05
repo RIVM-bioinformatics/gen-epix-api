@@ -6,5 +6,4 @@ from gen_epix.commondb.services import SystemService as SystemService
 from gen_epix.commondb.services import UserManager as UserManager
 from gen_epix.seqdb.services.abac import AbacService as AbacService
 from gen_epix.seqdb.services.file import FileService as FileService
-from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp as SeqdbRemoteApp
 from gen_epix.seqdb.services.seq import SeqService as SeqService

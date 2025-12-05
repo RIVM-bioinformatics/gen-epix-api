@@ -108,26 +108,6 @@ class TestCreate:
         if env.verbose:
             env.print_users()
 
-    def test_create_identifier_issuer(self, env: Env) -> None:
-        # Create identifier issuers as root and app_admin
-        env.create_identifier_issuer("root1_1", "identifier_issuer1")
-        env.create_identifier_issuer("app_admin1_1", "identifier_issuer2")
-        env.create_identifier_issuer("app_admin2_1", "identifier_issuer3")
-        if env.verbose:
-            env.print_identifier_issuers()
-
-    def test_create_organization_identifier_issuer_link(self, env: Env) -> None:
-        # Create guest as root, app_admin
-        env.create_organization_identifier_issuer_link(
-            "root1_1", "org1", "identifier_issuer1"
-        )
-        env.create_organization_identifier_issuer_link(
-            "app_admin1_1", "org1", "identifier_issuer2"
-        )
-        env.create_organization_identifier_issuer_link(
-            "app_admin2_1", "org2", "identifier_issuer2"
-        )
-
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_user_raise(self, env: Env) -> None:
         # Invite user by admin
@@ -186,30 +166,6 @@ class TestCreate:
                 env.create_org_admin_policy(exec_user, "org_user2_1", "org1")
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
-
-    def test_create_identifier_issuer_raise(self, env: Env) -> None:
-        # Check if non-root, non-app_admin users cannot create an identifier issuer
-        for exec_user in [
-            "org_admin1_1",
-            "refdata_admin1_1",
-            "org_user1_1",
-            "guest1_1",
-        ]:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_identifier_issuer(exec_user, "identifier_issuer11")
-
-    def test_create_organization_identifier_issuer_link_raise(self, env: Env) -> None:
-        # Check if non-root, non-app_admin users cannot create an organization identifier issuer link
-        for exec_user in [
-            "org_admin1_1",
-            "refdata_admin1_1",
-            "org_user1_1",
-            "guest1_1",
-        ]:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_organization_identifier_issuer_link(
-                    exec_user, "org1", "identifier_issuer1"
-                )
 
     # TODO: test_create_site
 

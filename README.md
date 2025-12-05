@@ -40,7 +40,7 @@ This repository contains the code for the backend and is one of several that tog
 
 2. Create and activate a conda environment:
    ```console
-   conda create --name gen-epix python=3.14
+   conda create --name gen-epix python=3.13
    conda activate gen-epix
    ```
 
@@ -139,7 +139,7 @@ For a complete list of dependencies, refer to:
 - [dev-requirements.txt](dev-requirements.txt) - Development dependencies
 
 **Python Version**
-Gen-EpiX requires Python 3.14 or higher.
+Gen-EpiX requires Python 3.13 or higher.
 
 ## Funding
 

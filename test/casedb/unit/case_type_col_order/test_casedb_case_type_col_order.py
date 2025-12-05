@@ -28,15 +28,6 @@ class TestCaseTypeColOrder:
             tree_algorithms={},
             case_type_access_abacs={},
             case_type_share_abacs={},
-            stats_time_case_type_col_ids=None,
-            stats_time_case_type_col=None,
-            stats_geo_case_type_col_ids=None,
-            stats_geo_case_type_col=None,
-            create_max_n_cases=1000,
-            read_max_n_cases=1000,
-            read_max_tree_size=1000,
-            update_max_n_cases=1000,
-            delete_max_n_cases=1000,
         )
 
         assert complete_case_type.case_type_col_order == [col1, col2, col3, col4]

@@ -56,11 +56,11 @@ test/end_to_end/client_credential_flow/
 The ReceiverApp can now be started directly via CLI using the Fire package:
 
 ```bash
-# Start ReceiverApp on default port (9001)
-python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oauth_discovery_url="http://localhost:9000/.well-known/openid-configuration"
+# Start ReceiverApp on default port (8001)
+python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oauth_discovery_url="http://localhost:8000/.well-known/openid-configuration"
 
 # Start on custom port
-python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --port=9000 --oauth_discovery_url="http://localhost:9000/.well-known/openid-configuration"
+python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --port=9001 --oauth_discovery_url="http://localhost:8000/.well-known/openid-configuration"
 
 # Show help
 python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --help
@@ -150,7 +150,7 @@ python -m pytest test/end_to_end/client_credential_flow/test_client_credential_f
 python -m pytest test/end_to_end/client_credential_flow/test_client_credential_flow.py::test_oauth_client_credentials_flow_success -v -s
 
 # Start ReceiverApp manually
-python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oauth_discovery_url="http://localhost:9000/.well-known/openid-configuration"
+python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oauth_discovery_url="http://localhost:8000/.well-known/openid-configuration"
 ```
 
 ## Dependencies
@@ -163,7 +163,7 @@ python -m test.end_to_end.client_credential_flow.apps.receiver_app_cli run --oau
 
 ## Test Environment
 
-- Python 3.14.1
+- Python 3.13.7
 - FastAPI with OIDC support
 - JWT token handling with RS256 signatures
 - Process-based isolation for realistic testing

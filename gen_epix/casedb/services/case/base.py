@@ -59,26 +59,102 @@ class BaseCaseService(DomainBaseCaseService):
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
 
-    # CaseCrudCommand,
-    # CaseDataCollectionLinkCrudCommand,
-    # CaseSetCategoryCrudCommand,
-    # CaseSetCrudCommand,
-    # CaseSetDataCollectionLinkCrudCommand,
-    # CaseSetMemberCrudCommand,
-    # CaseSetStatusCrudCommand,
-    # CaseTypeColCrudCommand,
-    # CaseTypeColSetCrudCommand,
-    # CaseTypeColSetMemberCrudCommand,
-    # CaseTypeCrudCommand,
-    # CaseTypeSetCategoryCrudCommand,
-    # CaseTypeSetCrudCommand,
-    # CaseTypeSetMemberCrudCommand,
-    # CaseTypeSettingsCrudCommand,
-    # ColCrudCommand,
-    # DimCrudCommand,
-    # GeneticDistanceProtocolCrudCommand,
-    # TreeAlgorithmClassCrudCommand,
-    # TreeAlgorithmCrudCommand,
+    @abstractmethod
+    def crud(  # type:ignore[override]
+        self, cmd: command.CrudCommand
+    ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:
+        """
+        Override the base crud method to apply ABAC restrictions and cascade delete
+        where necessary
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def validate_cases(
+        self, cmd: command.ValidateCasesCommand
+    ) -> model.CaseValidationReport:
+        """Validate cases according to case type rules."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+        """Create new cases with validation and authorization checks."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def create_case_set(
+        self, cmd: command.CreateCaseSetCommand
+    ) -> model.CaseSet | None:
+        """Create a new case set with associated data collection links."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_complete_case_type(
+        self,
+        cmd: command.RetrieveCompleteCaseTypeCommand,
+    ) -> model.CompleteCaseType:
+        """Retrieve complete case type information including all related metadata."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_case_type_stats(
+        self,
+        cmd: command.RetrieveCaseTypeStatsCommand,
+    ) -> list[model.CaseTypeStat]:
+        """Retrieve statistical information about case types."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_case_set_stats(
+        self,
+        cmd: command.RetrieveCaseSetStatsCommand,
+    ) -> list[model.CaseSetStat]:
+        """Retrieve statistical information about case sets."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_cases_by_query(
+        self, cmd: command.RetrieveCasesByQueryCommand
+    ) -> list[UUID]:
+        """Retrieve case IDs based on query criteria with ABAC filtering."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_cases_by_id(
+        self, cmd: command.RetrieveCasesByIdCommand
+    ) -> list[model.Case]:
+        """Retrieve cases by their IDs with content filtering."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_case_or_set_rights(
+        self,
+        cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
+    ) -> list[model.CaseRights] | list[model.CaseSetRights]:
+        """Retrieve access rights for cases or case sets."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_phylogenetic_tree(
+        self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
+    ) -> model.PhylogeneticTree:
+        """Retrieve phylogenetic tree for a set of cases."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_genetic_sequence_by_case(
+        self,
+        cmd: command.RetrieveGeneticSequenceByCaseCommand,
+    ) -> list[model.GeneticSequence]:
+        """Retrieve genetic sequences associated with cases."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def retrieve_genetic_sequence_fasta_by_case(
+        self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+    ) -> Iterable[str]:
+        """Return a streaming iterable of FASTA formatted lines for genetic sequences."""
+        raise NotImplementedError()
 
     @abstractmethod
     def _read_association_with_valid_ids(
@@ -104,8 +180,8 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
-        case_type_id: UUID | None = None,
         case_set_ids: list[UUID] | None = None,
+        case_type_ids: set[UUID] | None = None,
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
@@ -119,13 +195,11 @@ class BaseCaseService(DomainBaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
-        case_type_id: UUID,
-        case_type_settings: model.CaseTypeSettings | None = None,
         case_ids: list[UUID] | None = None,
+        case_type_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
-        calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
     ) -> list[model.Case]:
         """Retrieve cases that the user has specific content rights for."""

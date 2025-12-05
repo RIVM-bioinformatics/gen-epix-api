@@ -104,6 +104,11 @@ class ContactMixin(RowMetadataMixin):
 
 
 @declarative_mixin
+class IdentifierIssuerMixin(RowMetadataMixin):
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "name")
+
+
+@declarative_mixin
 class DataCollectionMixin(RowMetadataMixin):
     name: Mapped[str] = create_mapped_column(DOMAIN, model.DataCollection, "name")
     description: Mapped[str | None] = create_mapped_column(
@@ -187,25 +192,6 @@ class UserInvitationMixin(RowMetadataMixin):
         )
 
 
-@declarative_mixin
-class IdentifierIssuerMixin(RowMetadataMixin):
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "code")
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "name")
-    description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.IdentifierIssuer, "description"
-    )
-
-
-@declarative_mixin
-class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
-    organization_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationIdentifierIssuerLink, "organization_id"
-    )
-    identifier_issuer_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationIdentifierIssuerLink, "identifier_issuer_id"
-    )
-
-
 class Organization(Base, OrganizationMixin):
     __tablename__, __table_args__ = create_table_args(model.Organization)
 
@@ -230,6 +216,10 @@ class Contact(Base, ContactMixin):
     __tablename__, __table_args__ = create_table_args(model.Contact)
 
 
+class IdentifierIssuer(Base, IdentifierIssuerMixin):
+    __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
+
+
 class DataCollection(Base, DataCollectionMixin):
     __tablename__, __table_args__ = create_table_args(model.DataCollection)
 
@@ -244,13 +234,3 @@ class DataCollectionSetMember(Base, DataCollectionSetMemberMixin):
 
 class UserInvitation(Base, UserInvitationMixin):
     __tablename__, __table_args__ = create_table_args(model.UserInvitation)
-
-
-class IdentifierIssuer(Base, IdentifierIssuerMixin):
-    __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
-
-
-class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMixin):
-    __tablename__, __table_args__ = create_table_args(
-        model.OrganizationIdentifierIssuerLink
-    )

@@ -37,9 +37,6 @@ from gen_epix.commondb.domain.command.organization import (
     OrganizationCrudCommand as OrganizationCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
-    OrganizationIdentifierIssuerLinkCrudCommand as OrganizationIdentifierIssuerLinkCrudCommand,
-)
-from gen_epix.commondb.domain.command.organization import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -110,7 +107,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,
-            OrganizationIdentifierIssuerLinkCrudCommand,
             OrganizationSetCrudCommand,
             OrganizationSetMemberCrudCommand,
             OrganizationSetOrganizationUpdateAssociationCommand,
@@ -145,5 +141,3 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
         }
     ),
 }
-
-COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}

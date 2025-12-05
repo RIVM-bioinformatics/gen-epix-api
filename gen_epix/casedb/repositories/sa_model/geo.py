@@ -25,9 +25,6 @@ class RegionSet(Base, RowMetadataMixin):
     region_code_as_label: Mapped[bool] = create_mapped_column(
         DOMAIN, model.RegionSet, "region_code_as_label"
     )
-    resolution: Mapped[float] = create_mapped_column(
-        DOMAIN, model.RegionSet, "resolution"
-    )
 
 
 class RegionSetShape(Base, RowMetadataMixin):

@@ -1,5 +1,3 @@
-import datetime
-
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
@@ -7,10 +5,6 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.case_date import (
-    case_service_calculate_case_date,
-    case_service_get_case_date_case_type_col_mappers_from_cols,
-)
 from gen_epix.fastapp import CrudOperation
 
 
@@ -43,49 +37,20 @@ def case_service_create_cases(
 
     # Convert cases for create update to cases
     # TODO: validate content and add derived values
-    now = datetime.datetime.now()
     cases: list[model.Case] = [
         model.Case(
             id=x.id,
             case_type_id=cmd.case_type_id,
             subject_id=x.subject_id,
             created_in_data_collection_id=cmd.created_in_data_collection_id,
-            case_date=now,
+            case_date=x.case_date,
             content={y: z for y, z in x.content.items() if z is not None},
         )
         for x in cmd.cases
     ]
 
-    # Get complete case type
-    sub_cmd = command.RetrieveCompleteCaseTypeCommand(
-        user=cmd.user, case_type_id=case_type_id
-    )
-    sub_cmd._policies.extend(cmd._policies)
-    complete_case_type: model.CompleteCaseType = self.retrieve_complete_case_type(
-        sub_cmd
-    )
-
     # Create cases and case data collection links
     with self.repository.uow() as uow:
-        # Validate case data
-        case_validation_report = self.validate_cases(cmd)
-        for validated_case in case_validation_report.validated_cases:
-            if any(
-                x.data_rule in enum.CaseColDataRuleSet.PREVENTS_UPLOAD.value
-                for x in validated_case.data_issues
-            ):
-                raise exc.InvalidArgumentsError(
-                    f"Some cases have invalid data. None will be created."
-                )
-
-        # Calculate case date where possible
-        case_date_case_type_col_mappers = (
-            case_service_get_case_date_case_type_col_mappers_from_cols(
-                complete_case_type.stats_time_case_type_col_ids, complete_case_type.cols
-            )
-        )
-        case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
-
         # Create cases, using the parent class method to avoid ABAC
         # restrictions
         cases = super(DomainBaseCaseService, self).crud(  # type: ignore[assignment]

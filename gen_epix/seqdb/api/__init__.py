@@ -6,14 +6,6 @@ from gen_epix.seqdb.api.seq import (
     RetrieveAlleleProfileRequestBody as RetrieveAlleleProfileRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
-    RetrieveCompleteSamplesRequestBody as RetrieveCompleteSamplesRequestBody,
-)
-from gen_epix.seqdb.api.seq import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
-from gen_epix.seqdb.api.seq import (
-    RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,
-)
-from gen_epix.seqdb.api.seq import (
-    UpsertCompleteSamplesRequestBody as UpsertCompleteSamplesRequestBody,
-)
+from gen_epix.seqdb.api.seq import RetrieveSeqRequestBody as RetrieveSeqRequestBody

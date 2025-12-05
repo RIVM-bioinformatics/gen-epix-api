@@ -14,24 +14,3 @@ class TestType(Enum):
     CASEDB_PERFORMANCE_STARTUP = "CASEDB_PERFORMANCE_STARTUP"
     SEQDB_INTEGRATION_BUILD_DB = "SEQDB_INTEGRATION_BUILD_DB"
     DOCS_ERM = "DOCS_ERM"
-
-
-class ServerType(Enum):
-    COMMONDB = "COMMONDB"
-    CASEDB = "CASEDB"
-    SEQDB = "SEQDB"
-    OMOPDB = "OMOPDB"
-    OAUTH = "OAUTH"
-    OAUTH_RECEIVER = "OAUTH_RECEIVER"
-
-
-class ServerTypeSet(Enum):
-    NON_AUTH = frozenset(
-        {
-            ServerType.COMMONDB,
-            ServerType.CASEDB,
-            ServerType.SEQDB,
-            ServerType.OMOPDB,
-        }
-    )
-    AUTH = frozenset({ServerType.OAUTH, ServerType.OAUTH_RECEIVER})

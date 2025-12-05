@@ -1,111 +1,123 @@
-import gzip
+import base64
+import binascii
+import re
 from collections.abc import Iterable
-from io import BytesIO, StringIO
+from io import StringIO
 from uuid import UUID
 
 from Bio import SeqIO
 
-from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp import CrudOperationSet
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.file import BaseFileService
 
 
 class FileService(BaseFileService):
 
-    def create_file(
+    VALID_NUCLEOTIDES_PATTERN = re.compile(r"^[ACGTURYSWKMBDHVN\-.]+$", re.IGNORECASE)
+
+    def crud(  # type: ignore
+        self, cmd: command.CrudCommand
+    ) -> list[model.Model] | model.Model | list[UUID] | UUID:
+        if isinstance(cmd, command.FileCrudCommand):
+            self.validate_file(cmd)
+
+        return super().crud(cmd)
+
+    def validate_file(
         self,
-        cmd: command.CreateFileCommand,
-    ) -> UUID:
-        # Validate file content based on format
-        if cmd.format == enum.FileFormat.FASTA:
-            self._verify_fasta_content(cmd.file.content, cmd.compression)
-        elif cmd.format == enum.FileFormat.FASTQ:
-            self._verify_fastq_content(cmd.file.content, cmd.compression)
-        else:
-            raise exc.InvalidArgumentsError(f"Unsupported file format: {cmd.format}")
-        # Add file identifier
-        file = cmd.file
-        file.id: UUID = self.generate_id()  # type:ignore[assignment]
-        # Store the file
-        assert cmd.user is not None and cmd.user.id is not None
-        with self.repository.uow() as uow:
-            file_id: UUID = self.repository.crud(  # type: ignore[assignment]
-                uow,
-                cmd.user.id,
-                model.File,
-                cmd.file,
-                None,
-                operation=CrudOperation.CREATE_ONE,
-                return_id=True,
-            )
-        return file_id
-
-    def _get_file_text_stream(
-        self, content: bytes, compression: enum.FileCompression
-    ) -> StringIO:
-        try:
-            if compression == enum.FileCompression.NONE:
-                text_stream = StringIO(content.decode("utf-8"))
-            elif compression == enum.FileCompression.GZIP:
-                with gzip.GzipFile(fileobj=BytesIO(content)) as gz:
-                    text_stream = StringIO(gz.read().decode("utf-8"))
-        except Exception as e:
-            raise exc.InvalidArgumentsError(
-                "Unable to decode file content as UTF-8"
-            ) from e
-        return text_stream
-
-    def _verify_fasta_content(
-        self, content: bytes, compression: enum.FileCompression
+        cmd: command.FileCrudCommand,
     ) -> None:
-        text_stream: StringIO = self._get_file_text_stream(content, compression)
-        try:
-            seq_records: Iterable = SeqIO.parse(text_stream, "fasta")  # type: ignore[no-untyped-call]
-        except Exception as e:
-            raise exc.InvalidArgumentsError(f"Invalid FASTA content: {e}") from e
-
-        found_records: bool = False
-        for seq_record in seq_records:
-            found_records = True
-            seq = str(seq_record.seq)
-            invalid_chars = (
-                set(seq.lower()) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-            )
-            if invalid_chars:
-                raise exc.InvalidArgumentsError(
-                    f"Invalid FASTA: sequence contains at least the following invalid characters: {', '.join(sorted(invalid_chars))}"
+        is_create = cmd.operation in CrudOperationSet.CREATE.value
+        if is_create:
+            file_obj = cmd.get_objs()[0]
+            raw_content = getattr(file_obj, "content", None)
+            if (
+                raw_content is None
+                or (
+                    isinstance(raw_content, (bytes, bytearray))
+                    and len(raw_content) == 0
                 )
-        if not found_records:
-            raise exc.InvalidArgumentsError("No sequence records found in FASTA file")
-
-    def _verify_fastq_content(
-        self, content: bytes, compression: enum.FileCompression
-    ) -> None:
-        text_stream: StringIO = self._get_file_text_stream(content, compression)
-        try:
-            seq_records: Iterable = SeqIO.parse(text_stream, "fastq")  # type: ignore[no-untyped-call]
-        except Exception as e:
-            raise exc.InvalidArgumentsError(f"Invalid FASTQ content: {e}") from e
-
-        found_records: bool = False
-        for seq_record in seq_records:
-            found_records = True
-            phred_quality_scores: list[int] | None = seq_record.letter_annotations.get(
-                "phred_quality"
-            )
-            if phred_quality_scores is None or len(phred_quality_scores) != len(
-                seq_record.seq
+                or (isinstance(raw_content, str) and raw_content.strip() == "")
             ):
+                raise exc.InvalidArgumentsError("File content is empty")
+
+            if isinstance(raw_content, str):
+                content_bytes: bytes = raw_content.encode("utf-8")
+            else:
+                content_bytes = bytes(raw_content)
+
+            # If the file doesn't start with '>' or '@' try base64-decoding it
+            # (many clients embed binary files as base64 inside JSON).
+            header = content_bytes.lstrip()[:1]
+            if header not in (b">", b"@"):
+                try:
+                    decoded = base64.b64decode(content_bytes, validate=True)
+                    if not decoded:
+                        raise exc.InvalidArgumentsError(
+                            "File content is empty after base64 decoding"
+                        )
+                    # replace content_bytes with decoded bytes if it looks like a FASTA/FASTQ
+                    header_decoded = decoded.lstrip()[:1]
+                    if header_decoded in (b">", b"@"):
+                        content_bytes = decoded
+                        header = header_decoded
+                    else:
+                        raise exc.InvalidArgumentsError(
+                            "Unsupported file format: expected FASTA (lines start with >) or FASTQ (records start with @)"
+                        )
+                except binascii.Error as e:
+                    raise exc.InvalidArgumentsError(
+                        "Unsupported file format: expected FASTA (lines start with >) or FASTQ (records start with @), or a Base64-encoded representation of those."
+                    ) from e
+
+            # Determine sequence format from header byte
+            match header:
+                case b">":
+                    sequence_format: enum.SequenceFormat = enum.SequenceFormat.FASTA
+                case b"@":
+                    sequence_format = enum.SequenceFormat.FASTQ
+                case _:
+                    raise exc.InvalidArgumentsError(
+                        "Unsupported file format: expected FASTA (lines start with >) or FASTQ (records start with @)"
+                    )
+
+            try:
+                text_stream: StringIO = StringIO(content_bytes.decode("utf-8"))
+            except Exception as e:
                 raise exc.InvalidArgumentsError(
-                    "Invalid FASTQ: quality scores missing or length mismatch with sequence"
-                )
-            seq = str(seq_record.seq)
-            invalid_chars = (
-                set(seq.lower()) - enum.SeqAlphabet.DNA_INCL_AMBIGUOUS_AND_GAP.value
-            )
-            if invalid_chars:
+                    "Unable to decode file content as UTF-8"
+                ) from e
+            try:
+                sequence_records: Iterable = SeqIO.parse(text_stream, sequence_format.value.lower())  # type: ignore[no-untyped-call]
+            except Exception as e:
                 raise exc.InvalidArgumentsError(
-                    f"Invalid FASTQ: sequence contains at least the following invalid characters: {', '.join(sorted(invalid_chars))}"
+                    f"Invalid {sequence_format.value} content: {e}"
+                ) from e
+
+            found_records: bool = False
+            for record in sequence_records:
+                found_records = True
+                if sequence_format == enum.SequenceFormat.FASTQ:
+                    phred_quality_scores: list[int] | None = (
+                        record.letter_annotations.get("phred_quality")
+                    )
+                    if phred_quality_scores is None or len(phred_quality_scores) != len(
+                        record.seq
+                    ):
+                        raise exc.InvalidArgumentsError(
+                            "Invalid FASTQ: quality scores missing or length mismatch with sequence"
+                        )
+                sequence_string: str = str(record.seq)  # type: ignore[assignment]
+                if not self.VALID_NUCLEOTIDES_PATTERN.match(sequence_string):
+                    raise exc.InvalidArgumentsError(
+                        f"Invalid {sequence_format.value}: sequence contains invalid characters"
+                    )
+                if sequence_format == enum.SequenceFormat.FASTA:
+                    # SequnceFormat.FASTA doesn't need more than one record to validate
+                    break
+
+            if not found_records:
+                raise exc.InvalidArgumentsError(
+                    f"No sequence records found in {sequence_format.value} file"
                 )
-        if not found_records:
-            raise exc.InvalidArgumentsError("No sequence records found in FASTQ file")

@@ -3,7 +3,6 @@ from __future__ import annotations
 import abc
 import uuid
 from collections.abc import Hashable, Iterable
-from functools import cached_property
 from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -63,18 +62,12 @@ class Permission(PydanticBaseModel, frozen=True):
     command_name: str
     permission_type: PermissionType
 
-    @computed_field(
-        description="The name of the permission, combining command name and permission type."
-    )
-    @cached_property
+    @computed_field
     def name(self) -> str:
-        """"""
         return f"{self.command_name}{Permission._NAME_DELIMITER}{self.permission_type.value}"
 
-    @computed_field(description="A sort key for ordering permissions.")
-    @cached_property
+    @computed_field
     def sort_key(self) -> tuple[str, int]:
-        """"""
         permission_type_map = {
             PermissionType.EXECUTE: 0,
             PermissionType.CREATE: 1,

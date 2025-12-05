@@ -54,11 +54,6 @@ class RoleGenerator:
                 command.DataCollectionSetMemberCrudCommand,
                 PermissionTypeSet.CRUD,
             ),  # TODO: READ permission can be set broader once this entity is actually used
-            (command.IdentifierIssuerCrudCommand, PermissionTypeSet.CU),
-            (
-                command.OrganizationIdentifierIssuerLinkCrudCommand,
-                PermissionTypeSet.CUD,
-            ),
             # system
             (command.OutageCrudCommand, PermissionTypeSet.CRUD),
         },
@@ -87,10 +82,6 @@ class RoleGenerator:
             (command.RetrieveOrganizationAdminNameEmailsCommand, PermissionTypeSet.E),
             (command.RetrieveOrganizationContactCommand, PermissionTypeSet.E),
             (command.UpdateUserOwnOrganizationCommand, PermissionTypeSet.E),
-            (
-                command.OrganizationIdentifierIssuerLinkCrudCommand,
-                PermissionTypeSet.R,
-            ),
             # abac
             (command.OrganizationAdminPolicyCrudCommand, PermissionTypeSet.R),
         },

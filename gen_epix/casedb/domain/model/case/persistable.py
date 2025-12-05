@@ -473,89 +473,6 @@ class CaseTypeCol(Model):  # type: ignore
         return None if value is None else [x.value for x in value]
 
 
-class CaseTypeSettings(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_settings",
-        table_name="case_type_settings",
-        persistable=True,
-        keys=create_keys({1: "case_type_id"}),
-        links=create_links(
-            {
-                1: ("case_type_id", CaseType, "case_type"),
-                2: (
-                    "stats_time_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_time_case_type_col",
-                ),
-                3: (
-                    "stats_geo_case_type_col_id",
-                    CaseTypeCol,
-                    "stats_geo_case_type_col",
-                ),
-            }
-        ),
-    )
-    case_type_id: UUID = Field(
-        description=(
-            "The ID of the case type these settings apply to. One-to-one mapping. FOREIGN KEY"
-        )
-    )
-    case_type: CaseType | None = Field(
-        default=None, description="The case type for these settings"
-    )
-
-    stats_time_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the TIME case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_time_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The TIME case type col used for statistics"
-    )
-
-    stats_geo_case_type_col_id: UUID | None = Field(
-        default=None,
-        description=(
-            "The ID of the GEO case type col to use for statistics unless otherwise specified"
-        ),
-    )
-    stats_geo_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The GEO case type col used for statistics"
-    )
-
-    create_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    read_max_tree_size: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    update_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-    delete_max_n_cases: int = Field(
-        ge=0,
-        description=(
-            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
-        ),
-    )
-
-
 class CaseTypeColSet(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_col_sets",
@@ -637,19 +554,11 @@ class Case(Model):
         default=None, description="The data collection where the case was created"
     )
     count: int | None = Field(
-        default=None,
-        description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>=0) as well as reference data (n=0).",
-        gt=0,
+        default=None, description="The number of cases, if applicable", gt=0
     )
-    case_date: datetime = Field(
-        default_factory=datetime.now,
-        description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
-    )
+    case_date: datetime = Field(description="The date of the case")
     content: dict[UUID, str] = Field(
-        description=r"The data content of the case as {case_type_col_id: str_value}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted."
-    )
-    code: str | None = Field(
-        default=None, description="A code for the case for further reference."
+        description="The column data of the case as {col_id: str_value}"
     )
 
     @field_serializer("content", mode="plain")

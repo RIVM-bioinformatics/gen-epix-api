@@ -58,5 +58,3 @@ class TestDelete:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.User, tgt_user)
         env.delete_object("root1_1", model.User, tgt_user)
-
-    # TODO: delete identifier_issuer, organization_identifier_issuer_link
