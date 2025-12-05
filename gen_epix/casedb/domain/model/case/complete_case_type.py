@@ -36,13 +36,16 @@ class CompleteCaseType(CaseType):
     )
     dims: dict[UUID, Dim] = Field(description="The dimensions used by the case type")
     cols: dict[UUID, Col] = Field(description="The columns used by the case type")
-    case_type_dims: list[CaseTypeDim] = Field(
-        description="The ordered list of case type dimensions"
+    case_type_dims: dict[UUID, CaseTypeDim] = Field(
+        description="The case type dimensions"
     )
     case_type_cols: dict[UUID, CaseTypeCol] = Field(
         description="The case type columns for the case type"
     )
-    case_type_col_order: list[UUID] = Field(
+    ordered_case_type_dim_ids: list[UUID] = Field(
+        description="The order of the case type dimensions"
+    )
+    ordered_case_type_col_ids: list[UUID] = Field(
         description="The order of the case type columns outside the context of a dimension"
     )
     genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(

@@ -6,6 +6,7 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.service.case import BaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 
 
@@ -81,24 +82,18 @@ def case_service_get_case_date_case_type_col_mappers(
         raise ValueError(f"No CaseTypeDims found for case_type_id {case_type_id}")
     case_type_dim: model.CaseTypeDim = case_type_dims[0]
 
-    if case_type_dim.dim is None:
-        case_type_dim_dims: list[model.Dim] = (
-            self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user_id,
-                model.Dim,
-                None,
-                [case_type_dim.id],
-                CrudOperation.READ_SOME,
-            )
+    dim: model.Dim = self.repository.crud(  # type:ignore[assignment]
+        uow,
+        user_id,
+        model.Dim,
+        None,
+        case_type_dim.dim_id,
+        CrudOperation.READ_ONE,
+    )
+    if dim.dim_type != enum.DimType.TIME:
+        raise ValueError(
+            f"CaseTypeDim {case_type_dim.id} is not of time DimType, but of {dim.dim_type}"
         )
-        case_type_dim_dim = case_type_dim_dims[0]
-    else:
-        case_type_dim_dim = case_type_dim.dim
-
-    if case_type_dim_dim.dim_type != enum.DimType.TIME:
-        # No time dimension for case type, return empty dict
-        return {}
 
     case_type_cols: list[model.CaseTypeCol] = (
         self.repository.crud(  # type:ignore[assignment]
@@ -108,30 +103,27 @@ def case_service_get_case_date_case_type_col_mappers(
             None,
             None,
             CrudOperation.READ_ALL,
-            filter=UuidSetFilter(
-                key="case_type_dim_id",
-                members=frozenset({case_type_dim.id}),  # type:ignore[assignment]
-            ),
+            filter=EqualsUuidFilter(key="case_type_id", value=case_type_id),
         )
     )
     if not case_type_cols:
         # No case type cols for time dimension, return empty dict
         return {}
 
-    col_ids = {ctc.col_id for ctc in case_type_cols}
-    cols: list[model.Col] = self.repository.crud(  # type:ignore
+    col_ids = [x.col_id for x in case_type_cols]
+    cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
         uow,
         user_id,
         model.Col,
         None,
-        list(col_ids),
+        col_ids,
         CrudOperation.READ_SOME,
     )
     cols_map: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
     case_type_cols = [
-        ctc
-        for ctc in case_type_cols
-        if cols_map[ctc.col_id].col_type in enum.ColTypeSet.TIME.value
+        x
+        for x in case_type_cols
+        if cols_map[x.col_id].col_type in enum.ColTypeSet.TIME.value
     ]
     if not case_type_cols:
         # No time case type cols for time dimension, return empty dict

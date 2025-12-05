@@ -27,7 +27,7 @@ class TestCaseTypeColOrder:
             cols={},
             case_type_dims=dims,
             case_type_cols={},
-            case_type_col_order=[col4, col3, col2, col1],
+            ordered_case_type_col_ids=[col4, col3, col2, col1],
             genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
@@ -41,4 +41,4 @@ class TestCaseTypeColOrder:
             stats_time_case_type_dim_id=None,
         )
 
-        assert complete_case_type.case_type_col_order == [col1, col2, col3, col4]
+        assert complete_case_type.ordered_case_type_col_ids == [col1, col2, col3, col4]
