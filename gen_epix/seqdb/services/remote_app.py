@@ -18,14 +18,14 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 class SeqdbRemoteApp(CommondbRemoteApp):
 
-    DEFAULT_ROUTE_PREFIX = "/v1/"
+    DEFAULT_ROUTE_PREFIX = "/v1"
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
-        seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "retrieve/seq_fasta",
-        seqdb_command.CreateFileCommand: "create/file",
+        seqdb_command.RetrievePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
+        seqdb_command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
+        seqdb_command.CreateFileCommand: "/create/file",
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
