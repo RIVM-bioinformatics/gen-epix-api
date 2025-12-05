@@ -153,10 +153,12 @@ class ReadSet(SeqdbReadSet):
             }
         ),
     )
-    sequencing_protocol: SequencingProtocol | None = copy_model_field(
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(  # type:ignore
         SeqdbReadSet, "sequencing_protocol"
     )
-    sample: Sample | None = copy_model_field(SeqdbReadSet, "sample")
+    sample: Sample | None = copy_model_field(  # type:ignore
+        SeqdbReadSet, "sample"
+    )
 
 
 class Seq(SeqdbSeq):
