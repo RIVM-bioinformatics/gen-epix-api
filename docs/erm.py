@@ -76,4 +76,3 @@ def generate_erm_diagrams_for_service(domain: Domain, dir: Path) -> None:
                 out=dir / f"{domain.name.lower()}.{service_type.value.lower()}.png",
                 limit_search_models_to=[x.__name__ for x in model_classes],
             )
-            )
