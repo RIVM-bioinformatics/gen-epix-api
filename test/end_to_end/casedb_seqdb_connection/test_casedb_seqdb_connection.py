@@ -4,7 +4,8 @@ import logging
 from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
-from test.test_client.oauth.common_server_manager import CommonServerManager
+from test.test_client.enum import ServerType
+from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
@@ -12,7 +13,6 @@ import pytest
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
-from test.test_client.enum import ServerType
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
@@ -28,11 +28,11 @@ SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
 
 @pytest.fixture(scope="function")
-def oauth_server() -> Generator[CommonServerManager, None, None]:
+def oauth_server() -> Generator[ServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
-    with CommonServerManager(
+    with ServerManager(
         service=ServerType.OAUTH,
-        port=8000,
+        port=9000,
         ssl_keyfile=SSL_KEYFILE,
         ssl_certfile=SSL_CERTFILE,
     ) as server:
@@ -54,8 +54,8 @@ def oauth_server() -> Generator[CommonServerManager, None, None]:
 
 @pytest.fixture(scope="function")
 def seqdb_server(
-    oauth_server: CommonServerManager,
-) -> Generator[CommonServerManager, None, None]:
+    oauth_server: ServerManager,
+) -> Generator[ServerManager, None, None]:
     """Start SeqDB server on port 8001."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
@@ -78,7 +78,7 @@ def seqdb_server(
         debug=False,
     )
 
-    with CommonServerManager(
+    with ServerManager(
         service=ServerType.SEQDB,
         app=seqdb_fastapi_app,
         host="127.0.0.1",
@@ -92,7 +92,7 @@ def seqdb_server(
 
 
 def test_casedb_seqdb_connection(
-    oauth_server: CommonServerManager, seqdb_server: CommonServerManager
+    oauth_server: ServerManager, seqdb_server: ServerManager
 ) -> None:
     """Test CaseDB to SeqDB connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
@@ -114,7 +114,7 @@ def test_casedb_seqdb_connection(
 
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{http_protocol}://localhost:8000/health")
+            response = client.get(f"{http_protocol}://localhost:9000/health")
             assert response.status_code == 200
             logging.info("✅ OAuth server is accessible")
     except Exception as e:
@@ -133,7 +133,7 @@ def test_casedb_seqdb_connection(
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(
-                f"{http_protocol}://localhost:8000/.well-known/openid-configuration"
+                f"{http_protocol}://localhost:9000/.well-known/openid-configuration"
             )
             assert response.status_code == 200
             discovery_data = response.json()

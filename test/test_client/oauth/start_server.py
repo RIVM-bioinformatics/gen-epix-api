@@ -20,7 +20,7 @@ import logging
 import os
 import sys
 from test.test_client.enum import ServerType
-from test.test_client.oauth.common_server_manager import CommonServerManager
+from test.test_client.server_manager import ServerManager
 
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -87,7 +87,7 @@ def start_server(
     print("=" * 60)
     print("Press Ctrl+C to stop the server\n")
 
-    with CommonServerManager(
+    with ServerManager(
         service=ServerType.OAUTH,
         app=app,
         host=host,

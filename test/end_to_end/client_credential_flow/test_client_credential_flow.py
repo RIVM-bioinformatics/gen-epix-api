@@ -5,10 +5,10 @@ This module implements a comprehensive test for the OAuth 2.0 Client Credentials
 as described in RFC 6749 Section 4.4: https://datatracker.ietf.org/doc/html/rfc6749#section-4.4
 
 Test scenario:
-1. Start OAuth server on port 8000
+1. Start OAuth server on port 9000
 2. Add a machine-to-machine (M2M) app identity called RequestorApp with audience ReceiverApp
 3. Create ReceiverApp FastAPI app with OIDC client and protected endpoint
-4. Start ReceiverApp on port 8001
+4. Start ReceiverApp on port 9001
 5. Create RequestorApp class with OIDC client
 6. RequestorApp gets access token and calls ReceiverApp endpoint (success case)
 7. RequestorApp uses invalid token to call ReceiverApp endpoint (failure case)
@@ -24,7 +24,7 @@ from test.end_to_end.client_credential_flow.apps import (  # pylint: disable=imp
     RequestorApp,
 )
 from test.test_client.enum import ServerType
-from test.test_client.oauth.common_server_manager import CommonServerManager
+from test.test_client.server_manager import ServerManager
 from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def oauth_server() -> Generator[CommonServerManager, None, None]:
+def oauth_server() -> Generator[ServerManager, None, None]:
     """Start and manage OAuth server for the test session."""
-    with CommonServerManager(service=ServerType.OAUTH, port=8080) as server:
+    with ServerManager(service=ServerType.OAUTH, port=8080) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
 
@@ -105,13 +105,13 @@ def oauth_server() -> Generator[CommonServerManager, None, None]:
 
 @pytest.fixture(scope="session")
 def receiver_app(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
-) -> Generator[CommonServerManager, None, None]:
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
+) -> Generator[ServerManager, None, None]:
     """Start and manage ReceiverApp for the test session."""
     discovery_url = oauth_server.get_discovery_url()
 
-    with CommonServerManager(
-        service=ServerType.OAUTH_RECEIVER, port=8001, oauth_discovery_url=discovery_url
+    with ServerManager(
+        service=ServerType.OAUTH_RECEIVER, port=9001, oauth_discovery_url=discovery_url
     ) as app:
         if not app.start():
             pytest.fail("Failed to start ReceiverApp")
@@ -120,7 +120,7 @@ def receiver_app(
 
 @pytest.fixture(scope="session")
 def requestor_app(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
 ) -> RequestorApp:
     """Create RequestorApp instance."""
     discovery_url = oauth_server.get_discovery_url()
@@ -133,8 +133,8 @@ def requestor_app(
 
 
 def test_oauth_client_credentials_flow_success(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
-    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
+    receiver_app: ServerManager,  # pylint: disable=redefined-outer-name
     requestor_app: RequestorApp,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test successful OAuth Client Credentials flow."""
@@ -161,8 +161,8 @@ def test_oauth_client_credentials_flow_success(
 
 
 def test_oauth_client_credentials_flow_invalid_token(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name,unused-argument
-    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name,unused-argument
+    receiver_app: ServerManager,  # pylint: disable=redefined-outer-name
     requestor_app: RequestorApp,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test OAuth Client Credentials flow with invalid token."""
@@ -183,7 +183,7 @@ def test_oauth_client_credentials_flow_invalid_token(
 
 
 def test_oauth_client_credentials_flow_missing_token(
-    receiver_app: CommonServerManager,  # pylint: disable=redefined-outer-name
+    receiver_app: ServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test OAuth Client Credentials flow with missing token."""
 
@@ -202,7 +202,7 @@ def test_oauth_client_credentials_flow_missing_token(
 
 
 def test_oauth_discovery_endpoint(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test that OAuth discovery endpoint is working."""
 
@@ -235,7 +235,7 @@ def test_oauth_discovery_endpoint(
 
 
 def test_oauth_jwks_endpoint(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test that JWKS endpoint is working."""
 
@@ -261,7 +261,7 @@ def test_oauth_jwks_endpoint(
 
 
 def test_client_management_endpoints(
-    oauth_server: CommonServerManager,  # pylint: disable=redefined-outer-name
+    oauth_server: ServerManager,  # pylint: disable=redefined-outer-name
 ) -> None:
     """Test client management endpoints."""
 
@@ -369,7 +369,7 @@ def test_expiry_jwt_token(requestor_app: RequestorApp) -> None:
 
 
 def test_jwt_is_using_aws_cognito(
-    oauth_server: CommonServerManager, requestor_app: RequestorApp
+    oauth_server: ServerManager, requestor_app: RequestorApp
 ) -> None:
     """Test that JWT tokens are issued by AWS Cognito."""
 
@@ -409,7 +409,7 @@ def test_check_jwt_if_using_asymmetric(requestor_app: RequestorApp) -> None:
 
 
 def test_try_changing_jwt_signing_algorithm(
-    oauth_server: CommonServerManager, requestor_app: RequestorApp
+    oauth_server: ServerManager, requestor_app: RequestorApp
 ) -> None:
     """Test that changing the JWT algorithm invalidates the token."""
 
@@ -427,7 +427,7 @@ def test_try_changing_jwt_signing_algorithm(
 
     modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{signature_b64}"
 
-    endpoint_url = f"http://localhost:8001/test_client_credential_flow"
+    endpoint_url = f"http://localhost:9001/test_client_credential_flow"
     response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
 
     assert (
@@ -455,7 +455,7 @@ def test_try_modifying_payload_without_chaning_signature(
 
     modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{signature_b64}"
 
-    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    endpoint_url = "http://localhost:9001/test_client_credential_flow"
     response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
 
     assert (
@@ -475,7 +475,7 @@ def test_try_removing_signature_part(requestor_app: RequestorApp) -> None:
     header_b64, payload_b64, _ = jwt_token.split(".")
     modified_token = f"{header_b64}.{payload_b64}."
 
-    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    endpoint_url = "http://localhost:9001/test_client_credential_flow"
     response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
 
     assert (
@@ -509,7 +509,7 @@ def test_try_jwt_header_injections(
 
     modified_token = f"{_b64url_encode_no_pad(decoded_header)}.{_b64url_encode_no_pad(decoded_payload)}.{jwt_token.split('.')[2]}"
 
-    endpoint_url = "http://localhost:8001/test_client_credential_flow"
+    endpoint_url = "http://localhost:9001/test_client_credential_flow"
     response = requestor_app.call_protected_endpoint(endpoint_url, modified_token)
 
     assert (

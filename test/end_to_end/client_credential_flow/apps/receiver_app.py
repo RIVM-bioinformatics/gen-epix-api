@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class ReceiverApp:  # pylint: disable=too-few-public-methods
     """FastAPI app that receives and validates access tokens."""
 
-    def __init__(self, port: int = 8001, oauth_discovery_url: str = ""):
+    def __init__(self, port: int = 9001, oauth_discovery_url: str = ""):
         self.port = port
         self.oauth_discovery_url = oauth_discovery_url
         self.app = FastAPI(title="ReceiverApp", lifespan=self._lifespan)

@@ -12,9 +12,9 @@ import httpx
 import uvicorn
 
 
-class CommonServerManager:
+class ServerManager:
     """
-    Common Server manager to handle multiple servers including:
+    Server manager to handle startup of multiple servers including:
     - casedb
     - seqdb
     - omopdb
@@ -23,10 +23,10 @@ class CommonServerManager:
     """
 
     DEFAULT_PORTS: dict[ServerType, int] = {
-        ServerType.COMMONDB: 8000,
-        ServerType.CASEDB: 8001,
-        ServerType.SEQDB: 8002,
-        ServerType.OMOPDB: 8003,
+        ServerType.COMMONDB: 8010,
+        ServerType.CASEDB: 8000,
+        ServerType.SEQDB: 8001,
+        ServerType.OMOPDB: 8002,
         ServerType.OAUTH: 9000,
         ServerType.OAUTH_RECEIVER: 9001,
     }
@@ -366,7 +366,7 @@ class CommonServerManager:
         else:
             self.stop_uvicorn_server()
 
-    def __enter__(self) -> "CommonServerManager":
+    def __enter__(self) -> "ServerManager":
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
