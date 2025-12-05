@@ -716,10 +716,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         # verify keys
         self._signing_keys = {}
         for key_data in response_dict["keys"]:
-            if (
-                key_data.get("use") in ["sig"]
-                and key_data.get("kty") == "RSA"
-            ):
+            if key_data.get("use") in ["sig"] and key_data.get("kty") == "RSA":
                 self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
     async def __call__(self, request: Request) -> Claims | None:  # type: ignore
