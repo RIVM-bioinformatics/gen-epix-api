@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import subprocess
+import sys
 import threading
 import time
 from test.test_client.enum import ServerType, ServerTypeSet
@@ -126,7 +127,7 @@ class ServerManager:
 
         if self.service == ServerType.OAUTH:
             cmd: list[str] = [
-                "python",
+                sys.executable,
                 "-m",
                 "uvicorn",
                 "test.test_client.oauth.server:app",
@@ -152,7 +153,7 @@ class ServerManager:
                     "oauth_discovery_url must be provided for receiver app"
                 )
             cmd = [
-                "python",
+                sys.executable,
                 "-m",
                 "test.end_to_end.client_credential_flow.apps.receiver_app_cli",
                 "run",

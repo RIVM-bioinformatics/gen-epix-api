@@ -171,7 +171,7 @@ def demo_client_credentials_flow() -> None:
 
     # Initialize admin client for management operations
     admin_client = OAuth2Client(
-        base_url="http://127.0.0.1:8080",
+        base_url="http://127.0.0.1:9000",
         client_id="admin",
         client_secret="admin",
     )
@@ -200,7 +200,7 @@ def demo_client_credentials_flow() -> None:
 
         # Initialize client for OAuth operations
         client = OAuth2Client(
-            base_url="http://127.0.0.1:8080",
+            base_url="http://127.0.0.1:9000",
             client_id="demo-client",
             client_secret="demo-secret",
         )
@@ -298,7 +298,7 @@ def demo_client_credentials_flow() -> None:
 
     except requests.RequestException as e:
         print(f"❌ Request error: {e}")
-        print("Make sure the OAuth server is running on http://127.0.0.1:8080")
+        print("Make sure the OAuth server is running on http://127.0.0.1:9000")
     except Exception as e:
         print(f"❌ Error: {e}")
 
