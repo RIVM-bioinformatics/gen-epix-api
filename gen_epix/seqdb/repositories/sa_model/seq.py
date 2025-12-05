@@ -47,7 +47,12 @@ class AlleleAlignment(Base, RowMetadataMixin, AlignmentMixin, QualityMixin):
 class AlleleProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.AlleleProfile)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.AlleleProfile, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AlleleProfile, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.AlleleProfile, "seq_id"
+    )
     locus_set_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AlleleProfile, "locus_set_id"
     )
@@ -103,7 +108,12 @@ class AstMeasurement(Base, RowMetadataMixin):
 class AstPrediction(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.AstPrediction)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.AstPrediction, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.AstPrediction, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.AstPrediction, "seq_id"
+    )
     ast_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.AstPrediction, "ast_protocol_id"
     )
@@ -133,7 +143,12 @@ class KmerDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
 class KmerProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.KmerProfile)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.KmerProfile, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.KmerProfile, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.KmerProfile, "seq_id"
+    )
     kmer_detection_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.KmerProfile, "kmer_detection_protocol_id"
     )
@@ -178,7 +193,12 @@ class LocusDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
 class LocusProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.LocusProfile)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.LocusProfile, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.LocusProfile, "seq_id"
+    )
     locus_set_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.LocusProfile, "locus_set_id"
     )
@@ -215,7 +235,12 @@ class MlvaDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
 class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.MlvaProfile)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.MlvaProfile, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "seq_id"
+    )
     mlva_detection_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_detection_protocol_id"
     )
@@ -384,6 +409,9 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
     file_compression: Mapped[enum.FileCompression] = create_mapped_column(
         DOMAIN, model.Seq, "file_compression"
     )
+    file_hash: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Seq, "file_hash"
+    )
     read_set_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set_id")
     read_set2_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Seq, "read_set2_id")
     assembly_protocol_id: Mapped[UUID] = create_mapped_column(
@@ -411,7 +439,9 @@ class Seq(Base, RowMetadataMixin, CodeMixin, QualityMixin):
 class SeqAlignment(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqAlignment)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.SeqAlignment, "seq_id")
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.SeqAlignment, "seq_id"
+    )
     alignment_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqAlignment, "alignment_protocol_id"
     )
@@ -440,7 +470,10 @@ class SeqCategorySet(Base, RowMetadataMixin):
 class SeqClassification(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqClassification)
 
-    seq_id: Mapped[UUID] = create_mapped_column(
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqClassification, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.SeqClassification, "seq_id"
     )
     seq_classification_protocol_id: Mapped[UUID] = create_mapped_column(
@@ -471,7 +504,12 @@ class SeqClassificationProtocol(Base, RowMetadataMixin, ProtocolMixin):
 class SeqDistance(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqDistance)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.SeqDistance, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistance, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.SeqDistance, "seq_id"
+    )
     seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "seq_distance_protocol_id"
     )
@@ -495,11 +533,8 @@ class SeqDistance(Base, RowMetadataMixin):
 class SeqDistanceProtocol(Base, RowMetadataMixin, ProtocolMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqDistanceProtocol)
 
-    max_stored_distance: Mapped[float] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "max_stored_distance"
-    )
-    min_scale_unit: Mapped[float] = create_mapped_column(
-        DOMAIN, model.SeqDistanceProtocol, "min_scale_unit"
+    is_integer_distance: Mapped[bool] = create_mapped_column(
+        DOMAIN, model.SeqDistanceProtocol, "is_integer_distance"
     )
     seq_distance_protocol_type: Mapped[enum.SeqDistanceProtocolType] = (
         create_mapped_column(
@@ -512,12 +547,20 @@ class SeqDistanceProtocol(Base, RowMetadataMixin, ProtocolMixin):
     ref_seq_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistanceProtocol, "ref_seq_id"
     )
+    max_stored_distance: Mapped[float] = create_mapped_column(
+        DOMAIN, model.SeqDistanceProtocol, "max_stored_distance"
+    )
 
 
 class SeqTaxonomy(Base, RowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.SeqTaxonomy)
 
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.SeqTaxonomy, "seq_id")
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.SeqTaxonomy, "seq_id"
+    )
     taxonomy_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqTaxonomy, "taxonomy_protocol_id"
     )
@@ -544,10 +587,15 @@ class SnpDetectionProtocol(Base, RowMetadataMixin, ProtocolMixin):
 class SnpProfile(Base, RowMetadataMixin, QualityMixin):
     __tablename__, __table_args__ = create_table_args(model.SnpProfile)
 
+    sample_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SnpProfile, "sample_id"
+    )
+    seq_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.SnpProfile, "seq_id"
+    )
     ref_seq_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SnpProfile, "ref_seq_id"
     )
-    seq_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.SnpProfile, "seq_id")
     snp_detection_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SnpProfile, "snp_detection_protocol_id"
     )

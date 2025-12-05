@@ -305,18 +305,18 @@ class SeqdbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         name: str | None = None,
-        max_stored_distance: float = 100.0,
-        min_scale_unit: float = 1.0,
+        is_integer_distance: bool = True,
         seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.OTHER,
+        max_stored_distance: float = 100.0,
     ) -> model.SeqDistanceProtocol:
         return self._create_protocol(
             model.SeqDistanceProtocol,
             user_or_str,
             code,
             name,
-            max_stored_distance=max_stored_distance,  # Required field
-            min_scale_unit=min_scale_unit,  # Required field
+            is_integer_distance=is_integer_distance,  # Required field
             seq_distance_protocol_type=seq_distance_protocol_type,  # Required field - using OTHER to avoid locus_set_id requirement
+            max_stored_distance=max_stored_distance,  # Required field
         )  # type:ignore[return-value]
 
     def create_snp_detection_protocol(
