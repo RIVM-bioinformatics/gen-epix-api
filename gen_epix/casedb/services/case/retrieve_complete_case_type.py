@@ -3,6 +3,9 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.case_date import (
+    case_service_get_case_date_case_type_col_mappers,
+)
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter import UuidSetFilter
 
@@ -15,6 +18,7 @@ def case_service_retrieve_complete_case_type(
     # retrieving first all objs and then filtering.
     # To be improved with e.g. CQS.
     user, repository = self._get_user_and_repository(cmd)
+    assert user.id is not None
 
     with repository.uow() as uow:
         # Get case type
@@ -59,6 +63,7 @@ def case_service_retrieve_complete_case_type(
                 ),
                 return_id=True,
             )
+            abac_read_case_type_col_ids = abac_case_type_col_ids
             data_collection_ids: list[UUID] = self.app.handle(
                 command.DataCollectionCrudCommand(
                     user=user,  # type: ignore[arg-type]
@@ -87,9 +92,11 @@ def case_service_retrieve_complete_case_type(
             case_type_share_abacs = {}
         else:
             abac_case_type_col_ids = set()
+            abac_read_case_type_col_ids = set()
             for x in case_type_access_abacs.values():
-                abac_case_type_col_ids.update(x.read_case_type_col_ids)
+                abac_read_case_type_col_ids.update(x.read_case_type_col_ids)
                 abac_case_type_col_ids.update(x.write_case_type_col_ids)
+            abac_case_type_col_ids.update(abac_read_case_type_col_ids)
 
         # Get etiologies
         if case_type.disease_id:
@@ -134,22 +141,6 @@ def case_service_retrieve_complete_case_type(
         case_type_cols: dict[UUID, model.CaseTypeCol] = {
             x.id: x for x in case_type_cols_  # type: ignore[misc]
         }
-
-        # # Special case: no case_type_cols
-        # if not case_type_cols:
-        #     return model.CompleteCaseType(
-        #         **case_type.model_dump(),
-        #         etiologies=etiologies,
-        #         etiological_agents=etiological_agents,
-        #         dims={},
-        #         cols={},
-        #         case_type_dims=[],
-        #         case_type_cols={},
-        #         case_type_col_order=[],
-        #         genetic_distance_protocols={},
-        #         tree_algorithms={},
-        #         case_type_access_abacs=case_type_access_abacs,
-        #     )
 
         # Get cols
         col_ids = list({x.col_id for x in case_type_cols.values()})
@@ -274,6 +265,99 @@ def case_service_retrieve_complete_case_type(
             x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
         }
 
+        # Get case type settings if it exists
+        has_case_type_settings: bool = self.app.handle(
+            command.CaseTypeSettingsCrudCommand(
+                user=user,  # type: ignore[arg-type]
+                operation=CrudOperation.EXISTS_ONE,
+                obj_ids=case_type_id,
+            )
+        )
+        if has_case_type_settings:
+            case_type_settings: model.CaseTypeSettings = self.app.handle(
+                command.CaseTypeSettingsCrudCommand(
+                    user=user,  # type: ignore[arg-type]
+                    operation=CrudOperation.READ_ONE,
+                    obj_ids=case_type_id,
+                )
+            )
+        else:
+            # Create default case type settings
+            case_type_settings = model.CaseTypeSettings(
+                case_type_id=case_type_id,
+                stats_time_case_type_col_id=None,
+                stats_geo_case_type_col_id=None,
+                create_max_n_cases=self._default_create_max_n_cases,
+                read_max_n_cases=self._default_read_max_n_cases,
+                read_max_tree_size=self._default_read_max_tree_size,
+                update_max_n_cases=self._default_update_max_n_cases,
+                delete_max_n_cases=self._default_delete_max_n_cases,
+            )
+
+        # Get stats_time_case_type_col_ids
+        if not case_type_settings.stats_time_case_type_col_id:
+            stats_time_case_type_col_ids = None
+            stats_time_case_type_col_id = None
+        else:
+            case_date_case_type_col_mappers = case_service_get_case_date_case_type_col_mappers(
+                self=self,
+                uow=uow,
+                user_id=user.id,
+                case_type_id=case_type_id,
+                stats_time_case_type_col_id=case_type_settings.stats_time_case_type_col_id,
+            )
+            stats_time_case_type_col_ids = [
+                x
+                for x in case_date_case_type_col_mappers.keys()
+                if x in abac_read_case_type_col_ids
+            ]
+            stats_time_case_type_col_id = (
+                case_type_settings.stats_time_case_type_col_id
+                if case_type_settings.stats_time_case_type_col_id
+                in abac_read_case_type_col_ids
+                else (
+                    stats_time_case_type_col_ids[0]
+                    if stats_time_case_type_col_ids
+                    else None
+                )
+            )
+
+        # Get stats_geo_case_type_col_ids
+        stats_geo_case_type_col_ids: list[UUID] | None
+        if case_type_settings.stats_geo_case_type_col_id is None:
+            stats_geo_case_type_col_ids = None
+            stats_geo_case_type_col_id = None
+        else:
+            # Get all case type cols in the same (dim, occurrence) as stats_geo_case_type_col_id
+            stats_geo_case_type_col = case_type_cols[
+                case_type_settings.stats_geo_case_type_col_id
+            ]
+            stats_geo_col = cols[stats_geo_case_type_col.col_id]
+            dim_id = stats_geo_col.dim_id
+            occurrence = stats_geo_case_type_col.occurrence
+            case_type_cols_same_dim_occurrence = [
+                x
+                for x in case_type_cols.values()
+                if cols[x.col_id].dim_id == dim_id
+                and x.occurrence == occurrence
+                and cols[x.col_id].col_type in model.enum.ColTypeSet.GEO.value
+            ]
+            stats_geo_case_type_col_ids = [  # type: ignore[assignment]
+                x.id
+                for x in case_type_cols_same_dim_occurrence
+                if x.id in abac_read_case_type_col_ids
+            ]
+            stats_geo_case_type_col_id = (
+                case_type_settings.stats_geo_case_type_col_id
+                if case_type_settings.stats_geo_case_type_col_id
+                in abac_read_case_type_col_ids
+                else (
+                    stats_geo_case_type_col_ids[0]
+                    if stats_geo_case_type_col_ids
+                    else None
+                )
+            )
+
     # Compose complete case type and return
     return model.CompleteCaseType(
         **case_type.model_dump(),
@@ -288,4 +372,13 @@ def case_service_retrieve_complete_case_type(
         tree_algorithms=tree_algorithms,
         case_type_access_abacs=case_type_access_abacs,
         case_type_share_abacs=case_type_share_abacs,
+        stats_time_case_type_col_id=stats_time_case_type_col_id,
+        stats_geo_case_type_col_id=stats_geo_case_type_col_id,
+        stats_time_case_type_col_ids=stats_time_case_type_col_ids,
+        stats_geo_case_type_col_ids=stats_geo_case_type_col_ids,
+        create_max_n_cases=case_type_settings.create_max_n_cases,
+        read_max_n_cases=case_type_settings.read_max_n_cases,
+        read_max_tree_size=case_type_settings.read_max_tree_size,
+        update_max_n_cases=case_type_settings.update_max_n_cases,
+        delete_max_n_cases=case_type_settings.delete_max_n_cases,
     )

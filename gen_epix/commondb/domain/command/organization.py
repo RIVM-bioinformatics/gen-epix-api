@@ -231,3 +231,7 @@ class DataCollectionSetCrudCommand(CrudCommand):
 
 class DataCollectionSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DataCollectionSetMember
+
+
+class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink

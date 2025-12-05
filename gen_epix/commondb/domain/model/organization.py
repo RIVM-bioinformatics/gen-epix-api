@@ -209,8 +209,13 @@ class IdentifierIssuer(Model):
         snake_case_plural_name="identifier_issuers",
         table_name="identifier_issuer",
         persistable=True,
+        keys=create_keys({1: "code"}),
     )
+    code: str = Field(description="The name of the issuer", max_length=255)
     name: str = Field(description="The name of the issuer", max_length=255)
+    description: str | None = Field(
+        default=None, description="The description of the identifier issuer."
+    )
 
 
 class DataCollection(Model):
@@ -350,4 +355,36 @@ class UserInvitationConstraints(Model):
     )
     organization_ids: set[UUID] = Field(
         description="The organizations that the user may be assigned by the inviting user."
+    )
+
+
+class OrganizationIdentifierIssuerLink(Model):
+    """
+    The association between an organization and an identifier issuer.
+
+    This information can be used to restrict which identifier issuers
+    are available to users of a particular organization.
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="organization_identifier_issuer_links",
+        table_name="organization_identifier_issuer_link",
+        persistable=True,
+        keys=create_keys({1: ("organization_id", "identifier_issuer_id")}),
+        links=create_links(
+            {
+                1: ("organization_id", Organization, "organization"),
+                2: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+            }
+        ),
+    )
+    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
+    organization: Organization | None = Field(
+        default=None, description="The organization corresponding to the ID"
+    )
+    identifier_issuer_id: UUID = Field(
+        description="The ID of the identifier issuer. FOREIGN KEY"
+    )
+    identifier_issuer: IdentifierIssuer | None = Field(
+        default=None, description="The identifier issuer corresponding to the ID"
     )

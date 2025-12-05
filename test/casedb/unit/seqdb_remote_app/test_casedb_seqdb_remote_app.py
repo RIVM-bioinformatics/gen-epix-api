@@ -10,11 +10,11 @@ import pytest
 
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model as model
-from gen_epix.casedb.services.seqdb.remote_app import SeqdbRemoteApp
 from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
+from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
 
 
 class TestSeqdbRemoteApp:
