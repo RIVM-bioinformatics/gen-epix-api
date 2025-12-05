@@ -33,7 +33,7 @@ class Run:
         AppType.COMMONDB: {
             "app": "gen_epix.commondb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8010,
         },
     }
 
@@ -726,6 +726,7 @@ class Run:
         generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
+
         from test.test_client.oauth.start_server import start_server
 
         start_server()
