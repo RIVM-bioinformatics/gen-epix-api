@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -13,8 +14,7 @@ class BaseSeqService(BaseService):
         f = self.app.register_handler
         self.register_default_crud_handlers()
         f(command.RetrieveCompleteAlleleProfileCommand, self.retrieve_allele_profile)
-        f(command.RetrieveCompleteSeqCommand, self.retrieve_seq)
-        f(command.RetrieveCompleteSampleCommand, self.retrieve_sample)
+        f(command.RetrieveCompleteSamplesCommand, self.retrieve_complete_samples)
         f(
             command.RetrieveCompleteSnpProfileCommand,
             self.retrieve_snp_profile,
@@ -44,17 +44,10 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_seq(
+    def retrieve_complete_samples(
         self,
-        cmd: command.RetrieveCompleteSeqCommand,
-    ) -> model.CompleteSeq | list[model.CompleteSeq]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_sample(
-        self,
-        cmd: command.RetrieveCompleteSampleCommand,
-    ) -> model.CompleteSample | list[model.CompleteSample]:
+        cmd: command.RetrieveCompleteSamplesCommand,
+    ) -> list[model.CompleteSample]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -85,5 +78,5 @@ class BaseSeqService(BaseService):
     def upsert_complete_samples(
         self,
         cmd: command.UpsertCompleteSamplesCommand,
-    ) -> list[model.CompleteSample]:
+    ) -> list[UUID]:
         raise NotImplementedError()

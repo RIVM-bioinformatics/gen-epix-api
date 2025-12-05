@@ -87,8 +87,8 @@ class SeqAlignment(Model):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq = Field(description="The sequence.")
     alignment_protocol_id: UUID = Field(

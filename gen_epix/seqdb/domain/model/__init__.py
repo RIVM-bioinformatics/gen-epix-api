@@ -51,7 +51,6 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import CompleteContig as CompleteContig
 from gen_epix.seqdb.domain.model.seq import CompleteSample as CompleteSample
-from gen_epix.seqdb.domain.model.seq import CompleteSeq as CompleteSeq
 from gen_epix.seqdb.domain.model.seq import CompleteSnpProfile as CompleteSnpProfile
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
@@ -183,7 +182,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             PhylogeneticTree,
             CompleteContig,
             CompleteSample,
-            CompleteSeq,
+            CompleteSample,
             CompleteSnpProfile,
         ],
         enum.ServiceType.FILE: [File],
