@@ -5,19 +5,11 @@ import signal
 import subprocess
 import threading
 import time
+from test.test_client.enum import ServerType, ServerTypeSet
 from typing import Any
 
 import httpx
 import uvicorn
-
-from test.test_client.enum import ServerType, ServerTypeGroup
-
-logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-logger = logging.getLogger(__name__)
 
 
 class CommonServerManager:
@@ -41,6 +33,21 @@ class CommonServerManager:
 
     DEFAULT_SCOPES = ["openid", "profile"]
 
+    # Create logger
+    LOGGER = logging.getLogger(__name__)
+    LOGGER.setLevel(logging.WARNING)
+
+    # Create formatter for this specific logger
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # Create handler and apply formatter
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    LOGGER.addHandler(handler)
+
     def __init__(
         self,
         service: ServerType,
@@ -49,7 +56,7 @@ class CommonServerManager:
         port: int | None = None,
         ssl_certfile: str | None = None,
         ssl_keyfile: str | None = None,
-        oauth_discovery_url: str = ""
+        oauth_discovery_url: str = "",
     ) -> None:
         if (ssl_certfile is None) != (ssl_keyfile is None):
             raise ValueError(
@@ -71,7 +78,7 @@ class CommonServerManager:
         self.base_url = f"{self.http_protocol}://localhost:{self.port}"
         self.oauth_discovery_url = oauth_discovery_url
 
-        if self.service in ServerTypeGroup.NON_AUTH.value:
+        if self.service in ServerTypeSet.NON_AUTH.value:
             if app is None:
                 raise ValueError("app must be provided for non-OAuth servers")
 
@@ -132,11 +139,18 @@ class CommonServerManager:
             ]
             if self.ssl_keyfile:
                 cmd.extend(
-                    ["--ssl-keyfile", self.ssl_keyfile, "--ssl-certfile", self.ssl_certfile]
+                    [
+                        "--ssl-keyfile",
+                        self.ssl_keyfile,
+                        "--ssl-certfile",
+                        self.ssl_certfile,
+                    ]
                 )
         elif self.service == ServerType.OAUTH_RECEIVER:
             if self.oauth_discovery_url == "":
-                raise ValueError("oauth_discovery_url must be provided for receiver app")
+                raise ValueError(
+                    "oauth_discovery_url must be provided for receiver app"
+                )
             cmd = [
                 "python",
                 "-m",
@@ -155,7 +169,7 @@ class CommonServerManager:
             self._start_log_monitor()
             return self._wait_for_server()
         except Exception as e:
-            logger.error(f"Failed to start OAuth server: {e}")
+            self.LOGGER.error(f"Failed to start OAuth server: {e}")
             return False
 
     def add_client(
@@ -163,9 +177,9 @@ class CommonServerManager:
         client_id: str,
         client_secret: str,
         audience: str | None = None,
-        scopes: list[str] | None = None
+        scopes: list[str] | None = None,
     ) -> bool:
-        if self.service not in ServerTypeGroup.AUTH.value:
+        if self.service not in ServerTypeSet.AUTH.value:
             raise RuntimeError("add_client is only supported for OAuth server")
         scopes = scopes or self.DEFAULT_SCOPES
         client_data = {
@@ -183,53 +197,53 @@ class CommonServerManager:
                     f"{self.base_url}/admin/clients", json=client_data
                 )
                 if response.status_code == 201:
-                    logger.info(
+                    self.LOGGER.info(
                         f"Successfully added M2M client {client_id} with audience {audience}"
                     )
                     return True
                 elif response.status_code == 409:
                     # Client already exists
-                    logger.info(f"M2M client {client_id} already exists")
+                    self.LOGGER.info(f"M2M client {client_id} already exists")
                     return True
                 else:
-                    logger.error(
+                    self.LOGGER.error(
                         f"Failed to add M2M client: {response.status_code} - {response.text}"
                     )
                     return False
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error(f"Error adding M2M client: {e}")
+            self.LOGGER.error(f"Error adding M2M client: {e}")
             return False
 
     def get_discovery_url(self) -> str:
-        if self.service in ServerTypeGroup.AUTH.value:
+        if self.service in ServerTypeSet.AUTH.value:
             return f"{self.base_url}/.well-known/openid-configuration"
         else:
             raise RuntimeError("get_discovery_url is only supported for OAuth server")
 
     def delete_client(self, client_id: str) -> bool:
-        if self.service not in ServerTypeGroup.AUTH.value:
+        if self.service not in ServerTypeSet.AUTH.value:
             raise RuntimeError("delete_client is only supported for OAuth server")
         try:
             with httpx.Client(timeout=10.0) as client:
                 response = client.delete(f"{self.base_url}/admin/clients/{client_id}")
                 if response.status_code == 204:
-                    logger.info(f"Successfully deleted client {client_id}")
+                    self.LOGGER.info(f"Successfully deleted client {client_id}")
                     return True
                 elif response.status_code == 404:
-                    logger.info(f"Client {client_id} not found (already deleted)")
+                    self.LOGGER.info(f"Client {client_id} not found (already deleted)")
                     return True
                 else:
-                    logger.error(
+                    self.LOGGER.error(
                         f"Failed to delete client: {response.status_code} - {response.text}"
                     )
                     return False
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error(f"Error deleting client: {e}")
+            self.LOGGER.error(f"Error deleting client: {e}")
             return False
 
     def start_uvicorn_server(self) -> bool:
         try:
-            logger.info("Starting %s server on %s", self.service, self.host)
+            self.LOGGER.info("Starting %s server on %s", self.service, self.host)
             config: uvicorn.Config = uvicorn.Config(
                 app=self.app,
                 host=self.host,
@@ -251,21 +265,21 @@ class CommonServerManager:
             # Wait for the server to start
             is_ready = self._wait_for_server()
             if is_ready:
-                logger.info("%s server started successfully", self.service)
+                self.LOGGER.info("%s server started successfully", self.service)
             return is_ready
         except Exception as e:
-            logger.error(f"Failed to start {self.service} server: {e}")
+            self.LOGGER.error(f"Failed to start {self.service} server: {e}")
             return False
 
     def start(self) -> bool:
-        if self.service in ServerTypeGroup.AUTH.value:
+        if self.service in ServerTypeSet.AUTH.value:
             return self.start_oauth_server()
         else:
             return self.start_uvicorn_server()
 
     def _wait_for_server(self, timeout: int = 10) -> bool:
         start_time = time.time()
-        if self.service in ServerTypeGroup.AUTH.value:
+        if self.service in ServerTypeSet.AUTH.value:
             health_url = "/health"
         else:
             health_url = "/v1/health"
@@ -273,19 +287,17 @@ class CommonServerManager:
         while time.time() - start_time < timeout:
             if self.process:
                 if self.process.poll() is not None:
-                    logger.error("Server process terminated unexpectedly")
+                    self.LOGGER.error("Server process terminated unexpectedly")
                     return False
             try:
-                with httpx.Client(
-                    timeout=5.0, verify=self.ssl_certfile
-                ) as client:
+                with httpx.Client(timeout=5.0, verify=self.ssl_certfile) as client:
                     response = client.get(
                         f"{self.http_protocol}://{self.host}:{self.port}{health_url}"
                     )
                     if response.status_code == 200:
                         return True
             except Exception as e:
-                logger.debug("Error while checking server health: %s", e)
+                self.LOGGER.debug("Error while checking server health: %s", e)
             time.sleep(0.1)
         return False
 
@@ -346,10 +358,10 @@ class CommonServerManager:
                     self.process.stderr.close()
                 self.process = None
 
-        logger.info(f"{self.service.value} stopped")
+        self.LOGGER.info(f"{self.service.value} stopped")
 
     def stop(self) -> None:
-        if self.service in ServerTypeGroup.AUTH.value:
+        if self.service in ServerTypeSet.AUTH.value:
             self.stop_oauth_server()
         else:
             self.stop_uvicorn_server()

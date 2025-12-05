@@ -34,7 +34,7 @@ def oauth_server() -> Generator[CommonServerManager, None, None]:
         service=ServerType.OAUTH,
         port=8000,
         ssl_keyfile=SSL_KEYFILE,
-        ssl_certfile=SSL_CERTFILE
+        ssl_certfile=SSL_CERTFILE,
     ) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")

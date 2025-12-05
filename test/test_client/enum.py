@@ -25,7 +25,7 @@ class ServerType(Enum):
     OAUTH_RECEIVER = "OAUTH_RECEIVER"
 
 
-class ServerTypeGroup(Enum):
+class ServerTypeSet(Enum):
     NON_AUTH = frozenset(
         {
             ServerType.COMMONDB,
