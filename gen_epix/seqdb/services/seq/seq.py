@@ -318,10 +318,6 @@ class SeqService(BaseSeqService):
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
-        """
-        Retrieve the raw sequences for the given sequence IDs in FASTA format
-        as an iterable that yields one sequence at a time.
-        """
         wrap = cmd.wrap or 0
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
