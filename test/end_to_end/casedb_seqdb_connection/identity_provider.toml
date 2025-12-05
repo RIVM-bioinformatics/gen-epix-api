@@ -2,7 +2,7 @@
 name = "mock"
 label = "MOCK"
 protocol = "OIDC"
-discovery_url = "https://127.0.0.1:8000/.well-known/openid-configuration"
+discovery_url = "https://127.0.0.1:9000/.well-known/openid-configuration"
 client_id = "CASEDB_FOR_SEQDB"
 client_secret = "CASEDB_FOR_SEQDB_CLIENT_SECRET"
 scope = "openid profile"

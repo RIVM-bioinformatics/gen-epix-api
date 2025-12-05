@@ -184,16 +184,59 @@ class CaseAbac(BaseModel):
                 retval.add(case_type_id)
         return retval
 
-    def get_case_type_cols_with_any_rights(self) -> set[UUID]:
+    def get_case_type_cols_with_any_rights(
+        self, case_type_id: UUID | None = None
+    ) -> set[UUID]:
         """
         Get the set[case_type_col_id] for which there is any read or write access in at
-        least one of the data collections.
+        least one of the data collections. Optionally limited to the given case type.
         """
         retval = set()
-        for case_type_id, data in self.case_type_access_abacs.items():
-            for data_collection_id, access_abac in data.items():
+        if case_type_id is not None:
+            if case_type_id not in self.case_type_access_abacs:
+                return retval
+            data = self.case_type_access_abacs[case_type_id]
+            for access_abac in data.values():
                 retval.update(access_abac.read_case_type_col_ids)
                 retval.update(access_abac.write_case_type_col_ids)
+        for case_type_id, data in self.case_type_access_abacs.items():
+            for access_abac in data.values():
+                retval.update(access_abac.read_case_type_col_ids)
+                retval.update(access_abac.write_case_type_col_ids)
+        return retval
+
+    def get_case_type_cols_with_access_rights(
+        self, right: CaseRight, case_type_id: UUID | None = None
+    ) -> set[UUID]:
+        """
+        Get the set[case_type_col_id] for which there is any read or write access in at
+        least one of the data collections. Optionally limited to the given case type.
+        """
+        retval = set()
+        if case_type_id is not None:
+            if case_type_id not in self.case_type_access_abacs:
+                return retval
+            data = self.case_type_access_abacs[case_type_id]
+            for access_abac in data.values():
+                if right == CaseRight.READ_CASE:
+                    retval.update(access_abac.read_case_type_col_ids)
+                elif right == CaseRight.WRITE_CASE:
+                    retval.update(access_abac.write_case_type_col_ids)
+                else:
+                    raise exc.InvalidArgumentsError(
+                        f"Right {right.value} is invalid for case_type_col access"
+                    )
+            return retval
+        for case_type_id, data in self.case_type_access_abacs.items():
+            for access_abac in data.values():
+                if right == CaseRight.READ_CASE:
+                    retval.update(access_abac.read_case_type_col_ids)
+                elif right == CaseRight.WRITE_CASE:
+                    retval.update(access_abac.write_case_type_col_ids)
+                else:
+                    raise exc.InvalidArgumentsError(
+                        f"Right {right.value} is invalid for case_type_col access"
+                    )
         return retval
 
     def get_data_collections_with_any_rights(self) -> set[UUID]:

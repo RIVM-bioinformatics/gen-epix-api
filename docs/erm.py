@@ -1,18 +1,15 @@
-import hashlib
 import json
 import os
-import pickle
-import tempfile
 import warnings
 from pathlib import Path
 
+import erdantic as erd
+
+from docs.erm_hash import generate_hash_for_domain_models
 from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
 from gen_epix.fastapp import Domain
 from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
 from gen_epix.seqdb.domain import DOMAIN as SEQDB_DOMAIN
-
-# import erdantic as erd
-
 
 # Disable Graphviz Pango plugin warnings on Windows
 # This prevents "Could not load gvplugin_pango.dll" warnings
@@ -82,18 +79,3 @@ def generate_erm_diagrams_for_service(domain: Domain, dir: Path) -> None:
                 out=dir / f"{domain.name.lower()}.{service_type.value.lower()}.png",
                 limit_search_models_to=[x.__name__ for x in model_classes],
             )
-
-
-def generate_hash_for_domain_models(
-    domains: list[Domain], dir: Path | None = None
-) -> str:
-    """
-    Generates a SHA-256 hash for a list of sorted classes by pickling them to a
-    temporary file and then hashing the file.
-    """
-    sorted_model_classes = []
-    for domain in domains:
-        sorted_model_classes.extend(domain.get_dag_sorted_models(persistable=True))
-    with tempfile.TemporaryFile(dir=dir, suffix=".pkl") as handle:
-        pickle.dump(sorted_model_classes, handle)
-        return hashlib.file_digest(handle, "sha256").hexdigest()

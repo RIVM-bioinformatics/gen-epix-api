@@ -10,7 +10,9 @@ def serialize_id(value: Hashable) -> str | None:
 
 
 def create_ssl_context(
-    host: str, ssl_cert_file: Path | str | None = None, disable_ssl_verification: bool = False
+    host: str,
+    ssl_cert_file: Path | str | None = None,
+    disable_ssl_verification: bool = False,
 ) -> ssl.SSLContext | bool:
     """Get SSL verification setting using similar logic to OidcClient."""
     if disable_ssl_verification:
