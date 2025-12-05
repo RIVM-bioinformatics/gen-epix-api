@@ -491,17 +491,30 @@ class CaseService(BaseCaseService):
             raise exc.UnauthorizedAuthError(
                 f"User {user_id} has no access to case type {case_type_id}"
             )
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user_id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(
+                f"Case type not found: {case_type_id}"
+            )
+        case_type = case_types[0]
 
         # Verify max number of cases
         case_date_case_type_col_mappers: (
             dict[UUID, Callable[[str], datetime.datetime]] | None
         ) = {}
         max_n_cases: float = float("inf")
-        if apply_max_n_cases and case_type_settings is not None:
+        if apply_max_n_cases:
             if right == enum.CaseRight.READ_CASE:
-                max_n_cases = case_type_settings.read_max_n_cases
+                max_n_cases = case_type.read_max_n_cases
             elif right == enum.CaseRight.WRITE_CASE:
-                max_n_cases = case_type_settings.update_max_n_cases
+                max_n_cases = case_type.update_max_n_cases
             else:
                 raise NotImplementedError(f"Unsupported case right: {right}")
             case_date_case_type_col_mappers = (
@@ -509,8 +522,7 @@ class CaseService(BaseCaseService):
                     self,
                     uow,
                     user_id,
-                    case_type_id,
-                    case_type_settings.stats_time_case_type_col_id,
+                    case_type_id
                 )
             )
 

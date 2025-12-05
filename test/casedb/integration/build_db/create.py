@@ -345,9 +345,9 @@ class TestCreate:
     def test_create_dim(self, env: Env) -> None:
         # Create dim as root, app_admin, refdata_admin
         for i in range(1, 6):
-            env.create_dim("root1_1", f"text{i}", enum.DimType.TIME)
+            env.create_dim("root1_1", f"text{i}", enum.DimType.TEXT)
             env.create_dim("app_admin1_1", f"number{i}", enum.DimType.NUMBER)
-            env.create_dim("refdata_admin1_1", f"time{i}", enum.DimType.TEXT)
+            env.create_dim("refdata_admin1_1", f"time{i}", enum.DimType.TIME)
             env.create_dim("refdata_admin1_1", f"geo{i}", enum.DimType.GEO)
             env.create_dim("refdata_admin1_1", f"id{i}", enum.DimType.IDENTIFIER)
             env.create_dim("refdata_admin1_1", f"org{i}", enum.DimType.ORGANIZATION)

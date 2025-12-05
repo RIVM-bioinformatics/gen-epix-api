@@ -37,39 +37,18 @@ def case_service_retrieve_case_type_stats(
 
     with repository.uow() as uow:
 
-        # Get all case type settings
-        case_type_settings_list: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user.id,
-            model.CaseTypeSettings,
-            None,
-            None,
-            CrudOperation.READ_ALL,
-            filter=UuidSetFilter(
-                key="case_type_id",
-                members=case_type_ids,
-            ),
-        )
         # Retrieve cases per case type settings and thus case type, and calculate stats
         case_type_stats: list[model.CaseTypeStat] = []
-        for case_type_settings in case_type_settings_list:
-            # if case_type_settings.stats_time_case_type_col_id is None:
-            #     # No time column defined, cannot calculate stats
-            #     continue
-            # Retrieve cases for case type
-            case_type_id = case_type_settings.case_type_id
+        for case_type_id in case_type_ids:
             cases: list[model.Case] = (
                 self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
                     uow,
                     user.id,
                     case_abac,
-                    # user_case_access,
                     enum.CaseRight.READ_CASE,
-                    case_type_settings.case_type_id,
-                    case_type_settings=case_type_settings,
+                    case_type_id,
                     datetime_range_filter=cmd.datetime_range_filter,
                     calculate_case_date=True,
-                    apply_max_n_cases=False,
                 )
             )
             # Calculate stats

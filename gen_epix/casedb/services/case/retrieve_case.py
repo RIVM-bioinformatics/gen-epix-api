@@ -48,8 +48,6 @@ def case_service_retrieve_cases_by_query(
 
     with repository.uow() as uow:
 
-        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
-
         # @ABAC: Verify any access to all given case sets if applicable
         if case_set_ids:
             case_sets = self._retrieve_case_sets_with_content_right(
@@ -99,7 +97,6 @@ def case_service_retrieve_cases_by_query(
             # user_case_access,
             enum.CaseRight.READ_CASE,
             case_type_id,
-            case_type_settings=case_type_settings,
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
@@ -129,13 +126,25 @@ def case_service_retrieve_cases_by_query(
                 if y
             ]
 
+        # retrieve case type to apply max results limit
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
+
         # Apply max results limit
         is_max_results_exceeded = False
-        if case_type_settings:
-            max_n_cases = case_type_settings.read_max_n_cases
-            if max_n_cases is not None and len(cases) > max_n_cases:
-                is_max_results_exceeded = True
-                cases = cases[:max_n_cases]
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            is_max_results_exceeded = True
+            cases = cases[:max_n_cases]
 
     return model.CaseQueryResult(
         case_query=case_query,
@@ -158,7 +167,6 @@ def case_service_retrieve_cases_by_id(
     assert case_abac is not None
 
     with repository.uow() as uow:
-        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
 
         cases = self._retrieve_cases_with_content_right(
             uow,
@@ -166,14 +174,28 @@ def case_service_retrieve_cases_by_id(
             case_abac,
             enum.CaseRight.READ_CASE,
             case_type_id,
-            case_type_settings=case_type_settings,
             case_ids=case_ids,
             filter_content=True,
         )
         if not cases:
             return []
 
-        # TODO: Add case_type_settings.read_max_n_cases check?
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
+
+        # Apply max results limit
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            cases = cases[:max_n_cases]
 
     return cases
 
