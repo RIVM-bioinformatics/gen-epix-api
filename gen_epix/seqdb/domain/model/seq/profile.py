@@ -11,6 +11,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq, RefSnp, Seq
 
 
@@ -23,7 +24,7 @@ class LocusDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class LocusProfile(Model, QualityMixin):
+class LocusProfile(Model, HasSampleMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_profiles",
         table_name="locus_profile",
@@ -33,9 +34,10 @@ class LocusProfile(Model, QualityMixin):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: ("locus_set_id", LocusSet, "locus_set"),
-                3: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: ("locus_set_id", LocusSet, "locus_set"),
+                4: (
                     "locus_detection_protocol_id",
                     LocusDetectionProtocol,
                     "locus_detection_protocol",
@@ -43,8 +45,8 @@ class LocusProfile(Model, QualityMixin):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     locus_set_id: UUID = Field(
@@ -74,7 +76,7 @@ class LocusProfile(Model, QualityMixin):
         return str(value)
 
 
-class AlleleProfile(Model, QualityMixin):
+class AlleleProfile(Model, HasSampleMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="allele_profiles",
         table_name="allele_profile",
@@ -84,9 +86,10 @@ class AlleleProfile(Model, QualityMixin):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: ("locus_set_id", LocusSet, "locus_set"),
-                3: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: ("locus_set_id", LocusSet, "locus_set"),
+                4: (
                     "locus_detection_protocol_id",
                     LocusDetectionProtocol,
                     "locus_detection_protocol",
@@ -94,8 +97,8 @@ class AlleleProfile(Model, QualityMixin):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     locus_set_id: UUID = Field(
@@ -148,7 +151,7 @@ class SnpDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class SnpProfile(Model, QualityMixin):
+class SnpProfile(Model, HasSampleMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="snp_profiles",
         table_name="snp_profile",
@@ -164,9 +167,10 @@ class SnpProfile(Model, QualityMixin):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: ("ref_seq_id", RefSeq, "ref_seq"),
-                3: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: ("ref_seq_id", RefSeq, "ref_seq"),
+                4: (
                     "snp_detection_protocol_id",
                     SnpDetectionProtocol,
                     "snp_detection_protocol",
@@ -174,8 +178,8 @@ class SnpProfile(Model, QualityMixin):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     ref_seq_id: UUID = Field(
@@ -215,7 +219,7 @@ class MlvaDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class MlvaProfile(Model, QualityMixin):
+class MlvaProfile(Model, HasSampleMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="mlva_profiles",
         table_name="mlva_profile",
@@ -230,8 +234,9 @@ class MlvaProfile(Model, QualityMixin):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: (
                     "mlva_detection_protocol_id",
                     MlvaDetectionProtocol,
                     "mlva_detection_protocol",
@@ -239,8 +244,8 @@ class MlvaProfile(Model, QualityMixin):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     mlva_detection_protocol_id: UUID = Field(
@@ -272,7 +277,7 @@ class KmerDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class KmerProfile(Model, QualityMixin):
+class KmerProfile(Model, HasSampleMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="kmer_profiles",
         table_name="kmer_profile",
@@ -287,8 +292,9 @@ class KmerProfile(Model, QualityMixin):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: (
                     "kmer_detection_protocol_id",
                     KmerDetectionProtocol,
                     "kmer_detection_protocol",
@@ -296,8 +302,8 @@ class KmerProfile(Model, QualityMixin):
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     kmer_detection_protocol_id: UUID = Field(
@@ -322,7 +328,7 @@ class KmerProfile(Model, QualityMixin):
         return str(value)
 
 
-class CompleteAlleleProfile(Model):
+class CompleteAlleleProfile(Model, HasSampleMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_allele_profiles",
         persistable=False,
@@ -341,7 +347,7 @@ class CompleteAlleleProfile(Model):
     )
 
 
-class CompleteSnpProfile(Model):
+class CompleteSnpProfile(Model, HasSampleMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_snp_profiles",
         persistable=False,

@@ -312,14 +312,9 @@ class SeqService(BaseSeqService):
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
-    def retrieve_sample(
-        self, cmd: command.RetrieveCompleteSampleCommand
-    ) -> model.CompleteSample | list[model.CompleteSample]:
-        raise NotImplementedError()
-
-    def retrieve_seq(
-        self, cmd: command.RetrieveCompleteSeqCommand
-    ) -> model.CompleteSeq | list[model.CompleteSeq]:
+    def retrieve_complete_samples(
+        self, cmd: command.RetrieveCompleteSamplesCommand
+    ) -> list[model.CompleteSample]:
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
@@ -345,7 +340,7 @@ class SeqService(BaseSeqService):
     def upsert_complete_samples(
         self,
         cmd: command.UpsertCompleteSamplesCommand,
-    ) -> list[model.CompleteSample]:
+    ) -> list[UUID]:
         return seq_service_upsert_complete_samples(self, cmd)
 
     @staticmethod

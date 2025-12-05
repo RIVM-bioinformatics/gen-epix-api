@@ -13,6 +13,7 @@ from gen_epix.seqdb.domain.model.seq.profile import (
     KmerProfile,
     SnpProfile,
 )
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq, Seq
 
 
@@ -34,8 +35,9 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
             }
         ),
     )
-    max_stored_distance: float = Field(description="The maximum distance to be stored")
-    min_scale_unit: float = Field(description="The minimum unit to be shown in a scale")
+    is_integer_distance: bool = Field(
+        description="Whether the distances calculated by this protocol are integers"
+    )
     seq_distance_protocol_type: enum.SeqDistanceProtocolType = Field(
         description="The type of genetic distance protocol.",
     )
@@ -49,6 +51,9 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
         description="The unique identifier for the reference sequence, if applicable. FOREIGN KEY",
     )
     ref_seq: RefSeq | None = Field(default=None, description="The reference sequence.")
+    max_stored_distance: float = Field(
+        description="The maximum distance that is guaranteedto be stored"
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
@@ -73,7 +78,7 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
         return value
 
 
-class SeqDistance(Model):
+class SeqDistance(Model, HasSampleMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_distances",
         table_name="seq_distance",
@@ -91,20 +96,21 @@ class SeqDistance(Model):
         ),
         links=create_links(
             {
-                1: ("seq_id", Seq, "seq"),
-                2: (
+                1: ("sample_id", Sample, "sample"),
+                2: ("seq_id", Seq, "seq"),
+                3: (
                     "seq_distance_protocol_id",
                     SeqDistanceProtocol,
                     "seq_distance_protocol",
                 ),
-                3: ("allele_profile_id", AlleleProfile, "allele_profile"),
-                4: ("snp_profile_id", SnpProfile, "snp_profile"),
-                5: ("kmer_profile_id", KmerProfile, "kmer_profile"),
+                4: ("allele_profile_id", AlleleProfile, "allele_profile"),
+                5: ("snp_profile_id", SnpProfile, "snp_profile"),
+                6: ("kmer_profile_id", KmerProfile, "kmer_profile"),
             }
         ),
     )
-    seq_id: UUID = Field(
-        description="The unique identifier for the sequence. FOREIGN KEY"
+    seq_id: UUID | None = Field(
+        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
     )
     seq: Seq | None = Field(default=None, description="The sequence.")
     seq_distance_protocol_id: UUID = Field(

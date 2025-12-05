@@ -91,6 +91,7 @@ class CreateCasesCommand(ValidateCasesCommand):
     """
     Create the corresponding cases and return them.
     """
+
     NAME = "CreateCasesCommand"
 
     pass
