@@ -657,6 +657,17 @@ class TestCreate:
                 env.create_case_type_dim(
                     "refdata_admin1_1", f"{case_type}_other{j}")
 
+    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    def test_create_case_type_dim_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                for i in range(1, 6):
+                    case_type = f"case_type{i}"
+                    for j in range(1, 6):
+                        env.create_case_type_dim(
+                            exec_user, f"{case_type}_time{j}"
+                        )
+
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
@@ -690,18 +701,19 @@ class TestCreate:
                 )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            # case_type_col = env.create_case_type_col(
-            #     "root1_1",
-            #     f"case_type{i}_text1_8_time_year_2",
-            #     col="text1_8_time_year",
-            # )
-            # case_type_col = env.create_case_type_col(
-            #     "app_admin1_1",
-            #     f"case_type{i}_text1_8_time_year_3",
-            #     col="text1_8_time_year",
-            # )
-        # if env.verbose:
-        #     env.print_case_type_cols()
+            # TODO: fix duplicate obj keys, probably due CaseTypeDim creation 
+            case_type_col = env.create_case_type_col( 
+                "root1_1",
+                f"case_type{i}_text1_8_time_year_2",
+                col="text1_8_time_year",
+            )
+            case_type_col = env.create_case_type_col(
+                "app_admin1_1",
+                f"case_type{i}_text1_8_time_year_3",
+                col="text1_8_time_year",
+            )
+        if env.verbose:
+            env.print_case_type_cols()
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
