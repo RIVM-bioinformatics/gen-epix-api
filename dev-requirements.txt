@@ -14,7 +14,6 @@ pylint==4.0.*
 mypy==1.18.*
 black==25.11.*
 cryptography==46.0.3
-PyJWT==2.10.1
 oauthlib==3.3.1
 
 # stubs
