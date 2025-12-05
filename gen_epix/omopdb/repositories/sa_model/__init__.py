@@ -12,6 +12,9 @@ from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
 from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
@@ -106,6 +109,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
+        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,

@@ -3,7 +3,7 @@ from pathlib import Path
 from test.test_client import enum
 from test.test_client.util import get_test_name, get_test_output_dir
 
-from docs import erm
+import docs.erm_hash
 
 
 class TestERM:
@@ -12,7 +12,9 @@ class TestERM:
     HASH_FILE = Path.cwd() / "docs" / "assets" / "erm" / "erm.json"
 
     def test_erm_images_updated(self) -> None:
-        expected_hash = erm.generate_hash_for_domain_models(erm.DOMAINS)
+        expected_hash = docs.erm_hash.generate_hash_for_domain_models(
+            docs.erm_hash.DOMAINS
+        )
         with open(self.HASH_FILE, "r") as handle:
             actual_hash = json.load(handle)["models_hash"]
         assert (
