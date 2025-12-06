@@ -660,7 +660,7 @@ class Run:
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_pylint_for_messages(
+        for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
@@ -687,7 +687,7 @@ class Run:
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_mypy_for_messages(
+        for line in linter.parse_mypy_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)

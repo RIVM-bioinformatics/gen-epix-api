@@ -38,14 +38,14 @@ class Linter:
     """
 
     PYLINT_CODE_PATTERN = re.compile(r": (?P<code>[A-Z]+\d+):")
-    PYLINE_MESSAGE_PARTS_PATTERN = re.compile(
+    PYLINT_LINE_PARTS_PATTERN = re.compile(
         r"^(?P<module>.*?):(?P<line>.*?):(?P<position>.*?): (?P<code>[A-Z]+\d+): (?P<message>.*)$"
     )
     PYLINT_SCORE_PATTERN = re.compile(
         r"Your code has been rated at (?P<score>[\d\.]+)/10"
     )
     MYPY_LOCATION_PATTERN = re.compile(r"^(?P<location>.*?:(\d+):)")
-    MYPY_ERROR_CODE_PATTERN = re.compile(r"\[([a-z0-9_]+)\]")
+    MYPY_ISSUE_CODE_PATTERN = re.compile(r"\[([a-z0-9_]+)\]")
 
     PRESETS = {
         "mypy": [
@@ -114,10 +114,10 @@ class Linter:
             file = Path(file)
         self.run(cmd, file=file)
         if filter_on_codes:
-            lines = self.parse_mypy_for_messages(file, filter_on_codes)
+            lines = self.parse_mypy_for_issue_lines(file, filter_on_codes)
             file.write_text("\n".join(lines))
 
-    def parse_pylint_for_messages(
+    def parse_pylint_for_issue_lines(
         self, file: Path | str, filter_on_codes: set[str] | None = None
     ) -> list[str]:
         if isinstance(file, str):
@@ -125,7 +125,7 @@ class Linter:
         with open(file, "rt") as handle:
             lines = handle.readlines()
         pattern = self.PYLINT_CODE_PATTERN
-        messages = [
+        issue_lines = [
             line
             for line in lines
             if pattern.search(line)
@@ -133,9 +133,9 @@ class Linter:
                 not filter_on_codes or pattern.search(line).group(1) in filter_on_codes
             )
         ]
-        return messages
+        return issue_lines
 
-    def parse_mypy_for_messages(
+    def parse_mypy_for_issue_lines(
         self, file: Path | str, filter_on_codes: set[str] | None = None
     ) -> list[str]:
         if isinstance(file, str):
@@ -143,8 +143,8 @@ class Linter:
         with open(file, "rt") as handle:
             lines = handle.readlines()
         location_pattern = self.MYPY_LOCATION_PATTERN
-        error_code_pattern = self.MYPY_ERROR_CODE_PATTERN
-        out_lines: list[str] = []
+        issue_code_pattern = self.MYPY_ISSUE_CODE_PATTERN
+        issue_lines: list[str] = []
         prev_location = ""
         is_prev_match = False
         for line in lines:
@@ -153,34 +153,34 @@ class Linter:
             if not location_match:
                 # No location -> keep if empty line and previous match
                 if not line and is_prev_match:
-                    out_lines.append(line)
+                    issue_lines.append(line)
                 continue
             location = location_match.group(1)
             if location == prev_location:
                 # Same location -> keep if previous line was kept
                 if is_prev_match:
-                    out_lines.append(line)
+                    issue_lines.append(line)
                 continue
             prev_location = location
-            error_code_match = error_code_pattern.search(line)
+            error_code_match = issue_code_pattern.search(line)
             if not error_code_match:
                 if is_prev_match:
                     # Note for a non-matched error code
                     continue
                 # Special case: keep
-                out_lines.append(line)
+                issue_lines.append(line)
                 continue
                 # raise ValueError(f"Error code not found in line: {line}")
             error_code = error_code_match.group(1)
             if not filter_on_codes or error_code in filter_on_codes:
                 is_prev_match = True
-                out_lines.append(line)
+                issue_lines.append(line)
             else:
                 is_prev_match = False
         # Remove empty lines at the end
-        while out_lines and not out_lines[-1]:
-            out_lines.pop()
-        return out_lines
+        while issue_lines and not issue_lines[-1]:
+            issue_lines.pop()
+        return issue_lines
 
     def run(
         self, cmd: list[str], file: Path | str | None = None, verbose: bool = False
@@ -263,11 +263,12 @@ class Linter:
 
     def analyse_pylint_code_impact(self, verbose: bool = True) -> None:
         output_dir = get_test_root_output_dir()
-        base_report_file = output_dir / "pylint.rule_impact.base_report.txt"
-        result_file = output_dir / "pylint.rule_impact.result.xlsx"
-        temp_report_file_template = "pylint.rule_impact.disable_{code}.txt"
+        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_report_file = output_dir / f"pylint.rule_impact.{now_str}.base_report.txt"
+        result_file = output_dir / f"pylint.rule_impact.{now_str}.result.xlsx"
+        temp_report_file_template = f"pylint.rule_impact.{now_str}.disable_{{code}}.txt"
 
-        # Get baseline score and messages
+        # Get baseline score and issues
         if verbose:
             print(f"Getting baseline")
         start_time = datetime.now()
@@ -279,21 +280,21 @@ class Linter:
         base_score = Linter.parse_pylint_score(base_report)
         if base_score is None:
             raise ValueError("Could not determine base pylint score.")
-        messages = self.parse_pylint_for_messages(base_report_file)
-        total_n_messages = len(messages)
+        issue_lines = self.parse_pylint_for_issue_lines(base_report_file)
+        total_n_issues = len(issue_lines)
 
-        # Parse baseline messages and get aggregated counts
-        message_list = []
-        for message in messages:
-            pattern_match = self.PYLINE_MESSAGE_PARTS_PATTERN.match(message)
+        # Parse baseline issues and get aggregated counts
+        issue_list = []
+        for issue_line in issue_lines:
+            pattern_match = self.PYLINT_LINE_PARTS_PATTERN.match(issue_line)
             if not pattern_match:
                 if verbose:
-                    print(f"Could not parse pylint message: {message}")
+                    print(f"Could not parse pylint issue line: {issue_line}")
                 continue
-            message_list.append(pattern_match.groupdict())
-        message_df = pl.DataFrame(message_list)
-        code_counts_df = message_df.group_by("code").len().rename({"len": "count"})
-        module_counts_df = message_df.group_by("module").len().rename({"len": "count"})
+            issue_list.append(pattern_match.groupdict())
+        issue_df = pl.DataFrame(issue_list)
+        code_counts_df = issue_df.group_by("code").len().rename({"len": "count"})
+        module_counts_df = issue_df.group_by("module").len().rename({"len": "count"})
 
         # Run pylint disabling one code at a time
         code_pattern = self.PYLINT_CODE_PATTERN
@@ -303,7 +304,8 @@ class Linter:
                 "code": "BASE",
                 "score": base_score,
                 "impact_score": 0.0,
-                "n_messages": None,
+                "n_issues": 0,
+                "impact_score_per_issue": 0.0,
             }
         ]
         for i, code in enumerate(codes):
@@ -312,20 +314,25 @@ class Linter:
             temp_report_file = output_dir / temp_report_file_template.format(code=code)
             output = self.run_pylint(file=temp_report_file, disable_codes={code})
             score = Linter.parse_pylint_score(output)
-            n_messages = total_n_messages - len(
-                self.parse_pylint_for_messages(temp_report_file)
+            n_issues = total_n_issues - len(
+                self.parse_pylint_for_issue_lines(temp_report_file)
             )
             temp_report_file.unlink(missing_ok=True)
             impact_score = (score - base_score) if score is not None else None
             if verbose:
                 print(f"\tImpact on score: {impact_score}")
-                print(f"\tNumber of messages: {n_messages}")
+                print(f"\tNumber of issues: {n_issues}")
             results.append(
                 {
                     "code": code,
                     "score": score,
                     "impact_score": impact_score,
-                    "n_messages": n_messages,
+                    "n_issues": n_issues,
+                    "impact_score_per_issue": (
+                        impact_score / n_issues
+                        if n_issues and impact_score is not None
+                        else 0.0
+                    ),
                 }
             )
         score_df = pl.DataFrame(results)
@@ -333,10 +340,10 @@ class Linter:
 
         # Write out
         with xlsxwriter.Workbook(result_file) as workbook:
-            message_df.write_excel(workbook, worksheet="messages")
+            issue_df.write_excel(workbook, worksheet="issues")
             code_counts_df.write_excel(workbook, worksheet="code_counts")
             module_counts_df.write_excel(workbook, worksheet="module_counts")
-            score_df.write_excel(workbook, worksheet="code_impact")
+            score_df.write_excel(workbook, worksheet="score_impact")
         if verbose:
             print(f"Analysis complete. Results written to: {result_file}")
 
