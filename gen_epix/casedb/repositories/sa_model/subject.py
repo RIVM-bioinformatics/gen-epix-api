@@ -1,5 +1,7 @@
 # pylint: disable=too-few-public-methods
-
+from __future__ import (
+    annotations,  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from typing import Any
 from uuid import UUID
@@ -18,6 +20,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SUBJECT.value)
 
 
 class Subject(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Subject)
 
     data_collection_id: Mapped[UUID] = create_mapped_column(
@@ -32,6 +38,10 @@ class Subject(Base, RowMetadataMixin):
 
 
 class SubjectIdentifier(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.SubjectIdentifier)
 
     subject_id: Mapped[UUID] = create_mapped_column(
