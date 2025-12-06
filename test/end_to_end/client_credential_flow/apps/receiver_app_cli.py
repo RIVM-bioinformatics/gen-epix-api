@@ -21,7 +21,7 @@ class ReceiverAppCLI:  # pylint: disable=too-few-public-methods
 
     def run(
         self,
-        port: int = 8001,
+        port: int = 9001,
         oauth_discovery_url: str = "",
         ssl_keyfile: str | None = None,
         ssl_certfile: str | None = None,
@@ -30,7 +30,7 @@ class ReceiverAppCLI:  # pylint: disable=too-few-public-methods
         Start the ReceiverApp server.
 
         Args:
-            port: Port to run the server on (default: 8001)
+            port: Port to run the server on (default: 9001)
             oauth_discovery_url: OAuth server discovery URL
         """
         if (ssl_keyfile is None) != (ssl_certfile is None):

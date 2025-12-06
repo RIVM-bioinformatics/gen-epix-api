@@ -24,6 +24,7 @@ from gen_epix.casedb.domain.model.case import (
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
+from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
 from gen_epix.casedb.domain.model.case import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case import CaseSeq as CaseSeq
@@ -47,6 +48,7 @@ from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
+from gen_epix.casedb.domain.model.case import CaseTypeSettings as CaseTypeSettings
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
 from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
@@ -79,14 +81,11 @@ from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
 from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
 from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
-from gen_epix.casedb.domain.model.seqdb import (
-    LibraryPrepProtocol as LibraryPrepProtocol,
-)
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
-from gen_epix.casedb.domain.model.seqdb import RawSeq as RawSeq
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Sample as Sample
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
+from gen_epix.casedb.domain.model.seqdb import SequencingProtocol as SequencingProtocol
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
@@ -102,6 +101,9 @@ from gen_epix.commondb.domain.model import (
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
+from gen_epix.commondb.domain.model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.domain.model import (
     OrganizationSetMember as OrganizationSetMember,
@@ -152,12 +154,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleProfile,
             GeneticSequence,
             PhylogeneticTree,
-            LibraryPrepProtocol,
-            ReadSet,
-            File,
-            RawSeq,
-            Sample,
+            SequencingProtocol,
             AssemblyProtocol,
+            File,
+            Sample,
+            ReadSet,
             Seq,
         ],
         enum.ServiceType.SUBJECT: [
@@ -178,8 +179,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseTypeSetMember,
             CaseTypeDim,
             CaseTypeCol,
+            CaseTypeSettings,
             CaseTypeColSet,
             CaseTypeColSetMember,
+            CaseTypeSettings,
             CompleteCaseType,
             Case,
             CaseForCreateUpdate,
@@ -192,6 +195,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseTypeStat,
             CaseSetStat,
             CaseQuery,
+            CaseQueryResult,
             CaseSetQuery,
             CaseRights,
             CaseSetRights,

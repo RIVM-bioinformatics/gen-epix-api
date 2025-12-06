@@ -21,6 +21,7 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
+from gen_epix.fastapp.services.auth.token_introspection_manager import TokenIntrospectionManager
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 
 
@@ -71,10 +72,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         self.logger = logger
         self._log_item_class = log_item_class
         self._signing_keys: dict[str, jwt.PyJWK] = {}
-        self._introspection_request_headers = (
-            introspect_token_request_headers
-            or self.DEFAULT_INTROSPECTION_REQUEST_HEADERS
-        )
         self._client_credential_flow_request_headers = (
             client_credential_flow_request_headers
             or self.DEFAULT_CLIENT_CREDENTIAL_FLOW_REQUEST_HEADERS
@@ -92,18 +89,20 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             or self.DEFAULT_ALLOWED_SIGNING_ALGORITHMS
         )
 
-        # Introspection cache entry type
-        class IntrospectionCacheEntry(TypedDict):
-            active: bool | None
-            last_checked: int
-            exp: int
-
-        self._introspection_cache: dict[str, IntrospectionCacheEntry] = {}
-
-        # TODO: @cached(cache=TTLCache(maxsize=1024, ttl=300)) ? ?
         if self.server_cfg.enable_introspection:
-            # dynamically determine the introspection endpoint
-            self.introspection_endpoint: str = self._get_introspection_endpoint()
+            self.token_introspection_manger: TokenIntrospectionManager = (
+                TokenIntrospectionManager(
+                    server_cfg=self.server_cfg,
+                    discovery_url=discovery_url or self.server_cfg.discovery_url or "",
+                    ssl_context=self.ssl_context,
+                    introspect_token_request_headers=introspect_token_request_headers,
+                    introspection_auth_method=self.server_cfg.introspection_auth_method,
+                    introspection_timeout_seconds=self.server_cfg.introspection_timeout_seconds,
+                    introspection_interval_seconds=self.server_cfg.introspection_interval_seconds,
+                    log_item_class=self._log_item_class,
+                    logger=self.logger,
+                )
+            )
 
         # Set cfg and retrieve remaining information
         self.update_server_config_from_discovery(url=discovery_url, doc=discovery_doc)
@@ -183,11 +182,12 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     f"OIDC configuration from discovery URL is not valid. Invalid fields: {invalid_fields}"
                 )
         except Exception as exception:
+            msg = "Error accessing discovery URL"
             if self.logger:
                 self.logger.error(
                     self._log_item_class(
                         code="cfe970aa",
-                        msg="Error accessing discovery URL",
+                        msg=msg,
                         scheme_name=self.server_cfg.name,
                         exception=exception,
                     ).dumps()
@@ -320,7 +320,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            self.introspect_token(jwt_token, claims)
+            self.token_introspection_manger.introspect_token(jwt_token, claims)
 
         # Get issuer and sub
         issuer = claims["iss"]
@@ -362,7 +362,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 if claims[new_claim_name] is not None:
                     break
 
-        return claims
+        return claims  # type: ignore[no-any-return]
 
     def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
         now = self._now()
@@ -717,10 +717,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         # verify keys
         self._signing_keys = {}
         for key_data in response_dict["keys"]:
-            if (
-                key_data.get("use") in ["sig"]
-                and key_data.get("kty") == "RSA"
-            ):
+            if key_data.get("use") in ["sig"] and key_data.get("kty") == "RSA":
                 self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
     async def __call__(self, request: Request) -> Claims | None:  # type: ignore

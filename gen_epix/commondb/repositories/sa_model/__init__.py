@@ -53,6 +53,9 @@ from gen_epix.commondb.repositories.sa_model.organization import (
     Organization as Organization,
 )
 from gen_epix.commondb.repositories.sa_model.organization import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
+)
+from gen_epix.commondb.repositories.sa_model.organization import (
     OrganizationMixin as OrganizationMixin,
 )
 from gen_epix.commondb.repositories.sa_model.organization import (
@@ -108,13 +111,14 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollection: DataCollection,
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
-        model.IdentifierIssuer: IdentifierIssuer,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
         model.OrganizationSetMember: OrganizationSetMember,
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
+        model.IdentifierIssuer: IdentifierIssuer,
+        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,

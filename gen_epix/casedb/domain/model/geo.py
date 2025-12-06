@@ -36,6 +36,12 @@ class RegionSet(Model):
             "could be used instead of the name of the region."
         ),
     )
+    resolution: float = Field(
+        gt=0,
+        description=(
+            "The geographic resolution; higher values indicate higher resolution."
+        ),
+    )
 
 
 class RegionSetShape(Model):
