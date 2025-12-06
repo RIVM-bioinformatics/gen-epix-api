@@ -15,6 +15,11 @@ Base: type = orm.declarative_base(name=enum.ServiceType.SYSTEM.value)
 
 @declarative_mixin
 class OutageMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Outage, "description"
     )
@@ -39,4 +44,8 @@ class OutageMixin(RowMetadataMixin):
 
 
 class Outage(Base, OutageMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Outage)

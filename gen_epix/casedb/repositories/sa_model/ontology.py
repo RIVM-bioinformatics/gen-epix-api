@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods
-# This module defines base classes, methods are added later
-
+from __future__ import (
+    annotations,  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from typing import Any
 from uuid import UUID
@@ -19,6 +20,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ONTOLOGY.value)
 
 
 class ConceptSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptSet)
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.ConceptSet, "code")
@@ -39,6 +44,10 @@ class ConceptSet(Base, RowMetadataMixin):
 
 
 class Concept(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_set_id: Mapped[UUID] = create_mapped_column(
@@ -55,6 +64,10 @@ class Concept(Base, RowMetadataMixin):
 
 
 class ConceptRelation(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptRelation)
 
     from_concept_id: Mapped[UUID] = create_mapped_column(
@@ -69,6 +82,10 @@ class ConceptRelation(Base, RowMetadataMixin):
 
 
 class Disease(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Disease)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Disease, "name")
@@ -76,6 +93,10 @@ class Disease(Base, RowMetadataMixin):
 
 
 class EtiologicalAgent(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.EtiologicalAgent)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.EtiologicalAgent, "name")
@@ -83,6 +104,10 @@ class EtiologicalAgent(Base, RowMetadataMixin):
 
 
 class Etiology(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Etiology)
 
     disease_id: Mapped[UUID] = create_mapped_column(

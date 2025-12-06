@@ -337,6 +337,8 @@ class Linter:
             code_counts_df.write_excel(workbook, worksheet="code_counts")
             module_counts_df.write_excel(workbook, worksheet="module_counts")
             score_df.write_excel(workbook, worksheet="code_impact")
+        if verbose:
+            print(f"Analysis complete. Results written to: {result_file}")
 
     @staticmethod
     def parse_pylint_score(report: str) -> float | None:
