@@ -11,9 +11,9 @@ from gen_epix.commondb.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.util import copy_model_field
 
 # Non-CRUD
 

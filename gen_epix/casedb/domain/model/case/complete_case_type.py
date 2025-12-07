@@ -19,8 +19,8 @@ from gen_epix.casedb.domain.model.case.persistable import (
     TreeAlgorithm,
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity
+from gen_epix.util import copy_model_field
 
 
 class CompleteCaseType(CaseType):

@@ -9,11 +9,11 @@ from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
+from gen_epix.util import copy_model_field
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 

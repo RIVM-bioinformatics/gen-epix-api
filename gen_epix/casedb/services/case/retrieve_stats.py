@@ -3,9 +3,9 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
+from gen_epix.util import map_paired_elements
 
 
 def case_service_retrieve_case_type_stats(
