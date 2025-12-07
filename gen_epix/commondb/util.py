@@ -4,7 +4,6 @@ import importlib
 import logging
 import os
 import pickle
-from collections.abc import Hashable, Iterable
 from enum import Enum
 from pathlib import Path
 from uuid import UUID
@@ -17,74 +16,11 @@ from gen_epix.commondb.domain.enum import (
     DevRepositoryConfig,
     DevRepositoryConfigSet,
 )
-from gen_epix.fastapp import Command, Domain, Model, exc
+from gen_epix.fastapp import Domain
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
 from gen_epix.fastapp.repositories.sa import SARepository
 from gen_epix.util import get_package_root
-
-
-def register_domain_entities(
-    domain: Domain,
-    sorted_service_types: Iterable[Hashable],
-    sorted_models_by_service_type: dict[Hashable, list[type[Model]]],
-    commands_by_service_type: dict[Hashable, set[type[Command]]],
-    common_model_map: dict[type[Model], type[Model]] | None = None,
-    common_command_map: dict[type[Command], type[Command]] | None = None,
-    set_schema_to_service_type: bool = False,
-) -> None:
-    """
-    Register service types, models and commands with a domain. In case some
-    models or commands are subclassed from another domain and the provides
-    models and commands contain their parent classes, they can be substituted
-    in the input and subsequently be registered as the actual classes, by
-    providing a mapping.
-
-    If `set_schema_to_service_type` is enabled, the schema name of the model
-    will be set to the lower case service name for persistable entities, unless
-    the schema name is already set.
-    """
-    if not common_model_map:
-        common_model_map = {}
-    for service_type in sorted_service_types:
-        # Register the service type
-        domain.register_service_type(service_type)
-        schema_name = (
-            str(service_type.value).lower()
-            if isinstance(service_type, Enum)
-            else str(service_type)
-        )
-        # Register the models
-        for i, model_class in enumerate(
-            sorted_models_by_service_type.get(service_type, [])
-        ):
-            if model_class in common_model_map:
-                # Substitute the model class with its commondb implementation,
-                # also in the input
-                model_class = common_model_map[model_class]
-                sorted_models_by_service_type[service_type][i] = model_class
-            if model_class.ENTITY is None:
-                raise exc.InitializationServiceError(
-                    f"Entity for model class {model_class} is not initialized."
-                )
-            if (
-                set_schema_to_service_type
-                and model_class.ENTITY.persistable
-                and model_class.ENTITY.schema_name is None
-            ):
-                model_class.ENTITY.schema_name = schema_name
-            domain.register_entity(
-                model_class.ENTITY, model_class=model_class, service_type=service_type
-            )
-        # Register the commands
-        for command_class in commands_by_service_type.get(service_type, []):
-            if common_command_map and command_class in common_command_map:
-                # Substitute the command class with its commondb implementation,
-                # also in the input
-                commands_by_service_type[service_type].remove(command_class)
-                command_class = common_command_map[command_class]
-                commands_by_service_type[service_type].add(command_class)
-            domain.register_command(command_class, service_type=service_type)
 
 
 def set_env_variables(
