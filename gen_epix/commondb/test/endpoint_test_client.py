@@ -5,11 +5,12 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+import jwt
+
 # import libraries
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
-import jwt
 from pydantic import BaseModel as PydanticBaseModel
 
 from gen_epix.commondb.api import UpdateUserRequestBody, UserInvitationRequestBody
@@ -208,7 +209,7 @@ class EndpointTestClient:
         cmd_dict = json.loads(cmd.model_dump_json())
         tgt_user_id = cmd_dict["tgt_user_id"]
         response = self.test_client.put(
-            route_prefix + f"/users/{tgt_user_id}",
+            route_prefix + f"/update_user/{tgt_user_id}",
             headers=headers,
             json=json.loads(request_body.model_dump_json()),
         )

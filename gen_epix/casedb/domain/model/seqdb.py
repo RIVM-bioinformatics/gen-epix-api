@@ -11,7 +11,6 @@ from gen_epix.casedb.domain.model.case.persistable import (
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.util import create_keys, create_links
@@ -21,6 +20,7 @@ from gen_epix.seqdb.domain.model import ReadSet as SeqdbReadSet
 from gen_epix.seqdb.domain.model import Sample as SeqdbSample
 from gen_epix.seqdb.domain.model import Seq as SeqdbSeq
 from gen_epix.seqdb.domain.model import SequencingProtocol as SeqdbSequencingProtocol
+from gen_epix.util import copy_model_field
 
 
 class GeneticSequence(Model):
@@ -98,7 +98,6 @@ class PhylogeneticTree(Model):
 class SequencingProtocol(SeqdbSequencingProtocol):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="sequencing_protocols",
-        table_name="sequencing_protocol",
         persistable=False,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -107,7 +106,6 @@ class SequencingProtocol(SeqdbSequencingProtocol):
 class AssemblyProtocol(SeqdbAssemblyProtocol):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="assembly_protocols",
-        table_name="assembly_protocol",
         persistable=False,
         keys=create_keys({1: "code", 2: ("name", "version")}),
     )
@@ -116,7 +114,6 @@ class AssemblyProtocol(SeqdbAssemblyProtocol):
 class File(SeqdbFile):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",
-        table_name="file",
         persistable=False,
     )
 
@@ -124,7 +121,6 @@ class File(SeqdbFile):
 class Sample(SeqdbSample):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="samples",
-        table_name="sample",
         persistable=False,
         keys=create_keys({1: "code"}),
     )
@@ -156,6 +152,12 @@ class ReadSet(SeqdbReadSet):
                 ),
             }
         ),
+    )
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(  # type:ignore
+        SeqdbReadSet, "sequencing_protocol"
+    )
+    sample: Sample | None = copy_model_field(  # type:ignore
+        SeqdbReadSet, "sample"
     )
 
 

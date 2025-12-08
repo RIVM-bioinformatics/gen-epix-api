@@ -15,6 +15,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.FILE.value)
 
 
 class File(Base):
+    """
+    SQLAlchemy model mixin for adding a number of standard fields.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.File)
 
     id: Mapped[UUID] = create_mapped_column(DOMAIN, model.File, "id")

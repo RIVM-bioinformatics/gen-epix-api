@@ -4,7 +4,7 @@ from collections.abc import Callable
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from gen_epix.commondb.util import get_package_version
+from gen_epix.util import get_package_version
 
 
 class UpdateResponseHeaderMiddleware(BaseHTTPMiddleware):

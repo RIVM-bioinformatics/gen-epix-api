@@ -11,7 +11,7 @@ pyinstrument==5.1.*
 isort==7.0.*
 black==25.11.*
 pylint==4.0.*
-mypy==1.18.*
+mypy==1.19.*
 black==25.11.*
 cryptography==46.0.3
 oauthlib==3.3.1

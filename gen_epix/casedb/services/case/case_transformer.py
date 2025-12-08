@@ -13,7 +13,6 @@ from gen_epix.casedb.domain.enum import (
     RegionRelationType,
 )
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
@@ -25,6 +24,7 @@ from gen_epix.transform.transform_result import TransformResult
 from gen_epix.transform.transformers import IntervalTransformer
 from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
+from gen_epix.util import map_paired_elements
 
 
 class CaseTransformer(Transformer):

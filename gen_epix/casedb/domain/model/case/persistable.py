@@ -511,7 +511,7 @@ class CaseTypeSettings(Model):
         ),
     )
     stats_time_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The TIME dimension used for statistics"
+        default=None, description="The TIME case type col used for statistics"
     )
 
     stats_geo_case_type_col_id: UUID | None = Field(
@@ -521,42 +521,37 @@ class CaseTypeSettings(Model):
         ),
     )
     stats_geo_case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The GEO dimension used for statistics"
+        default=None, description="The GEO case type col used for statistics"
     )
 
     create_max_n_cases: int = Field(
         ge=0,
         description=(
-            "Maximum number of cases that can be created in one batch. If 0, no restriction;"
-            " may be superseded by user rights."
+            "Maximum number of cases that can be created in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
         ),
     )
     read_max_n_cases: int = Field(
         ge=0,
         description=(
-            "Maximum number of cases returned by a query. If 0, no restriction;"
-            " may be superseded by user rights."
+            "Maximum number of cases that can be read in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
         ),
     )
     read_max_tree_size: int = Field(
         ge=0,
         description=(
-            "Maximum number of cases for which a tree may be calculated. If 0, no restriction;"
-            " may be superseded by user rights."
+            "Maximum number of cases for which a tree may be calculated, if the user's rights are constrained by this setting. If 0, no restriction is applied."
         ),
     )
     update_max_n_cases: int = Field(
         ge=0,
         description=(
-            "Maximum number of cases that can be updated in one batch. If 0, no restriction;"
-            " may be superseded by user rights."
+            "Maximum number of cases that can be updated in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
         ),
     )
     delete_max_n_cases: int = Field(
         ge=0,
         description=(
-            "Maximum number of cases that can be deleted in one batch. If 0, no restriction;"
-            " may be superseded by user rights."
+            "Maximum number of cases that can be deleted in one batch, if the user's rights are constrained by this setting. If 0, no restriction is applied."
         ),
     )
 
@@ -642,11 +637,16 @@ class Case(Model):
         default=None, description="The data collection where the case was created"
     )
     count: int | None = Field(
-        default=None, description="The number of cases, if applicable", gt=0
+        default=None,
+        description="The number of cases that this case represents, if not one. This can be used to store aggregated cases (n>=0) as well as reference data (n=0).",
+        gt=0,
     )
-    case_date: datetime = Field(description="The date of the case")
+    case_date: datetime = Field(
+        default_factory=datetime.now,
+        description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
+    )
     content: dict[UUID, str] = Field(
-        description="The column data of the case as {col_id: str_value}"
+        description=r"The data content of the case as {case_type_col_id: str_value}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted."
     )
     code: str | None = Field(
         default=None, description="A code for the case for further reference."

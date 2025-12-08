@@ -54,7 +54,7 @@ class BaseSAMapper(abc.ABC):
         """
         Get a field name map between model and row fields. If one of the fields does
         not exist or there is no one-to-one mapping, it is excluded from the map.
-        This is a naieve implementation that can be overridden for performance.
+        This is a naive implementation that can be overridden for performance.
         """
         return {
             field_name if not reverse else row_field_name: (
@@ -75,7 +75,7 @@ class BaseSAMapper(abc.ABC):
         """
         Get the mapped field name between model and row fields. If there is no
         equivalent or no one-to-one mapping, return None.
-        This is a naieve implementation that can be overridden for performance.
+        This is a naive implementation that can be overridden for performance.
         """
         return self.get_field_name_map(reverse).get(field_name)
 

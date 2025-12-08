@@ -129,9 +129,9 @@ class LocusCodeMap(Model):
         snake_case_plural_name="locus_code_maps",
         table_name="locus_code_map",
         persistable=True,
-        keys=create_keys({1: ("naming_scheme")}),
+        keys=create_keys({1: ("code")}),
     )
-    naming_scheme: str = Field(
+    code: str = Field(
         description="The naming scheme used for the locus codes.",
         max_length=255,
     )
@@ -152,6 +152,10 @@ class LocusCodeMap(Model):
         if any(len(x) > 255 for x in dict_value.keys()):
             raise ValueError("All locus codes in code_map must have max length of 255.")
         return dict_value
+
+    @field_serializer("code_map", mode="plain")
+    def _serialize_locus_ids(self, value: dict[str, UUID]) -> dict[str, str]:
+        return {x: str(y) for x, y in value.items()}
 
 
 class RefAllele(Model, SeqMixin):
@@ -228,8 +232,21 @@ class Allele(Model, SeqMixin):
     locus: Locus | None = Field(default=None, description="The locus.")
 
     @model_validator(mode="before")
-    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_model_before(cls, values: dict[str, Any]) -> dict[str, Any]:
         values = SeqMixin._validate_mixin_and_id(values)
         if values.get("id") == cls.NULL_SEQ_HASH:
             raise ValueError("Allele ID cannot be the NULL_SEQ_HASH.")
         return values
+
+    @model_validator(mode="after")
+    def _validate_model_after(self) -> Self:
+        if self.id is None:
+            if self.seq_hash != self.NULL_SEQ_HASH:
+                # Set the ID to the sequence hash if not empty sequence
+                self.id = self.seq_hash
+        else:
+            if self.seq_hash is None:
+                raise ValueError("Allele seq_hash must be set if ID is set.")
+            if self.id != self.seq_hash:
+                raise ValueError("Allele ID must be equal to seq_hash.")
+        return self

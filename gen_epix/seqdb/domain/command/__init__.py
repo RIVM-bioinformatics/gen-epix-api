@@ -158,10 +158,7 @@ from gen_epix.seqdb.domain.command.seq import (
     RetrieveCompleteContigCommand as RetrieveCompleteContigCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteSampleCommand as RetrieveCompleteSampleCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteSeqCommand as RetrieveCompleteSeqCommand,
+    RetrieveCompleteSamplesCommand as RetrieveCompleteSamplesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveCompleteSnpProfileCommand as RetrieveCompleteSnpProfileCommand,
@@ -230,6 +227,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    UpsertCompleteSamplesCommand as UpsertCompleteSamplesCommand,
+)
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     # Specific commands
@@ -260,6 +260,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
+        UpsertCompleteSamplesCommand,
         ReadSetCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,
@@ -268,8 +269,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefSnpSetMemberCrudCommand,
         RetrieveCompleteAlleleProfileCommand,
         RetrieveCompleteContigCommand,
-        RetrieveCompleteSampleCommand,
-        RetrieveCompleteSeqCommand,
+        RetrieveCompleteSamplesCommand,
         RetrieveCompleteSnpProfileCommand,
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,

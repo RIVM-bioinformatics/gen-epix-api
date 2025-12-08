@@ -9,8 +9,8 @@ from pydantic import Field, field_serializer, field_validator
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.util import copy_model_field
 
 
 class Organization(Model):

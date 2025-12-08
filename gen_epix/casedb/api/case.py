@@ -10,12 +10,12 @@ from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.util import copy_model_field
 
 
 class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
@@ -183,7 +183,9 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
     )
@@ -196,7 +198,9 @@ class CreateFileForForReadSetRequestBody(PydanticBaseModel):
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create.")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
     file_format: seqdb_enum.SeqFileFormat = copy_model_field(
         command.CreateFileForSeqCommand, "file_format"
     )

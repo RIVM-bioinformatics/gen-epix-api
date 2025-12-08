@@ -42,7 +42,6 @@ from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq.non_persistable import (
     CompleteSample as CompleteSample,
 )
-from gen_epix.seqdb.domain.model.seq.non_persistable import CompleteSeq as CompleteSeq
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq.pheno import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement

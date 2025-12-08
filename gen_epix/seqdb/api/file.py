@@ -8,14 +8,16 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import copy_model_field
 
 
 class CreateFileRequestBody(PydanticBaseModel):
-    content: str = Field(description="The content of the file.")
+    content: str = Field(
+        description="The content of the file  as base64 encoded bytes."
+    )
     format: enum.FileFormat = copy_model_field(command.CreateFileCommand, "format")
     compression: enum.FileCompression = copy_model_field(
         command.CreateFileCommand, "compression"
