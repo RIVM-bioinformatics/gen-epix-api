@@ -147,7 +147,7 @@ def _crud_create_case_type_dim(
                         cmd.user.id,
                         model.CaseTypeDim,
                         other,
-                        [other.id],
+                        None,
                         CrudOperation.UPDATE_ONE,
                     )
 

@@ -4,7 +4,6 @@ import re
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from time import sleep
 from typing import Any
 from uuid import UUID
 
@@ -15,11 +14,8 @@ from gen_epix.casedb.env import AppComposer
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
-from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
 
 
 class OrganismType(enum.Enum):
@@ -384,7 +380,7 @@ class CasedbTestClient(TestClient):
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     min_scale_unit=min_scale_unit,
-                    seqdb_is_integer_distance=True
+                    seqdb_is_integer_distance=True,
                 ),
             )
         )
@@ -711,107 +707,151 @@ class CasedbTestClient(TestClient):
     def create_case_type_dim(
         self,
         user_or_str: str | model.User,
+        case_type: str | model.CaseType,
+        dim: str | model.Dim,
+        occurrence: int,
         code: str,
-        occurrence: int | None = None,
-        dim: str | model.Dim | None = None,
-        set_dummy_case_type: bool = False,
-        set_dummy_dim: bool = False,
+        rank: int,
+        label: str | None = None,
+        description: str | None = None,
+        is_case_date_dim: bool = False,
     ) -> model.CaseTypeDim:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
-        if not m:
-            raise ValueError(f"Invalid code {code}")
-        if set_dummy_case_type:
-            case_type_id = self.generate_id()
-        else:
-            case_type = self._get_obj(model.CaseType, m.group(1))
-            case_type_id = case_type.id
-        if set_dummy_dim:
-            dim_id = self.generate_id()
-        else:
-            if dim:
-                dim_obj: model.Dim = self._get_obj(model.Dim, dim)
-            else:
-                dim_obj: model.Dim = self._get_obj(model.Dim, m.group(2))
-            dim_id = dim_obj.id
         case_type_dim = self.handle(
             command.CaseTypeDimCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeDim(
-                    case_type_id=case_type_id,
-                    dim_id=dim_id,
+                    case_type_id=self._get_obj(model.CaseType, case_type).id,
+                    dim_id=self._get_obj(model.Dim, dim).id,
+                    occurrence=occurrence,
                     code=code,
-                    occurrence=occurrence if occurrence is not None else 0,
-                    rank=0,
+                    rank=rank,
+                    label=label,
+                    description=description,
+                    is_case_date_dim=is_case_date_dim,
                 ),
             )
         )
         return self._set_obj(case_type_dim)  # type:ignore[return-value]
 
+
     def create_case_type_col(
         self,
         user_or_str: str | model.User,
+        case_type: str | model.CaseType,
+        case_type_dim: str | model.CaseTypeDim,
+        col: str | model.Col,
         code: str,
+        rank: int,
+        label: str | None = None,
+        description: str | None = None,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        min_datetime: datetime.datetime | None = None,
+        max_datetime: datetime.datetime | None = None,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        pattern: str | None = None,
+        ncbi_taxid: str | None = None,
         genetic_sequence_case_type_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
-        col: str | model.Col | None = None,
-        set_dummy_case_type: bool = False,
-        set_dummy_col: bool = False,
-        set_dummy_case_type_dim: bool = False,
     ) -> model.CaseTypeCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
-        if not m:
-            raise ValueError(f"Invalid code {code}")
-        if set_dummy_case_type:
-            case_type_id = self.generate_id()
-        else:
-            case_type = self._get_obj(model.CaseType, m.group(1))
-            case_type_id = case_type.id
-        if set_dummy_col:
-            col_id = self.generate_id()
-        else:
-            if col:
-                col: model.Col = self._get_obj(model.Col, col)
-            else:
-                col: model.Col = self._get_obj(model.Col, m.group(2))
-            col_id = col.id
-        if set_dummy_case_type_dim:
-            case_type_dim_id = self.generate_id()
-        else:
-            if col.dim_id is None:
-                raise ValueError(f"Col has no dim_id: {col}")
-            dim_obj: model.Dim = self._get_obj(model.Dim, col.dim_id)
-            if dim_obj is None:
-                raise ValueError(f"Dim not found for col: {col}")
-
-            case_type_dim = self._get_obj(
-                model.CaseTypeDim,
-                f"{m.group(1)}_{dim_obj.code}",
-                # case_type5_text5 / 'case_type1_text1_6_text'
-            )
-            case_type_dim_id = case_type_dim.id
         case_type_col = self.handle(
             command.CaseTypeColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeCol(
-                    case_type_id=case_type_id,
-                    col_id=col_id,
+                    case_type_id=self._get_obj(model.CaseType, case_type).id,
+                    case_type_dim_id=self._get_obj(model.CaseTypeDim, case_type_dim).id,
+                    col_id=self._get_obj(model.Col, col).id,
                     code=code,
+                    rank=rank,
+                    label=label,
+                    description=description,
+                    min_value=min_value,
+                    max_value=max_value,
+                    min_datetime=min_datetime,
+                    max_datetime=max_datetime,
+                    min_length=min_length,
+                    max_length=max_length,
+                    pattern=pattern,
+                    ncbi_taxid=ncbi_taxid,
                     genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
                     tree_algorithm_codes=tree_algorithm_codes,
-                    case_type_dim_id=case_type_dim_id,
-                    rank=1,
                 ),
             )
         )
         return self._set_obj(case_type_col)  # type:ignore[return-value]
+
+
+    # def create_case_type_col(
+    #     self,
+    #     user_or_str: str | model.User,
+    #     code: str,
+    #     genetic_sequence_case_type_col_id: UUID | None = None,
+    #     tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
+    #     col: str | model.Col | None = None,
+    #     set_dummy_case_type: bool = False,
+    #     set_dummy_col: bool = False,
+    #     set_dummy_case_type_dim: bool = False,
+    # ) -> model.CaseTypeCol:
+    #     user: model.User = self._get_obj(
+    #         model.User, user_or_str
+    #     )  # type:ignore[assignment]
+    #     m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
+    #     if not m:
+    #         raise ValueError(f"Invalid code {code}")
+    #     if set_dummy_case_type:
+    #         case_type_id = self.generate_id()
+    #     else:
+    #         case_type = self._get_obj(model.CaseType, m.group(1))
+    #         case_type_id = case_type.id
+    #     if set_dummy_col:
+    #         col_id = self.generate_id()
+    #     else:
+    #         if col:
+    #             col: model.Col = self._get_obj(model.Col, col)
+    #         else:
+    #             col: model.Col = self._get_obj(model.Col, m.group(2))
+    #         col_id = col.id
+    #     if set_dummy_case_type_dim:
+    #         case_type_dim_id = self.generate_id()
+    #     else:
+    #         if col.dim_id is None:
+    #             raise ValueError(f"Col has no dim_id: {col}")
+    #         dim_obj: model.Dim = self._get_obj(model.Dim, col.dim_id)
+    #         if dim_obj is None:
+    #             raise ValueError(f"Dim not found for col: {col}")
+
+    #         case_type_dim = self._get_obj(
+    #             model.CaseTypeDim,
+    #             f"{m.group(1)}_{dim_obj.code}",
+    #             # case_type5_text5 / 'case_type1_text1_6_text'
+    #         )
+    #         case_type_dim_id = case_type_dim.id
+    #     case_type_col = self.handle(
+    #         # [UUID('019afd38-adf5-5a80-2259-18a17f3cd8f1')]
+    #         command.CaseTypeColCrudCommand(
+    #             user=user,
+    #             operation=CrudOperation.CREATE_ONE,
+    #             objs=model.CaseTypeCol(
+    #                 case_type_id=case_type_id,
+    #                 col_id=col_id,
+    #                 code=code,
+    #                 genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
+    #                 tree_algorithm_codes=tree_algorithm_codes,
+    #                 case_type_dim_id=case_type_dim_id,
+    #                 rank=1,
+    #             ),
+    #         )
+    #     )
+    #     return self._set_obj(case_type_col)  # type:ignore[return-value]
 
     def create_case_type_col_set(
         self,

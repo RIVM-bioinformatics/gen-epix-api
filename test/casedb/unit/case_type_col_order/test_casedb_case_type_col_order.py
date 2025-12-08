@@ -25,7 +25,7 @@ class TestCaseTypeColOrder:
             etiological_agents={},
             dims={},
             cols={},
-            case_type_dims=dims,
+            case_type_dims={x.id: x for x in dims if x.id is not None},
             case_type_cols={},
             ordered_case_type_col_ids=[col4, col3, col2, col1],
             genetic_distance_protocols={},
@@ -39,6 +39,9 @@ class TestCaseTypeColOrder:
             delete_max_n_cases=1000,
             stats_geo_case_type_dim_id=None,
             stats_time_case_type_dim_id=None,
+            ordered_case_type_dim_ids=[x.id for x in dims if x.id is not None],
         )
+
+        # TODO: Fix model validator of CompleteCaseType @model_validator(mode="after")
 
         assert complete_case_type.ordered_case_type_col_ids == [col1, col2, col3, col4]

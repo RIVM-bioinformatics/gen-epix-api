@@ -59,7 +59,7 @@ def _crud_case_type_col_by_admin(
         objs: list[model.CaseTypeCol] = cmd.get_objs()  # type: ignore[assignment]
         for obj in objs:
             # Read CaseTypeDim to verify case_type consistency
-            ct_dims: list[model.CaseTypeDim] = (
+            case_type_dims: list[model.CaseTypeDim] = (
                 self.repository.crud(  # type:ignore[assignment]
                     uow,
                     cmd.user.id,
@@ -69,12 +69,12 @@ def _crud_case_type_col_by_admin(
                     CrudOperation.READ_SOME,
                 )
             )
-            if not ct_dims:
+            if not case_type_dims:
                 raise exc.InvalidIdsError(
                     f"Invalid case_type_dim_id provided: {obj.case_type_dim_id}",
                     ids=[obj.case_type_dim_id],
                 )
-            ct_dim = ct_dims[0]
+            ct_dim = case_type_dims[0]
             if ct_dim.case_type_id != obj.case_type_id:
                 raise exc.InvalidArgumentsError(
                     "case_type_dim.case_type_id must match case_type_id of CaseTypeCol",

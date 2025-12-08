@@ -1,7 +1,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.abac.rights import (
@@ -71,3 +71,15 @@ class CompleteCaseType(CaseType):
     read_max_tree_size: int = copy_model_field(CaseType, "read_max_tree_size")
     update_max_n_cases: int = copy_model_field(CaseType, "update_max_n_cases")
     delete_max_n_cases: int = copy_model_field(CaseType, "delete_max_n_cases")
+
+    @model_validator(mode="after")
+    def derive_case_type_col_order(self) -> "CompleteCaseType":
+        ordered: list[UUID] = []
+        seen: set[UUID] = set()
+        for dim in self.case_type_dims:
+            for cid in dim.case_type_col_order:
+                if cid not in seen:
+                    ordered.append(cid)
+                    seen.add(cid)
+        self.case_type_col_order = ordered
+        return self
