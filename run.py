@@ -33,7 +33,7 @@ class Run:
         AppType.COMMONDB: {
             "app": "gen_epix.commondb.app:FAST_API",
             "host": "0.0.0.0",
-            "port": 8000,
+            "port": 8010,
         },
     }
 
@@ -660,7 +660,7 @@ class Run:
         linter = Linter()
         linter.run_pylint(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_pylint_for_messages(
+        for line in linter.parse_pylint_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
@@ -687,7 +687,7 @@ class Run:
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)
         file2.write_text(file.read_text())
-        for line in linter.parse_mypy_for_messages(
+        for line in linter.parse_mypy_for_issue_lines(
             file, filter_on_codes=filter_on_codes
         ):
             print(line)
@@ -726,6 +726,7 @@ class Run:
         generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
+
         from test.test_client.oauth.start_server import start_server
 
         start_server()

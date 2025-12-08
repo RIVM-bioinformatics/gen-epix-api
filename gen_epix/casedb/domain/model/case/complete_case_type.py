@@ -12,6 +12,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
+    CaseTypeSettings,
     Col,
     Dim,
     GeneticDistanceProtocol,
@@ -19,6 +20,7 @@ from gen_epix.casedb.domain.model.case.persistable import (
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.fastapp.domain import Entity
+from gen_epix.util import copy_model_field
 
 
 class CompleteCaseType(CaseType):
@@ -56,6 +58,23 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
+    stats_time_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_time_case_type_col_id"
+    )
+    stats_geo_case_type_col_id: UUID | None = copy_model_field(
+        CaseTypeSettings, "stats_geo_case_type_col_id"
+    )
+    stats_time_case_type_col_ids: list[UUID] | None = Field(
+        description="The case type column IDs within the same (dimension, occurrence) as the stats_time_case_type_col_id and that the user has read rights to for at least one data collection. The list is ordered from highest to lowest resolution (day, week, month, quarter, year). This is the list used to calculate the case date. Empty if no stats_time_case_type_col_id is set, empty list if no read rights to any of these columns.",
+    )
+    stats_geo_case_type_col_ids: list[UUID] | None = Field(
+        description="The case type column IDs within the same (dimension, occurrence) as the stats_geo_case_type_col_id and that the user has read rights to for at least one data collection. The list is not ordered. Empty if no stats_geo_case_type_col_id is set, empty list if no read rights to any of these columns.",
+    )
+    create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
+    read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
+    read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
+    update_max_n_cases: int = copy_model_field(CaseTypeSettings, "update_max_n_cases")
+    delete_max_n_cases: int = copy_model_field(CaseTypeSettings, "delete_max_n_cases")
 
     @model_validator(mode="after")
     def derive_case_type_col_order(self) -> "CompleteCaseType":

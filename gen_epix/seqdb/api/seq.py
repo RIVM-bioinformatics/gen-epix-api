@@ -11,6 +11,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.util import copy_model_field
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
@@ -20,8 +21,8 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     leaf_codes: list[str] | None = None
 
 
-class RetrieveSeqRequestBody(PydanticBaseModel):
-    seq_ids: list[UUID]
+class RetrieveCompleteSamplesRequestBody(PydanticBaseModel):
+    sample_ids: list[UUID]
 
 
 class RetrieveSeqFastaRequestBody(PydanticBaseModel):
@@ -38,6 +39,15 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     seq_ids: list[UUID]
     locus_set_id: UUID
+
+
+class UpsertCompleteSamplesRequestBody(command.UpsertCompleteSamplesCommand):
+    alleles: list[model.Allele] | None = copy_model_field(
+        command.UpsertCompleteSamplesCommand, "alleles"
+    )
+    complete_samples: list[model.CompleteSample] = copy_model_field(
+        command.UpsertCompleteSamplesCommand, "complete_samples"
+    )
 
 
 def create_seq_endpoints(
@@ -76,23 +86,23 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/seq",
-        operation_id="retrieve__seq",
-        name="RetrieveSeq",
-        description=command.RetrieveCompleteSeqCommand.__doc__,
+        "/retrieve/complete_samples",
+        operation_id="retrieve__complete_samples",
+        name="RetrieveCompleteSamples",
+        description=command.RetrieveCompleteSamplesCommand.__doc__,
     )
-    async def retrieve__seq(
-        user: registered_user_dependency, request_body: RetrieveSeqRequestBody  # type: ignore
-    ) -> list[model.CompleteSeq]:
+    async def retrieve__complete_samples(
+        user: registered_user_dependency, request_body: RetrieveCompleteSamplesRequestBody  # type: ignore
+    ) -> list[model.CompleteSample]:
         try:
-            retval: list[model.CompleteSeq] = app.handle(
-                command.RetrieveCompleteSeqCommand(
+            retval: list[model.CompleteSample] = app.handle(
+                command.RetrieveCompleteSamplesCommand(
                     user=user,
-                    seq_ids=request_body.seq_ids,
+                    sample_ids=request_body.sample_ids,
                 )
             )
         except Exception as exception:
-            handle_exception("ac218f73", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("ac218f73", user, exception, request_ids=request_body.sample_ids)  # type: ignore
         return retval
 
     @router.post(
@@ -139,6 +149,26 @@ def create_seq_endpoints(
                     user=user,
                     seq_ids=request_body.seq_ids,
                     locus_set_id=request_body.locus_set_id,
+                )
+            )
+        except Exception as exception:
+            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+        return retval
+
+    @router.post(
+        "/upsert/complete_samples",
+        operation_id="upsert__complete_samples",
+        name="UpsertCompleteSamples",
+        description=command.UpsertCompleteSamplesCommand.__doc__,
+    )
+    async def upsert__complete_samples(
+        user: registered_user_dependency, request_body: UpsertCompleteSamplesRequestBody  # type: ignore
+    ) -> list[UUID]:
+        try:
+            retval: list[UUID] = app.handle(
+                command.UpsertCompleteSamplesCommand(
+                    user=user,
+                    **request_body.model_dump(),
                 )
             )
         except Exception as exception:

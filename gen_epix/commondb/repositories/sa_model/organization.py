@@ -16,6 +16,11 @@ Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 
 @declarative_mixin
 class OrganizationMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     name: Mapped[str] = create_mapped_column(DOMAIN, model.Organization, "name")
     legal_entity_code: Mapped[str] = create_mapped_column(
         DOMAIN, model.Organization, "legal_entity_code"
@@ -24,6 +29,11 @@ class OrganizationMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     key: Mapped[str] = create_mapped_column(DOMAIN, model.User, "key")
     email: Mapped[str | None] = create_mapped_column(DOMAIN, model.User, "email")
     name: Mapped[str | None] = create_mapped_column(DOMAIN, model.User, "name")
@@ -41,6 +51,11 @@ class UserMixin(RowMetadataMixin):
 
 @declarative_mixin
 class OrganizationSetMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     name: Mapped[str] = create_mapped_column(DOMAIN, model.OrganizationSet, "name")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.OrganizationSet, "description"
@@ -49,6 +64,11 @@ class OrganizationSetMixin(RowMetadataMixin):
 
 @declarative_mixin
 class OrganizationSetMemberMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     @declared_attr
     def organization_set_id(cls) -> Mapped[UUID]:
         return create_mapped_column(
@@ -77,6 +97,11 @@ class OrganizationSetMemberMixin(RowMetadataMixin):
 
 @declarative_mixin
 class SiteMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     @declared_attr
     def organization_id(cls) -> Mapped[UUID]:
         return create_mapped_column(DOMAIN, model.Site, "organization_id")
@@ -90,6 +115,11 @@ class SiteMixin(RowMetadataMixin):
 
 @declarative_mixin
 class ContactMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     @declared_attr
     def site_id(cls) -> Mapped[UUID | None]:
         return create_mapped_column(DOMAIN, model.Contact, "site_id")
@@ -104,12 +134,12 @@ class ContactMixin(RowMetadataMixin):
 
 
 @declarative_mixin
-class IdentifierIssuerMixin(RowMetadataMixin):
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "name")
-
-
-@declarative_mixin
 class DataCollectionMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     name: Mapped[str] = create_mapped_column(DOMAIN, model.DataCollection, "name")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DataCollection, "description"
@@ -118,6 +148,11 @@ class DataCollectionMixin(RowMetadataMixin):
 
 @declarative_mixin
 class DataCollectionSetMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     name: Mapped[str] = create_mapped_column(DOMAIN, model.DataCollectionSet, "name")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DataCollectionSet, "description"
@@ -126,6 +161,11 @@ class DataCollectionSetMixin(RowMetadataMixin):
 
 @declarative_mixin
 class DataCollectionSetMemberMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     @declared_attr
     def data_collection_set_id(cls) -> Mapped[UUID]:
         return create_mapped_column(
@@ -158,6 +198,11 @@ class DataCollectionSetMemberMixin(RowMetadataMixin):
 
 @declarative_mixin
 class UserInvitationMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
     key: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
     email: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.UserInvitation, "email"
@@ -192,45 +237,128 @@ class UserInvitationMixin(RowMetadataMixin):
         )
 
 
+@declarative_mixin
+class IdentifierIssuerMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "code")
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.IdentifierIssuer, "name")
+    description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.IdentifierIssuer, "description"
+    )
+
+
+@declarative_mixin
+class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
+    organization_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.OrganizationIdentifierIssuerLink, "organization_id"
+    )
+    identifier_issuer_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.OrganizationIdentifierIssuerLink, "identifier_issuer_id"
+    )
+
+
 class Organization(Base, OrganizationMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Organization)
 
 
 class User(Base, UserMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.User)
 
 
 class OrganizationSet(Base, OrganizationSetMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.OrganizationSet)
 
 
 class OrganizationSetMember(Base, OrganizationSetMemberMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.OrganizationSetMember)
 
 
 class Site(Base, SiteMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Site)
 
 
 class Contact(Base, ContactMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Contact)
 
 
-class IdentifierIssuer(Base, IdentifierIssuerMixin):
-    __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
-
-
 class DataCollection(Base, DataCollectionMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DataCollection)
 
 
 class DataCollectionSet(Base, DataCollectionSetMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DataCollectionSet)
 
 
 class DataCollectionSetMember(Base, DataCollectionSetMemberMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DataCollectionSetMember)
 
 
 class UserInvitation(Base, UserInvitationMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.UserInvitation)
+
+
+class IdentifierIssuer(Base, IdentifierIssuerMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.IdentifierIssuer)
+
+
+class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(
+        model.OrganizationIdentifierIssuerLink
+    )
