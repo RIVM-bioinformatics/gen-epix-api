@@ -61,6 +61,12 @@ class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
     )
 
 
+class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
+    organization_identifier_issuer_links: list[
+        model.OrganizationIdentifierIssuerLink
+    ] = Field(description="The identifier issuers that the organization is linked to.")
+
+
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -258,6 +264,29 @@ def create_organization_endpoints(
             retval: model.User = app.handle(cmd)
         except Exception as exception:
             handle_exception("c2382b65", None, exception)
+        return retval
+
+    @router.put(
+        "/organizations/{organization_id}/identifier_issuers",
+        operation_id="organizations__put__identifier_issuers",
+        name="Update association between Organization and IdentifierIssuer",
+        description=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand.__doc__,
+    )
+    async def organizations__put__identifier_issuers(
+        user: registered_user_dependency,  # type: ignore
+        organization_id: UUID,
+        request_body: UpdateOrganizationIdentifierIssuerLinksRequestBody,
+    ) -> list[model.OrganizationIdentifierIssuerLink]:
+        try:
+            cmd = command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+                user=user,
+                obj_id1=organization_id,
+                association_objs=request_body.organization_identifier_issuer_links,
+                props={"return_id": False},
+            )
+            retval: list[model.OrganizationIdentifierIssuerLink] = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("a3c7f9d2", user, exception)
         return retval
 
     # CRUD
