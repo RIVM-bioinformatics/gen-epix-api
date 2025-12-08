@@ -235,3 +235,15 @@ class DataCollectionSetMemberCrudCommand(CrudCommand):
 
 class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
+
+
+class OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+    UpdateAssociationCommand
+):
+    ASSOCIATION_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
+    LINK_FIELD_NAME1: ClassVar = "organization_id"
+    LINK_FIELD_NAME2: ClassVar = "identifier_issuer_id"
+
+    obj_id1: UUID | None = None
+    obj_id2: UUID | None = None
+    association_objs: list[model.OrganizationIdentifierIssuerLink]
