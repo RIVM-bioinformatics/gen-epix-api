@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 
-def get_project_root() -> Path:
+def _get_project_root() -> Path:
     return Path(__file__).parent.parent.parent.parent
 
 
@@ -44,7 +44,7 @@ def _read_pyproject_dependencies(pyproject_file_path: Path) -> set[str]:
 
 def test_dependency_list_matches() -> None:
     """Ensure requirements.txt and pyproject.toml dependencies are identical."""
-    root = get_project_root()
+    root = _get_project_root()
 
     reqs = _read_requirements(root / "requirements.txt")
     pydeps = _read_pyproject_dependencies(root / "pyproject.toml")
@@ -52,7 +52,7 @@ def test_dependency_list_matches() -> None:
     missing_from_pyproject = sorted(reqs - pydeps)
     missing_from_requirements = sorted(pydeps - reqs)
 
-    # Remove report file writing; fail directly with a concise diff
+    # Build error message if there are any differences
     if missing_from_pyproject or missing_from_requirements:
         msg_lines = [
             "Dependency mismatch detected between requirements.txt and pyproject.toml."
