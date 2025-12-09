@@ -725,12 +725,14 @@ class TestCreate:
                 case_type_dim = f"{case_type}_{dim}"
                 col_str = f"{dim}_6_text"
                 code = f"{case_type}_{col_str}"
-                col = next((c for c in cols if c.code == col_str), None)
+                col: model.Col | None = next((col for col in cols if col.code == col_str), None)
                 if col is None:
                     continue
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
                     assert genetic_sequence_case_type_col is not None
-                    genetic_sequence_case_type_col_id = genetic_sequence_case_type_col.id
+                    genetic_sequence_case_type_col_id = (
+                        genetic_sequence_case_type_col.id
+                    )
                     tree_algorithm_codes = {
                         enum.TreeAlgorithmType.NJ,
                         enum.TreeAlgorithmType.SLINK,
