@@ -100,17 +100,6 @@ def fix_schema_nullable_and_single_element(schema: dict) -> None:
             for item in schema[key]:
                 if isinstance(item, dict):
                     fix_schema_nullable_and_single_element(item)
-        if (
-            key in schema
-            and key in {"anyOf", "oneOf", "allOf"}
-            and len(schema[key]) == 1
-        ):
-            # In case only 1 remaining item in list,
-            # move it one level higher and remove list
-            value = schema[key][0]
-            del schema[key]
-            for key2 in value:
-                schema[key2] = value[key2]
 
 
 # TODO: add a function to fix read-only fields

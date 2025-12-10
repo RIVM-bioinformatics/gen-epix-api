@@ -1,4 +1,4 @@
-from test.commondb.integration.build_db.base import SKIP_RAISE
+from test.commondb.integration.build_db.base import SKIP_ENDPOINTS, SKIP_RAISE
 
 import pytest
 
@@ -211,14 +211,6 @@ class TestCreate:
                     exec_user, "org1", "identifier_issuer1"
                 )
 
-    # TODO: test_create_site
-
-    # TODO: test_create_site_raise
-
-    # TODO: test_create_contact
-
-    # TODO: test_create_contact_raise
-
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_object_already_exists(self, env: Env) -> None:
         # Organization already exists
@@ -244,3 +236,14 @@ class TestCreate:
         with pytest.raises(exc.UnauthorizedAuthError):
             env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
         # TODO: OrganizationAdminPolicy.user does not exist
+
+    @pytest.mark.skipif(SKIP_ENDPOINTS, reason="Skipped endpoint tests")
+    def test_openapi_json_endpoint(self, env: Env) -> None:
+        assert env.endpoint_test_client is not None, "EndpointTestClient not provided"
+        response = env.endpoint_test_client.test_client.get("/openapi.json")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert isinstance(data, dict), "OpenAPI response is not JSON dict"
+        assert "openapi" in data and "paths" in data
