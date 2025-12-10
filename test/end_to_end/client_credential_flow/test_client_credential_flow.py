@@ -330,7 +330,10 @@ def _b64url_encode_no_pad(obj: Any) -> str:
 
 
 def test_jwt_sensitive_info_disclosure(requestor_app: RequestorApp) -> None:
-    """Test that JWT tokens do not disclose sensitive information."""
+    """
+    Test that JWT tokens do not disclose sensitive information.
+    test_scenario_id=TC-SEC-24-01
+    """
 
     jwt_token = (
         requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
@@ -411,7 +414,10 @@ def test_check_jwt_if_using_asymmetric(requestor_app: RequestorApp) -> None:
 def test_try_changing_jwt_signing_algorithm(
     oauth_server: ServerManager, requestor_app: RequestorApp
 ) -> None:
-    """Test that changing the JWT algorithm invalidates the token."""
+    """
+    Test that changing the JWT algorithm invalidates the token.
+    test_scenario_id=TC-SEC-24-03
+    """
 
     jwt_token = (
         requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
@@ -464,7 +470,10 @@ def test_try_modifying_payload_without_chaning_signature(
 
 
 def test_try_removing_signature_part(requestor_app: RequestorApp) -> None:
-    """Test that removing the JWT signature invalidates the token."""
+    """
+    Test that removing the JWT signature invalidates the token.
+    test_scenario_id=TC-SEC-24-05
+    """
 
     jwt_token = (
         requestor_app.oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
