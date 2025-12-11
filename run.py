@@ -593,6 +593,17 @@ class Run:
             ]
         )
 
+    def test_general_code_test_model_field_properties(self) -> None:
+
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code/test_model_field_properties.py",
+            ]
+        )
+
     def test_end_to_end(self) -> None:
         import pytest
 
