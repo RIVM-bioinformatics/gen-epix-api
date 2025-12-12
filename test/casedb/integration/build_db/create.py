@@ -636,132 +636,51 @@ class TestCreate:
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_case_type_dim(self, env: Env) -> None:
-        # Create case_type_dim as root, app_admin, refdata_admin
-        for i in range(1, 6):
-            case_type = f"case_type{i}"
-            for j in range(1, 6):
-                dim = f"text{j}"
-                code = f"{case_type}_{dim}"
-                occurrence = 1
-                rank = j
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-                dim = f"number{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-                dim = f"time{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1",
-                    case_type,
-                    dim,
-                    occurrence,
-                    code,
-                    rank,
-                    is_case_date_dim=True,
-                )
-                dim = f"geo{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-                dim = f"id{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-                dim = f"org{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-                dim = f"other{j}"
-                code = f"{case_type}_{dim}"
-                env.create_case_type_dim(
-                    "refdata_admin1_1", case_type, dim, occurrence, code, rank
-                )
-
-    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_case_type_dim_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                for i in range(1, 6):
-                    case_type = f"case_type{i}"
-                    for j in range(1, 6):
-                        dim = f"text{j}"
-                        occurrence = 1
-                        rank = j
-                        code = f"{case_type}_{dim}"
-                        env.create_case_type_dim(
-                            exec_user, case_type, dim, occurrence, code, rank
-                        )
-
-    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
+        # Create case_type_col as root, app_admin, refdata_admin
         cols: list[model.Col] = env.read_all(
             "root1_1", model.Col
         )  # type:ignore[assignment]
+        # Series of case types with only text columns
         for i in range(1, 4):
             case_type = f"case_type{i}"
             for j in range(1, 6):
                 dim = f"text{j}"
-                case_type_dim = f"{case_type}_{dim}"
-                col = f"{dim}_6_text"
-                code = f"{case_type}_{col}"
                 case_type_col = env.create_case_type_col(
-                    "root1_1", case_type, case_type_dim, col, code=code, rank=1
+                    "root1_1", f"{case_type}_{dim}_6_text"
                 )
         for i in range(4, 6):
-            case_type = f"case_type{i}"
             genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-            genetic_sequence_case_type_col_id = None
-            tree_algorithm_codes = None
-            for j in range(1, 6):
-                dim = f"text{j}"
-                case_type_dim = f"{case_type}_{dim}"
-                col_str = f"{dim}_6_text"
-                code = f"{case_type}_{col_str}"
-                col: model.Col | None = next((col for col in cols if col.code == col_str), None)
-                if col is None:
-                    continue
+            for col in cols:
+                kwargs: dict[str, Any] = {}
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
                     assert genetic_sequence_case_type_col is not None
-                    genetic_sequence_case_type_col_id = (
+                    kwargs["genetic_sequence_case_type_col_id"] = (
                         genetic_sequence_case_type_col.id
                     )
-                    tree_algorithm_codes = {
+                    kwargs["tree_algorithm_codes"] = {
                         enum.TreeAlgorithmType.NJ,
                         enum.TreeAlgorithmType.SLINK,
                     }
                 case_type_col = env.create_case_type_col(
-                    "refdata_admin1_1",
-                    case_type=case_type,
-                    case_type_dim=case_type_dim,
-                    col=col,
-                    code=code,
-                    rank=1,
-                    genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
-                    tree_algorithm_codes=tree_algorithm_codes,
+                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs
                 )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            # TODO: fix duplicate obj keys, probably due CaseTypeDim creation
             case_type_col = env.create_case_type_col(
                 "root1_1",
                 f"case_type{i}_text1_8_time_year_2",
                 col="text1_8_time_year",
+                occurrence=2,
             )
-            # case_type_col = env.create_case_type_col(
-            #     "app_admin1_1",
-            #     f"case_type{i}_text1_8_time_year_3",
-            #     col="text1_8_time_year",
-            # )
-        if env.verbose:
-            env.print_case_type_cols()
+            case_type_col = env.create_case_type_col(
+                "app_admin1_1",
+                f"case_type{i}_text1_8_time_year_3",
+                col="text1_8_time_year",
+                occurrence=3,
+            )
+        # if env.verbose:
+        #     env.print_case_type_cols()
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -1286,14 +1205,13 @@ class TestCreate:
                 )
         # CaseTypeCol.case_type does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidArgumentsError):
-                # TODO: Since ct_dim.case_type_id != obj.case_type_id in crud_case_type_col is checked before InvalidLinkIdsError, this raises InvalidArgumentsError
+            with pytest.raises(exc.InvalidLinkIdsError):
                 env.create_case_type_col(
                     "root1_1", "case_type1_text1_6_text", set_dummy_case_type=True
                 )
         # CaseTypeCol.col does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidArgumentsError):
+            with pytest.raises(exc.InvalidLinkIdsError):
                 env.create_case_type_col(
                     "root1_1", "case_type1_text1_6_text", set_dummy_col=True
                 )
