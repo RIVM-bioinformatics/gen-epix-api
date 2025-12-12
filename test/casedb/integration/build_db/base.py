@@ -5,7 +5,7 @@ from gen_epix.commondb.domain.enum import DevRepositoryConfig
 
 TEST_TYPE = TestType.CASEDB_INTEGRATION_BUILD_DB
 
-SKIP_ENDPOINTS = False  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
+SKIP_ENDPOINTS = True  # False (i.e. using endpoints) does not work with SA_SQLITE due to multi-threading issue
 SKIP_RAISE = False
 SKIP_CREATE_DATA = False
 VERBOSE = False

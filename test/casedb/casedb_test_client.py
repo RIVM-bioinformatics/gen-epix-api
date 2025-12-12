@@ -52,6 +52,7 @@ class CasedbTestClient(TestClient):
         model.Dim: "code",
         model.Col: "code",
         model.CaseTypeCol: "code",
+        model.CaseTypeDim: "code",
         model.CaseTypeColSet: "name",
         model.DataCollection: "name",
         model.Case: "code",
@@ -394,6 +395,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         code: str,
         dim_type: enum.DimType,
+        rank: int = 1,
     ) -> model.Dim:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -406,6 +408,7 @@ class CasedbTestClient(TestClient):
                     code=code,
                     label=code,
                     dim_type=dim_type,
+                    rank=rank,
                 ),
             )
         )
@@ -434,7 +437,7 @@ class CasedbTestClient(TestClient):
         m = re.match(r"^(.*?)(\d+)_(\d+)_?(.*)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
-        dim = m.group(1) + m.group(2)
+        dim = "dim" + m.group(2)
         rank = int(m.group(3))
         dim_id = (
             self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id
@@ -707,47 +710,105 @@ class CasedbTestClient(TestClient):
             self._set_obj(case_type_set_member)
         return self._set_obj(case_type_set)  # type:ignore[return-value]
 
+    def create_case_type_dim(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        rank: int = 0,
+        is_case_date_dim: bool = False,
+        set_dummy_case_type: bool = False,
+        set_dummy_dim: bool = False,
+    ) -> model.CaseTypeDim:
+        user: model.User = self._get_obj(
+            model.User, user_or_str
+        )  # type:ignore[assignment]
+        m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", code.lower())
+        # (case_type)(dim)(occurrence)
+        if not m:
+            raise ValueError(f"Invalid code {code}")
+        case_type_str = "case_type" + m.group(2)
+        dim_str = "dim" + m.group(3)
+        occurrence = int(m.group(4))
+        case_type_id: UUID = (
+            self.generate_id()
+            if set_dummy_case_type
+            else self._get_obj(
+                model.CaseType, case_type_str
+            ).id  # type:ignore[assignment]
+        )
+        dim_id = (
+            self.generate_id()
+            if set_dummy_dim
+            else self._get_obj(model.Dim, dim_str).id
+        )
+        case_type_dim = self.handle(
+            command.CaseTypeDimCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.CaseTypeDim(
+                    case_type_id=case_type_id,
+                    dim_id=dim_id,
+                    occurrence=occurrence,
+                    code=code,
+                    rank=rank,
+                    is_case_date_dim=is_case_date_dim,
+                ),
+            )
+        )
+
+        return self._set_obj(case_type_dim)  # type:ignore[return-value]
+
     def create_case_type_col(
         self,
         user_or_str: str | model.User,
         code: str,
         genetic_sequence_case_type_col_id: UUID | None = None,
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
-        occurrence: int | None = None,
-        col: str | model.Col | None = None,
         set_dummy_case_type: bool = False,
+        set_dummy_case_type_dim: bool = False,
         set_dummy_col: bool = False,
     ) -> model.CaseTypeCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
-        m = re.match(r"^([a-z_]*\d+?)_(.*)$", code.lower())
+        m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
+        case_type_str = "case_type" + m.group(2)
+        case_type_dim_str = "case_type_dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
+        col_str = "col" + m.group(4) + "_" + m.group(5)
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
-            case_type = self._get_obj(model.CaseType, m.group(1))
+            case_type = self._get_obj(model.CaseType, case_type_str)
             case_type_id = case_type.id
+        if set_dummy_case_type_dim:
+            case_type_dim_id = self.generate_id()
+        else:
+            case_type_dim = self._get_obj(
+                model.CaseTypeDim, case_type_dim_str
+            )
+            case_type_dim_id = case_type_dim.id
         if set_dummy_col:
             col_id = self.generate_id()
         else:
-            if col:
-                col: model.Col = self._get_obj(model.Col, col)
-            else:
-                col: model.Col = self._get_obj(model.Col, m.group(2))
+            col = self._get_obj(model.Col, col_str)
             col_id = col.id
+
+        print("dummy")
+        
         case_type_col = self.handle(
             command.CaseTypeColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeCol(
                     case_type_id=case_type_id,
+                    case_type_dim_id=case_type_dim_id,
                     col_id=col_id,
                     code=code,
+                    rank=0,
                     genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
                     tree_algorithm_codes=tree_algorithm_codes,
-                    occurrence=occurrence,
                 ),
             )
         )

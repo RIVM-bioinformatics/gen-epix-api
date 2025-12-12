@@ -226,6 +226,12 @@ class TestCreate:
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
             schema_definition="{}",
         )
+        env.create_concept_set(
+            "refdata_admin2_2",
+            "concept_set6_context_free_grammar_xml",
+            enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
+            schema_definition="<schema></schema>",
+        )
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -344,14 +350,9 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_dim(self, env: Env) -> None:
         # Create dim as root, app_admin, refdata_admin
-        for i in range(1, 6):
-            env.create_dim("root1_1", f"text{i}", enum.DimType.TEXT)
-            env.create_dim("app_admin1_1", f"number{i}", enum.DimType.NUMBER)
-            env.create_dim("refdata_admin1_1", f"time{i}", enum.DimType.TIME)
-            env.create_dim("refdata_admin1_1", f"geo{i}", enum.DimType.GEO)
-            env.create_dim("refdata_admin1_1", f"id{i}", enum.DimType.IDENTIFIER)
-            env.create_dim("refdata_admin1_1", f"org{i}", enum.DimType.ORGANIZATION)
-            env.create_dim("refdata_admin1_1", f"other{i}", enum.DimType.OTHER)
+        users: list[str] = ["root1_1", "app_admin1_1" ] + ["refdata_admin1_1"] * len(enum.DimType)
+        for i, dim_type in enumerate(enum.DimType, start=1):
+            env.create_dim(users[i], f"dim{i}", dim_type)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -364,105 +365,35 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_col(self, env: Env) -> None:
         # Create col as root, app_admin, refdata_admin
-        for i in range(1, 6):
-            # DimType.TEXT can have any column under it
-            dim = f"text{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.NOMINAL,
-                    enum.ColType.ORDINAL,
-                    enum.ColType.INTERVAL,
-                    enum.ColType.REGULAR_LANGUAGE,
-                    enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
+        users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
+            enum.ColType
+        )
+        for i, dim_type in enumerate(enum.DimType, start=1):
+            col_types = enum.DimColTypeSet[dim_type.name].value
+            col_str = f"col{i}" 
+            for j, col_type in enumerate(col_types, start=1):
+                concept_set: str | None = None
+                region_set: str | None = None
+                if col_type == enum.ColType.NOMINAL:
+                    concept_set = "concept_set1_nominal"
+                elif col_type == enum.ColType.ORDINAL:
+                    concept_set = "concept_set2_ordinal"
+                elif col_type == enum.ColType.INTERVAL:
+                    concept_set = "concept_set3_interval"
+                elif col_type == enum.ColType.REGULAR_LANGUAGE:
+                    concept_set = "concept_set4_regular_language"
+                elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_JSON:
+                    concept_set = "concept_set5_context_free_grammar_json"
+                elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_XML:
+                    concept_set = "concept_set6_context_free_grammar_xml"
+                elif col_type in enum.ColTypeSet.HAS_REGION_SET.value:
+                    region_set = f"region_set{j}"
                 env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_{col_type_str}",
+                    users[j],
+                    f"{col_str}_{j}",
                     col_type,
-                    concept_set=f"concept_set{j}_{col_type_str}",
-                )
-            env.create_col("root1_1", f"{dim}_6_text", enum.ColType.TEXT)
-            env.create_col(
-                "root1_1", f"{dim}_7_number_decimal_0", enum.ColType.DECIMAL_0
-            )
-            env.create_col("app_admin1_1", f"{dim}_8_time_year", enum.ColType.TIME_YEAR)
-            env.create_col(
-                "refdata_admin1_1",
-                f"{dim}_9_genetic_distance",
-                enum.ColType.GENETIC_SEQUENCE,
-            )
-            env.create_col(
-                "refdata_admin1_1",
-                f"{dim}_10_genetic_distance",
-                enum.ColType.GENETIC_DISTANCE,
-                genetic_distance_protocol=f"genetic_distance_protocol{i}",
-                # tree_algorithm_codes=[enum.TreeAlgorithm.NJ, enum.TreeAlgorithm.SLINK],
-            )
-            # DimType.TIME can have time columns under it
-            dim = f"time{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.TIME_DAY,
-                    enum.ColType.TIME_WEEK,
-                    enum.ColType.TIME_MONTH,
-                    enum.ColType.TIME_QUARTER,
-                    enum.ColType.TIME_YEAR,
-                    enum.ColType.TIME_MONTH,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.NUMBER can have number columns under it
-            dim = f"number{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.DECIMAL_0,
-                    enum.ColType.DECIMAL_1,
-                    enum.ColType.DECIMAL_2,
-                    enum.ColType.DECIMAL_3,
-                    enum.ColType.DECIMAL_4,
-                    enum.ColType.DECIMAL_5,
-                    enum.ColType.DECIMAL_6,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.GEO can have geo columns under it
-            dim = f"geo{i}"
-            for j in range(0, 3):
-                j += 1
-                region_set = f"region_set{j}"
-                env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_{region_set}",
-                    enum.ColType.GEO_REGION,
+                    concept_set=concept_set,
                     region_set=region_set,
-                )
-            # DimType.IDENTIFIER can have identifier columns under it
-            dim = f"id{i}"
-            for j, col_type in enumerate(enum.ColTypeSet.ID.value):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.ORGANIZATION can have organization columns under it
-            dim = f"org{i}"
-            for j in range(0, 3):
-                j += 1
-                env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_organization",
-                    enum.ColType.ORGANIZATION,
                 )
 
     @pytest.mark.skipif(
@@ -473,7 +404,7 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_col(
                     exec_user,
-                    "text1_1_nominal",
+                    "col1_21",
                     enum.ColType.NOMINAL,
                     "concept_set1_nominal",
                 )
@@ -636,22 +567,43 @@ class TestCreate:
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    def test_create_case_type_dim(self, env: Env) -> None:
+        # Create case_type_dim as root, app_admin, refdata_admin
+        # For case_type 4 and 5, create case_type_dims for each dim
+        for i in range(1, 6):
+            for j in range(1, 3):
+                env.create_case_type_dim("root1_1", f"case_type_dim{i}_1_{j}")
+                env.create_case_type_dim("app_admin1_1", f"case_type_dim{i}_2_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_3_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_4_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_5_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_6_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_7_{j}")
+
+    @pytest.mark.skipif(
+        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
+    )
+    def test_create_case_type_dim_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_case_type_dim(exec_user, "case_type_dim1_1_11")
+
+    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin
         cols: list[model.Col] = env.read_all(
             "root1_1", model.Col
         )  # type:ignore[assignment]
+        case_type_dims: list[model.CaseTypeDim] = env.read_all(
+            "root1_1", model.CaseTypeDim
+        )  # type:ignore[assignment]
+
         # Series of case types with only text columns
-        for i in range(1, 4):
-            case_type = f"case_type{i}"
-            for j in range(1, 6):
-                dim = f"text{j}"
-                case_type_col = env.create_case_type_col(
-                    "root1_1", f"{case_type}_{dim}_6_text"
-                )
-        for i in range(4, 6):
+        for case_type_dim in case_type_dims:
+            dim_id = case_type_dim.dim_id
+            curr_cols = [x for x in cols if x.dim_id == dim_id]
             genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-            for col in cols:
+            for i, col in enumerate(curr_cols, start=1):
                 kwargs: dict[str, Any] = {}
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
                     assert genetic_sequence_case_type_col is not None
@@ -662,52 +614,31 @@ class TestCreate:
                         enum.TreeAlgorithmType.NJ,
                         enum.TreeAlgorithmType.SLINK,
                     }
+                code = case_type_dim.code.replace("case_type_dim", "case_type_col")
                 case_type_col = env.create_case_type_col(
-                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs
+                    "refdata_admin1_1", f"{code}_{i}", **kwargs
                 )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            case_type_col = env.create_case_type_col(
-                "root1_1",
-                f"case_type{i}_text1_8_time_year_2",
-                col="text1_8_time_year",
-                occurrence=2,
-            )
-            case_type_col = env.create_case_type_col(
-                "app_admin1_1",
-                f"case_type{i}_text1_8_time_year_3",
-                col="text1_8_time_year",
-                occurrence=3,
-            )
-        # if env.verbose:
-        #     env.print_case_type_cols()
+        if env.verbose:
+            env.print_case_type_cols()
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
+    @pytest.mark.skipif(
+        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
+    )
     def test_create_case_type_col_raise(self, env: Env) -> None:
-        cols: list[model.Col] = env.read_all(
-            "root1_1", model.Col
+        case_type_dims: list[model.CaseTypeDim] = env.read_all(
+            "root1_1", model.CaseTypeDim
         )  # type:ignore[assignment]
+        case_type_dim = case_type_dims[0]
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-                for col in cols:
-                    kwargs: dict[str, Any] = {}
-                    if col.col_type == enum.ColType.GENETIC_DISTANCE:
-                        assert genetic_sequence_case_type_col is not None
-                        kwargs["genetic_sequence_case_type_col_id"] = (
-                            genetic_sequence_case_type_col.id
-                        )
-                        kwargs["tree_algorithm_codes"] = {
-                            enum.TreeAlgorithmType.NJ,
-                            enum.TreeAlgorithmType.SLINK,
-                        }
-                    case_type_col = env.create_case_type_col(
-                        exec_user, f"case_type1_{col.code}", **kwargs
-                    )
-                    if col.col_type == enum.ColType.GENETIC_SEQUENCE:
-                        genetic_sequence_case_type_col = case_type_col
+            code = case_type_dim.code.replace("case_type_dim", "case_type_col")
+            env.create_case_type_col(exec_user, f"{code}_1")
+        if env.verbose:
+            env.print_case_type_cols()
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col_set(self, env: Env) -> None:

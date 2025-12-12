@@ -320,6 +320,23 @@ class ColTypeSet(Enum):
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
+class DimColTypeSet(Enum):
+    TEXT = frozenset(
+        ColTypeSet.LANGUAGE.value.union(
+            {
+                ColType.TEXT,
+            },
+            ColTypeSet.STRING_SET.value,
+        )
+    )
+    IDENTIFIER = ColTypeSet.ID.value
+    NUMBER = ColTypeSet.NUMBER.value
+    TIME = ColTypeSet.TIME.value
+    GEO = ColTypeSet.GEO.value
+    ORGANIZATION = ColTypeSet.ORGANIZATION.value
+    OTHER = ColTypeSet.OTHER.value
+
+
 class ColTypeOrder(Enum):
     TIME_RESOLUTION_DESC = {
         ColType.TIME_DAY: 1,
