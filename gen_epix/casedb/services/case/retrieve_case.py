@@ -434,8 +434,11 @@ def _get_map_functions_for_filters(
             enum.ColType.ORDINAL,
             enum.ColType.INTERVAL,
             enum.ColType.TEXT,
-            enum.ColType.ID_DIRECT,
-            enum.ColType.ID_PSEUDONYMISED,
+            enum.ColType.ID_PERSON,
+            enum.ColType.ID_CASE,
+            enum.ColType.ID_SAMPLE,
+            enum.ColType.ID_EVENT,
+            enum.ColType.ID_GENETIC_SEQUENCE,
             enum.ColType.ORGANIZATION,
             enum.ColType.OTHER,
         }:

@@ -27,8 +27,11 @@ class BaseCaseService(DomainBaseCaseService):
         enum.ColType.TIME_YEAR: lambda x: None if not x else f"{x}",
         enum.ColType.GEO_LATLON: lambda x: None if not x else f"{x}",
         enum.ColType.TEXT: lambda x: None if not x else f"{x}",
-        enum.ColType.ID_DIRECT: lambda x: None if not x else f"{x}",
-        enum.ColType.ID_PSEUDONYMISED: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_PERSON: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_CASE: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_SAMPLE: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_EVENT: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_GENETIC_SEQUENCE: lambda x: None if not x else f"{x}",
         enum.ColType.OTHER: lambda x: None if not x else f"{x}",
         enum.ColType.DECIMAL_0: lambda x: (
             None if not x else (x if isinstance(x, str) else f"{x:.0f}")

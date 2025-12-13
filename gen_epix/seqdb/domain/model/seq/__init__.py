@@ -1,3 +1,7 @@
+from gen_epix.commondb.domain.model import (
+    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
+)
+
 # pylint: disable=useless-import-alias
 from gen_epix.seqdb.domain.model.seq.alignment import (
     AlignmentProtocol as AlignmentProtocol,
@@ -9,10 +13,10 @@ from gen_epix.seqdb.domain.model.seq.alignment import (
 )
 from gen_epix.seqdb.domain.model.seq.alignment import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq.base import AlignmentMixin as AlignmentMixin
+from gen_epix.seqdb.domain.model.seq.base import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq.base import QualityMixin as QualityMixin
-from gen_epix.seqdb.domain.model.seq.base import SeqMixin as SeqMixin
 from gen_epix.seqdb.domain.model.seq.classification import (
     AstPrediction as AstPrediction,
 )
@@ -40,8 +44,18 @@ from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    CompleteSample as CompleteSample,
+    AlleleForUpload as AlleleForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.non_persistable import (
+    AlleleProfileForUpload as AlleleProfileForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.non_persistable import (
+    SampleForUpload as SampleForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.non_persistable import (
+    SampleSetForUpload as SampleSetForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.non_persistable import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq.pheno import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement

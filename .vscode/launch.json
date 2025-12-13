@@ -504,6 +504,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.unit",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.integration",
             "type": "debugpy",
             "request": "launch",

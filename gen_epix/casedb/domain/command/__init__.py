@@ -198,6 +198,9 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
+    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
+)
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (

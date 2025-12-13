@@ -473,6 +473,16 @@ class Run:
             ]
         )
 
+    def test_seqdb_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit",
+            ]
+        )
+
     def test_seqdb_integration(self) -> None:
         import pytest
 

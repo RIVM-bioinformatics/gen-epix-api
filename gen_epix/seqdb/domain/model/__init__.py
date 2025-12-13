@@ -11,6 +11,10 @@ from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSe
 from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
+from gen_epix.commondb.domain.model import ExternalIdentifier as ExternalIdentifier
+from gen_epix.commondb.domain.model import (
+    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
+)
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
@@ -40,17 +44,21 @@ from gen_epix.seqdb.domain.model.seq import AlignmentMixin as AlignmentMixin
 from gen_epix.seqdb.domain.model.seq import AlignmentProtocol as AlignmentProtocol
 from gen_epix.seqdb.domain.model.seq import Allele as Allele
 from gen_epix.seqdb.domain.model.seq import AlleleAlignment as AlleleAlignment
+from gen_epix.seqdb.domain.model.seq import AlleleForUpload as AlleleForUpload
 from gen_epix.seqdb.domain.model.seq import AlleleProfile as AlleleProfile
+from gen_epix.seqdb.domain.model.seq import (
+    AlleleProfileForUpload as AlleleProfileForUpload,
+)
 from gen_epix.seqdb.domain.model.seq import AssemblyProtocol as AssemblyProtocol
 from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
+from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import (
     CompleteAlleleProfile as CompleteAlleleProfile,
 )
 from gen_epix.seqdb.domain.model.seq import CompleteContig as CompleteContig
-from gen_epix.seqdb.domain.model.seq import CompleteSample as CompleteSample
 from gen_epix.seqdb.domain.model.seq import CompleteSnpProfile as CompleteSnpProfile
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
@@ -85,7 +93,9 @@ from gen_epix.seqdb.domain.model.seq import Sample as Sample
 from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
+from gen_epix.seqdb.domain.model.seq import SampleSetForUpload as SampleSetForUpload
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
@@ -96,7 +106,7 @@ from gen_epix.seqdb.domain.model.seq import (
 )
 from gen_epix.seqdb.domain.model.seq import SeqDistance as SeqDistance
 from gen_epix.seqdb.domain.model.seq import SeqDistanceProtocol as SeqDistanceProtocol
-from gen_epix.seqdb.domain.model.seq import SeqMixin as SeqMixin
+from gen_epix.seqdb.domain.model.seq import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
@@ -137,6 +147,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Locus,
             LocusSet,
             LocusCodeMap,
+            BaseSeq,
             RefSeq,
             RefAllele,
             RefSnp,
@@ -180,9 +191,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqTaxonomy,
             MultipleAlignment,
             PhylogeneticTree,
+            AlleleForUpload,
+            AlleleProfileForUpload,
+            SeqForUpload,
+            SampleForUpload,
             CompleteContig,
-            CompleteSample,
-            CompleteSample,
             CompleteSnpProfile,
         ],
         enum.ServiceType.FILE: [File],

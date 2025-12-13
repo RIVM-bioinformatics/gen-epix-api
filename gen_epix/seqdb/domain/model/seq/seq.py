@@ -1,11 +1,10 @@
 import hashlib
 import json
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
-    BaseModel,
     Field,
     computed_field,
     field_serializer,
@@ -13,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
@@ -20,17 +20,17 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
 from gen_epix.seqdb.domain.model.seq.base import (
+    BaseSeq,
     CodeMixin,
     ProtocolMixin,
     QualityMixin,
-    SeqMixin,
 )
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon
 
 
-class RefSeq(Model, SeqMixin):
+class RefSeq(BaseSeq):
     """
     A reference sequence for a single chromosome, viral segment, plasmid or other
     contiguous DNA molecule belonging to a particular taxon. This can be an actual
@@ -54,6 +54,8 @@ class RefSeq(Model, SeqMixin):
         keys=create_keys({1: "code", 2: "name"}),
         links=create_links({1: ("taxon_id", Taxon, "taxon")}),
     )
+    NAME: ClassVar = "RefSeq"
+
     code: str = Field(description="The code of the reference sequence", max_length=255)
     name: str = Field(description="The name of the reference sequence", max_length=255)
     description: str | None = Field(
@@ -66,11 +68,6 @@ class RefSeq(Model, SeqMixin):
         description="The GenBank accession code of the reference sequence",
         max_length=255,
     )
-
-    @model_validator(mode="before")
-    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """"""
-        return SeqMixin._validate_mixin_and_id(values)
 
 
 class AssemblyProtocol(Model, ProtocolMixin):
@@ -94,22 +91,22 @@ class AssemblyProtocol(Model, ProtocolMixin):
     )
 
 
-class Contig(BaseModel, SeqMixin):
+class Contig(BaseSeq, QualityMixin):
     """
     A contiguous DNA sequence. Any IUPAC ambiguity codes are allowed in the sequence.
     A contig is not persistable on its own, but is meant to be part of other objects
     through composition.
 
-    A contig has a hash code that uniquely identifies it based on its sequence.
+    A contig has an id that is equal to the hash code that uniquely identifies it
+    based on its sequence.
 
     A contig is immutable: once created, it cannot be updated. As such,
     contig IDs can safely be referenced in other models and outside of the application.
     """
 
-    @model_validator(mode="before")
-    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """"""
-        return SeqMixin._validate_mixin(values)
+    NAME: ClassVar = "Contig"
+
+    pass
 
 
 class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
@@ -210,9 +207,9 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
     def seq_hash(self) -> UUID:
         """"""
         if not self.contigs:
-            return SeqMixin.NULL_SEQ_HASH
+            return NULL_ID
         # Get sorted list of contig seq_hashes as bytes
-        contig_hashes_bytes = sorted(x.seq_hash.bytes for x in self.contigs)
+        contig_hashes_bytes = sorted(x.id.bytes for x in self.contigs)
         # Concatenate the bytes
         concatenated = b"".join(contig_hashes_bytes)
         # Compute SHA256 hash and take first 16 bytes (128 bits)
