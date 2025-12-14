@@ -9,11 +9,11 @@ from pydantic import Field
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
+from gen_epix.util import copy_model_field
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
@@ -59,6 +59,12 @@ class UpdateUserOwnOrganizationRequestBody(PydanticBaseModel):
     organization_id: UUID = Field(
         description="The ID of the organization to update the user to"
     )
+
+
+class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
+    organization_identifier_issuer_links: list[
+        model.OrganizationIdentifierIssuerLink
+    ] = Field(description="The identifier issuers that the organization is linked to.")
 
 
 def create_organization_endpoints(
@@ -258,6 +264,29 @@ def create_organization_endpoints(
             retval: model.User = app.handle(cmd)
         except Exception as exception:
             handle_exception("c2382b65", None, exception)
+        return retval
+
+    @router.put(
+        "/organizations/{organization_id}/identifier_issuers",
+        operation_id="organizations__put__identifier_issuers",
+        name="Update association between Organization and IdentifierIssuer",
+        description=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand.__doc__,
+    )
+    async def organizations__put__identifier_issuers(
+        user: registered_user_dependency,  # type: ignore
+        organization_id: UUID,
+        request_body: UpdateOrganizationIdentifierIssuerLinksRequestBody,
+    ) -> list[model.OrganizationIdentifierIssuerLink]:
+        try:
+            cmd = command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+                user=user,
+                obj_id1=organization_id,
+                association_objs=request_body.organization_identifier_issuer_links,
+                props={"return_id": False},
+            )
+            retval: list[model.OrganizationIdentifierIssuerLink] = app.handle(cmd)
+        except Exception as exception:
+            handle_exception("a3c7f9d2", user, exception)
         return retval
 
     # CRUD

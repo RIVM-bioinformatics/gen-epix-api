@@ -4,7 +4,6 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain.model.seq.classification import (
@@ -23,6 +22,7 @@ from gen_epix.seqdb.domain.model.seq.profile import (
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import Sample, SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import Seq
+from gen_epix.util import copy_model_field
 
 
 class ExternalSampleIdentifier(Model):

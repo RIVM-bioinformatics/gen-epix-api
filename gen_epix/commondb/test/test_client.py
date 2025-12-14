@@ -14,9 +14,9 @@ from gen_epix.commondb.config import BaseAppCfg
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
+from gen_epix.util import map_paired_elements
 
 BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 

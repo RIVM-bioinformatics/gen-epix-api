@@ -12,9 +12,9 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.policy import BaseHasSystemOutagePolicy
 from gen_epix.commondb.domain.service import BaseSystemService
-from gen_epix.commondb.util import get_package_root
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.app import App
+from gen_epix.util import get_package_root
 
 
 class SystemService(BaseSystemService):

@@ -232,8 +232,21 @@ class Allele(Model, SeqMixin):
     locus: Locus | None = Field(default=None, description="The locus.")
 
     @model_validator(mode="before")
-    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_model_before(cls, values: dict[str, Any]) -> dict[str, Any]:
         values = SeqMixin._validate_mixin_and_id(values)
         if values.get("id") == cls.NULL_SEQ_HASH:
             raise ValueError("Allele ID cannot be the NULL_SEQ_HASH.")
         return values
+
+    @model_validator(mode="after")
+    def _validate_model_after(self) -> Self:
+        if self.id is None:
+            if self.seq_hash != self.NULL_SEQ_HASH:
+                # Set the ID to the sequence hash if not empty sequence
+                self.id = self.seq_hash
+        else:
+            if self.seq_hash is None:
+                raise ValueError("Allele seq_hash must be set if ID is set.")
+            if self.id != self.seq_hash:
+                raise ValueError("Allele ID must be equal to seq_hash.")
+        return self

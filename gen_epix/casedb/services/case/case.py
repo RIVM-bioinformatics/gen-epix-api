@@ -89,13 +89,13 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
     case_service_retrieve_case_type_stats,
 )
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.util import map_paired_elements
 
 
 class CaseService(BaseCaseService):

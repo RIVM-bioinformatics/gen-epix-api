@@ -31,7 +31,7 @@ class GeneticDistanceProtocol(Model):
     )
     name: str = Field(description="The name of the protocol", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the protocol"
+        default=None, description="The description of the protocol", max_length=1000
     )
     seqdb_max_stored_distance: float | None = Field(
         default=None,
@@ -103,7 +103,9 @@ class TreeAlgorithm(Model):
     code: enum.TreeAlgorithmType = Field(description="The code of the tree algorithm")
     name: str = Field(description="The name of the tree algorithm", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the tree algorithm"
+        default=None,
+        description="The description of the tree algorithm",
+        max_length=1000,
     )
     is_ultrametric: bool = Field(description="Whether the tree is ultrametric")
     rank: int | None = Field(
@@ -134,7 +136,7 @@ class Dim(Model):
         ),
     )
     description: str | None = Field(
-        default=None, description="Description of the dimension."
+        default=None, description="Description of the dimension.", max_length=1000
     )
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the dimension."
@@ -217,7 +219,7 @@ class Col(Model):
         default=None, description="The genetic distance protocol"
     )
     description: str | None = Field(
-        default=None, description="Description of the column."
+        default=None, description="Description of the column.", max_length=1000
     )
     props: dict[str, Any] = Field(
         default_factory=dict, description="Additional properties of the column."
@@ -263,7 +265,7 @@ class CaseType(Model):
     )
     name: str = Field(description="The name of the case type", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the case type"
+        default=None, description="The description of the case type", max_length=1000
     )
     disease_id: UUID | None = Field(
         default=None, description="The ID of the disease. FOREIGN KEY"
@@ -323,7 +325,9 @@ class CaseTypeSetCategory(Model):
         description="The name of the case type set category", max_length=255
     )
     description: str | None = Field(
-        default=None, description="The description of the case type set category"
+        default=None,
+        description="The description of the case type set category",
+        max_length=1000,
     )
     rank: int = Field(description="The rank of the case type set category")
     purpose: enum.CaseTypeSetCategoryPurpose = Field(
@@ -354,7 +358,9 @@ class CaseTypeSet(Model):
     )
     name: str = Field(description="The name of the case type set", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the case type set"
+        default=None,
+        description="The description of the case type set",
+        max_length=1000,
     )
     case_type_set_category_id: UUID = Field(
         description="The id of the category of the case type set. FOREIGN KEY"
@@ -430,9 +436,12 @@ class CaseTypeDim(Model):
             "The label of the dimension for this case type,"
             " if different from the general dimension label."
         ),
+        max_length=255,
     )
     description: str | None = Field(
-        default=None, description="Description of the case type dimension."
+        default=None,
+        description="Description of the case type dimension.",
+        max_length=1000,
     )
     rank: int = Field(
         description="The rank of the case type dimension within the case type for (partial) ordering."
@@ -488,9 +497,12 @@ class CaseTypeCol(Model):  # type: ignore
             "The label of the column for this case type,"
             " if different from the general column label."
         ),
+        max_length=255,
     )
     description: str | None = Field(
-        default=None, description="Description of the case type column."
+        default=None,
+        description="Description of the case type column.",
+        max_length=1000,
     )
     min_value: float | None = Field(
         default=None, description="The minimum value for a numeric column"
@@ -578,7 +590,9 @@ class CaseTypeColSet(Model):
         description="The name of a case type column set, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        default=None, description="The description of the case type column set"
+        default=None,
+        description="The description of the case type column set",
+        max_length=1000,
     )
 
 
@@ -697,7 +711,7 @@ class CaseSetCategory(Model):
         description="The name of the case set category, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        description="The description of the case set category"
+        description="The description of the case set category", max_length=1000
     )
 
 
@@ -712,7 +726,7 @@ class CaseSetStatus(Model):
         description="The name of the case set status, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        description="The description of the case set status"
+        description="The description of the case set status", max_length=1000
     )
 
 
@@ -744,7 +758,9 @@ class CaseSet(Model):
         default=None, description="The data collection where the case set was created"
     )
     name: str = Field(description="The name of a case set, UNIQUE", max_length=255)
-    description: str = Field(description="The description of a case set")
+    description: str = Field(
+        description="The description of a case set", max_length=10000
+    )
     created_at: datetime = Field(
         description="The datetime of the case set creation",
         default_factory=datetime.now,

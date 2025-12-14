@@ -9,8 +9,8 @@ from pydantic import Field, field_serializer, field_validator
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
+from gen_epix.util import copy_model_field
 
 
 class Organization(Model):
@@ -117,7 +117,7 @@ class OrganizationSet(Model):
     )
     name: str = Field(description="The name of the organization set", max_length=255)
     description: str | None = Field(
-        None, description="The description of the organization set."
+        None, description="The description of the organization set.", max_length=1000
     )
 
 
@@ -214,7 +214,9 @@ class IdentifierIssuer(Model):
     code: str = Field(description="The name of the issuer", max_length=255)
     name: str = Field(description="The name of the issuer", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the identifier issuer."
+        default=None,
+        description="The description of the identifier issuer.",
+        max_length=1000,
     )
 
 
@@ -234,7 +236,9 @@ class DataCollection(Model):
         description="The name of a data collection, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        default=None, description="The description of the data collection."
+        default=None,
+        description="The description of the data collection.",
+        max_length=1000,
     )
 
 
@@ -247,7 +251,9 @@ class DataCollectionSet(Model):
     )
     name: str = Field(description="The name of the data collection set", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the data collection set."
+        default=None,
+        description="The description of the data collection set.",
+        max_length=1000,
     )
 
 

@@ -1,12 +1,13 @@
 # pylint: disable=too-few-public-methods
-# This module defines base classes, methods are added later
-
+from __future__ import (
+    annotations,  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-import sqlalchemy.orm as orm
+from sqlalchemy import orm
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
@@ -20,6 +21,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.CASE.value)
 
 
 class TreeAlgorithmClass(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithmClass)
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.TreeAlgorithmClass, "code")
@@ -36,6 +41,10 @@ class TreeAlgorithmClass(Base, RowMetadataMixin):
 
 
 class TreeAlgorithm(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.TreeAlgorithm)
 
     tree_algorithm_class_id: Mapped[UUID] = create_mapped_column(
@@ -64,6 +73,10 @@ class TreeAlgorithm(Base, RowMetadataMixin):
 
 
 class GeneticDistanceProtocol(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.GeneticDistanceProtocol)
 
     seqdb_seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
@@ -91,6 +104,10 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
 
 
 class Dim(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Dim)
 
     dim_type: Mapped[enum.DimType] = create_mapped_column(DOMAIN, model.Dim, "dim_type")
@@ -107,6 +124,10 @@ class Dim(Base, RowMetadataMixin):
 
 
 class Col(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Col)
 
     dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "dim_id")
@@ -135,6 +156,10 @@ class Col(Base, RowMetadataMixin):
 
 
 class CaseType(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseType)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseType, "name")
@@ -165,6 +190,10 @@ class CaseType(Base, RowMetadataMixin):
 
 
 class CaseTypeSetCategory(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSetCategory)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeSetCategory, "name")
@@ -178,6 +207,10 @@ class CaseTypeSetCategory(Base, RowMetadataMixin):
 
 
 class CaseTypeSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSet)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeSet, "name")
@@ -195,6 +228,10 @@ class CaseTypeSet(Base, RowMetadataMixin):
 
 
 class CaseTypeSetMember(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeSetMember)
 
     case_type_set_id: Mapped[UUID] = create_mapped_column(
@@ -211,6 +248,10 @@ class CaseTypeSetMember(Base, RowMetadataMixin):
 
 
 class CaseTypeCol(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeCol)
 
     case_type_id: Mapped[UUID] = create_mapped_column(
@@ -226,9 +267,6 @@ class CaseTypeCol(Base, RowMetadataMixin):
     )
     rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "rank")
     label: Mapped[str | None] = create_mapped_column(DOMAIN, model.CaseTypeCol, "label")
-    description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CaseTypeCol, "description"
-    )
     min_value: Mapped[float | None] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "min_value"
     )
@@ -268,6 +306,10 @@ class CaseTypeCol(Base, RowMetadataMixin):
 
 
 class CaseTypeColSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeColSet)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeColSet, "name")
@@ -277,6 +319,10 @@ class CaseTypeColSet(Base, RowMetadataMixin):
 
 
 class CaseTypeColSetMember(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseTypeColSetMember)
 
     case_type_col_set_id: Mapped[UUID] = create_mapped_column(
@@ -316,6 +362,10 @@ class CaseTypeDim(Base, RowMetadataMixin):
 
 
 class Case(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Case)
 
     case_type_id: Mapped[UUID] = create_mapped_column(
@@ -338,6 +388,10 @@ class Case(Base, RowMetadataMixin):
 
 
 class CaseDataCollectionLink(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseDataCollectionLink)
 
     case_id: Mapped[UUID] = create_mapped_column(
@@ -351,6 +405,10 @@ class CaseDataCollectionLink(Base, RowMetadataMixin):
 
 
 class CaseSetCategory(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseSetCategory)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSetCategory, "name")
@@ -360,6 +418,10 @@ class CaseSetCategory(Base, RowMetadataMixin):
 
 
 class CaseSetStatus(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseSetStatus)
 
     name: Mapped[str] = create_mapped_column(DOMAIN, model.CaseSetStatus, "name")
@@ -369,6 +431,10 @@ class CaseSetStatus(Base, RowMetadataMixin):
 
 
 class CaseSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseSet)
 
     case_type_id: Mapped[UUID] = create_mapped_column(
@@ -401,6 +467,10 @@ class CaseSet(Base, RowMetadataMixin):
 
 
 class CaseSetMember(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseSetMember)
 
     case_set_id: Mapped[UUID] = create_mapped_column(
@@ -416,6 +486,10 @@ class CaseSetMember(Base, RowMetadataMixin):
 
 
 class CaseSetDataCollectionLink(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CaseSetDataCollectionLink)
 
     case_set_id: Mapped[UUID] = create_mapped_column(

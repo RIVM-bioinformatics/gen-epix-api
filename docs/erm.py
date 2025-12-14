@@ -3,19 +3,16 @@ import os
 import warnings
 from pathlib import Path
 
+# erdantic is used for generating ER diagrams but not added to dev-requirements.txt due to its dependency on pygraphviz which is hard to install on some systems
+# install erdantic manually if you need to regenerate the ER diagrams
 import erdantic as erd
 
-from docs.erm_hash import generate_hash_for_domain_models
-from gen_epix.casedb.domain import DOMAIN as CASEDB_DOMAIN
+from docs.erm_hash import DOMAINS, generate_hash_for_domain_models
 from gen_epix.fastapp import Domain
-from gen_epix.omopdb.domain import DOMAIN as OMOPDB_DOMAIN
-from gen_epix.seqdb.domain import DOMAIN as SEQDB_DOMAIN
 
 # Disable Graphviz Pango plugin warnings on Windows
 # This prevents "Could not load gvplugin_pango.dll" warnings
 os.environ.setdefault("GRAPHVIZ_DOT", "-Gfontname=Arial")
-
-DOMAINS = [CASEDB_DOMAIN, OMOPDB_DOMAIN, SEQDB_DOMAIN]
 
 
 def generate_erm_diagrams(dir: Path) -> None:

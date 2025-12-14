@@ -11,7 +11,6 @@ from gen_epix.casedb.domain.model.case.persistable import (
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.util import create_keys, create_links
@@ -21,6 +20,7 @@ from gen_epix.seqdb.domain.model import ReadSet as SeqdbReadSet
 from gen_epix.seqdb.domain.model import Sample as SeqdbSample
 from gen_epix.seqdb.domain.model import Seq as SeqdbSeq
 from gen_epix.seqdb.domain.model import SequencingProtocol as SeqdbSequencingProtocol
+from gen_epix.util import copy_model_field
 
 
 class GeneticSequence(Model):
@@ -153,10 +153,12 @@ class ReadSet(SeqdbReadSet):
             }
         ),
     )
-    sequencing_protocol: SequencingProtocol | None = copy_model_field(
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(  # type:ignore
         SeqdbReadSet, "sequencing_protocol"
     )
-    sample: Sample | None = copy_model_field(SeqdbReadSet, "sample")
+    sample: Sample | None = copy_model_field(  # type:ignore
+        SeqdbReadSet, "sample"
+    )
 
 
 class Seq(SeqdbSeq):

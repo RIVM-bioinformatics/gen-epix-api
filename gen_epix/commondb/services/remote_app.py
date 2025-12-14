@@ -20,7 +20,7 @@ from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 class CommondbRemoteApp(RemoteApp):
 
-    DEFAULT_ROUTE_PREFIX = "/v1/"
+    DEFAULT_ROUTE_PREFIX = "/v1"
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
