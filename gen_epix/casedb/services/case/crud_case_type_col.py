@@ -36,11 +36,11 @@ def case_service_crud_case_type_col(
         assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
         if is_metadata_admin_or_above(self, cmd.user):
-            return _crud_case_type_col_by_admin(self, uow, cmd)
-        return _crud_case_type_col_by_non_admin(self, uow, cmd)
+            return _crud_case_type_col_without_abac(self, uow, cmd)
+        return _crud_case_type_col_with_abac(self, uow, cmd)
 
 
-def _crud_case_type_col_by_admin(
+def _crud_case_type_col_without_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeColCrudCommand,
@@ -74,8 +74,8 @@ def _crud_case_type_col_by_admin(
                     f"Invalid case_type_dim_id provided: {obj.case_type_dim_id}",
                     ids=[obj.case_type_dim_id],
                 )
-            ct_dim = case_type_dims[0]
-            if ct_dim.case_type_id != obj.case_type_id:
+            case_type_dim = case_type_dims[0]
+            if case_type_dim.case_type_id != obj.case_type_id:
                 raise exc.InvalidArgumentsError(
                     "case_type_dim.case_type_id must match case_type_id of CaseTypeCol",
                     ids=[obj.case_type_dim_id],
@@ -84,7 +84,7 @@ def _crud_case_type_col_by_admin(
     return self.crud(cmd)  # type:ignore[return-value]
 
 
-def _crud_case_type_col_by_non_admin(
+def _crud_case_type_col_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeColCrudCommand,

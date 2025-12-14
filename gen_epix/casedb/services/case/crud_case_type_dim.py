@@ -32,11 +32,11 @@ def case_service_crud_case_type_dim(
         assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
         if is_metadata_admin_or_above(self, cmd.user):
-            return _crud_case_type_dim_by_admin(self, uow, cmd)
-        return _crud_case_type_dim_by_non_admin(self, uow, cmd)
+            return _crud_case_type_dim_without_abac(self, uow, cmd)
+        return _crud_case_type_dim_with_abac(self, uow, cmd)
 
 
-def _crud_case_type_dim_by_admin(
+def _crud_case_type_dim_without_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeDimCrudCommand,
@@ -247,7 +247,7 @@ def _crud_update_case_type_dim(
                     )
 
 
-def _crud_case_type_dim_by_non_admin(
+def _crud_case_type_dim_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeDimCrudCommand,

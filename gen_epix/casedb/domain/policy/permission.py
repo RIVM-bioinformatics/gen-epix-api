@@ -37,6 +37,22 @@ class RoleGenerator(CommonRoleGenerator):
                 command.DataCollectionSetDataCollectionUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
+            # case with impact on abac
+            (
+                command.CaseTypeSetCrudCommand,
+                PermissionTypeSet.D,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CUD),
+            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
+            (
+                command.CaseTypeColSetCrudCommand,
+                PermissionTypeSet.D,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CUD),
+            (
+                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
+                PermissionTypeSet.E,
+            ),
             # abac
             (command.OrganizationAccessCasePolicyCrudCommand, PermissionTypeSet.CUD),
             (
@@ -49,18 +65,19 @@ class RoleGenerator(CommonRoleGenerator):
             # case
             (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeColCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeColSetCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeDimCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
-            (
-                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
-                PermissionTypeSet.E,
-            ),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CRUD),
+            (
+                command.CaseTypeSetCrudCommand,
+                PermissionTypeSet.CRU,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.R),
+            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.R),
+            (
+                command.CaseTypeColSetCrudCommand,
+                PermissionTypeSet.CRU,
+            ),  # Create/update has no impact on abac
             (command.ColCrudCommand, PermissionTypeSet.CRU),
             (command.DimCrudCommand, PermissionTypeSet.CRU),
             # ontology

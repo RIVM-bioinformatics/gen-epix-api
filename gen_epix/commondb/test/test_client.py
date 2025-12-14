@@ -497,7 +497,7 @@ class TestClient:
         self,
         user_or_str: str | model.User,
         include_self: bool = False,
-    ) -> list[model.Organization]:
+    ) -> list[model.User]:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         org_admin_policies: list[model.OrganizationAdminPolicy] = [
             x
@@ -683,6 +683,8 @@ class TestClient:
         model_class: type[model.Model],
         obj_or_key: model.Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
+        verify: bool = False,
+        delete_user_or_str: str | model.User | None = None,
     ) -> UUID:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
@@ -697,16 +699,25 @@ class TestClient:
                 obj_ids=obj.id,
             )
         )
-        # verify if deleted
-        # is_existing_obj = self.app.handle(
-        #     self.app.domain.get_crud_command_for_model(model_class)(
-        #         user=user,
-        #         operation=CrudOperation.EXISTS_ONE,
-        #         obj_ids=deleted_obj_id,
-        #     )
-        # )
-        # if is_existing_obj:
-        #     raise ValueError(f"Object {deleted_obj_id} not deleted")
+        # Verify if the object was deleted
+        if verify:
+            sleep(0.000000001)
+            if delete_user_or_str is None:
+                delete_user: model.User = user
+            else:
+                delete_user = self._get_obj(
+                    self.user_class, delete_user_or_str
+                )  # type:ignore[assignment]
+
+            is_existing_obj = self.app.handle(
+                self.app.domain.get_crud_command_for_model(model_class)(
+                    user=delete_user,
+                    operation=CrudOperation.EXISTS_ONE,
+                    obj_ids=deleted_obj_id,
+                )
+            )
+            if is_existing_obj:
+                raise ValueError(f"Object {deleted_obj_id} not deleted")
         self._delete_obj(model_class, deleted_obj_id)
         return deleted_obj_id
 

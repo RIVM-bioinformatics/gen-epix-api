@@ -15,6 +15,7 @@ from gen_epix.fastapp import CrudOperation, CrudOperationSet
 
 def _col_type_matches_dim_type(col_type: enum.ColType, dim_type: enum.DimType) -> bool:
     # Map required correspondence between Dim.dim_type and Col.col_type families
+    # TODO: use enum.DimColTypeMap to apply to all dim types
     if dim_type == enum.DimType.TIME:
         return col_type in enum.ColTypeSet.TIME.value
     if dim_type == enum.DimType.GEO:
@@ -27,6 +28,7 @@ def case_service_crud_col(
     self: BaseCaseService, cmd: command.ColCrudCommand
 ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Col entities."""
+    # Col entities have no ABAC restrictions, but need some validation on CREATE/UPDATE
     if (
         cmd.operation in CrudOperationSet.CREATE.value
         or cmd.operation in CrudOperationSet.UPDATE.value
