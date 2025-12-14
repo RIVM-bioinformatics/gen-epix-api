@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -43,10 +43,12 @@ class CompleteCaseType(CaseType):
         description="The case type columns for the case type"
     )
     ordered_case_type_dim_ids: list[UUID] = Field(
-        description="The order of the case type dimensions"
+        default_factory=list,
+        description="The case type dimensions order by their (occurrence, rank, code). Calculated during model validation.",
     )
     ordered_case_type_col_ids: list[UUID] = Field(
-        description="The order of the case type columns outside the context of a dimension"
+        default_factory=list,
+        description="The order of the case type columns, ordered their (ordered_case_type_dim, rank, code). Calculated during model validation.",
     )
     genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(
         description="The genetic distance protocols used by the case type"
@@ -73,13 +75,42 @@ class CompleteCaseType(CaseType):
     delete_max_n_cases: int = copy_model_field(CaseType, "delete_max_n_cases")
 
     @model_validator(mode="after")
-    def derive_case_type_col_order(self) -> "CompleteCaseType":
-        ordered: list[UUID] = []
-        seen: set[UUID] = set()
-        for dim in self.case_type_dims:
-            for cid in dim.case_type_col_order:
-                if cid not in seen:
-                    ordered.append(cid)
-                    seen.add(cid)
-        self.case_type_col_order = ordered
+    def validate_model(self) -> Self:
+        if (
+            self.stats_time_case_type_dim_id is not None
+            and self.stats_time_case_type_dim_id not in self.case_type_dims
+        ):
+            raise ValueError(
+                "stats_time_case_type_dim_id must refer to a valid CaseTypeDim"
+            )
+        if (
+            self.stats_geo_case_type_dim_id is not None
+            and self.stats_geo_case_type_dim_id not in self.case_type_dims
+        ):
+            raise ValueError(
+                "stats_geo_case_type_dim_id must refer to a valid CaseTypeDim"
+            )
+        # Calculate ordered_case_type_dim_ids
+        self.ordered_case_type_dim_ids = [  # type: ignore[assignment]
+            y.id
+            for y in sorted(
+                self.case_type_dims.values(),
+                key=lambda x: (x.occurrence, x.rank, x.code),
+            )
+        ]
+        # Calculate ordered_case_type_col_ids
+        case_type_dim_order_map = {
+            x: i for i, x in enumerate(self.ordered_case_type_dim_ids)
+        }
+        self.ordered_case_type_col_ids = [  # type: ignore[assignment]
+            y.id
+            for y in sorted(
+                self.case_type_cols.values(),
+                key=lambda x: (
+                    case_type_dim_order_map[x.case_type_dim_id],
+                    x.rank,
+                    x.code,
+                ),
+            )
+        ]
         return self
