@@ -29,11 +29,11 @@ def case_service_crud_case_type(
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
         if is_metadata_admin_or_above(self, cmd.user):
-            return _crud_case_type_by_admin(self, uow, cmd)
-        return _crud_case_type_by_non_admin(self, uow, cmd)
+            return _crud_case_type_without_abac(self, uow, cmd)
+        return _crud_case_type_with_abac(self, uow, cmd)
 
 
-def _crud_case_type_by_admin(
+def _crud_case_type_without_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeCrudCommand,
@@ -44,7 +44,7 @@ def _crud_case_type_by_admin(
     return self.crud(cmd)  # type:ignore[return-value]
 
 
-def _crud_case_type_by_non_admin(
+def _crud_case_type_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeCrudCommand,
