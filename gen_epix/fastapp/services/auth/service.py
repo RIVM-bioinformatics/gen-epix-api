@@ -641,7 +641,7 @@ class AuthService(BaseAuthService):
                     logger=self._logger,
                     log_item_class=self.app.log_item_class,
                     discovery_doc=discovery_doc,
-                    ssl_context=True,
+                    ssl_context=idp_cfg.get("ssl_context", True),  # type: ignore
                 )
                 return idp_client
             else:
