@@ -21,7 +21,9 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
-from gen_epix.fastapp.services.auth.token_introspection_manager import TokenIntrospectionManager
+from gen_epix.fastapp.services.auth.token_introspection_manager import (
+    TokenIntrospectionManager,
+)
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 
 
