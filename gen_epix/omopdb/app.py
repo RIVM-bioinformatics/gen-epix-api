@@ -1,9 +1,9 @@
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.util import get_package_version
 from gen_epix.omopdb.api.router import create_routers
 from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.env import AppComposer
+from gen_epix.util import get_package_version
 
 APP_NAME = "OMOPDB"
 

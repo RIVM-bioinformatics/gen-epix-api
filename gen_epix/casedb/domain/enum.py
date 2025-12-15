@@ -196,9 +196,11 @@ class ColType(Enum):
     TIME_YEAR = "TIME_YEAR"
     GEO_LATLON = "GEO_LATLON"
     GEO_REGION = "GEO_REGION"
-    ID_DIRECT = "ID_DIRECT"
-    ID_PSEUDONYMISED = "ID_PSEUDONYMISED"
-    ID_ANONYMISED = "ID_ANONYMISED"
+    ID_PERSON = "ID_PERSON"
+    ID_CASE = "ID_CASE"
+    ID_SAMPLE = "ID_SAMPLE"
+    ID_EVENT = "ID_EVENT"
+    ID_GENETIC_SEQUENCE = "ID_GENETIC_SEQUENCE"
     DECIMAL_0 = "DECIMAL_0"
     DECIMAL_1 = "DECIMAL_1"
     DECIMAL_2 = "DECIMAL_2"
@@ -215,7 +217,15 @@ class ColType(Enum):
 
 
 class ColTypeSet(Enum):
-    ID = frozenset({ColType.ID_DIRECT, ColType.ID_PSEUDONYMISED, ColType.ID_ANONYMISED})
+    ID = frozenset(
+        {
+            ColType.ID_PERSON,
+            ColType.ID_SAMPLE,
+            ColType.ID_CASE,
+            ColType.ID_EVENT,
+            ColType.ID_GENETIC_SEQUENCE,
+        }
+    )
     LANGUAGE = frozenset(
         {
             ColType.CONTEXT_FREE_GRAMMAR_JSON,
@@ -310,9 +320,45 @@ class ColTypeSet(Enum):
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
+class DimColTypeSet(Enum):
+    TEXT = frozenset(
+        ColTypeSet.LANGUAGE.value.union(
+            {ColType.TEXT},
+            ColTypeSet.STRING_SET.value,
+            ColTypeSet.GENETIC.value,
+        )
+    )
+    IDENTIFIER = ColTypeSet.ID.value
+    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL})
+    TIME = ColTypeSet.TIME.value
+    GEO = ColTypeSet.GEO.value
+    ORGANIZATION = ColTypeSet.ORGANIZATION.value
+    OTHER = ColTypeSet.OTHER.value
+
+
+class ColTypeOrder(Enum):
+    TIME_RESOLUTION_DESC = {
+        ColType.TIME_DAY: 1,
+        ColType.TIME_WEEK: 2,
+        ColType.TIME_MONTH: 3,
+        ColType.TIME_QUARTER: 4,
+        ColType.TIME_YEAR: 5,
+    }
+
+
 class CaseColDataRule(Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
     UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"
+
+
+class CaseColDataRuleSet(Enum):
+    PREVENTS_UPLOAD = frozenset(
+        {
+            CaseColDataRule.INVALID,
+            CaseColDataRule.UNAUTHORIZED,
+            CaseColDataRule.CONFLICT,
+        }
+    )

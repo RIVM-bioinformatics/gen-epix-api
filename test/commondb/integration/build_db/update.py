@@ -195,6 +195,8 @@ class TestUpdate:
                 user, model.DataCollection, "data_collection23", {"description": str(i)}
             )
 
+    # TODO: update identifier issuer
+
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_data_collection_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_APP_ADMIN_USERS):

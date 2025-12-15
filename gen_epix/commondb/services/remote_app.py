@@ -1,37 +1,34 @@
-import json
-from collections.abc import Iterable
+import importlib
 from datetime import datetime
+from enum import Enum
 from logging import Logger
 from typing import Any
 
-import httpx
 import jwt
 
+from gen_epix.commondb.config import AppCfg
+from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
+from gen_epix.fastapp.app import App
+from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command
 from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
-from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
-from gen_epix.seqdb.domain import DOMAIN
-from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import model as seqdb_model
 
 
-class SeqdbRemoteApp(RemoteApp):
+class CommondbRemoteApp(RemoteApp):
 
-    DEFAULT_ROUTE_PREFIX = "/v1/"
+    DEFAULT_ROUTE_PREFIX = "/v1"
 
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
-    ROUTE_MAP: dict[type[Command], str] = {
-        seqdb_command.RetrievePhylogeneticTreeCommand: "retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "retrieve/genetic_sequence/fasta",
-    }
+    ROUTE_MAP: dict[type[Command], str] = {}
 
     def __init__(
         self,
+        domain: Domain,
         host: str,
         port: int | None,
         http_protocol: HttpProtocol = HttpProtocol.HTTPS,
@@ -60,7 +57,7 @@ class SeqdbRemoteApp(RemoteApp):
         )
 
         super().__init__(
-            DOMAIN,
+            domain,
             host,
             port,
             http_protocol=http_protocol,
@@ -113,24 +110,6 @@ class SeqdbRemoteApp(RemoteApp):
         self._oauth_token_refresh_margin = oauth_token_refresh_margin
         self._oauth_header_cache: tuple[int, dict[str, str]] | None = None
 
-        # Register routes and handlers
-        self.register_route(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand],
-        )
-        self.register_route(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
-        )
-        self.register_handler(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.retrieve_phylogenetic_tree,
-        )
-        self.register_handler(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.retrieve_genetic_sequence_fasta_by_id,
-        )
-
     def get_headers(self, cmd: Command) -> dict[str, str]:
         # Call identity provider to get JWT
         if self._auth_protocol == AuthProtocol.NONE:
@@ -146,8 +125,10 @@ class SeqdbRemoteApp(RemoteApp):
                 return self._oauth_header_cache[1]
             # Retrieve new token
 
-            jwt_token = self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
-                scope=self._oauth_scope
+            jwt_token = (
+                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+                    scope=self._oauth_scope
+                )
             )
             # Create headers
             headers = dict(self._default_headers)
@@ -165,54 +146,74 @@ class SeqdbRemoteApp(RemoteApp):
             f"Auth protocol {self._auth_protocol.value} not supported for token retrieval"
         )
 
-    def retrieve_phylogenetic_tree(
-        self,
-        cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
-    ) -> seqdb_model.PhylogeneticTree | None:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        # Create request body matching seqdb API expectations
-
-        request_body = RetrievePhylogeneticTreeRequestBody(
-            seq_distance_protocol_id=cmd.seq_distance_protocol_id,
-            tree_algorithm=cmd.tree_algorithm,
-            seq_ids=cmd.seq_ids,
-            leaf_codes=cmd.leaf_names,
-        )
-
-        with httpx.Client(verify=self.ssl_context) as client:
-            response = client.post(
-                route,
-                json=json.loads(request_body.model_dump_json()),
-                headers=headers,
+    @staticmethod
+    def create_local_or_remote_app(
+        app_type: enum.AppType,
+        app_setup_type: str,  # "LOCAL" or "REMOTE"
+        local_app_props: dict[str, Any] | None = None,
+        remote_app_props: dict[str, Any] | None = None,
+        app_composer_class: type | None = None,
+        user_class: type[model.User] | None = None,
+        service_type_enum: type[Enum] | None = None,
+        repository_type_enum: type[Enum] | None = None,
+        logger: Logger | None = None,
+    ) -> tuple[App, model.User | None]:
+        # Parse input
+        app_setup_type = app_setup_type.upper()
+        if app_setup_type not in ("LOCAL", "REMOTE"):
+            raise exc.InitializationServiceError(
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
             )
-            response.raise_for_status()
-            data = response.json()
-        if not data:
-            return None
-        return seqdb_model.PhylogeneticTree(**data)
-
-    def retrieve_genetic_sequence_fasta_by_id(
-        self,
-        cmd: seqdb_command.RetrieveSeqFastaCommand,
-    ) -> Iterable[str]:
-        headers = self.get_headers(cmd)
-        route = self.get_route(cmd)
-
-        request_body: dict[str, Any] = {
-            "user": cmd.user,
-            "seq_ids": cmd.seq_ids,
-            "wrap": cmd.wrap,
-        }
-
-        def _iter_fasta_generator() -> Iterable[str]:
-            with httpx.Client(verify=self.ssl_context) as client:
-                with client.stream(
-                    "POST", route, json=request_body, headers=headers
-                ) as resp:
-                    resp.raise_for_status()
-                    for chunk in resp.iter_bytes():
-                        yield chunk.decode()
-
-        return _iter_fasta_generator()
+        # Create local or remote app
+        app: App
+        user: user_class | None  # type: ignore[reportInvalidTypeForm]
+        if app_setup_type == "LOCAL":
+            # Parse local app props
+            if (
+                local_app_props is None
+                or app_composer_class is None
+                or user_class is None
+                or service_type_enum is None
+                or repository_type_enum is None
+            ):
+                raise exc.InitializationServiceError(
+                    "local_app_props, app_composer_class, user_class, service_type_enum, and repository_type_enum must be provided for LOCAL app setup."
+                )
+            if "user" not in local_app_props:
+                raise exc.InitializationServiceError(
+                    "local_app_props must contain 'user' key for LOCAL app setup."
+                )
+            # Get app config
+            if "app_cfg" in local_app_props:
+                app_cfg = local_app_props.pop("app_cfg")
+            else:
+                app_cfg = AppCfg(app_type, service_type_enum, repository_type_enum)
+            log_setup = local_app_props.get("log_setup", logger is not None)
+            # Create local app and user
+            app_composer = app_composer_class(app_cfg, log_setup=log_setup)
+            app = app_composer.app
+            user = user_class(**local_app_props["user"])
+        elif app_setup_type == "REMOTE":
+            # Parse remote app props
+            if remote_app_props is None:
+                raise exc.InitializationServiceError(
+                    "remote_app_props must be provided for REMOTE app setup."
+                )
+            if "module" not in remote_app_props or "class_name" not in remote_app_props:
+                raise exc.InitializationServiceError(
+                    "remote_app_props must contain 'module' and 'class_name' keys for REMOTE app setup."
+                )
+            # Create remote app
+            remote_app_module = remote_app_props.pop("module")
+            remote_app_class_name = remote_app_props.pop("class_name")
+            remote_app_class = getattr(
+                importlib.import_module(remote_app_module), remote_app_class_name
+            )
+            app = remote_app_class(**remote_app_props)
+            # No user for remote app, this is handled via authentication to the actual remote service
+            user = None
+        else:
+            raise exc.InitializationServiceError(
+                f"Invalid app_setup_type: {app_setup_type}. Must be 'LOCAL' or 'REMOTE'."
+            )
+        return app, user

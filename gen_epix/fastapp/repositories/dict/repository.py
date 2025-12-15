@@ -190,8 +190,8 @@ class DictRepository(BaseRepository):
                         continue
                     if extra_data == "raise":
                         raise ValueError(
-                            f"Model {model_class} links to "
-                            "additional linked model {link_model_class}"
+                            f"Model {model_class.__name__} links to "
+                            f"additional linked model {link_model_class.__name__}"
                         )
                     raise NotImplementedError
                 self._back_links[link_model_class].append(
@@ -483,7 +483,7 @@ class DictRepository(BaseRepository):
                     if linked_df is not None and linked_obj_id not in linked_df:
                         raise exc.InvalidIdsError(
                             (
-                                f"Model {model_class}: obj {get_id(obj)} has invalid id"
+                                f"Model {model_class.__name__}: obj {get_id(obj)} has invalid id"
                                 f' in {link_field_name}: "{linked_obj_id}"'
                             ),
                             ids=[linked_obj_id],
@@ -496,7 +496,7 @@ class DictRepository(BaseRepository):
                     if get_link_id(linked_obj) != linked_obj_id:
                         raise exc.InvalidLinkIdsError(
                             (
-                                f"Model {model_class}: obj {get_link_id(obj)} has different id "
+                                f"Model {model_class.__name__}: obj {get_link_id(obj)} has different id "
                                 f'in {link_field_name} ("{linked_obj_id}") versus '
                                 f'{relationship_field_name} ("{get_link_id(linked_obj)}")'
                             ),
@@ -546,8 +546,8 @@ class DictRepository(BaseRepository):
                 linked_obj_ids_str = ", ".join([f'"{x}"' for x in linked_obj_ids])
                 raise exc.LinkConstraintViolationError(
                     (
-                        f"Model {model_class}: link constraint conflict in model "
-                        f"{link_model_class}, id(s): {linked_obj_ids_str}"
+                        f"Model {model_class.__name__}: link constraint conflict in model "
+                        f"{link_model_class.__name__}, id(s): {linked_obj_ids_str}"
                     ),
                     list(uq_obj_ids),
                     linked_obj_ids,
@@ -664,7 +664,7 @@ class DictRepository(BaseRepository):
         if invalid_type_ids:
             invalid_type_ids_str = ", ".join([f'"{x}"' for x in invalid_type_ids])
             raise exc.InvalidModelIdsError(
-                f"Model {model_class}: object(s) are of different type: {invalid_type_ids_str}",
+                f"Model {model_class.__name__}: object(s) are of different type: {invalid_type_ids_str}",
                 ids=invalid_type_ids,
             )
         get_id = self._get_id[model_class]
@@ -701,7 +701,7 @@ class DictRepository(BaseRepository):
     ) -> None:
         invalid_obj_ids_str = ", ".join(f'"{x}"' for x in invalid_obj_ids)
         raise exc.InvalidIdsError(
-            f"Model {model_class}: invalid object id(s) provided: {invalid_obj_ids_str}",
+            f"Model {model_class.__name__}: invalid object id(s) provided: {invalid_obj_ids_str}",
             ids=invalid_obj_ids,
         )
 
@@ -720,7 +720,7 @@ class DictRepository(BaseRepository):
     ) -> None:
         duplicate_ids_str = ", ".join([f'"{x}"' for x in duplicate_ids])
         raise exc.DuplicateIdsError(
-            f"Model {model_class}: object ids are not unique: {duplicate_ids_str}",
+            f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids,
         )
 
@@ -765,7 +765,7 @@ class DictRepository(BaseRepository):
                 ]
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
-                f"Model {model_class}: object keys are not unique",
+                f"Model {model_class.__name__}: object keys are not unique",
                 duplicate_key_ids=list(set([get_id(x) for x in duplicate_objs])),
             )
         # Check for duplicate keys between objs and df_objs, excluding those df_objs
@@ -788,7 +788,7 @@ class DictRepository(BaseRepository):
                 ]
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
-                f"Model {model_class}: object keys are not unique",
+                f"Model {model_class.__name__}: object keys are not unique",
                 duplicate_key_ids=list(set([get_id(x) for x in duplicate_objs])),
             )
 
