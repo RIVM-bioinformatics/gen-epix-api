@@ -801,6 +801,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.general.code.test.model.field.properties",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_general_code_test_model_field_properties"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",
