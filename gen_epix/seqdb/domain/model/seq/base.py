@@ -51,9 +51,9 @@ class QualityMixin:
 
 class BaseSeq(Model):
     """
-    Base class The class includes validation logic to ensure consistency between
-    the sequence, its format, length, and derived sequence hash. The sequence hash
-    is stored in the id field of the model.
+    Base class for a sequence. The class includes validation logic to ensure
+    consistency between the sequence, its format, length, and derived sequence hash.
+    The sequence hash is stored in the id field of the model.
     """
 
     ENTITY: ClassVar = Entity(
@@ -69,17 +69,13 @@ class BaseSeq(Model):
         description="The format of the sequence",
     )
     length: int = Field(
+        default=0,
         description="The length of the sequence. Derived from the sequence if possible and if the value is set to zero. If set to zero and it is not possible to derive the length, an error is raised.",
         ge=0,
     )
 
-    @field_serializer("seq_format")
-    def _serialize_seq_format(self, value: enum.SeqFormat) -> str:
-        """Serialize the seq_format enum to its string value."""
-        return value.value
-
     @model_validator(mode="after")
-    def _validate_mixin(self) -> Self:
+    def _validate_model(self) -> Self:
         """
         Derive the sequence hash, if not provided, or otherwise verify that it is
         correctly derived if possible. The sequence hash is stored in the id field
@@ -125,6 +121,11 @@ class BaseSeq(Model):
                 "Provided sequence hash, i.e. the id, does not match computed sequence hash"
             )
         return self
+
+    @field_serializer("seq_format")
+    def _serialize_seq_format(self, value: enum.SeqFormat) -> str:
+        """Serialize the seq_format enum to its string value."""
+        return value.value
 
     # TODO: adding the serializer gives issues writing as binary to the database, but not adding it may give other issues
     # @field_serializer("seq_hash", mode="plain")

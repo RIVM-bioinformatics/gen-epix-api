@@ -106,7 +106,11 @@ class Contig(BaseSeq, QualityMixin):
 
     NAME: ClassVar = "Contig"
 
-    pass
+    @field_serializer("id", mode="plain")
+    def _serialize_id(self, value: UUID | None) -> str | None:
+        if isinstance(value, UUID):
+            return str(value)
+        return value
 
 
 class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
@@ -308,14 +312,21 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         """"""
         if isinstance(value, str):
             value = [Contig.model_validate(x) for x in json.loads(value)]
+        elif isinstance(value, list):
+            # Convert dict objects to Contig model instances if needed
+            converted_value = []
+            for item in value:
+                if isinstance(item, dict):
+                    converted_value.append(Contig.model_validate(item))
+                else:
+                    converted_value.append(item)
+            value = converted_value
         # Check for duplicate contig sequences
         seen_hashes = set()
         for contig in value:
-            if contig.seq_hash in seen_hashes:
-                raise ValueError(
-                    f"Duplicate contig with seq_hash {contig.seq_hash} found"
-                )
-            seen_hashes.add(contig.seq_hash)
+            if contig.id in seen_hashes:
+                raise ValueError(f"Duplicate contig with hash/id {contig.id} found")
+            seen_hashes.add(contig.id)
         return value
 
     @model_validator(mode="after")

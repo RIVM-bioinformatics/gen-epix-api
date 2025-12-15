@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import Field, computed_field, field_serializer, model_validator
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifier
+from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.base import Model
@@ -104,17 +104,17 @@ class AlleleProfileForUpload(AlleleProfile):
         description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    allele_ids: list[UUID] | None = Field(
-        default=None,
-        description="List of ids of all alleles detected for this sample for the loci within the locus set, in any order and if available. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    allele_profile: str = Field(
+        default="",
+        description="The allele profile as a string representation, e.g. a comma-separated list of allele codes or ids, in the order defined by the locus set. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
     alleles: list[AlleleForUpload] | None = Field(
         default=None,
-        description="List of all alleles detected for this sample and for the loci within the locus set, in any order. Must be present if allele_ids and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+        description="List of all alleles detected for this sample and for the loci within the locus set, in any order. Must be present if allele_profile and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
     locus_allele_id_map: dict[str, UUID] | None = Field(
         default=None,
-        description="A mapping from locus codes to allele ids, which are the hashes of the allele sequence, for all detected loci, in any order and if available. Must be present if allele_ids and alleles are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+        description="A mapping from locus codes to allele ids, which are the hashes of the allele sequence, for all detected loci, in any order and if available. Must be present if allele_profile and alleles are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
 
     @model_validator(mode="after")
@@ -122,26 +122,33 @@ class AlleleProfileForUpload(AlleleProfile):
         """Ensure that either locus_detection_protocol_code or locus_detection_protocol_id is set, and similarly for locus_set."""
         if (
             not self.locus_detection_protocol_code
-            and not self.locus_detection_protocol_id
+            and self.locus_detection_protocol_id == NULL_ID
         ):
             raise ValueError(
                 "Either locus_detection_protocol_code or locus_detection_protocol_id must be provided."
             )
-        if self.locus_set_code is None and self.locus_set_id is None:
+        if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
-        if self.locus_code_map_id is None and self.locus_code_map_code is None:
+        if self.locus_code_map_id == NULL_ID and self.locus_code_map_code is None:
             for allele in self.alleles or []:
                 if allele.locus_code is not None:
                     raise ValueError(
                         "Either locus_code_map_id or locus_code_map_code must be provided when alleles contain locus_code."
                     )
-        if (
-            self.allele_ids is None
-            and self.alleles is None
-            and self.locus_allele_id_map is None
-        ):
+            if self.locus_allele_id_map is not None:
+                raise ValueError(
+                    "Either locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is provided."
+                )
+        n_profiles = sum(
+            [
+                self.allele_profile != "",
+                self.alleles is not None,
+                self.locus_allele_id_map is not None,
+            ]
+        )
+        if n_profiles != 1:
             raise ValueError(
-                "At least one of allele_ids, alleles, or locus_allele_id_map must be provided."
+                "Exactly one of allele_profile, alleles, or locus_allele_id_map must be provided."
             )
         return self
 
@@ -197,7 +204,7 @@ class SampleForUpload(Sample):
     ]
 
     # Sample level data
-    external_ids: list[ExternalIdentifier] | None = Field(
+    external_ids: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="The list of external identifiers associated with the sample, if available.",
     )

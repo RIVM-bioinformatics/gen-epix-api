@@ -162,7 +162,7 @@ class Run:
                 "test/commondb/integration",
                 "test/casedb/unit",
                 "test/casedb/integration",
-                # "test/seqdb/unit",
+                "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
