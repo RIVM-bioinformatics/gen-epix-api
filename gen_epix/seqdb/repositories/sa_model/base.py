@@ -5,7 +5,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy_utils.types.uuid import UUIDType
 
 from gen_epix.commondb.repositories.sa_model import get_mixin_mapped_column
-from gen_epix.seqdb.domain import model
+from gen_epix.commondb.repositories.sa_model.util import create_mapped_column
+from gen_epix.seqdb.domain import DOMAIN, enum, model
 
 
 class CodeMixin:
@@ -21,11 +22,11 @@ class QualityMixin:
     SQLAlchemy model mixin for adding a number of standard fields.
     """
 
-    quality_score: Mapped[float] = get_mixin_mapped_column(
-        model.QualityMixin, "quality_score", sa.Float
+    qc_score: Mapped[float] = get_mixin_mapped_column(
+        model.QualityMixin, "qc_score", sa.Float
     )
-    quality: Mapped[str] = get_mixin_mapped_column(
-        model.QualityMixin, "quality", sa.String
+    qc_result: Mapped[enum.QualityControlResult] = get_mixin_mapped_column(
+        model.QualityMixin, "qc_result", sa.String
     )
 
 
@@ -34,28 +35,11 @@ class SeqMixin:
     SQLAlchemy model mixin for adding a number of standard fields.
     """
 
-    seq: Mapped[str] = get_mixin_mapped_column(model.SeqMixin, "seq", sa.Text)
-    seq_format: Mapped[str] = get_mixin_mapped_column(
-        model.SeqMixin, "seq_format", sa.String
+    seq: Mapped[str] = create_mapped_column(DOMAIN, model.BaseSeq, "seq")
+    seq_format: Mapped[enum.SeqFormat] = create_mapped_column(
+        DOMAIN, model.BaseSeq, "seq_format"
     )
-    seq_hash: Mapped[UUID] = get_mixin_mapped_column(
-        model.SeqMixin, "seq_hash", UUIDType
-    )
-    length: Mapped[int] = get_mixin_mapped_column(model.SeqMixin, "length", sa.Integer)
-
-
-class AlignmentMixin:
-    """
-    SQLAlchemy model mixin for adding a number of standard fields.
-    """
-
-    aln: Mapped[str] = get_mixin_mapped_column(model.AlignmentMixin, "aln", sa.Text)
-    aln_format: Mapped[str] = get_mixin_mapped_column(
-        model.AlignmentMixin, "aln_format", sa.String
-    )
-    aln_hash: Mapped[UUID] = get_mixin_mapped_column(
-        model.AlignmentMixin, "aln_hash", UUIDType
-    )
+    length: Mapped[int] = create_mapped_column(DOMAIN, model.BaseSeq, "length")
 
 
 class ProtocolMixin:
@@ -73,4 +57,18 @@ class ProtocolMixin:
     )
     props: Mapped[dict[str, str]] = get_mixin_mapped_column(
         model.ProtocolMixin, "props", sa.JSON
+    )
+
+
+class AlignmentMixin:
+    """
+    SQLAlchemy model mixin for adding a number of standard fields.
+    """
+
+    aln: Mapped[str] = get_mixin_mapped_column(model.AlignmentMixin, "aln", sa.Text)
+    aln_format: Mapped[str] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_format", sa.String
+    )
+    aln_hash: Mapped[UUID] = get_mixin_mapped_column(
+        model.AlignmentMixin, "aln_hash", UUIDType
     )

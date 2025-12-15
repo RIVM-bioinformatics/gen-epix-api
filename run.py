@@ -162,7 +162,7 @@ class Run:
                 "test/commondb/integration",
                 "test/casedb/unit",
                 "test/casedb/integration",
-                # "test/seqdb/unit",
+                "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
@@ -470,6 +470,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/casedb/custom",
+            ]
+        )
+
+    def test_seqdb_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit",
             ]
         )
 

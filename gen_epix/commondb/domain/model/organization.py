@@ -1,10 +1,16 @@
 import datetime
 import json
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
@@ -394,3 +400,72 @@ class OrganizationIdentifierIssuerLink(Model):
     identifier_issuer: IdentifierIssuer | None = Field(
         default=None, description="The identifier issuer corresponding to the ID"
     )
+
+
+class ExternalIdentifier(Model):
+    """
+    An externally generated identifier of a particular type and its corresponding
+    internal identifier. The externally generated identifier consists of the
+    combination (identifier issuer, identifier)
+    """
+
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="external_identifiers",
+        table_name="external_identifier",
+        persistable=True,
+        keys=create_keys(
+            {
+                1: ("identifier_type", "identifier_issuer_id", "external_id"),
+                2: ("identifier_type", "internal_id"),
+            }
+        ),
+        links=create_links(
+            {
+                1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
+            }
+        ),
+    )
+    identifier_type: enum.IdentifierType = Field(
+        description="The type of external identifier"
+    )
+    identifier_issuer_id: UUID = Field(
+        description="The UUID of the identifier issuer that issued the external identifier",
+    )
+    identifier_issuer: IdentifierIssuer | None = Field(
+        default=None, description="The identifier issuer corresponding to the ID"
+    )
+    external_id: str = Field(description="The external identifier", max_length=255)
+    internal_id: UUID = Field(
+        description="The internal identifier. This identifier is not guaranteed to still exist, so operations using it should check this first."
+    )
+
+
+class ExternalIdentifierForUpload(BaseModel):
+    """
+    An external identifier, defined as the combination of
+    (identifier issuer, identifier), intended for an upload operation.
+    The identifier issuer can be given either as its code or ID to facilitate the
+    upload operation where applicable.
+    """
+
+    identifier_issuer_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_code is not present.",
+    )
+    identifier_issuer_code: str | None = Field(
+        default=None,
+        description="The code of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_id is not present.",
+        max_length=255,
+    )
+    identifier: str = Field(description="The external identifier", max_length=255)
+
+    @model_validator(mode="after")
+    def _validate_issuer_fields(self) -> Self:
+        """Ensure that either identifier_issuer_id or identifier_issuer_code is set."""
+        if self.identifier_issuer_id is None and self.identifier_issuer_code is None:
+            raise ValueError(
+                "Either identifier_issuer_id or identifier_issuer_code must be provided."
+            )
+        return self
+
+    # TODO: add equals and hash methods

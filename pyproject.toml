@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]==0.124.0",
     "gunicorn==23.0.*",

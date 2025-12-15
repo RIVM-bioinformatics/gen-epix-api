@@ -21,6 +21,9 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
+    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
+)
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -228,7 +231,7 @@ from gen_epix.seqdb.domain.command.seq import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    UpsertCompleteSamplesCommand as UpsertCompleteSamplesCommand,
+    UploadSamplesCommand as UploadSamplesCommand,
 )
 
 COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
@@ -260,7 +263,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         MlvaProfileCrudCommand,
         PcrMeasurementCrudCommand,
         PcrProtocolCrudCommand,
-        UpsertCompleteSamplesCommand,
+        UploadSamplesCommand,
         ReadSetCrudCommand,
         RefAlleleCrudCommand,
         RefSeqCrudCommand,

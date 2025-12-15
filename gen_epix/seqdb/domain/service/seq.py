@@ -32,7 +32,7 @@ class BaseSeqService(BaseService):
             self.retrieve_seq_fasta,
         )
         f(
-            command.UpsertCompleteSamplesCommand,
+            command.UploadSamplesCommand,
             self.upsert_complete_samples,
         )
 
@@ -47,7 +47,7 @@ class BaseSeqService(BaseService):
     def retrieve_complete_samples(
         self,
         cmd: command.RetrieveCompleteSamplesCommand,
-    ) -> list[model.CompleteSample]:
+    ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -77,6 +77,6 @@ class BaseSeqService(BaseService):
     @abc.abstractmethod
     def upsert_complete_samples(
         self,
-        cmd: command.UpsertCompleteSamplesCommand,
+        cmd: command.UploadSamplesCommand,
     ) -> list[UUID]:
         raise NotImplementedError()
