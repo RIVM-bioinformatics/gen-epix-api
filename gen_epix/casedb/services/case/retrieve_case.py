@@ -9,26 +9,26 @@ from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.string_set import StringSetFilter
+from gen_epix.filter.uuid_set import UuidSetFilter
 
 
 def case_service_retrieve_cases_by_query(
     self: BaseCaseService, cmd: command.RetrieveCasesByQueryCommand
-) -> list[UUID]:
+) -> model.CaseQueryResult:
     # TODO: This is an inefficient call first loading all cases, then filtering them and then keeping only the ids. To be replaced by optimized query.
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
     case_query = cmd.case_query
     case_set_ids = case_query.case_set_ids
-    case_type_ids = case_query.case_type_ids
+    case_type_id = case_query.case_type_id
     datetime_range_filter = case_query.datetime_range_filter
 
     # Special case: zero case_set_ids or zero case_type_ids (None equals all)
+    # TODO: return empty CaseQueryResult instead of empty list
     if case_set_ids is not None and len(case_set_ids) == 0:
-        return []
-    if case_type_ids is not None and len(case_type_ids) == 0:
+        raise NotImplementedError("To be implemented")
         return []
 
     # @ABAC: get case abac
@@ -38,13 +38,14 @@ def case_service_retrieve_cases_by_query(
     has_case_read = case_abac.get_combinations_with_access_right(
         enum.CaseRight.READ_CASE
     )
+    read_case_type_col_ids = case_abac.get_case_type_cols_with_access_rights(
+        enum.CaseRight.READ_CASE, case_type_id
+    )
 
-    # @ABAC: Verify read access to all given case types if applicable
-    if case_type_ids and not is_full_access:
-        if not case_type_ids.issubset(set(has_case_read.keys())):
-            raise exc.UnauthorizedAuthError(f"Unauthorized case types: {case_type_ids}")
+    # @ABAC: Verify read access to the given case type if applicable
+    if case_type_id not in has_case_read and not is_full_access:
+        raise exc.UnauthorizedAuthError(f"Unauthorized case type: {case_type_id}")
 
-    case_ids: list[UUID] = []
     with repository.uow() as uow:
 
         # @ABAC: Verify any access to all given case sets if applicable
@@ -55,24 +56,33 @@ def case_service_retrieve_cases_by_query(
                 case_abac,
                 # user_case_access
                 enum.CaseRight.READ_CASE_SET,
+                case_type_id=case_type_id,
             ) + self._retrieve_case_sets_with_content_right(
                 uow,
                 user.id,
                 case_abac,
                 # user_case_access
                 enum.CaseRight.WRITE_CASE_SET,
+                case_type_id=case_type_id,
             )
-            invalid_case_set_ids = case_set_ids - {x.id for x in case_sets}
+            unauthorized_case_set_ids = case_set_ids - {x.id for x in case_sets}
+            if unauthorized_case_set_ids:
+                unauthorized_case_set_ids_str = ", ".join(
+                    [str(x) for x in unauthorized_case_set_ids]
+                )
+                raise exc.UnauthorizedAuthError(
+                    f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
+                )
+            invalid_case_set_ids = case_set_ids - {case_type_id}
             if invalid_case_set_ids:
                 invalid_case_set_ids_str = ", ".join(
                     [str(x) for x in invalid_case_set_ids]
                 )
-                raise exc.UnauthorizedAuthError(
-                    f"Unauthorized case sets: {invalid_case_set_ids_str}"
+                raise exc.InvalidArgumentsError(
+                    f"Case sets do not all belong to case type {case_type_id}: {invalid_case_set_ids_str}"
                 )
 
         # @ABAC: Verify validity of filter
-        cols: list[model.Col] = []
         if case_query.filter:
             # Make sure filter keys are UUIDs
             case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
@@ -86,50 +96,67 @@ def case_service_retrieve_cases_by_query(
             case_abac,
             # user_case_access,
             enum.CaseRight.READ_CASE,
+            case_type_id,
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
         )
 
-        # Filter cases by case types
-        if case_type_ids:
-            cases = [x for x in cases if x.case_type_id in case_type_ids]
-
         # Filter cases by case sets
         if case_set_ids:
-            case_ids: list[UUID] = [x.id for x in cases]  # type: ignore
             case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
             cases = [
                 x
-                for x, y in zip(cases, case_ids)
-                if y in case_case_sets and case_case_sets[y].intersection(case_set_ids)
+                for x in cases
+                if x.id in case_case_sets
+                and case_case_sets[x.id].intersection(case_set_ids)
             ]
 
         # Filter cases by filters
         if case_query.filter:
-            map_fns = _get_map_functions_for_filters(cols)
+            filter_mapping_functions = _get_map_functions_for_filters(cols)
             cases = [
                 x
                 for x, y in zip(
                     cases,
                     case_query.filter.match_rows(
-                        (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
+                        (x.content for x in cases), map_fn=filter_mapping_functions  # type: ignore[misc]
                     ),
                 )
                 if y
             ]
 
-    # TODO: consider putting these cases, with their data already filtered, in a
-    # cache, so that the expected subsequent call to retrieve them can be sped up
+        # retrieve case type to apply max results limit
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
 
-    # Return case ids
-    case_ids: list[UUID] = [x.id for x in cases]  # type: ignore
-    return case_ids
+        # Apply max results limit
+        is_max_results_exceeded = False
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            is_max_results_exceeded = True
+            cases = cases[:max_n_cases]
+
+    return model.CaseQueryResult(
+        case_query=case_query,
+        case_ids=[x.id for x in cases],  # type: ignore[arg-type]
+        is_max_results_exceeded=is_max_results_exceeded,
+    )
 
 
 def case_service_retrieve_cases_by_id(
     self: BaseCaseService, cmd: command.RetrieveCasesByIdCommand
 ) -> list[model.Case]:
+    case_type_id = cmd.case_type_id
     case_ids = cmd.case_ids
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
@@ -140,15 +167,178 @@ def case_service_retrieve_cases_by_id(
     assert case_abac is not None
 
     with repository.uow() as uow:
+
         cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
             case_abac,
             enum.CaseRight.READ_CASE,
+            case_type_id,
             case_ids=case_ids,
             filter_content=True,
         )
+        if not cases:
+            return []
+
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
+
+        # Apply max results limit
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            cases = cases[:max_n_cases]
+
     return cases
+
+
+# TEMPORARY: kept for reference while refactoring, remove afterwards
+
+# def case_service_retrieve_cases_by_query(
+#     self: BaseCaseService, cmd: command.RetrieveCasesByQueryCommand
+# ) -> model.CaseQueryResult:
+#     # TODO: This is an inefficient call first loading all cases, then filtering them and then keeping only the ids. To be replaced by optimized query.
+#     user, repository = self._get_user_and_repository(cmd)
+#     assert isinstance(user, model.User) and user.id is not None
+#     case_query = cmd.case_query
+#     case_set_ids = case_query.case_set_ids
+#     case_type_ids = case_query.case_type_ids
+#     datetime_range_filter = case_query.datetime_range_filter
+
+#     # Special case: zero case_set_ids or zero case_type_ids (None equals all)
+#     if case_set_ids is not None and len(case_set_ids) == 0:
+#         return []
+#     if case_type_ids is not None and len(case_type_ids) == 0:
+#         return []
+
+#     # @ABAC: get case abac
+#     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+#     assert case_abac is not None
+#     is_full_access = case_abac.is_full_access
+#     has_case_read = case_abac.get_combinations_with_access_right(
+#         enum.CaseRight.READ_CASE
+#     )
+
+#     # @ABAC: Verify read access to all given case types if applicable
+#     if case_type_ids and not is_full_access:
+#         if not case_type_ids.issubset(set(has_case_read.keys())):
+#             raise exc.UnauthorizedAuthError(f"Unauthorized case types: {case_type_ids}")
+
+#     case_ids: list[UUID] = []
+#     with repository.uow() as uow:
+
+#         # @ABAC: Verify any access to all given case sets if applicable
+#         if case_set_ids:
+#             case_sets = self._retrieve_case_sets_with_content_right(
+#                 uow,
+#                 user.id,
+#                 case_abac,
+#                 # user_case_access
+#                 enum.CaseRight.READ_CASE_SET,
+#             ) + self._retrieve_case_sets_with_content_right(
+#                 uow,
+#                 user.id,
+#                 case_abac,
+#                 # user_case_access
+#                 enum.CaseRight.WRITE_CASE_SET,
+#             )
+#             invalid_case_set_ids = case_set_ids - {x.id for x in case_sets}
+#             if invalid_case_set_ids:
+#                 invalid_case_set_ids_str = ", ".join(
+#                     [str(x) for x in invalid_case_set_ids]
+#                 )
+#                 raise exc.UnauthorizedAuthError(
+#                     f"Unauthorized case sets: {invalid_case_set_ids_str}"
+#                 )
+
+#         # @ABAC: Verify validity of filter
+#         cols: list[model.Col] = []
+#         if case_query.filter:
+#             # Make sure filter keys are UUIDs
+#             case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
+#             cols = _verify_case_filter(self, uow, user, case_query.filter)
+
+#         # @ABAC: Retrieve all cases with read access, and content filtered on case type
+#         # col read access
+#         cases = self._retrieve_cases_with_content_right(
+#             uow,
+#             user.id,
+#             case_abac,
+#             # user_case_access,
+#             enum.CaseRight.READ_CASE,
+#             case_ids=None,
+#             datetime_range_filter=datetime_range_filter,
+#             filter_content=True,
+#         )
+
+#         # Filter cases by case types
+#         if case_type_ids:
+#             cases = [x for x in cases if x.case_type_id in case_type_ids]
+
+#         # Filter cases by case sets
+#         if case_set_ids:
+#             case_ids: list[UUID] = [x.id for x in cases]  # type: ignore
+#             case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
+#             cases = [
+#                 x
+#                 for x, y in zip(cases, case_ids)
+#                 if y in case_case_sets and case_case_sets[y].intersection(case_set_ids)
+#             ]
+
+#         # Filter cases by filters
+#         if case_query.filter:
+#             map_fns = _get_map_functions_for_filters(cols)
+#             cases = [
+#                 x
+#                 for x, y in zip(
+#                     cases,
+#                     case_query.filter.match_rows(
+#                         (x.content for x in cases), map_fn=map_fns  # type: ignore[misc]
+#                     ),
+#                 )
+#                 if y
+#             ]
+
+#     # TODO: consider putting these cases, with their data already filtered, in a
+#     # cache, so that the expected subsequent call to retrieve them can be sped up
+
+#     # Return case ids
+#     case_ids: list[UUID] = [x.id for x in cases]  # type: ignore
+#     return case_ids
+
+
+# TEMPORARY: kept for reference while refactoring, remove afterwards
+
+# def case_service_retrieve_cases_by_id(
+#     self: BaseCaseService, cmd: command.RetrieveCasesByIdCommand
+# ) -> list[model.Case]:
+#     case_ids = cmd.case_ids
+#     user, repository = self._get_user_and_repository(cmd)
+#     assert isinstance(user, model.User) and user.id is not None
+#     if not case_ids:
+#         return []
+#     # @ABAC: get case abac
+#     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+#     assert case_abac is not None
+
+#     with repository.uow() as uow:
+#         cases = self._retrieve_cases_with_content_right(
+#             uow,
+#             user.id,
+#             case_abac,
+#             enum.CaseRight.READ_CASE,
+#             case_ids=case_ids,
+#             filter_content=True,
+#         )
+#     return cases
 
 
 def _verify_case_filter(
@@ -266,8 +456,11 @@ def _get_map_functions_for_filters(
             enum.ColType.ORDINAL,
             enum.ColType.INTERVAL,
             enum.ColType.TEXT,
-            enum.ColType.ID_DIRECT,
-            enum.ColType.ID_PSEUDONYMISED,
+            enum.ColType.ID_PERSON,
+            enum.ColType.ID_SAMPLE,
+            enum.ColType.ID_CASE,
+            enum.ColType.ID_EVENT,
+            enum.ColType.ID_GENETIC_SEQUENCE,
             enum.ColType.ORGANIZATION,
             enum.ColType.OTHER,
         }:

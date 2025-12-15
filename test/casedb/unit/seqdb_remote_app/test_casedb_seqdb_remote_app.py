@@ -10,11 +10,11 @@ import pytest
 
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model as model
-from gen_epix.casedb.services.seqdb.remote_app import SeqdbRemoteApp
 from gen_epix.seqdb.api import RetrievePhylogeneticTreeRequestBody
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
+from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
 
 
 class TestSeqdbRemoteApp:
@@ -68,7 +68,7 @@ class TestSeqdbRemoteApp:
         expected_route = (
             remote_app.host_url
             + remote_app._default_route_prefix
-            + "retrieve/phylogenetic_tree"
+            + "/retrieve/phylogenetic_tree"
         )
 
         # Verify the route is registered
@@ -330,7 +330,7 @@ class TestSeqdbRemoteApp:
         assert seqdb_command.RetrievePhylogeneticTreeCommand in remote_app.ROUTE_MAP
         assert (
             remote_app.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand]
-            == "retrieve/phylogenetic_tree"
+            == "/retrieve/phylogenetic_tree"
         )
 
     def test_retrieve_phylogenetic_tree_method_exists(

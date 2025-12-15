@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gen_epix.commondb.util import generate_ulid
+from gen_epix.util import generate_ulid
 
 
 def get_test_name(test_type: Enum | str) -> str:

@@ -9,6 +9,9 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseDataIssue as CaseDataIssue,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import CaseQuery as CaseQuery
+from gen_epix.casedb.domain.model.case.non_persistable import (
+    CaseQueryResult as CaseQueryResult,
+)
 from gen_epix.casedb.domain.model.case.non_persistable import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case.non_persistable import CaseRights as CaseRights
 from gen_epix.casedb.domain.model.case.non_persistable import CaseSeq as CaseSeq
@@ -19,7 +22,6 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseSetRights as CaseSetRights,
 )
 from gen_epix.casedb.domain.model.case.non_persistable import CaseSetStat as CaseSetStat
-from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseTypeStat as CaseTypeStat,
 )
@@ -50,12 +52,16 @@ from gen_epix.casedb.domain.model.case.persistable import (
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
+from gen_epix.casedb.domain.model.case.persistable import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case.persistable import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseTypeSetCategory as CaseTypeSetCategory,
 )
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseTypeSetMember as CaseTypeSetMember,
+)
+from gen_epix.casedb.domain.model.case.persistable import (
+    CaseTypeDim as CaseTypeDim,
 )
 from gen_epix.casedb.domain.model.case.persistable import Col as Col
 from gen_epix.casedb.domain.model.case.persistable import Dim as Dim

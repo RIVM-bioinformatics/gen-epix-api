@@ -23,10 +23,7 @@ class RoleGenerator(CommonRoleGenerator):
         Role.APP_ADMIN: COMMON_ROLE_PERMISSION_SETS[Role.APP_ADMIN]
         | {
             # case
-            (
-                command.CaseSetCrudCommand,
-                PermissionTypeSet.C,
-            ),  # Other users can only use dedicated command
+            (command.CaseSetCrudCommand, PermissionTypeSet.C),
             (
                 command.CaseCrudCommand,
                 PermissionTypeSet.C,
@@ -38,6 +35,22 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CaseTypeSetCrudCommand, PermissionTypeSet.D),
             (
                 command.DataCollectionSetDataCollectionUpdateAssociationCommand,
+                PermissionTypeSet.E,
+            ),
+            # case with impact on abac
+            (
+                command.CaseTypeSetCrudCommand,
+                PermissionTypeSet.D,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CUD),
+            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
+            (
+                command.CaseTypeColSetCrudCommand,
+                PermissionTypeSet.D,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CUD),
+            (
+                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             # abac
@@ -52,17 +65,19 @@ class RoleGenerator(CommonRoleGenerator):
             # case
             (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeColCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeColSetCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
-            (
-                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
-                PermissionTypeSet.E,
-            ),
+            (command.CaseTypeDimCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CRUD),
+            (
+                command.CaseTypeSetCrudCommand,
+                PermissionTypeSet.CRU,
+            ),  # Create/update has no impact on abac
+            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.R),
+            (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.R),
+            (
+                command.CaseTypeColSetCrudCommand,
+                PermissionTypeSet.CRU,
+            ),  # Create/update has no impact on abac
             (command.ColCrudCommand, PermissionTypeSet.CRU),
             (command.DimCrudCommand, PermissionTypeSet.CRU),
             # ontology
@@ -118,13 +133,14 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
             (command.RetrieveCaseSetRightsCommand, PermissionTypeSet.E),
             (command.RetrieveCaseRightsCommand, PermissionTypeSet.E),
-            (command.RetrieveLibraryPrepProtocolsCommand, PermissionTypeSet.E),
+            (command.RetrieveSequencingProtocolsCommand, PermissionTypeSet.E),
             (command.RetrieveAssemblyProtocolsCommand, PermissionTypeSet.E),
             (command.ValidateCasesCommand, PermissionTypeSet.E),
             (command.CreateReadSetsForCasesCommand, PermissionTypeSet.E),
             (command.CreateSeqsForCasesCommand, PermissionTypeSet.E),
             (command.CreateFileForReadSetCommand, PermissionTypeSet.E),
             (command.CreateFileForSeqCommand, PermissionTypeSet.E),
+            (command.CaseTypeDimCrudCommand, PermissionTypeSet.R),
             # ontology
             (command.ConceptCrudCommand, PermissionTypeSet.R),
             (command.ConceptSetCrudCommand, PermissionTypeSet.R),

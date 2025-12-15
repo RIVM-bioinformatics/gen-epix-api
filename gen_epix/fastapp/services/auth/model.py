@@ -84,9 +84,6 @@ class OidcServerCfg(Model):
         "scope",
         "public",
         "enable_introspection",
-        "introspection_interval_seconds",
-        "introspection_timeout_seconds",
-        "introspection_auth_method",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",
@@ -127,24 +124,6 @@ class OidcServerCfg(Model):
             "Enable token introspection after local JWT verification. Disabled by default."
         ),
     )
-    introspection_interval_seconds: int = Field(
-        default=300,
-        description=(
-            "Minimum interval in seconds between introspection checks for the same token."
-        ),
-    )
-    introspection_timeout_seconds: int = Field(
-        default=2,
-        description="HTTP timeout in seconds for the introspection request.",
-    )
-    introspection_auth_method: str = Field(
-        default="client_secret_basic",
-        description=(
-            "Client authentication method for introspection endpoint. One of: "
-            "'client_secret_basic', 'client_secret_post', 'none'."
-        ),
-    )
-
     # OpenID Provider Metadata fields from Section 3 of the specification
 
     # REQUIRED fields, made optional here as they may be absent until discovery is done
@@ -193,9 +172,6 @@ class OidcServerCfg(Model):
     )
 
     # OPTIONAL fields
-    introspection_endpoint: str | None = Field(
-        default=None, description="URL of the OP's Token Introspection Endpoint"
-    )
     response_modes_supported: list[str] | None = Field(
         default=None,
         description="JSON array containing a list of the OAuth 2.0 response_mode values that this OP supports",
@@ -292,6 +268,23 @@ class OidcServerCfg(Model):
         default=None,
         description="URL that the OpenID Provider provides to the person registering the Client to read about the OpenID Provider's terms of service",
     )
+    introspection_interval_seconds: int | None = Field(
+        default=None,
+        description=(
+            "Minimum interval in seconds between introspection checks for the same token."
+        ),
+    )
+    introspection_timeout_seconds: int | None = Field(
+        default=None,
+        description="HTTP timeout in seconds for the introspection request.",
+    )
+    introspection_auth_method: str | None = Field(
+        default=None,
+        description=(
+            "Client authentication method for introspection endpoint. One of: "
+            "'client_secret_basic', 'client_secret_post', 'none'."
+        ),
+    )
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
@@ -301,15 +294,6 @@ class OidcServerCfg(Model):
                 raise ValueError(
                     f"Claim map cannot map claim '{new_claim_name}' to itself in OIDC server config '{self.name}'"
                 )
-        return self
-
-    @model_validator(mode="after")
-    def validate_introspection_interval(self) -> Self:
-        """Validate that introspection_interval_seconds is not more than 1800 seconds (30 minutes)."""
-        if self.introspection_interval_seconds > 1800:
-            raise ValueError(
-                "introspection_interval_seconds cannot be more than 1800 seconds (30 minutes)"
-            )
         return self
 
     @field_validator("claim_map", mode="before")

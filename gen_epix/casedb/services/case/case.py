@@ -1,13 +1,14 @@
-from collections.abc import Iterable
+import datetime
+from collections.abc import Callable, Iterable
 from uuid import UUID
 
-import gen_epix.casedb.domain.command as command
-import gen_epix.casedb.domain.enum as enum
-import gen_epix.casedb.domain.model as model
-from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
-from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.case_date import (
+    case_service_calculate_case_date,
+    case_service_get_case_date_case_type_col_mappers,
+)
 from gen_epix.casedb.services.case.case_transformer import CaseTransformer
 from gen_epix.casedb.services.case.create_case import (
     case_service_create_case_set,
@@ -17,7 +18,56 @@ from gen_epix.casedb.services.case.create_seq import (
     case_service_create_file_for_read_set_or_seq,
     case_service_create_read_sets_or_seqs_for_cases,
 )
-from gen_epix.casedb.services.case.crud import crud
+from gen_epix.casedb.services.case.crud_case import case_service_crud_case
+from gen_epix.casedb.services.case.crud_case_data_collection_link import (
+    case_service_crud_case_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set_category import (
+    case_service_crud_case_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_set_data_collection_link import (
+    case_service_crud_case_set_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set_member import (
+    case_service_crud_case_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_set_status import (
+    case_service_crud_case_set_status,
+)
+from gen_epix.casedb.services.case.crud_case_type import case_service_crud_case_type
+from gen_epix.casedb.services.case.crud_case_type_col import (
+    case_service_crud_case_type_col,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set import (
+    case_service_crud_case_type_col_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set_member import (
+    case_service_crud_case_type_col_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_type_dim import (
+    case_service_crud_case_type_dim,
+)
+from gen_epix.casedb.services.case.crud_case_type_set import (
+    case_service_crud_case_type_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_category import (
+    case_service_crud_case_type_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_member import (
+    case_service_crud_case_type_set_member,
+)
+from gen_epix.casedb.services.case.crud_col import case_service_crud_col
+from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
+from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
+    case_service_crud_genetic_distance_protocol,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm import (
+    case_service_crud_tree_algorithm,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm_class import (
+    case_service_crud_tree_algorithm_class,
+)
 from gen_epix.casedb.services.case.read_association_with_valid_ids import (
     case_service_read_association_with_valid_ids,
 )
@@ -32,27 +82,23 @@ from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_by_case,
     case_service_retrieve_genetic_sequence_fasta_by_case,
-    case_service_retrieve_library_prep_protocols,
     case_service_retrieve_phylogenetic_tree,
+    case_service_retrieve_sequencing_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
     case_service_retrieve_case_type_stats,
 )
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
-from gen_epix.filter import Filter, UuidSetFilter
+from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import LogicalOperator
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.util import map_paired_elements
 
 
 class CaseService(BaseCaseService):
-
-    def crud(  # type:ignore[override]
-        self, cmd: command.CrudCommand
-    ) -> list[model.Model] | model.Model | list[UUID] | UUID | list[bool] | bool | None:
-        return crud(self, cmd)
 
     def validate_cases(
         self, cmd: command.ValidateCasesCommand
@@ -108,6 +154,12 @@ class CaseService(BaseCaseService):
         )  # type:ignore[assignment]
         return retval
 
+    def create_seq_for_case(self, cmd: command.CreateSeqsForCasesCommand) -> model.Seq:
+        retval: list[model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
+            self, cmd
+        )  # type:ignore[assignment]
+        return retval[0]
+
     def create_seqs_for_cases(
         self, cmd: command.CreateSeqsForCasesCommand
     ) -> list[model.Seq]:
@@ -125,7 +177,7 @@ class CaseService(BaseCaseService):
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     def retrieve_complete_case_type(
-        self: DomainBaseCaseService,
+        self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
         return case_service_retrieve_complete_case_type(self, cmd)
@@ -144,7 +196,7 @@ class CaseService(BaseCaseService):
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         return case_service_retrieve_cases_by_query(self, cmd)
 
     def retrieve_cases_by_id(
@@ -254,11 +306,11 @@ class CaseService(BaseCaseService):
         """
         return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
 
-    def retrieve_library_prep_protocols(
+    def retrieve_sequencing_protocols(
         self,
-        cmd: command.RetrieveLibraryPrepProtocolsCommand,
-    ) -> list[model.LibraryPrepProtocol]:
-        return case_service_retrieve_library_prep_protocols(self, cmd)
+        cmd: command.RetrieveSequencingProtocolsCommand,
+    ) -> list[model.SequencingProtocol]:
+        return case_service_retrieve_sequencing_protocols(self, cmd)
 
     def retrieve_assembly_protocols(
         self, cmd: command.RetrieveAssemblyProtocolsCommand
@@ -298,8 +350,8 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
-        case_set_ids: list[UUID] | None = None,
         case_type_ids: set[UUID] | None = None,
+        case_set_ids: list[UUID] | None = None,
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
@@ -410,19 +462,70 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
+        case_type_id: UUID,
         case_ids: list[UUID] | None = None,
-        case_type_ids: set[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
+        calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
+        apply_max_n_cases: bool = True,
     ) -> list[model.Case]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
         if right not in enum.CaseRightSet.CASE_CONTENT.value:
-            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+            raise ValueError(f"Invalid case abac right: {right.value}")
         if on_invalid_case_id not in {"raise", "ignore"}:
-            raise exc.InvalidArgumentsError(
-                f"Invalid on_invalid_case_id: {on_invalid_case_id}"
+            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
+        if not filter_content and calculate_case_date:
+            raise ValueError("Cannot calculate case date when filter_content is False")
+
+        # @ABAC: verify access to case type
+        access_data_collections = case_abac.get_combinations_with_access_right(
+            right
+        ).get(case_type_id, set())
+        is_full_access = case_abac.is_full_access
+        data_collection_col_access = case_abac.case_type_access_abacs.get(
+            case_type_id, {}
+        )
+        if not access_data_collections and not is_full_access:
+            raise exc.UnauthorizedAuthError(
+                f"User {user_id} has no access to case type {case_type_id}"
+            )
+        case_types: list[model.CaseType] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.CaseType,
+                None,
+                [case_type_id],
+                CrudOperation.READ_SOME,
+            )
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Case type not found: {case_type_id}")
+        case_type = case_types[0]
+
+        # Verify max number of cases
+        case_date_case_type_col_mappers: (
+            dict[UUID, Callable[[str], datetime.datetime]] | None
+        ) = {}
+        max_n_cases: float = float("inf")
+        if apply_max_n_cases and not is_full_access:
+            if right == enum.CaseRight.READ_CASE:
+                max_n_cases = case_type.read_max_n_cases
+            elif right == enum.CaseRight.WRITE_CASE:
+                max_n_cases = case_type.update_max_n_cases
+            else:
+                raise NotImplementedError(f"Unsupported case right: {right}")
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers(
+                    self, uow, user_id, case_type_id
+                )
+            )
+
+        if case_ids and len(case_ids) > max_n_cases:
+            raise exc.RequestLimitExceededAuthError(
+                f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
             )
 
         # Retrieve all cases, potentially filtered by datetime range
@@ -446,7 +549,19 @@ class CaseService(BaseCaseService):
                 case_ids,
                 CrudOperation.READ_SOME,
             )
+            if not all(x.case_type_id == case_type_id for x in cases):
+                raise exc.InvalidArgumentsError(
+                    f"Some cases have invalid case type ids: {case_ids}"
+                )
         else:
+            case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
+            if datetime_range_filter:
+                case_filter = CompositeFilter(
+                    operator=LogicalOperator.AND,
+                    filters=[case_type_filter, datetime_range_filter],
+                )
+            else:
+                case_filter = case_type_filter
             cases = self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
@@ -454,63 +569,32 @@ class CaseService(BaseCaseService):
                 None,
                 None,
                 CrudOperation.READ_ALL,
-                filter=datetime_range_filter,
+                filter=case_filter,
             )
 
-        # Filter on case_type_ids if any or verify that all cases have a valid
-        # case_type_id if case_ids is given
-        # TODO: add more efficient implementation by adding this as a filter in the
-        # call to the repository
-        if case_type_ids is not None:
-            if case_ids:
-                if not all(x.case_type_id in case_type_ids for x in cases):
-                    raise exc.InvalidArgumentsError(
-                        f"Some cases have invalid case type ids: {case_ids}"
-                    )
-                if on_invalid_case_id == "raise":
-                    if not all(x.case_type_id in case_type_ids for x in cases):
-                        raise exc.InvalidArgumentsError(
-                            f"Some cases have invalid case type ids: {case_ids}"
-                        )
-                elif on_invalid_case_id == "ignore":
-                    pass
-                else:
-                    raise AssertionError(
-                        f"Invalid on_invalid_case_id: {on_invalid_case_id}"
-                    )
-            cases = [x for x in cases if x.case_type_id in case_type_ids]
-
-        # Special case: full_access
+        # Special case: full_access -> nothing left to filter
         if case_abac.is_full_access:
             return cases
 
-        # @ABAC: filter cases to which the user has read access, and optionally also
+        # @ABAC: filter cases to which the user has access, and optionally also
         # the content (case type cols)
         case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
-        has_access = case_abac.get_combinations_with_access_right(right)
         filtered_cases = []
+        count = 0
         for case in cases:
-            # Check if user has any access to case
-            case_type_id = case.case_type_id
-            if case_type_id not in has_access:
-                if case_ids:
-                    if on_invalid_case_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested cases"
-                        )
-                    elif on_invalid_case_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_id: {on_invalid_case_id}"
-                        )
-                continue
             # Check if user has access to any data collection of the case
-            data_collection_ids = case_data_collections.get(
-                case.id, set()  # type:ignore[arg-type]
-            )
-            data_collection_ids.add(case.created_in_data_collection_id)
-            if not data_collection_ids.intersection(has_access[case_type_id]):
+            is_unauthorized_case = False
+            if case.id not in case_data_collections:
+                is_unauthorized_case = True
+            else:
+                assert case.id is not None
+                data_collection_ids: set[UUID] = case_data_collections.get(
+                    case.id, set()
+                )
+                data_collection_ids.add(case.created_in_data_collection_id)
+                if not data_collection_ids.intersection(access_data_collections):
+                    is_unauthorized_case = True
+            if is_unauthorized_case:
                 if case_ids:
                     if on_invalid_case_id == "raise":
                         raise exc.UnauthorizedAuthError(
@@ -523,13 +607,16 @@ class CaseService(BaseCaseService):
                             f"Invalid on_invalid_case_id: {on_invalid_case_id}"
                         )
                 continue
+            # Stop if maximum number of cases reached
+            count += case.count if case.count is not None else 1
+            if count > max_n_cases:
+                break
             # Keep case
             filtered_cases.append(case)
             # Continue to next case if case content need not be filtered
             if not filter_content:
                 continue
             # Determine which case type cols the user has access to
-            data_collection_col_access = case_abac.case_type_access_abacs[case_type_id]
             case_type_col_ids = set()
             for data_collection_id in data_collection_ids:
                 # Add case type cols with access to the case for this data
@@ -554,6 +641,11 @@ class CaseService(BaseCaseService):
             case.content = {
                 x: y for x, y in case.content.items() if x in case_type_col_ids
             }
+
+        # Calculate case date if necessary
+        if calculate_case_date and case_date_case_type_col_mappers:
+            case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
+
         return filtered_cases
 
     def _retrieve_case_data_collections_map(
@@ -716,6 +808,263 @@ class CaseService(BaseCaseService):
             raise exc.InvalidArgumentsError(
                 f"Case set members invalid, case set and case must have the same case type: {invalid_case_set_member_ids_str}"
             )
+
+    # CRUD method implementations
+    def crud_case(
+        self, cmd: command.CaseCrudCommand
+    ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Case entities."""
+        return case_service_crud_case(self, cmd)
+
+    def crud_case_data_collection_link(
+        self, cmd: command.CaseDataCollectionLinkCrudCommand
+    ) -> (
+        list[model.CaseDataCollectionLink]
+        | model.CaseDataCollectionLink
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseDataCollectionLink entities."""
+        return case_service_crud_case_data_collection_link(self, cmd)
+
+    def crud_case_set_category(
+        self, cmd: command.CaseSetCategoryCrudCommand
+    ) -> (
+        list[model.CaseSetCategory]
+        | model.CaseSetCategory
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetCategory entities."""
+        return case_service_crud_case_set_category(self, cmd)
+
+    def crud_case_set(
+        self, cmd: command.CaseSetCrudCommand
+    ) -> (
+        list[model.CaseSet]
+        | model.CaseSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSet entities."""
+        return case_service_crud_case_set(self, cmd)
+
+    def crud_case_set_data_collection_link(
+        self, cmd: command.CaseSetDataCollectionLinkCrudCommand
+    ) -> (
+        list[model.CaseSetDataCollectionLink]
+        | model.CaseSetDataCollectionLink
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetDataCollectionLink entities."""
+        return case_service_crud_case_set_data_collection_link(self, cmd)
+
+    def crud_case_set_member(
+        self, cmd: command.CaseSetMemberCrudCommand
+    ) -> (
+        list[model.CaseSetMember]
+        | model.CaseSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetMember entities."""
+        return case_service_crud_case_set_member(self, cmd)
+
+    def crud_case_set_status(
+        self, cmd: command.CaseSetStatusCrudCommand
+    ) -> (
+        list[model.CaseSetStatus]
+        | model.CaseSetStatus
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetStatus entities."""
+        return case_service_crud_case_set_status(self, cmd)
+
+    def crud_case_type_col(
+        self, cmd: command.CaseTypeColCrudCommand
+    ) -> (
+        list[model.CaseTypeCol]
+        | model.CaseTypeCol
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeCol entities."""
+        return case_service_crud_case_type_col(self, cmd)
+
+    def crud_case_type_col_set(
+        self, cmd: command.CaseTypeColSetCrudCommand
+    ) -> (
+        list[model.CaseTypeColSet]
+        | model.CaseTypeColSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeColSet entities."""
+        return case_service_crud_case_type_col_set(self, cmd)
+
+    def crud_case_type_col_set_member(
+        self, cmd: command.CaseTypeColSetMemberCrudCommand
+    ) -> (
+        list[model.CaseTypeColSetMember]
+        | model.CaseTypeColSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeColSetMember entities."""
+        return case_service_crud_case_type_col_set_member(self, cmd)
+
+    def crud_case_type(
+        self, cmd: command.CaseTypeCrudCommand
+    ) -> (
+        list[model.CaseType]
+        | model.CaseType
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseType entities."""
+        return case_service_crud_case_type(self, cmd)
+
+    def crud_case_type_set_category(
+        self, cmd: command.CaseTypeSetCategoryCrudCommand
+    ) -> (
+        list[model.CaseTypeSetCategory]
+        | model.CaseTypeSetCategory
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSetCategory entities."""
+        return case_service_crud_case_type_set_category(self, cmd)
+
+    def crud_case_type_set(
+        self, cmd: command.CaseTypeSetCrudCommand
+    ) -> (
+        list[model.CaseTypeSet]
+        | model.CaseTypeSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSet entities."""
+        return case_service_crud_case_type_set(self, cmd)
+
+    def crud_case_type_set_member(
+        self, cmd: command.CaseTypeSetMemberCrudCommand
+    ) -> (
+        list[model.CaseTypeSetMember]
+        | model.CaseTypeSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSetMember entities."""
+        return case_service_crud_case_type_set_member(self, cmd)
+
+    def crud_case_type_dim(
+        self, cmd: command.CaseTypeDimCrudCommand
+    ) -> (
+        list[model.CaseTypeDim]
+        | model.CaseTypeDim
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeDim entities."""
+        return case_service_crud_case_type_dim(self, cmd)
+
+    def crud_col(
+        self, cmd: command.ColCrudCommand
+    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Col entities."""
+        return case_service_crud_col(self, cmd)
+
+    def crud_dim(
+        self, cmd: command.DimCrudCommand
+    ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Dim entities."""
+        return case_service_crud_dim(self, cmd)
+
+    def crud_genetic_distance_protocol(
+        self, cmd: command.GeneticDistanceProtocolCrudCommand
+    ) -> (
+        list[model.GeneticDistanceProtocol]
+        | model.GeneticDistanceProtocol
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        return case_service_crud_genetic_distance_protocol(self, cmd)
+
+    def crud_tree_algorithm_class(
+        self, cmd: command.TreeAlgorithmClassCrudCommand
+    ) -> (
+        list[model.TreeAlgorithmClass]
+        | model.TreeAlgorithmClass
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for TreeAlgorithmClass entities."""
+        return case_service_crud_tree_algorithm_class(self, cmd)
+
+    def crud_tree_algorithm(
+        self, cmd: command.TreeAlgorithmCrudCommand
+    ) -> (
+        list[model.TreeAlgorithm]
+        | model.TreeAlgorithm
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for TreeAlgorithm entities."""
+        return case_service_crud_tree_algorithm(self, cmd)
 
     @staticmethod
     def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:

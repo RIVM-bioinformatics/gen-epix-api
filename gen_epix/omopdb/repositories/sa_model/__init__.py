@@ -7,10 +7,16 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
+from gen_epix.commondb.repositories.sa_model import (
+    ExternalIdentifier as ExternalIdentifier,
+)
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
 )
 from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.repositories.sa_model import (
@@ -99,6 +105,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollection: DataCollection,
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
+        model.ExternalIdentifier: ExternalIdentifier,
         model.IdentifierIssuer: IdentifierIssuer,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
@@ -106,6 +113,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
+        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,

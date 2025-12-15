@@ -14,9 +14,9 @@ from gen_epix.commondb.config import BaseAppCfg
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.model import Command
+from gen_epix.util import map_paired_elements
 
 BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
@@ -33,6 +33,11 @@ class TestClient:
         model.OrganizationAdminPolicy: ("organization_id", "user_id"),
         model.Site: ("name"),
         model.Contact: ("name"),
+        model.IdentifierIssuer: "code",
+        model.OrganizationIdentifierIssuerLink: (
+            "organization_id",
+            "identifier_issuer_id",
+        ),
     }
 
     def __init__(
@@ -311,6 +316,62 @@ class TestClient:
         )
         return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
 
+    def create_identifier_issuer(
+        self,
+        user_or_str: str | model.User,
+        code: str,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> model.IdentifierIssuer:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        identifier_issuer = self.handle(
+            command.IdentifierIssuerCrudCommand(
+                user=user,
+                operation=CrudOperation.CREATE_ONE,
+                objs=model.IdentifierIssuer(
+                    code=code,
+                    name=name or code,
+                    description=description,
+                ),
+            )
+        )
+        return self._set_obj(identifier_issuer)  # type:ignore[return-value]
+
+    def create_organization_identifier_issuer_link(
+        self,
+        user_or_str: str | model.User,
+        organization_or_str: str | model.Organization,
+        identifier_issuer_or_str: str | model.IdentifierIssuer,
+    ) -> model.OrganizationIdentifierIssuerLink:
+        user: model.User = self._get_obj(
+            self.user_class, user_or_str
+        )  # type:ignore[assignment]
+        organization: model.Organization = self._get_obj(
+            model.Organization, organization_or_str
+        )  # type:ignore[assignment]
+        identifier_issuer: model.IdentifierIssuer = self._get_obj(
+            model.IdentifierIssuer, identifier_issuer_or_str
+        )  # type:ignore[assignment]
+        assert organization.id is not None
+        assert identifier_issuer.id is not None
+        organization_identifier_issuer_link: model.OrganizationIdentifierIssuerLink = (
+            self.app.handle(
+                command.OrganizationIdentifierIssuerLinkCrudCommand(
+                    user=user,
+                    operation=CrudOperation.CREATE_ONE,
+                    objs=model.OrganizationIdentifierIssuerLink(
+                        organization_id=organization.id,
+                        identifier_issuer_id=identifier_issuer.id,
+                    ),
+                )
+            )
+        )
+        return self._set_obj(
+            organization_identifier_issuer_link
+        )  # type:ignore[return-value]
+
     def read_all_user_invitations(
         self, user_or_str: str | model.User
     ) -> list[model.UserInvitation]:
@@ -436,7 +497,7 @@ class TestClient:
         self,
         user_or_str: str | model.User,
         include_self: bool = False,
-    ) -> list[model.Organization]:
+    ) -> list[model.User]:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         org_admin_policies: list[model.OrganizationAdminPolicy] = [
             x
@@ -622,6 +683,8 @@ class TestClient:
         model_class: type[model.Model],
         obj_or_key: model.Model | str | tuple[UUID, UUID],
         retry_obj: tuple[UUID, UUID] | None = None,
+        verify: bool = False,
+        delete_user_or_str: str | model.User | None = None,
     ) -> UUID:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: model.Model = self._get_obj(model_class, obj_or_key, copy=True)  # type: ignore[assignment]
@@ -636,16 +699,25 @@ class TestClient:
                 obj_ids=obj.id,
             )
         )
-        # verify if deleted
-        # is_existing_obj = self.app.handle(
-        #     self.app.domain.get_crud_command_for_model(model_class)(
-        #         user=user,
-        #         operation=CrudOperation.EXISTS_ONE,
-        #         obj_ids=deleted_obj_id,
-        #     )
-        # )
-        # if is_existing_obj:
-        #     raise ValueError(f"Object {deleted_obj_id} not deleted")
+        # Verify if the object was deleted
+        if verify:
+            sleep(0.000000001)
+            if delete_user_or_str is None:
+                delete_user: model.User = user
+            else:
+                delete_user = self._get_obj(
+                    self.user_class, delete_user_or_str
+                )  # type:ignore[assignment]
+
+            is_existing_obj = self.app.handle(
+                self.app.domain.get_crud_command_for_model(model_class)(
+                    user=delete_user,
+                    operation=CrudOperation.EXISTS_ONE,
+                    obj_ids=deleted_obj_id,
+                )
+            )
+            if is_existing_obj:
+                raise ValueError(f"Object {deleted_obj_id} not deleted")
         self._delete_obj(model_class, deleted_obj_id)
         return deleted_obj_id
 
@@ -758,6 +830,48 @@ class TestClient:
         ):
             print(
                 f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type:ignore[union-attr]
+            )
+
+    def print_identifier_issuers(self) -> None:
+        identifier_issuers: list[model.IdentifierIssuer] = self.read_all(  # type: ignore[assignment]
+            "root1_1", model.IdentifierIssuer
+        )
+        print("\nIdentifierIssuers:")
+        for x in sorted(identifier_issuers, key=lambda x: x.code):
+            print(f"{x.code}: name={x.name} ({x.id})")
+
+    def print_organization_identifier_issuer_links(self) -> None:
+        organization_identifier_issuer_links: list[
+            model.OrganizationIdentifierIssuerLink
+        ] = self.read_all(  # type: ignore[assignment]
+            "root1_1", model.OrganizationIdentifierIssuerLink
+        )
+        organization_ids = set(
+            x.organization_id for x in organization_identifier_issuer_links
+        )
+        identifier_issuer_ids = set(
+            x.identifier_issuer_id for x in organization_identifier_issuer_links
+        )
+        organizations: dict[UUID, model.Organization] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_some("root1_1", model.Organization, organization_ids)
+        }
+        identifier_issuers: dict[UUID, model.IdentifierIssuer] = {
+            x.id: x  # type:ignore[misc]
+            for x in self.read_some(
+                "root1_1", model.IdentifierIssuer, identifier_issuer_ids
+            )
+        }
+        print("\nOrganizationIdentifierIssuerLinks:")
+        for x in sorted(
+            organization_identifier_issuer_links,
+            key=lambda x: (
+                organizations[x.organization_id].name,
+                identifier_issuers[x.identifier_issuer_id].code,
+            ),  # type:ignore[union-attr]
+        ):
+            print(
+                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"  # type:ignore[union-attr]
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:

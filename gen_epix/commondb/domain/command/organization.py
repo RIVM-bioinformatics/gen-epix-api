@@ -9,7 +9,7 @@ from gen_epix.commondb.domain.command.base import (
     CrudCommand,
     UpdateAssociationCommand,
 )
-from gen_epix.commondb.util import copy_model_field
+from gen_epix.util import copy_model_field
 
 # Non-CRUD commands
 
@@ -217,6 +217,10 @@ class ContactCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Contact
 
 
+class ExternalIdentifierCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.ExternalIdentifier
+
+
 class IdentifierIssuerCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.IdentifierIssuer
 
@@ -231,3 +235,19 @@ class DataCollectionSetCrudCommand(CrudCommand):
 
 class DataCollectionSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DataCollectionSetMember
+
+
+class OrganizationIdentifierIssuerLinkCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
+
+
+class OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+    UpdateAssociationCommand
+):
+    ASSOCIATION_CLASS: ClassVar = model.OrganizationIdentifierIssuerLink
+    LINK_FIELD_NAME1: ClassVar = "organization_id"
+    LINK_FIELD_NAME2: ClassVar = "identifier_issuer_id"
+
+    obj_id1: UUID | None = None
+    obj_id2: UUID | None = None
+    association_objs: list[model.OrganizationIdentifierIssuerLink]

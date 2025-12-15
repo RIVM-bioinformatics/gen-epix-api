@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods
-# This module defines base classes, methods are added later
-
+from __future__ import (
+    annotations,  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from uuid import UUID
 
@@ -18,6 +19,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.GEO.value)
 
 
 class RegionSet(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.RegionSet)
 
     code: Mapped[str] = create_mapped_column(DOMAIN, model.RegionSet, "code")
@@ -25,9 +30,16 @@ class RegionSet(Base, RowMetadataMixin):
     region_code_as_label: Mapped[bool] = create_mapped_column(
         DOMAIN, model.RegionSet, "region_code_as_label"
     )
+    resolution: Mapped[float] = create_mapped_column(
+        DOMAIN, model.RegionSet, "resolution"
+    )
 
 
 class RegionSetShape(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.RegionSetShape)
 
     region_set_id: Mapped[UUID] = create_mapped_column(
@@ -44,6 +56,10 @@ class RegionSetShape(Base, RowMetadataMixin):
 
 
 class Region(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Region)
 
     region_set_id: Mapped[UUID] = create_mapped_column(
@@ -66,6 +82,10 @@ class Region(Base, RowMetadataMixin):
 
 
 class RegionRelation(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.RegionRelation)
 
     from_region_id: Mapped[UUID] = create_mapped_column(
