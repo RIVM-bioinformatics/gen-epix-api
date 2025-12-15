@@ -1,21 +1,6 @@
 {
-    "alleles": [
-        {
-            "id": "2aec8da8-b30c-c123-e32e-2b7a6e35c2ac",
-            "locus_id": "11111111-1111-1111-1111-111111111111",
-            "allele_code": "ALLELE_REF_001",
-            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
-        },
-        {
-            "id": "3cf108a4-a2e7-077b-9d1b-8f50885e9813",
-            "locus_id": "22222222-2222-2222-2222-222222222222",
-            "allele_code": "ALLELE_REF_002",
-            "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat"
-        }
-    ],
     "samples": [
         {
-            "id": "01234567-89ab-cdef-0123-456789abcdef",
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_001",
@@ -24,33 +9,18 @@
             ],
             "seqs": [
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_001_single",
                     "contigs": [
                         {
                             "id": "2aec8da8-b30c-c123-e32e-2b7a6e35c2ac",
                             "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 48
-                }
-            ],
-            "allele_profiles": [
-                {
-                    "locus_detection_protocol_code": "PROTOCOL_001",
-                    "locus_set_code": "LOCUS_SET_001",
-                    "allele_profile": "VGVzdCBhbGxlbGUgcHJvZmlsZSBkYXRhIDEyMw==",
-                    "n_loci": 1,
-                    "allele_profile_hash": "fedcba98-7654-3210-fedc-ba9876543210"
                 }
             ],
             "created_in_data_collection_id": "11111111-2222-3333-4444-555555555555"
         },
         {
-            "id": "23456789-abcd-ef01-2345-6789abcdef01",
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_002",
@@ -59,39 +29,20 @@
             ],
             "seqs": [
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_002_double",
                     "contigs": [
                         {
-                            "id": "3cf108a4-a2e7-077b-9d1b-8f50885e9813",
                             "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         },
                         {
-                            "id": "d3b29003-56ec-fa44-0d8a-f49a04f26a74",
                             "seq": "cgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcac",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 96
-                }
-            ],
-            "allele_profiles": [
-                {
-                    "locus_detection_protocol_code": "PROTOCOL_002",
-                    "locus_set_code": "LOCUS_SET_002",
-                    "allele_profile": "VGVzdCBhbGxlbGUgcHJvZmlsZSBkYXRhIDQ1Ng==",
-                    "n_loci": 2,
-                    "allele_profile_hash": "abcdef01-2345-6789-abcd-ef0123456789"
                 }
             ],
             "created_in_data_collection_id": "22222222-3333-4444-5555-666666666666"
         },
         {
-            "id": "34567890-bcde-f012-3456-789abcdef012",
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_003",
@@ -100,47 +51,25 @@
             ],
             "seqs": [
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_003a_single",
                     "contigs": [
                         {
-                            "id": "584e1e06-a438-ea69-0fb1-c95efa11fa2e",
                             "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 48
                 },
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_003b_single",
                     "contigs": [
                         {
-                            "id": "41f7a372-58eb-639d-02f0-1a42f3f5ef38",
                             "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 48
-                }
-            ],
-            "allele_profiles": [
-                {
-                    "locus_detection_protocol_code": "PROTOCOL_003",
-                    "locus_set_code": "LOCUS_SET_003",
-                    "allele_profile": "VGVzdCBhbGxlbGUgcHJvZmlsZSBkYXRhIDc4OQ==",
-                    "n_loci": 2,
-                    "allele_profile_hash": "cdef0123-4567-89ab-cdef-012345678901"
                 }
             ],
             "created_in_data_collection_id": "33333333-4444-5555-6666-777777777777"
         },
         {
-            "id": "45678901-cdef-0123-4567-89abcdef0123",
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_004",
@@ -149,53 +78,26 @@
             ],
             "seqs": [
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_004a_double",
                     "contigs": [
                         {
-                            "id": "32ca8c34-aa30-f334-4225-d5694d46a01c",
                             "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         },
                         {
-                            "id": "4074ea9d-1148-a09e-3c0f-fda4a59ec77d",
                             "seq": "agctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgt",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 96
                 },
                 {
-                    "sample_id": "00000000-0000-0000-0000-000000000000",
                     "code": "seq_004b_double",
                     "contigs": [
                         {
-                            "id": "e309e85c-59d3-d8d0-4633-1162a70d293d",
                             "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         },
                         {
-                            "id": "2aec8da8-b30c-c123-e32e-2b7a6e35c2ac",
                             "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc",
-                            "seq_format": "STR_DNA",
-                            "length": 48
                         }
                     ],
-                    "seq_format": "STR_DNA",
-                    "length": 96
-                }
-            ],
-            "allele_profiles": [
-                {
-                    "locus_detection_protocol_code": "PROTOCOL_004",
-                    "locus_set_code": "LOCUS_SET_004",
-                    "allele_profile": "VGVzdCBhbGxlbGUgcHJvZmlsZSBkYXRhIDEwMTE=",
-                    "n_loci": 4,
-                    "allele_profile_hash": "def01234-5678-9abc-def0-123456789abc"
                 }
             ],
             "created_in_data_collection_id": "44444444-5555-6666-7777-888888888888"
