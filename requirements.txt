@@ -1,7 +1,7 @@
 # python 3.14
 
 # application server
-fastapi[standard]==0.124.0
+fastapi[standard]==0.124.4
 gunicorn==23.0.*
 starlette==0.50.0
 httpx==0.28.1
