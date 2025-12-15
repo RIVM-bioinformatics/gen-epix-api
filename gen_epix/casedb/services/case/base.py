@@ -108,6 +108,7 @@ class BaseCaseService(DomainBaseCaseService):
         filter_content: bool = True,
         calculate_case_date: bool = False,
         extra_access_case_type_col_ids: set[UUID] | None = None,
+        apply_max_n_cases: bool = True,
     ) -> list[model.Case]:
         """Retrieve cases that the user has specific content rights for."""
         raise NotImplementedError()

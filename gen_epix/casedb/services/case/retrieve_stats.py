@@ -4,6 +4,7 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.filter.base import Filter
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.util import map_paired_elements
 
@@ -25,7 +26,7 @@ def case_service_retrieve_case_type_stats(
     if case_type_ids is None:
         # No case types provided -> use all case types with read access
         case_type_ids = read_case_type_ids
-    else:
+    elif not case_abac.is_full_access:
         unauthorized_case_type_ids = case_type_ids - read_case_type_ids
         if unauthorized_case_type_ids:
             unauthorized_case_type_ids_str = ", ".join(
@@ -40,16 +41,15 @@ def case_service_retrieve_case_type_stats(
         # Retrieve cases per case type settings and thus case type, and calculate stats
         case_type_stats: list[model.CaseTypeStat] = []
         for case_type_id in case_type_ids:
-            cases: list[model.Case] = (
-                self._retrieve_cases_with_content_right(  # type:ignore[attr-defined]
-                    uow,
-                    user.id,
-                    case_abac,
-                    enum.CaseRight.READ_CASE,
-                    case_type_id,
-                    datetime_range_filter=cmd.datetime_range_filter,
-                    calculate_case_date=True,
-                )
+            cases: list[model.Case] = self._retrieve_cases_with_content_right(
+                uow,
+                user.id,
+                case_abac,
+                enum.CaseRight.READ_CASE,
+                case_type_id,
+                datetime_range_filter=cmd.datetime_range_filter,
+                calculate_case_date=True,
+                apply_max_n_cases=False,
             )
             # Calculate stats
             case_dates = [x.case_date for x in cases if x.case_date is not None]
