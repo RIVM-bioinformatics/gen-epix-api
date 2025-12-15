@@ -28,8 +28,8 @@ class BaseCaseService(DomainBaseCaseService):
         enum.ColType.GEO_LATLON: lambda x: None if not x else f"{x}",
         enum.ColType.TEXT: lambda x: None if not x else f"{x}",
         enum.ColType.ID_PERSON: lambda x: None if not x else f"{x}",
-        enum.ColType.ID_CASE: lambda x: None if not x else f"{x}",
         enum.ColType.ID_SAMPLE: lambda x: None if not x else f"{x}",
+        enum.ColType.ID_CASE: lambda x: None if not x else f"{x}",
         enum.ColType.ID_EVENT: lambda x: None if not x else f"{x}",
         enum.ColType.ID_GENETIC_SEQUENCE: lambda x: None if not x else f"{x}",
         enum.ColType.OTHER: lambda x: None if not x else f"{x}",
@@ -61,27 +61,6 @@ class BaseCaseService(DomainBaseCaseService):
         app_impl: AppImplDetails = self.app.impl
         self.role_map = app_impl.role_map
         self.role_set_map = app_impl.role_set_map
-
-    # CaseCrudCommand,
-    # CaseDataCollectionLinkCrudCommand,
-    # CaseSetCategoryCrudCommand,
-    # CaseSetCrudCommand,
-    # CaseSetDataCollectionLinkCrudCommand,
-    # CaseSetMemberCrudCommand,
-    # CaseSetStatusCrudCommand,
-    # CaseTypeColCrudCommand,
-    # CaseTypeColSetCrudCommand,
-    # CaseTypeColSetMemberCrudCommand,
-    # CaseTypeCrudCommand,
-    # CaseTypeSetCategoryCrudCommand,
-    # CaseTypeSetCrudCommand,
-    # CaseTypeSetMemberCrudCommand,
-    # CaseTypeSettingsCrudCommand,
-    # ColCrudCommand,
-    # DimCrudCommand,
-    # GeneticDistanceProtocolCrudCommand,
-    # TreeAlgorithmClassCrudCommand,
-    # TreeAlgorithmCrudCommand,
 
     @abstractmethod
     def _read_association_with_valid_ids(
@@ -123,7 +102,6 @@ class BaseCaseService(DomainBaseCaseService):
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
         case_type_id: UUID,
-        case_type_settings: model.CaseTypeSettings | None = None,
         case_ids: list[UUID] | None = None,
         datetime_range_filter: DatetimeRangeFilter | None = None,
         on_invalid_case_id: str = "raise",

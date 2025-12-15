@@ -298,10 +298,14 @@ class CaseTransformer(Transformer):
         This method assumes that only standard values are present in updated_contents.
         """
 
-        # Go over each case type dimension, i.e. (Dim, occurrence in the CaseType) combination
-        for case_type_dim in self.complete_case_type.case_type_dims:
+        # Go over each case type dimension
+        for case_type_dim in self.complete_case_type.case_type_dims.values():
             dim_type = self.complete_case_type.dims[case_type_dim.dim_id]
-            case_type_col_ids = case_type_dim.case_type_col_order
+            case_type_col_ids = (
+                self.complete_case_type.ordered_case_type_col_ids_by_dim[
+                    case_type_dim.id
+                ]
+            )
             # Handle each type of dimension
             if dim_type.dim_type == enum.DimType.GEO:
                 col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)

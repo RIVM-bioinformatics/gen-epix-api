@@ -220,8 +220,8 @@ class ColTypeSet(Enum):
     ID = frozenset(
         {
             ColType.ID_PERSON,
-            ColType.ID_CASE,
             ColType.ID_SAMPLE,
+            ColType.ID_CASE,
             ColType.ID_EVENT,
             ColType.ID_GENETIC_SEQUENCE,
         }
@@ -318,6 +318,22 @@ class ColTypeSet(Enum):
     )
     HAS_REGION_SET = frozenset({ColType.GEO_REGION})
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
+
+
+class DimColTypeSet(Enum):
+    TEXT = frozenset(
+        ColTypeSet.LANGUAGE.value.union(
+            {ColType.TEXT},
+            ColTypeSet.STRING_SET.value,
+            ColTypeSet.GENETIC.value,
+        )
+    )
+    IDENTIFIER = ColTypeSet.ID.value
+    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL})
+    TIME = ColTypeSet.TIME.value
+    GEO = ColTypeSet.GEO.value
+    ORGANIZATION = ColTypeSet.ORGANIZATION.value
+    OTHER = ColTypeSet.OTHER.value
 
 
 class ColTypeOrder(Enum):

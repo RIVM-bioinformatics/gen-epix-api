@@ -31,15 +31,13 @@ from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTyp
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
+from gen_epix.casedb.repositories.sa_model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetCategory as CaseTypeSetCategory,
 )
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
-)
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeSettings as CaseTypeSettings,
 )
 from gen_epix.casedb.repositories.sa_model.case import Col as Col
 from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
@@ -157,16 +155,15 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeCol: CaseTypeCol,
         model.CaseTypeColSet: CaseTypeColSet,
         model.CaseTypeColSetMember: CaseTypeColSetMember,
+        model.CaseTypeDim: CaseTypeDim,
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,
-        model.CaseTypeSettings: CaseTypeSettings,
         model.Col: Col,
         model.Dim: Dim,
         model.GeneticDistanceProtocol: GeneticDistanceProtocol,
         model.TreeAlgorithm: TreeAlgorithm,
         model.TreeAlgorithmClass: TreeAlgorithmClass,
-        model.CaseTypeSettings: CaseTypeSettings,
     },
 }
 

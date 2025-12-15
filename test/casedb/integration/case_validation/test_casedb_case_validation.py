@@ -69,6 +69,7 @@ class CaseValidationSetup:
         model.CaseType: "CaseType",
         model.CaseTypeSet: "CaseTypeSet",
         model.CaseTypeSetMember: "CaseTypeSetMember",
+        model.CaseTypeDim: "CaseTypeDim",
         model.CaseTypeCol: "CaseTypeCol",
         model.CaseTypeColSet: "CaseTypeColSet",
         model.CaseTypeColSetMember: "CaseTypeColSetMember",
