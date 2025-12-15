@@ -30,7 +30,7 @@ dependencies = [
     "pyjwt==2.10.1",
     "urllib3==2.6.0",
     "sqlalchemy==2.0.45",
-    "sqlalchemy_utils==0.42.0",
+    "sqlalchemy_utils==0.42.1",
     "pydantic==2.12.5",
     "ulid-py==1.1.0",
     "fire==0.7.1",
