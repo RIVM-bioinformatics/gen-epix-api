@@ -4,9 +4,7 @@ from pathlib import Path
 
 import pytest
 
-
-def _get_project_root() -> Path:
-    return Path(__file__).parent.parent.parent.parent
+from gen_epix.util import get_package_root
 
 
 def _parse_requirements_line(line: str) -> str | None:
@@ -44,10 +42,10 @@ def _read_pyproject_dependencies(pyproject_file_path: Path) -> set[str]:
 
 def test_dependency_list_matches() -> None:
     """Ensure requirements.txt and pyproject.toml dependencies are identical."""
-    root = _get_project_root()
+    root_dir = get_package_root()
 
-    reqs = _read_requirements(root / "requirements.txt")
-    pydeps = _read_pyproject_dependencies(root / "pyproject.toml")
+    reqs = _read_requirements(root_dir / "requirements.txt")
+    pydeps = _read_pyproject_dependencies(root_dir / "pyproject.toml")
 
     missing_from_pyproject = sorted(reqs - pydeps)
     missing_from_requirements = sorted(pydeps - reqs)
