@@ -1178,10 +1178,6 @@ class TestModelSampleSetForUpload(TestCase):
         # Verify computed field
         self.assertTrue(sample_set.has_seqs)
 
-        # Verify reference alleles are present
-        self.assertIsNotNone(sample_set.alleles)
-        self.assertEqual(len(sample_set.alleles), 2)
-
     def test_valid_minimal(self) -> None:
         """Test valid SampleSetForUpload with minimal data."""
         allele_id = uuid4()

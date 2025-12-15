@@ -12,10 +12,9 @@
                     "code": "seq_001_single",
                     "contigs": [
                         {
-                            "id": "2aec8da8-b30c-c123-e32e-2b7a6e35c2ac",
-                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc",
+                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
                         }
-                    ],
+                    ]
                 }
             ],
             "created_in_data_collection_id": "11111111-2222-3333-4444-555555555555"
@@ -32,12 +31,12 @@
                     "code": "seq_002_double",
                     "contigs": [
                         {
-                            "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat",
+                            "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat"
                         },
                         {
-                            "seq": "cgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcac",
+                            "seq": "cgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcac"
                         }
-                    ],
+                    ]
                 }
             ],
             "created_in_data_collection_id": "22222222-3333-4444-5555-666666666666"
@@ -54,17 +53,17 @@
                     "code": "seq_003a_single",
                     "contigs": [
                         {
-                            "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg",
+                            "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg"
                         }
-                    ],
+                    ]
                 },
                 {
                     "code": "seq_003b_single",
                     "contigs": [
                         {
-                            "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc",
+                            "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc"
                         }
-                    ],
+                    ]
                 }
             ],
             "created_in_data_collection_id": "33333333-4444-5555-6666-777777777777"
@@ -81,23 +80,23 @@
                     "code": "seq_004a_double",
                     "contigs": [
                         {
-                            "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga",
+                            "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga"
                         },
                         {
-                            "seq": "agctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgt",
+                            "seq": "agctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgt"
                         }
-                    ],
+                    ]
                 },
                 {
                     "code": "seq_004b_double",
                     "contigs": [
                         {
-                            "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag",
+                            "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag"
                         },
                         {
-                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc",
+                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
                         }
-                    ],
+                    ]
                 }
             ],
             "created_in_data_collection_id": "44444444-5555-6666-7777-888888888888"
