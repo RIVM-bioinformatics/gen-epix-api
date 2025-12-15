@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]==0.124.0",
     "gunicorn==23.0.*",
@@ -39,11 +39,12 @@ dependencies = [
     "scipy==1.16.3",
     "numpy==2.3.5",
     "biopython==1.86",
-    "cachetools==6.2.2",
+    "cachetools==6.2.3",
     "slowapi==0.1.9",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==80.9.*",
+    "python-multipart==0.0.20",
 ]
 
 [project.urls]

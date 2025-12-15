@@ -1,0 +1,105 @@
+{
+    "samples": [
+        {
+            "external_ids": [
+                {
+                    "identifier_issuer_code": "LAB_001",
+                    "identifier": "SAMPLE_001"
+                }
+            ],
+            "seqs": [
+                {
+                    "code": "seq_001_single",
+                    "contigs": [
+                        {
+                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
+                        }
+                    ]
+                }
+            ],
+            "created_in_data_collection_id": "11111111-2222-3333-4444-555555555555"
+        },
+        {
+            "external_ids": [
+                {
+                    "identifier_issuer_code": "LAB_002",
+                    "identifier": "SAMPLE_002"
+                }
+            ],
+            "seqs": [
+                {
+                    "code": "seq_002_double",
+                    "contigs": [
+                        {
+                            "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat"
+                        },
+                        {
+                            "seq": "cgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcac"
+                        }
+                    ]
+                }
+            ],
+            "created_in_data_collection_id": "22222222-3333-4444-5555-666666666666"
+        },
+        {
+            "external_ids": [
+                {
+                    "identifier_issuer_code": "LAB_003",
+                    "identifier": "SAMPLE_003"
+                }
+            ],
+            "seqs": [
+                {
+                    "code": "seq_003a_single",
+                    "contigs": [
+                        {
+                            "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg"
+                        }
+                    ]
+                },
+                {
+                    "code": "seq_003b_single",
+                    "contigs": [
+                        {
+                            "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc"
+                        }
+                    ]
+                }
+            ],
+            "created_in_data_collection_id": "33333333-4444-5555-6666-777777777777"
+        },
+        {
+            "external_ids": [
+                {
+                    "identifier_issuer_code": "LAB_004",
+                    "identifier": "SAMPLE_004"
+                }
+            ],
+            "seqs": [
+                {
+                    "code": "seq_004a_double",
+                    "contigs": [
+                        {
+                            "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga"
+                        },
+                        {
+                            "seq": "agctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgt"
+                        }
+                    ]
+                },
+                {
+                    "code": "seq_004b_double",
+                    "contigs": [
+                        {
+                            "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag"
+                        },
+                        {
+                            "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
+                        }
+                    ]
+                }
+            ],
+            "created_in_data_collection_id": "44444444-5555-6666-7777-888888888888"
+        }
+    ]
+}

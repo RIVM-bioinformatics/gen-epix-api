@@ -8,6 +8,7 @@ from test.casedb.integration.build_db.base import (
     BELOW_USER_ADMIN_USERS,
     ORG_ADMIN_OR_ABOVE_USERS,
     REFDATA_ADMIN_OR_ABOVE_USERS,
+    ROOT,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
@@ -197,11 +198,12 @@ class TestUpdate:
                                     env.update_user(user, tgt_user, roles=tgt_roles)
 
     def test_update_data_collection(self, env: Env) -> None:
-        env.create_data_collection("root1_1", "data_collection23")
+        env.create_data_collection(ROOT, "data_collection99")
         for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
             env.update_object(
-                user, model.DataCollection, "data_collection23", {"description": str(i)}
+                user, model.DataCollection, "data_collection99", {"description": str(i)}
             )
+        env.delete_object(ROOT, model.DataCollection, "data_collection99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_data_collection_raise(self, env: Env) -> None:
@@ -210,23 +212,23 @@ class TestUpdate:
                 env.update_object(
                     user,
                     model.DataCollection,
-                    "data_collection23",
+                    "data_collection1",
                     {"description": str(-i)},
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_update_organization_access_case_policy(self, env: Env) -> None:
         # TODO: test update organization, data collection, case type col set
-        env.create_data_collection("root1_1", "data_collection21")
-        name = "org_case_policy1_21"  # organization1, data_collection21, case_type_set1, case_type_col_set1
+        env.create_data_collection(ROOT, "data_collection99")
+        name = "org_case_policy1_99"  # organization1, data_collection99, case_type_set1, case_type_col_set1
         organization_access_case_policy = env.create_organization_access_case_policy(
-            "app_admin1_1",
+            ROOT,
             name,
             "case_type_set1",
             read_case_type_col_set="case_type_col_set1",
             write_case_type_col_set="case_type_col_set1",
         )
-        for i, user in enumerate(["root1_1", "app_admin1_1"]):
+        for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
             # Alternate between write False and True to make sure a change is persisted
             env.update_object(
                 user,
@@ -243,20 +245,24 @@ class TestUpdate:
                         organization_access_case_policy,
                         props={"write_case_set": bool(i % 2 != 0)},
                     )
+        env.delete_object(
+            ROOT, model.OrganizationAccessCasePolicy, organization_access_case_policy
+        )
+        env.delete_object(ROOT, model.DataCollection, "data_collection99")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_update_user_access_case_policy(self, env: Env) -> None:
-        env.create_data_collection("root1_1", "data_collection22")
-        org_case_policy = "org_case_policy1_22"
-        env.create_organization_access_case_policy(
-            "app_admin1_1",
-            org_case_policy,
+        env.create_data_collection(ROOT, "data_collection99")
+        name = "org_case_policy1_99"
+        organization_access_case_policy = env.create_organization_access_case_policy(
+            ROOT,
+            "org_case_policy1_99",
             "case_type_set1",
             read_case_type_col_set="case_type_col_set1",
             write_case_type_col_set="case_type_col_set1",
         )
         args = {
-            "data_collection": "data_collection22",
+            "data_collection": "data_collection99",
             "case_type_set": "case_type_set1",
         }
         kwargs = {
@@ -293,6 +299,11 @@ class TestUpdate:
                                 "write_case_set": bool(i % 2 != 0),
                             },
                         )
+            env.delete_object(ROOT, model.UserAccessCasePolicy, user_access_case_policy)
+        env.delete_object(
+            ROOT, model.OrganizationAccessCasePolicy, organization_access_case_policy
+        )
+        env.delete_object(ROOT, model.DataCollection, "data_collection99")
 
     def test_update_temp_update_user_own_organization(self, env: Env) -> None:
         if env.verbose:
@@ -325,72 +336,58 @@ class TestUpdate:
                         user, set_dummy_organization=True
                     )
 
-    def test_update_data_collection(self, env: Env) -> None:
-        env.create_data_collection("root1_1", "data_collection23")
-        for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
-            env.update_object(
-                user, model.DataCollection, "data_collection23", {"description": str(i)}
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_update_data_collection_raise(self, env: Env) -> None:
-        for i, user in enumerate(BELOW_APP_ADMIN_USERS):
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.update_object(
-                    user,
-                    model.DataCollection,
-                    "data_collection23",
-                    {"description": str(-i)},
-                )
-
     def test_update_dim(self, env: Env) -> None:
-        env.create_dim("root1_1", "text21", enum.DimType.TEXT)
+        env.create_dim(ROOT, "dim99", enum.DimType.TEXT)
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.update_object(user, model.Dim, "text21", {"description": str(i)})
+            env.update_object(user, model.Dim, "dim99", {"description": str(i)})
+        env.delete_object(ROOT, model.Dim, "dim99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_dim_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_APP_ADMIN_DATA_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.update_object(user, model.Dim, "text21", {"description": str(-i)})
+                env.update_object(user, model.Dim, "dim1", {"description": str(-i)})
 
     def test_update_col(self, env: Env) -> None:
-        env.create_col("root1_1", "text21_1_text", enum.ColType.TEXT)
+        env.create_col(ROOT, "col1_99")
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.update_object(user, model.Col, "text21_1_text", {"description": str(i)})
+            env.update_object(user, model.Col, "col1_99", {"description": str(i)})
+        env.delete_object(ROOT, model.Col, "col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_col_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_APP_ADMIN_DATA_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.update_object(
-                    user, model.Col, "text21_1_text", {"description": str(-i)}
-                )
+                env.update_object(user, model.Col, "col1_1", {"description": str(-i)})
 
     def test_update_case_type(self, env: Env) -> None:
-        env.create_case_type("root1_1", "case_type21", "disease1", "etiological_agent1")
+        env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
-                user, model.CaseType, "case_type21", {"description": str(i)}
+                user, model.CaseType, "case_type99", {"description": str(i)}
             )
+        env.delete_object(ROOT, model.CaseType, "case_type99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_APP_ADMIN_DATA_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_object(
-                    user, model.CaseType, "case_type21", {"description": str(-i)}
+                    user, model.CaseType, "case_type1", {"description": str(-i)}
                 )
 
     def test_update_case_type_col(self, env: Env) -> None:
-        env.create_case_type_col("root1_1", "case_type21_text21_1_text")
+        env.create_col(ROOT, "col1_99")
+        env.create_case_type_col(ROOT, "case_type_col1_1_1_99")
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeCol,
-                "case_type21_text21_1_text",
+                "case_type_col1_1_1_99",
                 {"description": str(i)},
             )
+        env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_99")
+        env.delete_object(ROOT, model.Col, "col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_raise(self, env: Env) -> None:
@@ -399,19 +396,20 @@ class TestUpdate:
                 env.update_object(
                     user,
                     model.CaseTypeCol,
-                    "case_type21_text21_1_text",
+                    "case_type_col1_1_1_1",
                     {"description": str(-i)},
                 )
 
     def test_update_case_type_set_category(self, env: Env) -> None:
-        env.create_case_type_set_category("root1_1", "case_type_set_category21")
+        env.create_case_type_set_category(ROOT, "case_type_set_category99")
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeSetCategory,
-                "case_type_set_category21",
+                "case_type_set_category99",
                 {"description": str(i)},
             )
+        env.delete_object(ROOT, model.CaseTypeSetCategory, "case_type_set_category99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_set_category_raise(self, env: Env) -> None:
@@ -420,39 +418,44 @@ class TestUpdate:
                 env.update_object(
                     user,
                     model.CaseTypeSetCategory,
-                    "case_type_set_category21",
+                    "case_type_set_category1",
                     {"description": str(-i)},
                 )
 
     def test_update_case_type_set(self, env: Env) -> None:
-        env.create_case_type("root1_1", "case_type41", "disease1", "etiological_agent1")
+        env.create_case_type_set_category(ROOT, "case_type_set_category99")
+        env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
         env.create_case_type_set(
-            "root1_1", "case_type_set41", {"case_type41"}, "case_type_set_category21"
+            ROOT, "case_type_set99", {"case_type99"}, "case_type_set_category99"
         )
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
-                user, model.CaseTypeSet, "case_type_set41", {"description": str(i)}
+                user, model.CaseTypeSet, "case_type_set99", {"description": str(i)}
             )
+        env.delete_object(ROOT, model.CaseTypeSet, "case_type_set99")
+        env.delete_object(ROOT, model.CaseType, "case_type99")
+        env.delete_object(ROOT, model.CaseTypeSetCategory, "case_type_set_category99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_set_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_APP_ADMIN_DATA_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_object(
-                    user, model.CaseTypeSet, "case_type_set41", {"description": str(-i)}
+                    user, model.CaseTypeSet, "case_type_set1", {"description": str(-i)}
                 )
 
     def test_update_case_type_col_set(self, env: Env) -> None:
         env.create_case_type_col_set(
-            "root1_1", "case_type_col_set31", {"case_type21_text21_1_text"}
+            ROOT, "case_type_col_set99", {"case_type_col1_1_1_1"}
         )
         for i, user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
             env.update_object(
                 user,
                 model.CaseTypeColSet,
-                "case_type_col_set31",
+                "case_type_col_set99",
                 {"description": str(i)},
             )
+        env.delete_object(ROOT, model.CaseTypeColSet, "case_type_col_set99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_set_raise(self, env: Env) -> None:
@@ -461,30 +464,19 @@ class TestUpdate:
                 env.update_object(
                     user,
                     model.CaseTypeColSet,
-                    "case_type_col_set31",
+                    "case_type_col_set1",
                     {"description": str(-i)},
                 )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_case_type_col_set_member(self, env: Env) -> None:
-        """
-        RBAC permissions:
-        - root: CRUD
-        - app_admin: CRUD
-        - refdata_admin: CRUD
-        - org_admin: -
-        - org_user: -
-        - guest: -
-        """
         all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(  # type: ignore[assignment]
-            "root1_1", model.CaseTypeColSetMember
+            ROOT, model.CaseTypeColSetMember
         )
-        all_cols: list[model.CaseTypeCol] = env.read_all("root1_1", model.CaseTypeCol)  # type: ignore[assignment]
+        all_cols: list[model.CaseTypeCol] = env.read_all(ROOT, model.CaseTypeCol)  # type: ignore[assignment]
         col_case_type_map = {c.id: c.case_type_id for c in all_cols}
-        for user_name in ALL_USERS:
-            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(
-                user_name
-            )
+        for user in ALL_USERS:
+            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
             expected_member_ids = {
                 x.id
                 for x in all_case_type_col_set_members
@@ -495,29 +487,40 @@ class TestUpdate:
                     (x for x in all_case_type_col_set_members if x.id == member),
                     None,
                 )
-                if user_name in REFDATA_ADMIN_OR_ABOVE_USERS:
+                if user in APP_ADMIN_OR_ABOVE_USERS:
                     # Use the update_case_type_col_set_member method to update a single
                     # CaseTypeColSetMember object in the database
-                    env.update_case_type_col_set_member(user_name, member_obj)  # type: ignore[assignment]
+                    env.update_case_type_col_set_member(user, member_obj)  # type: ignore[assignment]
                 else:
                     # update_case_type_col_set_member checks via the CRUD command
                     # the RBAC/ABAC permissions and should raise an error
                     with pytest.raises(exc.UnauthorizedAuthError):
-                        env.update_case_type_col_set_member(user_name, member_obj)  # type: ignore[assignment]
+                        env.update_case_type_col_set_member(user, member_obj)  # type: ignore[assignment]
 
     def test_update_contact(self, env: Env) -> None:
+        env.create_contact(ROOT, "contact1_1_99")
         for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
-            env.update_object(user, model.Contact, "contact1", {"email": str(i)})
-
-    def test_update_site(self, env: Env) -> None:
-        for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
-            env.update_object(user, model.Site, "site1_1", {"name": str(i)})
+            env.update_object(
+                user,
+                model.Contact,
+                "contact1_1_99",
+                {"email": f"contact{i}@example.com"},
+            )
+        env.delete_object(ROOT, model.Contact, "contact1_1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_contact_raise(self, env: Env) -> None:
         for i, user in enumerate(BELOW_ORG_ADMIN_USERS):
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.update_object(user, model.Contact, "contact1", {"email": str(-i)})
+                env.update_object(
+                    user, model.Contact, "contact1_1_1", {"email": str(-i)}
+                )
+
+    def test_update_site(self, env: Env) -> None:
+        env.create_site(ROOT, "site1_99")
+        for i, user in enumerate(ORG_ADMIN_OR_ABOVE_USERS):
+            env.update_object(user, model.Site, "site1_99", {"name": str(i)})
+        env.delete_object(ROOT, model.Site, "site1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_site_raise(self, env: Env) -> None:

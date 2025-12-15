@@ -368,20 +368,52 @@ class RetrieveAssemblyProtocolsCommand(Command):
 # CRUD
 
 
-class TreeAlgorithmClassCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.TreeAlgorithmClass
+class CaseCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Case
 
 
-class TreeAlgorithmCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.TreeAlgorithm
+class CaseDataCollectionLinkCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseDataCollectionLink
 
 
-class GeneticDistanceProtocolCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
+class CaseSetCategoryCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseSetCategory
+
+
+class CaseSetCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseSet
+
+
+class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
+
+
+class CaseSetMemberCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseSetMember
+
+
+class CaseSetStatusCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseSetStatus
+
+
+class CaseTypeColCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeCol
+
+
+class CaseTypeColSetCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeColSet
+
+
+class CaseTypeColSetMemberCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeColSetMember
 
 
 class CaseTypeCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseType
+
+
+class CaseTypeDimCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.CaseTypeDim
 
 
 class CaseTypeSetCategoryCrudCommand(CrudCommand):
@@ -396,57 +428,21 @@ class CaseTypeSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
-class CaseTypeSettingsCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeSettings
+class ColCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Col
 
 
 class DimCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Dim
 
 
-class ColCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Col
+class GeneticDistanceProtocolCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
 
 
-class CaseTypeColSetCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeColSet
+class TreeAlgorithmClassCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.TreeAlgorithmClass
 
 
-class CaseTypeColSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeColSetMember
-
-
-class CaseTypeColCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeCol
-
-
-class CaseCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.Case
-
-
-class CaseDataCollectionLinkCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseDataCollectionLink
-
-
-class CaseSetCategoryCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseSetCategory
-
-
-class CaseSetStatusCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseSetStatus
-
-
-class CaseSetCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseSet
-
-
-class CaseSetMemberCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseSetMember
-
-
-class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
-
-
-class CaseTypeSettingsCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.CaseTypeSettings
+class TreeAlgorithmCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.TreeAlgorithm
