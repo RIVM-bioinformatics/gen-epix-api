@@ -14,6 +14,7 @@ from gen_epix.casedb.services.case.crud_common import (
     is_metadata_admin_or_above,
 )
 from gen_epix.fastapp import CrudOperationSet
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -34,11 +35,11 @@ def case_service_crud_case_type_set(
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
         if is_metadata_admin_or_above(self, cmd.user):
-            return _crud_case_type_set_by_admin(self, uow, cmd)
-        return _crud_case_type_set_by_non_admin(self, uow, cmd)
+            return _crud_case_type_set_without_abac(self, uow, cmd)
+        return _crud_case_type_set_with_abac(self, uow, cmd)
 
 
-def _crud_case_type_set_by_admin(
+def _crud_case_type_set_without_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeSetCrudCommand,
@@ -56,7 +57,7 @@ def _crud_case_type_set_by_admin(
     return retval  # type:ignore[return-value]
 
 
-def _crud_case_type_set_by_non_admin(
+def _crud_case_type_set_with_abac(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     cmd: command.CaseTypeSetCrudCommand,
@@ -76,23 +77,45 @@ def _crud_case_type_set_by_non_admin(
         return self.crud(cmd)  # type:ignore[return-value]
 
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-    is_delete = cmd.operation in CrudOperationSet.DELETE.value
-
     if not is_read:
         raise AssertionError("Unexpected operation")
 
-    valid_case_type_ids = case_abac.get_case_types_with_any_rights()
-    valid_case_type_set_ids: set[UUID] = (
-        self._read_association_with_valid_ids(  # type:ignore[assignment]
-            command.CaseTypeSetMemberCrudCommand,
-            "case_type_set_id",
-            "case_type_id",
-            valid_ids2=valid_case_type_ids,
-            match_all2=is_delete,
-            return_type="ids1",
-            uow=uow,
-            user=cmd.user,
+    # Get all case type sets and members
+    user = cmd.user
+    assert user is not None and user.id is not None
+    all_case_type_set_ids: list[UUID] = self.repository.crud(  # type:ignore[assignment]
+        uow,
+        user.id,
+        model.CaseTypeSet,
+        None,
+        None,
+        CrudOperation.READ_ALL,
+        return_id=True,
+    )
+    all_case_type_set_members: list[model.CaseTypeSetMember] = (
+        self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user.id,
+            model.CaseTypeSetMember,
+            None,
+            None,
+            CrudOperation.READ_ALL,
         )
     )
+
+    # Get empty case type sets
+    empty_case_type_set_ids: set[UUID] = set(all_case_type_set_ids) - {
+        x.case_type_set_id for x in all_case_type_set_members
+    }
+
+    # Get valid case type sets
+    valid_case_type_ids = case_abac.get_case_types_with_any_rights()
+    valid_case_type_set_ids = empty_case_type_set_ids | {
+        x.case_type_set_id
+        for x in all_case_type_set_members
+        if x.case_type_set_id in valid_case_type_ids
+    }
+
+    # Read data with access filter
     access_filter = self._compose_id_filter(("id", valid_case_type_set_ids))
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]

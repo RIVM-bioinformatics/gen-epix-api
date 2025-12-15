@@ -46,6 +46,9 @@ from gen_epix.casedb.domain.command.case import (
     CaseTypeCrudCommand as CaseTypeCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    CaseTypeDimCrudCommand as CaseTypeDimCrudCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     CaseTypeSetCaseTypeUpdateAssociationCommand as CaseTypeSetCaseTypeUpdateAssociationCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -56,9 +59,6 @@ from gen_epix.casedb.domain.command.case import (
 )
 from gen_epix.casedb.domain.command.case import (
     CaseTypeSetMemberCrudCommand as CaseTypeSetMemberCrudCommand,
-)
-from gen_epix.casedb.domain.command.case import (
-    CaseTypeSettingsCrudCommand as CaseTypeSettingsCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import ColCrudCommand as ColCrudCommand
 from gen_epix.casedb.domain.command.case import CreateCasesCommand as CreateCasesCommand
@@ -282,11 +282,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CaseTypeColSetCrudCommand,
         CaseTypeColSetMemberCrudCommand,
         CaseTypeCrudCommand,
+        CaseTypeDimCrudCommand,
         CaseTypeSetCaseTypeUpdateAssociationCommand,
         CaseTypeSetCategoryCrudCommand,
         CaseTypeSetCrudCommand,
         CaseTypeSetMemberCrudCommand,
-        CaseTypeSettingsCrudCommand,
+        CaseTypeDimCrudCommand,
         ColCrudCommand,
         CreateCasesCommand,
         CreateCaseSetCommand,

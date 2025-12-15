@@ -48,7 +48,6 @@ from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
-from gen_epix.casedb.domain.model.case import CaseTypeSettings as CaseTypeSettings
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
 from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
@@ -179,10 +178,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseTypeSetMember,
             CaseTypeDim,
             CaseTypeCol,
-            CaseTypeSettings,
             CaseTypeColSet,
             CaseTypeColSetMember,
-            CaseTypeSettings,
             CompleteCaseType,
             Case,
             CaseForCreateUpdate,

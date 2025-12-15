@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, model_validator
+from pydantic import Field, field_serializer, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
@@ -207,6 +207,23 @@ class CreateFileForSeqRequestBody(PydanticBaseModel):
     file_compression: seqdb_enum.FileCompression = copy_model_field(
         command.CreateFileForSeqCommand, "file_compression"
     )
+
+
+class ColValidationRulesResponseBody(PydanticBaseModel):
+    """
+    The additional validation rules that a Col instance must comply with.
+    """
+
+    valid_col_types_by_dim_type: dict[enum.DimType, set[enum.ColType]] = Field(
+        default={enum.DimType[x.name]: set(x.value) for x in enum.DimColTypeSet},
+        description="The Col.col_type values that are allowed depending on the Col.dim.dim_type.",
+    )
+
+    @field_serializer("valid_col_types_by_dim_type")
+    def serialize_valid_col_types_by_dim_type(
+        self, value: dict[enum.DimType, set[enum.ColType]]
+    ) -> dict[str, list[str]]:
+        return {x.value: [z.value for z in y] for x, y in value.items()}
 
 
 def create_case_endpoints(
@@ -758,6 +775,21 @@ def create_case_endpoints(
             )
         except Exception as exception:
             handle_exception("c1d2e3f4", user, exception)
+        return retval
+
+    @router.get(
+        "/" + model.Col.ENTITY.snake_case_plural_name + "/validation_rules",
+        operation_id=model.Col.ENTITY.snake_case_plural_name + "__validation_rules",
+        name="Col validation rules",
+        description=ColValidationRulesResponseBody.__doc__,
+    )
+    async def get__col__validation_rules(
+        user: registered_user_dependency,  # type: ignore
+    ) -> ColValidationRulesResponseBody:
+        try:
+            retval = ColValidationRulesResponseBody()
+        except Exception as exception:
+            handle_exception("f2a4b8c6", user, exception)
         return retval
 
     # CRUD
