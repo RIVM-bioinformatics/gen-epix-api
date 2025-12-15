@@ -16,6 +16,10 @@ Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 
 class Location(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Location)
 
     location_id: Mapped[UUID] = create_mapped_column(
@@ -43,6 +47,10 @@ class Location(Base, NoIdRowMetadataMixin):
 
 
 class CohortDefinition(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
 
     cohort_definition_id: Mapped[UUID] = create_mapped_column(
@@ -69,6 +77,10 @@ class CohortDefinition(Base, NoIdRowMetadataMixin):
 
 
 class Cohort(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Cohort)
 
     cohort_definition_id: Mapped[UUID | None] = create_mapped_column(
@@ -85,6 +97,10 @@ class Cohort(Base, NoIdRowMetadataMixin):
 
 
 class CdmSource(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CdmSource)
 
     cdm_source_name: Mapped[str] = create_mapped_column(
@@ -123,6 +139,10 @@ class CdmSource(Base, NoIdRowMetadataMixin):
 
 
 class Vocabulary(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Vocabulary)
 
     vocabulary_id: Mapped[UUID] = create_mapped_column(
@@ -143,6 +163,10 @@ class Vocabulary(Base, NoIdRowMetadataMixin):
 
 
 class Domain(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Domain)
 
     domain_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Domain, "domain_id")
@@ -153,6 +177,10 @@ class Domain(Base, NoIdRowMetadataMixin):
 
 
 class ConceptClass(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptClass)
 
     concept_class_id: Mapped[UUID] = create_mapped_column(
@@ -167,6 +195,10 @@ class ConceptClass(Base, NoIdRowMetadataMixin):
 
 
 class Concept(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Concept, "concept_id")
@@ -198,6 +230,10 @@ class Concept(Base, NoIdRowMetadataMixin):
 
 
 class Relationship(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Relationship)
 
     relationship_id: Mapped[UUID] = create_mapped_column(
@@ -221,6 +257,10 @@ class Relationship(Base, NoIdRowMetadataMixin):
 
 
 class ConceptRelationship(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptRelationship)
 
     concept_id_1: Mapped[UUID] = create_mapped_column(
@@ -247,6 +287,10 @@ class ConceptRelationship(Base, NoIdRowMetadataMixin):
 
 
 class ConceptAncestor(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptAncestor)
 
     ancestor_concept_id: Mapped[UUID] = create_mapped_column(
@@ -267,6 +311,10 @@ class ConceptAncestor(Base, NoIdRowMetadataMixin):
 
 
 class ConceptSynonym(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConceptSynonym)
 
     concept_id: Mapped[UUID] = create_mapped_column(
@@ -284,6 +332,10 @@ class ConceptSynonym(Base, NoIdRowMetadataMixin):
 
 
 class DrugStrength(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DrugStrength)
 
     drug_concept_id: Mapped[UUID] = create_mapped_column(
@@ -328,6 +380,10 @@ class DrugStrength(Base, NoIdRowMetadataMixin):
 
 
 class SourceToConceptMap(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
 
     source_code: Mapped[str] = create_mapped_column(
@@ -363,6 +419,10 @@ class SourceToConceptMap(Base, NoIdRowMetadataMixin):
 
 
 class Metadata(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Metadata)
 
     metadata_concept_id: Mapped[UUID] = create_mapped_column(
@@ -390,6 +450,10 @@ class Metadata(Base, NoIdRowMetadataMixin):
 
 
 class CareSite(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.CareSite)
 
     care_site_id: Mapped[UUID] = create_mapped_column(
@@ -416,6 +480,10 @@ class CareSite(Base, NoIdRowMetadataMixin):
 
 
 class Provider(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Provider)
 
     provider_id: Mapped[UUID] = create_mapped_column(
@@ -456,6 +524,10 @@ class Provider(Base, NoIdRowMetadataMixin):
 
 
 class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Person)
 
     person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Person, "person_id")
@@ -522,6 +594,10 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ObservationPeriod)
 
     observation_period_id: Mapped[UUID] = create_mapped_column(
@@ -548,6 +624,10 @@ class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
 
     payer_plan_period_id: Mapped[UUID] = create_mapped_column(
@@ -616,6 +696,10 @@ class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.VisitOccurrence)
 
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -672,6 +756,10 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.VisitDetail)
 
     visit_detail_id: Mapped[UUID] = create_mapped_column(
@@ -734,6 +822,10 @@ class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConditionOccurrence)
 
     condition_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -793,6 +885,10 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ProcedureOccurrence)
 
     procedure_occurrence_id: Mapped[UUID] = create_mapped_column(
@@ -843,6 +939,10 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DrugExposure)
 
     drug_exposure_id: Mapped[UUID] = create_mapped_column(
@@ -921,6 +1021,10 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DeviceExposure)
 
     device_exposure_id: Mapped[UUID] = create_mapped_column(
@@ -977,6 +1081,10 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Measurement)
 
     measurement_id: Mapped[UUID] = create_mapped_column(
@@ -1048,6 +1156,10 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Observation)
 
     observation_id: Mapped[UUID] = create_mapped_column(
@@ -1122,6 +1234,10 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Specimen)
 
     specimen_id: Mapped[UUID] = create_mapped_column(
@@ -1179,6 +1295,10 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Note)
 
     note_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "note_id")
@@ -1224,6 +1344,10 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.ConditionEra)
 
     condition_era_id: Mapped[UUID] = create_mapped_column(
@@ -1247,6 +1371,10 @@ class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DrugEra)
 
     drug_era_id: Mapped[UUID] = create_mapped_column(
@@ -1277,6 +1405,10 @@ class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.DoseEra)
 
     dose_era_id: Mapped[UUID] = create_mapped_column(
@@ -1301,6 +1433,10 @@ class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.NoteNlp)
 
     note_nlp_id: Mapped[UUID] = create_mapped_column(
@@ -1340,6 +1476,10 @@ class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.Cost)
 
     cost_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "cost_id")
@@ -1393,6 +1533,10 @@ class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class LocationHistory(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.LocationHistory)
 
     location_id: Mapped[UUID] = create_mapped_column(
@@ -1425,6 +1569,10 @@ class LocationHistory(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class SurveyConduct(Base, DataLineageMixin, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.SurveyConduct)
 
     survey_conduct_id: Mapped[UUID] = create_mapped_column(
@@ -1502,6 +1650,10 @@ class SurveyConduct(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
 
 class FactRelationship(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.FactRelationship)
 
     domain_concept_id_1: Mapped[UUID] = create_mapped_column(
@@ -1525,6 +1677,10 @@ class FactRelationship(Base, NoIdRowMetadataMixin):
 
 
 class MeasurementRelation(Base, NoIdRowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
     __tablename__, __table_args__ = create_table_args(model.MeasurementRelation)
 
     measurement_relation_id: Mapped[UUID] = create_mapped_column(

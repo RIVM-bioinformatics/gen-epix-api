@@ -31,6 +31,7 @@ from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTyp
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
+from gen_epix.casedb.repositories.sa_model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetCategory as CaseTypeSetCategory,
@@ -73,10 +74,16 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
+from gen_epix.commondb.repositories.sa_model import (
+    ExternalIdentifier as ExternalIdentifier,
+)
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
 )
 from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.repositories.sa_model import (
@@ -106,12 +113,14 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
         model.IdentifierIssuer: IdentifierIssuer,
+        model.ExternalIdentifier: ExternalIdentifier,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
         model.OrganizationSetMember: OrganizationSetMember,
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
+        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,
@@ -146,6 +155,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseTypeCol: CaseTypeCol,
         model.CaseTypeColSet: CaseTypeColSet,
         model.CaseTypeColSetMember: CaseTypeColSetMember,
+        model.CaseTypeDim: CaseTypeDim,
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,

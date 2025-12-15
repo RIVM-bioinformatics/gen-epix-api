@@ -7,10 +7,16 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
+from gen_epix.commondb.repositories.sa_model import (
+    ExternalIdentifier as ExternalIdentifier,
+)
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
+)
+from gen_epix.commondb.repositories.sa_model import (
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
 )
 from gen_epix.commondb.repositories.sa_model import OrganizationSet as OrganizationSet
 from gen_epix.commondb.repositories.sa_model import (
@@ -43,18 +49,19 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import KmerProfile as KmerProfile
-from gen_epix.seqdb.repositories.sa_model.seq import (
-    LibraryPrepProtocol as LibraryPrepProtocol,
-)
 from gen_epix.seqdb.repositories.sa_model.seq import Locus as Locus
+from gen_epix.seqdb.repositories.sa_model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.repositories.sa_model.seq import (
     LocusDetectionProtocol as LocusDetectionProtocol,
 )
+from gen_epix.seqdb.repositories.sa_model.seq import LocusProfile as LocusProfile
 from gen_epix.seqdb.repositories.sa_model.seq import LocusSet as LocusSet
-from gen_epix.seqdb.repositories.sa_model.seq import LocusSetMember as LocusSetMember
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    MlvaDetectionProtocol as MlvaDetectionProtocol,
+)
+from gen_epix.seqdb.repositories.sa_model.seq import MlvaProfile as MlvaProfile
 from gen_epix.seqdb.repositories.sa_model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.repositories.sa_model.seq import PcrProtocol as PcrProtocol
-from gen_epix.seqdb.repositories.sa_model.seq import RawSeq as RawSeq
 from gen_epix.seqdb.repositories.sa_model.seq import ReadSet as ReadSet
 from gen_epix.seqdb.repositories.sa_model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.repositories.sa_model.seq import RefSeq as RefSeq
@@ -62,6 +69,12 @@ from gen_epix.seqdb.repositories.sa_model.seq import RefSnp as RefSnp
 from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.repositories.sa_model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.repositories.sa_model.seq import Sample as Sample
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    SampleDataCollectionLink as SampleDataCollectionLink,
+)
+from gen_epix.seqdb.repositories.sa_model.seq import (
+    SampleIdentifier as SampleIdentifier,
+)
 from gen_epix.seqdb.repositories.sa_model.seq import Seq as Seq
 from gen_epix.seqdb.repositories.sa_model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.repositories.sa_model.seq import SeqCategory as SeqCategory
@@ -78,12 +91,13 @@ from gen_epix.seqdb.repositories.sa_model.seq import (
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.repositories.sa_model.seq import (
+    SequencingProtocol as SequencingProtocol,
+)
+from gen_epix.seqdb.repositories.sa_model.seq import (
     SnpDetectionProtocol as SnpDetectionProtocol,
 )
 from gen_epix.seqdb.repositories.sa_model.seq import SnpProfile as SnpProfile
-from gen_epix.seqdb.repositories.sa_model.seq import SubtypingScheme as SubtypingScheme
 from gen_epix.seqdb.repositories.sa_model.seq import Taxon as Taxon
-from gen_epix.seqdb.repositories.sa_model.seq import TaxonLocusLink as TaxonLocusLink
 from gen_epix.seqdb.repositories.sa_model.seq import (
     TaxonomyProtocol as TaxonomyProtocol,
 )
@@ -103,6 +117,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollection: DataCollection,
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
+        model.ExternalIdentifier: ExternalIdentifier,
         model.IdentifierIssuer: IdentifierIssuer,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
@@ -110,6 +125,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Site: Site,
         model.User: User,
         model.UserInvitation: UserInvitation,
+        model.OrganizationIdentifierIssuerLink: OrganizationIdentifierIssuerLink,
     },
     enum.ServiceType.SYSTEM: {
         model.Outage: Outage,
@@ -125,14 +141,16 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.AstProtocol: AstProtocol,
         model.KmerDetectionProtocol: KmerDetectionProtocol,
         model.KmerProfile: KmerProfile,
-        model.LibraryPrepProtocol: LibraryPrepProtocol,
+        model.SequencingProtocol: SequencingProtocol,
         model.Locus: Locus,
+        model.LocusCodeMap: LocusCodeMap,
         model.LocusDetectionProtocol: LocusDetectionProtocol,
+        model.LocusProfile: LocusProfile,
         model.LocusSet: LocusSet,
-        model.LocusSetMember: LocusSetMember,
+        model.MlvaDetectionProtocol: MlvaDetectionProtocol,
+        model.MlvaProfile: MlvaProfile,
         model.PcrMeasurement: PcrMeasurement,
         model.PcrProtocol: PcrProtocol,
-        model.RawSeq: RawSeq,
         model.ReadSet: ReadSet,
         model.RefAllele: RefAllele,
         model.RefSeq: RefSeq,
@@ -140,6 +158,8 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.RefSnpSet: RefSnpSet,
         model.RefSnpSetMember: RefSnpSetMember,
         model.Sample: Sample,
+        model.SampleDataCollectionLink: SampleDataCollectionLink,
+        model.SampleIdentifier: SampleIdentifier,
         model.Seq: Seq,
         model.SeqAlignment: SeqAlignment,
         model.SeqCategory: SeqCategory,
@@ -151,9 +171,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.SeqTaxonomy: SeqTaxonomy,
         model.SnpDetectionProtocol: SnpDetectionProtocol,
         model.SnpProfile: SnpProfile,
-        model.SubtypingScheme: SubtypingScheme,
         model.Taxon: Taxon,
-        model.TaxonLocusLink: TaxonLocusLink,
         model.TaxonomyProtocol: TaxonomyProtocol,
         model.TaxonSet: TaxonSet,
         model.TaxonSetMember: TaxonSetMember,

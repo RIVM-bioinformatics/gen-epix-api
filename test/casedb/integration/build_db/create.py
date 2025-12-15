@@ -1,19 +1,19 @@
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
+    APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_ORG_ADMIN_USERS,
-    DEV_REPOSITORY_CONFIG,
-    REFDATA_ADMIN_OR_ABOVE_USERS,
+    ORG_ADMIN_OR_ABOVE_USERS,
     SKIP_CREATE_DATA,
     SKIP_RAISE,
 )
+from test.omopdb.integration.build_db.base import ROOT
 from typing import Any
 
 import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
-from gen_epix.commondb.domain.enum import DevRepositoryConfigSet
 
 
 class TestCreate:
@@ -178,23 +178,26 @@ class TestCreate:
                 env.create_org_admin_policy(exec_user, "guest2_1", "org1")
 
     def test_create_site(self, env: Env) -> None:
-        env.create_site("root1_1", "site1_1", "org1")
-        env.create_site("root1_1", "site2_1", "org2")
-
-    def test_create_contact(self, env: Env) -> None:
-        env.create_contact("root1_1", "contact1", "site1_1", email="c1@example.com")
-        env.create_contact("root1_1", "contact2", "site2_1")
-        env.create_contact("root1_1", "contact3", "site2_1")
+        for i in range(1, 6):
+            for j, exec_user in enumerate(ORG_ADMIN_OR_ABOVE_USERS, start=1):
+                env.create_site(exec_user, f"site{i}_{j}")
 
     def test_create_site_raise(self, env: Env) -> None:
         for exec_user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_site(exec_user, "site1_11", "org1")
+                env.create_site(exec_user, "site1_1")
+
+    def test_create_contact(self, env: Env) -> None:
+        for i, exec_user in enumerate(ORG_ADMIN_OR_ABOVE_USERS, start=1):
+            for j in range(1, 3):
+                env.create_contact(
+                    exec_user, f"contact{i}_1_{j}", email=f"c{i}.{j}@example.com"
+                )
 
     def test_create_contact_raise(self, env: Env) -> None:
         for exec_user in BELOW_ORG_ADMIN_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_contact(exec_user, "contact11", "site1_1")
+                env.create_contact(exec_user, "contact1_1_1")
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_concept_set(self, env: Env) -> None:
@@ -226,6 +229,12 @@ class TestCreate:
             enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_JSON,
             schema_definition="{}",
         )
+        env.create_concept_set(
+            "refdata_admin2_2",
+            "concept_set6_context_free_grammar_xml",
+            enum.ConceptSetType.CONTEXT_FREE_GRAMMAR_XML,
+            schema_definition="<schema></schema>",
+        )
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -256,7 +265,7 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_concept(exec_user, "category1_1", "concept_set1_nominal")
-        # TODO: add test for creating concept under regex or context free grammar concept set, which should not be allowed
+        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept set, which should not be allowed; alternatively regex and context free grammar Cols do not have a concept set but rather the regex/schema is part of the Col definition
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
@@ -344,14 +353,11 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_dim(self, env: Env) -> None:
         # Create dim as root, app_admin, refdata_admin
-        for i in range(1, 6):
-            env.create_dim("root1_1", f"text{i}", enum.DimType.TIME)
-            env.create_dim("app_admin1_1", f"number{i}", enum.DimType.NUMBER)
-            env.create_dim("refdata_admin1_1", f"time{i}", enum.DimType.TEXT)
-            env.create_dim("refdata_admin1_1", f"geo{i}", enum.DimType.GEO)
-            env.create_dim("refdata_admin1_1", f"id{i}", enum.DimType.IDENTIFIER)
-            env.create_dim("refdata_admin1_1", f"org{i}", enum.DimType.ORGANIZATION)
-            env.create_dim("refdata_admin1_1", f"other{i}", enum.DimType.OTHER)
+        users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
+            enum.DimType
+        )
+        for i, dim_type in enumerate(enum.DimType, start=1):
+            env.create_dim(users[i - 1], f"dim{i}", dim_type)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
@@ -364,111 +370,39 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_col(self, env: Env) -> None:
         # Create col as root, app_admin, refdata_admin
-        for i in range(1, 6):
-            # DimType.TEXT can have any column under it
-            dim = f"text{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.NOMINAL,
-                    enum.ColType.ORDINAL,
-                    enum.ColType.INTERVAL,
-                    enum.ColType.REGULAR_LANGUAGE,
-                    enum.ColType.CONTEXT_FREE_GRAMMAR_JSON,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
+        users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
+            enum.ColType
+        )
+        for i, dim_type in enumerate(enum.DimType, start=1):
+            col_types = enum.DimColTypeSet[dim_type.name].value
+            col_str = f"col{i}"
+            for j, col_type in enumerate(col_types, start=1):
+                concept_set: str | None = None
+                region_set: str | None = None
+                genetic_distance_protocol: str | None = None
+                if col_type == enum.ColType.NOMINAL:
+                    concept_set = "concept_set1_nominal"
+                elif col_type == enum.ColType.ORDINAL:
+                    concept_set = "concept_set2_ordinal"
+                elif col_type == enum.ColType.INTERVAL:
+                    concept_set = "concept_set3_interval"
+                elif col_type == enum.ColType.REGULAR_LANGUAGE:
+                    concept_set = "concept_set4_regular_language"
+                elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_JSON:
+                    concept_set = "concept_set5_context_free_grammar_json"
+                elif col_type == enum.ColType.CONTEXT_FREE_GRAMMAR_XML:
+                    concept_set = "concept_set6_context_free_grammar_xml"
+                elif col_type in enum.ColTypeSet.HAS_REGION_SET.value:
+                    region_set = f"region_set{j}"
+                elif col_type == enum.ColType.GENETIC_DISTANCE:
+                    genetic_distance_protocol = f"genetic_distance_protocol1"
                 env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_{col_type_str}",
-                    col_type,
-                    concept_set=f"concept_set{j}_{col_type_str}",
-                )
-            env.create_col("root1_1", f"{dim}_6_text", enum.ColType.TEXT)
-            env.create_col(
-                "root1_1", f"{dim}_7_number_decimal_0", enum.ColType.DECIMAL_0
-            )
-            env.create_col("app_admin1_1", f"{dim}_8_time_year", enum.ColType.TIME_YEAR)
-            env.create_col(
-                "refdata_admin1_1",
-                f"{dim}_9_genetic_distance",
-                enum.ColType.GENETIC_SEQUENCE,
-            )
-            env.create_col(
-                "refdata_admin1_1",
-                f"{dim}_10_genetic_distance",
-                enum.ColType.GENETIC_DISTANCE,
-                genetic_distance_protocol=f"genetic_distance_protocol{i}",
-                # tree_algorithm_codes=[enum.TreeAlgorithm.NJ, enum.TreeAlgorithm.SLINK],
-            )
-            # DimType.TIME can have time columns under it
-            dim = f"time{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.TIME_DAY,
-                    enum.ColType.TIME_WEEK,
-                    enum.ColType.TIME_MONTH,
-                    enum.ColType.TIME_QUARTER,
-                    enum.ColType.TIME_YEAR,
-                    enum.ColType.TIME_MONTH,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.NUMBER can have number columns under it
-            dim = f"number{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.DECIMAL_0,
-                    enum.ColType.DECIMAL_1,
-                    enum.ColType.DECIMAL_2,
-                    enum.ColType.DECIMAL_3,
-                    enum.ColType.DECIMAL_4,
-                    enum.ColType.DECIMAL_5,
-                    enum.ColType.DECIMAL_6,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.GEO can have geo columns under it
-            dim = f"geo{i}"
-            for j in range(0, 3):
-                j += 1
-                region_set = f"region_set{j}"
-                env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_{region_set}",
-                    enum.ColType.GEO_REGION,
+                    users[j - 1],
+                    f"{col_str}_{j}",
+                    col_type=col_type,
+                    concept_set=concept_set,
                     region_set=region_set,
-                )
-            # DimType.IDENTIFIER can have identifier columns under it
-            dim = f"id{i}"
-            for j, col_type in enumerate(
-                [
-                    enum.ColType.ID_DIRECT,
-                    enum.ColType.ID_PSEUDONYMISED,
-                    enum.ColType.ID_ANONYMISED,
-                ]
-            ):
-                j += 1
-                col_type_str = col_type.value.lower()
-                env.create_col(
-                    "refdata_admin1_1", f"{dim}_{j}_{col_type_str}", col_type
-                )
-            # DimType.ORGANIZATION can have organization columns under it
-            dim = f"org{i}"
-            for j in range(0, 3):
-                j += 1
-                env.create_col(
-                    "refdata_admin1_1",
-                    f"{dim}_{j}_organization",
-                    enum.ColType.ORGANIZATION,
+                    genetic_distance_protocol=genetic_distance_protocol,
                 )
 
     @pytest.mark.skipif(
@@ -479,10 +413,17 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_col(
                     exec_user,
-                    "text1_1_nominal",
-                    enum.ColType.NOMINAL,
-                    "concept_set1_nominal",
+                    "col1_99",
+                    col_type=enum.ColType.NOMINAL,
+                    concept_set="concept_set1_nominal",
                 )
+        # TODO [LSP-2691] create additional tests for casedb build_db create Col:
+        #  invalid col type for dim type
+        #  missing concept_set for nominal, ordinal, interval, regular_language,
+        #    context_free_grammar_json, context_free_grammar_xml col types
+        #  missing region_set for region col types
+        #  missing genetic_sequence_case_type_col for genetic_distance col
+        #  missing tree_algorithm_codes for genetic_distance col
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_disease(self, env: Env) -> None:
@@ -611,18 +552,25 @@ class TestCreate:
             "app_admin1_1", "case_type_set2", {"case_type2"}, "case_type_set_category2"
         )
         env.create_case_type_set(
-            "app_admin1_1", "case_type_set3", {"case_type3"}, "case_type_set_category3"
+            "app_admin1_2", "case_type_set3", {"case_type3"}, "case_type_set_category3"
         )
         env.create_case_type_set(
-            "refdata_admin1_1",
+            "app_admin1_1",
             "case_type_set4",
             {"case_type1", "case_type2"},
             "case_type_set_category4",
         )
         env.create_case_type_set(
-            "refdata_admin1_2",
+            "app_admin1_1",
             "case_type_set5",
             {"case_type2", "case_type3"},
+            "case_type_set_category5",
+        )
+        # Refdata admin creating empty case_type_set is allowed, not adding members (which is a separate operation) since this impacts ABAC
+        env.create_case_type_set(
+            "refdata_admin1_1",
+            "case_type_set6",
+            set(),
             "case_type_set_category5",
         )
         if env.verbose:
@@ -642,78 +590,96 @@ class TestCreate:
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
+    def test_create_case_type_dim(self, env: Env) -> None:
+        # Create case_type_dim as root, app_admin, refdata_admin
+        for i in range(1, 6):
+            for j in range(1, 3):
+                env.create_case_type_dim("root1_1", f"case_type_dim{i}_1_{j}")
+                env.create_case_type_dim("app_admin1_1", f"case_type_dim{i}_2_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_3_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_4_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_5_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_6_{j}")
+                env.create_case_type_dim("refdata_admin1_1", f"case_type_dim{i}_7_{j}")
+
+    @pytest.mark.skipif(
+        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
+    )
+    def test_create_case_type_dim_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_case_type_dim(exec_user, "case_type_dim1_1_11")
+        # TODO [LSP-2616]: add test for creating case_type_dim for
+        # non-existing dim
+        # non-existing case_type
+        # is_case_date_dim=True and dim.dim_type != TIME
+
+    @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin
         cols: list[model.Col] = env.read_all(
             "root1_1", model.Col
         )  # type:ignore[assignment]
-        # Series of case types with only text columns
-        for i in range(1, 4):
-            case_type = f"case_type{i}"
-            for j in range(1, 6):
-                dim = f"text{j}"
-                case_type_col = env.create_case_type_col(
-                    "root1_1", f"{case_type}_{dim}_6_text"
-                )
-        for i in range(4, 6):
+        case_type_dims: list[model.CaseTypeDim] = env.read_all(
+            "root1_1", model.CaseTypeDim
+        )  # type:ignore[assignment]
+        users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
+            enum.ColType
+        )
+        for case_type_dim in case_type_dims:
+            dim_id = case_type_dim.dim_id
+            curr_cols = [x for x in cols if x.dim_id == dim_id]
+            genetic_distance_case_type_col_kwargs: dict[str, Any] = {}
+            genetic_distance_case_type_col_index: int | None = None
             genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-            for col in cols:
+            for i, col in enumerate(curr_cols, start=1):
                 kwargs: dict[str, Any] = {}
+                is_genetic_distance_col = False
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
-                    assert genetic_sequence_case_type_col is not None
-                    kwargs["genetic_sequence_case_type_col_id"] = (
-                        genetic_sequence_case_type_col.id
-                    )
-                    kwargs["tree_algorithm_codes"] = {
+                    is_genetic_distance_col = True
+                    genetic_distance_case_type_col_index = i
+                    genetic_distance_case_type_col_kwargs["tree_algorithm_codes"] = {
                         enum.TreeAlgorithmType.NJ,
                         enum.TreeAlgorithmType.SLINK,
                     }
-                case_type_col = env.create_case_type_col(
-                    "refdata_admin1_1", f"case_type{i}_{col.code}", **kwargs
-                )
+                code = case_type_dim.code.replace("case_type_dim", "case_type_col")
+                if not is_genetic_distance_col:
+                    case_type_col = env.create_case_type_col(
+                        users[i - 1], f"{code}_{i}", **kwargs
+                    )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            case_type_col = env.create_case_type_col(
-                "root1_1",
-                f"case_type{i}_text1_8_time_year_2",
-                col="text1_8_time_year",
-                occurrence=2,
-            )
-            case_type_col = env.create_case_type_col(
-                "app_admin1_1",
-                f"case_type{i}_text1_8_time_year_3",
-                col="text1_8_time_year",
-                occurrence=3,
-            )
-        # if env.verbose:
-        #     env.print_case_type_cols()
+            # Handle genetic distance col case_type_col creation with extra args
+            if genetic_sequence_case_type_col:
+                genetic_distance_case_type_col_kwargs[
+                    "genetic_sequence_case_type_col_id"
+                ] = genetic_sequence_case_type_col.id
+                case_type_col = env.create_case_type_col(
+                    users[genetic_distance_case_type_col_index - 1],
+                    f"{code}_{genetic_distance_case_type_col_index}",
+                    **genetic_distance_case_type_col_kwargs,
+                )
+
+        if env.verbose:
+            env.print_case_type_cols()
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
     def test_create_case_type_col_raise(self, env: Env) -> None:
-        cols: list[model.Col] = env.read_all(
-            "root1_1", model.Col
+        case_type_dims: list[model.CaseTypeDim] = env.read_all(
+            "root1_1", model.CaseTypeDim
         )  # type:ignore[assignment]
+        case_type_dim = case_type_dims[0]
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
+            code = case_type_dim.code.replace("case_type_dim", "case_type_col")
             with pytest.raises(exc.UnauthorizedAuthError):
-                genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-                for col in cols:
-                    kwargs: dict[str, Any] = {}
-                    if col.col_type == enum.ColType.GENETIC_DISTANCE:
-                        assert genetic_sequence_case_type_col is not None
-                        kwargs["genetic_sequence_case_type_col_id"] = (
-                            genetic_sequence_case_type_col.id
-                        )
-                        kwargs["tree_algorithm_codes"] = {
-                            enum.TreeAlgorithmType.NJ,
-                            enum.TreeAlgorithmType.SLINK,
-                        }
-                    case_type_col = env.create_case_type_col(
-                        exec_user, f"case_type1_{col.code}", **kwargs
-                    )
-                    if col.col_type == enum.ColType.GENETIC_SEQUENCE:
-                        genetic_sequence_case_type_col = case_type_col
+                env.create_case_type_col(exec_user, f"{code}_1")
+        # TODO [LSP-2693] Add test for creating case_type_col for
+        # non-existing case_type
+        # non-existing case_type_dim
+        # non-existing col
+        # col is for different dim than case_type_dim
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col_set(self, env: Env) -> None:
@@ -721,37 +687,43 @@ class TestCreate:
         env.create_case_type_col_set(
             "root1_1",
             "case_type_col_set1",
-            {f"case_type1_text{i+1}_6_text" for i in range(0, 5)},
+            {f"case_type_col1_{i+1}_1_1" for i in range(0, 5)},
         )
         env.create_case_type_col_set(
             "app_admin1_1",
             "case_type_col_set2",
-            {f"case_type2_text{i+1}_6_text" for i in range(0, 5)},
+            {f"case_type_col2_{i+1}_1_1" for i in range(0, 5)},
         )
         env.create_case_type_col_set(
-            "refdata_admin1_1",
+            "app_admin1_2",
             "case_type_col_set3",
-            {f"case_type3_text{i+1}_6_text" for i in range(0, 5)},
+            {f"case_type_col3_{i+1}_1_1" for i in range(0, 5)},
         )
         env.create_case_type_col_set(
-            "refdata_admin1_1",
+            "app_admin1_1",
             "case_type_col_set4",
             {
-                "case_type1_text1_6_text",
-                "case_type1_text2_6_text",
-                "case_type2_text1_6_text",
-                "case_type2_text2_6_text",
+                "case_type_col1_1_1_1",
+                "case_type_col1_2_1_1",
+                "case_type_col2_1_1_1",
+                "case_type_col2_2_1_1",
             },
         )
         env.create_case_type_col_set(
-            "refdata_admin1_1",
+            "app_admin1_1",
             "case_type_col_set5",
             {
-                "case_type2_text2_6_text",
-                "case_type2_text3_6_text",
-                "case_type3_text2_6_text",
-                "case_type3_text3_6_text",
+                "case_type_col2_2_1_1",
+                "case_type_col2_3_1_1",
+                "case_type_col3_2_1_1",
+                "case_type_col3_3_1_1",
             },
+        )
+        # Refdata admin creating empty case_type_col_set is allowed, not adding members (which is a separate operation) since this impacts ABAC
+        env.create_case_type_col_set(
+            "refdata_admin1_1",
+            "case_type_col_set6",
+            set(),
         )
         if env.verbose:
             env.print_case_type_col_sets()
@@ -766,7 +738,7 @@ class TestCreate:
                     exec_user,
                     "case_type_col_set11",
                     {
-                        "case_type1_text1_6_text",
+                        "case_type_col1_1_1_1",
                     },
                 )
 
@@ -933,61 +905,14 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_set_status(user, "case_set_status11")
 
-    # TODO: remove when ok. Replaced by case access integration test.
-    # @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    # def test_create_case_set(self, env: Env) -> None:
-    #     # Create case set as org_user
-    #     for i in range(1, 4):
-    #         for j in range(1, 4):
-    #             env.create_case_set(
-    #                 f"org_user{i}_3",
-    #                 f"case_set{i}_{j}",
-    #                 "case_set_category1",
-    #                 "case_set_status1",
-    #                 f"data_collection{i}",
-    #                 cases=[f"case{i}_{j}"],
-    #             )
-    #     # Custom cases: (org_user, name, cases, data_collections)
-    #     data = [
-    #         ("1_2", "1_4", ("1_4",), ("1", "4")),
-    #         ("2_2", "2_4", ("2_4",), ("2", "5")),
-    #         ("3_2", "3_4", ("3_4", "3_5"), ("3", "4", "5")),
-    #     ]
-    #     for x in data:
-    #         env.create_case_set(
-    #             f"org_user{x[0]}",
-    #             f"case_set{x[1]}",
-    #             "case_set_category1",
-    #             "case_set_status1",
-    #             [f"data_collection{y}" for y in x[3]],
-    #             cases=[f"case{y}" for y in x[2]],
-    #         )
-
-    @pytest.mark.skipif(
-        SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
-    )
-    def test_create_case_set_raise(self, env: Env) -> None:
-        # TODO: Create case set as org_user1_1 for cases that they do not have access to
-        # TODO: Create case set as org_user1_1 for cases that org_user4_1 has access to
-        # TODO: Create case set as org_user1_1 for cases that org_user2_1 does not have access to
-        # TODO: Create case set as org_admin1_1, app_admin1_1 and root1_1 for cases that org_user1_1 has access to
-        # TODO: Create case set for cases some of which do not exist
-        # TODO: Create case set for cases some of which are for a different case type
-        # TODO: Create case set for cases some of which are not in the case set's data collections even though the user has access to them
-
-        # Update scenarios
-        # TODO: Remove data collection from case set: only if write access to data collection/case type
-        # TODO: XXX
-        pass
-
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_object_already_exists(self, env: Env) -> None:
         # Organization already exists
         with pytest.raises(exc.UniqueConstraintViolationError):
-            env.create_organization("root2_2", "org2")
+            env.create_organization(ROOT, "org2")
         # User already exists
         with pytest.raises(exc.UserAlreadyExistsAuthError):
-            env.invite_and_register_user("root1_2", "root2_1")
+            env.invite_and_register_user(ROOT, "root2_1")
         with pytest.raises(exc.UserAlreadyExistsAuthError):
             env.invite_and_register_user("app_admin1_1", "org_admin2_1")
         # Organization admin policy already exists
@@ -997,193 +922,245 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_concept_set(
-                    "root1_1",
+                    ROOT,
                     "concept_set1_nominal",
                     enum.ConceptSetType.NOMINAL,
                 )
         # Concept already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_concept("root1_1", "category1_1", "concept_set1_nominal")
+                env.create_concept(ROOT, "category1_1", "concept_set1_nominal")
         # RegionSet already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_region_set("root1_1", "region_set1")
+                env.create_region_set(ROOT, "region_set1")
         # RegionSetShape already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_region_set_shape("root1_1", "region_set1", 1)
+                env.create_region_set_shape(ROOT, "region_set1", 1)
         # Region already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_region("root1_1", "region1_1", "region_set1")
+                env.create_region(ROOT, "region1_1", "region_set1")
         # GeneticDistanceProtocol already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_genetic_distance_protocol(
-                    "root1_1", "genetic_distance_protocol1"
-                )
+                env.create_genetic_distance_protocol(ROOT, "genetic_distance_protocol1")
         # Dim already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_dim("root1_1", "time1", enum.DimType.TIME)
+                env.create_dim(ROOT, "dim1", enum.DimType.TIME)
         # Col already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_col(
-                    "root1_1",
-                    "text1_1_nominal",
-                    enum.ColType.NOMINAL,
+                    ROOT,
+                    "col1_1",
+                    col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set1_nominal",
                 )
         # Disease already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_disease("root1_1", "disease1")
+                env.create_disease(ROOT, "disease1")
         # EtiologicalAgent already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_etiological_agent("root1_1", "etiological_agent1")
+                env.create_etiological_agent(ROOT, "etiological_agent1")
         # Etiology already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_etiology("root1_1", "disease1", "etiological_agent1")
+                env.create_etiology(ROOT, "disease1", "etiological_agent1")
         # DataCollection already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_data_collection("root1_1", "data_collection1")
+                env.create_data_collection(ROOT, "data_collection1")
         # CaseType already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_case_type(
-                    "root1_1", "case_type1", "disease1", "etiological_agent1"
+                    ROOT, "case_type1", "disease1", "etiological_agent1"
                 )
         # CaseTypeSetCategory already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_case_type_set_category("root1_1", "case_type_set_category1")
+                env.create_case_type_set_category(ROOT, "case_type_set_category1")
         # CaseTypeSet already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_case_type_set(
-                    "root1_1",
+                    ROOT,
                     "case_type_set1",
-                    {"case_type1"},
+                    {"case_type_col1_1_1_1"},
                     "case_type_set_category1",
                 )
         # CaseTypeCol already exists
         if (
             not SKIP_CREATE_DATA
-            and DEV_REPOSITORY_CONFIG not in DevRepositoryConfigSet.SA_SQLITE.value
+            # and DEV_REPOSITORY_CONFIG not in DevRepositoryConfigSet.SA_SQLITE.value
         ):
             # sqlite does not enforce unique constraints on nullable columns.
             # CaseTypeCol.occurrence, which is part of a unique constraint, is
             # nullable, so this this test will fail for sqlite and should therefore
             # not be executed for this type of repository.
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_case_type_col("root1_1", "case_type1_text1_6_text")
+                env.create_case_type_col(ROOT, "case_type_col1_1_1_1")
         # CaseTypeColSet already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_case_type_col_set(
-                    "root1_1",
+                    ROOT,
                     "case_type_col_set1",
-                    {},
+                    set(),
                 )
         # TODO: add OrganizationAccessCasePolicy and UserAccessCasePolicy already exist
+
+    def test_create_case_type_set_member(self, env: Env) -> None:
+        env.create_case_type_set(
+            ROOT,
+            "case_type_set99",
+            set(),
+            "case_type_set_category1",
+        )
+        for i, exec_user in enumerate(APP_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_case_type_set_member(
+                exec_user, "case_type_set99", f"case_type{i}"
+            )
+        env.delete_object(ROOT, model.CaseTypeSet, "case_type_set99")
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_case_type_set_member_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_case_type_set_member(
+                    exec_user, "case_type_set1", f"case_type1"
+                )
+
+    def test_create_case_type_col_set_member(self, env: Env) -> None:
+        env.create_case_type_col_set(
+            ROOT,
+            "case_type_col_set99",
+            set(),
+        )
+        for i, exec_user in enumerate(APP_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_case_type_col_set_member(
+                exec_user, "case_type_col_set99", f"case_type_col1_1_1_{i}"
+            )
+        env.delete_object(ROOT, model.CaseTypeColSet, "case_type_col_set99")
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_case_type_col_set_member_raise(self, env: Env) -> None:
+        for exec_user in BELOW_APP_ADMIN_USERS:
+            with pytest.raises(exc.UnauthorizedAuthError):
+                env.create_case_type_col_set_member(
+                    exec_user, "case_type_col_set1", f"case_type_col1_1_1_1"
+                )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_object_invalid_reference(self, env: Env) -> None:
         # User.organization does not exist
-        with pytest.raises(exc.InvalidIdsError):
-            env.invite_and_register_user(
-                "root1_1", "root11_1", set_dummy_organization=True
-            )
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+            env.invite_and_register_user(ROOT, "root11_1", set_dummy_organization=True)
         # UserInvitation.token is invalid
         with pytest.raises(exc.UnauthorizedAuthError):
-            env.invite_and_register_user("root1_1", "root1_11", set_dummy_token=True)
+            env.invite_and_register_user(ROOT, "root1_11", set_dummy_token=True)
         # Concept.concept_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
             env.create_concept(
-                "root1_1",
+                ROOT,
                 "concept11_1",
                 set_dummy_concept_set=True,
             )
         # Region.region_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
             env.create_region(
-                "root1_1",
+                ROOT,
                 "region11_1",
                 "region_set11",
                 set_dummy_region_set=True,
             )
         # RegionSetShape.region_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
             env.create_region_set_shape(
-                "root1_1",
+                ROOT,
                 "region_set11",
                 1,
                 set_dummy_region_set=True,
             )
         # Col.concept_set does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.TEXT
+                ][0]
                 env.create_col(
-                    "root1_1",
-                    "text1_1_nominal",
-                    enum.ColType.NOMINAL,
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set11_nominal",
                     set_dummy_concept_set=True,
                 )
         # Col.region_set does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.GEO
+                ][0]
                 env.create_col(
-                    "root1_1",
-                    "geo1_1_region",
-                    enum.ColType.GEO_REGION,
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.GEO_REGION,
                     region_set="region_set11",
                     set_dummy_region_set=True,
                 )
         # Col.genetic_distance_protocol does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.TEXT
+                ][0]
                 env.create_col(
-                    "root1_1",
-                    "text1_1_genetic_distance",
-                    enum.ColType.GENETIC_DISTANCE,
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
                     set_dummy_genetic_distance_protocol=True,
                 )
         # Etiology.disease does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_etiology(
-                    "root1_1",
+                    ROOT,
                     "disease11",
                     "etiological_agent1",
                     set_dummy_disease=True,
                 )
         # Etiology.etiological_agent does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_etiology(
-                    "root1_1",
+                    ROOT,
                     "disease1",
                     "etiological_agent11",
                     set_dummy_etiological_agent=True,
                 )
         # CaseType.disease does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type(
-                    "root1_1", "case_type11", "disease11", None, set_dummy_disease=True
+                    ROOT, "case_type11", "disease11", None, set_dummy_disease=True
                 )
         # CaseType.etiological_agent does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type(
-                    "root1_1",
+                    ROOT,
                     "case_type11",
                     None,
                     "etiological_agent11",
@@ -1191,9 +1168,9 @@ class TestCreate:
                 )
         # CaseTypeSet.case_type_set_category does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type_set(
-                    "root1_1",
+                    ROOT,
                     "case_type_set11",
                     {"case_type1"},
                     "case_type_set_category11",
@@ -1201,91 +1178,42 @@ class TestCreate:
                 )
         # CaseTypeSetMember.case_type does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type_set(
-                    "root1_1",
+                    ROOT,
                     "case_type_set11",
                     {"case_type11"},
                     "case_type_set_category1",
                     set_dummy_case_types=True,
                 )
+        # CaseTypeDim.dim does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_dim(ROOT, "case_type_dim1_1_1", set_dummy_dim=True)
         # CaseTypeCol.case_type does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises(
+                (
+                    exc.InvalidLinkIdsError,
+                    exc.InvalidIdsError,
+                    exc.InvalidArgumentsError,
+                )
+            ):
                 env.create_case_type_col(
-                    "root1_1", "case_type1_text1_6_text", set_dummy_case_type=True
+                    ROOT, "case_type_col1_1_1_1", set_dummy_case_type=True
                 )
         # CaseTypeCol.col does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type_col(
-                    "root1_1", "case_type1_text1_6_text", set_dummy_col=True
+                    ROOT, "case_type_col1_1_1_1", set_dummy_col=True
                 )
         # CaseTypeColSetMember.case_type_col does not exist
         if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type_col_set(
-                    "root1_1",
+                    ROOT,
                     "case_type_col_set11",
-                    {"case_type_col11"},
+                    {"case_type_col1_1_1_99"},
                     set_dummy_case_type_cols=True,
-                )
-
-    def test_create_case_type_set_member(self, env: Env) -> None:
-        """
-        RBAC permissions:
-        - root: CRUD
-        - app_admin: CRU
-        - refdata_admin: CRU
-        - org_admin: R
-        - org_user: R
-        - guest: -
-        """
-        env.create_case_type_set(
-            "refdata_admin1_1",
-            "case_type_set21",
-            set(),
-            "case_type_set_category1",
-        )
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            i += 1
-            env.create_case_type_set_member(
-                exec_user, "case_type_set21", f"case_type{i}"
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_create_case_type_set_member_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_case_type_set_member(
-                    exec_user, "case_type_set21", f"case_type1"
-                )
-
-    def test_create_case_type_col_set_member(self, env: Env) -> None:
-        """
-        RBAC permissions:
-        - root: CRUD
-        - app_admin: CRUD
-        - refdata_admin: CRUD
-        - org_admin: -
-        - org_user: -
-        - guest: -
-        """
-        env.create_case_type_col_set(
-            "refdata_admin1_1",
-            "case_type_col_set21",
-            set(),
-        )
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
-            i += 1
-            env.create_case_type_col_set_member(
-                exec_user, "case_type_col_set21", f"case_type1_text{i}_6_text"
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_create_case_type_col_set_member_raise(self, env: Env) -> None:
-        for exec_user in BELOW_APP_ADMIN_DATA_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_case_type_col_set_member(
-                    exec_user, "case_type_col_set21", f"case_type1_text1_6_text"
                 )

@@ -4,10 +4,8 @@ import logging
 from collections.abc import Generator
 from pathlib import Path
 from test.end_to_end.casedb_seqdb_connection.envvar import set_envvar
-from test.end_to_end.casedb_seqdb_connection.seqdb_server_manager import (
-    SeqdbServerManager,
-)
-from test.test_client.oauth.server_manager import OAuthServerManager
+from test.test_client.enum import ServerType
+from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
@@ -30,10 +28,13 @@ SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
 
 
 @pytest.fixture(scope="function")
-def oauth_server() -> Generator[OAuthServerManager, None, None]:
+def oauth_server() -> Generator[ServerManager, None, None]:
     """Start OAuth server and create CASEDB_FOR_SEQDB client."""
-    with OAuthServerManager(
-        port=8000, ssl_keyfile=SSL_KEYFILE, ssl_certfile=SSL_CERTFILE
+    with ServerManager(
+        service=ServerType.OAUTH,
+        port=9000,
+        ssl_keyfile=SSL_KEYFILE,
+        ssl_certfile=SSL_CERTFILE,
     ) as server:
         if not server.start():
             pytest.fail("Failed to start OAuth server")
@@ -53,8 +54,8 @@ def oauth_server() -> Generator[OAuthServerManager, None, None]:
 
 @pytest.fixture(scope="function")
 def seqdb_server(
-    oauth_server: OAuthServerManager,
-) -> Generator[SeqdbServerManager, None, None]:
+    oauth_server: ServerManager,
+) -> Generator[ServerManager, None, None]:
     """Start SeqDB server on port 8001."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
@@ -77,8 +78,9 @@ def seqdb_server(
         debug=False,
     )
 
-    with SeqdbServerManager(
-        seqdb_fastapi_app,
+    with ServerManager(
+        service=ServerType.SEQDB,
+        app=seqdb_fastapi_app,
         host="127.0.0.1",
         port=8001,
         ssl_certfile=SSL_CERTFILE,
@@ -90,7 +92,7 @@ def seqdb_server(
 
 
 def test_casedb_seqdb_connection(
-    oauth_server: OAuthServerManager, seqdb_server: SeqdbServerManager
+    oauth_server: ServerManager, seqdb_server: ServerManager
 ) -> None:
     """Test CaseDB to SeqDB connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
@@ -112,7 +114,7 @@ def test_casedb_seqdb_connection(
 
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{http_protocol}://localhost:8000/health")
+            response = client.get(f"{http_protocol}://localhost:9000/health")
             assert response.status_code == 200
             logging.info("✅ OAuth server is accessible")
     except Exception as e:
@@ -131,7 +133,7 @@ def test_casedb_seqdb_connection(
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(
-                f"{http_protocol}://localhost:8000/.well-known/openid-configuration"
+                f"{http_protocol}://localhost:9000/.well-known/openid-configuration"
             )
             assert response.status_code == 200
             discovery_data = response.json()
@@ -141,7 +143,7 @@ def test_casedb_seqdb_connection(
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
     # Create root user
-    root_user: model.User = test_util.create_root_user_from_claims(
+    root_user: model.User = test_util.get_existing_root_user(
         casedb_app_composer.cfg, casedb_app
     )
 
@@ -207,3 +209,40 @@ def test_casedb_seqdb_connection(
 
     # Log results
     assert phylogenetic_tree_retrieved
+
+    genetic_sequence_case_type_cols = [
+        x
+        for x in case_type_cols.values()
+        if cols[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE
+    ]
+    for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+        has_seq_case_ids = [
+            x.content[genetic_sequence_case_type_col.id]
+            for x in cases
+            if x.content.get(genetic_sequence_case_type_col.id)
+        ]
+        if not has_seq_case_ids:
+            continue
+
+    fasta_retrieved: bool = False
+    if has_seq_case_ids:
+        fasta_iter = casedb_app.handle(
+            command.RetrieveGeneticSequenceFastaByIdCommand(
+                user=root_user,  # type: ignore[arg-type]
+                seq_ids=has_seq_case_ids,
+                wrap=False,
+            )
+        )
+
+        # Read a few chunks to validate FASTA-like content
+        chunks_read = 0
+        for chunk in fasta_iter:
+            # Expect FASTA header or sequence lines
+            if chunk.strip():
+                assert chunk.startswith(">") or chunk.strip().isalpha()
+                fasta_retrieved = True
+            chunks_read += 1
+            if chunks_read >= 10:
+                break
+
+    assert fasta_retrieved

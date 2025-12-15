@@ -28,6 +28,9 @@ from gen_epix.commondb.domain.command.organization import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
+    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
@@ -35,6 +38,12 @@ from gen_epix.commondb.domain.command.organization import (
 )
 from gen_epix.commondb.domain.command.organization import (
     OrganizationCrudCommand as OrganizationCrudCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
+    OrganizationIdentifierIssuerLinkCrudCommand as OrganizationIdentifierIssuerLinkCrudCommand,
+)
+from gen_epix.commondb.domain.command.organization import (
+    OrganizationIdentifierIssuerLinkUpdateAssociationCommand as OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     OrganizationSetCrudCommand as OrganizationSetCrudCommand,
@@ -104,9 +113,12 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             DataCollectionSetCrudCommand,
             DataCollectionSetDataCollectionUpdateAssociationCommand,
             DataCollectionSetMemberCrudCommand,
+            ExternalIdentifierCrudCommand,
             IdentifierIssuerCrudCommand,
             InviteUserCommand,
             OrganizationCrudCommand,
+            OrganizationIdentifierIssuerLinkCrudCommand,
+            OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
             OrganizationSetCrudCommand,
             OrganizationSetMemberCrudCommand,
             OrganizationSetOrganizationUpdateAssociationCommand,
@@ -141,3 +153,5 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
         }
     ),
 }
+
+COMMON_COMMAND_MAP: dict[type[fastapp.Command], type[fastapp.Command]] = {}

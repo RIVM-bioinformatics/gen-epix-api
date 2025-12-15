@@ -11,9 +11,9 @@ from gen_epix.casedb.domain.model.case.persistable import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
+from gen_epix.util import copy_model_field
 
 
 class CaseForCreateUpdate(Model):
@@ -42,27 +42,6 @@ class CaseForCreateUpdate(Model):
         return {str(x): y for x, y in value.items()}
 
 
-class CaseTypeDim(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_dims",
-        persistable=False,
-    )
-    id: UUID = Field(description="The ID of the first case type column.")
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    occurrence: int | None = Field(
-        default=None,
-        description=(
-            "The index of the occurrence of the dimension for this case type."
-            " E.g. for first and second vaccination time it would be 1 and 2."
-            " Empty if only a single occurrence."
-        ),
-    )
-    rank: int = Field(description="The rank of the case type dimension for ordering.")
-    case_type_col_order: list[UUID] = Field(
-        description="The order of the case type columns"
-    )
-
-
 class CaseTypeStat(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_stats",
@@ -72,11 +51,13 @@ class CaseTypeStat(fastapp.Model):
     n_cases: int | None = Field(
         default=None, description="The number of cases for the case type."
     )
-    first_case_month: str | None = Field(
-        default=None, description="The ISO year and month of the first case."
+    first_case_date: datetime | None = Field(
+        default=None,
+        description="The date of the first case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
     )
-    last_case_month: str | None = Field(
-        default=None, description="The ISO year and month of the last case."
+    last_case_date: datetime | None = Field(
+        default=None,
+        description="The date of the last case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
     )
 
 
@@ -92,11 +73,13 @@ class CaseSetStat(fastapp.Model):
     n_own_cases: int | None = Field(
         default=None, description="The number of own cases in the case set."
     )
-    first_case_month: str | None = Field(
-        default=None, description="The ISO year and month of the first case."
+    first_case_date: datetime | None = Field(
+        default=None,
+        description="The date of the first case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
     )
-    last_case_month: str | None = Field(
-        default=None, description="The ISO year and month of the last case."
+    last_case_date: datetime | None = Field(
+        default=None,
+        description="The date of the last case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
     )
 
 
@@ -106,13 +89,12 @@ class CaseQuery(Model):
         persistable=False,
     )
     label: str | None = Field(default=None, description="The label for the query.")
-    case_type_ids: set[UUID] | None = Field(
-        default=None,
-        description="The IDs of the case type(s) that the case must belong to. Not applied if not provided.",
+    case_type_id: UUID = Field(
+        description="The ID of the case type that the cases must belong to.",
     )
     case_set_ids: set[UUID] | None = Field(
         default=None,
-        description="The IDs of the case set(s) that the case must belong to. Not applied if not provided.",
+        description="The IDs of the case set(s) that the case must belong to. Not applied if not provided. All case sets must belong to the same case type as case_type_id.",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
@@ -265,3 +247,19 @@ class CaseSeq(Model):
     )
     seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
     seq: Seq | None = Field(default=None, description="The sequence.")
+
+
+class CaseQueryResult(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="case_query_results",
+        persistable=False,
+    )
+    case_query: CaseQuery = Field(
+        description="The case query that was executed, provided back."
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of the cases matching the query, possibly limited by CaseSettings.read_max_n_cases. If limited, the most recent cases according to CaseSettings.stats_time_dim_id are returned"
+    )
+    is_max_results_exceeded: bool = Field(
+        description="Whether the number of results was limited."
+    )

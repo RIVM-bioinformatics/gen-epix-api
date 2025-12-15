@@ -46,6 +46,9 @@ from gen_epix.casedb.domain.command.case import (
     CaseTypeCrudCommand as CaseTypeCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import (
+    CaseTypeDimCrudCommand as CaseTypeDimCrudCommand,
+)
+from gen_epix.casedb.domain.command.case import (
     CaseTypeSetCaseTypeUpdateAssociationCommand as CaseTypeSetCaseTypeUpdateAssociationCommand,
 )
 from gen_epix.casedb.domain.command.case import (
@@ -112,13 +115,13 @@ from gen_epix.casedb.domain.command.case import (
     RetrieveGeneticSequenceFastaByCaseCommand as RetrieveGeneticSequenceFastaByCaseCommand,
 )
 from gen_epix.casedb.domain.command.case import (
-    RetrieveLibraryPrepProtocolsCommand as RetrieveLibraryPrepProtocolsCommand,
-)
-from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeByCasesCommand as RetrievePhylogeneticTreeByCasesCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     RetrievePhylogeneticTreeBySequencesCommand as RetrievePhylogeneticTreeBySequencesCommand,
+)
+from gen_epix.casedb.domain.command.case import (
+    RetrieveSequencingProtocolsCommand as RetrieveSequencingProtocolsCommand,
 )
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmClassCrudCommand as TreeAlgorithmClassCrudCommand,
@@ -195,6 +198,9 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
+    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
+)
+from gen_epix.commondb.domain.command import (
     GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
@@ -269,9 +275,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
     enum.ServiceType.CASE: {
         CaseCrudCommand,
         CaseDataCollectionLinkCrudCommand,
-        CreateCasesCommand,
         CaseSetCategoryCrudCommand,
-        CreateCaseSetCommand,
         CaseSetCrudCommand,
         CaseSetDataCollectionLinkCrudCommand,
         CaseSetMemberCrudCommand,
@@ -281,18 +285,23 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CaseTypeColSetCrudCommand,
         CaseTypeColSetMemberCrudCommand,
         CaseTypeCrudCommand,
+        CaseTypeDimCrudCommand,
         CaseTypeSetCaseTypeUpdateAssociationCommand,
         CaseTypeSetCategoryCrudCommand,
         CaseTypeSetCrudCommand,
         CaseTypeSetMemberCrudCommand,
+        CaseTypeDimCrudCommand,
         ColCrudCommand,
+        CreateCasesCommand,
+        CreateCaseSetCommand,
+        CreateFileForReadSetCommand,
+        CreateFileForSeqCommand,
+        CreateReadSetsForCasesCommand,
+        CreateSeqsForCasesCommand,
         DimCrudCommand,
         GeneticDistanceProtocolCrudCommand,
         RetrieveAlleleProfileCommand,
-        CreateReadSetsForCasesCommand,
-        CreateSeqsForCasesCommand,
-        CreateFileForReadSetCommand,
-        CreateFileForSeqCommand,
+        RetrieveAssemblyProtocolsCommand,
         RetrieveCaseRightsCommand,
         RetrieveCasesByIdCommand,
         RetrieveCasesByQueryCommand,
@@ -301,14 +310,13 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveCaseTypeStatsCommand,
         RetrieveCompleteCaseTypeCommand,
         RetrieveGeneticSequenceByCaseCommand,
+        RetrieveGeneticSequenceFastaByCaseCommand,
         RetrievePhylogeneticTreeByCasesCommand,
         RetrievePhylogeneticTreeBySequencesCommand,
-        RetrieveGeneticSequenceFastaByCaseCommand,
+        RetrieveSequencingProtocolsCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
         ValidateCasesCommand,
-        RetrieveLibraryPrepProtocolsCommand,
-        RetrieveAssemblyProtocolsCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,
@@ -318,9 +326,9 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveContainingRegionCommand,
     },
     enum.ServiceType.ONTOLOGY: {
-        ConceptSetCrudCommand,
         ConceptCrudCommand,
         ConceptRelationCrudCommand,
+        ConceptSetCrudCommand,
         DiseaseCrudCommand,
         DiseaseEtiologicalAgentUpdateAssociationCommand,
         EtiologicalAgentCrudCommand,

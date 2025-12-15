@@ -4,8 +4,8 @@ from gen_epix.casedb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,
     SORTED_SERVICE_TYPES,
 )
-from gen_epix.commondb.util import register_domain_entities
 from gen_epix.fastapp import Domain
+from gen_epix.util import register_domain_entities
 
 DOMAIN = Domain("casedb")
 

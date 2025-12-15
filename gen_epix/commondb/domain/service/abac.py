@@ -27,6 +27,7 @@ class BaseAbacService(BaseService):
 
     READ_ORGANIZATION_RESULTS_ONLY_COMMANDS: set[type[Command]] = {
         command.OrganizationAdminPolicyCrudCommand,
+        command.OrganizationIdentifierIssuerLinkCrudCommand,
         command.UserInvitationCrudCommand,
         command.RetrieveInviteUserConstraintsCommand,
     }

@@ -8,7 +8,6 @@ from gen_epix.casedb import policies as policies
 from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
-from gen_epix.commondb.util import map_paired_elements
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
 from gen_epix.filter import (
@@ -18,6 +17,7 @@ from gen_epix.filter import (
     LogicalOperator,
     UuidSetFilter,
 )
+from gen_epix.util import map_paired_elements
 
 
 class AbacService(BaseAbacService):

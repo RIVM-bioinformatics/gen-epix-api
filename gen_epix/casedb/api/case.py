@@ -6,22 +6,28 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, model_validator
+from pydantic import Field, field_serializer, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
+from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.util import copy_model_field
 
 
 class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
-    case_type_set_members: list[model.CaseTypeSetMember]
+    case_type_set_members: list[model.CaseTypeSetMember] = Field(
+        description="The members of the case type set."
+    )
 
 
 class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
-    case_type_col_set_members: list[model.CaseTypeColSetMember]
+    case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
+        description="The members of the case type col set."
+    )
 
 
 class ValidateCasesRequestBody(PydanticBaseModel):
@@ -84,13 +90,21 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
 
 
 class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
-    organization_ids: list[UUID] | None = None
-    site_ids: list[UUID] | None = None
-    contact_ids: list[UUID] | None = None
-    props: dict[str, Any] = {}
+    organization_ids: list[UUID] | None = Field(
+        default=None, description="The organization IDs to retrieve contacts for."
+    )
+    site_ids: list[UUID] | None = Field(
+        default=None, description="The site IDs to retrieve contacts for."
+    )
+    contact_ids: list[UUID] | None = Field(
+        default=None, description="The contact IDs to retrieve contacts for."
+    )
+    props: dict[str, Any] = Field(
+        default_factory=dict, description="Additional properties for the request."
+    )
 
     @model_validator(mode="after")
-    def check_one_of_fields(self) -> Any:
+    def _validate_model(self) -> Any:
         if (
             sum(
                 [
@@ -108,24 +122,46 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
         return self
 
 
+class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveCasesByIdCommand, "case_type_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveCasesByIdCommand, "case_ids"
+    )
+
+
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
-    genetic_distance_case_type_col_id: UUID
-    tree_algorithm_code: enum.TreeAlgorithmType
-    case_ids: list[UUID]
+    genetic_distance_case_type_col_id: UUID = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand,
+        "genetic_distance_case_type_col_id",
+    )
+    tree_algorithm_code: enum.TreeAlgorithmType = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand, "tree_algorithm"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand, "case_ids"
+    )
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The case type column that contains the genetic sequences to retrieve.",
+    genetic_sequence_case_type_col_id: UUID = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand,
+        "genetic_sequence_case_type_col_id",
     )
-    case_ids: list[UUID] = Field(
-        description="The case ids to retrieve genetic sequences for.",
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
     )
 
 
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
-    sequence_ids: list[UUID]
-    props: dict[str, Any] = {}
+    genetic_sequence_case_type_col_id: UUID = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand,
+        "genetic_sequence_case_type_col_id",
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
+    )
 
 
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
@@ -147,14 +183,47 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
 
 
 class CreateFileForForReadSetRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create (base64 encoded bytes).")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
     is_fwd: bool = Field(
         description="Whether the file is for the forward reads (True) or reverse reads (False).",
+    )
+    file_format: seqdb_enum.ReadsFileFormat = copy_model_field(
+        command.CreateFileForReadSetCommand, "file_format"
+    )
+    file_compression: seqdb_enum.FileCompression = copy_model_field(
+        command.CreateFileForReadSetCommand, "file_compression"
     )
 
 
 class CreateFileForSeqRequestBody(PydanticBaseModel):
-    file_content: str = Field(description="The content of the file to create (base64 encoded bytes).")
+    file_content: str = Field(
+        description="The content of the file to create as base64 encoded bytes."
+    )
+    file_format: seqdb_enum.SeqFileFormat = copy_model_field(
+        command.CreateFileForSeqCommand, "file_format"
+    )
+    file_compression: seqdb_enum.FileCompression = copy_model_field(
+        command.CreateFileForSeqCommand, "file_compression"
+    )
+
+
+class ColValidationRulesResponseBody(PydanticBaseModel):
+    """
+    The additional validation rules that a Col instance must comply with.
+    """
+
+    valid_col_types_by_dim_type: dict[enum.DimType, set[enum.ColType]] = Field(
+        default={enum.DimType[x.name]: set(x.value) for x in enum.DimColTypeSet},
+        description="The Col.col_type values that are allowed depending on the Col.dim.dim_type.",
+    )
+
+    @field_serializer("valid_col_types_by_dim_type")
+    def serialize_valid_col_types_by_dim_type(
+        self, value: dict[enum.DimType, set[enum.ColType]]
+    ) -> dict[str, list[str]]:
+        return {x.value: [z.value for z in y] for x, y in value.items()}
 
 
 def create_case_endpoints(
@@ -357,9 +426,9 @@ def create_case_endpoints(
     async def retrieve__case_ids_by_query(
         user: registered_user_dependency,  # type: ignore
         request_body: model.CaseQuery,
-    ) -> list[UUID]:
+    ) -> model.CaseQueryResult:
         try:
-            retval: list[UUID] = app.handle(
+            retval: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=user,
                     case_query=request_body,
@@ -377,13 +446,14 @@ def create_case_endpoints(
     )
     async def retrieve__cases_by_ids(
         user: registered_user_dependency,  # type: ignore
-        request_body: list[UUID],
+        request_body: RetrieveCasesByIdsRequestBody,
     ) -> list[model.Case]:
         try:
             retval: list[model.Case] = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=user,
-                    case_ids=request_body,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
                 )
             )
         except Exception as exception:
@@ -519,16 +589,17 @@ def create_case_endpoints(
     )
     async def retrieve__genetic_sequence_fasta(
         token: Annotated[str, Form()],
-        genetic_sequence_case_type_col_id: Annotated[str, Form()],
+        genetic_sequence_case_type_col_id: Annotated[UUID, Form()],
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
     ) -> StreamingResponse:
         user: model.User | None = None
         app_impl: AppImplDetails = app.impl
         try:
-            user = await app_impl.services[
+            auth_service: AuthService = app_impl.services[
                 enum.ServiceType.AUTH
-            ].get_existing_user_from_token(token=token)
+            ]  # type: ignore[assignment]
+            user = await auth_service.get_existing_user_from_token(token=token)  # type: ignore[assignment]
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
@@ -565,13 +636,13 @@ def create_case_endpoints(
             retval: list[model.AlleleProfile] = app.handle(
                 command.RetrieveAlleleProfileCommand(
                     user=user,
-                    sequence_ids=request_body.sequence_ids,
-                    props=request_body.props,
+                    genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
+                    case_ids=request_body.case_ids,
                 )
             )
         except Exception as exception:
             handle_exception(  # type:ignore[call-arg]
-                "a4c03b54", user, exception, request_ids=request_body.sequence_ids
+                "a4c03b54", user, exception, request_ids=request_body.case_ids
             )
         return retval
 
@@ -669,17 +740,17 @@ def create_case_endpoints(
         return created_file_id
 
     @router.get(
-        "/retrieve/library_prep_protocols",
-        operation_id="retrieve__library_prep_protocols",
-        name="Retrieve library preparation protocols",
-        description=command.RetrieveLibraryPrepProtocolsCommand.__doc__,
+        "/retrieve/sequencing_protocols",
+        operation_id="retrieve__sequencing_protocols",
+        name="Retrieve sequencing protocols",
+        description=command.RetrieveSequencingProtocolsCommand.__doc__,
     )
-    async def retrieve__library_prep_protocols(
+    async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.LibraryPrepProtocol]:
+    ) -> list[model.SequencingProtocol]:
         try:
-            retval: list[model.LibraryPrepProtocol] = app.handle(
-                command.RetrieveLibraryPrepProtocolsCommand(
+            retval: list[model.SequencingProtocol] = app.handle(
+                command.RetrieveSequencingProtocolsCommand(
                     user=user,
                 )
             )
@@ -704,6 +775,21 @@ def create_case_endpoints(
             )
         except Exception as exception:
             handle_exception("c1d2e3f4", user, exception)
+        return retval
+
+    @router.get(
+        "/" + model.Col.ENTITY.snake_case_plural_name + "/validation_rules",
+        operation_id=model.Col.ENTITY.snake_case_plural_name + "__validation_rules",
+        name="Col validation rules",
+        description=ColValidationRulesResponseBody.__doc__,
+    )
+    async def get__col__validation_rules(
+        user: registered_user_dependency,  # type: ignore
+    ) -> ColValidationRulesResponseBody:
+        try:
+            retval = ColValidationRulesResponseBody()
+        except Exception as exception:
+            handle_exception("f2a4b8c6", user, exception)
         return retval
 
     # CRUD

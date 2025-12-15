@@ -401,7 +401,7 @@ class BaseService(abc.ABC):
             self._verify_other_service_links(
                 cmd, cmd.association_objs, other_service_links
             )
-            retval = self.repository.update_association(  # type: ignore
+            retval = self.repository.update_association(  # type: ignore[assignment]
                 uow,
                 cmd.user.id if cmd.user else None,
                 cmd.ASSOCIATION_CLASS,
