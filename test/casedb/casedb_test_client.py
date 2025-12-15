@@ -8,7 +8,6 @@ from time import sleep
 from typing import Any
 from uuid import UUID
 
-import gen_epix.casedb.domain.model.case.persistable
 from gen_epix.casedb.api.router import create_routers
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.env import AppComposer
@@ -371,7 +370,7 @@ class CasedbTestClient(TestClient):
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
         min_scale_unit: float = 1,
-    ) -> gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol:
+    ) -> model.GeneticDistanceProtocol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type:ignore[assignment]
@@ -384,7 +383,7 @@ class CasedbTestClient(TestClient):
             command.GeneticDistanceProtocolCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol(
+                objs=model.GeneticDistanceProtocol(
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                     min_scale_unit=min_scale_unit,
@@ -425,11 +424,7 @@ class CasedbTestClient(TestClient):
         col_type: enum.ColType = enum.ColType.TEXT,
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
-        genetic_distance_protocol: (
-            str
-            | gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol
-            | None
-        ) = None,
+        genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
         set_dummy_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
@@ -471,7 +466,7 @@ class CasedbTestClient(TestClient):
                 None
                 if not genetic_distance_protocol
                 else self._get_obj(
-                    gen_epix.casedb.domain.model.case.persistable.GeneticDistanceProtocol,
+                    model.GeneticDistanceProtocol,
                     genetic_distance_protocol,
                 ).id
             )

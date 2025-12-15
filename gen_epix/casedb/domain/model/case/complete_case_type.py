@@ -44,11 +44,15 @@ class CompleteCaseType(CaseType):
     )
     ordered_case_type_dim_ids: list[UUID] = Field(
         default_factory=list,
-        description="The case type dimensions order by their (occurrence, rank, code). Calculated during model validation.",
+        description="The case type dimensions ordered by their (occurrence, rank, code). Calculated during model validation.",
     )
     ordered_case_type_col_ids: list[UUID] = Field(
         default_factory=list,
-        description="The order of the case type columns, ordered their (ordered_case_type_dim, rank, code). Calculated during model validation.",
+        description="The case type columns ordered by their (ordered_case_type_dim, rank, code). Calculated during model validation.",
+    )
+    ordered_case_type_col_ids_by_dim: dict[UUID, list[UUID]] = Field(
+        default_factory=dict,
+        description="The case type columns per case type dimension, ordered by (rank, code). Calculated during model validation.",
     )
     genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(
         description="The genetic distance protocols used by the case type"
@@ -62,11 +66,8 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
-    stats_time_case_type_dim_id: UUID | None = Field(
+    case_date_case_type_dim_id: UUID | None = Field(
         description="The case type dimension ID to use for time-based statistics unless otherwise specified"
-    )
-    stats_geo_case_type_dim_id: UUID | None = Field(
-        description="The case type dimension ID to use for geo-based statistics unless otherwise specified"
     )
     create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
     read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")
@@ -77,18 +78,11 @@ class CompleteCaseType(CaseType):
     @model_validator(mode="after")
     def validate_model(self) -> Self:
         if (
-            self.stats_time_case_type_dim_id is not None
-            and self.stats_time_case_type_dim_id not in self.case_type_dims
+            self.case_date_case_type_dim_id is not None
+            and self.case_date_case_type_dim_id not in self.case_type_dims
         ):
             raise ValueError(
                 "stats_time_case_type_dim_id must refer to a valid CaseTypeDim"
-            )
-        if (
-            self.stats_geo_case_type_dim_id is not None
-            and self.stats_geo_case_type_dim_id not in self.case_type_dims
-        ):
-            raise ValueError(
-                "stats_geo_case_type_dim_id must refer to a valid CaseTypeDim"
             )
         # Calculate ordered_case_type_dim_ids
         self.ordered_case_type_dim_ids = [  # type: ignore[assignment]
@@ -113,4 +107,23 @@ class CompleteCaseType(CaseType):
                 ),
             )
         ]
+        # Calculate ordered_case_type_col_ids_by_dim
+        ordered_case_type_col_ids_by_dim: dict[UUID, list[UUID]] = {}
+        for case_type_dim_id in self.case_type_dims.keys():
+            dim_case_type_cols = [
+                x
+                for x in self.case_type_cols.values()
+                if x.case_type_dim_id == case_type_dim_id
+            ]
+            ordered_dim_case_type_cols: list[UUID] = [  # type:ignore[assignment]
+                y.id
+                for y in sorted(
+                    dim_case_type_cols,
+                    key=lambda x: (x.rank, x.code),
+                )
+            ]
+            ordered_case_type_col_ids_by_dim[case_type_dim_id] = (
+                ordered_dim_case_type_cols
+            )
+        self.ordered_case_type_col_ids_by_dim = ordered_case_type_col_ids_by_dim
         return self

@@ -265,7 +265,7 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_concept(exec_user, "category1_1", "concept_set1_nominal")
-        # TODO: add test for creating concept under regex or context free grammar concept set, which should not be allowed
+        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept set, which should not be allowed; alternatively regex and context free grammar Cols do not have a concept set but rather the regex/schema is part of the Col definition
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
@@ -379,6 +379,7 @@ class TestCreate:
             for j, col_type in enumerate(col_types, start=1):
                 concept_set: str | None = None
                 region_set: str | None = None
+                genetic_distance_protocol: str | None = None
                 if col_type == enum.ColType.NOMINAL:
                     concept_set = "concept_set1_nominal"
                 elif col_type == enum.ColType.ORDINAL:
@@ -393,12 +394,15 @@ class TestCreate:
                     concept_set = "concept_set6_context_free_grammar_xml"
                 elif col_type in enum.ColTypeSet.HAS_REGION_SET.value:
                     region_set = f"region_set{j}"
+                elif col_type == enum.ColType.GENETIC_DISTANCE:
+                    genetic_distance_protocol = f"genetic_distance_protocol1"
                 env.create_col(
                     users[j - 1],
                     f"{col_str}_{j}",
                     col_type=col_type,
                     concept_set=concept_set,
                     region_set=region_set,
+                    genetic_distance_protocol=genetic_distance_protocol,
                 )
 
     @pytest.mark.skipif(
@@ -605,9 +609,10 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_type_dim(exec_user, "case_type_dim1_1_11")
-        # TODO: add test for creating case_type_dim for
+        # TODO [LSP-2616]: add test for creating case_type_dim for
         # non-existing dim
         # non-existing case_type
+        # is_case_date_dim=True and dim.dim_type != TIME
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
@@ -624,24 +629,37 @@ class TestCreate:
         for case_type_dim in case_type_dims:
             dim_id = case_type_dim.dim_id
             curr_cols = [x for x in cols if x.dim_id == dim_id]
+            genetic_distance_case_type_col_kwargs: dict[str, Any] = {}
+            genetic_distance_case_type_col_index: int | None = None
             genetic_sequence_case_type_col: model.CaseTypeCol | None = None
             for i, col in enumerate(curr_cols, start=1):
                 kwargs: dict[str, Any] = {}
+                is_genetic_distance_col = False
                 if col.col_type == enum.ColType.GENETIC_DISTANCE:
-                    assert genetic_sequence_case_type_col is not None
-                    kwargs["genetic_sequence_case_type_col_id"] = (
-                        genetic_sequence_case_type_col.id
-                    )
-                    kwargs["tree_algorithm_codes"] = {
+                    is_genetic_distance_col = True
+                    genetic_distance_case_type_col_index = i
+                    genetic_distance_case_type_col_kwargs["tree_algorithm_codes"] = {
                         enum.TreeAlgorithmType.NJ,
                         enum.TreeAlgorithmType.SLINK,
                     }
                 code = case_type_dim.code.replace("case_type_dim", "case_type_col")
-                case_type_col = env.create_case_type_col(
-                    users[i - 1], f"{code}_{i}", **kwargs
-                )
+                if not is_genetic_distance_col:
+                    case_type_col = env.create_case_type_col(
+                        users[i - 1], f"{code}_{i}", **kwargs
+                    )
                 if col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
+            # Handle genetic distance col case_type_col creation with extra args
+            if genetic_sequence_case_type_col:
+                genetic_distance_case_type_col_kwargs[
+                    "genetic_sequence_case_type_col_id"
+                ] = genetic_sequence_case_type_col.id
+                case_type_col = env.create_case_type_col(
+                    users[genetic_distance_case_type_col_index - 1],
+                    f"{code}_{genetic_distance_case_type_col_index}",
+                    **genetic_distance_case_type_col_kwargs,
+                )
+
         if env.verbose:
             env.print_case_type_cols()
 
@@ -997,147 +1015,6 @@ class TestCreate:
                 )
         # TODO: add OrganizationAccessCasePolicy and UserAccessCasePolicy already exist
 
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_create_object_invalid_reference(self, env: Env) -> None:
-        # User.organization does not exist
-        with pytest.raises(exc.InvalidIdsError):
-            env.invite_and_register_user(ROOT, "root11_1", set_dummy_organization=True)
-        # UserInvitation.token is invalid
-        with pytest.raises(exc.UnauthorizedAuthError):
-            env.invite_and_register_user(ROOT, "root1_11", set_dummy_token=True)
-        # Concept.concept_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_concept(
-                ROOT,
-                "concept11_1",
-                set_dummy_concept_set=True,
-            )
-        # Region.region_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_region(
-                ROOT,
-                "region11_1",
-                "region_set11",
-                set_dummy_region_set=True,
-            )
-        # RegionSetShape.region_set does not exist
-        with pytest.raises(exc.InvalidLinkIdsError):
-            env.create_region_set_shape(
-                ROOT,
-                "region_set11",
-                1,
-                set_dummy_region_set=True,
-            )
-        # Col.concept_set does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_col(
-                    ROOT,
-                    "text1_1_nominal",
-                    col_type=enum.ColType.NOMINAL,
-                    concept_set="concept_set11_nominal",
-                    set_dummy_concept_set=True,
-                )
-        # Col.region_set does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_col(
-                    ROOT,
-                    "geo1_1_region",
-                    col_type=enum.ColType.GEO_REGION,
-                    region_set="region_set11",
-                    set_dummy_region_set=True,
-                )
-        # Col.genetic_distance_protocol does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_col(
-                    ROOT,
-                    "text1_1_genetic_distance",
-                    col_type=enum.ColType.GENETIC_DISTANCE,
-                    genetic_distance_protocol="genetic_distance_protocol11",
-                    set_dummy_genetic_distance_protocol=True,
-                )
-        # Etiology.disease does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_etiology(
-                    ROOT,
-                    "disease11",
-                    "etiological_agent1",
-                    set_dummy_disease=True,
-                )
-        # Etiology.etiological_agent does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_etiology(
-                    ROOT,
-                    "disease1",
-                    "etiological_agent11",
-                    set_dummy_etiological_agent=True,
-                )
-        # CaseType.disease does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type(
-                    ROOT, "case_type11", "disease11", None, set_dummy_disease=True
-                )
-        # CaseType.etiological_agent does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type(
-                    ROOT,
-                    "case_type11",
-                    None,
-                    "etiological_agent11",
-                    set_dummy_etiological_agent=True,
-                )
-        # CaseTypeSet.case_type_set_category does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type_set(
-                    ROOT,
-                    "case_type_set11",
-                    {"case_type1"},
-                    "case_type_set_category11",
-                    set_dummy_case_type_set_category=True,
-                )
-        # CaseTypeSetMember.case_type does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type_set(
-                    ROOT,
-                    "case_type_set11",
-                    {"case_type11"},
-                    "case_type_set_category1",
-                    set_dummy_case_types=True,
-                )
-        # CaseTypeDim.dim does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type_dim(ROOT, "case_type_dim1_1_1", set_dummy_dim=True)
-        # CaseTypeCol.case_type does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidArgumentsError)):
-                env.create_case_type_col(
-                    ROOT, "case_type_col1_1_1_1", set_dummy_case_type=True
-                )
-        # CaseTypeCol.col does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type_col(
-                    ROOT, "case_type_col1_1_1_1", set_dummy_col=True
-                )
-        # CaseTypeColSetMember.case_type_col does not exist
-        if not SKIP_CREATE_DATA:
-            with pytest.raises(exc.InvalidLinkIdsError):
-                env.create_case_type_col_set(
-                    ROOT,
-                    "case_type_col_set11",
-                    {"case_type_col1_1_1_99"},
-                    set_dummy_case_type_cols=True,
-                )
-
     def test_create_case_type_set_member(self, env: Env) -> None:
         env.create_case_type_set(
             ROOT,
@@ -1177,4 +1054,166 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_type_col_set_member(
                     exec_user, "case_type_col_set1", f"case_type_col1_1_1_1"
+                )
+
+    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
+    def test_create_object_invalid_reference(self, env: Env) -> None:
+        # User.organization does not exist
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+            env.invite_and_register_user(ROOT, "root11_1", set_dummy_organization=True)
+        # UserInvitation.token is invalid
+        with pytest.raises(exc.UnauthorizedAuthError):
+            env.invite_and_register_user(ROOT, "root1_11", set_dummy_token=True)
+        # Concept.concept_set does not exist
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+            env.create_concept(
+                ROOT,
+                "concept11_1",
+                set_dummy_concept_set=True,
+            )
+        # Region.region_set does not exist
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+            env.create_region(
+                ROOT,
+                "region11_1",
+                "region_set11",
+                set_dummy_region_set=True,
+            )
+        # RegionSetShape.region_set does not exist
+        with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+            env.create_region_set_shape(
+                ROOT,
+                "region_set11",
+                1,
+                set_dummy_region_set=True,
+            )
+        # Col.concept_set does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.TEXT
+                ][0]
+                env.create_col(
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.NOMINAL,
+                    concept_set="concept_set11_nominal",
+                    set_dummy_concept_set=True,
+                )
+        # Col.region_set does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.GEO
+                ][0]
+                env.create_col(
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.GEO_REGION,
+                    region_set="region_set11",
+                    set_dummy_region_set=True,
+                )
+        # Col.genetic_distance_protocol does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                index = [
+                    i
+                    for i, x in enumerate(enum.DimType, start=1)
+                    if x == enum.DimType.TEXT
+                ][0]
+                env.create_col(
+                    ROOT,
+                    f"col{index}_99",
+                    col_type=enum.ColType.GENETIC_DISTANCE,
+                    genetic_distance_protocol="genetic_distance_protocol11",
+                    set_dummy_genetic_distance_protocol=True,
+                )
+        # Etiology.disease does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_etiology(
+                    ROOT,
+                    "disease11",
+                    "etiological_agent1",
+                    set_dummy_disease=True,
+                )
+        # Etiology.etiological_agent does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_etiology(
+                    ROOT,
+                    "disease1",
+                    "etiological_agent11",
+                    set_dummy_etiological_agent=True,
+                )
+        # CaseType.disease does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type(
+                    ROOT, "case_type11", "disease11", None, set_dummy_disease=True
+                )
+        # CaseType.etiological_agent does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type(
+                    ROOT,
+                    "case_type11",
+                    None,
+                    "etiological_agent11",
+                    set_dummy_etiological_agent=True,
+                )
+        # CaseTypeSet.case_type_set_category does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_set(
+                    ROOT,
+                    "case_type_set11",
+                    {"case_type1"},
+                    "case_type_set_category11",
+                    set_dummy_case_type_set_category=True,
+                )
+        # CaseTypeSetMember.case_type does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_set(
+                    ROOT,
+                    "case_type_set11",
+                    {"case_type11"},
+                    "case_type_set_category1",
+                    set_dummy_case_types=True,
+                )
+        # CaseTypeDim.dim does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_dim(ROOT, "case_type_dim1_1_1", set_dummy_dim=True)
+        # CaseTypeCol.case_type does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises(
+                (
+                    exc.InvalidLinkIdsError,
+                    exc.InvalidIdsError,
+                    exc.InvalidArgumentsError,
+                )
+            ):
+                env.create_case_type_col(
+                    ROOT, "case_type_col1_1_1_1", set_dummy_case_type=True
+                )
+        # CaseTypeCol.col does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_col(
+                    ROOT, "case_type_col1_1_1_1", set_dummy_col=True
+                )
+        # CaseTypeColSetMember.case_type_col does not exist
+        if not SKIP_CREATE_DATA:
+            with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
+                env.create_case_type_col_set(
+                    ROOT,
+                    "case_type_col_set11",
+                    {"case_type_col1_1_1_99"},
+                    set_dummy_case_type_cols=True,
                 )

@@ -116,8 +116,7 @@ class TestModelCompleteCaseType:
             read_max_tree_size=1000,
             update_max_n_cases=1000,
             delete_max_n_cases=1000,
-            stats_geo_case_type_dim_id=None,
-            stats_time_case_type_dim_id=None,
+            case_date_case_type_dim_id=None,
             ordered_case_type_dim_ids=[
                 x.id for x in case_type_dims if x.id is not None
             ],

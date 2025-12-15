@@ -420,6 +420,7 @@ class CaseTypeDim(Model):
             "E.g. for first and second vaccination time it would be 1 and 2. "
             "Zero if only a single occurrence is expected or created."
         ),
+        ge=0,
     )
     code: str = Field(
         description=(
@@ -448,7 +449,7 @@ class CaseTypeDim(Model):
     )
     is_case_date_dim: bool = Field(
         default=False,
-        description="Indicates if this dimension is to be used to derive the case date",
+        description="Indicates if this dimension is to be used to derive the case date.",
     )
 
 

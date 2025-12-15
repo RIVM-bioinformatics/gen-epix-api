@@ -323,14 +323,13 @@ class ColTypeSet(Enum):
 class DimColTypeSet(Enum):
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
-            {
-                ColType.TEXT,
-            },
+            {ColType.TEXT},
             ColTypeSet.STRING_SET.value,
+            ColTypeSet.GENETIC.value,
         )
     )
     IDENTIFIER = ColTypeSet.ID.value
-    NUMBER = ColTypeSet.NUMBER.value
+    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL})
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value

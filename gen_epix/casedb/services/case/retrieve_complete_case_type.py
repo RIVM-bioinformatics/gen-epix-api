@@ -135,11 +135,15 @@ def case_service_retrieve_complete_case_type(
             case_type_col_ids,
             CrudOperation.READ_SOME,
         )
-        case_type_dim_ids: list[UUID] = [x.case_type_dim_id for x in case_type_cols]
         case_type_col_map: dict[UUID, model.CaseTypeCol] = {
             x.id: x for x in case_type_cols  # type: ignore[misc]
         }
 
+        # Get allowed case_type_dims as the case_type_dims used by the allowed
+        # case_type_cols
+        case_type_dim_ids: list[UUID] = list(
+            {x.case_type_dim_id for x in case_type_cols}
+        )
         case_type_dims: list[model.CaseTypeDim] = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
@@ -176,19 +180,6 @@ def case_service_retrieve_complete_case_type(
         )
         dim_map: dict[UUID, model.Dim] = {x.id: x for x in dims}  # type: ignore[misc]
 
-        # Get case_type_col_order
-
-        # TODO: to be tested
-        case_type_col_sort_keys: dict[UUID, tuple[int, int]] = {
-            x.id: (  # type: ignore[misc]
-                case_type_dim_map[x.case_type_dim_id].rank,
-                x.rank,
-            )
-            for x in case_type_cols
-        }
-        ordered_case_type_col_ids = list(case_type_col_sort_keys.keys())
-        ordered_case_type_col_ids.sort(key=lambda x: case_type_col_sort_keys[x])
-
         # Get genetic distance protocols
         genetic_distance_protocols = self.app.handle(
             command.GeneticDistanceProtocolCrudCommand(
@@ -220,34 +211,26 @@ def case_service_retrieve_complete_case_type(
             x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
         }
 
-        # derrive stats_time_case_type_dim_id from CaseTypeDim.is_time
-        stats_time_case_type_dim_id: UUID | None = None
-        stats_geo_case_type_dim_id: UUID | None = None
+        # Derive stats_time_case_type_dim_id from CaseTypeDim.is_time
+        case_date_case_type_dim_id: UUID | None = None
         for case_type_dim in case_type_dims:
             if case_type_dim.is_case_date_dim:
-                stats_time_case_type_dim_id = case_type_dim.id
+                case_date_case_type_dim_id = case_type_dim.id
                 break
             # TODO: add geo case type dim flag if needed
 
-    # Compose complete case type and return
-    return model.CompleteCaseType(
-        **case_type.model_dump(),
-        etiologies=etiologies,
-        etiological_agents=etiological_agents,
-        dims=dim_map,
-        cols=col_map,
-        case_type_dims=case_type_dim_map,
-        case_type_cols=case_type_col_map,
-        ordered_case_type_col_ids=ordered_case_type_col_ids,
-        genetic_distance_protocols=genetic_distance_protocols,
-        tree_algorithms=tree_algorithms,
-        case_type_access_abacs=case_type_access_abacs,
-        case_type_share_abacs=case_type_share_abacs,
-        create_max_n_cases=case_type.create_max_n_cases,
-        read_max_n_cases=case_type.read_max_n_cases,
-        read_max_tree_size=case_type.read_max_tree_size,
-        update_max_n_cases=case_type.update_max_n_cases,
-        delete_max_n_cases=case_type.delete_max_n_cases,
-        stats_time_case_type_dim_id=stats_time_case_type_dim_id,
-        stats_geo_case_type_dim_id=stats_geo_case_type_dim_id,
-    )
+        # Compose complete case type and return
+        return model.CompleteCaseType(
+            **case_type.model_dump(),
+            etiologies=etiologies,
+            etiological_agents=etiological_agents,
+            dims=dim_map,
+            cols=col_map,
+            case_type_dims=case_type_dim_map,
+            case_type_cols=case_type_col_map,
+            genetic_distance_protocols=genetic_distance_protocols,
+            tree_algorithms=tree_algorithms,
+            case_type_access_abacs=case_type_access_abacs,
+            case_type_share_abacs=case_type_share_abacs,
+            case_date_case_type_dim_id=case_date_case_type_dim_id,
+        )
