@@ -4,7 +4,7 @@ import logging
 import ssl
 import time
 import urllib.parse
-from typing import Any, TypedDict
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -21,10 +21,10 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
+from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 from gen_epix.fastapp.services.auth.token_introspection_manager import (
     TokenIntrospectionManager,
 )
-from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 
 
 class OauthIdpClient(IdpClient, OpenIdConnect):
@@ -168,6 +168,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             # Get discovery document
             with httpx.Client(verify=self.ssl_context) as client:
                 response = client.get(url)
+                response.raise_for_status()
                 discovery_doc = response.json()
 
             # Update current configuration with discovery data, preserving client credentials
@@ -185,6 +186,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 )
         except Exception as exception:
             msg = "Error accessing discovery URL"
+            # Add more specific error message for SSL certificate issues
             if self.logger:
                 self.logger.error(
                     self._log_item_class(
@@ -566,6 +568,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 )
             with httpx.Client(verify=self.ssl_context) as client:
                 response = client.get(url)
+                response.raise_for_status()
                 discovery_doc = response.json()
             introspection_endpoint: str = discovery_doc.get("introspection_endpoint")
             return introspection_endpoint
@@ -699,7 +702,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         jwks_uri = self.server_cfg.jwks_uri
         assert jwks_uri is not None
         try:
-            with httpx.Client(verify=self.ssl_context) as client:
+            with httpx.Client(verify=self.ssl_context, timeout=30.0) as client:
                 # get keys
                 response = client.get(jwks_uri)
                 response.raise_for_status()

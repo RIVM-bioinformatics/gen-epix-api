@@ -622,7 +622,9 @@ class AuthService(BaseAuthService):
                     )
                 raise exc.UnauthorizedAuthError()
 
-    def _init_idp_client(self, idp_cfg: dict[str, str | list]) -> IdpClient | None:
+    def _init_idp_client(
+        self, idp_cfg: dict[str, str | list], ssl_context: ssl.SSLContext | bool = True
+    ) -> IdpClient | None:
         """
         Try to initialize a single IDP client from its configuration.
         If unsuccessful, log and return None.
@@ -641,7 +643,7 @@ class AuthService(BaseAuthService):
                     logger=self._logger,
                     log_item_class=self.app.log_item_class,
                     discovery_doc=discovery_doc,
-                    ssl_context=idp_cfg.get("ssl_context", True),  # type: ignore
+                    ssl_context=idp_cfg.get("ssl_context", ssl_context),  # type: ignore
                 )
                 return idp_client
             else:
@@ -683,7 +685,7 @@ class AuthService(BaseAuthService):
         # Try to initialize all IDP clients
         for idp_cfg in idp_cfgs:
             # Attempt to initialize IDP client
-            idp_client = self._init_idp_client(idp_cfg)
+            idp_client = self._init_idp_client(idp_cfg, ssl_context=ssl_context)
             if not idp_client:
                 # Initialization failed, add to pending list
                 with self._pending_idp_clients_lock:

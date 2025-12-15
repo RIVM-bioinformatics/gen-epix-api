@@ -59,5 +59,5 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                     raise exc.InitializationServiceError(
                         f"FASTA export not supported for {contig.seq_format.value} format"
                     )
-                contig_list.append((contig.seq_hash, contig.seq))
+                contig_list.append((contig.id, contig.seq))
             yield (seq.id, contig_list)

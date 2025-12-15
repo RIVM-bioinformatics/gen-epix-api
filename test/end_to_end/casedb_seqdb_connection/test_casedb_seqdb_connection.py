@@ -143,7 +143,10 @@ def test_casedb_seqdb_connection(
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
     # Create root user
-    root_user: model.User = test_util.get_existing_root_user(
+    # root_user: model.User = test_util.get_existing_root_user(
+    #     casedb_app_composer.cfg, casedb_app
+    # )
+    root_user = test_util.create_root_user_from_claims(
         casedb_app_composer.cfg, casedb_app
     )
 
@@ -175,17 +178,19 @@ def test_casedb_seqdb_connection(
 
     # Test phylogenetic tree retrieval (which calls SeqDB)
     phylogenetic_tree_retrieved = False
-    genetic_distance_case_type_col_ids = [
-        x.id
+    genetic_distance_case_type_col_ids: list[UUID] = [
+        x.id  # type: ignore[misc]
         for x in case_type_cols.values()
         if cols[x.col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
     for case_type_col_id in genetic_distance_case_type_col_ids:
         case_type_col = case_type_cols[case_type_col_id]
-        genetic_sequence_case_type_col_id = (
-            case_type_col.genetic_sequence_case_type_col_id
+        assert case_type_col.genetic_sequence_case_type_col_id is not None
+        case_type_col = case_type_cols[case_type_col_id]
+        genetic_sequence_case_type_col_id: UUID = (
+            case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
         )
-        case_ids: list[UUID] = [
+        case_ids: list[UUID] = [  # type: ignore[assignment]
             x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
         ]
         if len(case_ids) < 2:
@@ -196,7 +201,7 @@ def test_casedb_seqdb_connection(
             for tree_algorithm_code in case_type_col.tree_algorithm_codes:
                 phylogenetic_tree = casedb_app.handle(
                     command.RetrievePhylogeneticTreeByCasesCommand(
-                        user=root_user,  # type: ignore[arg-type]
+                        user=root_user,
                         genetic_distance_case_type_col_id=case_type_col.id,
                         tree_algorithm=tree_algorithm_code,
                         case_ids=case_ids,
@@ -215,20 +220,22 @@ def test_casedb_seqdb_connection(
         for x in case_type_cols.values()
         if cols[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE
     ]
+    has_seq_case_ids: list[UUID] = []
     for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
-        has_seq_case_ids = [
-            x.content[genetic_sequence_case_type_col.id]
+        assert genetic_sequence_case_type_col.id is not None
+        has_seq_case_ids: list[UUID] = [  # type: ignore[assignment]
+            UUID(x.content[genetic_sequence_case_type_col.id])
             for x in cases
             if x.content.get(genetic_sequence_case_type_col.id)
         ]
-        if not has_seq_case_ids:
-            continue
+        if has_seq_case_ids:
+            break
 
     fasta_retrieved: bool = False
     if has_seq_case_ids:
         fasta_iter = casedb_app.handle(
             command.RetrieveGeneticSequenceFastaByIdCommand(
-                user=root_user,  # type: ignore[arg-type]
+                user=root_user,
                 seq_ids=has_seq_case_ids,
                 wrap=False,
             )
