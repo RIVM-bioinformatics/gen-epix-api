@@ -183,7 +183,7 @@ class SARepository(BaseRepository):
             )
             self.register_mapper(mapper)
 
-    def get_mapper(self, model_class: type) -> BaseSAMapper:
+    def get_mapper(self, model_class: type[Model]) -> BaseSAMapper:
         mapper = self._mapper_by_model.get(model_class)
         if not mapper:
             raise exc.RepositoryInitializationServiceError(
@@ -211,7 +211,7 @@ class SARepository(BaseRepository):
     def to_sql(
         self,
         user_id: Hashable | None,
-        model_class: type,
+        model_class: type[Model],
         obj: Any | Iterable[Any],
         **kwargs: Any,
     ) -> Any | list[Any]:
@@ -221,7 +221,7 @@ class SARepository(BaseRepository):
         return [mapper.dump(user_id, x, **kwargs) for x in obj]
 
     def from_sql(
-        self, model_class: type, row: Any | Iterable[Any], **kwargs: Any
+        self, model_class: type[Model], row: Any | Iterable[Any], **kwargs: Any
     ) -> Any | list[Any]:
         mapper = self._mapper_by_model[model_class]
         if isinstance(row, Iterable):
@@ -294,13 +294,13 @@ class SARepository(BaseRepository):
                 raise NotImplementedError(f"Operation {operation} not implemented")
 
     def create_one(
-        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.create_some(model_class, user_id, [obj], **kwargs)[0]
 
     def create_some(
         self,
-        model_class: type,
+        model_class: type[Model],
         user_id: Hashable,
         objs: Iterable[Model],
         **kwargs: Any,
@@ -318,7 +318,7 @@ class SARepository(BaseRepository):
 
         # Check objs
         if not all(isinstance(x, model_class) for x in objs):
-            raise ValueError("Not all objs are of the correct Model")
+            raise ValueError(f"Not all objs are of type {model_class.__name__}")
 
         # Create rows
 
@@ -328,7 +328,7 @@ class SARepository(BaseRepository):
             n_batches = int(n_rows / max_batch_size) + (n_rows / max_batch_size > 0)
             if not flush and n_batches > 1:
                 raise exc.RepositoryServiceError(
-                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batche while flush={flush}"
+                    f"Creation of {n_rows} objects requires more than one (n={n_batches}) batches while flush={flush}"
                 )
             for i in range(n_batches):
                 slice_ = slice(
@@ -348,11 +348,13 @@ class SARepository(BaseRepository):
         created_objs = self._execute_sa(session, _execute, kwargs)
         return created_objs  # type: ignore[return-value]
 
-    def read_one(self, model_class: type, obj_id: Hashable, **kwargs: Any) -> Model:
+    def read_one(
+        self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
+    ) -> Model:
         return self.read_some(model_class, [obj_id], **kwargs)[0]
 
     def read_some(
-        self, model_class: type, obj_ids: Iterable[Hashable], **kwargs: Any
+        self, model_class: type[Model], obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[Model]:
         """
         :param optimize_parameter_handling, optional kwarg:
@@ -401,7 +403,7 @@ class SARepository(BaseRepository):
         return objs
 
     def read_all(
-        self, model_class: type, filter: Filter | None, **kwargs: Any
+        self, model_class: type[Model], filter: Filter | None, **kwargs: Any
     ) -> list[Model]:
         # Check arguments
         session: Session = kwargs.get("session")  # type: ignore[assignment]
@@ -453,13 +455,13 @@ class SARepository(BaseRepository):
         return objs
 
     def update_one(
-        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.update_some(model_class, user_id, [obj], **kwargs)[0]
 
     def update_some(
         self,
-        model_class: type,
+        model_class: type[Model],
         user_id: Hashable,
         objs: Iterable[Model],
         **kwargs: Any,
@@ -507,13 +509,13 @@ class SARepository(BaseRepository):
         return updated_objs
 
     def upsert_one(
-        self, model_class: type, user_id: Hashable, obj: Model, **kwargs: Any
+        self, model_class: type[Model], user_id: Hashable, obj: Model, **kwargs: Any
     ) -> Model | Hashable:
         return self.upsert_some(model_class, user_id, [obj], **kwargs)[0]
 
     def upsert_some(
         self,
-        model_class: type,
+        model_class: type[Model],
         _user_id: Hashable,
         _objs: Iterable[Model],
         **kwargs: Any,
@@ -521,13 +523,17 @@ class SARepository(BaseRepository):
         raise NotImplementedError
 
     def delete_one(
-        self, model_class: type, user_id: Hashable, row_id: Hashable, **kwargs: Any
+        self,
+        model_class: type[Model],
+        user_id: Hashable,
+        row_id: Hashable,
+        **kwargs: Any,
     ) -> Hashable:
         return self.delete_some(model_class, user_id, [row_id], **kwargs)[0]
 
     def delete_some(
         self,
-        model_class: type,
+        model_class: type[Model],
         user_id: Hashable,
         row_ids: Iterable[Hashable],
         **kwargs: Any,
@@ -559,7 +565,7 @@ class SARepository(BaseRepository):
 
     def delete_all(
         self,
-        model_class: type,
+        model_class: type[Model],
         user_id: Hashable,
         filter: Filter | None,
         **kwargs: Any,
@@ -575,58 +581,72 @@ class SARepository(BaseRepository):
 
         def _execute(session: Session) -> list[Hashable] | None:
 
+            row_ids: list[Hashable] | None = None
+
+            # filter and/or obj_filter provided
             if filter or obj_filter:
-                raise NotImplementedError("Filter not implemented for delete_all")
-            row_ids = None
-            if return_id:
-                # Get ids
-                row_ids = session.execute(select(get_row_id(row_class))).all()
-                row_ids = [x[0] for x in row_ids]
+                # Read all row ids matching filter and obj_filter, then delete those
+                row_ids = self.read_all(  # type: ignore[assignment]
+                    model_class,
+                    filter,
+                    session=session,
+                    return_id=True,
+                    obj_filter=obj_filter,
+                )
+                stmt = delete(row_class).where(get_row_id(row_class).in_(row_ids))
+                session.execute(stmt)
+                return row_ids if return_id else None
 
             # Delete all rows
-            # TODO: commented out for sqlite workourand. Restore ASAP.
-            # session.execute(delete(row_class))
-
-            # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
-            # Check if this is SQLite and if we need to handle foreign key constraints
-            is_sqlite = "sqlite" in str(session.get_bind().url).lower()
-            needs_fk_workaround = False
-            # For SQLite with schemas (using ATTACH DATABASE), foreign key constraints
-            # can cause issues when referencing tables across schemas. Check if this table
-            # has foreign keys that might need special handling.
-            if is_sqlite and hasattr(row_class, "__table__"):
-                table = row_class.__table__
-                for fk in table.foreign_keys:
-                    # If foreign key references a table in the same schema, it should work
-                    # If it references a different schema or has schema prefix issues, we might need workaround
-                    referenced_table = fk.column.table
-                    if referenced_table.schema != table.schema or table.name in [
-                        "measurement_relation"
-                    ]:  # Known problematic tables
-                        needs_fk_workaround = True
-                        break
-            # Temporarily disable foreign key constraints if needed
-            if needs_fk_workaround:
-                session.execute(sa.text("PRAGMA foreign_keys=OFF"))
-                session.flush()
-            # Delete rows
+            if return_id:
+                # Get ids
+                row_ids = [
+                    x[0] for x in session.execute(select(get_row_id(row_class))).all()
+                ]
             session.execute(delete(row_class))
-            # Re-enable foreign keys if we disabled them
-            if needs_fk_workaround:
-                session.execute(sa.text("PRAGMA foreign_keys=ON"))
-                session.flush()
-            # TODO: end of workaround for SQLite foreign key constraint issues. Remove ASAP.
+
+            # # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
+            # # Check if this is SQLite and if we need to handle foreign key constraints
+            # is_sqlite = "sqlite" in str(session.get_bind().url).lower()
+            # needs_fk_workaround = False
+            # # For SQLite with schemas (using ATTACH DATABASE), foreign key constraints
+            # # can cause issues when referencing tables across schemas. Check if this table
+            # # has foreign keys that might need special handling.
+            # if is_sqlite and hasattr(row_class, "__table__"):
+            #     table = row_class.__table__
+            #     for fk in table.foreign_keys:
+            #         # If foreign key references a table in the same schema, it should work
+            #         # If it references a different schema or has schema prefix issues, we might need workaround
+            #         referenced_table = fk.column.table
+            #         if referenced_table.schema != table.schema or table.name in [
+            #             "measurement_relation"
+            #         ]:  # Known problematic tables
+            #             needs_fk_workaround = True
+            #             break
+            # # Temporarily disable foreign key constraints if needed
+            # if needs_fk_workaround:
+            #     session.execute(sa.text("PRAGMA foreign_keys=OFF"))
+            #     session.flush()
+            # # Delete rows
+            # session.execute(delete(row_class))
+            # # Re-enable foreign keys if we disabled them
+            # if needs_fk_workaround:
+            #     session.execute(sa.text("PRAGMA foreign_keys=ON"))
+            #     session.flush()
+            # # TODO: end of workaround for SQLite foreign key constraint issues. Remove ASAP.
 
             return row_ids
 
         deleted_row_ids = self._execute_sa(session, _execute, kwargs)
         return deleted_row_ids if return_id else None
 
-    def exists_one(self, model_class: type, obj_id: Hashable, **kwargs: Any) -> bool:
+    def exists_one(
+        self, model_class: type[Model], obj_id: Hashable, **kwargs: Any
+    ) -> bool:
         return self.exists_some(model_class, [obj_id], **kwargs)[0]
 
     def exists_some(
-        self, model_class: type, obj_ids: Iterable[Hashable], **kwargs: Any
+        self, model_class: type[Model], obj_ids: Iterable[Hashable], **kwargs: Any
     ) -> list[bool]:
         session: Session = kwargs.get("session")  # type: ignore[assignment]
 
@@ -677,7 +697,7 @@ class SARepository(BaseRepository):
         return self._execute_sa(uow.session, _execute, kwargs)
 
     def split_filter(
-        self, model_class: type, filter: Filter | None
+        self, model_class: type[Model], filter: Filter | None
     ) -> tuple[Filter | None, Filter | None]:
         if not filter:
             return None, None
@@ -1044,7 +1064,9 @@ class SARepository(BaseRepository):
             )
 
     @staticmethod
-    def _verify_duplicate_ids(model_class: type, obj_ids: Iterable[Hashable]) -> None:
+    def _verify_duplicate_ids(
+        model_class: type[Model], obj_ids: Iterable[Hashable]
+    ) -> None:
         if not isinstance(obj_ids, list) and not isinstance(obj_ids, set):
             obj_ids = [obj_ids]
         seen = set()
@@ -1056,7 +1078,7 @@ class SARepository(BaseRepository):
         duplicate_ids = set(obj_ids) - uq_obj_ids
         duplicate_ids_str = ", ".join([str(x) for x in duplicate_ids])
         raise exc.DuplicateIdsError(
-            f"Model {model_class}: object ids are not unique: {duplicate_ids_str}",
+            f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids_str,
         )
 

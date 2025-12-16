@@ -136,13 +136,18 @@ class ServerManager:
                 "--port",
                 str(self.port),
                 "--log-level",
-                "info",
+                logging.getLevelName(self.LOGGER.level).lower(),
             ]
             if self.ssl_keyfile:
                 cmd.extend(
                     [
                         "--ssl-keyfile",
                         self.ssl_keyfile,
+                    ]
+                )
+            if self.ssl_certfile:
+                cmd.extend(
+                    [
                         "--ssl-certfile",
                         self.ssl_certfile,
                     ]
@@ -249,7 +254,7 @@ class ServerManager:
                 app=self.app,
                 host=self.host,
                 port=self.port,
-                log_level="info",
+                log_level=logging.getLevelName(self.LOGGER.level).lower(),
                 access_log=False,
                 ssl_certfile=self.ssl_certfile,
                 ssl_keyfile=self.ssl_keyfile,

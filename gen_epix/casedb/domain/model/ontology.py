@@ -48,7 +48,9 @@ class ConceptSet(Model):
         ),
     )
     description: str | None = Field(
-        default=None, description="The description of the concept set."
+        default=None,
+        description="The description of the concept set.",
+        max_length=1000,
     )
 
     @model_validator(mode="after")
@@ -86,7 +88,9 @@ class Concept(Model):
         default=None, description="The name of the concept.", max_length=255
     )
     description: str | None = Field(
-        default=None, description="The description of the concept."
+        default=None,
+        description="The description of the concept.",
+        max_length=1000,
     )
     rank: int | None = Field(
         default=None,

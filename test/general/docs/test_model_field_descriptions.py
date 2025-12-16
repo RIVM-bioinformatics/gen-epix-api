@@ -6,7 +6,7 @@ from gen_epix.omopdb.domain import model as omopdb_model
 from gen_epix.seqdb.domain import model as seqdb_model
 
 
-def _is_model_class(obj: Any) -> bool:
+def is_model_class(obj: Any) -> bool:
     return isinstance(obj, type) and hasattr(obj, "model_fields")
 
 
@@ -20,7 +20,7 @@ def test_model_field_descriptions() -> None:
     ]
 
     for domain in domains:
-        model_classes = [x for x in vars(domain).values() if _is_model_class(x)]
+        model_classes = [x for x in vars(domain).values() if is_model_class(x)]
         assert (
             model_classes
         ), f"no model classes discovered in domain module {domain.__name__}"

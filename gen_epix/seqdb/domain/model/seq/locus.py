@@ -1,6 +1,6 @@
 import json
 from functools import cached_property
-from typing import Any, ClassVar, Self
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import (
@@ -15,7 +15,7 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
-from gen_epix.seqdb.domain.model.seq.base import SeqMixin
+from gen_epix.seqdb.domain.model.seq.base import BaseSeq
 
 
 class Locus(Model):
@@ -158,7 +158,7 @@ class LocusCodeMap(Model):
         return {x: str(y) for x, y in value.items()}
 
 
-class RefAllele(Model, SeqMixin):
+class RefAllele(BaseSeq):
     """
     A reference allele for a locus. This can be an actual sequence or an
     artificial construct, typically then a consensus sequence. It can be used
@@ -180,6 +180,7 @@ class RefAllele(Model, SeqMixin):
         keys=create_keys({1: ("locus_id", "index")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
+    NAME: ClassVar = "RefAllele"
 
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
@@ -189,13 +190,8 @@ class RefAllele(Model, SeqMixin):
         description="The index (ordinal number) of the reference allele for the locus."
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _validate_model(cls, values: dict[str, Any]) -> dict[str, Any]:
-        return SeqMixin._validate_mixin_and_id(values)
 
-
-class Allele(Model, SeqMixin):
+class Allele(BaseSeq):
     """
     An allele for a locus, i.e., a specific DNA sequence variant observed at that locus.
     Any IUPAC ambiguity codes are allowed in the sequence.
@@ -212,41 +208,20 @@ class Allele(Model, SeqMixin):
     nearest cryptographer, as they will be thrilled to investigate it. A word of
     caution though: this will lead to the discovery that SHA256 is cryptographically
     broken, which in turn will lead to the discovery that P=NP. This will lead to the
-    collapse of modern cryptography as we know it, triggering a period of global chaos
-    that will eventually lead to nuclear armageddon and bring about the end of human
-    civilization as we know it. It may be good therefore to think twice before
-    reporting such collisions.
+    collapse of modern cryptography, triggering a period of global chaos that will
+    eventually lead to nuclear armageddon and bring about the end of human civilization
+    as we know it. No liability is accepted for this chain of events.
     """
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="alleles",
         table_name="allele",
         persistable=True,
-        keys=create_keys({1: ("locus_id", "seq_hash")}),
         links=create_links({1: ("locus_id", Locus, "locus")}),
     )
+    NAME: ClassVar = "Allele"
 
     locus_id: UUID = Field(
         description="The unique identifier for the locus. FOREIGN KEY"
     )
     locus: Locus | None = Field(default=None, description="The locus.")
-
-    @model_validator(mode="before")
-    def _validate_model_before(cls, values: dict[str, Any]) -> dict[str, Any]:
-        values = SeqMixin._validate_mixin_and_id(values)
-        if values.get("id") == cls.NULL_SEQ_HASH:
-            raise ValueError("Allele ID cannot be the NULL_SEQ_HASH.")
-        return values
-
-    @model_validator(mode="after")
-    def _validate_model_after(self) -> Self:
-        if self.id is None:
-            if self.seq_hash != self.NULL_SEQ_HASH:
-                # Set the ID to the sequence hash if not empty sequence
-                self.id = self.seq_hash
-        else:
-            if self.seq_hash is None:
-                raise ValueError("Allele seq_hash must be set if ID is set.")
-            if self.id != self.seq_hash:
-                raise ValueError("Allele ID must be equal to seq_hash.")
-        return self

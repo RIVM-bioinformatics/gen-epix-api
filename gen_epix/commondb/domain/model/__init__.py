@@ -14,6 +14,12 @@ from gen_epix.commondb.domain.model.organization import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
 from gen_epix.commondb.domain.model.organization import (
+    ExternalIdentifier as ExternalIdentifier,
+)
+from gen_epix.commondb.domain.model.organization import (
+    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
+)
+from gen_epix.commondb.domain.model.organization import (
     IdentifierIssuer as IdentifierIssuer,
 )
 from gen_epix.commondb.domain.model.organization import Organization as Organization
@@ -55,6 +61,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         DataCollectionSetMember,
         IdentifierIssuer,
         OrganizationIdentifierIssuerLink,
+        ExternalIdentifier,
         Site,
         Contact,
         UserNameEmail,

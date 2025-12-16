@@ -42,27 +42,6 @@ class CaseForCreateUpdate(Model):
         return {str(x): y for x, y in value.items()}
 
 
-class CaseTypeDim(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_dims",
-        persistable=False,
-    )
-    id: UUID = Field(description="The ID of the first case type column.")
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    occurrence: int | None = Field(
-        default=None,
-        description=(
-            "The index of the occurrence of the dimension for this case type."
-            " E.g. for first and second vaccination time it would be 1 and 2."
-            " Empty if only a single occurrence."
-        ),
-    )
-    rank: int = Field(description="The rank of the case type dimension for ordering.")
-    case_type_col_order: list[UUID] = Field(
-        description="The order of the case type columns"
-    )
-
-
 class CaseTypeStat(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_stats",

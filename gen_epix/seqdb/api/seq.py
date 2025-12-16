@@ -11,7 +11,6 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.util import copy_model_field
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
@@ -41,13 +40,8 @@ class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     locus_set_id: UUID
 
 
-class UpsertCompleteSamplesRequestBody(command.UpsertCompleteSamplesCommand):
-    alleles: list[model.Allele] | None = copy_model_field(
-        command.UpsertCompleteSamplesCommand, "alleles"
-    )
-    complete_samples: list[model.CompleteSample] = copy_model_field(
-        command.UpsertCompleteSamplesCommand, "complete_samples"
-    )
+class UploadSamplesRequestBody(command.UploadSamplesCommand):
+    pass
 
 
 def create_seq_endpoints(
@@ -93,9 +87,9 @@ def create_seq_endpoints(
     )
     async def retrieve__complete_samples(
         user: registered_user_dependency, request_body: RetrieveCompleteSamplesRequestBody  # type: ignore
-    ) -> list[model.CompleteSample]:
+    ) -> list[model.SampleForUpload]:
         try:
-            retval: list[model.CompleteSample] = app.handle(
+            retval: list[model.SampleForUpload] = app.handle(
                 command.RetrieveCompleteSamplesCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
@@ -159,14 +153,14 @@ def create_seq_endpoints(
         "/upsert/complete_samples",
         operation_id="upsert__complete_samples",
         name="UpsertCompleteSamples",
-        description=command.UpsertCompleteSamplesCommand.__doc__,
+        description=command.UploadSamplesCommand.__doc__,
     )
     async def upsert__complete_samples(
-        user: registered_user_dependency, request_body: UpsertCompleteSamplesRequestBody  # type: ignore
+        user: registered_user_dependency, request_body: UploadSamplesRequestBody  # type: ignore
     ) -> list[UUID]:
         try:
             retval: list[UUID] = app.handle(
-                command.UpsertCompleteSamplesCommand(
+                command.UploadSamplesCommand(
                     user=user,
                     **request_body.model_dump(),
                 )

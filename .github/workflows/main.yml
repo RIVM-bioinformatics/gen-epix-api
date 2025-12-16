@@ -1,6 +1,11 @@
 name: Static Analysis and testing
 
 on:
+  push:
+    branches:
+      - dev
+      - main
+      - test
   pull_request:
     branches:
       - dev
