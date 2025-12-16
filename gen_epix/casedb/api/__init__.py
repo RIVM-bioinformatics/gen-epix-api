@@ -1,10 +1,28 @@
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.api.case import (
+    ColValidationRulesResponseBody as ColValidationRulesResponseBody,
+)
+from gen_epix.casedb.api.case import (
     CreateCaseSetRequestBody as CreateCaseSetRequestBody,
 )
 from gen_epix.casedb.api.case import CreateCasesRequestBody as CreateCasesRequestBody
 from gen_epix.casedb.api.case import (
+    CreateFileForForReadSetRequestBody as CreateFileForForReadSetRequestBody,
+)
+from gen_epix.casedb.api.case import (
+    CreateFileForSeqRequestBody as CreateFileForSeqRequestBody,
+)
+from gen_epix.casedb.api.case import (
     RetrieveAlleleProfileRequestBody as RetrieveAlleleProfileRequestBody,
+)
+from gen_epix.casedb.api.case import (
+    RetrieveCasesByIdsRequestBody as RetrieveCasesByIdsRequestBody,
+)
+from gen_epix.casedb.api.case import (
+    RetrieveCaseSetStatsRequestBody as RetrieveCaseSetStatsRequestBody,
+)
+from gen_epix.casedb.api.case import (
+    RetrieveCaseTypeStatsRequestBody as RetrieveCaseTypeStatsRequestBody,
 )
 from gen_epix.casedb.api.case import (
     RetrieveGeneticSequenceRequestBody as RetrieveGeneticSequenceRequestBody,
@@ -21,6 +39,9 @@ from gen_epix.casedb.api.case import (
 from gen_epix.casedb.api.case import (
     UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
 )
+from gen_epix.casedb.api.case import (
+    ValidateCasesRequestBody as ValidateCasesRequestBody,
+)
 from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,
 )
@@ -33,3 +54,4 @@ from gen_epix.commondb.api.organization import (
 from gen_epix.commondb.api.organization import (
     UserInvitationRequestBody as UserInvitationRequestBody,
 )
+from gen_epix.commondb.api.organization import ApiPermission as ApiPermission
