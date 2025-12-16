@@ -468,4 +468,20 @@ class ExternalIdentifierForUpload(BaseModel):
             )
         return self
 
-    # TODO: add equals and hash methods
+    def __eq__(self, other: object) -> bool:
+        """
+        Check equality based on identifier_issuer_id, identifier_issuer_code, and identifier.
+        Only when all three match, the objects are considered equal.
+        """
+        if not isinstance(other, ExternalIdentifierForUpload):
+            return NotImplemented
+        return (
+            self.identifier_issuer_id == other.identifier_issuer_id
+            and self.identifier_issuer_code == other.identifier_issuer_code
+            and self.identifier == other.identifier
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (self.identifier_issuer_id, self.identifier_issuer_code, self.identifier)
+        )

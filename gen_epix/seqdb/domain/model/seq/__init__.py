@@ -50,6 +50,9 @@ from gen_epix.seqdb.domain.model.seq.non_persistable import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.non_persistable import (
+    ReadSetForUpload as ReadSetForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.non_persistable import (
     SampleForUpload as SampleForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.non_persistable import (

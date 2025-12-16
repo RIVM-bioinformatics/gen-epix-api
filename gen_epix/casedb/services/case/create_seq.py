@@ -29,9 +29,9 @@ def case_service_create_read_sets_or_seqs_for_cases(
     case_type_col_ids: list[UUID] = []
     if isinstance(cmd, command.CreateReadSetsForCasesCommand):
         is_read_set = True
-        read_sets = [x.read_set for x in cmd.case_read_sets]  # type:ignore
-        case_ids = [x.case_id for x in cmd.case_read_sets]
-        case_type_col_ids = [x.case_type_col_id for x in cmd.case_read_sets]
+        read_sets = [x.read_set for x in cmd.read_sets]  # type:ignore
+        case_ids = [x.case_id for x in cmd.read_sets]
+        case_type_col_ids = [x.case_type_col_id for x in cmd.read_sets]
     elif isinstance(cmd, command.CreateSeqsForCasesCommand):
         is_read_set = False
         seqs = [x.seq for x in cmd.case_seqs]  # type:ignore

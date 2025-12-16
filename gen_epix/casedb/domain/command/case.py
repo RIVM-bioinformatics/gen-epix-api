@@ -269,12 +269,12 @@ class CreateReadSetsForCasesCommand(Command):
     Create read sets for a set of cases based on a read set case type column.
     """
 
-    case_read_sets: list[model.ReadSetForUpload] = Field(
-        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
+    read_sets: list[model.ReadSetForUpload] = Field(
+        description="The read sets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
     )
 
-    @field_validator("case_read_sets", mode="after")
-    def _validate_case_read_sets(
+    @field_validator("read_sets", mode="after")
+    def _validate_read_sets(
         cls,
         case_read_sets: list[model.ReadSetForUpload],
     ) -> list[model.ReadSetForUpload]:

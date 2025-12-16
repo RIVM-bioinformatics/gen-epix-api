@@ -284,18 +284,18 @@ class PersonForUpload(Person):
     )
     data_collection_ids: list[UUID] | None = Field(
         default=None,
-        description="The data collection IDs that the person should be put in.",
+        description="The data collection IDs that the person should be put in. If None, this element is not taken into consideration during the upload.",
     )
 
     # Associated data
     measurements: list[MeasurementForUpload] | None = Field(
-        description="The measurements.",
+        description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
     observations: list[ObervationForUpload] | None = Field(
-        description="The observations.",
+        description="The observations. If None, this element is not taken into consideration during the upload.",
     )
     specimens: list[SpecimenForUpload] | None = Field(
-        description="The specimens.",
+        description="The specimens. If None, this element is not taken into consideration during the upload.",
     )
     # TODO: add other associated data types when needed
 

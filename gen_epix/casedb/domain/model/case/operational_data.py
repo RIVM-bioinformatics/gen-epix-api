@@ -40,6 +40,9 @@ class Case(Model):
             }
         ),
     )
+    code: str | None = Field(
+        default=None, description="A code for the case for further reference."
+    )
     case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
     case_type: CaseType | None = Field(default=None, description="The case type")
     subject_id: UUID | None = Field(
@@ -63,9 +66,6 @@ class Case(Model):
     )
     content: dict[UUID, str] = Field(
         description=r"The data content of the case as {case_type_col_id: str_value}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted."
-    )
-    code: str | None = Field(
-        default=None, description="A code for the case for further reference."
     )
 
     @field_serializer("content", mode="plain")

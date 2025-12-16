@@ -654,13 +654,13 @@ def create_case_endpoints(
     )
     async def create__read_sets_for_cases(
         user: registered_user_dependency,  # type: ignore
-        case_read_sets: list[model.ReadSetForUpload],
+        read_sets: list[model.ReadSetForUpload],
     ) -> list[model.ReadSet]:
         try:
             created_read_sets: list[model.ReadSet] = app.handle(
                 command.CreateReadSetsForCasesCommand(
                     user=user,
-                    case_read_sets=case_read_sets,
+                    read_sets=read_sets,
                 )
             )
         except Exception as exception:

@@ -1,8 +1,7 @@
-from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer, model_validator
+from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
@@ -11,86 +10,128 @@ from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.util import copy_model_field
+from gen_epix.seqdb.domain.model import ReadSetForUpload as SeqdbReadSetForUpload
+from gen_epix.seqdb.domain.model import SeqForUpload as SeqdbSeqForUpload
 
 
-class ReadSetForUpload(Model):
+class ReadSetForUpload(SeqdbReadSetForUpload):
+    """
+    A single read set to be uploaded and associated with both an existing case in
+    casedb and a potentially existing sample in seqdb. Equal to the corresponding
+    seqdb model, with an additional case_type_col_id property.
+
+    Description of the seqdb model:
+    """
+
+    __doc__ = f"{__doc__}{SeqdbReadSetForUpload.__doc__}"
+
     ENTITY: ClassVar = Entity(persistable=False)
 
     case_type_col_id: UUID = Field(
-        description="The ID of the case type column that the read set is or will be associated with."
+        description="The ID of the case type column with column type genetic reads that the read set is or will be associated with."
     )
-    sample_id: UUID | None = Field(
-        description="The ID of the sample. If provided, the sample must already exist. Must be provided if external_sample_id is not provided.",
-        default=None,
-    )
-    external_sample_id: ExternalIdentifierForUpload | None = Field(
-        description="The external identifier of the sample. Used only if sample_id is not provided. Must be provided if sample_id is not provided.",
-        default=None,
-    )
-    read_set_id: UUID | None = Field(
-        description="The ID of the read set.", default=None
-    )
-    read_set: ReadSet | None = Field(default=None, description="The read set.")
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        """
-        Validate that either sample_id or external_sample_id is provided.
-        """
-        if self.sample_id is None and self.external_sample_id is None:
-            raise ValueError("Either sample_id or external_sample_id must be provided.")
-        return self
 
 
-class SeqForUpload(Model):
+class SeqForUpload(SeqdbSeqForUpload):
+    """
+    A single sequence to be uploaded and associated with both an existing case in
+    casedb and a potentially existing sample in seqdb. The sample can be identified
+    in seqdb either by its internal ID (sample_id) or by an external identifier
+    (external_sample_id). The ID of created sequence is intended to be added to
+    the corresponding case in casedb as the content of the given case type column.
+
+    Description of the seqdb model:
+    """
+
+    __doc__ = f"{__doc__}{SeqdbSeqForUpload.__doc__}"
+
     ENTITY: ClassVar = Entity(persistable=False)
 
     case_type_col_id: UUID = Field(
         description="The ID of the case type column that the sequence is or will be associated with."
     )
-    sample_id: UUID | None = Field(
-        description="The ID of the sample. If provided, the sample must already exist. Must be provided if external_sample_id is not provided.",
+
+
+class CaseForUpload(Case):
+    """
+    A case intended for upload, together with any relevant associated data.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "CaseForUpload"
+
+    # Case level data
+    external_ids: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
+        description="The external identifiers associated with the sample, if available.",
     )
-    external_sample_id: ExternalIdentifierForUpload | None = Field(
-        description="The external identifier of the sample. Used only if sample_id is not provided. Must be provided if sample_id is not provided.",
+    data_collection_ids: list[UUID] | None = Field(
         default=None,
+        description="The data collection IDs that the sample should be put in. If None, this element is not taken into consideration during the upload.",
     )
-    seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
-    seq: Seq | None = Field(default=None, description="The sequence.")
+
+    # Associated data
+    has_content: bool = Field(
+        default=False,
+        description="Indicates whether the case has content to be uploaded, since content is a mandatory field and the distinction can otherwise not be made. If False, content must be empty.",
+    )
+    read_sets: list[ReadSetForUpload] | None = Field(
+        default=None,
+        description="The read sets to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different case type column.",
+    )
+    seqs: list[SeqForUpload] | None = Field(
+        default=None,
+        description="The sequences to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different case type column.",
+    )
 
     @model_validator(mode="after")
     def _validate_model(self) -> Self:
-        """
-        Validate that either sample_id or external_sample_id is provided.
-        """
-        if self.sample_id is None and self.external_sample_id is None:
-            raise ValueError("Either sample_id or external_sample_id must be provided.")
+        # Verify that external_ids contains no duplicates
+        if self.external_ids is not None and len(self.external_ids) != len(
+            set(self.external_ids)
+        ):
+            raise ValueError("external_ids must not contain duplicates.")
+        # Verify that has_content is consistent with content
+        if not self.has_content and self.content:
+            raise ValueError(
+                "has_content is False, but content is not empty. Content must be empty."
+            )
+        # Verify that read_sets contains no duplicate case_type_col_id
+        if self.read_sets is not None:
+            case_type_col_ids = [x.case_type_col_id for x in self.read_sets]
+            if len(case_type_col_ids) != len(set(case_type_col_ids)):
+                raise ValueError(
+                    "read_sets must not contain duplicate case_type_col_id."
+                )
+        # Verify that seqs contains no duplicate case_type_col_id
+        if self.seqs is not None:
+            case_type_col_ids = [x.case_type_col_id for x in self.seqs]
+            if len(case_type_col_ids) != len(set(case_type_col_ids)):
+                raise ValueError("seqs must not contain duplicate case_type_col_id.")
         return self
 
 
-class CaseForUpload(Model):
+class CasesForUpload(Model):
     """
-    A class representing a case to be created or updated.
+    A number of unique cases intended for upload. The parameters specifying the
+    upload operation are specified elsewhere.
     """
 
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="cases_for_create_update",
-        persistable=False,
-    )
-    subject_id: UUID | None = copy_model_field(Case, "subject_id")
-    count: int | None = copy_model_field(Case, "count")
-    case_date: datetime | None = Field(
-        description="The date of the case. Required when creating a case, ignored when updating.",
-        default=None,
-    )
-    content: dict[UUID, str | None] = Field(
-        description="The column data of the case as {col_id: str_value}. If None and the model is used for update, then any existing value will be deleted."
-    )
+    ENTITY: ClassVar = Entity(persistable=False)
 
-    @field_serializer("content", mode="plain")
-    def _serialize_content(
-        self, value: dict[UUID, str | None]
-    ) -> dict[str, str | None]:
-        return {str(x): y for x, y in value.items()}
+    cases: list[CaseForUpload] = Field(description="The cases to be uploaded.")
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        # Verify that cases contain no duplicate case_ids
+        case_ids = [x.id for x in self.cases if x.id is not None]
+        if len(case_ids) != len(set(case_ids)):
+            raise ValueError("cases must not contain duplicate case IDs.")
+        # Verify that cases contains no duplicate external_ids
+        all_external_ids = []
+        for case in self.cases:
+            if case.external_ids is not None:
+                all_external_ids.extend(case.external_ids)
+        if len(all_external_ids) != len(set(all_external_ids)):
+            raise ValueError("cases must not contain duplicate external_ids.")
+        return self

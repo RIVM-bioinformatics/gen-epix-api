@@ -230,57 +230,57 @@ class SampleForUpload(Sample):
     )
     data_collection_ids: list[UUID] | None = Field(
         default=None,
-        description="The data collection IDs that the sample should be put in.",
+        description="The data collection IDs that the sample should be put in. If None, this element is not taken into consideration during the upload.",
     )
 
     # Associated data
     read_sets: list[ReadSetForUpload] | None = Field(
         default=None,
-        description="The read sets associated with the sample.",
+        description="The read sets associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     seqs: list[SeqForUpload] | None = Field(
         default=None,
-        description="The sequences associated with the sample.",
+        description="The sequences associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     seq_taxonomies: list[SeqTaxonomy] | None = Field(
         default=None,
-        description="The taxonomies associated with the sample.",
+        description="The taxonomies associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     seq_classifications: list[SeqClassification] | None = Field(
         default=None,
-        description="The classifications associated with the sample.",
+        description="The classifications associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     locus_profiles: list[LocusProfile] | None = Field(
         default=None,
-        description="The locus profiles associated with the sample.",
+        description="The locus profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     allele_profiles: list[AlleleProfileForUpload] | None = Field(
         default=None,
-        description="The allele profiles associated with the sample.",
+        description="The allele profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     snp_profiles: list[SnpProfile] | None = Field(
         default=None,
-        description="The SNP profiles associated with the sample.",
+        description="The SNP profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     mlva_profiles: list[MlvaProfile] | None = Field(
         default=None,
-        description="The MLVA profiles associated with the sample.",
+        description="The MLVA profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     kmer_profiles: list[KmerProfile] | None = Field(
         default=None,
-        description="The k-mer profiles associated with the sample.",
+        description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     distances: list[SeqDistance] | None = Field(
         default=None,
-        description="The genetic distances associated with the sample.",
+        description="The genetic distances associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     pcr_measurements: list[PcrMeasurement] | None = Field(
         default=None,
-        description="The PCR measurements associated with the sample.",
+        description="The PCR measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     ast_measurements: list[AstMeasurement] | None = Field(
         default=None,
-        description="The AST measurements associated with the sample.",
+        description="The AST measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
 
     @model_validator(mode="after")
