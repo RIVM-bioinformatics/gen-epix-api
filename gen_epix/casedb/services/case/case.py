@@ -101,7 +101,7 @@ from gen_epix.util import map_paired_elements
 class CaseService(BaseCaseService):
 
     def validate_cases(
-        self, cmd: command.ValidateCasesCommand
+        self, cmd: command.ValidateCasesCommand | command.UploadCasesCommand
     ) -> model.CaseValidationReport:
         case_type_id = cmd.case_type_id
         created_in_data_collection_id = cmd.created_in_data_collection_id
@@ -138,7 +138,7 @@ class CaseService(BaseCaseService):
 
         return case_validation_report
 
-    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+    def upload_cases(self, cmd: command.UploadCasesCommand) -> list[model.Case] | None:
         return case_service_create_cases(self, cmd)
 
     def create_case_set(

@@ -72,7 +72,7 @@ class CaseForUpload(Case):
 
     # Associated data
     has_content: bool = Field(
-        default=False,
+        default=True,
         description="Indicates whether the case has content to be uploaded, since content is a mandatory field and the distinction can otherwise not be made. If False, content must be empty.",
     )
     read_sets: list[ReadSetForUpload] | None = Field(
@@ -113,8 +113,9 @@ class CaseForUpload(Case):
 
 class CasesForUpload(Model):
     """
-    A number of unique cases intended for upload. The parameters specifying the
-    upload operation are specified elsewhere.
+    A number of unique cases intended for upload. The class is named CasesForUpload
+    rather than CaseSetForUpload to avoid confusion with the existing CaseSet
+    entity in casedb.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)

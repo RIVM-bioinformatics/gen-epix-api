@@ -13,7 +13,6 @@ from gen_epix.commondb.domain.command import (
 )
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
-from gen_epix.util import copy_model_field
 
 # Non-CRUD
 
@@ -59,20 +58,23 @@ class CreateCaseSetCommand(Command):
         return self
 
 
-class ValidateCasesCommand(Command):
+class BaseUploadCasesCommand(Command):
     """
-    Validate case data and return a validation report.
+    Base command for uploading cases.
     """
 
-    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
-    created_in_data_collection_id: UUID = copy_model_field(
-        model.CaseValidationReport, "created_in_data_collection_id"
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to. All cases in the case set must have this case type ID."
     )
-    data_collection_ids: set[UUID] = copy_model_field(
-        model.CaseValidationReport, "data_collection_ids"
+    created_in_data_collection_id: UUID = Field(
+        description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
     )
-    is_update: bool = Field(description="Whether this is an update operation.")
-    cases: list[model.CaseForUpload] = Field(description="The cases to validate.")
+    data_collection_ids: set[UUID] = Field(
+        description="The additional data collection IDs that all the cases must belong to. All cases in the case set must have these data collection IDs or None."
+    )
+    cases_set: model.CasesSetForUpload = Field(
+        description="The unique cases to validate."
+    )
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -80,21 +82,46 @@ class ValidateCasesCommand(Command):
             raise ValueError(
                 "The created in data collection ID may not be in the additional data collection IDs."
             )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating cases")
-        if not self.is_update and any(x.case_date is None for x in self.cases):
-            raise ValueError("All cases must have a case date when creating cases")
+        if any(x.case_type_id != self.case_type_id for x in self.cases_set.cases):
+            raise ValueError("All cases must belong to the given case type ID.")
+        if any(
+            x.created_in_data_collection_id != self.created_in_data_collection_id
+            for x in self.cases_set.cases
+        ):
+            raise ValueError(
+                "All cases must belong to the given created in data collection ID."
+            )
+        if any(
+            x.data_collection_ids is not None
+            and x.data_collection_ids != self.data_collection_ids
+            for x in self.cases_set.cases
+        ):
+            raise ValueError(
+                "All cases must have the same data collection IDs or None."
+            )
         return self
 
 
-class CreateCasesCommand(ValidateCasesCommand):
+class ValidateCasesCommand(BaseUploadCasesCommand):
     """
-    Create the corresponding cases and return them.
+    Validate case data and return a validation report. All cases must belong to the same
+    case type and have the same created in data collection.
     """
 
-    NAME = "CreateCasesCommand"
+    is_update: bool = Field(
+        description="Whether the cases already exist and their content should first be merged with the new content, before validation.",
+    )
 
-    pass
+
+class UploadCasesCommand(BaseUploadCasesCommand):
+    """
+    Upload the corresponding cases and return them.
+    """
+
+    is_update: bool = Field(
+        default=False,
+        description="Whether the cases already exist and should be updated.",
+    )
 
 
 class RetrieveCaseSetStatsCommand(Command):

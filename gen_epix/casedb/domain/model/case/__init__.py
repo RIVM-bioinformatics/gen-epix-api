@@ -74,6 +74,7 @@ from gen_epix.casedb.domain.model.case.reference_data import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
 from gen_epix.casedb.domain.model.case.upload import CaseForUpload as CaseForUpload
+from gen_epix.casedb.domain.model.case.upload import CasesForUpload as CasesForUpload
 from gen_epix.casedb.domain.model.case.upload import (
     ReadSetForUpload as ReadSetForUpload,
 )

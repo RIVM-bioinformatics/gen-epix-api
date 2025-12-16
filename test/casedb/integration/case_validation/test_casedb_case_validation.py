@@ -254,7 +254,9 @@ class TestCaseValidation(CaseValidationSetup):
                 print(f"Command {index}, user={user.name}): executing")
 
             # Create cases and expected new cases
-            cases = [all_cases[x].model_copy() for x in case_ids]
+            cases_set = model.CasesSetForUpload(
+                cases=[all_cases[x].model_copy() for x in case_ids]
+            )
             expected_validated_cases = [
                 all_validated_cases[x].model_copy() for x in case_ids
             ]
@@ -271,9 +273,9 @@ class TestCaseValidation(CaseValidationSetup):
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                is_update=is_update,
-                cases=cases,
                 data_collection_ids=set(),
+                is_update=is_update,
+                cases_set=cases_set,
             )
             # Execute command
             is_allowed = row["is_allowed"]

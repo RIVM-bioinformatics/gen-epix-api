@@ -136,16 +136,16 @@ class TestCaseAccess(CaseAccessSetup):
             if for_create_upload:
                 return model.CaseForUpload(
                     id=row["case.id"],
-                    subject_id=row["case.subject_id"],
-                    case_date=row["case.case_date"],
+                    case_type_id=row["case.case_type_id"],
+                    created_in_data_collection_id=row[
+                        "case.created_in_data_collection_id"
+                    ],
                     content=case_content,
                 )
             return model.Case(
                 id=row["case.id"],
                 case_type_id=row["case.case_type_id"],
-                subject_id=row["case.subject_id"],
                 created_in_data_collection_id=row["case.created_in_data_collection_id"],
-                case_date=row["case.case_date"],
                 content=case_content,
             )
 
@@ -194,7 +194,7 @@ class TestCaseAccess(CaseAccessSetup):
                     obj_ids=UUID(row["case.id"]),
                 )
             elif row_operation == "CREATE_CASES":
-                cmd = command.CreateCasesCommand(
+                cmd = command.UploadCasesCommand(
                     id=row["id"],
                     user=user,
                     case_type_id=row["case.case_type_id"],
@@ -202,7 +202,9 @@ class TestCaseAccess(CaseAccessSetup):
                         "case.created_in_data_collection_id"
                     ],
                     is_update=False,
-                    cases=[_create_case(row, for_create_upload=True)],  # type: ignore[list-item]
+                    cases_set=model.CasesSetForUpload(  # type:ignore[list-item]
+                        cases=[_create_case(row, for_create_upload=True)]
+                    ),
                     data_collection_ids=set(),
                     props={"id_present": "keep"},
                 )
@@ -210,6 +212,7 @@ class TestCaseAccess(CaseAccessSetup):
                 cmd = command.RetrieveCasesByIdCommand(
                     id=row["id"],
                     user=user,
+                    case_type_id=row["case.case_type_id"],
                     case_ids=[UUID(row["case.id"])],
                 )
             elif row_operation == "CASES_DELETE":

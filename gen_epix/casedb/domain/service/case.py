@@ -157,7 +157,7 @@ class BaseCaseService(BaseService):
         f(command.TreeAlgorithmClassCrudCommand, self.crud_tree_algorithm_class)
         f(command.TreeAlgorithmCrudCommand, self.crud_tree_algorithm)
         f(command.ValidateCasesCommand, self.validate_cases)
-        f(command.CreateCasesCommand, self.create_cases)
+        f(command.UploadCasesCommand, self.upload_cases)
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
         f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_type_stats)
@@ -473,12 +473,12 @@ class BaseCaseService(BaseService):
 
     @abc.abstractmethod
     def validate_cases(
-        self, cmd: command.ValidateCasesCommand
+        self, cmd: command.ValidateCasesCommand | command.UploadCasesCommand
     ) -> model.CaseValidationReport:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+    def upload_cases(self, cmd: command.UploadCasesCommand) -> list[model.Case] | None:
         raise NotImplementedError()
 
     @abc.abstractmethod

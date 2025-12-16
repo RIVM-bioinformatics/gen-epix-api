@@ -1163,7 +1163,7 @@ class CasedbTestClient(TestClient):
             content[case_type_col.id] = str(value)
         # Create the case, encoding the case_type_index and case_index in the case_date as resp. month and days since 1900-01-01
         cases = self.handle(
-            command.CreateCasesCommand(
+            command.UploadCasesCommand(
                 user=user,
                 cases=[
                     model.Case(

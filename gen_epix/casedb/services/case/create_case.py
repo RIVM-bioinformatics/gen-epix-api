@@ -15,11 +15,14 @@ from gen_epix.fastapp import CrudOperation
 
 
 def case_service_create_cases(
-    self: BaseCaseService, cmd: command.CreateCasesCommand
+    self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> list[model.Case] | None:
     # Special case: zero cases to be created
-    if not cmd.cases:
+    cases_for_upload = cmd.cases_set.cases
+    if not cases_for_upload:
         return []
+
+    # TODO handle cmd.cases_set.cases[i].has_content=False
 
     # Get case type and created_in data collection IDs
     case_type_id = cmd.case_type_id
@@ -53,7 +56,7 @@ def case_service_create_cases(
             case_date=now,
             content={y: z for y, z in x.content.items() if z is not None},
         )
-        for x in cmd.cases
+        for x in cases_for_upload
     ]
 
     # Get complete case type
@@ -107,6 +110,9 @@ def case_service_create_cases(
                 props=cmd.props,
             )
         )
+
+        # TODO Create seqdb ReadSets and Seqs and add their IDs to the case content
+
         # Associate cases with data collections
         curr_cmd = command.CaseDataCollectionLinkCrudCommand(
             user=cmd.user,

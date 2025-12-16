@@ -61,7 +61,6 @@ from gen_epix.casedb.domain.command.case import (
     CaseTypeSetMemberCrudCommand as CaseTypeSetMemberCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import ColCrudCommand as ColCrudCommand
-from gen_epix.casedb.domain.command.case import CreateCasesCommand as CreateCasesCommand
 from gen_epix.casedb.domain.command.case import (
     CreateCaseSetCommand as CreateCaseSetCommand,
 )
@@ -129,6 +128,7 @@ from gen_epix.casedb.domain.command.case import (
 from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
+from gen_epix.casedb.domain.command.case import UploadCasesCommand as UploadCasesCommand
 from gen_epix.casedb.domain.command.case import (
     ValidateCasesCommand as ValidateCasesCommand,
 )
@@ -292,7 +292,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CaseTypeSetMemberCrudCommand,
         CaseTypeDimCrudCommand,
         ColCrudCommand,
-        CreateCasesCommand,
+        UploadCasesCommand,
         CreateCaseSetCommand,
         CreateFileForReadSetCommand,
         CreateFileForSeqCommand,

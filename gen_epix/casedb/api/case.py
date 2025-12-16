@@ -1,6 +1,6 @@
 import base64
 from collections.abc import Callable
-from typing import Annotated, Any, NoReturn, Self
+from typing import Annotated, Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, Form
@@ -39,43 +39,23 @@ class ValidateCasesRequestBody(PydanticBaseModel):
         command.ValidateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases: list[model.CaseForUpload] = copy_model_field(
-        command.ValidateCasesCommand, "cases"
+    cases_set: model.CasesSetForUpload = copy_model_field(
+        command.ValidateCasesCommand, "cases_set"
     )
 
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
 
-
-class CreateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.CreateCasesCommand, "case_type_id")
+class UploadCasesRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(command.UploadCasesCommand, "case_type_id")
     created_in_data_collection_id: UUID = copy_model_field(
-        command.CreateCasesCommand, "created_in_data_collection_id"
+        command.UploadCasesCommand, "created_in_data_collection_id"
     )
     data_collection_ids: set[UUID] = copy_model_field(
-        command.CreateCasesCommand, "data_collection_ids"
+        command.UploadCasesCommand, "data_collection_ids"
     )
-    is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
-    cases: list[model.CaseForUpload] = copy_model_field(
-        command.CreateCasesCommand, "cases"
+    is_update: bool = copy_model_field(command.UploadCasesCommand, "is_update")
+    cases_set: model.CasesSetForUpload = copy_model_field(
+        command.UploadCasesCommand, "cases_set"
     )
-
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
@@ -317,9 +297,9 @@ def create_case_endpoints(
                 user=user,
                 case_type_id=request_body.case_type_id,
                 created_in_data_collection_id=request_body.created_in_data_collection_id,
-                is_update=request_body.is_update,
-                cases=request_body.cases,
                 data_collection_ids=request_body.data_collection_ids,
+                is_update=request_body.is_update,
+                cases_set=request_body.cases_set,
             )
             retval: model.CaseValidationReport = app.handle(cmd)
         except Exception as exception:
@@ -330,20 +310,20 @@ def create_case_endpoints(
         "/create/cases",
         operation_id="create__cases",
         name="Create cases",
-        description=command.CreateCasesCommand.__doc__,
+        description=command.UploadCasesCommand.__doc__,
     )
     async def create__cases(
         user: registered_user_dependency,  # type: ignore
-        request_body: CreateCasesRequestBody,
+        request_body: UploadCasesRequestBody,
     ) -> list[model.Case]:
         try:
-            cmd = command.CreateCasesCommand(
+            cmd = command.UploadCasesCommand(
                 user=user,
-                cases=request_body.cases,
-                data_collection_ids=request_body.data_collection_ids,
                 case_type_id=request_body.case_type_id,
                 created_in_data_collection_id=request_body.created_in_data_collection_id,
+                data_collection_ids=request_body.data_collection_ids,
                 is_update=request_body.is_update,
+                cases_set=request_body.cases_set,
             )
             retval: list[model.Case] = app.handle(cmd)
         except Exception as exception:

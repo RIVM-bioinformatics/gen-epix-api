@@ -2,7 +2,6 @@
 from gen_epix.casedb.api.case import (
     CreateCaseSetRequestBody as CreateCaseSetRequestBody,
 )
-from gen_epix.casedb.api.case import CreateCasesRequestBody as CreateCasesRequestBody
 from gen_epix.casedb.api.case import (
     RetrieveAlleleProfileRequestBody as RetrieveAlleleProfileRequestBody,
 )
@@ -21,6 +20,7 @@ from gen_epix.casedb.api.case import (
 from gen_epix.casedb.api.case import (
     UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
 )
+from gen_epix.casedb.api.case import UploadCasesRequestBody as UploadCasesRequestBody
 from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,
 )

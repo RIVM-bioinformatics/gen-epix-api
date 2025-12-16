@@ -148,25 +148,25 @@ class CaseTransformer(Transformer):
             success=True, original_object=obj, transformed_object=case_validation_report
         )
 
-    def _setup_reporting(self, obj: command.ValidateCasesCommand) -> tuple[
+    def _setup_reporting(self, cmd: command.ValidateCasesCommand) -> tuple[
         model.CaseValidationReport,
         list[dict[UUID, str | None]],
         list[dict[UUID, str | None]],
         bool,
     ]:
         """Set up the case validation report and content lists for processing."""
-        if obj.case_type_id != self.complete_case_type.id:
+        if cmd.case_type_id != self.complete_case_type.id:
             raise ValueError("Invalid case type")
 
-        is_update = obj.is_update
-        contents = [case.content for case in obj.cases]
+        is_update = cmd.is_update
+        contents = [x.content for x in cmd.cases_set.cases]
 
         # Create case validation report with empty content for cases
         case_validation_report = model.CaseValidationReport(
-            case_type_id=obj.case_type_id,
-            created_in_data_collection_id=obj.created_in_data_collection_id,
-            is_update=obj.is_update,
-            data_collection_ids=obj.data_collection_ids,
+            case_type_id=cmd.case_type_id,
+            created_in_data_collection_id=cmd.created_in_data_collection_id,
+            is_update=cmd.is_update,
+            data_collection_ids=cmd.data_collection_ids,
             validated_cases=[
                 model.ValidatedCase(
                     case=model.CaseForUpload(
@@ -174,7 +174,7 @@ class CaseTransformer(Transformer):
                     ),
                     data_issues=[],
                 )
-                for x in obj.cases
+                for x in cmd.cases_set.cases
             ],
         )
         updated_contents = [

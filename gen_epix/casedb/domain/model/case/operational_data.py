@@ -64,13 +64,15 @@ class Case(Model):
         default_factory=datetime.now,
         description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
     )
-    content: dict[UUID, str] = Field(
-        description=r"The data content of the case as {case_type_col_id: str_value}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted."
+    content: dict[UUID, str | None] = Field(
+        description=r"The data content of the case as {case_type_col_id: str_value | None}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed but will be removed upon serialization."
     )
 
     @field_serializer("content", mode="plain")
-    def _serialize_content(self, value: dict[UUID, str]) -> dict[str, str]:
-        return {str(x): y for x, y in value.items()}
+    def _serialize_content(
+        self, value: dict[UUID, str | None]
+    ) -> dict[str, str | None]:
+        return {str(x): y for x, y in value.items() if y is not None}
 
 
 class CaseDataCollectionLink(Model):

@@ -123,7 +123,7 @@ class RoleGenerator(CommonRoleGenerator):
                 PermissionTypeSet.CRUD,
             ),
             (command.CreateCaseSetCommand, PermissionTypeSet.E),
-            (command.CreateCasesCommand, PermissionTypeSet.E),
+            (command.UploadCasesCommand, PermissionTypeSet.E),
             (command.CaseSetCrudCommand, PermissionTypeSet.RUD),
             (command.CaseSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.RetrieveCaseSetStatsCommand, PermissionTypeSet.E),
