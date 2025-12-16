@@ -62,9 +62,10 @@ def generate_excel_report(
                 aggregated_results[scenario_id] = {
                     "id": scenario_id,
                     "result_date": result_date,
-                    "all_pass": True,  # flip to False on any Fail
+                    "all_pass": True,
                 }
             if test_result != "Pass":
+                # flip to False on any Fail
                 aggregated_results[scenario_id]["all_pass"] = False
             try:
                 current_datetime = datetime.strptime(
@@ -75,7 +76,7 @@ def generate_excel_report(
                 if new_datetime > current_datetime:
                     aggregated_results[scenario_id]["result_date"] = result_date
             except ValueError:
-                # Fallback: overwrite if parsing fails
+                # overwrite if parsing fails
                 aggregated_results[scenario_id]["result_date"] = result_date
 
     save_excel_report(file_path, aggregated_results, detailed_rows)
@@ -87,18 +88,14 @@ def save_excel_report(
     detailed_rows: list[tuple[str, str, str, str, float]],
 ) -> None:
     workbook = Workbook()
-    # Aggregated sheet
     aggregated_results_sheet = workbook.active
     assert aggregated_results_sheet is not None
-
     aggregated_results_sheet.title = "Aggregated"
     aggregated_results_sheet.append(["id", "result_date", "result"])
     for _, data in aggregated_results.items():
         aggregated_results_sheet.append(
             [data["id"], data["result_date"], "Pass" if data["all_pass"] else "Fail"]
         )
-
-    # Details sheet
     detailed_results_sheet = workbook.create_sheet("Details")
     detailed_results_sheet.append(
         ["test_name", "scenario_id", "result_date", "result", "duration"]
