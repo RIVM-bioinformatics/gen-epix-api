@@ -169,7 +169,7 @@ class CaseTransformer(Transformer):
             data_collection_ids=obj.data_collection_ids,
             validated_cases=[
                 model.ValidatedCase(
-                    case=model.CaseForCreateUpdate(
+                    case=model.CaseForUpload(
                         **x.model_dump(exclude={"content"}), content={}
                     ),
                     data_issues=[],

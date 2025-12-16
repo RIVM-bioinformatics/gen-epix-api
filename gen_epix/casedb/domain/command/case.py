@@ -72,7 +72,7 @@ class ValidateCasesCommand(Command):
         model.CaseValidationReport, "data_collection_ids"
     )
     is_update: bool = Field(description="Whether this is an update operation.")
-    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
+    cases: list[model.CaseForUpload] = Field(description="The cases to validate.")
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
@@ -269,14 +269,15 @@ class CreateReadSetsForCasesCommand(Command):
     Create read sets for a set of cases based on a read set case type column.
     """
 
-    case_read_sets: list[model.CaseReadSet] = Field(
+    case_read_sets: list[model.ReadSetForUpload] = Field(
         description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
     )
 
     @field_validator("case_read_sets", mode="after")
     def _validate_case_read_sets(
-        cls, case_read_sets: list[model.CaseReadSet]
-    ) -> list[model.CaseReadSet]:
+        cls,
+        case_read_sets: list[model.ReadSetForUpload],
+    ) -> list[model.ReadSetForUpload]:
         case_ids = [x.case_id for x in case_read_sets]
         read_set_ids = [
             x.read_set_id for x in case_read_sets if x.read_set_id is not None
@@ -344,7 +345,7 @@ class CreateSeqsForCasesCommand(Command):
     Create sequences for a set of cases based on a genetic sequence case type column.
     """
 
-    case_seqs: list[model.CaseSeq] = Field(
+    case_seqs: list[model.SeqForUpload] = Field(
         description="The CaseSequences describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
     )
 

@@ -3,43 +3,16 @@ from typing import ClassVar
 from uuid import UUID
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, field_serializer
+from pydantic import Field
 
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.operational_data import Case
+from gen_epix.casedb.domain.model.case.upload import CaseForUpload
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
-from gen_epix.util import copy_model_field
-
-
-class CaseForCreateUpdate(Model):
-    """
-    A class representing a case to be created or updated.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="cases_for_create_update",
-        persistable=False,
-    )
-    subject_id: UUID | None = copy_model_field(Case, "subject_id")
-    count: int | None = copy_model_field(Case, "count")
-    case_date: datetime | None = Field(
-        description="The date of the case. Required when creating a case, ignored when updating.",
-        default=None,
-    )
-    content: dict[UUID, str | None] = Field(
-        description="The column data of the case as {col_id: str_value}. If None and the model is used for update, then any existing value will be deleted."
-    )
-
-    @field_serializer("content", mode="plain")
-    def _serialize_content(
-        self, value: dict[UUID, str | None]
-    ) -> dict[str, str | None]:
-        return {str(x): y for x, y in value.items()}
 
 
 class CaseTypeStat(fastapp.Model):
@@ -191,7 +164,7 @@ class CaseDataIssue(PydanticBaseModel):
 
 
 class ValidatedCase(PydanticBaseModel):
-    case: CaseForCreateUpdate = Field(description="The case with validated content.")
+    case: CaseForUpload = Field(description="The case with validated content.")
     data_issues: list[CaseDataIssue] = Field(
         description="The data issues found for the case."
     )
@@ -215,38 +188,6 @@ class CaseValidationReport(Model):
     validated_cases: list[ValidatedCase] = Field(
         description="The cases containing validated content and any data issues found during validation."
     )
-
-
-class CaseReadSet(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_read_sets",
-        persistable=False,
-    )
-    case_id: UUID = Field(
-        description="The ID of the case that the read set is or will be associated with."
-    )
-    case_type_col_id: UUID = Field(
-        description="The ID of the case type column that the read set is or will be associated with."
-    )
-    read_set_id: UUID | None = Field(
-        description="The ID of the read set.", default=None
-    )
-    read_set: ReadSet | None = Field(default=None, description="The read set.")
-
-
-class CaseSeq(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_seq",
-        persistable=False,
-    )
-    case_id: UUID = Field(
-        description="The ID of the case that the sequence is or will be associated with."
-    )
-    case_type_col_id: UUID = Field(
-        description="The ID of the case type column that the sequence is or will be associated with."
-    )
-    seq_id: UUID | None = Field(description="The ID of the sequence.", default=None)
-    seq: Seq | None = Field(default=None, description="The sequence.")
 
 
 class CaseQueryResult(Model):

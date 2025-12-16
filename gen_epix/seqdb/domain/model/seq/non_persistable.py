@@ -27,6 +27,46 @@ from gen_epix.seqdb.domain.model.seq.sample import Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 
 
+class ReadSetForUpload(ReadSet):
+    """
+    A read set intended for upload.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "ReadSetForUpload"
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the read set is associated with. If not available, the null ID is put.",
+    )
+
+    @field_serializer("sample_id")
+    def _serialize_id(self, value: UUID) -> UUID | None:
+        if value == NULL_ID:
+            return None
+        return value
+
+
+class SeqForUpload(Seq):
+    """
+    A sequence intended for upload.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "SeqForUpload"
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
+    )
+
+    @field_serializer("sample_id")
+    def _serialize_id(self, value: UUID) -> UUID | None:
+        if value == NULL_ID:
+            return None
+        return value
+
+
 class AlleleForUpload(Allele):
     """
     An allele intended for upload. Equal to an Allele, with
@@ -161,26 +201,6 @@ class AlleleProfileForUpload(AlleleProfile):
         return value
 
 
-class SeqForUpload(Seq):
-    """
-    A sequence intended for upload.
-    """
-
-    ENTITY: ClassVar = Entity(persistable=False)
-    NAME: ClassVar = "SeqForUpload"
-
-    sample_id: UUID = Field(
-        default=NULL_ID,
-        description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
-    )
-
-    @field_serializer("sample_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
-
-
 class SampleForUpload(Sample):
     """
     A sample intended for upload, together with any relevant associated data.
@@ -206,61 +226,61 @@ class SampleForUpload(Sample):
     # Sample level data
     external_ids: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
-        description="The list of external identifiers associated with the sample, if available.",
+        description="The external identifiers associated with the sample, if available.",
     )
     data_collection_ids: list[UUID] | None = Field(
         default=None,
-        description="The list of data collection IDs that the sample should be put in.",
+        description="The data collection IDs that the sample should be put in.",
     )
 
     # Associated data
-    read_sets: list[ReadSet] | None = Field(
+    read_sets: list[ReadSetForUpload] | None = Field(
         default=None,
-        description="The list of read sets associated with the sample.",
+        description="The read sets associated with the sample.",
     )
     seqs: list[SeqForUpload] | None = Field(
         default=None,
-        description="The list of sequences associated with the sample.",
+        description="The sequences associated with the sample.",
     )
     seq_taxonomies: list[SeqTaxonomy] | None = Field(
         default=None,
-        description="The list of taxonomies associated with the sample.",
+        description="The taxonomies associated with the sample.",
     )
     seq_classifications: list[SeqClassification] | None = Field(
         default=None,
-        description="The list of classifications associated with the sample.",
+        description="The classifications associated with the sample.",
     )
     locus_profiles: list[LocusProfile] | None = Field(
         default=None,
-        description="The list of locus profiles associated with the sample.",
+        description="The locus profiles associated with the sample.",
     )
     allele_profiles: list[AlleleProfileForUpload] | None = Field(
         default=None,
-        description="The list of allele profiles associated with the sample.",
+        description="The allele profiles associated with the sample.",
     )
     snp_profiles: list[SnpProfile] | None = Field(
         default=None,
-        description="The list of SNP profiles associated with the sample.",
+        description="The SNP profiles associated with the sample.",
     )
     mlva_profiles: list[MlvaProfile] | None = Field(
         default=None,
-        description="The list of MLVA profiles associated with the sample.",
+        description="The MLVA profiles associated with the sample.",
     )
     kmer_profiles: list[KmerProfile] | None = Field(
         default=None,
-        description="The list of k-mer profiles associated with the sample.",
+        description="The k-mer profiles associated with the sample.",
     )
     distances: list[SeqDistance] | None = Field(
         default=None,
-        description="The list of genetic distances associated with the sample.",
+        description="The genetic distances associated with the sample.",
     )
     pcr_measurements: list[PcrMeasurement] | None = Field(
         default=None,
-        description="The list of PCR measurements associated with the sample.",
+        description="The PCR measurements associated with the sample.",
     )
     ast_measurements: list[AstMeasurement] | None = Field(
         default=None,
-        description="The list of AST measurements associated with the sample.",
+        description="The AST measurements associated with the sample.",
     )
 
     @model_validator(mode="after")

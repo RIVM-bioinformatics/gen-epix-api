@@ -134,19 +134,19 @@ class TestCaseValidation(CaseValidationSetup):
         df = env.props["_case_data"]
         all_cases: dict[
             UUID,
-            model.CaseForCreateUpdate,
+            model.CaseForUpload,
         ] = {}
         all_validated_cases: dict[
             UUID,
-            model.CaseForCreateUpdate,
+            model.CaseForUpload,
         ] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["id"])
             all_cases.setdefault(
-                case_id, model.CaseForCreateUpdate(**row, content=case_content.get(case_id, {}))  # type: ignore[misc]
+                case_id, model.CaseForUpload(**row, content=case_content.get(case_id, {}))  # type: ignore[misc]
             )
             all_validated_cases.setdefault(
-                case_id, model.CaseForCreateUpdate(**row, content=validated_case_content.get(case_id, {}))  # type: ignore[misc]
+                case_id, model.CaseForUpload(**row, content=validated_case_content.get(case_id, {}))  # type: ignore[misc]
             )
 
         # Parse validate case command data

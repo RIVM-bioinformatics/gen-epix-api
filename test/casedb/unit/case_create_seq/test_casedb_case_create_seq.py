@@ -1,3 +1,4 @@
+import gzip
 import hashlib
 from typing import Any
 from unittest.mock import Mock, patch
@@ -19,7 +20,6 @@ from gen_epix.casedb.services.case.create_seq import (
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-import gzip
 
 
 class TestCasedbCaseCreateSeq:
@@ -86,7 +86,7 @@ class TestCasedbCaseCreateSeq:
         read_set = Mock(spec=model.ReadSet)
         read_set.id = uuid4()
 
-        case_read_set = Mock(spec=model.CaseReadSet)
+        case_read_set = Mock(spec=model.ReadSetForUpload)
         case_read_set.case_id = case_id
         case_read_set.case_type_col_id = case_type_col_id
         case_read_set.read_set = read_set
@@ -101,7 +101,7 @@ class TestCasedbCaseCreateSeq:
         seq = Mock(spec=model.Seq)
         seq.id = uuid4()
 
-        case_seq = Mock(spec=model.CaseSeq)
+        case_seq = Mock(spec=model.SeqForUpload)
         case_seq.case_id = case_id
         case_seq.case_type_col_id = case_type_col_id
         case_seq.seq = seq
@@ -1038,7 +1038,7 @@ class TestCasedbCaseCreateSeq:
                 read_set = Mock(spec=model.ReadSet)
                 read_set.id = uuid4()
 
-                case_read_set = Mock(spec=model.CaseReadSet)
+                case_read_set = Mock(spec=model.ReadSetForUpload)
                 case_read_set.case_id = case_id
                 case_read_set.case_type_col_id = case_type_col_id
                 case_read_set.read_set = read_set

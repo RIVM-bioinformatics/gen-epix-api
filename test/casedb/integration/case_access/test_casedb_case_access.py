@@ -125,7 +125,7 @@ class TestCaseAccess(CaseAccessSetup):
         # Function to create a case
         def _create_case(
             row: dict[str, Any], for_create_upload: bool = False
-        ) -> model.Case | model.CaseForCreateUpdate:
+        ) -> model.Case | model.CaseForUpload:
             case_content = {}
             for i in range(1, n_case_type_cols):
                 case_type_col_id = row[f"case.content.case_type_col_id{i}"]
@@ -134,7 +134,7 @@ class TestCaseAccess(CaseAccessSetup):
                 value = row[f"case.content.case_type_col_value{i}"]
                 case_content[case_type_col_id] = value
             if for_create_upload:
-                return model.CaseForCreateUpdate(
+                return model.CaseForUpload(
                     id=row["case.id"],
                     subject_id=row["case.subject_id"],
                     case_date=row["case.case_date"],

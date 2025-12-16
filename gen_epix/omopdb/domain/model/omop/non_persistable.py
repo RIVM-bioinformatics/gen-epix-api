@@ -25,19 +25,19 @@ class Subject(Model):
         default=None, description="The person associated with the subject."
     )
     specimen_records: list[Specimen] = Field(
-        description="The list of specimen records associated with the subject."
+        description="The specimen records associated with the subject."
     )
     observation_records: list[Observation] = Field(
-        description="The list of observations records associated with the subject."
+        description="The observations records associated with the subject."
     )
     measurement_records: list[Measurement] = Field(
-        description="The list of measurements records associated with the subject."
+        description="The measurements records associated with the subject."
     )
     drug_exposure_records: list[DrugExposure] = Field(
-        description="The list of drug exposure records associated with the subject."
+        description="The drug exposure records associated with the subject."
     )
     location_history_records: list[LocationHistory] = Field(
-        description="The list of location history records associated with the subject."
+        description="The location history records associated with the subject."
     )
 
 
@@ -278,16 +278,13 @@ class PersonForUpload(Person):
         default=NULL_ID,
         description="The id of the person, if available. If not, it must be filled with the null ID. Must be present if external_person_ids are not provided.",
     )
-    is_existing_person: bool = Field(
-        description="Indicates whether the person should already exist in the database.",
-    )
-    created_in_data_collection_id: UUID = Field(
-        default=NULL_ID,
-        description="The id of the data collection in which the person was or is to be created, if available. If not, it must be filled with the null ID.",
-    )
-    external_person_ids: list[ExternalIdentifierForUpload] | None = Field(
+    external_ids: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="List of external person identifiers. Must have at least one element if person_id is not provided.",
+    )
+    data_collection_ids: list[UUID] | None = Field(
+        default=None,
+        description="The data collection IDs that the person should be put in.",
     )
 
     # Associated data

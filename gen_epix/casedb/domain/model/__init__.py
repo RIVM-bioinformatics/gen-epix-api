@@ -23,11 +23,10 @@ from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
+from gen_epix.casedb.domain.model.case import CaseForUpload as CaseForUpload
 from gen_epix.casedb.domain.model.case import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case import CaseQueryResult as CaseQueryResult
-from gen_epix.casedb.domain.model.case import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case import CaseRights as CaseRights
-from gen_epix.casedb.domain.model.case import CaseSeq as CaseSeq
 from gen_epix.casedb.domain.model.case import CaseSet as CaseSet
 from gen_epix.casedb.domain.model.case import CaseSetCategory as CaseSetCategory
 from gen_epix.casedb.domain.model.case import (
@@ -57,14 +56,13 @@ from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
+from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
+from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
 from gen_epix.casedb.domain.model.case import ValidatedCase as ValidatedCase
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
-)
-from gen_epix.casedb.domain.model.case.non_persistable import (
-    CaseForCreateUpdate as CaseForCreateUpdate,
 )
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
@@ -171,8 +169,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             GeneticDistanceProtocol,
             Dim,
             Col,
-            CaseReadSet,
-            CaseSeq,
             CaseTypeSetCategory,
             CaseType,
             CaseTypeSet,
@@ -183,13 +179,15 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseTypeColSetMember,
             CompleteCaseType,
             Case,
-            CaseForCreateUpdate,
             CaseSetCategory,
             CaseSetStatus,
             CaseSet,
             CaseSetMember,
             CaseDataCollectionLink,
             CaseSetDataCollectionLink,
+            ReadSetForUpload,
+            SeqForUpload,
+            CaseForUpload,
             CaseTypeStat,
             CaseSetStat,
             CaseQuery,

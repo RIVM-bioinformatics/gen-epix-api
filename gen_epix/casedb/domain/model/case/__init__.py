@@ -12,9 +12,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import CaseQuery as CaseQ
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseQueryResult as CaseQueryResult,
 )
-from gen_epix.casedb.domain.model.case.non_persistable import CaseReadSet as CaseReadSet
 from gen_epix.casedb.domain.model.case.non_persistable import CaseRights as CaseRights
-from gen_epix.casedb.domain.model.case.non_persistable import CaseSeq as CaseSeq
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseSetQuery as CaseSetQuery,
 )
@@ -75,3 +73,8 @@ from gen_epix.casedb.domain.model.case.reference_data import (
 from gen_epix.casedb.domain.model.case.reference_data import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
+from gen_epix.casedb.domain.model.case.upload import CaseForUpload as CaseForUpload
+from gen_epix.casedb.domain.model.case.upload import (
+    ReadSetForUpload as ReadSetForUpload,
+)
+from gen_epix.casedb.domain.model.case.upload import SeqForUpload as SeqForUpload
