@@ -114,11 +114,15 @@ class AppImplDetails(BaseModel):
     def _validate_role_map(
         cls, value: dict[enum.Role | Enum, str] | type[Enum]
     ) -> dict[enum.Role | Enum, str]:
+        role_map: dict[enum.Role | Enum, str]
         if not isinstance(value, dict):
-            value = {e: str(e.value) for e in value}
-            if len(set(value.values())) != len(value):
-                raise ValueError("role_map must not contain duplicate values")
-        return value
+            role_map = {e: str(e.value) for e in value}
+        else:
+            role_map = value
+        if len(set(role_map.values())) != len(role_map):
+            raise ValueError("role_map must not contain duplicate values")
+
+        return role_map
 
     @field_validator("role_set_map", mode="before")
     @classmethod
