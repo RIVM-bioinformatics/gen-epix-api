@@ -291,33 +291,30 @@ class ModelAnonymizer(BaseAnonymizer):
         At present anonymization_spec is not handled as we haven't yet designed it.
         """
 
-        def validate_location_path(path: tuple[str | int, ...]) -> bool:
+        def validate_location_path(path: tuple[str | int, ...]) -> None:
             """
             Validate the path to ensure it is matches expected form (see get_nested_attribute)
             """
-            if not isinstance(path, tuple):
-                raise ValueError(f"Invalid path: {path}. Path must be a tuple")
-            elif len(path) == 1 and isinstance(path[0], str):
-                return True
-            elif (
+            if len(path) == 1 and isinstance(path[0], str):
+                return
+            if (
                 len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], str)
             ):
-                return True
-            elif (
+                return
+            if (
                 len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], int)
             ):
-                return True
-            elif (
+                return
+            if (
                 len(path) == 3
                 and isinstance(path[0], str)
                 and isinstance(path[1], int)
                 and isinstance(path[2], str)
             ):
-                return True
-            else:
-                raise ValueError(
-                    f"Invalid path: {path}. Path must be a 1-tuple, 2-tuple, or 3-tuple of strings and/or integers"
-                )
+                return
+            raise ValueError(
+                f"Invalid path: {path}. Path must be a 1-tuple, 2-tuple, or 3-tuple of strings and/or integers"
+            )
 
         def get_nested_attribute(model: Model, path: tuple[str | int, ...]) -> Any:
             """

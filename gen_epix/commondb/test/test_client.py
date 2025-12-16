@@ -23,7 +23,7 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 class TestClient:
 
-    DEFAULT_ROUTE_PREFIX = "/v1"
+    DEFAULT_ROUTE_PREFIX_VALUE = "/v1"
 
     MODEL_KEY_MAP: dict[type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
@@ -57,7 +57,7 @@ class TestClient:
         self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_composer = app_composer
-        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
         self.log_level = log_level
         self.verbose = verbose
 
@@ -117,7 +117,7 @@ class TestClient:
         self.db: dict[type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints = use_endpoints
-        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
+        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
