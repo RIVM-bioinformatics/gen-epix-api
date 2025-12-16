@@ -31,15 +31,17 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 from gen_epix.casedb.domain.model.case.non_persistable import (
     ValidatedCase as ValidatedCase,
 )
-from gen_epix.casedb.domain.model.case.persistable import Case as Case
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.operational_data import Case as Case
+from gen_epix.casedb.domain.model.case.operational_data import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
-from gen_epix.casedb.domain.model.case.persistable import CaseSet as CaseSet
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.operational_data import CaseSet as CaseSet
+from gen_epix.casedb.domain.model.case.operational_data import (
     CaseSetDataCollectionLink as CaseSetDataCollectionLink,
 )
-from gen_epix.casedb.domain.model.case.persistable import CaseSetMember as CaseSetMember
+from gen_epix.casedb.domain.model.case.operational_data import (
+    CaseSetMember as CaseSetMember,
+)
 from gen_epix.casedb.domain.model.case.reference_data import (
     CaseSetCategory as CaseSetCategory,
 )

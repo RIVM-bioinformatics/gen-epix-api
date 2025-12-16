@@ -7,7 +7,7 @@ from pydantic import Field, field_serializer
 
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.persistable import Case
+from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
