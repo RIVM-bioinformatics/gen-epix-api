@@ -8,7 +8,7 @@ from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
     CaseType,
     CaseTypeCol,
     CaseTypeDim,

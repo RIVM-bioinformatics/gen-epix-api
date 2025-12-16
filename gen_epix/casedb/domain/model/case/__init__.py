@@ -37,38 +37,39 @@ from gen_epix.casedb.domain.model.case.persistable import (
 )
 from gen_epix.casedb.domain.model.case.persistable import CaseSet as CaseSet
 from gen_epix.casedb.domain.model.case.persistable import (
-    CaseSetCategory as CaseSetCategory,
-)
-from gen_epix.casedb.domain.model.case.persistable import (
     CaseSetDataCollectionLink as CaseSetDataCollectionLink,
 )
 from gen_epix.casedb.domain.model.case.persistable import CaseSetMember as CaseSetMember
-from gen_epix.casedb.domain.model.case.persistable import CaseSetStatus as CaseSetStatus
-from gen_epix.casedb.domain.model.case.persistable import CaseType as CaseType
-from gen_epix.casedb.domain.model.case.persistable import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
+    CaseSetCategory as CaseSetCategory,
+)
+from gen_epix.casedb.domain.model.case.reference_data import (
+    CaseSetStatus as CaseSetStatus,
+)
+from gen_epix.casedb.domain.model.case.reference_data import CaseType as CaseType
+from gen_epix.casedb.domain.model.case.reference_data import CaseTypeCol as CaseTypeCol
+from gen_epix.casedb.domain.model.case.reference_data import (
     CaseTypeColSet as CaseTypeColSet,
 )
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
-from gen_epix.casedb.domain.model.case.persistable import CaseTypeDim as CaseTypeDim
-from gen_epix.casedb.domain.model.case.persistable import CaseTypeSet as CaseTypeSet
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import CaseTypeDim as CaseTypeDim
+from gen_epix.casedb.domain.model.case.reference_data import CaseTypeSet as CaseTypeSet
+from gen_epix.casedb.domain.model.case.reference_data import (
     CaseTypeSetCategory as CaseTypeSetCategory,
 )
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
-from gen_epix.casedb.domain.model.case.persistable import (
-    CaseTypeDim as CaseTypeDim,
-)
-from gen_epix.casedb.domain.model.case.persistable import Col as Col
-from gen_epix.casedb.domain.model.case.persistable import Dim as Dim
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import Col as Col
+from gen_epix.casedb.domain.model.case.reference_data import Dim as Dim
+from gen_epix.casedb.domain.model.case.reference_data import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
-from gen_epix.casedb.domain.model.case.persistable import TreeAlgorithm as TreeAlgorithm
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
+    TreeAlgorithm as TreeAlgorithm,
+)
+from gen_epix.casedb.domain.model.case.reference_data import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
