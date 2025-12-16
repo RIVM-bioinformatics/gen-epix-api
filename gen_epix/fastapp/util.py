@@ -27,18 +27,6 @@ def create_ssl_context(
         if isinstance(ssl_cert_file, str):
             ssl_cert_file = Path(ssl_cert_file)
         ssl_context = ssl.create_default_context()
-        # TODO: check if this is not exposing sensible security data?
-        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-        ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
-        ciphers = ":".join(
-            [
-                "ECDHE-RSA-AES256-GCM-SHA384",
-                "ECDHE-RSA-AES128-GCM-SHA256",
-                "ECDHE-ECDSA-AES256-GCM-SHA384",
-                "ECDHE-ECDSA-AES128-GCM-SHA256",
-            ]
-        )
-        ssl_context.set_ciphers(ciphers)
         ssl_context.load_verify_locations(ssl_cert_file.absolute().as_posix())
         return ssl_context
 
