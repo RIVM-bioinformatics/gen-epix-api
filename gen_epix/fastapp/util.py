@@ -28,6 +28,15 @@ def create_ssl_context(
             ssl_cert_file = Path(ssl_cert_file)
         ssl_context = ssl.create_default_context()
         ssl_context.load_verify_locations(ssl_cert_file.absolute().as_posix())
+        # Enforce TLS 1.2/1.3 and restrict ciphers to match ingress controller
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+        ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
+        ssl_context.set_ciphers(
+            "ECDHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-AES128-GCM-SHA256"
+        )
         return ssl_context
 
     # Use default verification
