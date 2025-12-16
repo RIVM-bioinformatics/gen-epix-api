@@ -61,8 +61,7 @@ def fix_schema_nullable_and_single_element(schema: dict) -> None:
     Fixes the schema by handling 'anyOf' constructs and setting the 'nullable' property.
     This function performs the following operations on the given schema:
     1. Replaces 'anyOf' constructs containing {"type": "null"} with 'nullable': True.
-    2. Simplifies 'anyOf', 'allOf', and 'oneOf' constructs containing a single item by replacing them with that item.
-    3. Recursively processes nested dictionaries and lists to apply the above transformations.
+    2. Recursively processes nested dictionaries and lists to apply the above transformations.
     Args:
         schema (dict): The JSON schema to be fixed.
     Returns:
@@ -100,17 +99,6 @@ def fix_schema_nullable_and_single_element(schema: dict) -> None:
             for item in schema[key]:
                 if isinstance(item, dict):
                     fix_schema_nullable_and_single_element(item)
-        if (
-            key in schema
-            and key in {"anyOf", "oneOf", "allOf"}
-            and len(schema[key]) == 1
-        ):
-            # In case only 1 remaining item in list,
-            # move it one level higher and remove list
-            value = schema[key][0]
-            del schema[key]
-            for key2 in value:
-                schema[key2] = value[key2]
 
 
 # TODO: add a function to fix read-only fields
