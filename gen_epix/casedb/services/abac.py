@@ -493,42 +493,60 @@ class AbacService(BaseAbacService):
         case_type_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeShareAbac]]:
         dict_: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = {}
-        for x in case_policies:
+        for policy in case_policies:
             # Create case type share abac object for each case type id
-            data_collection_id = x.data_collection_id
-            from_data_collection_id = x.from_data_collection_id
-            case_type_ids = case_type_set_member_map.get(x.case_type_set_id, set())
+            case_type_ids = case_type_set_member_map.get(policy.case_type_set_id, set())
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
                     dict_[case_type_id] = {}
-                if data_collection_id not in dict_[case_type_id]:
-                    dict_[case_type_id][data_collection_id] = model.CaseTypeShareAbac(
-                        case_type_id=case_type_id,
-                        data_collection_id=data_collection_id,
-                        add_case_from_data_collection_ids=set(),
-                        remove_case_from_data_collection_ids=set(),
-                        add_case_set_from_data_collection_ids=set(),
-                        remove_case_set_from_data_collection_ids=set(),
+                if policy.data_collection_id not in dict_[case_type_id]:
+                    dict_[case_type_id][policy.data_collection_id] = (
+                        model.CaseTypeShareAbac(
+                            case_type_id=case_type_id,
+                            data_collection_id=policy.data_collection_id,
+                            add_case_from_data_collection_ids=set(),
+                            remove_case_from_data_collection_ids=set(),
+                            add_case_set_from_data_collection_ids=set(),
+                            remove_case_set_from_data_collection_ids=set(),
+                        )
                     )
-                case_type_share_abac = dict_[case_type_id][data_collection_id]
-                # Add the source data collection id to the appropriate sets
-                if x.add_case:
-                    case_type_share_abac.add_case_from_data_collection_ids.add(
-                        from_data_collection_id
-                    )
-                if x.remove_case:
-                    case_type_share_abac.remove_case_from_data_collection_ids.add(
-                        from_data_collection_id
-                    )
-                if x.add_case_set:
-                    case_type_share_abac.add_case_set_from_data_collection_ids.add(
-                        from_data_collection_id
-                    )
-                if x.remove_case_set:
-                    case_type_share_abac.remove_case_set_from_data_collection_ids.add(
-                        from_data_collection_id
-                    )
+                # Based on the policy, get the case type share abac object
+                case_type_share_abac = dict_[case_type_id][policy.data_collection_id]
+                case_type_share_abac = AbacService.get_case_type_share_abac_dict(
+                    policy,
+                    policy.data_collection_id,
+                    policy.from_data_collection_id,
+                    case_type_id,
+                    case_type_share_abac,
+                )
         return dict_
+
+    @staticmethod
+    def get_case_type_share_abac_dict(
+        policy: model.OrganizationShareCasePolicy | model.UserShareCasePolicy,
+        data_collection_id: UUID,
+        from_data_collection_id: UUID,
+        case_type_id: UUID,
+        case_type_share_abac: model.CaseTypeShareAbac,
+    ) -> model.CaseTypeShareAbac:
+        if policy.add_case:
+            case_type_share_abac.add_case_from_data_collection_ids.add(
+                from_data_collection_id
+            )
+        if policy.remove_case:
+            case_type_share_abac.remove_case_from_data_collection_ids.add(
+                from_data_collection_id
+            )
+        if policy.add_case_set:
+            case_type_share_abac.add_case_set_from_data_collection_ids.add(
+                from_data_collection_id
+            )
+        if policy.remove_case_set:
+            case_type_share_abac.remove_case_set_from_data_collection_ids.add(
+                from_data_collection_id
+            )
+
+        return case_type_share_abac
 
     @staticmethod
     def _get_share_intersect(
