@@ -212,35 +212,34 @@ class CaseAbac(BaseModel):
         Get the set[case_type_col_id] for which there is any read or write access in at
         least one of the data collections. Optionally limited to the given case type.
         """
-        retval = set()
+        retval: set[UUID] = set()
         if case_type_id is not None:
             if case_type_id not in self.case_type_access_abacs:
                 return retval
             data = self.case_type_access_abacs[case_type_id]
-            for access_abac in data.values():
-                if right == CaseRight.READ_CASE:
-                    retval.update(access_abac.read_case_type_col_ids)
-                elif right == CaseRight.WRITE_CASE:
-                    retval.update(access_abac.write_case_type_col_ids)
-                else:
-                    raise exc.InvalidArgumentsError(
-                        f"Right {right.value} is invalid for case_type_col access"
-                    )
+            retval = self._update_access_rights(right, retval, data)
             return retval
         for case_type_id, data in self.case_type_access_abacs.items():
-            for access_abac in data.values():
-                if right == CaseRight.READ_CASE:
-                    retval.update(access_abac.read_case_type_col_ids)
-                elif right == CaseRight.WRITE_CASE:
-                    retval.update(access_abac.write_case_type_col_ids)
-                else:
-                    raise exc.InvalidArgumentsError(
-                        f"Right {right.value} is invalid for case_type_col access"
-                    )
+            retval = self._update_access_rights(right, retval, data)
+        return retval
+
+    def _update_access_rights(
+        self, right: CaseRight, retval: set[UUID], data: dict[UUID, CaseTypeAccessAbac]
+    ) -> set[UUID]:
+        """Helper to update the set of case type column IDs based on the given right."""
+        for access_abac in data.values():
+            if right == CaseRight.READ_CASE:
+                retval.update(access_abac.read_case_type_col_ids)
+            elif right == CaseRight.WRITE_CASE:
+                retval.update(access_abac.write_case_type_col_ids)
+            else:
+                raise exc.InvalidArgumentsError(
+                    f"Right {right.value} is invalid for case_type_col access"
+                )
         return retval
 
     def get_data_collections_with_any_rights(self) -> set[UUID]:
-        data_collection_ids = set()
+        data_collection_ids: set[UUID] = set()
         for data_collection_access_abac_map in self.case_type_access_abacs.values():
             for (
                 data_collection_id,
@@ -316,154 +315,214 @@ class CaseAbac(BaseModel):
         if self.is_full_access:
             return True
 
-        # Parse input
-        if current_data_collection_ids is None:
-            current_data_collection_ids = set()
-        if tgt_data_collection_ids is None:
-            tgt_data_collection_ids = set()
+        current_data_collection_ids = current_data_collection_ids or set()
+        tgt_data_collection_ids = tgt_data_collection_ids or set()
 
         # Get rights for the case type
         access_abac = self.case_type_access_abacs.get(case_type_id, {})
         share_abac = self.case_type_share_abacs.get(case_type_id, {})
+
         if access_abac is None and share_abac is None:
-            # No rights to this case type
             return False
 
         # Handle each right
-        has_right_fn = self._get_has_right_function(right)
         if right in CaseRightSet.ADD.value:
-            # Check if the case or case set can be added to all the target data collections
-            if is_create_or_delete:
-                # Check if the case or case set can be created
-                if created_in_data_collection_id is None:
-                    raise exc.InvalidArgumentsError(
-                        f"created_in_data_collection_id must be provided for right {right.value} if is_create_or_delete=True"
-                    )
-                if created_in_data_collection_id not in access_abac:
+            return self._is_add_allowed(
+                right,
+                access_abac,
+                share_abac,
+                is_create_or_delete,
+                created_in_data_collection_id,
+                current_data_collection_ids,
+                tgt_data_collection_ids,
+            )
+        if right in CaseRightSet.REMOVE.value:
+            return self._is_remove_allowed(
+                right,
+                access_abac,
+                share_abac,
+                is_create_or_delete,
+                created_in_data_collection_id,
+                current_data_collection_ids,
+                tgt_data_collection_ids,
+            )
+        if right in CaseRightSet.CONTENT.value:
+            return self.is_content_allowed(
+                right,
+                access_abac,
+                is_create_or_delete,
+                current_data_collection_ids,
+                tgt_data_collection_ids,
+            )
+        raise exc.InvalidArgumentsError(f"Right {right.value} is invalid")
+
+    def _validate_private_creation_or_deletion(
+        self,
+        right: CaseRight,
+        created_in_data_collection_id: UUID,
+        access_abac: dict[UUID, CaseTypeAccessAbac],
+    ) -> bool:
+        if created_in_data_collection_id is None:
+            raise exc.InvalidArgumentsError(
+                f"created_in_data_collection_id must be provided for right {right.value}"
+            )
+
+        if created_in_data_collection_id not in access_abac:
+            return False
+
+        if not access_abac[created_in_data_collection_id].is_private:
+            return False
+
+        return True
+
+    def _check_access_or_share(
+        self,
+        right: CaseRight,
+        data_collection_id: UUID,
+        access_abac: dict[UUID, CaseTypeAccessAbac],
+        share_abac: dict[UUID, CaseTypeShareAbac],
+        current_data_collection_ids: set[UUID],
+    ) -> bool:
+        has_right_fn = self._get_has_right_function(right)
+        get_share_from_data_collections_fn = (
+                self._get_get_share_from_data_collections_function(right)
+            )
+        if data_collection_id not in access_abac:
                     # No access to this data collection
-                    return False
-                if not access_abac[created_in_data_collection_id].is_private:
-                    # created_in_data_collection_id is not a private data collection
-                    return False
-                if current_data_collection_ids:
-                    raise exc.InvalidArgumentsError(
-                        f"current_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
+            return False
+        if access_abac[data_collection_id].is_private:
+            # Private data collection different from the created in data collection
+            return False
+        if not has_right_fn(access_abac[data_collection_id]):
+            # No access right in this data collection -> check share rights
+            if (
+                share_abac is None
+                or data_collection_id not in share_abac
+                or not current_data_collection_ids.intersection(
+                    get_share_from_data_collections_fn(
+                        share_abac[data_collection_id]
                     )
-            # Check for each of the remaining target data collections if the user has
-            # the right to add cases or case sets to it
-            remaining_data_collection_ids = (
+                )
+            ):
+                # No direct share rights either
+                # TODO: Check indirect share rights from the provided data collections
+                return False
+        return True
+
+    def _is_add_allowed(
+        self,
+        right: CaseRight,
+        access_abac: dict[UUID, CaseTypeAccessAbac],
+        share_abac: dict[UUID, CaseTypeShareAbac],
+        is_create_or_delete: bool,
+        created_in_data_collection_id: UUID | None,
+        current_data_collection_ids: set[UUID],
+        tgt_data_collection_ids: set[UUID],
+    ) -> bool:
+        # Check if the case or case set can be added to all the target data collections
+        if is_create_or_delete:
+            if not self._validate_private_creation_or_deletion(
+                right, created_in_data_collection_id, access_abac
+            ):
+                return False
+            if current_data_collection_ids:
+                raise exc.InvalidArgumentsError(
+                    f"current_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
+                )
+        remaining_data_collection_ids = (
                 set()
                 if tgt_data_collection_ids is None
                 else set(tgt_data_collection_ids)
             )
-            remaining_data_collection_ids.discard(
-                created_in_data_collection_id  # type:ignore[arg-type]
+        remaining_data_collection_ids.discard(
+            created_in_data_collection_id  # type:ignore[arg-type]
+        )
+        if current_data_collection_ids:
+            remaining_data_collection_ids = (
+                remaining_data_collection_ids - current_data_collection_ids
             )
-            if current_data_collection_ids:
-                remaining_data_collection_ids = (
-                    remaining_data_collection_ids - current_data_collection_ids
+        current_data_collection_ids.add(
+            created_in_data_collection_id  # type:ignore[arg-type]
+        )
+
+        for data_collection_id in remaining_data_collection_ids:
+            if not self._check_access_or_share(
+                right,
+                data_collection_id,
+                access_abac,
+                share_abac,
+                current_data_collection_ids,
+            ):
+                return False
+        return True
+
+    def _is_remove_allowed(
+        self,
+        right: CaseRight,
+        access_abac: dict[UUID, CaseTypeAccessAbac],
+        share_abac: dict[UUID, CaseTypeShareAbac],
+        is_create_or_delete: bool,
+        created_in_data_collection_id: UUID | None,
+        current_data_collection_ids: set[UUID],
+        tgt_data_collection_ids: set[UUID],
+    ) -> bool:
+        # Check if the case or case set can be deleted from all the target data collections
+        if is_create_or_delete:
+            if not self._validate_private_creation_or_deletion(
+                right, created_in_data_collection_id, access_abac
+            ):
+                return False
+            if tgt_data_collection_ids:
+                raise exc.InvalidArgumentsError(
+                    f"tgt_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
                 )
-            current_data_collection_ids.add(
-                created_in_data_collection_id  # type:ignore[arg-type]
-            )
-            get_share_from_data_collections_fn = (
-                self._get_get_share_from_data_collections_function(right)
-            )
-            for data_collection_id in remaining_data_collection_ids:
-                if data_collection_id not in access_abac:
-                    # No access to this data collection
-                    return False
-                if access_abac[data_collection_id].is_private:
-                    # Private data collection different from the created in data collection
-                    return False
-                if not has_right_fn(access_abac[data_collection_id]):
-                    # No access right in this data collection -> check share rights
-                    if (
-                        share_abac is None
-                        or data_collection_id not in share_abac
-                        or not current_data_collection_ids.intersection(
-                            get_share_from_data_collections_fn(
-                                share_abac[data_collection_id]
-                            )
-                        )
-                    ):
-                        # No direct share rights either
-                        # TODO: Check indirect share rights from the provided data collections
-                        return False
-        elif right in CaseRightSet.REMOVE.value:
-            # Check if the case or case set can be deleted from all the target data collections
-            if is_create_or_delete:
-                # Check if the case or case set can be deleted
-                if created_in_data_collection_id is None:
-                    raise exc.InvalidArgumentsError(
-                        f"created_in_data_collection_id must be provided for right {right.value} if is_create_or_delete=True"
-                    )
-                if created_in_data_collection_id not in access_abac:
-                    # No access to this data collection
-                    return False
-                if not access_abac[created_in_data_collection_id].is_private:
-                    # created_in_data_collection_id is not a private data collection
-                    return False
-                if tgt_data_collection_ids:
-                    raise exc.InvalidArgumentsError(
-                        f"tgt_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
-                    )
-                tgt_data_collection_ids = current_data_collection_ids
-            if not tgt_data_collection_ids.issubset(current_data_collection_ids):
+            tgt_data_collection_ids = current_data_collection_ids
+        if not tgt_data_collection_ids.issubset(current_data_collection_ids):
                 raise exc.InvalidArgumentsError(
                     f"tgt_data_collection_ids must be a subset of current_data_collection_ids for right {right.value}"
                 )
-            # Check for each of the remaining target data collections if the user has
-            # the right to remove cases or case sets from it
-            remaining_data_collection_ids = set(tgt_data_collection_ids)
-            remaining_data_collection_ids.discard(
-                created_in_data_collection_id  # type:ignore[arg-type]
-            )
-            get_share_from_data_collections_fn = (
-                self._get_get_share_from_data_collections_function(right)
-            )
-            for data_collection_id in remaining_data_collection_ids:
-                if data_collection_id not in access_abac:
-                    # No access to this data collection
-                    return False
-                if access_abac[data_collection_id].is_private:
-                    # Private data collection different from the created in data collection
-                    return False
-                if not has_right_fn(access_abac[data_collection_id]):
-                    # No access right in this data collection -> check share rights
-                    if (
-                        share_abac is None
-                        or data_collection_id not in share_abac
-                        or not current_data_collection_ids.intersection(
-                            get_share_from_data_collections_fn(
-                                share_abac[data_collection_id]
-                            )
-                        )
-                    ):
-                        # No direct share rights either
-                        # TODO: Check indirect share rights from the provided data collections
-                        return False
-        elif right in CaseRightSet.CONTENT.value:
-            # Check if the case or case set can be read or written from any of the current data collections
-            if is_create_or_delete:
-                raise exc.InvalidArgumentsError(
-                    f"is_create_or_delete must be False for right {right.value}"
-                )
-            if tgt_data_collection_ids:
-                raise exc.InvalidArgumentsError(
-                    f"tgt_data_collection_ids must be empty for right {right.value}"
-                )
-            has_right_fn = self._get_has_right_function(right)
-            for data_collection_id in current_data_collection_ids:
-                if data_collection_id in access_abac and has_right_fn(
-                    access_abac[data_collection_id]
-                ):
-                    # Access right in this data collection
-                    return True
-        else:
-            raise exc.InvalidArgumentsError(f"Right {right.value} is invalid")
-        # All checks passed
+        # Check for each of the remaining target data collections if the user has
+        # the right to remove cases or case sets from it
+        remaining_data_collection_ids = set(tgt_data_collection_ids)
+        remaining_data_collection_ids.discard(
+            created_in_data_collection_id  # type:ignore[arg-type]
+        )
+        for data_collection_id in remaining_data_collection_ids:
+            if not self._check_access_or_share(
+                right,
+                data_collection_id,
+                access_abac,
+                share_abac,
+                current_data_collection_ids,
+            ):
+                return False
         return True
+
+    def is_content_allowed(
+        self,
+        right: CaseRight,
+        access_abac: dict[UUID, CaseTypeAccessAbac],
+        is_create_or_delete: bool,
+        current_data_collection_ids: set[UUID],
+        tgt_data_collection_ids: set[UUID],
+    ) -> bool:
+        if is_create_or_delete:
+            raise exc.InvalidArgumentsError(
+                f"is_create_or_delete must be False for right {right.value}"
+            )
+        if tgt_data_collection_ids:
+            raise exc.InvalidArgumentsError(
+                f"tgt_data_collection_ids must be empty for right {right.value}"
+            )
+
+        has_right_fn = self._get_has_right_function(right)
+        for data_collection_id in current_data_collection_ids:
+            if data_collection_id in access_abac and has_right_fn(
+                access_abac[data_collection_id]
+            ):
+                # Access right in this data collection
+                return True
+        return False
 
     def get_case_rights(
         self,
