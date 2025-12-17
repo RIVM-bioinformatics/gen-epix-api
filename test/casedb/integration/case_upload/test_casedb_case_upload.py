@@ -2,7 +2,7 @@ import logging
 from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_validation.base import (
+from test.casedb.integration.case_upload.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
@@ -82,8 +82,8 @@ class CaseValidationSetup:
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
-        self.excel_file = Path(__file__).parent / "test_casedb_case_validation.xlsx"
-        self.pickle_file = Path(__file__).parent / "test_casedb_case_validation.pkl"
+        self.excel_file = Path(__file__).parent / "test_casedb_case_upload.xlsx"
+        self.pickle_file = Path(__file__).parent / "test_casedb_case_upload.pkl"
         self.case_crud_commands: pd.DataFrame | None = None
         self.retrieve_data_from_file(env)
 
@@ -110,7 +110,7 @@ class TestCaseValidation(CaseValidationSetup):
     def _decode_pairing_function(self, z: int) -> tuple[int, int]:
         return z // 100, z % 100
 
-    def test_case_validation(self, env: Env) -> None:
+    def test_case_upload(self, env: Env) -> None:
         """
         Execute all case CRUD and similar commands in case_crud_commands
         """

@@ -403,13 +403,13 @@ class Run:
             ]
         )
 
-    def test_casedb_integration_case_validation(self) -> None:
+    def test_casedb_integration_case_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/case_validation",
+                "test/casedb/integration/case_upload",
             ]
         )
 

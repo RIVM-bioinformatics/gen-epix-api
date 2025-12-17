@@ -427,12 +427,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.integration.case_validation",
+            "name": "test.casedb.integration.case_upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_integration_case_validation"
+                "test_casedb_integration_case_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
