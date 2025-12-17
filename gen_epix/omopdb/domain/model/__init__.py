@@ -75,7 +75,7 @@ from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
-from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
+from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (

@@ -10,10 +10,7 @@ from gen_epix.casedb.services.case.case_date import (
     case_service_get_case_date_case_type_col_mappers,
 )
 from gen_epix.casedb.services.case.case_transformer import CaseTransformer
-from gen_epix.casedb.services.case.create_case import (
-    case_service_create_case_set,
-    case_service_create_cases,
-)
+from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
 from gen_epix.casedb.services.case.create_seq import (
     case_service_create_file_for_read_set_or_seq,
     case_service_create_read_sets_or_seqs_for_cases,
@@ -89,6 +86,7 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_set_stats,
     case_service_retrieve_case_type_stats,
 )
+from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
@@ -139,7 +137,7 @@ class CaseService(BaseCaseService):
         return case_validation_report
 
     def upload_cases(self, cmd: command.UploadCasesCommand) -> list[model.Case] | None:
-        return case_service_create_cases(self, cmd)
+        return case_service_upload_cases(self, cmd)
 
     def create_case_set(
         self, cmd: command.CreateCaseSetCommand

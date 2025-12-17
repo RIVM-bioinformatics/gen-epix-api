@@ -1,6 +1,5 @@
 # pylint: disable=useless-import-alias
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin as DataLineageMixin
-from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
 from gen_epix.omopdb.domain.model.omop.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop.omop import Cohort as Cohort
@@ -52,3 +51,4 @@ from gen_epix.omopdb.domain.model.omop.omop import SurveyConduct as SurveyConduc
 from gen_epix.omopdb.domain.model.omop.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop.omop import Vocabulary as Vocabulary
+from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject

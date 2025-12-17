@@ -43,22 +43,6 @@ from gen_epix.seqdb.domain.model.seq.locus import Locus as Locus
 from gen_epix.seqdb.domain.model.seq.locus import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet as LocusSet
 from gen_epix.seqdb.domain.model.seq.locus import RefAllele as RefAllele
-from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    AlleleForUpload as AlleleForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    AlleleProfileForUpload as AlleleProfileForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    ReadSetForUpload as ReadSetForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    SampleForUpload as SampleForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.non_persistable import (
-    SampleSetForUpload as SampleSetForUpload,
-)
-from gen_epix.seqdb.domain.model.seq.non_persistable import SeqForUpload as SeqForUpload
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq.pheno import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasurement
@@ -111,3 +95,13 @@ from gen_epix.seqdb.domain.model.seq.tree import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq.tree import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
+from gen_epix.seqdb.domain.model.seq.upload import AlleleForUpload as AlleleForUpload
+from gen_epix.seqdb.domain.model.seq.upload import (
+    AlleleProfileForUpload as AlleleProfileForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
+from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
+from gen_epix.seqdb.domain.model.seq.upload import (
+    SampleSetForUpload as SampleSetForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload

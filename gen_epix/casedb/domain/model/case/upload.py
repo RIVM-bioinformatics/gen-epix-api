@@ -1,7 +1,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
@@ -136,3 +136,15 @@ class CasesForUpload(Model):
         if len(all_external_ids) != len(set(all_external_ids)):
             raise ValueError("cases must not contain duplicate external_ids.")
         return self
+
+    @computed_field
+    @property
+    def has_read_sets(self) -> bool:
+        """Indicates whether there are any read sets in the cases."""
+        return any(len(x.read_sets or []) > 0 for x in self.cases)
+
+    @computed_field
+    @property
+    def has_seqs(self) -> bool:
+        """Indicates whether there are any sequences in the cases."""
+        return any(len(x.seqs or []) > 0 for x in self.cases)
