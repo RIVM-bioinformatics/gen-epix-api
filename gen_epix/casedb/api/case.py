@@ -681,13 +681,13 @@ def create_case_endpoints(
     )
     async def create_seqs_for_cases(
         user: registered_user_dependency,  # type: ignore
-        case_seqs: list[model.SeqForUpload],
+        seqs: list[model.SeqForUpload],
     ) -> list[model.Seq]:
         try:
             created_seqs: list[model.Seq] = app.handle(
                 command.CreateSeqsForCasesCommand(
                     user=user,
-                    case_seqs=case_seqs,
+                    seqs=seqs,
                 )
             )
         except Exception as exception:

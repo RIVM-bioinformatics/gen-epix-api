@@ -34,9 +34,9 @@ def case_service_create_read_sets_or_seqs_for_cases(
         case_type_col_ids = [x.case_type_col_id for x in cmd.read_sets]
     elif isinstance(cmd, command.CreateSeqsForCasesCommand):
         is_read_set = False
-        seqs = [x.seq for x in cmd.case_seqs]  # type:ignore
-        case_ids = [x.case_id for x in cmd.case_seqs]
-        case_type_col_ids = [x.case_type_col_id for x in cmd.case_seqs]
+        seqs = [x.seq for x in cmd.seqs]  # type:ignore
+        case_ids = [x.case_id for x in cmd.seqs]
+        case_type_col_ids = [x.case_type_col_id for x in cmd.seqs]
     else:
         raise exc.InvalidArgumentsError("Invalid command type")
 

@@ -93,10 +93,14 @@ from gen_epix.seqdb.domain.model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.domain.model.seq import Sample as Sample
 from gen_epix.seqdb.domain.model.seq import SampleBatchForUpload as SampleBatchForUpload
 from gen_epix.seqdb.domain.model.seq import (
+    SampleBatchUploadResult as SampleBatchUploadResult,
+)
+from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
 from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
+from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
@@ -197,6 +201,9 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleForUpload,
             AlleleProfileForUpload,
             SampleForUpload,
+            SampleBatchForUpload,
+            SampleUploadResult,
+            SampleBatchUploadResult,
             CompleteContig,
             CompleteSnpProfile,
         ],

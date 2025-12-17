@@ -11,6 +11,7 @@ from gen_epix.commondb.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
@@ -297,31 +298,56 @@ class CreateReadSetsForCasesCommand(Command):
     """
 
     read_sets: list[model.ReadSetForUpload] = Field(
-        description="The read sets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
+        description="The read sets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The case_ids must be unique and the ids must be None.",
     )
 
     @field_validator("read_sets", mode="after")
     def _validate_read_sets(
         cls,
-        case_read_sets: list[model.ReadSetForUpload],
+        read_sets: list[model.ReadSetForUpload],
     ) -> list[model.ReadSetForUpload]:
-        case_ids = [x.case_id for x in case_read_sets]
-        read_set_ids = [
-            x.read_set_id for x in case_read_sets if x.read_set_id is not None
-        ]
-        if read_set_ids and len(set(read_set_ids)) < len(read_set_ids):
-            raise exc.InvalidArgumentsError("CaseReadSets may not contain read_set_id")
-        if any(x.read_set is None for x in case_read_sets):
-            raise exc.InvalidArgumentsError(
-                "CaseReadSets may not have None for read_set "
-            )
+        case_ids = [x.case_id for x in read_sets]
+        if any(x == NULL_ID for x in case_ids):
+            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
         duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
         if duplicate_case_ids:
             duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
             raise exc.InvalidArgumentsError(
-                f"Some CaseReadSets have identical case_id: {duplicates_str}"
+                f"Some read sets have identical case_id: {duplicates_str}"
             )
-        return case_read_sets
+        read_set_ids = [x.id for x in read_sets if x.id is not None and x.id != NULL_ID]
+        if read_set_ids:
+            raise exc.InvalidArgumentsError("read_sets may not have id filled in")
+        return read_sets
+
+
+class CreateSeqsForCasesCommand(Command):
+    """
+    Create sequences for a set of cases based on a genetic sequence case type column.
+    """
+
+    seqs: list[model.SeqForUpload] = Field(
+        description="The sequences describing for which (case_id, case_type_col_id) a Seq (genetic sequence) is to be created. The case_ids must be unique and the ids must be None."
+    )
+
+    @field_validator("seqs", mode="after")
+    def _validate_seqs(
+        cls,
+        seqs: list[model.SeqForUpload],
+    ) -> list[model.SeqForUpload]:
+        case_ids = [x.case_id for x in seqs]
+        if any(x == NULL_ID for x in case_ids):
+            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
+        duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
+        if duplicate_case_ids:
+            duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
+            raise exc.InvalidArgumentsError(
+                f"Some read sets have identical case_id: {duplicates_str}"
+            )
+        seq_ids = [x.id for x in seqs if x.id is not None and x.id != NULL_ID]
+        if seq_ids:
+            raise exc.InvalidArgumentsError("seqs may not have id filled in")
+        return seqs
 
 
 class CreateFileForReadSetCommand(Command):
@@ -364,16 +390,6 @@ class CreateFileForSeqCommand(Command):
     file_compression: seqdb_enum.FileCompression = Field(
         default=seqdb_enum.FileCompression.NONE,
         description="The compression of the sequence file.",
-    )
-
-
-class CreateSeqsForCasesCommand(Command):
-    """
-    Create sequences for a set of cases based on a genetic sequence case type column.
-    """
-
-    case_seqs: list[model.SeqForUpload] = Field(
-        description="The CaseSequences describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
     )
 
 

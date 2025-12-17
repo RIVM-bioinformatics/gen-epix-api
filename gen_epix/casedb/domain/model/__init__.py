@@ -21,6 +21,9 @@ from gen_epix.casedb.domain.model.case import BaseCaseRights as BaseCaseRights
 from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchForUpload
 from gen_epix.casedb.domain.model.case import (
+    CaseBatchUploadResult as CaseBatchUploadResult,
+)
+from gen_epix.casedb.domain.model.case import (
     CaseDataCollectionLink as CaseDataCollectionLink,
 )
 from gen_epix.casedb.domain.model.case import CaseDataIssue as CaseDataIssue
@@ -49,6 +52,7 @@ from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
+from gen_epix.casedb.domain.model.case import CaseUploadResult as CaseUploadResult
 from gen_epix.casedb.domain.model.case import (
     CaseValidationReport as CaseValidationReport,
 )
@@ -190,6 +194,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqForUpload,
             CaseForUpload,
             CaseBatchForUpload,
+            CaseUploadResult,
+            CaseBatchUploadResult,
             CaseTypeStat,
             CaseSetStat,
             CaseQuery,

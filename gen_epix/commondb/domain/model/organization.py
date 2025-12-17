@@ -440,12 +440,13 @@ class ExternalIdentifier(Model):
     )
 
 
-class ExternalIdentifierForUpload(BaseModel):
+class ExternalIdentifierForUpload(BaseModel, frozen=True):
     """
     An external identifier, defined as the combination of
     (identifier issuer, identifier), intended for an upload operation.
     The identifier issuer can be given either as its code or ID to facilitate the
     upload operation where applicable.
+    The model is immutable (frozen) to allow its use in sets and as dictionary keys.
     """
 
     identifier_issuer_id: UUID | None = Field(
@@ -474,7 +475,7 @@ class ExternalIdentifierForUpload(BaseModel):
         Only when all three match, the objects are considered equal.
         """
         if not isinstance(other, ExternalIdentifierForUpload):
-            return NotImplemented
+            return False
         return (
             self.identifier_issuer_id == other.identifier_issuer_id
             and self.identifier_issuer_code == other.identifier_issuer_code

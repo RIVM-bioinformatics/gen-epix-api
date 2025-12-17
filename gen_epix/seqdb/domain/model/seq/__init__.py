@@ -103,5 +103,11 @@ from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetFo
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchForUpload as SampleBatchForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.upload import (
+    SampleBatchUploadResult as SampleBatchUploadResult,
+)
 from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
+from gen_epix.seqdb.domain.model.seq.upload import (
+    SampleUploadResult as SampleUploadResult,
+)
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload

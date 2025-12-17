@@ -190,7 +190,9 @@ class Entity(BaseModel):
             if self._model_class is model_class:
                 return self
             if on_existing == "raise":
-                raise ValueError("Instance already has a model set")
+                raise ValueError(
+                    f"Entity already has a model set: {self._model_class.__name__}"
+                )
             elif on_existing == "replace":
                 pass
             else:

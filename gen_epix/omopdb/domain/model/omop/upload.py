@@ -1,10 +1,18 @@
+from collections.abc import Hashable
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, field_serializer, model_validator
+from pydantic import (
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
+from gen_epix.commondb.domain.model.base import UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
@@ -45,7 +53,7 @@ class ConceptFieldsForUploadMixin:
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = []
 
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
+    def _validate_concept_fields_for_upload(self) -> Self:
         for id_field, int_id_field in self.CONCEPT_FIELD_PAIRS:
             id_value = getattr(self, id_field)
             int_id_value = getattr(self, int_id_field)
@@ -129,7 +137,7 @@ class MeasurementForUpload(Measurement, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class ObervationForUpload(Observation, ConceptFieldsForUploadMixin):
+class ObservationForUpload(Observation, ConceptFieldsForUploadMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables. The different concepts can be given either as their UUID
@@ -291,7 +299,7 @@ class PersonForUpload(Person):
     measurements: list[MeasurementForUpload] | None = Field(
         description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
-    observations: list[ObervationForUpload] | None = Field(
+    observations: list[ObservationForUpload] | None = Field(
         description="The observations. If None, this element is not taken into consideration during the upload.",
     )
     specimens: list[SpecimenForUpload] | None = Field(
@@ -299,19 +307,77 @@ class PersonForUpload(Person):
     )
     # TODO: add other associated data types when needed
 
+    @field_validator("external_ids", "data_collection_ids", mode="after")
+    def _validate_associated_ids(
+        cls, value: list[Hashable] | None
+    ) -> list[Hashable] | None:
+        if value is None:
+            return None
+        if len(set(value)) != len(value):
+            raise ValueError("Associated IDs must be unique.")
+        return value
+
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        if self.person_id is None or self.person_id == NULL_ID:
-            return self
+    def _validate_person_for_upload(self) -> Self:
+        # Verify that external_ids contains no duplicates
+        if self.external_ids is not None and len(self.external_ids) != len(
+            set(self.external_ids)
+        ):
+            raise ValueError("external_ids must not contain duplicates.")
+        # TODO: verify that each list of results is unique, e.g. no identical measurements
+        # Verify that result person_ids are consistent with person id
+        person_id = NULL_ID if self.id is None else self.id
         for field_name in self.RESULT_FIELD_NAMES:
             items = getattr(self, field_name)
             for item in items or []:
-                if item.person_id in (None, NULL_ID):
+                if item.person_id == NULL_ID or item.person_id == person_id:
                     continue
                 raise ValueError(
-                    f"person_id of {field_name} is not None or the null ID, while the person_id variable is not provided."
+                    f"person_id of {field_name} is not the null ID, while the person id variable is not provided."
                 )
         return self
+
+
+class PersonUploadResult(UploadResult):
+    """
+    The result of uploading a single person.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonUploadResult"
+
+    SUB_RESULT_FIELD_NAMES: ClassVar = [
+        "person_result",
+    ]
+    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
+        "external_id_results",
+        "data_collection_id_results",
+        "measurement_results",
+        "observation_results",
+        "specimen_results",
+    ]
+
+    person_result: UploadResult | None = Field(
+        default=None,
+        description="The result of uploading the person itself.",
+    )
+    external_id_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the external identifiers associated with the person, if any were provided, in the same order as provided.",
+    )
+    data_collection_id_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of associating the person with the data collections, if any were provided.",
+    )
+    measurement_results: list[UploadResult] | None = Field(
+        description="The results of uploading the individual measurements, if any were provided, in the same order as provided."
+    )
+    observation_results: list[UploadResult] | None = Field(
+        description="The results of uploading the individual observations, if any were provided, in the same order as provided."
+    )
+    specimen_results: list[UploadResult] | None = Field(
+        description="The results of uploading the individual specimens, if any were provided, in the same order as provided."
+    )
 
 
 class PersonBatchForUpload(Model):
@@ -321,6 +387,7 @@ class PersonBatchForUpload(Model):
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonBatchForUpload"
 
     persons: list[PersonForUpload] = Field(
         description="The persons intended for upload.",
@@ -347,3 +414,20 @@ class PersonBatchForUpload(Model):
         return any(len(x.specimens or []) > 0 for x in self.persons)
 
     # TODO: add model validator to make sure person are unique
+
+
+class PersonBatchUploadResult(UploadResult):
+    """
+    The result of uploading a batch of persons.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonBatchUploadResult"
+
+    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
+        "person_results",
+    ]
+
+    person_results: list[PersonUploadResult] = Field(
+        description="The results of uploading the individual persons, in the same order as provided."
+    )

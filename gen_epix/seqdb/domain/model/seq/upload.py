@@ -1,13 +1,20 @@
+from collections.abc import Hashable
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, field_serializer, model_validator
+from pydantic import (
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.base import BatchForUpload, UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
-from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
     SeqTaxonomy,
@@ -87,7 +94,7 @@ class AlleleForUpload(Allele):
     )
 
     @model_validator(mode="after")
-    def _validate_locus_fields(self) -> Self:
+    def _validate_allele_for_upload(self) -> Self:
         """Ensure that either locus_code or locus_id is set."""
         if self.locus_code is None and self.locus_id == NULL_ID:
             raise ValueError("Either locus_code or locus_id must be provided.")
@@ -158,7 +165,7 @@ class AlleleProfileForUpload(AlleleProfile):
     )
 
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
+    def _validate_allele_profile_for_upload(self) -> Self:
         """Ensure that either locus_detection_protocol_code or locus_detection_protocol_id is set, and similarly for locus_set."""
         if (
             not self.locus_detection_protocol_code
@@ -283,28 +290,135 @@ class SampleForUpload(Sample):
         description="The AST measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
 
+    @field_validator("external_ids", "data_collection_ids", mode="after")
+    def _validate_associated_ids(
+        cls, value: list[Hashable] | None
+    ) -> list[Hashable] | None:
+        if value is None:
+            return None
+        if len(set(value)) != len(value):
+            raise ValueError("Associated IDs must be unique.")
+        return value
+
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        if self.id is None or self.id == NULL_ID:
-            return self
+    def _validate_sample_for_upload(self) -> Self:
+        # Verify that external_ids contains no duplicates
+        if self.external_ids is not None and len(self.external_ids) != len(
+            set(self.external_ids)
+        ):
+            raise ValueError("external_ids must not contain duplicates.")
+        # TODO: verify that each list of results is unique, e.g. no identical read sets
+        # Verify that result sample_ids are consistent with sample id
+        sample_id = NULL_ID if self.id is None else self.id
         for field_name in self.RESULT_FIELD_NAMES:
             items = getattr(self, field_name)
             for item in items or []:
-                if item.sample_id in (None, NULL_ID):
+                if item.sample_id == NULL_ID or item.sample_id == sample_id:
                     continue
                 raise ValueError(
-                    f"sample_id of {field_name} is not None or the null ID, while the sample id variable is not provided."
+                    f"sample_id of {field_name} is not the null ID, while the sample id variable is not provided."
                 )
         return self
 
 
-class SampleBatchForUpload(Model):
+class SampleUploadResult(UploadResult):
+    """
+    The result of uploading a single sample.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "SampleUploadResult"
+
+    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
+        "sample_result",
+    ]
+    RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
+        "external_id_results",
+        "data_collection_id_results",
+        "read_set_results",
+        "seq_results",
+        "seq_taxonomy_results",
+        "seq_classification_results",
+        "locus_profile_results",
+        "allele_profile_results",
+        "snp_profile_results",
+        "mlva_profile_results",
+        "kmer_profile_results",
+        "distance_results",
+        "pcr_measurement_results",
+        "ast_measurement_results",
+    ]
+
+    sample_result: UploadResult | None = Field(
+        default=None,
+        description="The result of uploading the sample itself.",
+    )
+    external_id_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
+    )
+    data_collection_id_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of associating the sample with the data collections, if any were provided.",
+    )
+    read_set_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the read sets associated with the sample, if any were provided, in the same order as provided.",
+    )
+    seq_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the sequences associated with the sample, if any were provided, in the same order as provided.",
+    )
+    seq_taxonomy_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the seq taxonomies associated with the sample, if any were provided, in the same order as provided.",
+    )
+    seq_classification_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the seq classifications associated with the sample, if any were provided, in the same order as provided.",
+    )
+    locus_profile_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the locus profiles associated with the sample, if any were provided, in the same order as provided.",
+    )
+    allele_profile_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the allele profiles associated with the sample, if any were provided, in the same order as provided.",
+    )
+    snp_profile_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the SNP profiles associated with the sample, if any were provided, in the same order as provided.",
+    )
+    mlva_profile_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the MLVA profiles associated with the sample, if any were provided, in the same order as provided.",
+    )
+    kmer_profile_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the k-mer profiles associated with the sample, if any were provided, in the same order as provided.",
+    )
+    distance_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the genetic distances associated with the sample, if any were provided, in the same order as provided.",
+    )
+    pcr_measurement_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the PCR measurements associated with the sample, if any were provided, in the same order as provided.",
+    )
+    ast_measurement_results: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the AST measurements associated with the sample, if any were provided, in the same order as provided.",
+    )
+
+
+class SampleBatchForUpload(BatchForUpload):
     """
     A set of samples intended for upload, together with any new reference data required
     for the storage of these data.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "SampleBatchForUpload"
 
     samples: list[SampleForUpload] = Field(
         description="The samples to be uploaded.",
@@ -390,3 +504,20 @@ class SampleBatchForUpload(Model):
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
 
     # TODO: add model validator to make sure samples are unique
+
+
+class SampleBatchUploadResult(UploadResult):
+    """
+    The result of uploading a batch of cases.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "SampleBatchUploadResult"
+
+    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
+        "sample_results",
+    ]
+
+    sample_results: list[SampleUploadResult] = Field(
+        description="The results of uploading the individual samples, in the same order as provided."
+    )

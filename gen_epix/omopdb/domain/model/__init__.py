@@ -75,6 +75,25 @@ from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
+from gen_epix.omopdb.domain.model.omop.upload import (
+    MeasurementForUpload as MeasurementForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    ObservationForUpload as ObservationForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonBatchForUpload as PersonBatchForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonBatchUploadResult as PersonBatchUploadResult,
+)
+from gen_epix.omopdb.domain.model.omop.upload import PersonForUpload as PersonForUpload
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonUploadResult as PersonUploadResult,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    SpecimenForUpload as SpecimenForUpload,
+)
 from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
 
 # List up model classes per service and sorted according to links topology
@@ -149,6 +168,16 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             # General relationships
             FactRelationship,
             MeasurementRelation,
+            # Upload
+            SpecimenForUpload,
+            MeasurementForUpload,
+            ObservationForUpload,
+            PersonForUpload,
+            PersonUploadResult,
+            PersonBatchForUpload,
+            PersonBatchUploadResult,
+            # Download
+            Subject,
         ],
     }
 )
