@@ -385,10 +385,10 @@ class CaseAbac(BaseModel):
     ) -> bool:
         has_right_fn = self._get_has_right_function(right)
         get_share_from_data_collections_fn = (
-                self._get_get_share_from_data_collections_function(right)
-            )
+            self._get_get_share_from_data_collections_function(right)
+        )
         if data_collection_id not in access_abac:
-                    # No access to this data collection
+            # No access to this data collection
             return False
         if access_abac[data_collection_id].is_private:
             # Private data collection different from the created in data collection
@@ -399,9 +399,7 @@ class CaseAbac(BaseModel):
                 share_abac is None
                 or data_collection_id not in share_abac
                 or not current_data_collection_ids.intersection(
-                    get_share_from_data_collections_fn(
-                        share_abac[data_collection_id]
-                    )
+                    get_share_from_data_collections_fn(share_abac[data_collection_id])
                 )
             ):
                 # No direct share rights either
@@ -430,10 +428,8 @@ class CaseAbac(BaseModel):
                     f"current_data_collection_ids must be empty for right {right.value} if is_create_or_delete=True"
                 )
         remaining_data_collection_ids = (
-                set()
-                if tgt_data_collection_ids is None
-                else set(tgt_data_collection_ids)
-            )
+            set() if tgt_data_collection_ids is None else set(tgt_data_collection_ids)
+        )
         remaining_data_collection_ids.discard(
             created_in_data_collection_id  # type:ignore[arg-type]
         )
@@ -478,9 +474,9 @@ class CaseAbac(BaseModel):
                 )
             tgt_data_collection_ids = current_data_collection_ids
         if not tgt_data_collection_ids.issubset(current_data_collection_ids):
-                raise exc.InvalidArgumentsError(
-                    f"tgt_data_collection_ids must be a subset of current_data_collection_ids for right {right.value}"
-                )
+            raise exc.InvalidArgumentsError(
+                f"tgt_data_collection_ids must be a subset of current_data_collection_ids for right {right.value}"
+            )
         # Check for each of the remaining target data collections if the user has
         # the right to remove cases or case sets from it
         remaining_data_collection_ids = set(tgt_data_collection_ids)
@@ -560,47 +556,56 @@ class CaseAbac(BaseModel):
         )
         return case_set_rights
 
-    def _get_case_or_set_rights(
+    def _get_case_or_set_rights_with_full_access(
         self,
         case_or_set_id: UUID,
         is_case_set: bool,
         case_type_id: UUID,
         created_in_data_collection_id: UUID,
-        data_collection_ids: frozenset[UUID],
+        data_collection_ids: set[UUID],
     ) -> CaseRights | CaseSetRights:
-        # Parse input
-        shared_in_data_collection_ids = data_collection_ids - {
-            created_in_data_collection_id
-        }
-        if self.is_full_access:
-            if is_case_set:
-                return CaseSetRights(
-                    case_set_id=case_or_set_id,
-                    case_type_id=case_type_id,
-                    created_in_data_collection_id=created_in_data_collection_id,
-                    data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
-                    is_full_access=True,
-                    add_data_collection_ids=set(),
-                    remove_data_collection_ids=set(),
-                    read_case_set=True,
-                    write_case_set=True,
-                    can_delete=True,
-                    shared_in_data_collection_ids=shared_in_data_collection_ids,
-                )
-            return CaseRights(
-                case_id=case_or_set_id,
+        shared_in_data_collection_ids: set[UUID] = data_collection_ids - {
+                created_in_data_collection_id
+            }
+        if is_case_set:
+            return CaseSetRights(
+                case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
                 data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
                 is_full_access=True,
                 add_data_collection_ids=set(),
                 remove_data_collection_ids=set(),
-                read_case_type_col_ids=set(),
-                write_case_type_col_ids=set(),
+                read_case_set=True,
+                write_case_set=True,
                 can_delete=True,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
+        return CaseRights(
+            case_id=case_or_set_id,
+            case_type_id=case_type_id,
+            created_in_data_collection_id=created_in_data_collection_id,
+            data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
+            is_full_access=True,
+            add_data_collection_ids=set(),
+            remove_data_collection_ids=set(),
+            read_case_type_col_ids=set(),
+            write_case_type_col_ids=set(),
+            can_delete=True,
+            shared_in_data_collection_ids=shared_in_data_collection_ids,
+        )
 
+    def _get_case_or_set_rights_without_full_access(
+        self,
+        case_or_set_id: UUID,
+        is_case_set: bool,
+        case_type_id: UUID,
+        created_in_data_collection_id: UUID,
+        data_collection_ids: set[UUID],
+    ) -> CaseRights | CaseSetRights:
+        shared_in_data_collection_ids = data_collection_ids - {
+            created_in_data_collection_id
+        }
         # Determine case access: if the case/set created_in_data_collection_id is a
         # private data collection, the user is allowed add to/remove from the
         # listed data collections
@@ -611,75 +616,17 @@ class CaseAbac(BaseModel):
             x.data_collection_id == created_in_data_collection_id and x.is_private
             for x in self.case_type_access_abacs.get(case_type_id, {}).values()
         )
-        # Data collections that the case/set is not yet in but is allowed to be added to
-        add_data_collection_ids = (
-            {
-                x
-                for x, y in access.items()
-                if (y.add_case_set if is_case_set else y.add_case)
-                and x not in data_collection_ids
-            }
-            if is_own_private
-            else set()
+        add_data_collection_ids = self.get_addable_data_collections_ids(
+            is_case_set, data_collection_ids, access, is_own_private
         )
-        # Data collections that the case/set is in and is allowed to be removed from
-        remove_data_collection_ids = (
-            {
-                x
-                for x, y in access.items()
-                if (y.remove_case_set if is_case_set else y.remove_case)
-                and x in data_collection_ids
-            }
-            if is_own_private
-            else set()
+        remove_data_collection_ids = self.get_removable_data_collections_ids(
+            is_case_set, data_collection_ids, access, is_own_private
         )
+        can_delete = set(data_collection_ids).issubset(set(remove_data_collection_ids))
 
-        # Read/write rights
         if is_case_set:
-            # Whether the case set can be read/written
             read_case_set = any(x.read_case_set for x in access.values())
             write_case_set = any(x.write_case_set for x in access.values())
-        else:
-            # Case type cols that can be read/written
-            read_case_type_col_ids = set.union(
-                *[x.read_case_type_col_ids for x in access.values()]
-            )
-            write_case_type_col_ids = set.union(
-                *[x.write_case_type_col_ids for x in access.values()]
-            )
-
-        # Determine any other share rights
-        share: dict[UUID, CaseTypeShareAbac] = self.case_type_share_abacs.get(
-            case_type_id, {}
-        )
-        for to_data_collection_id, case_type_share_abac in share.items():
-            add_from_data_collection_ids = (
-                case_type_share_abac.add_case_set_from_data_collection_ids
-                if is_case_set
-                else case_type_share_abac.add_case_from_data_collection_ids
-            )
-            if (
-                to_data_collection_id not in data_collection_ids
-                and add_from_data_collection_ids.intersection(data_collection_ids)
-            ):
-                add_data_collection_ids.add(to_data_collection_id)
-            remove_from_data_collection_ids = (
-                case_type_share_abac.remove_case_set_from_data_collection_ids
-                if is_case_set
-                else case_type_share_abac.remove_case_from_data_collection_ids
-            )
-            if (
-                to_data_collection_id in data_collection_ids
-                and remove_from_data_collection_ids.intersection(data_collection_ids)
-            ):
-                remove_data_collection_ids.add(to_data_collection_id)
-
-        can_delete = self.is_full_access or set(data_collection_ids).issubset(
-            set(remove_data_collection_ids)
-        )
-
-        # Create the rights object
-        if is_case_set:
             return CaseSetRights(
                 case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
@@ -693,6 +640,12 @@ class CaseAbac(BaseModel):
                 can_delete=can_delete,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
+        read_case_type_col_ids: set[UUID] = {
+            col_id for x in access.values() for col_id in x.read_case_type_col_ids
+        }
+        write_case_type_col_ids: set[UUID] = {
+            col_id for x in access.values() for col_id in x.write_case_type_col_ids
+        }
         return CaseRights(
             case_id=case_or_set_id,
             case_type_id=case_type_id,
@@ -705,6 +658,72 @@ class CaseAbac(BaseModel):
             write_case_type_col_ids=write_case_type_col_ids,
             can_delete=can_delete,
             shared_in_data_collection_ids=shared_in_data_collection_ids,
+        )
+
+    def get_removable_data_collections_ids(
+        self, 
+        is_case_set: bool, 
+        data_collection_ids: frozenset[UUID], 
+        access: dict[UUID, CaseTypeAccessAbac],
+        is_own_private: bool,
+    ) -> set[UUID]:
+        remove_data_collection_ids: set[UUID] = (
+            {
+                x
+                for x, y in access.items()
+                if (y.remove_case_set if is_case_set else y.remove_case)
+                and x in data_collection_ids
+            }
+            if is_own_private
+            else set()
+        )
+
+        return remove_data_collection_ids
+
+    def get_addable_data_collections_ids(
+        self, 
+        is_case_set: bool, 
+        data_collection_ids: frozenset[UUID], 
+        access: dict[UUID, CaseTypeAccessAbac],
+        is_own_private: bool,
+    ) -> set[UUID]:
+        add_data_collection_ids: set[UUID] = (
+            {
+                x
+                for x, y in access.items()
+                if (y.add_case_set if is_case_set else y.add_case)
+                and x not in data_collection_ids
+            }
+            if is_own_private
+            else set()
+        )
+
+        return add_data_collection_ids
+
+    def _get_case_or_set_rights(
+        self,
+        case_or_set_id: UUID,
+        is_case_set: bool,
+        case_type_id: UUID,
+        created_in_data_collection_id: UUID,
+        data_collection_ids: frozenset[UUID],
+    ) -> CaseRights | CaseSetRights:
+        # Parse input
+        if self.is_full_access:
+            return self._get_case_or_set_rights_with_full_access(
+                case_or_set_id,
+                is_case_set,
+                case_type_id,
+                created_in_data_collection_id,
+                data_collection_ids,
+            )
+
+        return self._get_case_or_set_rights_without_full_access(
+            case_or_set_id,
+            is_case_set,
+            case_type_id,
+            created_in_data_collection_id,
+            data_collection_ids,
         )
 
     @staticmethod
