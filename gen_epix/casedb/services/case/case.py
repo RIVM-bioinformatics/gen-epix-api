@@ -356,105 +356,114 @@ class CaseService(BaseCaseService):
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
-        if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
-            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
-        if on_invalid_case_set_id not in {"raise", "ignore"}:
-            raise exc.InvalidArgumentsError(
-                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-            )
-
-        # Retrieve all case sets, potentially filtered
-        case_sets: list[model.CaseSet]
-        if case_set_ids:
-            if filter:
-                raise exc.InvalidArgumentsError(
-                    "Cannot use datetime range filter with case set ids"
-                )
-            case_sets = self.repository.crud(  # type:ignore[assignment]
+        self.validate_case_right(right, on_invalid_case_set_id)
+        case_sets: list[model.CaseSet] = (
+            self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
                 model.CaseSet,
                 None,
-                case_set_ids,
-                CrudOperation.READ_SOME,
+                case_set_ids if case_set_ids else None,
+                CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
+                filter=None if case_set_ids else filter,
             )
-        else:
-            case_sets = self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user_id,
-                model.CaseSet,
-                None,
-                None,
-                CrudOperation.READ_ALL,
-                filter=filter,
-            )
+        )
 
         # Filter on case_type_id if any or verify that all case sets have the valid
         # case_type_id if case_set_ids is given
         # TODO: add more efficient implementation by adding this as a filter in the
         # call to the repository
         if case_type_id is not None:
-            if case_set_ids:
-                if on_invalid_case_set_id == "raise":
-                    if not all(x.case_type_id == case_type_id for x in case_sets):
-                        raise exc.InvalidArgumentsError(
-                            f"Some case sets have invalid case type ids: {case_set_ids}"
-                        )
-                elif on_invalid_case_set_id == "ignore":
-                    pass
-                else:
-                    raise AssertionError(
-                        f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                    )
-            case_sets = [x for x in case_sets if x.case_type_id == case_type_id]
-
-        # Special case: full_access
+            case_sets = self._filter_case_sets_by_same_case_type_id(
+                case_type_id, case_set_ids, on_invalid_case_set_id, case_sets
+            )
         if case_abac.is_full_access:
             return case_sets
-
-        # @ABAC: filter case sets to which the user has read access
         case_set_data_collections = self._retrieve_case_set_data_collections_map(
             uow, user_id
         )
         has_access = case_abac.get_combinations_with_access_right(right)
-        filtered_case_sets = []
+        filtered_case_sets: list[model.CaseSet] = []
         for case_set in case_sets:
-            # Check if user has any access to case
-            case_type_id = case_set.case_type_id
-            if case_type_id not in has_access:
-                if case_set_ids:
-                    if on_invalid_case_set_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested cases"
-                        )
-                    elif on_invalid_case_set_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
-                        )
-                continue
-            # Check if user has access to any of the data collections of the case set
-            data_collection_ids = case_set_data_collections.get(
-                case_set.id, set()  # type:ignore[arg-type]
+            self._validate_case_set_access(
+                case_set,
+                user_id,
+                case_set_ids,
+                on_invalid_case_set_id,
+                case_set_data_collections,
+                has_access,
             )
-            data_collection_ids.add(case_set.created_in_data_collection_id)
-            if not data_collection_ids.intersection(has_access[case_type_id]):
-                if case_set_ids:
-                    if on_invalid_case_set_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested case sets"
-                        )
-                    elif on_invalid_case_set_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                        )
-                continue
-            # Keep case
             filtered_case_sets.append(case_set)
         return filtered_case_sets
+
+    def _validate_case_set_access(
+        self,
+        case_set: model.CaseSet,
+        user_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_set_data_collections: dict[UUID, set[UUID]],
+        has_access: dict[UUID, set[UUID]],
+    ) -> None:
+        if case_set.case_type_id not in has_access and case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested cases"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
+                )
+        # Check if user has access to any of the data collections of the case set
+        data_collection_ids = set(case_set_data_collections.get(case_set.id, ()))
+        data_collection_ids.add(case_set.created_in_data_collection_id)
+
+        if (
+            not data_collection_ids & has_access.get(case_set.case_type_id, set())
+            and case_set_ids
+        ):
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested case sets"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+    def _filter_case_sets_by_same_case_type_id(
+        self,
+        case_type_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_sets: list[model.CaseSet],
+    ) -> list[model.CaseSet]:
+        if case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                if not all(x.case_type_id == case_type_id for x in case_sets):
+                    raise exc.InvalidArgumentsError(
+                        f"Some case sets have invalid case type ids: {case_set_ids}"
+                    )
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+        return [x for x in case_sets if x.case_type_id == case_type_id]
+
+    def validate_case_right(
+        self, right: enum.CaseRight, on_invalid_case_set_id: str
+    ) -> None:
+        if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
+            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+        if on_invalid_case_set_id not in {"raise", "ignore"}:
+            raise exc.InvalidArgumentsError(
+                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+            )
 
     def _retrieve_cases_with_content_right(
         self,
