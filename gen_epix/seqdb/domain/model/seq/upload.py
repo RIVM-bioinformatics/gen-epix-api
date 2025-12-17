@@ -298,7 +298,7 @@ class SampleForUpload(Sample):
         return self
 
 
-class SampleSetForUpload(Model):
+class SampleBatchForUpload(Model):
     """
     A set of samples intended for upload, together with any new reference data required
     for the storage of these data.

@@ -314,7 +314,7 @@ class PersonForUpload(Person):
         return self
 
 
-class PersonSetForUpload(Model):
+class PersonBatchForUpload(Model):
     """
     A set of persons intended for upload, together with any new reference data required
     for the storage of these data.

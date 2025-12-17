@@ -100,8 +100,8 @@ from gen_epix.seqdb.domain.model.seq.upload import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
-from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
-    SampleSetForUpload as SampleSetForUpload,
+    SampleBatchForUpload as SampleBatchForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload

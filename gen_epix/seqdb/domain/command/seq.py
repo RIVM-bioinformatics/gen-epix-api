@@ -14,8 +14,8 @@ from gen_epix.seqdb.domain import enum, model
 
 
 class UploadSamplesCommand(Command):
-    sample_set: model.SampleSetForUpload = Field(
-        description="Samples to upsert, along with any associated data.",
+    sample_batch: model.SampleBatchForUpload = Field(
+        description="Samples to upload, along with any associated data.",
     )
 
 

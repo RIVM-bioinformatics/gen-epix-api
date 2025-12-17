@@ -202,7 +202,7 @@ class TestCaseAccess(CaseAccessSetup):
                         "case.created_in_data_collection_id"
                     ],
                     is_update=False,
-                    cases_set=model.CasesSetForUpload(  # type:ignore[list-item]
+                    case_batch=model.CaseBatchForUpload(  # type:ignore[list-item]
                         cases=[_create_case(row, for_create_upload=True)]
                     ),
                     data_collection_ids=set(),

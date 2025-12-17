@@ -2,7 +2,7 @@
 Unit tests for IDSDB ETL model classes.
 
 Tests the ExternalIdentifier, AlleleForUpload, AlleleProfileForUpload,
-and SampleSetForUpload models with various validation scenarios.
+and SampleBatchForUpload models with various validation scenarios.
 """
 
 import base64
@@ -1076,7 +1076,7 @@ class TestModelSampleForUpload(TestCase):
             self.assertIsInstance(seq, model.SeqForUpload)
 
 
-class TestModelSampleSetForUpload(TestCase):
+class TestModelSampleBatchForUpload(TestCase):
 
     def setUp(self) -> None:
         self.test_dir = Path(__file__).parent
@@ -1103,7 +1103,7 @@ class TestModelSampleSetForUpload(TestCase):
         # Create seqs with proper sample_id based on validation rules
         seq_sample_id = NULL_ID if sample_id != NULL_ID else uuid4()
         seqs = [
-            TestModelSampleSetForUpload._create_sample_seq_for_upload(
+            TestModelSampleBatchForUpload._create_sample_seq_for_upload(
                 sample_id=seq_sample_id, code=f"seq_{i:03d}"
             )
             for i in range(num_seqs)
@@ -1123,44 +1123,44 @@ class TestModelSampleSetForUpload(TestCase):
         defaults.update(kwargs)
         return model.SampleForUpload(**defaults)
 
-    def test_read_source_complete_sample_set1_json(self) -> None:
-        """Test reading sample_set_for_upload1.json as SampleSetForUpload model."""
-        file_path = self.test_dir / "sample_set_for_upload1.json.gz"
+    def test_read_source_complete_sample_batch1_json(self) -> None:
+        """Test reading sample_batch_for_upload1.json as SampleBatchForUpload model."""
+        file_path = self.test_dir / "sample_batch_for_upload1.json.gz"
         with gzip.open(file_path, "rt") as f:
             data = json.load(f)
         # file_path = self.test_dir / "sample_set_for_upload1.json"
         # with open(file_path, "rt") as f:
         #     data = json.load(f)
 
-        complete_sample_set = model.SampleSetForUpload(**data)
-        self.assertIsInstance(complete_sample_set, model.SampleSetForUpload)
+        sample_batch = model.SampleBatchForUpload(**data)
+        self.assertIsInstance(sample_batch, model.SampleBatchForUpload)
 
-    def test_read_source_sample_set2_json(self) -> None:
-        """Test reading sample_set_for_upload2.json as SampleSetForUpload model."""
-        file_path = self.test_dir / "sample_set_for_upload2.json"
+    def test_read_source_sample_batch2_json(self) -> None:
+        """Test reading sample_batch_for_upload2.json as SampleBatchForUpload model."""
+        file_path = self.test_dir / "sample_batch_for_upload2.json"
         with open(file_path, "rt") as f:
             data = json.load(f)
 
-        sample_set = model.SampleSetForUpload(**data)
-        self.assertIsInstance(sample_set, model.SampleSetForUpload)
+        sample_batch = model.SampleBatchForUpload(**data)
+        self.assertIsInstance(sample_batch, model.SampleBatchForUpload)
 
         # Validate structure: 4 samples with different seq/contig configurations
-        self.assertEqual(len(sample_set.samples), 4)
+        self.assertEqual(len(sample_batch.samples), 4)
 
         # Sample 1: 1 seq with 1 contig
-        sample1 = sample_set.samples[0]
+        sample1 = sample_batch.samples[0]
         self.assertEqual(len(sample1.seqs), 1)
         self.assertEqual(len(sample1.seqs[0].contigs), 1)
         self.assertEqual(sample1.seqs[0].code, "seq_001_single")
 
         # Sample 2: 1 seq with 2 contigs
-        sample2 = sample_set.samples[1]
+        sample2 = sample_batch.samples[1]
         self.assertEqual(len(sample2.seqs), 1)
         self.assertEqual(len(sample2.seqs[0].contigs), 2)
         self.assertEqual(sample2.seqs[0].code, "seq_002_double")
 
         # Sample 3: 2 seqs with 1 contig each
-        sample3 = sample_set.samples[2]
+        sample3 = sample_batch.samples[2]
         self.assertEqual(len(sample3.seqs), 2)
         self.assertEqual(len(sample3.seqs[0].contigs), 1)
         self.assertEqual(len(sample3.seqs[1].contigs), 1)
@@ -1168,7 +1168,7 @@ class TestModelSampleSetForUpload(TestCase):
         self.assertEqual(sample3.seqs[1].code, "seq_003b_single")
 
         # Sample 4: 2 seqs with 2 contigs each
-        sample4 = sample_set.samples[3]
+        sample4 = sample_batch.samples[3]
         self.assertEqual(len(sample4.seqs), 2)
         self.assertEqual(len(sample4.seqs[0].contigs), 2)
         self.assertEqual(len(sample4.seqs[1].contigs), 2)
@@ -1176,10 +1176,10 @@ class TestModelSampleSetForUpload(TestCase):
         self.assertEqual(sample4.seqs[1].code, "seq_004b_double")
 
         # Verify computed field
-        self.assertTrue(sample_set.has_seqs)
+        self.assertTrue(sample_batch.has_seqs)
 
     def test_valid_minimal(self) -> None:
-        """Test valid SampleSetForUpload with minimal data."""
+        """Test valid SampleBatchForUpload with minimal data."""
         allele_id = uuid4()
         sample = model.SampleForUpload(
             id=uuid4(),
@@ -1188,12 +1188,12 @@ class TestModelSampleSetForUpload(TestCase):
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
-        sample_set = model.SampleSetForUpload(samples=[sample])
+        sample_set = model.SampleBatchForUpload(samples=[sample])
         self.assertEqual(len(sample_set.samples), 1)
         self.assertIsNone(sample_set.alleles)
 
     def test_valid_with_alleles(self) -> None:
-        """Test valid SampleSetForUpload with alleles."""
+        """Test valid SampleBatchForUpload with alleles."""
         allele = model.AlleleForUpload(locus_code="locus123", seq="ATCG")
         allele_id = uuid4()
         sample = model.SampleForUpload(
@@ -1203,12 +1203,12 @@ class TestModelSampleSetForUpload(TestCase):
                 TestModelAlleleProfileForUpload._get_allele_profile_for_ids([allele_id])
             ],
         )
-        sample_set = model.SampleSetForUpload(samples=[sample], alleles=[allele])
+        sample_set = model.SampleBatchForUpload(samples=[sample], alleles=[allele])
         self.assertEqual(len(sample_set.samples), 1)
         self.assertEqual(len(sample_set.alleles), 1)
 
     def test_valid_with_multiple_samples(self) -> None:
-        """Test valid SampleSetForUpload with multiple samples including seqs."""
+        """Test valid SampleBatchForUpload with multiple samples including seqs."""
         # Sample with seqs
         sample_with_seqs = self._create_sample_with_seqs(num_seqs=2)
 
@@ -1224,7 +1224,7 @@ class TestModelSampleSetForUpload(TestCase):
             ],
         )
 
-        sample_set = model.SampleSetForUpload(
+        sample_set = model.SampleBatchForUpload(
             samples=[sample_with_seqs, sample_without_seqs]
         )
         self.assertEqual(len(sample_set.samples), 2)
@@ -1239,17 +1239,17 @@ class TestModelSampleSetForUpload(TestCase):
         self.assertTrue(sample_set.has_seqs)
 
     def test_valid_empty_samples_list(self) -> None:
-        """Test valid SampleSetForUpload with empty samples list."""
-        sample_set = model.SampleSetForUpload(samples=[])
+        """Test valid SampleBatchForUpload with empty samples list."""
+        sample_set = model.SampleBatchForUpload(samples=[])
         self.assertEqual(len(sample_set.samples), 0)
 
     def test_valid_with_samples_containing_seqs(self) -> None:
-        """Test SampleSetForUpload where all samples contain SeqForUpload instances."""
+        """Test SampleBatchForUpload where all samples contain SeqForUpload instances."""
         sample1 = self._create_sample_with_seqs(num_seqs=1)
         sample2 = self._create_sample_with_seqs(num_seqs=3)
         sample3 = self._create_sample_with_seqs(num_seqs=2)
 
-        sample_set = model.SampleSetForUpload(samples=[sample1, sample2, sample3])
+        sample_set = model.SampleBatchForUpload(samples=[sample1, sample2, sample3])
 
         self.assertEqual(len(sample_set.samples), 3)
         self.assertEqual(len(sample_set.samples[0].seqs), 1)
@@ -1265,7 +1265,7 @@ class TestModelSampleSetForUpload(TestCase):
                 self.assertIsInstance(seq, model.SeqForUpload)
 
     def test_valid_samples_with_different_seq_configurations(self) -> None:
-        """Test SampleSetForUpload with samples having different seq configurations."""
+        """Test SampleBatchForUpload with samples having different seq configurations."""
         # Sample with file-linked seqs
         file_id = uuid4()
         seq_with_file = self._create_sample_seq_for_upload(
@@ -1293,7 +1293,7 @@ class TestModelSampleSetForUpload(TestCase):
         sample_with_protocol = self._create_sample_with_seqs()
         sample_with_protocol.seqs = [seq_with_protocol]
 
-        sample_set = model.SampleSetForUpload(
+        sample_set = model.SampleBatchForUpload(
             samples=[sample_with_file, sample_with_qc, sample_with_protocol]
         )
 
@@ -1313,7 +1313,7 @@ class TestModelSampleSetForUpload(TestCase):
         self.assertEqual(protocol_seq.assembly_protocol_id, assembly_protocol_id)
 
     def test_valid_mixed_samples_with_and_without_seqs(self) -> None:
-        """Test SampleSetForUpload with mix of samples with and without seqs."""
+        """Test SampleBatchForUpload with mix of samples with and without seqs."""
         # Sample with multiple seqs
         sample_with_seqs = self._create_sample_with_seqs(num_seqs=2)
 
@@ -1330,7 +1330,7 @@ class TestModelSampleSetForUpload(TestCase):
             ],
         )
 
-        sample_set = model.SampleSetForUpload(
+        sample_set = model.SampleBatchForUpload(
             samples=[sample_with_seqs, sample_with_empty_seqs, sample_without_seqs]
         )
 
@@ -1343,7 +1343,7 @@ class TestModelSampleSetForUpload(TestCase):
         self.assertTrue(sample_set.has_seqs)
 
     def test_valid_sample_set_with_seqs_and_alleles(self) -> None:
-        """Test SampleSetForUpload with both sample seqs and reference alleles."""
+        """Test SampleBatchForUpload with both sample seqs and reference alleles."""
         # Create samples with seqs
         sample1 = self._create_sample_with_seqs(num_seqs=2)
         sample2 = self._create_sample_with_seqs(num_seqs=1)
@@ -1352,16 +1352,16 @@ class TestModelSampleSetForUpload(TestCase):
         allele1 = model.AlleleForUpload(locus_code="locus1", seq="ATCGATCG")
         allele2 = model.AlleleForUpload(locus_code="locus2", seq="GCTAGCTA")
 
-        sample_set = model.SampleSetForUpload(
+        sample_batch = model.SampleBatchForUpload(
             samples=[sample1, sample2], alleles=[allele1, allele2]
         )
 
-        self.assertEqual(len(sample_set.samples), 2)
-        self.assertEqual(len(sample_set.alleles), 2)
-        self.assertTrue(sample_set.has_seqs)
+        self.assertEqual(len(sample_batch.samples), 2)
+        self.assertEqual(len(sample_batch.alleles), 2)
+        self.assertTrue(sample_batch.has_seqs)
 
         # Verify samples have seqs
-        for sample in sample_set.samples:
+        for sample in sample_batch.samples:
             self.assertIsNotNone(sample.seqs)
             self.assertGreater(len(sample.seqs), 0)
 
@@ -1391,8 +1391,8 @@ class TestModelSampleSetForUpload(TestCase):
             ),
         ]
 
-        sample_set = model.SampleSetForUpload(samples=samples)
-        self.assertFalse(sample_set.has_seqs)
+        sample_batch = model.SampleBatchForUpload(samples=samples)
+        self.assertFalse(sample_batch.has_seqs)
 
     def test_computed_field_has_seqs_true_with_empty_seqs_list(self) -> None:
         """Test has_seqs computed field with samples having empty seqs lists."""
@@ -1406,9 +1406,9 @@ class TestModelSampleSetForUpload(TestCase):
             created_in_data_collection_id=uuid4(),
         )
 
-        sample_set = model.SampleSetForUpload(samples=[sample_with_empty_seqs])
+        sample_batch = model.SampleBatchForUpload(samples=[sample_with_empty_seqs])
         # Empty seqs list should result in has_seqs being False
-        self.assertFalse(sample_set.has_seqs)
+        self.assertFalse(sample_batch.has_seqs)
 
     def test_samples_with_seqs_validation_compliance(self) -> None:
         """Test that samples with seqs follow proper validation rules."""
@@ -1440,13 +1440,13 @@ class TestModelSampleSetForUpload(TestCase):
             created_in_data_collection_id=uuid4(),
         )
 
-        sample_set = model.SampleSetForUpload(
+        sample_batch = model.SampleBatchForUpload(
             samples=[sample_with_id, sample_without_id]
         )
 
-        self.assertEqual(len(sample_set.samples), 2)
-        self.assertTrue(sample_set.has_seqs)
+        self.assertEqual(len(sample_batch.samples), 2)
+        self.assertTrue(sample_batch.has_seqs)
 
         # Verify validation compliance
-        self.assertEqual(sample_set.samples[0].seqs[0].sample_id, NULL_ID)
-        self.assertEqual(sample_set.samples[1].seqs[0].sample_id, seq_sample_id)
+        self.assertEqual(sample_batch.samples[0].seqs[0].sample_id, NULL_ID)
+        self.assertEqual(sample_batch.samples[1].seqs[0].sample_id, seq_sample_id)

@@ -39,8 +39,8 @@ class ValidateCasesRequestBody(PydanticBaseModel):
         command.ValidateCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases_set: model.CasesSetForUpload = copy_model_field(
-        command.ValidateCasesCommand, "cases_set"
+    case_batch: model.CaseBatchForUpload = copy_model_field(
+        command.ValidateCasesCommand, "case_batch"
     )
 
 
@@ -53,8 +53,8 @@ class UploadCasesRequestBody(PydanticBaseModel):
         command.UploadCasesCommand, "data_collection_ids"
     )
     is_update: bool = copy_model_field(command.UploadCasesCommand, "is_update")
-    cases_set: model.CasesSetForUpload = copy_model_field(
-        command.UploadCasesCommand, "cases_set"
+    case_batch: model.CaseBatchForUpload = copy_model_field(
+        command.UploadCasesCommand, "case_batch"
     )
 
 
@@ -299,7 +299,7 @@ def create_case_endpoints(
                 created_in_data_collection_id=request_body.created_in_data_collection_id,
                 data_collection_ids=request_body.data_collection_ids,
                 is_update=request_body.is_update,
-                cases_set=request_body.cases_set,
+                case_batch=request_body.case_batch,
             )
             retval: model.CaseValidationReport = app.handle(cmd)
         except Exception as exception:
@@ -323,7 +323,7 @@ def create_case_endpoints(
                 created_in_data_collection_id=request_body.created_in_data_collection_id,
                 data_collection_ids=request_body.data_collection_ids,
                 is_update=request_body.is_update,
-                cases_set=request_body.cases_set,
+                case_batch=request_body.case_batch,
             )
             retval: list[model.Case] = app.handle(cmd)
         except Exception as exception:

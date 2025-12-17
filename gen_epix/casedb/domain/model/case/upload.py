@@ -111,11 +111,9 @@ class CaseForUpload(Case):
         return self
 
 
-class CasesForUpload(Model):
+class CaseBatchForUpload(Model):
     """
-    A number of unique cases intended for upload. The class is named CasesForUpload
-    rather than CaseSetForUpload to avoid confusion with the existing CaseSet
-    entity in casedb.
+    A number of unique cases intended for upload.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)

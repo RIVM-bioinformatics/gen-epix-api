@@ -18,7 +18,7 @@ def case_service_upload_cases(
     self: BaseCaseService, cmd: command.UploadCasesCommand
 ) -> list[model.Case] | None:
     # Special case: zero cases to be created
-    cases_for_upload = cmd.cases_set.cases
+    cases_for_upload = cmd.case_batch.cases
     if not cases_for_upload:
         return []
 

@@ -159,7 +159,7 @@ class CaseTransformer(Transformer):
             raise ValueError("Invalid case type")
 
         is_update = cmd.is_update
-        contents = [x.content for x in cmd.cases_set.cases]
+        contents = [x.content for x in cmd.case_batch.cases]
 
         # Create case validation report with empty content for cases
         case_validation_report = model.CaseValidationReport(
@@ -174,7 +174,7 @@ class CaseTransformer(Transformer):
                     ),
                     data_issues=[],
                 )
-                for x in cmd.cases_set.cases
+                for x in cmd.case_batch.cases
             ],
         )
         updated_contents = [

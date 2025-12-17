@@ -72,7 +72,7 @@ class BaseUploadCasesCommand(Command):
     data_collection_ids: set[UUID] = Field(
         description="The additional data collection IDs that all the cases must belong to. All cases in the case set must have these data collection IDs or None."
     )
-    cases_set: model.CasesSetForUpload = Field(
+    case_batch: model.CaseBatchForUpload = Field(
         description="The unique cases to validate."
     )
 
@@ -82,11 +82,11 @@ class BaseUploadCasesCommand(Command):
             raise ValueError(
                 "The created in data collection ID may not be in the additional data collection IDs."
             )
-        if any(x.case_type_id != self.case_type_id for x in self.cases_set.cases):
+        if any(x.case_type_id != self.case_type_id for x in self.case_batch.cases):
             raise ValueError("All cases must belong to the given case type ID.")
         if any(
             x.created_in_data_collection_id != self.created_in_data_collection_id
-            for x in self.cases_set.cases
+            for x in self.case_batch.cases
         ):
             raise ValueError(
                 "All cases must belong to the given created in data collection ID."
@@ -94,7 +94,7 @@ class BaseUploadCasesCommand(Command):
         if any(
             x.data_collection_ids is not None
             and x.data_collection_ids != self.data_collection_ids
-            for x in self.cases_set.cases
+            for x in self.case_batch.cases
         ):
             raise ValueError(
                 "All cases must have the same data collection IDs or None."
