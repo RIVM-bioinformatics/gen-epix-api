@@ -49,7 +49,7 @@ def _crud_case_set_with_abac(
 ) -> list[model.CaseSet] | model.CaseSet | list[UUID] | UUID | list[bool] | bool | None:
     """CaseSet user command handling, ABAC applied."""
     # @ABAC: get case abac
-    case_abac = get_case_abac_from_command(cmd)
+    case_abac: model.CaseAbac | None = get_case_abac_from_command(cmd)
 
     # Special case: no policy, allows for internal commands to retrieve all
     if case_abac is None:
@@ -80,11 +80,11 @@ def _crud_case_set_with_abac(
             filter=cmd.query_filter,
         )
         return (
-            retval[0] if cmd.operation == CrudOperation.READ_ONE else retval  # type: ignore[return-value]
+            retval[0] if cmd.operation == CrudOperation.READ_ONE else retval
         )
     elif is_update:
         # At least one data collection with write access is required
-        case_sets = self._retrieve_case_sets_with_content_right(
+        self._retrieve_case_sets_with_content_right(
             uow,
             cmd.user.id,
             case_abac,
@@ -94,44 +94,60 @@ def _crud_case_set_with_abac(
         return self.crud(cmd)  # type: ignore[return-value]
     elif is_delete:
         # All linked data collections have remove right
-        if is_delete_all:
-            # Delete all not allowed due to potential large number of case sets
-            raise exc.UnauthorizedAuthError(
-                f"Operation {cmd.operation.value} not allowed for case sets for this user"
-            )
-        # Get all case sets and data collection links
-        assert case_set_ids is not None
-        case_sets = self.repository.crud(  # type:ignore[assignment]
-            uow,
-            cmd.user.id,
-            model.CaseSet,
-            None,
-            case_set_ids,
-            CrudOperation.READ_SOME,
+        _validate_case_set_deletion(
+            self, uow, cmd, case_abac, is_delete_all, case_set_ids
         )
-        case_set_data_collection_map = self._retrieve_case_set_data_collections_map(
-            uow,
-            cmd.user.id,
-            case_set_ids=case_set_ids,
-        )
-        # Check if the user has access to all data collections of all requested
-        # case sets
-        for case_set in case_sets:
-            data_collection_ids = case_set_data_collection_map.get(
-                case_set.id, set()  # type:ignore[arg-type]
-            )
-            is_allowed = case_abac.is_allowed(
-                case_set.case_type_id,
-                enum.CaseRight.REMOVE_CASE_SET,
-                True,
-                created_in_data_collection_id=case_set.created_in_data_collection_id,
-                current_data_collection_ids=data_collection_ids,
-            )
-            if not is_allowed:
-                raise exc.UnauthorizedAuthError(
-                    f"User {cmd.user.id} is not allowed to delete case set {case_set.id}"
-                )
         # Delete with cascade
         return self.crud(cmd)  # type:ignore[return-value]
     else:
         raise AssertionError("Unexpected operation")
+
+
+def _validate_case_set_deletion(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    cmd: command.CaseSetCrudCommand,
+    case_abac: model.CaseAbac,
+    is_delete_all: bool,
+    case_set_ids: list[UUID] | None,
+) -> None:
+    if is_delete_all:
+        # Delete all not allowed due to potential large number of case sets
+        raise exc.UnauthorizedAuthError(
+            f"Operation {cmd.operation.value} not allowed for case sets for this user"
+        )
+        # Get all case sets and data collection links
+    assert case_set_ids is not None
+    case_sets: list[model.CaseSet] = self.repository.crud(  # type:ignore[assignment]
+        uow,
+        cmd.user.id,  # type: ignore[union-attr]
+        model.CaseSet,
+        None,
+        case_set_ids,
+        CrudOperation.READ_SOME,
+    )
+    case_set_data_collection_map: dict[UUID, set[UUID]] = (
+        self._retrieve_case_set_data_collections_map(
+            uow,
+            cmd.user.id,  # type: ignore[arg-type,union-attr]
+            case_set_ids=case_set_ids,
+        )
+    )
+    # Check if the user has access to all data collections of all requested
+    # case sets
+    for case_set in case_sets:
+        assert case_set.id is not None
+        data_collection_ids: set[UUID] = case_set_data_collection_map.get(
+            case_set.id, set()
+        )
+        is_allowed = case_abac.is_allowed(
+            case_set.case_type_id,
+            enum.CaseRight.REMOVE_CASE_SET,
+            True,
+            created_in_data_collection_id=case_set.created_in_data_collection_id,
+            current_data_collection_ids=data_collection_ids,
+        )
+        if not is_allowed:
+            raise exc.UnauthorizedAuthError(
+                f"User {cmd.user.id} is not allowed to delete case set {case_set.id}"  # type: ignore[union-attr]
+            )
