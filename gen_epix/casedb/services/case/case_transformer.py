@@ -448,7 +448,6 @@ class CaseTransformer(Transformer):
         updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """Validate and transform TIME pairs of values."""
-        # For TIME dim: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
         for col_pair in col_pairs:
             col1 = self.complete_case_type.cols[
                 self.complete_case_type.case_type_cols[col_pair[0]].col_id
@@ -456,7 +455,7 @@ class CaseTransformer(Transformer):
             col2 = self.complete_case_type.cols[
                 self.complete_case_type.case_type_cols[col_pair[1]].col_id
             ]
-            # Skip if columns are not TIME types
+
             if (
                 col1.col_type not in ColTypeSet.TIME.value
                 or col2.col_type not in ColTypeSet.TIME.value
@@ -466,11 +465,9 @@ class CaseTransformer(Transformer):
             from_time_unit = self.COL_TYPE_TO_TIME_UNIT[col1.col_type]
             to_time_unit = self.COL_TYPE_TO_TIME_UNIT[col2.col_type]
 
-            # Skip if transformation is not possible
             if not IsoTimeTransformer.can_transform_time(from_time_unit, to_time_unit):
                 continue
 
-            # Create IsoTimeTransformer for this transformation
             time_transformer = IsoTimeTransformer(
                 field_name="time_value",
                 src_unit=from_time_unit,
@@ -481,36 +478,53 @@ class CaseTransformer(Transformer):
             for i, (content, updated_content) in enumerate(
                 zip(contents, updated_contents)
             ):
-                from_time = updated_content.get(col_pair[0])
-                if from_time is None:
-                    continue
-                col1 = self.complete_case_type.cols[
-                    self.complete_case_type.case_type_cols[col_pair[0]].col_id
-                ]
-
-                # Check if from_time is a valid time value for col1's type
-                if self.TIME_MATCHERS[col1.col_type](from_time) is NoReturn:
-                    continue
-
-                # Transform the time value using ObjectAdapter
-                try:
-                    adapter = ObjectAdapter({"time_value": from_time})
-                    transformed_adapter = time_transformer.transform(adapter)
-                    to_time = transformed_adapter.get("time_value")
-                except Exception:
-                    # Skip if transformation fails
-                    continue
-                if to_time is None:
-                    continue
-
-                self._set_derived_value(
+                self._apply_time_transformation(
+                    col_pair,
+                    time_transformer,
                     case_validation_report,
                     i,
                     content,
                     updated_content,
-                    col_pair,
-                    to_time,
                 )
+
+    def _apply_time_transformation(
+        self,
+        col_pair: tuple[UUID, UUID],
+        time_transformer: IsoTimeTransformer,
+        case_validation_report: model.CaseValidationReport,
+        case_index: int,
+        content: dict[UUID, str | None],
+        updated_content: dict[UUID, str | None],
+    ) -> None:
+        """Apply time transformation to a single pair of values."""
+        from_time = updated_content.get(col_pair[0])
+        if from_time is None:
+            return
+
+        col1 = self.complete_case_type.cols[
+            self.complete_case_type.case_type_cols[col_pair[0]].col_id
+        ]
+        if self.TIME_MATCHERS[col1.col_type](from_time) is NoReturn:
+            return
+
+        try:
+            adapter = ObjectAdapter({"time_value": from_time})
+            transformed_adapter = time_transformer.transform(adapter)
+            to_time = transformed_adapter.get("time_value")
+        except Exception:
+            return
+
+        if to_time is None:
+            return
+
+        self._set_derived_value(
+            case_validation_report,
+            case_index,
+            content,
+            updated_content,
+            col_pair,
+            to_time,
+        )
 
     def _transform_number_value_pairs(
         self,
@@ -679,9 +693,9 @@ class CaseTransformer(Transformer):
         self,
         case_validation_report: model.CaseValidationReport,
         case_index: int,
-        content: dict,
-        updated_content: dict,
-        col_pair: tuple,
+        content: dict[UUID, str | None],
+        updated_content: dict[UUID, str | None],
+        col_pair: tuple[UUID, UUID],
         new_value: str,
     ) -> None:
         # Add derived value to updated_content
