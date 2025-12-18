@@ -611,7 +611,7 @@ class TestCasedbCaseCreateSeq:
                     mock_get_cases.return_value = [mock_case]
 
                     with pytest.raises(
-                        exc.InvalidArgumentsError, match="No ReadSet linked to case"
+                        exc.InvalidArgumentsError, match="No ReadSet or Seq linked to case for the given case type column"
                     ):
                         case_service_create_file_for_read_set_or_seq(mock_service, cmd)
 

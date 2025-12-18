@@ -38,7 +38,7 @@ def case_service_create_read_sets_or_seqs_for_cases(
         case_ids = [x.case_id for x in cmd.case_seqs]
         case_type_col_ids = [x.case_type_col_id for x in cmd.case_seqs]
     else:
-        raise exc.InvalidArgumentsError("Invalid command type")
+        raise exc.InvalidArgumentsError(f"Invalid command type: {type(cmd)}")
 
     # Special case: nothing to create
     if is_read_set and not read_sets:
@@ -91,101 +91,104 @@ def case_service_create_file_for_read_set_or_seq(
     self: BaseCaseService,
     cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
 ) -> UUID:
+    if not isinstance(
+        cmd, (command.CreateFileForReadSetCommand, command.CreateFileForSeqCommand)
+    ):
+        raise exc.InvalidArgumentsError("Invalid command type")
+
     user, repository = self._get_user_and_repository(cmd)
     user_id: UUID = user.id  # type: ignore[assignment]
 
-    # Parse input
-    if isinstance(cmd, command.CreateFileForReadSetCommand):
-        is_read_set = True
-    elif isinstance(cmd, command.CreateFileForSeqCommand):
-        is_read_set = False
-    else:
-        raise exc.InvalidArgumentsError("Invalid command type")
-
-    # Retrieve case ABAC
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
 
-    # Handle transaction for reading case
     with repository.uow() as uow:
-        cases = _get_cases_for_create_read_sets_or_seqs(
+        case = _get_cases_for_create_read_sets_or_seqs(
             self, cmd, case_abac, uow, user_id, [cmd.case_id], [cmd.case_type_col_id]
-        )
-        case = cases[0]
+        )[0]
 
-        # Retrieve ReadSet or Seq ID from case content
         if cmd.case_type_col_id not in case.content:
             raise exc.InvalidArgumentsError(
-                "No ReadSet linked to case for the given case type column"
+                "No ReadSet or Seq linked to case for the given case type column"
             )
         read_set_or_seq_id = UUID(case.content[cmd.case_type_col_id])
 
-    if is_read_set:
-        assert isinstance(cmd, command.CreateFileForReadSetCommand)
-        # Verify no file linked yet
-        read_set: model.ReadSet = self.app.handle(
-            seqdb_command.ReadSetCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ONE,
-                obj_ids=read_set_or_seq_id,
-            )
-        )
-        if cmd.is_fwd and read_set.fwd_file_id is not None:
-            raise exc.InvalidArgumentsError(
-                "The ReadSet already has a forward file linked"
-            )
-        if not cmd.is_fwd and read_set.rev_file_id is not None:
-            raise exc.InvalidArgumentsError(
-                "The ReadSet already has a reverse file linked"
-            )
-        # Compute file hash then create file
-        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
-        file = _create_file(self, cmd)
-        # Update ReadSet with file ID and hash
-        if cmd.is_fwd:
-            read_set.fwd_file_id = file.id
-            read_set.fwd_reads_hash = file_hash
-        else:
-            read_set.rev_file_id = file.id
-            read_set.rev_reads_hash = file_hash
-        self.app.handle(
-            seqdb_command.ReadSetCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.UPDATE_ONE,
-                objs=read_set,
-            )
-        )
-
-    elif isinstance(cmd, command.CreateFileForSeqCommand):
-        # Verify no file linked yet
-        seq: model.Seq = self.app.handle(
-            seqdb_command.SeqCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ONE,
-                obj_ids=read_set_or_seq_id,
-            )
-        )
-        if seq.file_id is not None:
-            raise exc.InvalidArgumentsError("The Seq already has a file linked")
-        # Compute file hash then create file
-        file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
-        file = _create_file(self, cmd)
-        # Update Seq with file ID and hash
-        seq.file_id = file.id
-        seq.file_hash = file_hash
-        self.app.handle(
-            seqdb_command.SeqCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.UPDATE_ONE,
-                objs=seq,
-            )
-        )
-
-    else:
-        raise ValueError("Invalid command type")
+    if isinstance(cmd, command.CreateFileForReadSetCommand):
+        file = _handle_read_set_file_creation(self, cmd, read_set_or_seq_id)
+    else:  # is command.CreateFileForSeqCommand
+        file = _handle_seq_file_creation(self, cmd, read_set_or_seq_id)
 
     assert file.id is not None
     return file.id
+
+
+def _handle_read_set_file_creation(
+    self: BaseCaseService,
+    cmd: command.CreateFileForReadSetCommand,
+    read_set_id: UUID,
+) -> model.File:
+    read_set: model.ReadSet = self.app.handle(
+        seqdb_command.ReadSetCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_ONE,
+            obj_ids=read_set_id,
+        )
+    )
+    if cmd.is_fwd and read_set.fwd_file_id is not None:
+        raise exc.InvalidArgumentsError("The ReadSet already has a forward file linked")
+    if not cmd.is_fwd and read_set.rev_file_id is not None:
+        raise exc.InvalidArgumentsError("The ReadSet already has a reverse file linked")
+
+    file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
+    file = _create_file(self, cmd)
+
+    if cmd.is_fwd:
+        read_set.fwd_file_id = file.id
+        read_set.fwd_reads_hash = file_hash
+    else:
+        read_set.rev_file_id = file.id
+        read_set.rev_reads_hash = file_hash
+
+    self.app.handle(
+        seqdb_command.ReadSetCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.UPDATE_ONE,
+            objs=read_set,
+        )
+    )
+    return file
+
+
+def _handle_seq_file_creation(
+    self: BaseCaseService,
+    cmd: command.CreateFileForSeqCommand,
+    seq_id: UUID,
+) -> model.File:
+    seq: model.Seq = self.app.handle(
+        seqdb_command.SeqCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_ONE,
+            obj_ids=seq_id,
+        )
+    )
+
+    if seq.file_id is not None:
+        raise exc.InvalidArgumentsError("The Seq already has a file linked")
+
+    file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
+    file = _create_file(self, cmd)
+
+    seq.file_id = file.id
+    seq.file_hash = file_hash
+
+    self.app.handle(
+        seqdb_command.SeqCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.UPDATE_ONE,
+            objs=seq,
+        )
+    )
+    return file
 
 
 def _get_cases_for_create_read_sets_or_seqs(
