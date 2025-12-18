@@ -21,14 +21,14 @@ def get_case_abac_from_command(cmd: command.CrudCommand) -> model.CaseAbac | Non
     return BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
 
 
-def is_metadata_admin_or_above(service, user: model.User) -> bool:
+def is_metadata_admin_or_above(service: BaseCaseService, user: model.User) -> bool:
     """Check if user has metadata admin or above privileges."""
     return bool(
         user.roles.intersection(service.role_set_map[CommonRoleSet.GE_REFDATA_ADMIN])
     )
 
 
-def is_app_admin_or_above(service, user: model.User) -> bool:
+def is_app_admin_or_above(service: BaseCaseService, user: model.User) -> bool:
     """Check if user has app admin or above privileges."""
     return bool(
         user.roles.intersection(service.role_set_map[CommonRoleSet.GE_APP_ADMIN])
@@ -88,11 +88,58 @@ def _crud_cascade_delete(
     In case of a delete operation, cascade delete all instances of any
     linked_model_classes that are linked to the instances in cmd.
     """
-    if not cmd.operation in CrudOperationSet.DELETE.value:
+    if cmd.operation not in CrudOperationSet.DELETE.value:
         return
 
     # Find linked model classes for cascade delete
     model_class: type[model.Model] = cmd.MODEL_CLASS  # type: ignore[assignment]
+    link_model_classes = _get_linked_model_classes(self, model_class)
+
+    # Handle no linked model classes to cascade delete
+    if not link_model_classes:
+        return
+
+    # Go over each link_model_class and delete all instances that are linked to
+    # the instances in cmd
+    obj_ids: set[UUID] | None = cmd.get_obj_ids(as_set=True)  # type:ignore[assignment]
+    assert cmd.user is not None and cmd.user.id is not None
+    _cascade_delete_linked_models(
+        self, uow, cmd, model_class, link_model_classes, obj_ids
+    )
+
+
+def _cascade_delete_linked_models(
+    self: BaseCaseService,
+    uow: BaseUnitOfWork,
+    cmd: command.CrudCommand,
+    model_class: type[model.Model],
+    link_model_classes: tuple[type[model.Model], ...],
+    obj_ids: set[UUID] | None,
+) -> None:
+    for link_model_class in link_model_classes:
+        entity: Entity = link_model_class.ENTITY  # type: ignore[assignment]
+        for link in entity.links.values():
+            if link.link_model_class != model_class:
+                continue
+            # Delete all linked instances
+            self.repository.crud(
+                uow,
+                cmd.user.id,  # type: ignore[union-attr]
+                link_model_class,
+                None,
+                None,
+                CrudOperation.DELETE_ALL,
+                filter=(
+                    self._compose_id_filter((link.link_field_name, obj_ids))
+                    if obj_ids is not None
+                    else None
+                ),
+            )
+
+
+def _get_linked_model_classes(
+    self: BaseCaseService, model_class: type[model.Model]
+) -> tuple[type[model.Model], ...]:
     link_model_classes = self.CASCADE_DELETE_MODEL_CLASSES.get(model_class)
     if link_model_classes is None:
         is_found = False
@@ -106,32 +153,7 @@ def _crud_cascade_delete(
                 self.CASCADE_DELETE_MODEL_CLASSES[model_class] = link_model_classes
         if not is_found:
             # Add to dict for next time
-            self.CASCADE_DELETE_MODEL_CLASSES[model_class] = tuple()
+            self.CASCADE_DELETE_MODEL_CLASSES[model_class] = ()
 
-    # Handle no linked model classes to cascade delete
-    if not link_model_classes:
-        return
-
-    # Go over each link_model_class and delete all instances that are linked to
-    # the instances in cmd
-    obj_ids: set[UUID] | None = cmd.get_obj_ids(as_set=True)  # type:ignore[assignment]
-    assert cmd.user is not None and cmd.user.id is not None
-    for link_model_class in link_model_classes:
-        entity: Entity = link_model_class.ENTITY  # type: ignore[assignment]
-        for link in entity.links.values():
-            if link.link_model_class != model_class:
-                continue
-            # Delete all linked instances
-            self.repository.crud(
-                uow,
-                cmd.user.id,
-                link_model_class,
-                None,
-                None,
-                CrudOperation.DELETE_ALL,
-                filter=(
-                    self._compose_id_filter((link.link_field_name, obj_ids))
-                    if obj_ids is not None
-                    else None
-                ),
-            )
+    assert link_model_classes is not None
+    return link_model_classes
