@@ -1,7 +1,8 @@
 import re
 from decimal import Decimal, InvalidOperation
+from functools import partial
 from itertools import combinations
-from typing import Any, NoReturn
+from typing import Any, Callable, NoReturn
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
@@ -212,80 +213,136 @@ class CaseTransformer(Transformer):
         is_update: bool,
     ) -> None:
         """Validate and transform individual values."""
-        msg_template = "{orig_value}"
         for case_type_col in self.complete_case_type.case_type_cols.values():
-            case_type_col_id = case_type_col.id
-            assert case_type_col_id is not None
             col = self.complete_case_type.cols[case_type_col.col_id]
-            if col.col_type == ColType.REGULAR_LANGUAGE:
-                assert col.concept_set_id
-                transform_fn = lambda x: (
-                    x
-                    if x is None or self.regex_patterns[col.concept_set_id].match(x)
-                    else NoReturn
-                )
-                msg_template = "{orig_value} does not match regex"
-            elif col.col_type in ColTypeSet.STRING_SET.value:
-                assert col.concept_set_id
-                concept_value_map = self.concept_value_maps[col.concept_set_id]
-                transform_fn = lambda x: (
-                    concept_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                msg_template = "{orig_value} cannot be mapped to concept"
-            elif col.col_type in ColTypeSet.HAS_REGION_SET.value:
-                assert col.region_set_id
-                region_value_map = self.region_value_maps[col.region_set_id]
-                transform_fn = lambda x: (
-                    region_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                msg_template = "{orig_value} cannot be mapped to region"
-            elif col.col_type in ColTypeSet.TIME.value:
-                transform_fn = self.TIME_MATCHERS[col.col_type]
-                msg_template = (
-                    "{orig_value} is not a valid " + col.col_type.value + " value"
-                )
-            elif col.col_type in ColTypeSet.NUMBER.value:
-                n_decimals = self.N_DECIMALS[col.col_type]
-                transform_fn = lambda x: CaseTransformer._transform_decimal(
-                    x, n_decimals
-                )
-            elif col.col_type == ColType.ORGANIZATION:
-                organization_value_map = self.organization_value_map
-                transform_fn = lambda x: (
-                    organization_value_map.get(x.lower(), NoReturn) if x else None
-                )
-                msg_template = "{orig_value} cannot be mapped to organization"
-            else:
-                # TODO: transform any other col_types
-                transform_fn = lambda x: x
-            # Update value
+            transform_fn, msg_template = self._get_transform_function(col)
             for i, (content, updated_content) in enumerate(
                 zip(contents, updated_contents)
             ):
-                if case_type_col_id not in content:
-                    continue
-                orig_value = content[case_type_col_id]
-                if orig_value is None:
-                    if is_update:
-                        # Deletion of value by providing None -> keep in content
-                        updated_content[case_type_col_id] = None
-                    # Unnecessary None -> do not add
-                    continue
-                new_value = transform_fn(orig_value)
-                if new_value == NoReturn:
-                    new_value = None
-                    # No mapping found
-                    case_validation_report.validated_cases[i].data_issues.append(
-                        model.CaseDataIssue(
-                            case_type_col_id=case_type_col_id,
-                            original_value=orig_value,
-                            updated_value=new_value,
-                            data_rule=CaseColDataRule.INVALID,
-                            details=msg_template.format(orig_value=orig_value),
-                        )
-                    )
-                    continue
-                updated_content[case_type_col_id] = new_value
+                self._apply_transformation(
+                    case_type_col,
+                    transform_fn,
+                    msg_template,
+                    case_validation_report.validated_cases[i],
+                    content,
+                    updated_content,
+                    is_update,
+                )
+
+    def _apply_transformation(
+        self,
+        case_type_col: model.CaseTypeCol,
+        transform_fn: Callable[[str | None], str | None | NoReturn],
+        msg_template: str,
+        validated_case: model.ValidatedCase,
+        content: dict[UUID, str | None],
+        updated_content: dict[UUID, str | None],
+        is_update: bool,
+    ) -> None:
+        """Apply transformation to a single value, handling None and invalid values."""
+        if case_type_col.id is None or case_type_col.id not in content:
+            return
+        case_type_col_id: UUID = case_type_col.id
+        orig_value: str | None = content[case_type_col_id]
+        if orig_value is None:
+            if is_update:
+                # Deletion of value by providing None -> keep in content
+                updated_content[case_type_col_id] = None
+            # Unnecessary None -> do not add
+            return
+        new_value = transform_fn(orig_value)
+        if new_value == NoReturn:
+            new_value = None
+            # No mapping found
+            validated_case.data_issues.append(
+                model.CaseDataIssue(
+                    case_type_col_id=case_type_col_id,
+                    original_value=orig_value,
+                    updated_value=new_value,
+                    data_rule=CaseColDataRule.INVALID,
+                    details=msg_template.format(orig_value=orig_value),
+                )
+            )
+            return
+
+        updated_content[case_type_col_id] = new_value
+
+    def _get_transform_function(self, col: model.Col) -> tuple[
+        Callable[[str | None], str | None | NoReturn],
+        str,
+    ]:
+        """Get the transformation function and message template for a given column."""
+        msg_template = "{orig_value}"
+        if col.col_type == ColType.REGULAR_LANGUAGE:
+            assert col.concept_set_id
+            pattern = self.regex_patterns[col.concept_set_id]
+            transform_fn = partial(self._transform_regex, pattern=pattern)
+            msg_template = "{orig_value} does not match regex"
+        elif col.col_type in ColTypeSet.STRING_SET.value:
+            assert col.concept_set_id
+            concept_value_map = self.concept_value_maps[col.concept_set_id]
+            transform_fn = partial(
+                self._transform_concept, concept_value_map=concept_value_map
+            )
+            msg_template = "{orig_value} cannot be mapped to concept"
+        elif col.col_type in ColTypeSet.HAS_REGION_SET.value:
+            assert col.region_set_id
+            region_value_map = self.region_value_maps[col.region_set_id]
+            transform_fn = partial(
+                self._transform_region, region_value_map=region_value_map
+            )
+            msg_template = "{orig_value} cannot be mapped to region"
+        elif col.col_type in ColTypeSet.TIME.value:
+            transform_fn = self.TIME_MATCHERS[col.col_type]
+            msg_template = (
+                "{orig_value} is not a valid " + col.col_type.value + " value"
+            )
+        elif col.col_type in ColTypeSet.NUMBER.value:
+            n_decimals = self.N_DECIMALS[col.col_type]
+            transform_fn = partial(self._transform_decimal, n_decimals=n_decimals)
+        elif col.col_type == ColType.ORGANIZATION:
+            organization_value_map = self.organization_value_map
+            transform_fn = partial(
+                self._transform_organization,
+                organization_value_map=organization_value_map,
+            )
+            msg_template = "{orig_value} cannot be mapped to organization"
+        else:
+            # TODO: transform any other col_types
+            transform_fn = lambda x: x
+        return transform_fn, msg_template
+
+    def _transform_regex(
+        self, value: str | None, pattern: re.Pattern[str]
+    ) -> str | None | NoReturn:
+        """Transform a value using a regex pattern."""
+        if value is None:
+            return None
+        return value if pattern.match(value) else NoReturn
+
+    def _transform_concept(
+        self, value: str | None, concept_value_map: dict[str, str]
+    ) -> str | None | NoReturn:
+        """Transform a value using a concept map."""
+        if value is None:
+            return None
+        return concept_value_map.get(value.lower(), NoReturn)
+
+    def _transform_region(
+        self, value: str | None, region_value_map: dict[str, str]
+    ) -> str | None | NoReturn:
+        """Transform a value using a region map."""
+        if value is None:
+            return None
+        return region_value_map.get(value.lower(), NoReturn)
+
+    def _transform_organization(
+        self, value: str | None, organization_value_map: dict[str, str]
+    ) -> str | None | NoReturn:
+        """Transform a value using an organization map."""
+        if value is None:
+            return None
+        return organization_value_map.get(value.lower(), NoReturn)
 
     def _transform_value_pairs(
         self,
