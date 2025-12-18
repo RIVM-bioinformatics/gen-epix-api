@@ -1,4 +1,5 @@
 import datetime
+import uuid
 from collections.abc import Hashable
 from uuid import UUID
 
@@ -118,32 +119,25 @@ def case_service_upload_cases(
 
         # Create any read sets, seqs and samples in seqdb
         if seqdb_sample_map:
-            seqdb_samples = self.app.handle(
-                seqdb_command.UploadSamplesCommand(
-                    user=cmd.user,
-                    sample_batch=seqdb_model.SampleBatchForUpload(
-                        samples=list(seqdb_sample_map.values())
-                    ),
-                )
-            )
-            # Update sample IDs in read sets and seqs
-            for sample in seqdb_samples:
-                for read_set in sample.read_sets or []:
-                    key = (
-                        read_set.sample_id
-                        if read_set.sample_id != NULL_ID
-                        else next(iter(read_set.external_ids))
+            # TODO: implement seqdb_command.UploadSamplesCommand and parse SampleBatchUploadResult
+            # seqdb_sample_upload_result: seqdb_model.SampleBatchUploadResult = self.app.handle(
+            #     seqdb_command.UploadSamplesCommand(
+            #         user=cmd.user,
+            #         sample_batch=seqdb_model.SampleBatchForUpload(
+            #             samples=list(seqdb_sample_map.values())
+            #         ),
+            #     )
+            # )
+            # TODO: TEMPORARY assign random IDs to samples, read sets and seqs
+            for case_for_upload in cases_for_upload:
+                for read_set in case_for_upload.read_sets or []:
+                    read_set.id = uuid.uuid4()
+                    case_for_upload.content[read_set.case_type_col_id] = str(
+                        read_set.id
                     )
-                    seqdb_sample_map[key].read_sets[
-                        sample.read_sets.index(read_set)
-                    ].id = read_set.id
-                for seq in sample.seqs or []:
-                    key = (
-                        seq.sample_id
-                        if seq.sample_id != NULL_ID
-                        else next(iter(seq.external_ids))
-                    )
-                    seqdb_sample_map[key].seqs[sample.seqs.index(seq)].id = seq.id
+                for seq in case_for_upload.seqs or []:
+                    seq.id = uuid.uuid4()
+                    case_for_upload.content[seq.case_type_col_id] = str(seq.id)
 
         # Calculate case date where possible
         case_date_case_type_dim_id = complete_case_type.case_date_case_type_dim_id

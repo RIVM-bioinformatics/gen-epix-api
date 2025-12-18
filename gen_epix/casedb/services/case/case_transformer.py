@@ -170,7 +170,12 @@ class CaseTransformer(Transformer):
             validated_cases=[
                 model.ValidatedCase(
                     case=model.CaseForUpload(
-                        **x.model_dump(exclude={"content"}), content={}
+                        **x.model_dump(
+                            exclude={"content"},
+                            exclude_none=True,
+                            exclude_defaults=True,
+                        ),
+                        content={},
                     ),
                     data_issues=[],
                 )

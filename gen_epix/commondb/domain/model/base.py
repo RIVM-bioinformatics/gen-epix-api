@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from typing import ClassVar, Self
 from uuid import UUID
@@ -27,6 +28,10 @@ class BatchForUpload(Model):
         default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch.",
     )
+    created_at: datetime.datetime = Field(
+        default_factory=datetime.datetime.now,
+        description="The timestamp when the upload batch was created.",
+    )
 
 
 class UploadResult(Model):
@@ -42,6 +47,10 @@ class UploadResult(Model):
     id: UUID = Field(
         default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch result.",
+    )
+    created_at: datetime.datetime = Field(
+        default_factory=datetime.datetime.now,
+        description="The timestamp when the upload result was created.",
     )
     batch_id: UUID = Field(
         description="The unique identifier for the upload batch that this result belongs to.",

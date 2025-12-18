@@ -48,10 +48,8 @@ class ReadSetForUpload(ReadSet):
     )
 
     @field_serializer("sample_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_sample_id(self, value: UUID) -> str:
+        return str(value)
 
 
 class SeqForUpload(Seq):
@@ -68,10 +66,8 @@ class SeqForUpload(Seq):
     )
 
     @field_serializer("sample_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_sample_id(self, value: UUID) -> str:
+        return str(value)
 
 
 class AlleleForUpload(Allele):
@@ -101,10 +97,8 @@ class AlleleForUpload(Allele):
         return self
 
     @field_serializer("locus_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_locus_id(self, value: UUID) -> str:
+        return str(value)
 
 
 class AlleleProfileForUpload(AlleleProfile):
@@ -202,10 +196,8 @@ class AlleleProfileForUpload(AlleleProfile):
     @field_serializer(
         "sample_id", "locus_detection_protocol_id", "locus_set_id", "locus_code_map_id"
     )
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_ids(self, value: UUID) -> str:
+        return str(value)
 
 
 class SampleForUpload(Sample):

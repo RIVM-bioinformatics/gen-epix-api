@@ -59,10 +59,8 @@ class ReadSetForUpload(SeqdbReadSetForUpload):
         return self
 
     @field_serializer("case_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_case_id(self, value: UUID) -> str:
+        return str(value)
 
 
 class SeqForUpload(SeqdbSeqForUpload):
@@ -104,10 +102,8 @@ class SeqForUpload(SeqdbSeqForUpload):
         return self
 
     @field_serializer("case_id")
-    def _serialize_id(self, value: UUID) -> UUID | None:
-        if value == NULL_ID:
-            return None
-        return value
+    def _serialize_case_id(self, value: UUID) -> str:
+        return str(value)
 
 
 class CaseForUpload(Case):
