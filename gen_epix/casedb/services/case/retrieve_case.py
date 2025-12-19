@@ -73,14 +73,6 @@ def case_service_retrieve_cases_by_query(
                 raise exc.UnauthorizedAuthError(
                     f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
                 )
-            invalid_case_set_ids = case_set_ids - {case_type_id}
-            if invalid_case_set_ids:
-                invalid_case_set_ids_str = ", ".join(
-                    [str(x) for x in invalid_case_set_ids]
-                )
-                raise exc.InvalidArgumentsError(
-                    f"Case sets do not all belong to case type {case_type_id}: {invalid_case_set_ids_str}"
-                )
 
         # @ABAC: Verify validity of filter
         if case_query.filter:
