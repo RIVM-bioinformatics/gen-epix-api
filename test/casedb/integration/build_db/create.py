@@ -614,6 +614,17 @@ class TestCreate:
         # non-existing case_type
         # is_case_date_dim=True and dim.dim_type != TIME
 
+    def test_create_case_type_dim_invalid_dim_type(self, env: Env) -> None:
+        users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
+            enum.DimType
+        )
+        for i, dim_type in enumerate(enum.DimType, start=1):
+            if dim_type != enum.DimType.TIME:
+                with pytest.raises(exc.InvalidArgumentsError):
+                    env.create_case_type_dim(
+                        users[i - 1], f"case_type_dim1_{i}_1", is_case_date_dim=True
+                    )
+
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin

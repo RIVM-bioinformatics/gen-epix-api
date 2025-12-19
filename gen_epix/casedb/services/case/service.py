@@ -348,7 +348,7 @@ class CaseService(BaseCaseService):
         user_id: UUID,
         case_abac: model.CaseAbac,
         right: enum.CaseRight,
-        case_type_ids: set[UUID] | None = None,
+        case_type_id: UUID | None = None,
         case_set_ids: list[UUID] | None = None,
         filter: Filter | None = None,
         on_invalid_case_set_id: str = "raise",
@@ -387,14 +387,14 @@ class CaseService(BaseCaseService):
                 filter=filter,
             )
 
-        # Filter on case_type_ids if any or verify that all case sets have a valid
+        # Filter on case_type_id if any or verify that all case sets have the valid
         # case_type_id if case_set_ids is given
         # TODO: add more efficient implementation by adding this as a filter in the
         # call to the repository
-        if case_type_ids is not None:
+        if case_type_id is not None:
             if case_set_ids:
                 if on_invalid_case_set_id == "raise":
-                    if not all(x.case_type_id in case_type_ids for x in case_sets):
+                    if not all(x.case_type_id == case_type_id for x in case_sets):
                         raise exc.InvalidArgumentsError(
                             f"Some case sets have invalid case type ids: {case_set_ids}"
                         )
@@ -404,7 +404,7 @@ class CaseService(BaseCaseService):
                     raise AssertionError(
                         f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
                     )
-            case_sets = [x for x in case_sets if x.case_type_id in case_type_ids]
+            case_sets = [x for x in case_sets if x.case_type_id == case_type_id]
 
         # Special case: full_access
         if case_abac.is_full_access:

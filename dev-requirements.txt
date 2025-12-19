@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==2.3.3
-polars==1.35.2
+polars==1.36.1
 xlsxwriter==3.2.9
 pytest
 pytest-cov==7.0.*

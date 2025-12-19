@@ -162,7 +162,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
-class CreateFileForForReadSetRequestBody(PydanticBaseModel):
+class CreateFileForReadSetRequestBody(PydanticBaseModel):
     file_content: str = Field(
         description="The content of the file to create as base64 encoded bytes."
     )
@@ -657,7 +657,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
         case_type_col_id: UUID,
-        request_body: CreateFileForForReadSetRequestBody,
+        request_body: CreateFileForReadSetRequestBody,
     ) -> UUID:
         try:
             created_file_id: UUID = app.handle(
