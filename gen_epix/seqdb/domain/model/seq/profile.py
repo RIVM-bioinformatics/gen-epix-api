@@ -1,9 +1,11 @@
+import base64
 import hashlib
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, field_serializer
+from pydantic import Field, field_serializer, model_validator
 
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
@@ -77,6 +79,12 @@ class LocusProfile(Model, HasSampleMixin, QualityMixin):
 
 
 class AlleleProfile(Model, HasSampleMixin, QualityMixin):
+    """
+    An allele profile derived from a sequence for a given locus set and locus
+    detection protocol. The class includes validation logic to ensure consistency
+    between the profile, its format, number of detected loci, and derived profile hash.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="allele_profiles",
         table_name="allele_profile",
@@ -111,7 +119,11 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
     locus_detection_protocol: LocusDetectionProtocol | None = Field(
         default=None, description="The locus detection protocol."
     )
-    n_loci: int = Field(description="The number of loci detected.")
+    n_loci: int = Field(
+        default=0,
+        description="The number of detected loci. Derived from the profile if possible and if the value is set to zero. If set to zero and it is not possible to derive the value, an error is raised.",
+        ge=0,
+    )
     allele_profile: str = Field(
         description="The alleles detected in the sequence for the loci in the locus set."
     )
@@ -120,18 +132,63 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         description="The representation format of the alleles.",
     )
     allele_profile_hash: UUID = Field(
-        description="The first 128 bits of the SHA256 hash of the sorted list of allele ids as bytes.",
+        default=NULL_ID,
+        description="The first 128 bits of the SHA256 hash of the sorted list of allele ids, including null alleles (null ID) as bytes. Derived from the allele profile if possible and if the value is the null ID. If set to the null ID and it is not possible to derive the value, an error is raised.",
     )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Derive the allele profile hash, if not provided, or otherwise verify that it is
+        correctly derived if possible. Also derive n_loci if set to zero.
+        """
+        profile_hash = self.allele_profile_hash
+
+        # Parse allele profile and derive values depending on allele_profile_format
+        if self.allele_profile_format == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+            # Parse the allele profile from base64 encoded concatenated 128-bit allele IDs
+            allele_bytes = base64.b64decode(self.allele_profile)
+            if len(allele_bytes) % 16 != 0:
+                raise ValueError("Allele profile bytes length is not a multiple of 16")
+            sha256 = hashlib.sha256()
+            sha256.update(allele_bytes)
+            computed_profile_hash = UUID(sha256.digest()[:16].hex())
+            computed_n_loci = sum(
+                allele_bytes[i : i + 16] != NULL_ID.bytes
+                for i in range(0, len(allele_bytes), 16)
+            )
+        else:
+            if profile_hash is None:
+                raise ValueError(
+                    "Unable to calculate allele profile hash for this format"
+                )
+            # Unable to compute n_loci or profile hash but provided -> assume correct
+            computed_n_loci = self.n_loci
+            computed_profile_hash = profile_hash
+
+        # Set or verify n_loci
+        if self.n_loci == 0:
+            if computed_n_loci == 0:
+                raise ValueError("Unable to calculate number of loci")
+            self.n_loci = computed_n_loci
+        elif self.n_loci != computed_n_loci:
+            raise ValueError(
+                f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
+            )
+
+        # Set or verify allele_profile_hash
+        if profile_hash is None:
+            self.allele_profile_hash = computed_profile_hash
+        elif profile_hash != computed_profile_hash:
+            raise ValueError(
+                "Provided allele profile hash does not match computed hash"
+            )
+
+        return self
 
     @field_serializer("allele_profile_hash")
     def _serialize_allele_profile_hash(self, value: UUID) -> str:
         return str(value)
-
-    @staticmethod
-    def get_allele_profile_hash(allele_ids: list[UUID | None]) -> bytes:
-        sha256 = hashlib.sha256()
-        sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
-        return sha256.digest()
 
     @field_serializer("allele_profile_format", mode="plain")
     def _serialize_snp_profile_format(
@@ -140,6 +197,12 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         if isinstance(value, enum.AlleleProfileFormat):
             return value.value
         return value
+
+    @staticmethod
+    def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
+        sha256 = hashlib.sha256()
+        sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
+        return UUID(sha256.digest()[:16].hex())
 
 
 class SnpDetectionProtocol(Model, ProtocolMixin):

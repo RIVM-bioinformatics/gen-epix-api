@@ -79,11 +79,22 @@ def case_service_create_cases(
                 )
 
         # Calculate case date where possible
-        case_date_case_type_col_mappers = (
-            case_service_get_case_date_case_type_col_mappers_from_cols(
-                complete_case_type.stats_time_case_type_col_ids, complete_case_type.cols
+        case_date_case_type_dim_id = complete_case_type.case_date_case_type_dim_id
+        if case_date_case_type_dim_id is None:
+            case_date_case_type_col_mappers = {}
+        else:
+            case_type_cols = [
+                complete_case_type.case_type_cols[x]
+                for x in complete_case_type.ordered_case_type_col_ids_by_dim[
+                    case_date_case_type_dim_id
+                ]
+            ]
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers_from_cols(
+                    case_type_cols,
+                    complete_case_type.cols,
+                )
             )
-        )
         case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
 
         # Create cases, using the parent class method to avoid ABAC

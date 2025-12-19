@@ -1,5 +1,6 @@
 import tomllib
 import uuid
+from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from enum import Enum
 from functools import lru_cache
@@ -72,21 +73,18 @@ def map_paired_elements(
         dict[Hashable, list[Any]]
         | dict[Hashable, set[Any]]
         | dict[Hashable, frozenset[Any]]
-    ) = {}
+    )
     if as_set:
+        retval = defaultdict(set)
         for k, v in data:
-            if k not in retval:
-                retval[k] = set()  # type: ignore[assignment]
-            retval[k].add(v)  # type: ignore[union-attr]
+            retval[k].add(v)
         if frozen:
-            for k in retval:
-                retval[k] = frozenset(retval[k])  # type: ignore[assignment]
-    else:
-        for k, v in data:
-            if k not in retval:
-                retval[k] = []  # type: ignore[assignment]
-            retval[k].append(v)  # type: ignore[union-attr]
-    return retval
+            return {k: frozenset(v) for k, v in retval.items()}
+        return dict(retval)
+    retval = defaultdict(list)
+    for k, v in data:
+        retval[k].append(v)
+    return dict(retval)
 
 
 def copy_model_field(

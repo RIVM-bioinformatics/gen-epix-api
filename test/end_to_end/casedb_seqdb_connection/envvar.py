@@ -29,5 +29,7 @@ def set_envvar() -> None:
     )
     os.environ["CASEDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
     os.environ["SEQDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
+    # os.environ["CASEDB_LOG_LEVEL"] = "DEBUG"
+    # os.environ["SEQDB_LOG_LEVEL"] = "DEBUG"
     os.environ["CASEDB_LOG_LEVEL"] = "WARNING"
     os.environ["SEQDB_LOG_LEVEL"] = "WARNING"

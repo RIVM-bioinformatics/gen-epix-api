@@ -61,6 +61,7 @@ class CaseAccessSetup:
         model.CaseType: "CaseType",
         model.CaseTypeSet: "CaseTypeSet",
         model.CaseTypeSetMember: "CaseTypeSetMember",
+        model.CaseTypeDim: "CaseTypeDim",
         model.CaseTypeCol: "CaseTypeCol",
         model.CaseTypeColSet: "CaseTypeColSet",
         model.CaseTypeColSetMember: "CaseTypeColSetMember",
@@ -106,7 +107,7 @@ class TestCaseAccess(CaseAccessSetup):
             raise ValueError("Case CRUD commands DataFrame is not set.")
         df = df.loc[df["dm.is_active"] == True, :]
         command_idx_to_test = None
-        # command_idx_to_test = {33}  # For debugging, set set of indices, otherwise None
+        # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
         n_case_type_cols = 3
         # Sort by index to have correct order
         df = df.sort_values(by="index", axis=0).to_dict(orient="records")

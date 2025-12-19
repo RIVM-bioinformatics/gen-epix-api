@@ -14,6 +14,6 @@ from gen_epix.seqdb.api.seq import (
 from gen_epix.seqdb.api.seq import (
     RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,
 )
-from gen_epix.seqdb.api.seq import (
-    UpsertCompleteSamplesRequestBody as UpsertCompleteSamplesRequestBody,
-)
+from gen_epix.seqdb.api.seq import UploadSamplesRequestBody as UploadSamplesRequestBody
+from gen_epix.seqdb.api.file import CreateFileRequestBody as CreateFileRequestBody
+from gen_epix.seqdb.api.organization import ApiPermission as ApiPermission

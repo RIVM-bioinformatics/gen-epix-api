@@ -162,7 +162,7 @@ class Run:
                 "test/commondb/integration",
                 "test/casedb/unit",
                 "test/casedb/integration",
-                # "test/seqdb/unit",
+                "test/seqdb/unit",
                 "test/seqdb/integration",
                 "test/omopdb/unit",
                 "test/omopdb/integration",
@@ -473,6 +473,16 @@ class Run:
             ]
         )
 
+    def test_seqdb_unit(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit",
+            ]
+        )
+
     def test_seqdb_integration(self) -> None:
         import pytest
 
@@ -590,6 +600,17 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/general/code",
+            ]
+        )
+
+    def test_general_code_test_model_field_properties(self) -> None:
+
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/general/code/test_model_field_properties.py",
             ]
         )
 

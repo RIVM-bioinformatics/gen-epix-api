@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, model_validator
@@ -8,11 +8,10 @@ from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
-from gen_epix.casedb.domain.model.case.non_persistable import CaseTypeDim
 from gen_epix.casedb.domain.model.case.persistable import (
     CaseType,
     CaseTypeCol,
-    CaseTypeSettings,
+    CaseTypeDim,
     Col,
     Dim,
     GeneticDistanceProtocol,
@@ -37,14 +36,23 @@ class CompleteCaseType(CaseType):
     )
     dims: dict[UUID, Dim] = Field(description="The dimensions used by the case type")
     cols: dict[UUID, Col] = Field(description="The columns used by the case type")
-    case_type_dims: list[CaseTypeDim] = Field(
-        description="The ordered list of case type dimensions"
+    case_type_dims: dict[UUID, CaseTypeDim] = Field(
+        description="The case type dimensions"
     )
     case_type_cols: dict[UUID, CaseTypeCol] = Field(
         description="The case type columns for the case type"
     )
-    case_type_col_order: list[UUID] = Field(
-        description="The order of the case type columns outside the context of a dimension"
+    ordered_case_type_dim_ids: list[UUID] = Field(
+        default_factory=list,
+        description="The case type dimensions ordered by their (occurrence, rank, code). Calculated during model validation.",
+    )
+    ordered_case_type_col_ids: list[UUID] = Field(
+        default_factory=list,
+        description="The case type columns ordered by their (ordered_case_type_dim, rank, code). Calculated during model validation.",
+    )
+    ordered_case_type_col_ids_by_dim: dict[UUID, list[UUID]] = Field(
+        default_factory=dict,
+        description="The case type columns per case type dimension, ordered by (rank, code). Calculated during model validation.",
     )
     genetic_distance_protocols: dict[UUID, GeneticDistanceProtocol] = Field(
         description="The genetic distance protocols used by the case type"
@@ -58,32 +66,64 @@ class CompleteCaseType(CaseType):
     case_type_share_abacs: dict[UUID, CaseTypeShareAbac] = Field(
         description="The case type share ABAC object by data collection ID"
     )
-    stats_time_case_type_col_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_time_case_type_col_id"
+    case_date_case_type_dim_id: UUID | None = Field(
+        description="The case type dimension ID to use for time-based statistics unless otherwise specified"
     )
-    stats_geo_case_type_col_id: UUID | None = copy_model_field(
-        CaseTypeSettings, "stats_geo_case_type_col_id"
-    )
-    stats_time_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_time_case_type_col_id and that the user has read rights to for at least one data collection. The list is ordered from highest to lowest resolution (day, week, month, quarter, year). This is the list used to calculate the case date. Empty if no stats_time_case_type_col_id is set, empty list if no read rights to any of these columns.",
-    )
-    stats_geo_case_type_col_ids: list[UUID] | None = Field(
-        description="The case type column IDs within the same (dimension, occurrence) as the stats_geo_case_type_col_id and that the user has read rights to for at least one data collection. The list is not ordered. Empty if no stats_geo_case_type_col_id is set, empty list if no read rights to any of these columns.",
-    )
-    create_max_n_cases: int = copy_model_field(CaseTypeSettings, "create_max_n_cases")
-    read_max_n_cases: int = copy_model_field(CaseTypeSettings, "read_max_n_cases")
-    read_max_tree_size: int = copy_model_field(CaseTypeSettings, "read_max_tree_size")
-    update_max_n_cases: int = copy_model_field(CaseTypeSettings, "update_max_n_cases")
-    delete_max_n_cases: int = copy_model_field(CaseTypeSettings, "delete_max_n_cases")
+    create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
+    read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")
+    read_max_tree_size: int = copy_model_field(CaseType, "read_max_tree_size")
+    update_max_n_cases: int = copy_model_field(CaseType, "update_max_n_cases")
+    delete_max_n_cases: int = copy_model_field(CaseType, "delete_max_n_cases")
 
     @model_validator(mode="after")
-    def derive_case_type_col_order(self) -> "CompleteCaseType":
-        ordered: list[UUID] = []
-        seen: set[UUID] = set()
-        for dim in self.case_type_dims:
-            for cid in dim.case_type_col_order:
-                if cid not in seen:
-                    ordered.append(cid)
-                    seen.add(cid)
-        self.case_type_col_order = ordered
+    def validate_model(self) -> Self:
+        if (
+            self.case_date_case_type_dim_id is not None
+            and self.case_date_case_type_dim_id not in self.case_type_dims
+        ):
+            raise ValueError(
+                "stats_time_case_type_dim_id must refer to a valid CaseTypeDim"
+            )
+        # Calculate ordered_case_type_dim_ids
+        self.ordered_case_type_dim_ids = [  # type: ignore[assignment]
+            y.id
+            for y in sorted(
+                self.case_type_dims.values(),
+                key=lambda x: (x.occurrence, x.rank, x.code),
+            )
+        ]
+        # Calculate ordered_case_type_col_ids
+        case_type_dim_order_map = {
+            x: i for i, x in enumerate(self.ordered_case_type_dim_ids)
+        }
+        self.ordered_case_type_col_ids = [  # type: ignore[assignment]
+            y.id
+            for y in sorted(
+                self.case_type_cols.values(),
+                key=lambda x: (
+                    case_type_dim_order_map[x.case_type_dim_id],
+                    x.rank,
+                    x.code,
+                ),
+            )
+        ]
+        # Calculate ordered_case_type_col_ids_by_dim
+        ordered_case_type_col_ids_by_dim: dict[UUID, list[UUID]] = {}
+        for case_type_dim_id in self.case_type_dims.keys():
+            dim_case_type_cols = [
+                x
+                for x in self.case_type_cols.values()
+                if x.case_type_dim_id == case_type_dim_id
+            ]
+            ordered_dim_case_type_cols: list[UUID] = [  # type:ignore[assignment]
+                y.id
+                for y in sorted(
+                    dim_case_type_cols,
+                    key=lambda x: (x.rank, x.code),
+                )
+            ]
+            ordered_case_type_col_ids_by_dim[case_type_dim_id] = (
+                ordered_dim_case_type_cols
+            )
+        self.ordered_case_type_col_ids_by_dim = ordered_case_type_col_ids_by_dim
         return self

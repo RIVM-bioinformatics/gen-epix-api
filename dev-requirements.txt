@@ -1,7 +1,7 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
 pandas==2.3.3
-polars==1.35.2
+polars==1.36.1
 xlsxwriter==3.2.9
 pytest
 pytest-cov==7.0.*
@@ -9,10 +9,9 @@ pytest-mock==3.15.*
 pytest-dependency==0.6.*
 pyinstrument==5.1.*
 isort==7.0.*
-black==25.11.*
+black==25.12.*
 pylint==4.0.*
 mypy==1.19.*
-black==25.11.*
 cryptography==46.0.3
 oauthlib==3.3.1
 
