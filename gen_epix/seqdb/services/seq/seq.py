@@ -314,7 +314,7 @@ class SeqService(BaseSeqService):
 
     def retrieve_complete_samples(
         self, cmd: command.RetrieveCompleteSamplesCommand
-    ) -> list[model.CompleteSample]:
+    ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
@@ -335,7 +335,7 @@ class SeqService(BaseSeqService):
 
     def upsert_complete_samples(
         self,
-        cmd: command.UpsertCompleteSamplesCommand,
+        cmd: command.UploadSamplesCommand,
     ) -> list[UUID]:
         return seq_service_upsert_complete_samples(self, cmd)
 
@@ -370,8 +370,8 @@ class SeqService(BaseSeqService):
                 x
                 for x in allele_profiles
                 if x.locus_set_id == locus_set_id
-                and x.quality
-                and x.quality.is_usable()
+                and x.qc_result
+                and x.qc_result.is_usable()
             ]
             # Convert allele_profile from json to object
             allele_profile_allele_ids = [

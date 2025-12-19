@@ -48,8 +48,6 @@ def case_service_retrieve_cases_by_query(
 
     with repository.uow() as uow:
 
-        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
-
         # @ABAC: Verify any access to all given case sets if applicable
         if case_set_ids:
             case_sets = self._retrieve_case_sets_with_content_right(
@@ -75,14 +73,6 @@ def case_service_retrieve_cases_by_query(
                 raise exc.UnauthorizedAuthError(
                     f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
                 )
-            invalid_case_set_ids = case_set_ids - {case_type_id}
-            if invalid_case_set_ids:
-                invalid_case_set_ids_str = ", ".join(
-                    [str(x) for x in invalid_case_set_ids]
-                )
-                raise exc.InvalidArgumentsError(
-                    f"Case sets do not all belong to case type {case_type_id}: {invalid_case_set_ids_str}"
-                )
 
         # @ABAC: Verify validity of filter
         if case_query.filter:
@@ -99,7 +89,6 @@ def case_service_retrieve_cases_by_query(
             # user_case_access,
             enum.CaseRight.READ_CASE,
             case_type_id,
-            case_type_settings=case_type_settings,
             case_ids=None,
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
@@ -129,13 +118,25 @@ def case_service_retrieve_cases_by_query(
                 if y
             ]
 
+        # retrieve case type to apply max results limit
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
+
         # Apply max results limit
         is_max_results_exceeded = False
-        if case_type_settings:
-            max_n_cases = case_type_settings.read_max_n_cases
-            if max_n_cases is not None and len(cases) > max_n_cases:
-                is_max_results_exceeded = True
-                cases = cases[:max_n_cases]
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            is_max_results_exceeded = True
+            cases = cases[:max_n_cases]
 
     return model.CaseQueryResult(
         case_query=case_query,
@@ -158,7 +159,6 @@ def case_service_retrieve_cases_by_id(
     assert case_abac is not None
 
     with repository.uow() as uow:
-        case_type_settings = _retrieve_case_type_settings(self, uow, user, case_type_id)
 
         cases = self._retrieve_cases_with_content_right(
             uow,
@@ -166,14 +166,28 @@ def case_service_retrieve_cases_by_id(
             case_abac,
             enum.CaseRight.READ_CASE,
             case_type_id,
-            case_type_settings=case_type_settings,
             case_ids=case_ids,
             filter_content=True,
         )
         if not cases:
             return []
 
-        # TODO: Add case_type_settings.read_max_n_cases check?
+        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+            uow,
+            user.id,
+            model.CaseType,
+            None,
+            [case_type_id],
+            CrudOperation.READ_SOME,
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        case_type = case_types[0]
+
+        # Apply max results limit
+        max_n_cases = case_type.read_max_n_cases
+        if len(cases) > max_n_cases:
+            cases = cases[:max_n_cases]
 
     return cases
 
@@ -434,8 +448,11 @@ def _get_map_functions_for_filters(
             enum.ColType.ORDINAL,
             enum.ColType.INTERVAL,
             enum.ColType.TEXT,
-            enum.ColType.ID_DIRECT,
-            enum.ColType.ID_PSEUDONYMISED,
+            enum.ColType.ID_PERSON,
+            enum.ColType.ID_SAMPLE,
+            enum.ColType.ID_CASE,
+            enum.ColType.ID_EVENT,
+            enum.ColType.ID_GENETIC_SEQUENCE,
             enum.ColType.ORGANIZATION,
             enum.ColType.OTHER,
         }:
@@ -462,27 +479,3 @@ def _get_map_functions_for_filters(
         else:
             raise exc.InvalidArgumentsError(f"Unsupported column type: {col.col_type}")
     return map_fns
-
-
-def _retrieve_case_type_settings(
-    self: BaseCaseService, uow: BaseUnitOfWork, user: model.User, case_type_id: UUID
-) -> model.CaseTypeSettings:
-    # Get time stats case type col ids and mappers based on case type settings
-    case_type_settings_list: list[model.CaseTypeSettings] = self.repository.crud(  # type: ignore[assignment]
-        uow,
-        user.id,
-        model.CaseTypeSettings,
-        None,
-        None,
-        CrudOperation.READ_ALL,
-        filter=UuidSetFilter(
-            key="case_type_id",
-            members=frozenset({case_type_id}),
-        ),
-    )
-    if not case_type_settings_list:
-        raise exc.InvalidArgumentsError(
-            f"No case type settings for case type {case_type_id}"
-        )
-    case_type_settings = case_type_settings_list[0]
-    return case_type_settings

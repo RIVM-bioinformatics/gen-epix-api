@@ -7,7 +7,6 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 
@@ -23,7 +22,7 @@ class Outage(Model):
         persistable=True,
     )
     description: str | None = Field(
-        default=None, description="Description of the system outage."
+        default=None, description="Description of the system outage.", max_length=1000
     )
     active_from: datetime.datetime | None = Field(
         default=None, description="The date-time when the system outage starts."

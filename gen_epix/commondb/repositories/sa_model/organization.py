@@ -223,12 +223,12 @@ class UserInvitationMixin(RowMetadataMixin):
         return create_mapped_column(DOMAIN, model.UserInvitation, "invited_by_user_id")
 
     @declared_attr
-    def organization_id(cls) -> Mapped[UUID]:
-        return create_mapped_column(DOMAIN, model.UserInvitation, "organization_id")
-
-    @declared_attr
     def invited_by_user(cls) -> Mapped[UserMixin]:
         return relationship("User", foreign_keys="UserInvitation.invited_by_user_id")
+
+    @declared_attr
+    def organization_id(cls) -> Mapped[UUID]:
+        return create_mapped_column(DOMAIN, model.UserInvitation, "organization_id")
 
     @declared_attr
     def organization(cls) -> Mapped[model.Organization]:
@@ -263,6 +263,38 @@ class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
     )
     identifier_issuer_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.OrganizationIdentifierIssuerLink, "identifier_issuer_id"
+    )
+
+
+@declarative_mixin
+class ExternalIdentifierMixin(RowMetadataMixin):
+    """
+    SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
+    created under a different declarative base.
+    """
+
+    identifier_type: Mapped[enum.IdentifierType] = create_mapped_column(
+        DOMAIN, model.ExternalIdentifier, "identifier_type"
+    )
+
+    @declared_attr
+    def identifier_issuer_id(cls) -> Mapped[UUID]:
+        return create_mapped_column(
+            DOMAIN, model.ExternalIdentifier, "identifier_issuer_id"
+        )
+
+    @declared_attr
+    def identifier_issuer(cls) -> Mapped[model.IdentifierIssuer]:
+        return create_mapped_column(
+            DOMAIN, model.ExternalIdentifier, "identifier_issuer"
+        )
+
+    external_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.ExternalIdentifier, "external_id"
+    )
+
+    internal_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ExternalIdentifier, "internal_id"
     )
 
 
@@ -362,3 +394,11 @@ class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMix
     __tablename__, __table_args__ = create_table_args(
         model.OrganizationIdentifierIssuerLink
     )
+
+
+class ExternalIdentifier(Base, ExternalIdentifierMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ExternalIdentifier)

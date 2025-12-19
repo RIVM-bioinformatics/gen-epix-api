@@ -83,7 +83,7 @@ class OidcServerCfg(Model):
         "client_secret",
         "scope",
         "public",
-        "enable_introspection"
+        "enable_introspection",
     }
     SPEC_REQUIRED_FIELDS: ClassVar[set[str]] = {
         "issuer",

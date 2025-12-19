@@ -13,13 +13,9 @@ from gen_epix.seqdb.domain import enum, model
 # Non-CRUD commands
 
 
-class UpsertCompleteSamplesCommand(Command):
-    alleles: list[model.Allele] | None = Field(
-        default=None,
-        description="List of any not yet existing alleles to create. Any already existing alleles are ignored. None if not set.",
-    )
-    complete_samples: list[model.CompleteSample] = Field(
-        description="List of complete samples to upsert.",
+class UploadSamplesCommand(Command):
+    sample_set: model.SampleSetForUpload = Field(
+        description="Samples to upsert, along with any associated data.",
     )
 
 

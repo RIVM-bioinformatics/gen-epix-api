@@ -4,6 +4,7 @@ from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest wa
 
 import pytest
 
+from gen_epix import fastapp
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
@@ -49,17 +50,21 @@ def get_test_client() -> Env:
 class TestContent:
     def test_content(self, env: Env) -> None:
 
+        # import pyinstrument
+
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
 
         app = env.app
         app_impl: AppImplDetails = app.impl
+
         # Get root user
         root_user = env.get_root_user()
         env._set_obj(root_user)
         root_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
+
         # Get all users and permissions
         users = app.handle(
             command.UserCrudCommand(
@@ -68,6 +73,7 @@ class TestContent:
             )
         )
         permissions = app.domain.permissions
+
         # Get organization level policies
         org_access_case_policies = app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(
@@ -81,6 +87,7 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
+
         # Get org admin user
         org_admin_policies = app.handle(
             command.OrganizationAdminPolicyCrudCommand(
@@ -94,6 +101,7 @@ class TestContent:
         org_admin_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_admin_user)
         )
+
         # Get org user
         user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -111,6 +119,7 @@ class TestContent:
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
         )
+
         # Invite an org user as org admin user
         new_user = model.User(
             key="new_user@example.com",
@@ -133,12 +142,14 @@ class TestContent:
                 token=new_user_invitation.token,
             )
         )
+
         # Get constraints on user invitation
         user_invitation_constraints = app.handle(
             command.RetrieveInviteUserConstraintsCommand(
                 user=org_admin_user,
             )
         )
+
         # Get some refdata as org user
         case_types = app.handle(
             command.CaseTypeCrudCommand(
@@ -170,11 +181,13 @@ class TestContent:
             ]
             for concept_set in concept_sets
         }
+
+        # Get case type and and case set stats
         case_type_stats = app.handle(
             command.RetrieveCaseTypeStatsCommand(user=org_user)
         )
-        # Get case type and and case set stats
         case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
+
         # Go over all case types with data
         has_cases_case_type_ids = {
             x.case_type_id for x in case_type_stats if x.n_cases > 0
@@ -191,6 +204,7 @@ class TestContent:
             assert complete_case_type.id is not None
             if len(complete_case_type.case_type_cols) <= 1:
                 continue
+
             # Retrieve cases based on a filter
             # print(f"Retrieving cases for case type {complete_case_type.name}")
             filters = []
@@ -240,6 +254,7 @@ class TestContent:
             if len(case_ids) > 100:
                 # Too high load for this test
                 continue
+
             # Retrieve phylogenetic tree
             dist_case_type_cols = [
                 case_type_col
@@ -263,6 +278,7 @@ class TestContent:
                     assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
+
             # Retrieve genetic sequence
             genetic_sequence_case_type_cols = [
                 case_type_col
@@ -335,6 +351,8 @@ class TestContent:
                 for assembly_protocol in assembly_protocols:
                     if not assembly_protocol.id:
                         raise ValueError("Assembly protocol ID should not be empty")
+
+        # Go over all case sets
         for case_set in case_sets:
             case_ids: model.CaseQueryResult = app.handle(
                 command.RetrieveCasesByQueryCommand(
@@ -352,8 +370,9 @@ class TestContent:
                 )
             )
 
+        # Read all for all models with read permission
         for model_class, command_class in app._model_crud_command_map.items():
-            permissions: frozenset[model.Permission] = (
+            permissions: frozenset[fastapp.Permission] = (
                 app.domain.get_permissions_for_command(command_class)
             )
             if PermissionType.READ not in {x.permission_type for x in permissions}:
