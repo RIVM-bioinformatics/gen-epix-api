@@ -27,7 +27,19 @@ def case_service_retrieve_case_type_stats(
     )
     if case_type_ids is None:
         # No case types provided -> use all case types with read access
-        case_type_ids = read_case_type_ids
+        if case_abac.is_full_access:
+            with repository.uow() as uow:
+                case_type_ids = self.repository.crud(
+                    uow,
+                    user.id,
+                    model.CaseType,
+                    None,
+                    None,
+                    CrudOperation.READ_ALL,
+                    return_id=True,
+                )
+        else:
+            case_type_ids = read_case_type_ids
     elif not case_abac.is_full_access:
         unauthorized_case_type_ids = case_type_ids - read_case_type_ids
         if unauthorized_case_type_ids:
