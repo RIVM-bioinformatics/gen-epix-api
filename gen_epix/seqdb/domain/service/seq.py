@@ -13,8 +13,8 @@ class BaseSeqService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         self.register_default_crud_handlers()
-        f(command.RetrieveCompleteAlleleProfileCommand, self.retrieve_allele_profile)
-        f(command.RetrieveCompleteSamplesCommand, self.retrieve_complete_samples)
+        f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
+        f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
             command.RetrieveCompleteSnpProfileCommand,
             self.retrieve_snp_profile,
@@ -33,20 +33,20 @@ class BaseSeqService(BaseService):
         )
         f(
             command.UploadSamplesCommand,
-            self.upsert_complete_samples,
+            self.upload_samples,
         )
 
     @abc.abstractmethod
     def retrieve_allele_profile(
         self,
-        cmd: command.RetrieveCompleteAlleleProfileCommand,
+        cmd: command.RetrieveAlleleProfileCommand,
     ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_complete_samples(
+    def retrieve_samples(
         self,
-        cmd: command.RetrieveCompleteSamplesCommand,
+        cmd: command.RetrieveSamplesCommand,
     ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
 
@@ -75,7 +75,7 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def upsert_complete_samples(
+    def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
     ) -> list[UUID]:

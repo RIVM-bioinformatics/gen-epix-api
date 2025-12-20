@@ -21,9 +21,7 @@ from gen_epix.filter import (
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
-from gen_epix.seqdb.services.seq.upsert_complete_samples import (
-    seq_service_upsert_complete_samples,
-)
+from gen_epix.seqdb.services.seq.upload import seq_service_upload_samplea
 
 
 class SeqService(BaseSeqService):
@@ -82,28 +80,11 @@ class SeqService(BaseSeqService):
 
         return super().crud(cmd)
 
-    def _calculate_allele_profile_distances(
-        self, uow: BaseUnitOfWork, allele_profiles: list[model.AlleleProfile]
-    ) -> list[model.SeqDistance]:
-        """
-        Calculate all distances for these allele profiles between themselves and with
-        all stored allele profiles, for all distance protocols that are applicable to
-        the locus set of the allele profiles.
-        """
-        locus_set_ids = {x.locus_set_id for x in allele_profiles}
-        cmd = command.SeqDistanceProtocolCrudCommand(
-            user=None,
-            operation=CrudOperation.READ_ALL,
-            query_filter=UuidSetFilter(key="locus_set_id", members=locus_set_ids),
-        )
-        seq_distance_protocols = self.crud_repository(uow, cmd)
-        seq_distances = self.calculate_pairwise_allele_profile_distances(
-            seq_distance_protocols, allele_profiles
-        )
-        # TODO: calculate distances with all stored allele profiles
-        # TODO: store/update distances
-        # raise NotImplementedError()
-        return seq_distances
+    def upload_samples(
+        self,
+        cmd: command.UploadSamplesCommand,
+    ) -> list[UUID]:
+        return seq_service_upload_samplea(self, cmd)
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeCommand
@@ -293,7 +274,7 @@ class SeqService(BaseSeqService):
 
     def retrieve_allele_profile(
         self,
-        cmd: command.RetrieveCompleteAlleleProfileCommand,
+        cmd: command.RetrieveAlleleProfileCommand,
     ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
         raise NotImplementedError()
 
@@ -312,8 +293,8 @@ class SeqService(BaseSeqService):
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
-    def retrieve_complete_samples(
-        self, cmd: command.RetrieveCompleteSamplesCommand
+    def retrieve_samples(
+        self, cmd: command.RetrieveSamplesCommand
     ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
 
@@ -333,11 +314,28 @@ class SeqService(BaseSeqService):
                         for i in range(n_chunks)
                     )
 
-    def upsert_complete_samples(
-        self,
-        cmd: command.UploadSamplesCommand,
-    ) -> list[UUID]:
-        return seq_service_upsert_complete_samples(self, cmd)
+    def _calculate_allele_profile_distances(
+        self, uow: BaseUnitOfWork, allele_profiles: list[model.AlleleProfile]
+    ) -> list[model.SeqDistance]:
+        """
+        Calculate all distances for these allele profiles between themselves and with
+        all stored allele profiles, for all distance protocols that are applicable to
+        the locus set of the allele profiles.
+        """
+        locus_set_ids = {x.locus_set_id for x in allele_profiles}
+        cmd = command.SeqDistanceProtocolCrudCommand(
+            user=None,
+            operation=CrudOperation.READ_ALL,
+            query_filter=UuidSetFilter(key="locus_set_id", members=locus_set_ids),
+        )
+        seq_distance_protocols = self.crud_repository(uow, cmd)
+        seq_distances = self.calculate_pairwise_allele_profile_distances(
+            seq_distance_protocols, allele_profiles
+        )
+        # TODO: calculate distances with all stored allele profiles
+        # TODO: store/update distances
+        # raise NotImplementedError()
+        return seq_distances
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(

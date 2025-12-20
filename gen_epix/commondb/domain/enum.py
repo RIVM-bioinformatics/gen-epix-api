@@ -67,6 +67,13 @@ class IdentifierType(IntEnum):
     GENETIC_SEQUENCE = 6
 
 
+class OnExistsUploadAction(Enum):
+    IGNORE = "IGNORE"
+    UPDATE = "UPDATE"
+    REPLACE = "REPLACE"
+    ERROR = "ERROR"
+
+
 class RepositoryType(Enum):
     DICT = "DICT"
     SA_SQLITE = "SA_SQLITE"

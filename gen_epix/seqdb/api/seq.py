@@ -13,6 +13,10 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.seqdb.domain import command, enum, model
 
 
+class UploadSamplesRequestBody(command.UploadSamplesCommand):
+    pass
+
+
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     seq_distance_protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
@@ -20,7 +24,7 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     leaf_codes: list[str] | None = None
 
 
-class RetrieveCompleteSamplesRequestBody(PydanticBaseModel):
+class RetrieveSamplesRequestBody(PydanticBaseModel):
     sample_ids: list[UUID]
 
 
@@ -38,10 +42,6 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
 class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     seq_ids: list[UUID]
     locus_set_id: UUID
-
-
-class UploadSamplesRequestBody(command.UploadSamplesCommand):
-    pass
 
 
 def create_seq_endpoints(
@@ -80,17 +80,17 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
-        "/retrieve/complete_samples",
-        operation_id="retrieve__complete_samples",
-        name="RetrieveCompleteSamples",
-        description=command.RetrieveCompleteSamplesCommand.__doc__,
+        "/retrieve/samples",
+        operation_id="retrieve__samples",
+        name="RetrieveSamples",
+        description=command.RetrieveSamplesCommand.__doc__,
     )
-    async def retrieve__complete_samples(
-        user: registered_user_dependency, request_body: RetrieveCompleteSamplesRequestBody  # type: ignore
+    async def retrieve__samples(
+        user: registered_user_dependency, request_body: RetrieveSamplesRequestBody  # type: ignore
     ) -> list[model.SampleForUpload]:
         try:
             retval: list[model.SampleForUpload] = app.handle(
-                command.RetrieveCompleteSamplesCommand(
+                command.RetrieveSamplesCommand(
                     user=user,
                     sample_ids=request_body.sample_ids,
                 )
@@ -132,14 +132,14 @@ def create_seq_endpoints(
         "/retrieve/allele_profile",
         operation_id="retrieve__allele_profile",
         name="RetrieveAlleleProfile",
-        description=command.RetrieveCompleteAlleleProfileCommand.__doc__,
+        description=command.RetrieveAlleleProfileCommand.__doc__,
     )
     async def retrieve__allele_profile(
         user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
     ) -> list[model.CompleteAlleleProfile]:
         try:
             retval: list[model.CompleteAlleleProfile] = app.handle(
-                command.RetrieveCompleteAlleleProfileCommand(
+                command.RetrieveAlleleProfileCommand(
                     user=user,
                     seq_ids=request_body.seq_ids,
                     locus_set_id=request_body.locus_set_id,

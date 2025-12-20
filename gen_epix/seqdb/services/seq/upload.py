@@ -4,7 +4,7 @@ from gen_epix.seqdb.domain import command
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
 
-def seq_service_upsert_complete_samples(
+def seq_service_upload_samplea(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
 ) -> list[UUID]:

@@ -40,7 +40,7 @@ def case_service_upload_cases(
     case_type_id = cmd.case_type_id
     created_in_data_collection_id = cmd.created_in_data_collection_id
 
-    # @ABAC: verify if case set or cases may be created in the given data collection(s)
+    # @ABAC: verify if cases may be created in the given data collection(s)
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
     is_allowed = case_abac.is_allowed(
