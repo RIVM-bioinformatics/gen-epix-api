@@ -329,7 +329,7 @@ class DimColTypeSet(Enum):
         )
     )
     IDENTIFIER = ColTypeSet.ID.value
-    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL})
+    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL, ColType.NOMINAL})
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value
