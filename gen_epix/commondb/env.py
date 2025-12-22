@@ -1,3 +1,4 @@
+import logging
 import traceback
 
 # pylint: disable=unused-import-alias
@@ -37,6 +38,7 @@ class App(fastapp.App):
 
 
 class AppComposer(BaseAppComposer):
+
     def __init__(
         self,
         app_cfg: AppCfg,
@@ -84,7 +86,7 @@ class AppComposer(BaseAppComposer):
         self._new_user_dependency: Callable = data["new_user_dependency"]
         self._idp_user_dependency: Callable = data["idp_user_dependency"]
 
-    def compose_application(self) -> dict:
+    def compose_application(self) -> dict[str, Any]:
 
         # Get loggers
         cfg = self._app_cfg.cfg
@@ -95,17 +97,7 @@ class AppComposer(BaseAppComposer):
         # Compose application
         try:
             if self._log_setup and setup_logger:
-                setup_logger.debug(
-                    App.create_static_log_message(
-                        "e8665136", "Starting composing application"
-                    )
-                )
-
-                setup_logger.debug(
-                    App.create_static_log_message(
-                        "fb612692", "Initialising services and repositories"
-                    )
-                )
+                self._setup_application_logging(setup_logger)
 
             # Initialize app
             app_impl = AppImplDetails(
@@ -133,78 +125,24 @@ class AppComposer(BaseAppComposer):
 
             # Initialise repositories and services
             for service_type in self._sorted_service_types:
-                service_cfg = cfg["service"][service_type.value]
-                service_class = service_cfg["class"]
-                service_props = service_cfg["props"]
-                repository_cfg = cfg["repository"].get(service_type.value)
-
-                # Create repository if necessary
-                curr_repository = None
-                if repository_cfg:
-                    repository_class: type[BaseRepository] = repository_cfg["class"]
-                    repository_props = repository_cfg["props"]
-                    if isinstance(repository_cfg["type"], str):
-                        repository_type = enum.RepositoryType(repository_cfg["type"])
-                    else:
-                        repository_type = enum.RepositoryType(
-                            repository_cfg["type"].value
-                        )
-                    entities = app.domain.get_dag_sorted_entities(
-                        service_type=service_type
-                    )
-                    if self._log_setup and setup_logger:
-                        setup_logger.debug(
-                            app.create_log_message(
-                                "db89f0a5",
-                                f"Setting up {service_type.value} service with {repository_type.value} repository",
-                            )
-                        )
-                    curr_repository = repository_class.create_repository(
-                        entities=entities, **repository_props
-                    )
-                    # Add to overview of repositories
-                    app_impl.repositories[service_type] = curr_repository
-
-                # Create service, injecting app, repository, logger and props
-                curr_service: BaseService = service_class(
+                self._initialize_repository(
+                    cfg,
+                    setup_logger,
+                    service_logger,
+                    app_impl,
                     app,
-                    service_type=service_type,
-                    repository=curr_repository,
-                    logger=service_logger,
-                    setup_logger=setup_logger if self._log_setup else None,
-                    name=service_type.value,
-                    ssl_context=ssl_context,
-                    **service_props,
+                    ssl_context,
+                    service_type,
                 )
-                # Add to overview of services
-                app_impl.services[service_type] = curr_service
 
             # Get common services and types
-            system_service_type = AppComposer._get_enum_from_list(
-                self._sorted_service_types, "SYSTEM"
-            )
-            system_service = app_impl.services[system_service_type]
-            assert isinstance(system_service, SystemService)
-            auth_service_type = AppComposer._get_enum_from_list(
-                self._sorted_service_types, "AUTH"
-            )
-            auth_service = app_impl.services[auth_service_type]
-            assert isinstance(auth_service, AuthService)
-            rbac_service_type = AppComposer._get_enum_from_list(
-                self._sorted_service_types, "RBAC"
-            )
-            rbac_service = app_impl.services[rbac_service_type]
-            assert isinstance(rbac_service, RbacService)
-            abac_service_type = AppComposer._get_enum_from_list(
-                self._sorted_service_types, "ABAC"
-            )
-            abac_service = app_impl.services[abac_service_type]
-            assert isinstance(abac_service, AbacService)
-            organization_service_type = AppComposer._get_enum_from_list(
-                self._sorted_service_types, "ORGANIZATION"
-            )
-            organization_service = app_impl.services[organization_service_type]
-            assert isinstance(organization_service, OrganizationService)
+            (
+                system_service,
+                auth_service,
+                rbac_service,
+                abac_service,
+                organization_service,
+            ) = self._get_services(app_impl)
 
             # Set up roles
             rbac_service.register_roles(
@@ -265,6 +203,106 @@ class AppComposer(BaseAppComposer):
             "new_user_dependency": app_impl.new_user_dependency,
             "idp_user_dependency": app_impl.idp_user_dependency,
         }
+
+    def _get_services(
+        self, app_impl: AppImplDetails
+    ) -> tuple[
+        SystemService, AuthService, RbacService, AbacService, OrganizationService
+    ]:
+        system_service_type = AppComposer._get_enum_from_list(
+            self._sorted_service_types, "SYSTEM"
+        )
+        system_service = app_impl.services[system_service_type]
+        assert isinstance(system_service, SystemService)
+        auth_service_type = AppComposer._get_enum_from_list(
+            self._sorted_service_types, "AUTH"
+        )
+        auth_service = app_impl.services[auth_service_type]
+        assert isinstance(auth_service, AuthService)
+        rbac_service_type = AppComposer._get_enum_from_list(
+            self._sorted_service_types, "RBAC"
+        )
+        rbac_service = app_impl.services[rbac_service_type]
+        assert isinstance(rbac_service, RbacService)
+        abac_service_type = AppComposer._get_enum_from_list(
+            self._sorted_service_types, "ABAC"
+        )
+        abac_service = app_impl.services[abac_service_type]
+        assert isinstance(abac_service, AbacService)
+        organization_service_type = AppComposer._get_enum_from_list(
+            self._sorted_service_types, "ORGANIZATION"
+        )
+        organization_service = app_impl.services[organization_service_type]
+        assert isinstance(organization_service, OrganizationService)
+        return (
+            system_service,
+            auth_service,
+            rbac_service,
+            abac_service,
+            organization_service,
+        )
+
+    def _initialize_repository(
+        self,
+        cfg: Dynaconf,
+        setup_logger: logging.Logger,
+        service_logger: logging.Logger,
+        app_impl: AppImplDetails,
+        app: App,
+        ssl_context: Any,
+        service_type: Enum,
+    ) -> None:
+        service_cfg = cfg["service"][service_type.value]
+        service_class = service_cfg["class"]
+        service_props = service_cfg["props"]
+        repository_cfg = cfg["repository"].get(service_type.value)
+
+        # Create repository if necessary
+        curr_repository = None
+        if repository_cfg:
+            repository_class: type[BaseRepository] = repository_cfg["class"]
+            repository_props = repository_cfg["props"]
+            if isinstance(repository_cfg["type"], str):
+                repository_type = enum.RepositoryType(repository_cfg["type"])
+            else:
+                repository_type = enum.RepositoryType(repository_cfg["type"].value)
+            entities = app.domain.get_dag_sorted_entities(service_type=service_type)
+            if self._log_setup and setup_logger:
+                setup_logger.debug(
+                    app.create_log_message(
+                        "db89f0a5",
+                        f"Setting up {service_type.value} service with {repository_type.value} repository",
+                    )
+                )
+            curr_repository = repository_class.create_repository(
+                entities=entities, **repository_props
+            )
+            # Add to overview of repositories
+            app_impl.repositories[service_type] = curr_repository
+
+            # Create service, injecting app, repository, logger and props
+        curr_service: BaseService = service_class(
+            app,
+            service_type=service_type,
+            repository=curr_repository,
+            logger=service_logger,
+            setup_logger=setup_logger if self._log_setup else None,
+            name=service_type.value,
+            ssl_context=ssl_context,
+            **service_props,
+        )
+        # Add to overview of services
+        app_impl.services[service_type] = curr_service
+
+    def _setup_application_logging(self, setup_logger: logging.Logger) -> None:
+        setup_logger.debug(
+            App.create_static_log_message("e8665136", "Starting composing application")
+        )
+        setup_logger.debug(
+            App.create_static_log_message(
+                "fb612692", "Initialising services and repositories"
+            )
+        )
 
     @staticmethod
     def _get_enum_from_list(enums: Iterable[Enum], name: str) -> Enum:
