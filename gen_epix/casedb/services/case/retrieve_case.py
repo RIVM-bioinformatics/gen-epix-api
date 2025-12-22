@@ -29,7 +29,6 @@ def case_service_retrieve_cases_by_query(
     # TODO: return empty CaseQueryResult instead of empty list
     if case_set_ids is not None and len(case_set_ids) == 0:
         raise NotImplementedError("To be implemented")
-        return []
 
     # @ABAC: get case abac
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
@@ -38,50 +37,20 @@ def case_service_retrieve_cases_by_query(
     has_case_read = case_abac.get_combinations_with_access_right(
         enum.CaseRight.READ_CASE
     )
-    read_case_type_col_ids = case_abac.get_case_type_cols_with_access_rights(
-        enum.CaseRight.READ_CASE, case_type_id
-    )
-
-    # @ABAC: Verify read access to the given case type if applicable
     if case_type_id not in has_case_read and not is_full_access:
         raise exc.UnauthorizedAuthError(f"Unauthorized case type: {case_type_id}")
 
     with repository.uow() as uow:
-
-        # @ABAC: Verify any access to all given case sets if applicable
         if case_set_ids:
-            case_sets = self._retrieve_case_sets_with_content_right(
-                uow,
-                user.id,
-                case_abac,
-                # user_case_access
-                enum.CaseRight.READ_CASE_SET,
-                case_type_id=case_type_id,
-            ) + self._retrieve_case_sets_with_content_right(
-                uow,
-                user.id,
-                case_abac,
-                # user_case_access
-                enum.CaseRight.WRITE_CASE_SET,
-                case_type_id=case_type_id,
+            # @ABAC: Verify any access to all given case sets if applicable
+            _verify_case_set_access(
+                self, user, case_set_ids, case_type_id, case_abac, uow
             )
-            unauthorized_case_set_ids = case_set_ids - {x.id for x in case_sets}
-            if unauthorized_case_set_ids:
-                unauthorized_case_set_ids_str = ", ".join(
-                    [str(x) for x in unauthorized_case_set_ids]
-                )
-                raise exc.UnauthorizedAuthError(
-                    f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
-                )
-
-        # @ABAC: Verify validity of filter
         if case_query.filter:
-            # Make sure filter keys are UUIDs
-            case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
-            cols = _verify_case_filter(self, uow, user, case_query.filter)
+            # @ABAC: Verify validity of filter
+            cols = _verify_filter_validity(self, user, case_query, uow)
 
-        # @ABAC: Retrieve all cases with read access, and content filtered on case type
-        # col read access
+        # @ABAC: Retrieve all cases with read access, and content filtered on case type col read access
         cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
@@ -93,7 +62,6 @@ def case_service_retrieve_cases_by_query(
             datetime_range_filter=datetime_range_filter,
             filter_content=True,
         )
-
         # Filter cases by case sets
         if case_set_ids:
             case_case_sets = self._retrieve_case_case_sets_map(uow, user.id)
@@ -103,7 +71,6 @@ def case_service_retrieve_cases_by_query(
                 if x.id in case_case_sets
                 and case_case_sets[x.id].intersection(case_set_ids)
             ]
-
         # Filter cases by filters
         if case_query.filter:
             filter_mapping_functions = _get_map_functions_for_filters(cols)
@@ -119,30 +86,86 @@ def case_service_retrieve_cases_by_query(
             ]
 
         # retrieve case type to apply max results limit
-        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
-            uow,
-            user.id,
-            model.CaseType,
-            None,
-            [case_type_id],
-            CrudOperation.READ_SOME,
+        cases, is_max_results_exceeded = _apply_max_results_limit(
+            self, user, case_type_id, uow, cases
         )
-        if not case_types:
-            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
-        case_type = case_types[0]
-
-        # Apply max results limit
-        is_max_results_exceeded = False
-        max_n_cases = case_type.read_max_n_cases
-        if len(cases) > max_n_cases:
-            is_max_results_exceeded = True
-            cases = cases[:max_n_cases]
 
     return model.CaseQueryResult(
         case_query=case_query,
-        case_ids=[x.id for x in cases],  # type: ignore[arg-type]
+        case_ids=[x.id for x in cases],  # type: ignore[misc]
         is_max_results_exceeded=is_max_results_exceeded,
     )
+
+
+def _apply_max_results_limit(
+    self: BaseCaseService,
+    user: model.User,
+    case_type_id: UUID,
+    uow: BaseUnitOfWork,
+    cases: list[model.Case],
+) -> tuple[list[model.Case], bool]:
+    case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+        uow,
+        user.id,
+        model.CaseType,
+        None,
+        [case_type_id],
+        CrudOperation.READ_SOME,
+    )
+    if not case_types:
+        raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+    case_type = case_types[0]
+    # Apply max results limit
+    is_max_results_exceeded = False
+    max_n_cases = case_type.read_max_n_cases
+    if len(cases) > max_n_cases:
+        is_max_results_exceeded = True
+        cases = cases[:max_n_cases]
+    return cases, is_max_results_exceeded
+
+
+def _verify_filter_validity(
+    self: BaseCaseService,
+    user: model.User,
+    case_query: model.CaseQuery,
+    uow: BaseUnitOfWork,
+) -> list[model.Col]:
+    case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
+    cols = _verify_case_filter(self, uow, user, case_query.filter)
+    return cols
+
+
+def _verify_case_set_access(
+    self: BaseCaseService,
+    user: model.User,
+    case_set_ids: set[UUID],
+    case_type_id: UUID,
+    case_abac: model.CaseAbac,
+    uow: BaseUnitOfWork,
+) -> None:
+    case_sets = self._retrieve_case_sets_with_content_right(
+        uow,
+        user.id,  # type: ignore[arg-type]
+        case_abac,
+        # user_case_access
+        enum.CaseRight.READ_CASE_SET,
+        case_type_id=case_type_id,
+    ) + self._retrieve_case_sets_with_content_right(
+        uow,
+        user.id,  # type: ignore[arg-type]
+        case_abac,
+        # user_case_access
+        enum.CaseRight.WRITE_CASE_SET,
+        case_type_id=case_type_id,
+    )
+    unauthorized_case_set_ids = case_set_ids - {x.id for x in case_sets}
+    if unauthorized_case_set_ids:
+        unauthorized_case_set_ids_str = ", ".join(
+            [str(x) for x in unauthorized_case_set_ids]
+        )
+        raise exc.UnauthorizedAuthError(
+            f"Unauthorized case sets: {unauthorized_case_set_ids_str}"
+        )
 
 
 def case_service_retrieve_cases_by_id(
@@ -337,10 +360,10 @@ def _verify_case_filter(
     self: BaseCaseService,
     uow: BaseUnitOfWork,
     user: model.User,
-    filter: CompositeFilter,
+    composite_filter: CompositeFilter,
 ) -> list[model.Col]:
     # Retrieve case type cols corresponding to filter keys
-    filter_case_type_col_ids = filter.get_keys()
+    filter_case_type_col_ids = composite_filter.get_keys()
     filter_case_type_cols: list[model.CaseTypeCol] = (
         self.repository.crud(  # type:ignore[assignment]
             uow,
@@ -358,7 +381,7 @@ def _verify_case_filter(
         model.Col,
         None,
         list(
-            set(x.col_id for x in filter_case_type_cols)
+            {x.col_id for x in filter_case_type_cols}
         ),  # TODO: consider READ_SOME allowing duplicate ids
         CrudOperation.READ_SOME,
     )
@@ -367,64 +390,106 @@ def _verify_case_filter(
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for case_type_col, col, filter in zip(  # type:ignore[assignment]
-        filter_case_type_cols, cols, filter.filters
+    for case_type_col, col, composite_filter in zip(  # type:ignore[assignment]
+        filter_case_type_cols, cols, composite_filter.filters
     ):
         if col.concept_set_id or col.region_set_id:
-            if isinstance(filter, StringSetFilter):
-                valid_values = None
-                if col.concept_set_id is not None:
-                    # Get valid region set values
-                    if col.concept_set_id not in concept_valid_values:
-                        concepts: list[model.Concept] = self.app.handle(
-                            command.ConceptCrudCommand(
-                                user=user,
-                                operation=CrudOperation.READ_ALL,
-                                query_filter=UuidSetFilter(
-                                    key="concept_set_id",
-                                    members=frozenset({col.concept_set_id}),
-                                ),
-                            )
-                        )
-                        concept_valid_values[col.concept_set_id] = {
-                            str(x.id).lower() for x in concepts
-                        }
-                    valid_values = concept_valid_values[col.concept_set_id]
-                elif col.region_set_id is not None:
-                    # Get valid region set values
-                    if col.region_set_id not in region_valid_values:
-                        regions: list[model.Region] = self.app.handle(
-                            command.RegionCrudCommand(
-                                user=user,
-                                operation=CrudOperation.READ_ALL,
-                                query_filter=UuidSetFilter(
-                                    key="region_set_id",
-                                    members=frozenset({col.region_set_id}),
-                                ),
-                            )
-                        )
-                        region_valid_values[col.region_set_id] = set(
-                            [str(x.id).lower() for x in regions]
-                        )
-                    valid_values = region_valid_values[col.region_set_id]
-                # Handle invalid values
-                if valid_values is not None:
-                    invalid_values = [
-                        str(x)
-                        for x in filter.members
-                        if str(x).lower() not in valid_values
-                    ]
-                    if len(invalid_values):
-                        invalid_values_str = ", ".join(invalid_values)
-                        raise exc.InvalidArgumentsError(
-                            f"Column {case_type_col.id}: invalid {filter.__class__.__name__} filter members: {invalid_values_str}"
-                        )
+            if isinstance(composite_filter, StringSetFilter):
+                validate_concept_or_region(
+                    self,
+                    user,
+                    composite_filter,
+                    concept_valid_values,
+                    region_valid_values,
+                    case_type_col,
+                    col,
+                )
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Column {case_type_col.id}: invalid filter type: {filter.__class__.__name__}"
+                    f"Column {case_type_col.id}: invalid filter type: {composite_filter.__class__.__name__}"
                 )
 
     return cols
+
+
+def validate_concept_or_region(
+    self: BaseCaseService,
+    user: model.User,
+    stringset_filter: StringSetFilter,
+    concept_valid_values: dict[UUID, set[str]],
+    region_valid_values: dict[UUID, set[str]],
+    case_type_col: model.CaseTypeCol,
+    col: model.Col,
+) -> None:
+    valid_values = None
+    if col.concept_set_id is not None:
+        # Get valid region set values
+        valid_values = _get_valid_concepts(self, user, concept_valid_values, col)
+    elif col.region_set_id is not None:
+        # Get valid region set values
+        valid_values = _get_valid_region_values(self, user, region_valid_values, col)
+        # Handle invalid values
+    if valid_values is not None:
+        _validate_filter_members(stringset_filter, case_type_col, valid_values)
+
+
+def _validate_filter_members(
+    stringset_filter: StringSetFilter,
+    case_type_col: model.CaseTypeCol,
+    valid_values: set[str],
+) -> None:
+    invalid_values = [
+        str(x) for x in stringset_filter.members if str(x).lower() not in valid_values
+    ]
+    if len(invalid_values):
+        invalid_values_str = ", ".join(invalid_values)
+        raise exc.InvalidArgumentsError(
+            f"Column {case_type_col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}"
+        )
+
+
+def _get_valid_region_values(
+    self: BaseCaseService,
+    user: model.User,
+    region_valid_values: dict[UUID, set[str]],
+    col: model.Col,
+) -> set[str]:
+    if col.region_set_id not in region_valid_values:
+        regions: list[model.Region] = self.app.handle(
+            command.RegionCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=UuidSetFilter(
+                    key="region_set_id",
+                    members=frozenset({col.region_set_id}),  # type: ignore[arg-type]
+                ),
+            )
+        )
+        assert isinstance(regions, list)
+        region_valid_values[col.region_set_id] = {str(x.id).lower() for x in regions}  # type: ignore[index]
+    valid_values = region_valid_values[col.region_set_id]  # type: ignore[index]
+    return valid_values
+
+
+def _get_valid_concepts(
+    self: BaseCaseService,
+    user: model.User,
+    concept_valid_values: dict[UUID, set[str]],
+    col: model.Col,
+) -> set[str]:
+    if col.concept_set_id not in concept_valid_values:
+        concepts: list[model.Concept] = self.app.handle(
+            command.ConceptCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=UuidSetFilter(
+                    key="concept_set_id",
+                    members=frozenset({col.concept_set_id}),  # type: ignore[arg-type]
+                ),
+            )
+        )
+        concept_valid_values[col.concept_set_id] = {str(x.id).lower() for x in concepts}  # type: ignore[index]
+    return concept_valid_values[col.concept_set_id]  # type: ignore[index]
 
 
 def _get_map_functions_for_filters(
@@ -432,50 +497,32 @@ def _get_map_functions_for_filters(
 ) -> list[Callable[[Any], Any]]:
 
     # Check validity of filter and generate map_fns
-    map_fns = []
+    map_fns: list[Callable[[Any], Any]] = []
     for col in cols:
-        if col.col_type == enum.ColType.TIME_DAY:
-            map_fns.append(
-                lambda x: (datetime.date.fromisoformat(x) if isinstance(x, str) else x)
-            )
-        elif col.col_type in {
-            enum.ColType.TIME_WEEK,
-            enum.ColType.TIME_MONTH,
-            enum.ColType.TIME_QUARTER,
-            enum.ColType.TIME_YEAR,
-            enum.ColType.GEO_REGION,
-            enum.ColType.NOMINAL,
-            enum.ColType.ORDINAL,
-            enum.ColType.INTERVAL,
-            enum.ColType.TEXT,
-            enum.ColType.ID_PERSON,
-            enum.ColType.ID_SAMPLE,
-            enum.ColType.ID_CASE,
-            enum.ColType.ID_EVENT,
-            enum.ColType.ID_GENETIC_SEQUENCE,
-            enum.ColType.ORGANIZATION,
-            enum.ColType.OTHER,
-        }:
-            map_fns.append(lambda x: x if isinstance(x, str) else str(x))
-        elif col.col_type == enum.ColType.DECIMAL_0:
-            map_fns.append(lambda x: int(x) if isinstance(x, str) else x)
-        elif col.col_type in {
-            enum.ColType.DECIMAL_1,
-            enum.ColType.DECIMAL_2,
-            enum.ColType.DECIMAL_3,
-            enum.ColType.DECIMAL_4,
-            enum.ColType.DECIMAL_5,
-            enum.ColType.DECIMAL_6,
-        }:
-            map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
-        elif col.col_type == enum.ColType.GEO_LATLON:
-            map_fns.append(
-                lambda x: (
-                    (float(x.split(",")[0]), float(x.split(",")[1]))
-                    if isinstance(x, str)
-                    else x
-                )
-            )
-        else:
-            raise exc.InvalidArgumentsError(f"Unsupported column type: {col.col_type}")
+        _get_map_function_for_col(map_fns, col)
     return map_fns
+
+
+def _get_map_function_for_col(
+    map_fns: list[Callable[[Any], Any]],
+    col: model.Col,
+) -> None:
+    mapping: dict[enum.ColType, Callable[[Any], Any]] = {
+        enum.ColType.TIME_DAY: lambda x: (
+            datetime.date.fromisoformat(x) if isinstance(x, str) else x
+        ),
+        enum.ColType.DECIMAL_0: lambda x: int(x) if isinstance(x, str) else x,
+        enum.ColType.GEO_LATLON: lambda x: (
+            (float(x.split(",")[0]), float(x.split(",")[1]))
+            if isinstance(x, str)
+            else x
+        ),
+    }
+    if col.col_type in mapping:
+        map_fns.append(mapping[col.col_type])
+    elif col.col_type in enum.ColTypeSet.COL_TYPES_STR_LIKE.value:
+        map_fns.append(lambda x: x if isinstance(x, str) else str(x))
+    elif col.col_type in enum.ColTypeSet.NUMBER.value - {enum.ColType.DECIMAL_0}:
+        map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
+    else:
+        raise exc.InvalidArgumentsError(f"Unsupported column type: {col.col_type}")
