@@ -293,35 +293,42 @@ class AppCfg(BaseAppCfg):
         # Go over each service type
         for service_type in service_types:
             # Get file path from config
-            service_type_str = service_type.value.lower()
-            if service_type_str not in self._cfg["repository"]:
-                continue
-            cfg = self._cfg["repository"][service_type_str]["props"]
-            if "file" not in cfg:
-                continue
-            curr_path = Path(cfg["file"])
-            new_path = tgt_dir / curr_path.name
-            # Copy file
-            if not curr_path.exists():
-                raise FileNotFoundError(f"Source file not found: {curr_path}")
-            if new_path.exists():
-                if on_exist == "overwrite":
-                    pass
-                elif on_exist == "skip":
-                    continue
-                elif on_exist == "raise":
-                    raise FileExistsError(
-                        f"Destination file already exists: {new_path}"
-                    )
-                else:
-                    raise NotImplementedError(
-                        f"on_exist value '{on_exist}' not implemented"
-                    )
-            with open(curr_path, "rb") as src_handle:
-                with open(new_path, "wb") as dst_handle:
-                    dst_handle.write(src_handle.read())
-            # Update config
-            cfg["file"] = str(Path(tgt_dir) / curr_path.name)
+            self._copy_single_repository_file(service_type, tgt_dir, on_exist)
+
+    def _copy_single_repository_file(
+        self, service_type: Enum, tgt_dir: Path | str, on_exist: str
+    ) -> None:
+        service_type_str = service_type.value.lower()
+        if service_type_str not in self._cfg["repository"]:
+            return
+        cfg = self._cfg["repository"][service_type_str]["props"]
+        if "file" not in cfg:
+            return
+        curr_path = Path(cfg["file"])
+        tgt_dir_path = tgt_dir if isinstance(tgt_dir, Path) else Path(tgt_dir)
+        new_path = tgt_dir_path / curr_path.name
+
+        # Copy file
+        self._handle_file_copy(curr_path, new_path, on_exist)
+        cfg["file"] = str(tgt_dir_path / curr_path.name)
+
+    def _handle_file_copy(self, curr_path: Path, new_path: Path, on_exist: str) -> None:
+        if not curr_path.exists():
+            raise FileNotFoundError(f"Source file not found: {curr_path}")
+        if new_path.exists():
+            if on_exist == "overwrite":
+                pass
+            elif on_exist == "skip":
+                return
+            elif on_exist == "raise":
+                raise FileExistsError(f"Destination file already exists: {new_path}")
+            else:
+                raise NotImplementedError(
+                    f"on_exist value '{on_exist}' not implemented"
+                )
+        with open(curr_path, "rb") as src_handle:
+            with open(new_path, "wb") as dst_handle:
+                dst_handle.write(src_handle.read())
 
     def set_log_level(self, log_level: str | int | None = None) -> None:
         """Set log level for all loggers."""
