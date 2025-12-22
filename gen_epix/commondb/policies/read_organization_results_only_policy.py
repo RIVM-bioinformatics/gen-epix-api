@@ -65,43 +65,72 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         is_read_one = cmd.operation == CrudOperation.READ_ONE
         msg1 = "User is not an admin for the organization and/or does not belong to it"
         msg2 = "User is not an admin for some of the organizations and/or does not belong to them"
+
         for command_class in self.has_organization_id_attr_command_classes:
-            if not isinstance(cmd, command_class):
-                continue
-            if is_read_all:
-                return [x for x in retval if x.organization_id in organization_ids]
-            if is_read_one and retval.organization_id not in organization_ids:
-                raise exc.UnauthorizedAuthError(msg1)
-            if not is_read_one and any(
-                x.organization_id not in organization_ids for x in retval
-            ):
-                raise exc.UnauthorizedAuthError(msg2)
-        for command_class in self.has_user_id_attr_command_classes:
-            if not isinstance(cmd, command_class):
-                continue
-            objs: list = cmd.get_objs() if not is_read_all else []  # type: ignore[attr-defined]
-            users: list[model.User] = self.abac_service.app.handle(
-                self.user_crud_command_class(
-                    user=cmd.user,
-                    objs=None,
-                    obj_ids=(None if is_read_all else list({x.user_id for x in objs})),
-                    operation=(
-                        CrudOperation.READ_ALL
-                        if is_read_all
-                        else CrudOperation.READ_SOME
-                    ),
+            if isinstance(cmd, command_class):
+                return self._filter_results_by_organization(
+                    retval, organization_ids, is_read_all, is_read_one, msg1, msg2
                 )
-            )
-            valid_user_ids = {
-                x.id for x in users if x.organization_id in organization_ids
-            }
-            if is_read_all:
-                return [x for x in retval if x.user_id in valid_user_ids]
-            else:
-                if is_read_one and retval.user_id not in valid_user_ids:
-                    raise exc.UnauthorizedAuthError(msg1)
-                if not is_read_one and not {x.user_id for x in retval}.issubset(
-                    valid_user_ids
-                ):
-                    raise exc.UnauthorizedAuthError(msg2)
+        for command_class in self.has_user_id_attr_command_classes:
+            if isinstance(cmd, command_class):
+                return self._filter_users_by_organization(
+                    cmd, retval, organization_ids, is_read_all, is_read_one, msg1, msg2
+                )
+
+    def _filter_results_by_organization(
+        self,
+        retval: Any,
+        organization_ids: set[int],
+        is_read_all: bool,
+        is_read_one: bool,
+        msg1: str,
+        msg2: str,
+    ) -> Any:
+        if is_read_all:
+            return [x for x in retval if x.organization_id in organization_ids]
+        if is_read_one and retval.organization_id not in organization_ids:
+            raise exc.UnauthorizedAuthError(msg1)
+        if not is_read_one and any(
+            x.organization_id not in organization_ids for x in retval
+        ):
+            raise exc.UnauthorizedAuthError(msg2)
+        return retval
+
+    def _filter_users_by_organization(
+        self,
+        cmd: command.Command,
+        retval: Any,
+        organization_ids: set[int],
+        is_read_all: bool,
+        is_read_one: bool,
+        msg1: str,
+        msg2: str,
+    ) -> Any:
+        users = self._get_users(cmd, is_read_all)
+        valid_user_ids = {
+            x.id for x in users if x.organization_id in organization_ids
+        }
+        if is_read_all:
+            return [x for x in retval if x.user_id in valid_user_ids]
+        if is_read_one and retval.user_id not in valid_user_ids:
+            raise exc.UnauthorizedAuthError(msg1)
+        if not is_read_one and not {x.user_id for x in retval}.issubset(
+            valid_user_ids
+        ):
+            raise exc.UnauthorizedAuthError(msg2)
         raise NotImplementedError
+
+    def _get_users(self, cmd: command.Command, is_read_all: bool) -> list[model.User]:
+        objs: list = cmd.get_objs() if not is_read_all else []  # type: ignore[attr-defined]
+        users: list[model.User] = self.abac_service.app.handle(
+            self.user_crud_command_class(
+                user=cmd.user,
+                objs=None,
+                obj_ids=(None if is_read_all else list({x.user_id for x in objs})),
+                operation=(
+                    CrudOperation.READ_ALL if is_read_all else CrudOperation.READ_SOME
+                ),
+            )
+        )
+
+        return users
