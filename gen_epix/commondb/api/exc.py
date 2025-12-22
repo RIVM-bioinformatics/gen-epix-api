@@ -4,11 +4,13 @@ from collections.abc import Callable, Hashable
 from functools import partial
 from typing import Any, NoReturn
 
+from fastapi import HTTPException
+
 from gen_epix.commondb.domain import model
 from gen_epix.fastapp import App, LogLevel, exc
 from gen_epix.fastapp.api import exc as api_exc
 
-http_exception_fmap = {
+http_exception_fmap: dict[int, Callable[..., HTTPException]] = {
     400: api_exc.BadRequest400HTTPException,
     401: api_exc.UnauthorizedUser401HTTPException,
     403: api_exc.Forbidden403HTTPException,
@@ -21,7 +23,7 @@ http_exception_fmap = {
 }
 
 
-def get_logger_fmap(logger: logging.Logger) -> dict[LogLevel, Callable]:
+def get_logger_fmap(logger: logging.Logger) -> dict[LogLevel, Callable[..., None]]:
     logger_fmap = {
         LogLevel.TRACE: logger.debug,
         LogLevel.DEBUG: logger.debug,
@@ -39,6 +41,133 @@ LAST_HANDLED_EXCEPTION: dict[str, Any] = {
 }
 
 
+def handle_exception(
+    app: App,
+    logger: logging.Logger | None,
+    log_message_id: str,
+    user: model.User | None,
+    exception: Exception,
+    request_ids: Hashable | list[Hashable] | None = None,
+    level: LogLevel = LogLevel.ERROR,
+) -> NoReturn:
+    LAST_HANDLED_EXCEPTION.update(
+        {
+            "id": uuid.uuid4(),
+            "log_message_id": log_message_id,
+            "user": user,
+            "exception": exception,
+            "request_ids": request_ids,
+            "level": level,
+        }
+    )
+    # Log without stack trace since this is expected to be logged separately
+    log_message = app.create_log_message(
+        log_message_id, None, user_id=user.id if user else None, exception=exception
+    )
+    # Raise HTTP exception
+    if isinstance(exception, exc.DomainException):
+        if isinstance(exception, exc.IdsError):
+            _handle_invalid_ids_exception(logger, exception, request_ids, log_message)
+        if isinstance(exception, exc.AuthException):
+            _handle_auth_exception(logger, exception, log_message)
+        if isinstance(exception, exc.ServiceException):
+            _handle_service_exception(logger, exception, log_message)
+        else:
+            # Other DomainError
+            if logger:
+                logger.warning(log_message)
+            raise http_exception_fmap[422](detail=str(exception)) from exception
+    else:
+        # Any other error than a DomainError
+        if logger:
+            logger.error(log_message)
+        raise http_exception_fmap[500]() from exception
+
+
+def _handle_service_exception(
+    logger: logging.Logger | None,
+    exception: exc.ServiceException,
+    log_message: str,
+) -> NoReturn:
+    if logger:
+        logger.error(log_message)
+    raise http_exception_fmap[exception.get_http_status_code()](
+        detail="System unavailable", **exception.get_http_other_props()
+    ) from exception
+
+
+def _handle_auth_exception(
+    logger: logging.Logger | None,
+    exception: exc.AuthException,
+    log_message: str,
+) -> NoReturn:
+    if logger:
+        logger.info(log_message)
+    raise http_exception_fmap[exception.get_http_status_code()](
+        detail="Access denied", **exception.get_http_other_props()
+    ) from exception
+
+
+def _handle_invalid_ids_exception(
+    logger: logging.Logger | None,
+    exception: exc.IdsError,
+    request_ids: Hashable | list[Hashable] | None,
+    log_message: str,
+) -> NoReturn:
+    http_status_code = 422
+    if isinstance(exception, (exc.LinkConstraintViolationError, exc.DuplicateIdsError)):
+        http_status_code = 409
+    invalid_ids = []
+    if request_ids and exception.ids:
+        # Compare ids received in request with those reported
+        # as invalid in the DomainError
+        invalid_ids = __extract_invalid_ids(exception, request_ids)
+    if invalid_ids:
+        log_and_raise_invalid_ids_exception(
+            logger, exception, log_message, http_status_code, invalid_ids
+        )
+    if logger:
+        logger.info(log_message)
+    raise http_exception_fmap[http_status_code]() from exception
+
+
+def log_and_raise_invalid_ids_exception(
+    logger: logging.Logger | None,
+    exception: exc.IdsError,
+    log_message: str,
+    http_status_code: int,
+    invalid_ids: list[Hashable],
+) -> NoReturn:
+    if isinstance(exception, exc.DuplicateIdsError):
+        invalid_ids_str = ", ".join([f'"{x}"' for x in set(invalid_ids)])
+        detail = f"Duplicate ids(s) provided: {invalid_ids_str}"
+    else:
+        invalid_ids_str = ", ".join([f'"{x}"' for x in invalid_ids])
+        detail = f"Invalid ids(s) provided: {invalid_ids_str}"
+    if logger:
+        logger.info(log_message)
+    raise http_exception_fmap[http_status_code](detail=detail) from exception
+
+
+def __extract_invalid_ids(
+    exception: exc.IdsError,
+    request_ids: Hashable | list[Hashable],
+) -> list[Hashable]:
+    raw_request_ids = request_ids
+    if not isinstance(raw_request_ids, list):
+        raw_request_ids = [raw_request_ids]
+    request_ids = []
+    for id_ in raw_request_ids:
+        if not id_:
+            continue
+        if isinstance(id_, list):
+            request_ids += [x for x in id_ if x]
+        else:
+            request_ids.append(id_)
+    invalid_ids = [x for x in request_ids if x in exception.ids]
+    return invalid_ids
+
+
 # TODO: Consider refactoring this into a callable ExceptionHandler class
 def generate_handle_exception_function(
     app: App,
@@ -47,95 +176,4 @@ def generate_handle_exception_function(
     [str, model.User | None, Exception, Hashable | list[Hashable] | None],
     NoReturn,
 ]:
-
-    def handle_exception(
-        app: App,
-        logger: logging.Logger | None,
-        log_message_id: str,
-        user: model.User | None,
-        exception: Exception,
-        request_ids: Hashable | list[Hashable] | None = None,
-        level: LogLevel = LogLevel.ERROR,
-    ) -> NoReturn:
-        LAST_HANDLED_EXCEPTION.update(
-            {
-                "id": uuid.uuid4(),
-                "log_message_id": log_message_id,
-                "user": user,
-                "exception": exception,
-                "request_ids": request_ids,
-                "level": level,
-            }
-        )
-        # Log without stack trace since this is expected to be logged separately
-        log_message = app.create_log_message(
-            log_message_id, None, user_id=user.id if user else None, exception=exception
-        )
-        # Raise HTTP exception
-        if isinstance(exception, exc.DomainException):
-            if isinstance(exception, exc.IdsError):
-                http_status_code = 422
-                if isinstance(
-                    exception, (exc.LinkConstraintViolationError, exc.DuplicateIdsError)
-                ):
-                    http_status_code = 409
-                invalid_ids = []
-                if request_ids and exception.ids:
-                    # Compare ids received in request with those reported
-                    # as invalid in the DomainError
-                    raw_request_ids = request_ids
-                    if not isinstance(raw_request_ids, list):
-                        raw_request_ids = [raw_request_ids]
-                    request_ids = []
-                    for id_ in raw_request_ids:
-                        if not id_:
-                            continue
-                        if isinstance(id_, list):
-                            request_ids += [x for x in id_ if x]
-                        else:
-                            request_ids.append(id_)
-                    invalid_ids = [x for x in request_ids if x in exception.ids]
-                if invalid_ids:
-                    # (Part of the) issue is with id(s). Provide detail on that.
-                    if isinstance(exception, exc.DuplicateIdsError):
-                        invalid_ids_str = ", ".join(
-                            [f'"{x}"' for x in set(invalid_ids)]
-                        )
-                        detail = f"Duplicate ids(s) provided: {invalid_ids_str}"
-                    else:
-                        invalid_ids_str = ", ".join([f'"{x}"' for x in invalid_ids])
-                        detail = f"Invalid ids(s) provided: {invalid_ids_str}"
-                    if logger:
-                        logger.info(log_message)
-                    raise http_exception_fmap[http_status_code](
-                        detail=detail
-                    ) from exception
-                # IdsError, but other issue than provided invalid ids.
-                # No further details provided.
-                if logger:
-                    logger.info(log_message)
-                raise http_exception_fmap[http_status_code]() from exception
-            elif isinstance(exception, exc.AuthException):
-                if logger:
-                    logger.info(log_message)
-                raise http_exception_fmap[exception.get_http_status_code()](
-                    detail="Access denied", **exception.get_http_other_props()
-                ) from exception
-            elif isinstance(exception, exc.ServiceException):
-                if logger:
-                    logger.error(log_message)
-                raise http_exception_fmap[exception.get_http_status_code()](
-                    detail="System unavailable", **exception.get_http_other_props()
-                ) from exception
-            else:
-                # Other domain issue.
-                if logger:
-                    logger.warning(log_message)
-                raise http_exception_fmap[422](detail=str(exception)) from exception
-        else:
-            # Any other error than a DomainError
-            if logger:
-                logger.error(log_message)
-            raise http_exception_fmap[500]() from exception
-
     return partial(handle_exception, app, logger)
