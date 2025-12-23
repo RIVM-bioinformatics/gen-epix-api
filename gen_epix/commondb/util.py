@@ -32,30 +32,16 @@ def set_env_variables(
     cfg_path: Path | None = None,
 ) -> None:
     # Parse input
-    if isinstance(app_type, str):
-        if app_type.upper() in AppType.__members__:
-            app_type_enum = AppType[app_type.upper()]
-            app_type_str = app_type_enum.value.lower()
-        else:
-            app_type_str = app_type.lower()
-            app_type_enum = None
-    else:
-        app_type_str = app_type.value.lower()
-        app_type_enum = app_type
-    if isinstance(dev_idp_config, str):
-        dev_idp_config_enum = DevIdpConfig[dev_idp_config.upper()]
-    else:
-        dev_idp_config_enum = dev_idp_config
-    if isinstance(dev_repository_config, str):
-        dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
-    else:
-        dev_repository_config_enum = dev_repository_config
+    app_type_enum, app_type_str = _get_correct_app_type(app_type)
+    dev_idp_config_enum, dev_repository_config_enum = _get_correct_dev_idp_config(
+        dev_idp_config, dev_repository_config
+    )
     # Special case: set environment variables for all apps
     if app_type_enum == AppType.ALL:
         for app2 in AppTypeSet.ALL.value:
             set_env_variables(app2, dev_idp_config_enum, dev_repository_config_enum)
         return
-    elif app_type_enum == AppType.CASEDB:
+    if app_type_enum == AppType.CASEDB:
         set_env_variables(
             AppType.SEQDB, dev_idp_config_enum, dev_repository_config_enum
         )
@@ -66,28 +52,61 @@ def set_env_variables(
     if cfg_path is None:
         cfg_path = package_root / "gen_epix" / app_type_str / "config"
     envvar_prefix = app_type_str.upper() + "_"
+    settings_files = generate_settings_file_list(
+        extra_settings_files,
+        general_cfg_path,
+        cfg_path,
+        dev_idp_config_enum,
+        dev_repository_config_enum,
+    )
+    # Set environment variables
+    set_environment_variables(cfg_path, envvar_prefix, settings_files)
+
+
+def generate_settings_file_list(
+    extra_settings_files: list[Path] | None,
+    general_cfg_path: Path,
+    cfg_path: Path,
+    dev_idp_config_enum: DevIdpConfig,
+    dev_repository_config_enum: DevRepositoryConfig,
+) -> list[Path]:
     settings_files: list[Path] = []
     # General settings
     settings_files.append(cfg_path / "settings.toml")
     # Service secrets
     settings_files.append(cfg_path / ".example.secrets.service.toml")
     # Identity provider settings
-    if dev_idp_config_enum == DevIdpConfig.IDPS:
-        settings_files.append(general_cfg_path / "identity_providers.toml")
-    elif dev_idp_config_enum == DevIdpConfig.MOCK:
-        settings_files.append(general_cfg_path / "mock_identity_provider.toml")
-    elif dev_idp_config_enum == DevIdpConfig.NONE:
-        settings_files.append(general_cfg_path / "no_identity_providers.toml")
-    else:
-        raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
+    _append_identity_provider_settings(
+        general_cfg_path, dev_idp_config_enum, settings_files
+    )
     # Repository settings
-    if dev_repository_config_enum in DevRepositoryConfigSet.DICT.value:
-        settings_files.append(cfg_path / "settings.repository.dict.toml")
-    elif dev_repository_config_enum in DevRepositoryConfigSet.SA.value:
-        settings_files.append(cfg_path / "settings.repository.sa.toml")
-    else:
-        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+    _append_repository_settings(cfg_path, dev_repository_config_enum, settings_files)
     # Repository secrets
+    _append_repository_secrets(cfg_path, dev_repository_config_enum, settings_files)
+    # Add any extra settings files at the end
+    if extra_settings_files:
+        settings_files.extend(extra_settings_files)
+    return settings_files
+
+
+def set_environment_variables(
+    cfg_path: Path,
+    envvar_prefix: str,
+    settings_files: list[Path],
+) -> None:
+    os.environ[envvar_prefix + "SETTINGS_FILES"] = ",".join(
+        [str(x.resolve()) for x in settings_files]
+    )
+    os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
+        (cfg_path / "logging.yaml").resolve()
+    )
+
+
+def _append_repository_secrets(
+    cfg_path: Path,
+    dev_repository_config_enum: DevRepositoryConfig,
+    settings_files: list[Path],
+) -> None:
     if dev_repository_config_enum == DevRepositoryConfig.DICT_DEMO:
         settings_files.append(cfg_path / ".example.secrets.repository.dict.demo.toml")
     elif dev_repository_config_enum == DevRepositoryConfig.DICT_EMPTY:
@@ -104,16 +123,65 @@ def set_env_variables(
         settings_files.append(cfg_path / ".example.secrets.repository.sa_sql.toml")
     else:
         raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
-    # Add any extra settings files at the end
-    if extra_settings_files:
-        settings_files.extend(extra_settings_files)
-    # Set environment variables
-    os.environ[envvar_prefix + "SETTINGS_FILES"] = ",".join(
-        [str(x.resolve()) for x in settings_files]
-    )
-    os.environ[envvar_prefix + "LOG_CONFIG_FILE"] = str(
-        (cfg_path / "logging.yaml").resolve()
-    )
+
+
+def _append_repository_settings(
+    cfg_path: Path,
+    dev_repository_config_enum: DevRepositoryConfig,
+    settings_files: list[Path],
+) -> None:
+    if dev_repository_config_enum in DevRepositoryConfigSet.DICT.value:
+        settings_files.append(cfg_path / "settings.repository.dict.toml")
+    elif dev_repository_config_enum in DevRepositoryConfigSet.SA.value:
+        settings_files.append(cfg_path / "settings.repository.sa.toml")
+    else:
+        raise ValueError(f"Unknown dev_repository_config: {dev_repository_config_enum}")
+
+
+def _append_identity_provider_settings(
+    general_cfg_path: Path,
+    dev_idp_config_enum: DevIdpConfig,
+    settings_files: list[Path],
+) -> None:
+    if dev_idp_config_enum == DevIdpConfig.IDPS:
+        settings_files.append(general_cfg_path / "identity_providers.toml")
+    elif dev_idp_config_enum == DevIdpConfig.MOCK:
+        settings_files.append(general_cfg_path / "mock_identity_provider.toml")
+    elif dev_idp_config_enum == DevIdpConfig.NONE:
+        settings_files.append(general_cfg_path / "no_identity_providers.toml")
+    else:
+        raise ValueError(f"Unknown dev_idp_config: {dev_idp_config_enum}")
+
+
+def _get_correct_dev_idp_config(
+    dev_idp_config: DevIdpConfig | str,
+    dev_repository_config: DevRepositoryConfig | str,
+) -> tuple[DevIdpConfig, DevRepositoryConfig]:
+    if isinstance(dev_idp_config, str):
+        dev_idp_config_enum = DevIdpConfig[dev_idp_config.upper()]
+    else:
+        dev_idp_config_enum = dev_idp_config
+    if isinstance(dev_repository_config, str):
+        dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
+    else:
+        dev_repository_config_enum = dev_repository_config
+    return dev_idp_config_enum, dev_repository_config_enum
+
+
+def _get_correct_app_type(
+    app_type: AppType | str,
+) -> tuple[AppType | None, str]:
+    if isinstance(app_type, str):
+        if app_type.upper() in AppType.__members__:
+            app_type_enum = AppType[app_type.upper()]
+            app_type_str = app_type_enum.value.lower()
+        else:
+            app_type_str = app_type.lower()
+            app_type_enum = None
+    else:
+        app_type_str = app_type.value.lower()
+        app_type_enum = app_type
+    return app_type_enum, app_type_str
 
 
 def create_demo_data_from_repository(
