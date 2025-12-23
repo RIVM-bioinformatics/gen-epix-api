@@ -113,9 +113,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
             # Regular user: can read only self and active organization admins of own organization
             org_admin_user_ids = self.get_admin_user_ids_own_organization(user)
             organization_ids = set()
-        user_ids: set[UUID] = {
-            user.id
-        } | org_admin_user_ids  # user.id validated non-None
+        user_ids: set[UUID] = {user.id} | org_admin_user_ids  # type: ignore
 
         return organization_ids, is_org_admin, user_ids
 
