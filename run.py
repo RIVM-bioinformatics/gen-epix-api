@@ -14,7 +14,7 @@ from gen_epix.commondb.util import set_env_variables
 
 class Run:
 
-    APP_URI = {
+    APP_URI: dict[AppType, dict[str, str | int]] = {
         AppType.CASEDB: {
             "app": "gen_epix.casedb.app:FAST_API",
             "host": "0.0.0.0",
@@ -40,7 +40,7 @@ class Run:
     APP_SSL_KEYFILE = "./cert/key.pem"
     APP_SSL_CERTFILE = "./cert/cert.pem"
 
-    ETL_ENV = {
+    ETL_ENV: dict[AppType, dict[str, str | list[str]]] = {
         AppType.CASEDB: {
             "module_root": "gen_epix.casedb",
             "targets": [

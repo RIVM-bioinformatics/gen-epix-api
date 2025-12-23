@@ -76,7 +76,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
                     )
 
                 # Get claims from the token - this validates signature, issuer, audience, and expiry
-                claims_data = await self.oauth_idp_client.get_claims_from_jwt(
+                claims_data = await self.oauth_idp_client.verify_jwt_and_get_claims(
                     token.credentials
                 )
 

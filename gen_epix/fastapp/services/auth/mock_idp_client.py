@@ -2,9 +2,9 @@ import logging
 import uuid
 from typing import Any
 
+import jwt
 from fastapi import Request
 from fastapi.security.utils import get_authorization_scheme_param
-import jwt
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.log import BaseLogItem, LogItem
@@ -32,7 +32,7 @@ class MockIDPClient(IdpClient):
     def get_identity_provider(self) -> IdentityProvider:
         raise NotImplementedError()
 
-    async def get_claims_from_jwt(
+    async def verify_jwt_and_get_claims(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
         raise NotImplementedError()

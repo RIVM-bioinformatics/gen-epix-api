@@ -5,11 +5,11 @@ from typing import Any
 import pytest
 
 from gen_epix.fastapp import exc
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.fastapp.services.auth.token_introspection_manager import (
     TokenIntrospectionManager,
 )
-from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class TestOauthIdpClientIntrospection:
@@ -77,11 +77,11 @@ class TestOauthIdpClientIntrospection:
             fake_introspect,
         )
 
-        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims is not None
         assert counter["n"] == 1
 
-        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims2 = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims2 is not None
         assert counter["n"] == 1
 
@@ -94,7 +94,7 @@ class TestOauthIdpClientIntrospection:
         }
 
         with pytest.raises(exc.CredentialsAuthError):
-            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+            asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
 
     def test_recheck_to_inactive_then_denies(self) -> None:
         now = self._now()
@@ -114,7 +114,7 @@ class TestOauthIdpClientIntrospection:
         )
 
         with pytest.raises(exc.CredentialsAuthError):
-            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+            asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
 
     def test_introspection_failure(self) -> None:
         self._cache().pop(self.TOKEN, None)
@@ -132,7 +132,7 @@ class TestOauthIdpClientIntrospection:
         )
 
         with pytest.raises(exc.CredentialsAuthError):
-            asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+            asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert counter["n"] == 1
 
     def test_cache_expiry_prunes_and_triggers_recheck(self) -> None:
@@ -155,11 +155,11 @@ class TestOauthIdpClientIntrospection:
             fake_introspect,
         )
 
-        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims is not None
         assert counter["n"] == 1
 
-        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims2 = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims2 is not None
         assert counter["n"] == 1
 
@@ -180,7 +180,7 @@ class TestOauthIdpClientIntrospection:
             fail_if_called,
         )
 
-        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims is not None
 
     def test_interval_elapsed_triggers_single_recheck(self) -> None:
@@ -206,11 +206,11 @@ class TestOauthIdpClientIntrospection:
             fake_introspect,
         )
 
-        claims = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims is not None
         assert counter["n"] == 1
 
-        claims2 = asyncio.run(self.CLIENT.get_claims_from_jwt(self.TOKEN))
+        claims2 = asyncio.run(self.CLIENT.verify_jwt_and_get_claims(self.TOKEN))
         assert claims2 is not None
         assert counter["n"] == 1
 
