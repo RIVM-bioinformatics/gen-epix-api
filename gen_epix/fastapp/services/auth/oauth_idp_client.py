@@ -368,51 +368,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
         return claims  # type: ignore[no-any-return]
 
-    def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
-        now = self._now()
-        self._prune_expired_introspection_cache(now)
-        if self._is_cached_introspection_token_inactive(jwt_token):
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="0ce44f1a",
-                        msg="Token previously marked inactive by introspection; denying",
-                    ).dumps()
-                )
-            raise exc.CredentialsAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            )
-        if self._is_recheck_introspection(jwt_token, now):
-            if self.logger:
-                self.logger.info(
-                    self._log_item_class(
-                        code="9deaa6b2",
-                        msg="Performing token introspection re-check",
-                    ).dumps()
-                )
-            is_active = self._introspect_token_with_server(jwt_token)
-            if is_active is None:
-                # network or parse error
-                raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
-            exp_val = int(claims.get("exp", now))
-            if is_active:
-                self._update_introspection_cache(jwt_token, True, exp_val, now)
-            else:
-                if is_active is False:
-                    self._update_introspection_cache(jwt_token, False, exp_val, now)
-                    if self.logger:
-                        self.logger.warning(
-                            self._log_item_class(
-                                code="b1c2d3e4",
-                                msg="Token marked inactive by introspection; denying",
-                            ).dumps()
-                        )
-                raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
-
     def retrieve_jwt_with_client_credentials_flow(
         self,
         scope: str,
