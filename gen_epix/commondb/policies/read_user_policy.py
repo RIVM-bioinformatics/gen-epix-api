@@ -27,19 +27,48 @@ class ReadUserPolicy(BaseReadUserPolicy):
         self.role_set_map = app_impl.role_set_map
 
     def filter(
-        self, cmd: Command, results: model.User | list[model.User]
+        self, cmd: Command, retval: model.User | list[model.User]
     ) -> model.User | list[model.User]:
-        if not isinstance(cmd, command.UserCrudCommand):
-            raise NotImplementedError(
-                "Unsupported command type: {cmd.__class__.__name__}"
+        if self._check_invalid_filter_input(cmd):
+            return retval
+        user: model.User = cmd.user  # type:ignore[assignment]
+        if self._is_no_abac_user(user):
+            return retval
+        organization_ids, is_org_admin, user_ids = self._get_org_and_user_ids(user)
+        # Filter or check results
+        result_list: list[model.User]
+        if cmd.operation == CrudOperation.READ_ALL:  # type: ignore[attr-defined]
+            # Open-ended results: filter
+            result_list = retval  # type:ignore[assignment]
+            return [
+                x
+                for x in result_list
+                if (x.id in user_ids or x.organization_id in organization_ids)
+                and (x.is_active or is_org_admin)
+            ]
+        if cmd.operation == CrudOperation.READ_SOME:  # type: ignore[attr-defined]
+            # Specific users requested: check results
+            result_list = retval  # type:ignore[assignment]
+            return self._filter_read_some(
+                result_list,
+                organization_ids,
+                retval,
+                is_org_admin,
+                user_ids,
             )
-        if cmd.operation not in CrudOperationSet.READ.value:
-            # Not applicable
-            return results
-        user: model.User | None = cmd.user
-        if user is None or user.id is None:
-            raise AssertionError("User must be authenticated")
-        is_no_abac_user = (
+        if cmd.operation == CrudOperation.READ_ONE:  # type: ignore[attr-defined]
+            # Specific user requested: check results
+            result: model.User = retval  # type:ignore[assignment]
+            return self._filter_read_one(
+                result,
+                organization_ids,
+                is_org_admin,
+                user_ids,
+            )
+        raise NotImplementedError("Unsupported operation: {cmd.operation.value}")
+
+    def _is_no_abac_user(self, user: model.User) -> bool:
+        return (
             len(
                 user.roles.intersection(
                     self.role_set_map[model.enum.RoleSet.GE_APP_ADMIN]
@@ -47,11 +76,27 @@ class ReadUserPolicy(BaseReadUserPolicy):
             )
             > 0
         )
-        if is_no_abac_user:
-            return results
 
+    def _check_invalid_filter_input(self, cmd: Command) -> bool:
+        early_return: bool = False
+        user: model.User | None = cmd.user
+        if not isinstance(cmd, command.UserCrudCommand):
+            raise NotImplementedError(
+                "Unsupported command type: {cmd.__class__.__name__}"
+            )
+        if cmd.operation not in CrudOperationSet.READ.value:
+            # Not applicable
+            early_return = True
+        if user is None or user.id is None:
+            raise AssertionError("User must be authenticated")
+
+        return early_return
+
+    def _get_org_and_user_ids(
+        self,
+        user: model.User,
+    ) -> tuple[set[UUID], bool, set[UUID]]:
         organization_ids: set[UUID]
-        org_admin_policies: list[model.OrganizationAdminPolicy]
         is_org_admin = (
             len(
                 user.roles.intersection(
@@ -63,76 +108,88 @@ class ReadUserPolicy(BaseReadUserPolicy):
         if is_org_admin:
             # User is organization admin: can read all users (active or not) of all
             # organizations they are admin of, plus all organization admins of those
-            org_admin_policies = self.abac_service.app.handle(
-                self.organization_admin_policy_crud_command_class(
-                    user=user,
-                    operation=CrudOperation.READ_ALL,
-                    query_filter=EqualsBooleanFilter(key="is_active", value=True),
-                )
-            )
-            organization_ids = {
-                x.organization_id for x in org_admin_policies if x.user_id == user.id
-            }
-            org_admin_user_ids = {
-                x.user_id
-                for x in org_admin_policies
-                if x.organization_id in organization_ids
-            }
+            org_admin_user_ids, organization_ids = self._get_admin_user_ids(user)
         else:
             # Regular user: can read only self and active organization admins of own organization
-            org_admin_policies = self.abac_service.app.handle(
-                self.organization_admin_policy_crud_command_class(
-                    user=user,
-                    operation=CrudOperation.READ_ALL,
-                    query_filter=CompositeFilter(
-                        filters=[
-                            EqualsUuidFilter(
-                                key="organization_id", value=user.organization_id
-                            ),
-                            EqualsBooleanFilter(key="is_active", value=True),
-                        ],
-                        operator=LogicalOperator.AND,
-                    ),
-                )
-            )
+            org_admin_user_ids = self.get_admin_user_ids_own_organization(user)
             organization_ids = set()
-            org_admin_user_ids = {x.user_id for x in org_admin_policies}
-        user_ids = {user.id} | org_admin_user_ids
+        user_ids: set[UUID] = {
+            user.id
+        } | org_admin_user_ids  # user.id validated non-None
 
-        # Filter or check results
-        result_list: list[model.User]
-        if cmd.operation == CrudOperation.READ_ALL:
-            # Open-ended results: filter
-            result_list = results  # type:ignore[assignment]
-            return [
-                x
-                for x in result_list
-                if (x.id in user_ids or x.organization_id in organization_ids)
-                and (x.is_active or is_org_admin)
-            ]
-        elif cmd.operation == CrudOperation.READ_SOME:
-            # Specific users requested: check results
-            result_list = results  # type:ignore[assignment]
-            if not all(
-                (x.organization_id in organization_ids or x.id in user_ids)
-                and (x.is_active or is_org_admin)
-                for x in result_list
-            ):
-                # User cannot read users outside their admin organizations
-                raise exc.UnauthorizedAuthError(
-                    "Cannot read users outside your admin organizations"
-                )
-            return results
-        elif cmd.operation == CrudOperation.READ_ONE:
-            # Specific user requested: check results
-            result: model.User = results  # type:ignore[assignment]
-            if (
-                result.organization_id not in organization_ids
-                and result.id not in user_ids
-            ) or not (result.is_active or is_org_admin):
-                # User cannot read users outside their admin organizations
-                raise exc.UnauthorizedAuthError(
-                    "Cannot read users outside your admin organizations"
-                )
-            return results
-        raise NotImplementedError("Unsupported operation: {cmd.operation.value}")
+        return organization_ids, is_org_admin, user_ids
+
+    def _filter_read_one(
+        self,
+        result: model.User,
+        organization_ids: set[UUID],
+        is_org_admin: bool,
+        user_ids: set[UUID],
+    ) -> model.User | list[model.User]:
+        if (
+            result.organization_id not in organization_ids and result.id not in user_ids
+        ) or not (result.is_active or is_org_admin):
+            # User cannot read users outside their admin organizations
+            raise exc.UnauthorizedAuthError(
+                "Cannot read users outside your admin organizations"
+            )
+        return result
+
+    def _filter_read_some(
+        self,
+        result_list: list[model.User],
+        organization_ids: set[UUID],
+        results: model.User | list[model.User],
+        is_org_admin: bool,
+        user_ids: set[UUID],
+    ) -> model.User | list[model.User]:
+        if not all(
+            (x.organization_id in organization_ids or x.id in user_ids)
+            and (x.is_active or is_org_admin)
+            for x in result_list
+        ):
+            # User cannot read users outside their admin organizations
+            raise exc.UnauthorizedAuthError(
+                "Cannot read users outside your admin organizations"
+            )
+        return results
+
+    def get_admin_user_ids_own_organization(self, user: model.User) -> set[UUID]:
+        org_admin_policies = self.abac_service.app.handle(
+            self.organization_admin_policy_crud_command_class(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=CompositeFilter(
+                    filters=[
+                        EqualsUuidFilter(
+                            key="organization_id", value=user.organization_id
+                        ),
+                        EqualsBooleanFilter(key="is_active", value=True),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+            )
+        )
+        org_admin_user_ids = {x.user_id for x in org_admin_policies}
+        return org_admin_user_ids
+
+    def _get_admin_user_ids(
+        self,
+        user: model.User,
+    ) -> tuple[set[UUID], set[UUID]]:
+        org_admin_policies = self.abac_service.app.handle(
+            self.organization_admin_policy_crud_command_class(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=EqualsBooleanFilter(key="is_active", value=True),
+            )
+        )
+        organization_ids = {
+            x.organization_id for x in org_admin_policies if x.user_id == user.id
+        }
+        admin_user_ids = {
+            x.user_id
+            for x in org_admin_policies
+            if x.organization_id in organization_ids
+        }
+        return admin_user_ids, organization_ids
