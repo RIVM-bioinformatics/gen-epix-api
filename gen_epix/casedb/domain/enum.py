@@ -320,6 +320,7 @@ class ColTypeSet(Enum):
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
 
 
+# !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
@@ -333,7 +334,14 @@ class DimColTypeSet(Enum):
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value
-    OTHER = ColTypeSet.OTHER.value
+    OTHER =  frozenset(
+        ColTypeSet.LANGUAGE.value.union(
+            {ColType.TEXT},
+            ColTypeSet.STRING_SET.value,
+            ColTypeSet.GENETIC.value,
+            ColTypeSet.OTHER.value,
+        )
+    )
 
 
 class ColTypeOrder(Enum):
