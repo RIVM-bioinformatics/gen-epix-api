@@ -189,18 +189,23 @@ class BaseRepository(abc.ABC):
                     f"Model {model_class.__name__}: association object id pairs contains some excluded pairs",
                 )
 
-        # Retrieve non-excluded existing objects
+        # Retrieve all existing objects for this relationship
         # TODO: replace retrieval of existing objects with a more efficient method
-        existing_objs: list[Model] = [
-            x  # type: ignore
-            for x in self.crud(  # type: ignore
-                uow, user_id, model_class, None, None, CrudOperation.READ_ALL
-            )
-            if get_id_pair(x) in obj_dict  # type: ignore
-        ]
+        all_existing_objs: list[Model] = list(
+            self.crud(uow, user_id, model_class, None, None, CrudOperation.READ_ALL)  # type: ignore
+        )
+        # Filter to get only associations for the specified relationship (obj_id1 or obj_id2)
+        relevant_existing_objs = self._get_relevant_existing_objs(
+            model_class,
+            link_field_name1,
+            link_field_name2,
+            obj_id1,
+            obj_id2,
+            all_existing_objs,
+        )
         existing_obj_dict: dict[Hashable, Model] = {
             get_id_pair(x): x
-            for x in existing_objs
+            for x in relevant_existing_objs
             if get_id_pair(x) not in excluded_id_pairs
         }
 
@@ -265,6 +270,32 @@ class BaseRepository(abc.ABC):
             if return_id
             else association_objs
         )
+
+    def _get_relevant_existing_objs(
+        self,
+        model_class: type[Model],
+        link_field_name1: str,
+        link_field_name2: str,
+        obj_id1: Hashable | None,
+        obj_id2: Hashable | None,
+        all_existing_objs: list[Model],
+    ) -> list[Model]:
+        if obj_id1 is not None:
+            relevant_existing_objs = [
+                x for x in all_existing_objs if getattr(x, link_field_name1) == obj_id1
+            ]
+        elif obj_id2 is not None:
+            relevant_existing_objs = [
+                x for x in all_existing_objs if getattr(x, link_field_name2) == obj_id2
+            ]
+        else:
+            # Neither obj_id1 nor obj_id2 specified
+            raise exc.InvalidArgumentsError(
+                f"Model {model_class.__name__}: update_association requires either "
+                f"obj_id1 ({link_field_name1}) or obj_id2 ({link_field_name2}) to be specified. "
+            )
+
+        return relevant_existing_objs
 
     @abc.abstractmethod
     def verify_valid_ids(
