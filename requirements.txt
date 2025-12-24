@@ -1,7 +1,7 @@
 # python 3.14
 
 # application server
-fastapi[standard]==0.124.4
+fastapi[standard]==0.125.0
 gunicorn==23.0.*
 starlette==0.50.0
 httpx==0.28.1
@@ -21,7 +21,7 @@ fire==0.7.1
 dynaconf==3.2.12
 PyYAML==6.0.3
 types-setuptools==80.9.*
-python-multipart==0.0.20
+python-multipart==0.0.21
 
 # calculation
 scipy==1.16.3
