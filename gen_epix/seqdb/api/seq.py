@@ -150,16 +150,16 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
-        "/upsert/complete_samples",
-        operation_id="upsert__complete_samples",
-        name="UpsertCompleteSamples",
+        "/upload/samples",
+        operation_id="upload__samples",
+        name="UploadSamples",
         description=command.UploadSamplesCommand.__doc__,
     )
-    async def upsert__complete_samples(
+    async def upload__samples(
         user: registered_user_dependency, request_body: UploadSamplesRequestBody  # type: ignore
-    ) -> list[UUID]:
+    ) -> model.SampleBatchUploadResult:
         try:
-            retval: list[UUID] = app.handle(
+            retval: model.SampleBatchUploadResult = app.handle(
                 command.UploadSamplesCommand(
                     user=user,
                     **request_body.model_dump(),

@@ -83,7 +83,7 @@ class SeqService(BaseSeqService):
     def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
-    ) -> list[UUID]:
+    ) -> model.SampleBatchUploadResult:
         return seq_service_upload_samplea(self, cmd)
 
     def retrieve_phylogenetic_tree(

@@ -1,6 +1,5 @@
 import abc
 from collections.abc import Iterable
-from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -78,5 +77,5 @@ class BaseSeqService(BaseService):
     def upload_samples(
         self,
         cmd: command.UploadSamplesCommand,
-    ) -> list[UUID]:
+    ) -> model.SampleBatchUploadResult:
         raise NotImplementedError()
