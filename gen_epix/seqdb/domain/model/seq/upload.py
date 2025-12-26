@@ -2,18 +2,11 @@ from collections.abc import Hashable
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import (
-    Field,
-    computed_field,
-    field_serializer,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, computed_field, field_validator, model_validator
 
-from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BatchForUpload, UploadResult
+from gen_epix.commondb.domain.literal import MAX_CODE_FIELD_LENGTH, NULL_ID
+from gen_epix.commondb.domain.model.base import BaseBatchForUpload, UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
-from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
@@ -47,10 +40,6 @@ class ReadSetForUpload(ReadSet):
         description="The UUID of the sample that the read set is associated with. If not available, the null ID is put.",
     )
 
-    @field_serializer("sample_id")
-    def _serialize_sample_id(self, value: UUID) -> str:
-        return str(value)
-
 
 class SeqForUpload(Seq):
     """
@@ -65,10 +54,6 @@ class SeqForUpload(Seq):
         description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
     )
 
-    @field_serializer("sample_id")
-    def _serialize_sample_id(self, value: UUID) -> str:
-        return str(value)
-
 
 class AlleleForUpload(Allele):
     """
@@ -81,24 +66,24 @@ class AlleleForUpload(Allele):
 
     locus_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the locus, if available. Must be present if locus_code is not present. If not available, the null ID is put. The use of locus_id is preferred over locus_code since the latter may change and implies an additional mapping step.",
+        description="The UUID of the locus, if available. Must be present if locus_code is not present. "
+        "If not available, the null ID is put. The use of locus_id is preferred over locus_code "
+        "since the latter may change and implies an additional mapping step.",
     )
     locus_code: str | None = Field(
         default=None,
-        description="The external code of the locus, to be mapped to locus_id through a LocusCodeMap supplied elsewhere. Must be present if locus_id is not present. The use of locus_code is meant for situations where the locus_id is not known, but the code is.",
-        max_length=255,
+        description="The external code of the locus, to be mapped to locus_id through a LocusCodeMap "
+        "supplied elsewhere. Must be present if locus_id is not present. The use of locus_code "
+        "is meant for situations where the locus_id is not known, but the code is.",
+        max_length=MAX_CODE_FIELD_LENGTH,
     )
 
     @model_validator(mode="after")
-    def _validate_allele_for_upload(self) -> Self:
+    def _validate_locus_reference(self) -> Self:
         """Ensure that either locus_code or locus_id is set."""
         if self.locus_code is None and self.locus_id == NULL_ID:
-            raise ValueError("Either locus_code or locus_id must be provided.")
+            raise ValueError("Either 'locus_code' or 'locus_id' must be provided.")
         return self
-
-    @field_serializer("locus_id")
-    def _serialize_locus_id(self, value: UUID) -> str:
-        return str(value)
 
 
 class AlleleProfileForUpload(AlleleProfile):
@@ -159,8 +144,31 @@ class AlleleProfileForUpload(AlleleProfile):
     )
 
     @model_validator(mode="after")
-    def _validate_allele_profile_for_upload(self) -> Self:
-        """Ensure that either locus_detection_protocol_code or locus_detection_protocol_id is set, and similarly for locus_set."""
+    def _validate_model(self) -> Self:
+        """
+        Override parent validation for upload format to handle alleles and locus_allele_id_map.
+        """
+        # Check if we're using upload-specific formats
+        using_alleles = self.alleles is not None
+        using_locus_allele_id_map = self.locus_allele_id_map is not None
+        using_allele_profile_string = self.allele_profile != ""
+
+        if (
+            using_allele_profile_string
+            and not using_alleles
+            and not using_locus_allele_id_map
+        ):
+            # Use parent validation for allele_profile string format
+            super()._validate_model()
+        else:
+            # For upload formats with alleles/locus_allele_id_map, set defaults
+            if self.allele_profile_hash == NULL_ID:
+                # Set a placeholder hash since we can't calculate it from alleles/map
+                from uuid import uuid4
+
+                self.allele_profile_hash = uuid4()
+
+        # Upload-specific validation
         if (
             not self.locus_detection_protocol_code
             and self.locus_detection_protocol_id == NULL_ID
@@ -193,12 +201,6 @@ class AlleleProfileForUpload(AlleleProfile):
             )
         return self
 
-    @field_serializer(
-        "sample_id", "locus_detection_protocol_id", "locus_set_id", "locus_code_map_id"
-    )
-    def _serialize_ids(self, value: UUID) -> str:
-        return str(value)
-
 
 class SampleForUpload(Sample):
     """
@@ -226,10 +228,6 @@ class SampleForUpload(Sample):
     external_ids: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="The external identifiers associated with the sample, if available.",
-    )
-    data_collection_ids: list[UUID] | None = Field(
-        default=None,
-        description="The data collection IDs that the sample should be put in. If None, this element is not taken into consideration during the upload.",
     )
 
     # Associated data
@@ -282,7 +280,7 @@ class SampleForUpload(Sample):
         description="The AST measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
 
-    @field_validator("external_ids", "data_collection_ids", mode="after")
+    @field_validator("external_ids", mode="after")
     def _validate_associated_ids(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
@@ -301,15 +299,17 @@ class SampleForUpload(Sample):
             raise ValueError("external_ids must not contain duplicates.")
         # TODO: verify that each list of results is unique, e.g. no identical read sets
         # Verify that result sample_ids are consistent with sample id
-        sample_id = NULL_ID if self.id is None else self.id
-        for field_name in self.RESULT_FIELD_NAMES:
-            items = getattr(self, field_name)
-            for item in items or []:
-                if item.sample_id == NULL_ID or item.sample_id == sample_id:
-                    continue
-                raise ValueError(
-                    f"sample_id of {field_name} is not the null ID, while the sample id variable is not provided."
-                )
+        # If sample has an ID, then associated items must have NULL_ID or the same sample_id
+        # If sample has NULL_ID, then associated items can have any sample_id
+        if self.id is not None and self.id != NULL_ID:
+            sample_id = self.id
+            for field_name in self.RESULT_FIELD_NAMES:
+                items = getattr(self, field_name)
+                for item in items or []:
+                    if item.sample_id != NULL_ID and item.sample_id != sample_id:
+                        raise ValueError(
+                            f"sample_id of {field_name} must be NULL_ID or match the sample's ID when sample has an ID."
+                        )
         return self
 
 
@@ -348,10 +348,6 @@ class SampleUploadResult(UploadResult):
     external_id_results: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
-    )
-    data_collection_id_results: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of associating the sample with the data collections, if any were provided.",
     )
     read_set_results: list[UploadResult] | None = Field(
         default=None,
@@ -403,7 +399,7 @@ class SampleUploadResult(UploadResult):
     )
 
 
-class SampleBatchForUpload(BatchForUpload):
+class SampleBatchForUpload(BaseBatchForUpload):
     """
     A set of samples intended for upload, together with any new reference data required
     for the storage of these data.
@@ -495,7 +491,20 @@ class SampleBatchForUpload(BatchForUpload):
         """Indicates whether there are any AST measurements in the sample set."""
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
 
-    # TODO: add model validator to make sure samples are unique
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        # Verify that samples contain no duplicate sample_ids
+        sample_ids = [x.id for x in self.samples if x.id is not None]
+        if len(sample_ids) != len(set(sample_ids)):
+            raise ValueError("Samples must not contain duplicate sample IDs.")
+        # Verify that samples contains no duplicate external_ids
+        all_external_ids = []
+        for sample in self.samples:
+            if sample.external_ids is not None:
+                all_external_ids.extend(sample.external_ids)
+        if len(all_external_ids) != len(set(all_external_ids)):
+            raise ValueError("Samples must not contain duplicate external_ids.")
+        return self
 
 
 class SampleBatchUploadResult(UploadResult):

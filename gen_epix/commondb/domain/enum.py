@@ -68,10 +68,9 @@ class IdentifierType(IntEnum):
 
 
 class OnExistsUploadAction(Enum):
-    IGNORE = "IGNORE"
-    UPDATE = "UPDATE"
-    REPLACE = "REPLACE"
     ERROR = "ERROR"
+    UPDATE = "UPDATE"
+    SKIP = "SKIP"
 
 
 class RepositoryType(Enum):
@@ -132,3 +131,11 @@ class DevRepositoryConfigSet(Enum):
     EMPTY = frozenset(
         {DevRepositoryConfig.DICT_EMPTY, DevRepositoryConfig.SA_SQLITE_EMPTY}
     )
+
+
+class UploadStatus(Enum):
+    """Enumeration of possible upload result statuses."""
+
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"  # Not processed due to conditions

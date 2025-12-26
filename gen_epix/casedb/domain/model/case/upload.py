@@ -14,7 +14,7 @@ from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BatchForUpload, UploadResult
+from gen_epix.commondb.domain.model.base import BaseBatchForUpload, UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
@@ -124,7 +124,7 @@ class CaseForUpload(Case):
         default=None,
         description="The external identifiers associated with the case, if available.",
     )
-    data_collection_ids: list[UUID] | None = Field(
+    data_collection_ids: set[UUID] | None = Field(
         default=None,
         description="The data collection IDs that the case should be put in. If None, this element is not taken into consideration during the upload.",
     )
@@ -251,7 +251,7 @@ class CaseUploadResult(UploadResult):
     )
 
 
-class CaseBatchForUpload(BatchForUpload):
+class CaseBatchForUpload(BaseBatchForUpload):
     """
     A number of unique cases intended for upload.
     """

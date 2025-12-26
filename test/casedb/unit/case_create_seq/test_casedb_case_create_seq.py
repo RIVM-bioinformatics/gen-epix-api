@@ -118,7 +118,7 @@ class TestCasedbCaseCreateSeq:
             # Setup command
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = sample_case_read_sets
+            cmd.read_sets = sample_case_read_sets
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -162,7 +162,7 @@ class TestCasedbCaseCreateSeq:
             # Setup command
             cmd = Mock(spec=command.CreateSeqsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_seqs = sample_case_seqs
+            cmd.seqs = sample_case_seqs
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
@@ -204,7 +204,7 @@ class TestCasedbCaseCreateSeq:
             """Test that empty read_sets list returns empty list."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = []
+            cmd.read_sets = []
 
             result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
 
@@ -216,7 +216,7 @@ class TestCasedbCaseCreateSeq:
             """Test that empty seqs list returns empty list."""
             cmd = Mock(spec=command.CreateSeqsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_seqs = []
+            cmd.seqs = []
 
             result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
 
@@ -969,7 +969,7 @@ class TestCasedbCaseCreateSeq:
             """Test the complete workflow with full ABAC access."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = sample_case_read_sets
+            cmd.read_sets = sample_case_read_sets
 
             # Setup ABAC with full access
             case_abac = Mock(spec=model.CaseAbac)
@@ -1046,7 +1046,7 @@ class TestCasedbCaseCreateSeq:
 
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = case_read_sets
+            cmd.read_sets = case_read_sets
 
             # Setup mocks for multiple cases
             mock_cases = []

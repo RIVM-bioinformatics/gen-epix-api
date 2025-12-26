@@ -8,12 +8,19 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.commondb.domain.command import Command, CrudCommand
+from gen_epix.commondb.domain.command.base import UploadCommandMixin
 from gen_epix.seqdb.domain import enum, model
 
 # Non-CRUD commands
 
 
-class UploadSamplesCommand(Command):
+class UploadSamplesCommand(Command, UploadCommandMixin):
+    """
+    Upload a batch of samples along with their associated data.
+    The data are uploaded as a single atomic unit of work, so that
+    either all data are successfully uploaded or none are.
+    """
+
     sample_batch: model.SampleBatchForUpload = Field(
         description="Samples to upload, along with any associated data.",
     )

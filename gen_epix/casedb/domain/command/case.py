@@ -61,7 +61,7 @@ class CreateCaseSetCommand(Command):
 
 class BaseUploadCasesCommand(Command):
     """
-    Base command for uploading cases.
+    Base class for uploading cases.
     """
 
     case_type_id: UUID = Field(
@@ -116,9 +116,14 @@ class ValidateCasesCommand(BaseUploadCasesCommand):
 
 class UploadCasesCommand(BaseUploadCasesCommand):
     """
-    Upload the corresponding cases and return them.
+    Upload a batch of cases along with their associated data.
+    The data are uploaded as a single atomic unit of work, so that
+    either all data are successfully uploaded or none are.
     """
 
+    case_batch: model.CaseBatchForUpload = Field(
+        description="Cases to upload, along with any associated data.",
+    )
     is_update: bool = Field(
         default=False,
         description="Whether the cases already exist and should be updated.",

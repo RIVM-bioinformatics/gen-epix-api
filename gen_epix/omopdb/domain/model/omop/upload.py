@@ -290,10 +290,6 @@ class PersonForUpload(Person):
         default=None,
         description="List of external person identifiers. Must have at least one element if person_id is not provided.",
     )
-    data_collection_ids: list[UUID] | None = Field(
-        default=None,
-        description="The data collection IDs that the person should be put in. If None, this element is not taken into consideration during the upload.",
-    )
 
     # Associated data
     measurements: list[MeasurementForUpload] | None = Field(
@@ -307,7 +303,7 @@ class PersonForUpload(Person):
     )
     # TODO: add other associated data types when needed
 
-    @field_validator("external_ids", "data_collection_ids", mode="after")
+    @field_validator("external_ids", mode="after")
     def _validate_associated_ids(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
@@ -365,10 +361,6 @@ class PersonUploadResult(UploadResult):
         default=None,
         description="The results of uploading the external identifiers associated with the person, if any were provided, in the same order as provided.",
     )
-    data_collection_id_results: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of associating the person with the data collections, if any were provided.",
-    )
     measurement_results: list[UploadResult] | None = Field(
         description="The results of uploading the individual measurements, if any were provided, in the same order as provided."
     )
@@ -413,7 +405,20 @@ class PersonBatchForUpload(Model):
         """Indicates whether there are any specimens in the person set."""
         return any(len(x.specimens or []) > 0 for x in self.persons)
 
-    # TODO: add model validator to make sure person are unique
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        # Verify that persons contain no duplicate person_ids
+        person_ids = [x.id for x in self.persons if x.id is not None]
+        if len(person_ids) != len(set(person_ids)):
+            raise ValueError("Persons must not contain duplicate person IDs.")
+        # Verify that persons contains no duplicate external_ids
+        all_external_ids = []
+        for person in self.persons:
+            if person.external_ids is not None:
+                all_external_ids.extend(person.external_ids)
+        if len(all_external_ids) != len(set(all_external_ids)):
+            raise ValueError("Persons must not contain duplicate external_ids.")
+        return self
 
 
 class PersonBatchUploadResult(UploadResult):

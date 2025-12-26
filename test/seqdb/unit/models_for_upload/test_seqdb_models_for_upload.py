@@ -421,9 +421,13 @@ class TestModelSeqForUpload(TestCase):
         seq_upload_null = self._create_sample_seq_for_upload(sample_id=NULL_ID)
         self.assertEqual(seq_upload_null.sample_id, NULL_ID)
 
-        # Test serializer function directly
-        serialized_sample_id = seq_upload_null._serialize_id(NULL_ID)
-        self.assertIsNone(serialized_sample_id)
+        # Test that the field serializer works during JSON serialization
+        # The field serializer is now handled by BatchForUpload base class
+        json_data = seq_upload_null.model_dump_json()
+        import json
+
+        parsed_data = json.loads(json_data)
+        self.assertEqual(parsed_data["sample_id"], str(NULL_ID))
 
     def test_upload_specific_fields(self) -> None:
         """Test upload-specific field handling."""
@@ -514,12 +518,14 @@ class TestModelAlleleProfileForUpload(TestCase):
     def test_json_serialization(self) -> None:
         """Test JSON serialization of AlleleProfileForUpload."""
         allele_id1, allele_id2 = uuid4(), uuid4()
+        # Sort allele IDs to match hash calculation
+        sorted_allele_ids = sorted([allele_id1, allele_id2])
         allele_profile = model.AlleleProfileForUpload(
             locus_detection_protocol_code="PROTOCOL123",
             locus_set_code="LOCUSSET123",
-            allele_profile=base64.b64encode(allele_id1.bytes + allele_id2.bytes).decode(
-                "ascii"
-            ),
+            allele_profile=base64.b64encode(
+                b"".join(x.bytes for x in sorted_allele_ids)
+            ).decode("ascii"),
             n_loci=2,
             allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(
                 [allele_id1, allele_id2]
@@ -529,9 +535,12 @@ class TestModelAlleleProfileForUpload(TestCase):
         data = json.loads(json_str)
         self.assertEqual(data["locus_detection_protocol_code"], "PROTOCOL123")
         self.assertEqual(data["locus_set_code"], "LOCUSSET123")
+        # The stored profile uses sorted allele IDs
         self.assertEqual(
             data["allele_profile"],
-            base64.b64encode(allele_id1.bytes + allele_id2.bytes).decode("ascii"),
+            base64.b64encode(b"".join(x.bytes for x in sorted_allele_ids)).decode(
+                "ascii"
+            ),
         )
         self.assertEqual(data["n_loci"], 2)
         self.assertEqual(
@@ -542,12 +551,14 @@ class TestModelAlleleProfileForUpload(TestCase):
     def test_valid_with_protocol_code_and_locus_set_code(self) -> None:
         """Test valid AlleleProfileForUpload with codes."""
         allele_id1, allele_id2 = uuid4(), uuid4()
+        # Sort allele IDs to match hash calculation
+        sorted_allele_ids = sorted([allele_id1, allele_id2])
         allele_profile = model.AlleleProfileForUpload(
             locus_detection_protocol_code="PROTOCOL123",
             locus_set_code="LOCUSSET123",
-            allele_profile=base64.b64encode(allele_id1.bytes + allele_id2.bytes).decode(
-                "ascii"
-            ),
+            allele_profile=base64.b64encode(
+                b"".join(aid.bytes for aid in sorted_allele_ids)
+            ).decode("ascii"),
             n_loci=2,
             allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(
                 [allele_id1, allele_id2]
@@ -563,13 +574,15 @@ class TestModelAlleleProfileForUpload(TestCase):
         protocol_id = uuid4()
         locus_set_id = uuid4()
         allele_id1, allele_id2 = uuid4(), uuid4()
+        # Sort allele IDs to match hash calculation
+        sorted_allele_ids = sorted([allele_id1, allele_id2])
         allele_profile = model.AlleleProfileForUpload(
             locus_detection_protocol_id=protocol_id,
             locus_set_id=locus_set_id,
             n_loci=2,
-            allele_profile=base64.b64encode(allele_id1.bytes + allele_id2.bytes).decode(
-                "ascii"
-            ),
+            allele_profile=base64.b64encode(
+                b"".join(aid.bytes for aid in sorted_allele_ids)
+            ).decode("ascii"),
             allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(
                 [allele_id1, allele_id2]
             ),
@@ -592,8 +605,7 @@ class TestModelAlleleProfileForUpload(TestCase):
             locus_set_code="LOCUSSET123",
             locus_code_map_code="MAP123",
             alleles=alleles,
-            n_loci=2,
-            allele_profile_hash=uuid4(),
+            # Don't provide n_loci for upload format with alleles
         )
         self.assertEqual(allele_profile.allele_profile, "")
         self.assertEqual(len(allele_profile.alleles or []), 2)
@@ -607,8 +619,7 @@ class TestModelAlleleProfileForUpload(TestCase):
             locus_set_code="LOCUSSET123",
             locus_code_map_code="MAP123",
             locus_allele_id_map=locus_allele_id_map,
-            n_loci=2,
-            allele_profile_hash=uuid4(),
+            # Don't provide n_loci for upload format with locus_allele_id_map
         )
         self.assertEqual(allele_profile.allele_profile, "")
         self.assertIsNone(allele_profile.alleles)
@@ -622,8 +633,7 @@ class TestModelAlleleProfileForUpload(TestCase):
             locus_set_code="LOCUSSET123",
             locus_code_map_code="MAP123",
             alleles=alleles,
-            n_loci=1,
-            allele_profile_hash=uuid4(),
+            # Don't provide n_loci for upload format with alleles
         )
         self.assertEqual(allele_profile.locus_code_map_code, "MAP123")
         self.assertEqual(allele_profile.allele_profile, "")
@@ -699,13 +709,18 @@ class TestModelAlleleProfileForUpload(TestCase):
     def _get_allele_profile_for_ids(
         allele_ids: list[UUID | None], **kwargs: Any
     ) -> model.AlleleProfileForUpload:
+        # Sort allele IDs to match hash calculation
+        sorted_allele_ids = sorted([x for x in allele_ids if x is not None])
+        allele_bytes = b"".join(aid.bytes for aid in sorted_allele_ids)
+        # Add NULL_ID bytes for any None values
+        null_count = len(allele_ids) - len(sorted_allele_ids)
+        allele_bytes += NULL_ID.bytes * null_count
+
         return model.AlleleProfileForUpload(
             locus_detection_protocol_code="PROTOCOL456",
             locus_set_code="LOCUSSET456",
-            allele_profile=base64.b64encode(
-                b"".join(x.bytes if x else NULL_ID.bytes for x in allele_ids)
-            ).decode("ascii"),
-            n_loci=1,
+            allele_profile=base64.b64encode(allele_bytes).decode("ascii"),
+            n_loci=len(allele_ids),  # Use actual length of allele_ids
             allele_profile_hash=model.AlleleProfile.get_allele_profile_hash(allele_ids),
             **kwargs,
         )

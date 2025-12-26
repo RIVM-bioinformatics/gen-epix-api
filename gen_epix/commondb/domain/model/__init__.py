@@ -4,7 +4,7 @@ from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.model.base import BatchForUpload as BatchForUpload
+from gen_epix.commondb.domain.model.base import BaseBatchForUpload as BaseBatchForUpload
 from gen_epix.commondb.domain.model.base import Model as Model
 from gen_epix.commondb.domain.model.base import UploadResult as UploadResult
 from gen_epix.commondb.domain.model.organization import Contact as Contact

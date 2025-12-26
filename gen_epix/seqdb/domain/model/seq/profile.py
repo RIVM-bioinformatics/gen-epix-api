@@ -90,7 +90,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         table_name="allele_profile",
         persistable=True,
         keys=create_keys(
-            {1: ("seq_id", "locus_set_id", "locus_detection_protocol_id")}
+            {1: ("sample_id", "seq_id", "locus_set_id", "locus_detection_protocol_id")}
         ),
         links=create_links(
             {
@@ -222,6 +222,7 @@ class SnpProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "ref_seq_id",
                     "snp_detection_protocol_id",
@@ -290,6 +291,7 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "mlva_detection_protocol_id",
                 )
@@ -348,6 +350,7 @@ class KmerProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "kmer_detection_protocol_id",
                 )
