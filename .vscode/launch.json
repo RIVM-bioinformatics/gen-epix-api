@@ -515,6 +515,28 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.unit.models_for_upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_models_for_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+{
+            "name": "test.seqdb.unit.sample_upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_sample_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.integration",
             "type": "debugpy",
             "request": "launch",

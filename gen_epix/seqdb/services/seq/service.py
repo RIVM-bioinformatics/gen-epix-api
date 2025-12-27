@@ -21,7 +21,7 @@ from gen_epix.filter import (
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
-from gen_epix.seqdb.services.seq.upload import seq_service_upload_samplea
+from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
@@ -84,7 +84,7 @@ class SeqService(BaseSeqService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
-        return seq_service_upload_samplea(self, cmd)
+        return seq_service_upload_samples(self, cmd)
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeCommand

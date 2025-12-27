@@ -12,7 +12,7 @@ from pydantic import (
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import UploadResult
+from gen_epix.commondb.domain.model.base import BaseBatchUploadResult, UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
@@ -421,7 +421,7 @@ class PersonBatchForUpload(Model):
         return self
 
 
-class PersonBatchUploadResult(UploadResult):
+class PersonBatchUploadResult(BaseBatchUploadResult):
     """
     The result of uploading a batch of persons.
     """

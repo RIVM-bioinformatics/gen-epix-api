@@ -58,24 +58,21 @@ class UploadResult(Model):
     # List of field names in subclasses that each contains each a list of sub-results for generic model validation
     SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = []
 
-    id: UUID = Field(
-        default_factory=uuid.uuid4,
-        description="The unique identifier for this upload result record.",
+    id: UUID | None = Field(
+        default=None,
+        description="The unique identifier for the specific object instance that this result pertains to, if applicable. E.g. the object that was created or updated as part of the upload.",
     )
     created_at: datetime.datetime = Field(
         default_factory=lambda: datetime.datetime.now(datetime.timezone.utc),
         description="The UTC timestamp when the upload result was created.",
     )
-    batch_id: UUID = Field(
-        description="The unique identifier for the upload batch that this result belongs to.",
-    )
-    instance_id: UUID | None = Field(
-        default=None,
-        description="The unique identifier for the specific object instance that this result pertains to, if applicable. E.g. the object that was created or updated as part of the upload.",
-    )
     status: UploadStatus = Field(
         default=UploadStatus.FAILED,
-        description="The status of the upload operation.",
+        description="The status of the upload operation. In case sub-results are present, this status is calculated from that of the sub-results: success if all sub-results are successful, failed if any sub-result failed, and skipped if all sub-results are skipped.",
+    )
+    is_update: bool = Field(
+        default=False,
+        description="Indicates whether the upload operation resulted in an update of at least one existing object. If no objects were updated, i.e. all were newly created or skipped, this will be False.",
     )
     error_messages: list[str] | None = Field(
         default=None,
@@ -100,22 +97,33 @@ class UploadResult(Model):
 
     @computed_field
     @cached_property
-    def n_records_processed(self) -> int:
+    def n_items_processed(self) -> int:
         """The number of records processed during the upload operation."""
         n = 1  # Count self
         for field_name in self.SUB_RESULT_FIELD_NAMES:
             sub_result: UploadResult | None = getattr(self, field_name, None)
             if sub_result is not None:
-                n += sub_result.n_records_processed
+                n += sub_result.n_items_processed
         for field_name in self.SUB_RESULT_LIST_FIELD_NAMES:
             sub_results: list[UploadResult] = getattr(self, field_name, None) or []
             for sub_result in sub_results:
-                n += sub_result.n_records_processed
+                n += sub_result.n_items_processed
         return n
 
     @model_validator(mode="after")
     def _validate_upload_result(self) -> Self:
         """Validate upload result consistency."""
+        # Validate error/warning message and code length consistency
+        if self.error_messages and self.error_codes:
+            if len(self.error_messages) != len(self.error_codes):
+                raise ValueError(
+                    "error_messages and error_codes must be the same length"
+                )
+        if self.warning_messages and self.warning_codes:
+            if len(self.warning_messages) != len(self.warning_codes):
+                raise ValueError(
+                    "warning_messages and warning_codes must be the same length"
+                )
         # Validate error/status consistency
         has_errors = bool(self.error_messages or self.error_codes)
         if self.status == UploadStatus.SUCCESS and has_errors:
@@ -133,17 +141,20 @@ class UploadResult(Model):
         """Calculate status based on sub-results with proper type checking."""
         n_total = 0
         n_skipped = 0
+        n_updated = 0
 
         # Check single sub-results
+        self.status = UploadStatus.FAILED
+        self.is_update = False
         for field_name in self.SUB_RESULT_FIELD_NAMES:
             sub_result: UploadResult | None = getattr(self, field_name, None)
             if sub_result is None:
                 continue
             n_total += 1
             if sub_result.status == UploadStatus.FAILED:
-                self.status = UploadStatus.FAILED
                 return
             n_skipped += sub_result.status == UploadStatus.SKIPPED
+            n_updated += sub_result.is_update
 
         # Check list sub-results
         for field_name in self.SUB_RESULT_LIST_FIELD_NAMES:
@@ -154,24 +165,24 @@ class UploadResult(Model):
                     self.status = UploadStatus.FAILED
                     return
                 n_skipped += sub_result.status == UploadStatus.SKIPPED
+                n_updated += sub_result.is_update
 
         self.status = (
             UploadStatus.SUCCESS if n_skipped < n_total else UploadStatus.SKIPPED
         )
+        self.is_update = n_updated > 0
 
     @classmethod
     def create_success(
         cls,
-        batch_id: UUID,
-        instance_id: UUID | None = None,
+        id: UUID | None = None,
         warning_messages: list[str] | None = None,
         warning_codes: list[str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create a successful upload result."""
         return cls(
-            batch_id=batch_id,
-            instance_id=instance_id,
+            id=id,
             status=UploadStatus.SUCCESS,
             warning_messages=warning_messages,
             warning_codes=warning_codes,
@@ -181,8 +192,7 @@ class UploadResult(Model):
     @classmethod
     def create_failure(
         cls,
-        batch_id: UUID,
-        instance_id: UUID | None = None,
+        id: UUID | None = None,
         error_messages: list[str] | None = None,
         error_codes: list[str] | None = None,
         warning_messages: list[str] | None = None,
@@ -191,8 +201,7 @@ class UploadResult(Model):
     ) -> Self:
         """Create a failed upload result."""
         return cls(
-            batch_id=batch_id,
-            instance_id=instance_id,
+            id=id,
             status=UploadStatus.FAILED,
             error_messages=error_messages,
             error_codes=error_codes,
@@ -204,18 +213,29 @@ class UploadResult(Model):
     @classmethod
     def create_skipped(
         cls,
-        batch_id: UUID,
-        instance_id: UUID | None = None,
+        id: UUID | None = None,
         warning_messages: list[str] | None = None,
         warning_codes: list[str] | None = None,
         **kwargs: Any,
     ) -> Self:
         """Create a skipped upload result."""
         return cls(
-            batch_id=batch_id,
-            instance_id=instance_id,
+            id=id,
             status=UploadStatus.SKIPPED,
             warning_messages=warning_messages,
             warning_codes=warning_codes,
             **kwargs,
         )
+
+
+class BaseBatchUploadResult(UploadResult):
+    """
+    Base class for upload results corresponding to a complete batch of objects uploaded.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "BaseBatchUploadResult"
+
+    batch_id: UUID = Field(
+        description="The unique identifier for the upload batch that this result belongs to.",
+    )

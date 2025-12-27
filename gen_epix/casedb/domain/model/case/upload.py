@@ -14,7 +14,11 @@ from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import BaseBatchForUpload, UploadResult
+from gen_epix.commondb.domain.model.base import (
+    BaseBatchForUpload,
+    BaseBatchUploadResult,
+    UploadResult,
+)
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
@@ -289,7 +293,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
         return any(len(x.seqs or []) > 0 for x in self.cases)
 
 
-class CaseBatchUploadResult(UploadResult):
+class CaseBatchUploadResult(BaseBatchUploadResult):
     """
     The result of uploading a batch of cases.
     """

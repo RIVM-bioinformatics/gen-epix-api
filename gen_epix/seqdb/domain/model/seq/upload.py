@@ -5,7 +5,11 @@ from uuid import UUID
 from pydantic import Field, computed_field, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import MAX_CODE_FIELD_LENGTH, NULL_ID
-from gen_epix.commondb.domain.model.base import BaseBatchForUpload, UploadResult
+from gen_epix.commondb.domain.model.base import (
+    BaseBatchForUpload,
+    BaseBatchUploadResult,
+    UploadResult,
+)
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain.model.seq.classification import (
@@ -326,7 +330,6 @@ class SampleUploadResult(UploadResult):
     ]
     RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
         "external_id_results",
-        "data_collection_id_results",
         "read_set_results",
         "seq_results",
         "seq_taxonomy_results",
@@ -507,7 +510,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
         return self
 
 
-class SampleBatchUploadResult(UploadResult):
+class SampleBatchUploadResult(BaseBatchUploadResult):
     """
     The result of uploading a batch of cases.
     """
