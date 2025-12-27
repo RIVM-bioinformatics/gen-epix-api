@@ -17,6 +17,7 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.base import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    Model,
     UploadResult,
 )
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
@@ -118,10 +119,15 @@ class CaseForUpload(Case):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "CaseForUpload"
 
-    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "read_sets",
-        "seqs",
-    ]
+    FOR_UPLOAD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+        ReadSet: ReadSetForUpload,
+        Seq: SeqForUpload,
+    }
+
+    MODEL_RESULT_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+        ReadSetForUpload: "read_sets",
+        SeqForUpload: "seqs",
+    }
 
     # Case level data
     external_ids: list[ExternalIdentifierForUpload] | None = Field(
@@ -175,7 +181,7 @@ class CaseForUpload(Case):
         self._validate_read_sets_or_seqs(self.seqs)
         # Verify that result case_ids are consistent with case id
         case_id = NULL_ID if self.id is None else self.id
-        for field_name in self.RESULT_FIELD_NAMES:
+        for field_name in self.MODEL_RESULT_FIELD_NAME_MAP.values():
             items = getattr(self, field_name)
             for item in items or []:
                 if item.case_id == NULL_ID or item.case_id == case_id:

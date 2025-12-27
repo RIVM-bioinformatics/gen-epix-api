@@ -641,7 +641,7 @@ class TestCaseUpload(CaseUploadSetup):
             sample_id = case_content.get(sample_id_case_type_col_id)
             external_id = (
                 commondb_model.ExternalIdentifierForUpload(
-                    identifier_issuer_id=identifier_issuer_id, identifier=sample_id
+                    identifier_issuer_id=identifier_issuer_id, external_id=sample_id
                 )
                 if sample_id is not None
                 else None

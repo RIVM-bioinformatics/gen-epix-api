@@ -1,7 +1,20 @@
+from collections import defaultdict
 from typing import Any
+from uuid import UUID
 
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix import fastapp
+from gen_epix.commondb.domain.enum import (
+    IdentifierType,
+    OnExistsUploadAction,
+    UploadStatus,
+)
 from gen_epix.commondb.domain.model import UploadResult
+from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.enum import LogicalOperator
+from gen_epix.filter.equals_number import EqualsNumberFilter
+from gen_epix.filter.string_set import StringSetFilter
+from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
@@ -26,25 +39,25 @@ def seq_service_upload_samples(
     _check_user_rights(self, cmd)
 
     # Step 2: Initialize the upload result
-    upload_result = _initialize_upload_result(cmd)
+    retval = _initialize_upload_result(cmd)
 
     # Step 3: Check existence of samples and associated data
     # (May return early with errors in upload_result)
-    success = _verify_upload_data_existence(self, cmd, upload_result)
+    success = _verify_batch(self, cmd, retval)
     if not success:  # Early return due to errors
-        return upload_result
+        return retval
 
     # Step 4: Look up, complete and verify reference data links
     # (May return early with errors in upload_result)
-    success = _retrieve_and_verify_reference_data(self, cmd, upload_result)
+    success = _retrieve_and_verify_reference_data(self, cmd, retval)
     if not success:  # Early return due to errors
-        return upload_result
+        return retval
 
     # Step 5: Create or update the data
-    _create_or_update_data(self, cmd, reference_data, upload_result)
+    _create_or_update_data(self, cmd, {}, retval)
 
     # Step 6: Return the upload result
-    return upload_result
+    return retval
 
 
 def _check_user_rights(
@@ -101,7 +114,7 @@ def _initialize_upload_result(
     Step 2: Initialize the upload result (SampleBatchUploadResult)
     2.1 For each sample in cmd.sample_batch.samples:
     2.1.1 For all associated data types (read_sets, seqs, allele_profiles, etc.):
-    2.1.1.1 Create UploadResult for each instance with status SKIPPED
+    2.1.1.1 Create UploadResult for each instance with status PENDING
     2.1.1.1 Set the ID of the existing instance if available
     2.1.2 Create SampleUploadResult
     2.2 Create SampleBatchUploadResult
@@ -109,7 +122,7 @@ def _initialize_upload_result(
     # Placeholder: create basic result structure
     sample_results = []
     base_upload_result = UploadResult(
-        status=UploadStatus.SKIPPED,
+        status=UploadStatus.PENDING,
     )
 
     def _create_sub_result(obj: Any | None) -> UploadResult | None:
@@ -117,7 +130,7 @@ def _initialize_upload_result(
             return None
         return UploadResult(
             id=getattr(obj, "id", None),
-            status=UploadStatus.SKIPPED,
+            status=UploadStatus.PENDING,
         )
 
     def _create_sub_results(objs: list | None) -> list[UploadResult] | None:
@@ -126,7 +139,7 @@ def _initialize_upload_result(
         return [
             UploadResult(
                 id=getattr(x, "id", None),
-                status=UploadStatus.SKIPPED,
+                status=UploadStatus.PENDING,
             )
             for x in objs
         ]
@@ -134,53 +147,48 @@ def _initialize_upload_result(
     for sample in cmd.sample_batch.samples:
         sample_result = model.SampleUploadResult(
             status=UploadStatus.SKIPPED,
-            sample_result=_create_sub_result(sample.props),
-            external_id_results=_create_sub_results(sample.external_ids),
-            read_set_results=_create_sub_results(sample.read_sets),
-            seq_results=_create_sub_results(sample.seqs),
-            seq_taxonomy_results=_create_sub_results(sample.seq_taxonomies),
-            seq_classification_results=_create_sub_results(sample.seq_classifications),
-            locus_profile_results=_create_sub_results(sample.locus_profiles),
-            allele_profile_results=_create_sub_results(sample.allele_profiles),
-            snp_profile_results=_create_sub_results(sample.snp_profiles),
-            mlva_profile_results=_create_sub_results(sample.mlva_profiles),
-            kmer_profile_results=_create_sub_results(sample.kmer_profiles),
-            distance_results=_create_sub_results(sample.distances),
-            pcr_measurement_results=_create_sub_results(sample.pcr_measurements),
-            ast_measurement_results=_create_sub_results(sample.ast_measurements),
+            sample=_create_sub_result(sample.props),
+            external_ids=_create_sub_results(sample.external_ids),
+            read_sets=_create_sub_results(sample.read_sets),
+            seqs=_create_sub_results(sample.seqs),
+            seq_taxonomies=_create_sub_results(sample.seq_taxonomies),
+            seq_classifications=_create_sub_results(sample.seq_classifications),
+            locus_profiles=_create_sub_results(sample.locus_profiles),
+            allele_profiles=_create_sub_results(sample.allele_profiles),
+            snp_profiles=_create_sub_results(sample.snp_profiles),
+            mlva_profiles=_create_sub_results(sample.mlva_profiles),
+            kmer_profiles=_create_sub_results(sample.kmer_profiles),
+            seq_distances=_create_sub_results(sample.seq_distances),
+            pcr_measurements=_create_sub_results(sample.pcr_measurements),
+            ast_measurements=_create_sub_results(sample.ast_measurements),
         )
         sample_results.append(sample_result)
 
     return model.SampleBatchUploadResult(
         batch_id=cmd.sample_batch.id,
         status=UploadStatus.SKIPPED,
-        sample_results=sample_results,
+        samples=sample_results,
     )
 
 
-def _verify_upload_data_existence(
+def _verify_batch(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
-    upload_result: model.SampleBatchUploadResult,
+    retval: model.SampleBatchUploadResult,
 ) -> bool:
     """
     Check existence of samples and associated data.
-
-    Step 3: Check existence of samples and associated data
-    3.1 Check sample existence in bulk:
-    3.1.1 Collect all non-null sample IDs and check with repository.crud(EXISTS_SOME)
-    3.1.2 Collect all external identifiers and check with single service.crud READ_ALL call filtering on the identifier property only, then filter the returned results further by (identifier_issuer, identifier) pairs
-    3.1.3 Cross-validate: if sample has both ID and some external identifiers, ensure the latter refer to same sample
-    3.1.4 Error if samples exist and resolved on_exists=ERROR. Adjust SampleBatchUploadResult return value accordingly and return.
-    3.2 Check associated data existence for existing samples only:
-    3.2.1 For each existing sample, check which read_sets, seqs, etc. exist:
-    3.2.1.1 Collect all IDs and and use bulk repository.crud with EXISTS_SOME. Error if some do not exist. Adjust SampleBatchUploadResult return value accordingly and return.
-    3.2.1.2 For sequences and allele profiles, also query on (sample_id, read_set_id, read_set2_id, assembly_protocol_id, seq_hash) or (sample_id, seq_id, allele_profile_protocol, allele_profile_hash), since per sample these combinations must be unique. If matches on hash, fill in the corresponding ID.
-    3.2.2 Error if any instances exist and cmd.on_exists=ERROR. Adjust SampleBatchUploadResult return value accordingly and return.
     """
-    # TODO: Implement sample and data existence checking
-    # Return True since all operations were successful for now
-    return True
+    success = True
+    # Handle transaction
+    with self.repository.uow() as uow:
+        # Verify existence of samples by ID
+        success &= _verify_batch_sample_existence(self, cmd, retval, uow)
+        # Verify existence and consistency of external IDs
+        success &= _verify_batch_external_ids(self, cmd, retval)
+        # Verify existence and consistency of associated data as needed
+        success &= _verify_batch_associated_data(self, cmd, retval, uow)
+    return success
 
 
 def _retrieve_and_verify_reference_data(
@@ -264,3 +272,639 @@ def _create_or_update_data(
     # TODO: Implement data creation and update within UoW
     # Update upload_result as operations proceed
     pass
+
+
+def _verify_batch_sample_existence(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """Check sample existence when ID is given"""
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+    success = True
+    sample_ids = list({x.id for x in samples if x.id is not None})
+    has_existing_samples = False
+    if sample_ids:
+        # Some sample IDs are given, check existence
+        # Check existence of given sample IDs
+        samples_exist: list[bool] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user_id,
+            model.Sample,
+            None,
+            sample_ids,
+            CrudOperation.EXISTS_SOME,
+        )
+        existing_sample_ids = {x for x, y in zip(sample_ids, samples_exist) if y}
+        for sample, sample_result in zip(samples, sample_results):
+            sample_id = sample.id
+            if sample_id is None:
+                # Sample ID not given, cannot exist
+                continue
+            if sample_id not in existing_sample_ids:
+                # Sample ID is given but does not exist
+                success = False
+                sample_result.add_error("a8b4c2e9", f"ID does not exist")
+                continue
+            # Sample exists
+            has_existing_samples = True
+    if has_existing_samples and cmd.on_exists == OnExistsUploadAction.ERROR:
+        success = False
+        retval.add_error(
+            "d3f5b6a1", "One or more samples already exist and on_exists=ERROR."
+        )
+    return success
+
+
+def _verify_batch_external_ids(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+) -> bool:
+    """Retrieve and verify identifier issuers in external IDs"""
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+    success = True
+
+    # Retrieve and verify identifier issuers in external IDs provided by ID
+    identifier_issuer_ids = list(
+        {
+            y.identifier_issuer_id
+            for x in samples
+            for y in x.external_ids or []
+            if y.identifier_issuer_id is not None
+        }
+    )
+    identifier_issuer_by_id_map: dict[UUID, model.IdentifierIssuer] = {}
+    identifier_issuers: list[model.IdentifierIssuer] = []
+    if identifier_issuer_ids:
+        identifier_issuers = self.crud(  # type:ignore[assignment]
+            command.IdentifierIssuerCrudCommand(
+                user=cmd.user,
+                obj_ids=list(identifier_issuer_ids),
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        identifier_issuer_by_id_map = {  # type: ignore[misc]
+            x.id: x for x in identifier_issuers if x.id is not None
+        }
+        for sample, sample_result in zip(samples, sample_results):
+            for external_id, external_id_result in zip(
+                sample.external_ids or [], sample_result.external_ids or []
+            ):
+                identifier_issuer_id = external_id.identifier_issuer_id
+                if identifier_issuer_id is None:
+                    continue
+                if identifier_issuer_id not in identifier_issuer_by_id_map:
+                    success = False
+                    external_id_result.add_error(
+                        "c4d5e6f7",
+                        f"Identifier issuer with ID {identifier_issuer_id} does not exist",
+                    )
+
+    # Retrieve and verify identifier issuers in external IDs provided by code
+    identifier_issuer_codes = list(
+        {
+            y.identifier_issuer_code
+            for x in samples
+            for y in x.external_ids or []
+            if y.identifier_issuer_code is not None
+        }
+    )
+    identifier_issuer_by_code_map: dict[str, model.IdentifierIssuer] = {}
+    if identifier_issuer_codes:
+        identifier_issuers = self.crud(  # type:ignore[assignment]
+            command.IdentifierIssuerCrudCommand(
+                user=cmd.user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=StringSetFilter(
+                    key="code", members=frozenset(identifier_issuer_codes)
+                ),
+            )
+        )
+        identifier_issuer_by_code_map = {x.code: x for x in identifier_issuers}
+        for sample, sample_result in zip(samples, sample_results):
+            for i, (external_id, external_id_result) in enumerate(
+                zip(
+                    sample.external_ids or [],
+                    sample_result.external_ids or [],
+                )
+            ):
+                identifier_issuer_code = external_id.identifier_issuer_code
+                if identifier_issuer_code is None:
+                    continue
+                if identifier_issuer_code not in identifier_issuer_by_code_map:
+                    success = False
+                    external_id_result.add_error(
+                        "d6e7f8a9",
+                        f"Identifier issuer with code {identifier_issuer_code} does not exist",
+                    )
+                    continue
+                identifier_issuer = identifier_issuer_by_code_map[
+                    identifier_issuer_code
+                ]
+                if external_id.identifier_issuer_id is not None:
+                    if external_id.identifier_issuer_id != identifier_issuer.id:
+                        success = False
+                        external_id_result.add_error(
+                            "e7f8a9b0",
+                            f"Identifier issuer code {identifier_issuer_code} with ID {identifier_issuer.id} does not match provided ID {external_id.identifier_issuer_id}",
+                        )
+                else:
+                    # Add identifier issuer ID, must be as a new instance since external_ids are frozen
+                    if sample.external_ids is not None:
+                        sample.external_ids[i] = external_id.model_copy(
+                            update={"identifier_issuer_id": identifier_issuer.id}
+                        )
+                # Add to ID map as well
+                if identifier_issuer.id is not None:
+                    identifier_issuer_by_id_map[identifier_issuer.id] = identifier_issuer  # type: ignore[misc]
+
+    # Retrieve and verify external IDs
+    external_identifiers = list(
+        {y.external_id for x in samples for y in x.external_ids or []}
+    )
+    if external_identifiers:
+        # Get all SAMPLE external identifiers matching the provided external
+        # identifiers and identifier issuers, but not their combination
+        # This leaves the possibility that the same external identifier for a
+        # different identifier issuer is retrieved: this is addressed after
+        # retrieval, allowing a straightforward filter here
+        existing_external_ids: list[model.ExternalIdentifier] = (
+            self.crud(  # type:ignore[assignment]
+                command.ExternalIdentifierCrudCommand(
+                    user=cmd.user,
+                    operation=CrudOperation.READ_ALL,
+                    query_filter=CompositeFilter(
+                        operator=LogicalOperator.AND,
+                        filters=[
+                            EqualsNumberFilter(
+                                key="identifier_type",
+                                value=IdentifierType.SAMPLE.value,
+                            ),
+                            UuidSetFilter(
+                                key="identifier_issuer_id",
+                                members=frozenset(identifier_issuer_by_id_map.keys()),
+                            ),
+                            StringSetFilter(
+                                key="identifier",
+                                members=frozenset(external_identifiers),
+                            ),
+                        ],
+                    ),
+                )
+            )
+        )
+        existing_external_id_map: dict[tuple[UUID, str], model.ExternalIdentifier] = {
+            (x.identifier_issuer_id, x.external_id): x for x in existing_external_ids
+        }
+        has_existing_samples = False
+        for sample, sample_result in zip(samples, sample_results):
+            for external_id, external_id_result in zip(
+                sample.external_ids or [], sample_result.external_ids or []
+            ):
+                if external_id_result.status in [
+                    UploadStatus.SKIPPED,
+                    UploadStatus.FAILED,
+                ]:
+                    # Already skipped or failed, no need to check existence
+                    continue
+                key: tuple[UUID, str] = (external_id.identifier_issuer_id, external_id.external_id)  # type: ignore[assignment]
+                if key in existing_external_id_map:
+                    has_existing_samples = True
+                    existing_external_id = existing_external_id_map[key]
+                    # Cross-validate with sample ID if given
+                    if sample.id is not None:
+                        if existing_external_id.internal_id != sample.id:
+                            success = False
+                            external_id_result.add_error(
+                                "f8a9b0c1",
+                                f"External identifier {external_id.external_id} refers to sample ID {existing_external_id.internal_id}, which does not match provided sample ID {sample.id}",
+                            )
+                        # External ID already exists, nothing to upload
+                        external_id_result.id = existing_external_id.id
+                        external_id_result.status = UploadStatus.SKIPPED
+                    else:
+                        # Fill in sample ID
+                        sample.id = existing_external_id.internal_id
+        if has_existing_samples and cmd.on_exists == OnExistsUploadAction.ERROR:
+            success = False
+            retval.add_error(
+                "a1c7d9f3",
+                "One or more samples already exist and on_exists=ERROR",
+            )
+
+    return success
+
+
+def _verify_batch_associated_data(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """Check associated data existence and consistency"""
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+    success = True
+
+    # Prepare some data
+    rev_map = {
+        y: x for x, y in model.SampleForUpload.FOR_UPLOAD_MODEL_CLASS_MAP.items()
+    }
+    model_class_map: dict[str, type[model.Model]] = {
+        y: rev_map[x]
+        for x, y in model.SampleForUpload.MODEL_RESULT_FIELD_NAME_MAP.items()
+    }
+
+    # Verify each associated data type for each sample
+    has_existing_data = False
+    for field_name, model_class in model_class_map.items():
+        # Collect all IDs for this associated data type and determine existence
+        obj_ids: list[UUID] = list(
+            {
+                y.id
+                for x in samples
+                for y in getattr(x, field_name) or []
+                if y.id is not None
+            }
+        )
+        if not obj_ids:
+            # No associated data IDs to check
+            continue
+        objs_exist: list[bool] = self.repository.crud(  # type:ignore[assignment]
+            uow,
+            user_id,
+            model_class,
+            None,
+            obj_ids,
+            CrudOperation.EXISTS_SOME,
+        )
+        existing_obj_ids = {x for x, y in zip(obj_ids, objs_exist) if y}
+        # Get (id, sample_id) for all existing ids
+        existing_obj_sample_id_map: dict[UUID, UUID] = {}
+        if existing_obj_ids:
+            result_iter = self.repository.read_fields(
+                uow,
+                user_id,
+                model_class,
+                ["id", "sample_id"],
+                filter=UuidSetFilter(key="id", members=frozenset(existing_obj_ids)),
+            )
+            existing_obj_sample_id_map = {x[0]: x[1] for x in result_iter}
+        # Verify existence of associated data instances
+        for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
+            for obj, obj_result in zip(
+                getattr(sample, field_name) or [],
+                getattr(sample_result, field_name) or [],
+            ):
+                if obj.id is None:
+                    # Instance does not exist yet, assign sample ID if existing
+                    obj.sample_id = sample.id
+                    continue
+                if obj.id not in existing_obj_ids:
+                    success = False
+                    obj_result.add_error(
+                        "d4f5e6a7",
+                        f"ID does not exist",
+                    )
+                # Existing instance
+                has_existing_data = True
+                existing_sample_id = existing_obj_sample_id_map[obj.id]
+                if sample.id is None:
+                    # Fill in sample ID
+                    sample.id = existing_sample_id
+                else:
+                    if sample.id != existing_sample_id:
+                        success = False
+                        obj_result.add_error(
+                            "e5f6a7b8",
+                            f"Associated data ID {obj.id} refers to sample ID {existing_sample_id}, which does not match provided sample ID {sample.id}",
+                        )
+    if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:
+        success = False
+        retval.add_error(
+            "c6e7f8a0",
+            f"One or more {model_class.NAME} instances already exist and on_exists=ERROR",
+        )
+
+    # Associated data class specific verifications
+    success &= _verify_batch_seqs(self, cmd, retval, uow)
+    success &= _verify_batch_allele_profiles(self, cmd, retval, uow)
+
+    return success
+
+
+def _verify_batch_seqs(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """Verify seq specific rules"""
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+    success = True
+
+    # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, assembly_protocol_id, id)]
+    sample_ids = list({sample.id for sample in samples if sample.id is not None})
+    if not sample_ids:
+        return success  # No samples with ID, nothing to verify
+    result_iter = self.repository.read_fields(
+        uow,
+        user_id,
+        model.Seq,
+        [
+            "sample_id",
+            "seq_hash",
+            "read_set_id",
+            "read_set2_id",
+            "assembly_protocol_id",
+            "id",
+        ],
+        filter=UuidSetFilter(key="sample_id", members=frozenset(sample_ids)),
+    )
+    key_map: defaultdict[tuple[UUID, UUID], list[tuple]] = defaultdict(list)
+    for x in result_iter:
+        key_map[(x[0], x[1])].append((x[2], x[3], x[4], x[5]))
+
+    # Verify each seq
+    has_existing_seqs = False
+    for sample, sample_result in zip(samples, sample_results):
+        if sample.id is None:
+            # Sample does not exist
+            continue
+        for seq, seq_result in zip(sample.seqs or [], sample_result.seqs or []):
+            existing_seq_data = key_map.get((sample.id, seq.seq_hash))
+            if existing_seq_data is None:
+                # No existing seq with this hash for this sample
+                continue
+            # Compare existing seqs with this hash
+            for (
+                read_set_id,
+                read_set2_id,
+                assembly_protocol_id,
+                seq_id,
+            ) in existing_seq_data:
+                if seq.assembly_protocol_id != assembly_protocol_id:
+                    # Different assembly protocol, cannot give rise to an issue
+                    continue
+                if seq.read_set_id == read_set_id and seq.read_set2_id == read_set2_id:
+                    # Same read sets -> skip since the seq is identical and there are
+                    # no immutable parts
+                    seq.id = seq_id
+                    seq_result.add_warning(
+                        "a2b3c4d5",
+                        f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
+                    )
+                    seq_result.status = UploadStatus.SKIPPED
+                    has_existing_seqs = True
+                    break
+                if seq.read_set_id is None and seq.read_set2_id is None:
+                    # New seq with same hash but unknown read sets -> error since
+                    # cannot verify if indeed it was derived from the same reads sets
+                    success = False
+                    seq_result.add_error(
+                        "f1e2d3c4",
+                        f"Seq with same hash ({seq.seq_hash}) and assembly protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
+                    )
+
+    # Finalise checks
+    if has_existing_seqs and cmd.on_exists == OnExistsUploadAction.ERROR:
+        success = False
+        retval.add_error(
+            "b4c5d6e7",
+            "One or more seqs already exist and on_exists=ERROR",
+        )
+    return success
+
+
+def _verify_batch_allele_profiles(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """Verify allele profile specific rules"""
+    user_id = cmd.user.id if cmd.user else None
+    samples = cmd.sample_batch.samples
+    sample_results = retval.samples
+    success = True
+
+    # Get sample IDs
+    sample_ids = list({sample.id for sample in samples if sample.id is not None})
+    if not sample_ids:
+        # No existing samples, nothing to verify
+        return success
+
+    # Retrieve and verify locus detection protocols provided by ID and/or code
+    protocol_tuples = list(
+        {
+            (y.locus_detection_protocol_id, y.locus_detection_protocol_code)
+            for x in samples
+            for y in x.allele_profiles or []
+        }
+    )
+    protocol_ids = {x[0] for x in protocol_tuples if x[0] is not None}
+    protocol_codes = {x[1] for x in protocol_tuples if x[1] is not None}
+    protocol_id_code_map: dict[UUID, str] = {}
+    protocol_code_id_map: dict[str, UUID] = {}
+    if protocol_ids or protocol_codes:
+        # Retrieve locus detection protocols by ID and code
+        result_iter = self.repository.read_fields(
+            uow,
+            user_id,
+            model.LocusDetectionProtocol,
+            ["id", "code"],
+            filter=CompositeFilter(
+                operator=LogicalOperator.OR,
+                filters=[
+                    UuidSetFilter(key="id", members=frozenset(protocol_ids)),
+                    StringSetFilter(key="code", members=frozenset(protocol_codes)),
+                ],
+            ),
+        )
+        protocol_id_code_map = {x[0]: x[1] for x in result_iter}
+        protocol_code_id_map = {y: x for x, y in protocol_id_code_map.items()}
+        # Verify locus detection protocols in allele profiles
+        for sample, sample_result in zip(samples, sample_results):
+            for allele_profile, allele_profile_result in zip(
+                sample.allele_profiles or [], sample_result.allele_profiles or []
+            ):
+                protocol_id = allele_profile.locus_detection_protocol_id
+                protocol_code = allele_profile.locus_detection_protocol_code
+                if protocol_id and protocol_id not in protocol_id_code_map:
+                    success = False
+                    allele_profile_result.add_error(
+                        "b2c3d4e5",
+                        f"Locus detection protocol with ID {protocol_id} does not exist",
+                    )
+                if protocol_code:
+                    if protocol_code not in protocol_code_id_map:
+                        success = False
+                        allele_profile_result.add_error(
+                            "d4e5f6a7",
+                            f"Locus detection protocol with code {protocol_code} does not exist",
+                        )
+                    elif (
+                        protocol_id
+                        and protocol_code_id_map[protocol_code] != protocol_id
+                    ):
+                        success = False
+                        allele_profile_result.add_error(
+                            "e5f6a7b8",
+                            f"Locus detection protocol code {protocol_code} with ID {protocol_code_id_map[protocol_code]} does not match provided ID {protocol_id}",
+                        )
+                    elif not protocol_id:
+                        # Add locus detection protocol ID
+                        allele_profile.locus_detection_protocol_id = (
+                            protocol_code_id_map[protocol_code]
+                        )
+
+    # Retrieve and verify locus sets provided by ID and/or code
+    locus_set_tuples = list(
+        {
+            (y.locus_set_id, y.locus_set_code)
+            for x in samples
+            for y in x.allele_profiles or []
+        }
+    )
+    locus_set_ids = {x[0] for x in locus_set_tuples if x[0] is not None}
+    locus_set_codes = {x[1] for x in locus_set_tuples if x[1] is not None}
+    locus_set_id_code_map: dict[UUID, str] = {}
+    locus_set_code_id_map: dict[str, UUID] = {}
+    if locus_set_ids or locus_set_codes:
+        # Retrieve locus sets by ID and code
+        result_iter = self.repository.read_fields(
+            uow,
+            user_id,
+            model.LocusSet,
+            ["id", "code"],
+            filter=CompositeFilter(
+                operator=LogicalOperator.OR,
+                filters=[
+                    UuidSetFilter(key="id", members=frozenset(locus_set_ids)),
+                    StringSetFilter(key="code", members=frozenset(locus_set_codes)),
+                ],
+            ),
+        )
+        locus_set_id_code_map = {x[0]: x[1] for x in result_iter}
+        locus_set_code_id_map = {y: x for x, y in locus_set_id_code_map.items()}
+        # Verify locus sets in allele profiles
+        for sample, sample_result in zip(samples, sample_results):
+            for allele_profile, allele_profile_result in zip(
+                sample.allele_profiles or [], sample_result.allele_profiles or []
+            ):
+                locus_set_id = allele_profile.locus_set_id
+                locus_set_code = allele_profile.locus_set_code
+                if locus_set_id and locus_set_id not in locus_set_id_code_map:
+                    success = False
+                    allele_profile_result.add_error(
+                        "f6a7b8c9",
+                        f"Locus set with ID {locus_set_id} does not exist",
+                    )
+                if locus_set_code:
+                    if locus_set_code not in locus_set_code_id_map:
+                        success = False
+                        allele_profile_result.add_error(
+                            "a7b8c9d0",
+                            f"Locus set with code {locus_set_code} does not exist",
+                        )
+                    elif (
+                        locus_set_id
+                        and locus_set_code_id_map[locus_set_code] != locus_set_id
+                    ):
+                        success = False
+                        allele_profile_result.add_error(
+                            "b8c9d0e1",
+                            f"Locus set code {locus_set_code} with ID {locus_set_code_id_map[locus_set_code]} does not match provided ID {locus_set_id}",
+                        )
+                    elif not locus_set_id:
+                        # Add locus set ID
+                        allele_profile.locus_set_id = locus_set_code_id_map[
+                            locus_set_code
+                        ]
+
+    # Get dict[(sample_id, allele_profile_hash), [(locus_detection_protocol_id, locus_set_id, seq_id,id)]
+    result_iter = self.repository.read_fields(
+        uow,
+        user_id,
+        model.AlleleProfile,
+        [
+            "sample_id",
+            "allele_profile_hash",
+            "locus_detection_protocol_id",
+            "locus_set_id",
+            "seq_id",
+            "id",
+        ],
+        filter=UuidSetFilter(key="sample_id", members=frozenset(sample_ids)),
+    )
+    key_map: defaultdict[tuple[UUID, UUID], list[tuple]] = defaultdict(list)
+    for x in result_iter:
+        key_map[(x[0], x[1])].append((x[2], x[3], x[4], x[5]))
+
+    # Verify each allele profile
+    has_existing_allele_profiles = False
+    for sample, sample_result in zip(samples, sample_results):
+        if sample.id is None:
+            # Sample does not exist
+            continue
+        for allele_profile, allele_profile_result in zip(
+            sample.allele_profiles or [], sample_result.allele_profiles or []
+        ):
+            existing_allele_profile_data = key_map.get(
+                (sample.id, allele_profile.allele_profile_hash)
+            )
+            if existing_allele_profile_data is None:
+                # No existing allele profile with this hash for this sample
+                continue
+            # Compare existing allele profiles with this hash
+            for (
+                locus_detection_protocol_id,
+                locus_set_id,
+                seq_id,
+                allele_profile_id,
+            ) in existing_allele_profile_data:
+                if (
+                    allele_profile.locus_detection_protocol_id
+                    != locus_detection_protocol_id
+                ):
+                    # Different locus detection protocol, cannot give rise to an issue
+                    continue
+                if allele_profile.locus_set_id != locus_set_id:
+                    # Different locus set, cannot give rise to an issue
+                    continue
+                if allele_profile.seq_id == seq_id:
+                    # Same seq -> skip since the allele profile is identical and there are
+                    # no immutable parts
+                    allele_profile.id = allele_profile_id
+                    allele_profile_result.add_warning(
+                        "c7d8e9f0",
+                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
+                    )
+                    allele_profile_result.status = UploadStatus.SKIPPED
+                    has_existing_allele_profiles = True
+                    break
+                if allele_profile.seq_id is None:
+                    # New allele profile with same hash but unknown read sets -> error since
+                    # cannot verify if indeed it was derived from the same seq
+                    success = False
+                    allele_profile_result.add_error(
+                        "a8f3e7b2",
+                        f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and assembly protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
+                    )
+
+    # Finalise checks
+    if has_existing_allele_profiles and cmd.on_exists == OnExistsUploadAction.ERROR:
+        success = False
+        retval.add_error(
+            "d8a3b7f4",
+            "One or more allele profiles already exist and on_exists=ERROR",
+        )
+    return success

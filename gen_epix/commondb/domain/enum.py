@@ -139,3 +139,4 @@ class UploadStatus(Enum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     SKIPPED = "SKIPPED"  # Not processed due to conditions
+    PENDING = "PENDING"  # Yet to be processed

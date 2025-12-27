@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from functools import cached_property
-from typing import Any, Callable, ClassVar, Self
+from typing import Callable, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, computed_field, field_serializer, model_validator
@@ -67,28 +67,28 @@ class UploadResult(Model):
         description="The UTC timestamp when the upload result was created.",
     )
     status: UploadStatus = Field(
-        default=UploadStatus.FAILED,
+        default=UploadStatus.PENDING,
         description="The status of the upload operation. In case sub-results are present, this status is calculated from that of the sub-results: success if all sub-results are successful, failed if any sub-result failed, and skipped if all sub-results are skipped.",
     )
     is_update: bool = Field(
         default=False,
         description="Indicates whether the upload operation resulted in an update of at least one existing object. If no objects were updated, i.e. all were newly created or skipped, this will be False.",
     )
-    error_messages: list[str] | None = Field(
-        default=None,
-        description="Error messages generated during the upload operation, describing the causes for upload failure, if applicable and available. Must be same length as error_codes if both are provided.",
-    )
-    error_codes: list[str] | None = Field(
+    error_codes: list[str | None] | None = Field(
         default=None,
         description="Error codes generated during the upload operation, describing the causes for upload failure, if applicable and available. Must be same length as error_messages if both are provided.",
     )
-    warning_messages: list[str] | None = Field(
+    error_messages: list[str | None] | None = Field(
         default=None,
-        description="Warning messages generated during the upload operation, if applicable and available. If both warning_messages and warning_code are provided, they must be the same length.",
+        description="Error messages generated during the upload operation, describing the causes for upload failure, if applicable and available. Must be same length as error_codes if both are provided.",
     )
-    warning_codes: list[str] | None = Field(
+    warning_codes: list[str | None] | None = Field(
         default=None,
         description="Warning codes generated during the upload operation, if applicable and available. If both warning_messages and warning_code are provided, they must be the same length.",
+    )
+    warning_messages: list[str | None] | None = Field(
+        default=None,
+        description="Warning messages generated during the upload operation, if applicable and available. If both warning_messages and warning_code are provided, they must be the same length.",
     )
     duration_ms: int | None = Field(
         default=None,
@@ -99,7 +99,7 @@ class UploadResult(Model):
     @cached_property
     def n_items_processed(self) -> int:
         """The number of records processed during the upload operation."""
-        n = 1  # Count self
+        n = bool(self.status != UploadStatus.PENDING)  # Count self if not pending
         for field_name in self.SUB_RESULT_FIELD_NAMES:
             sub_result: UploadResult | None = getattr(self, field_name, None)
             if sub_result is not None:
@@ -119,10 +119,24 @@ class UploadResult(Model):
                 raise ValueError(
                     "error_messages and error_codes must be the same length"
                 )
+            if any(
+                x is None and y is None
+                for x, y in zip(self.error_messages, self.error_codes)
+            ):
+                raise ValueError(
+                    "At least one of error_message or error_code must be provided for each error"
+                )
         if self.warning_messages and self.warning_codes:
             if len(self.warning_messages) != len(self.warning_codes):
                 raise ValueError(
                     "warning_messages and warning_codes must be the same length"
+                )
+            if any(
+                x is None and y is None
+                for x, y in zip(self.warning_messages, self.warning_codes)
+            ):
+                raise ValueError(
+                    "At least one of warning_message or warning_code must be provided for each warning"
                 )
         # Validate error/status consistency
         has_errors = bool(self.error_messages or self.error_codes)
@@ -140,6 +154,7 @@ class UploadResult(Model):
     def _calculate_status_from_sub_results(self) -> None:
         """Calculate status based on sub-results with proper type checking."""
         n_total = 0
+        n_pending = 0
         n_skipped = 0
         n_updated = 0
 
@@ -153,6 +168,7 @@ class UploadResult(Model):
             n_total += 1
             if sub_result.status == UploadStatus.FAILED:
                 return
+            n_pending += sub_result.status == UploadStatus.PENDING
             n_skipped += sub_result.status == UploadStatus.SKIPPED
             n_updated += sub_result.is_update
 
@@ -164,68 +180,48 @@ class UploadResult(Model):
                 if sub_result.status == UploadStatus.FAILED:
                     self.status = UploadStatus.FAILED
                     return
+                n_pending += sub_result.status == UploadStatus.PENDING
                 n_skipped += sub_result.status == UploadStatus.SKIPPED
                 n_updated += sub_result.is_update
 
+        self.is_update = n_updated > 0
+        if n_pending > 0:
+            self.status = UploadStatus.PENDING
+            return
         self.status = (
             UploadStatus.SUCCESS if n_skipped < n_total else UploadStatus.SKIPPED
         )
-        self.is_update = n_updated > 0
 
-    @classmethod
-    def create_success(
-        cls,
-        id: UUID | None = None,
-        warning_messages: list[str] | None = None,
-        warning_codes: list[str] | None = None,
-        **kwargs: Any,
-    ) -> Self:
-        """Create a successful upload result."""
-        return cls(
-            id=id,
-            status=UploadStatus.SUCCESS,
-            warning_messages=warning_messages,
-            warning_codes=warning_codes,
-            **kwargs,
-        )
+    def add_error(
+        self,
+        message: str | None,
+        code: str | None,
+    ) -> None:
+        """Add an error message and optional code to the upload result."""
+        if message is None and code is None:
+            raise ValueError("At least one of message or code must be provided")
+        if self.error_messages is None:
+            self.error_messages = []
+        if self.error_codes is None:
+            self.error_codes = []
+        self.error_messages.append(message)
+        self.error_codes.append(code)
+        self.status = UploadStatus.FAILED
 
-    @classmethod
-    def create_failure(
-        cls,
-        id: UUID | None = None,
-        error_messages: list[str] | None = None,
-        error_codes: list[str] | None = None,
-        warning_messages: list[str] | None = None,
-        warning_codes: list[str] | None = None,
-        **kwargs: Any,
-    ) -> Self:
-        """Create a failed upload result."""
-        return cls(
-            id=id,
-            status=UploadStatus.FAILED,
-            error_messages=error_messages,
-            error_codes=error_codes,
-            warning_messages=warning_messages,
-            warning_codes=warning_codes,
-            **kwargs,
-        )
-
-    @classmethod
-    def create_skipped(
-        cls,
-        id: UUID | None = None,
-        warning_messages: list[str] | None = None,
-        warning_codes: list[str] | None = None,
-        **kwargs: Any,
-    ) -> Self:
-        """Create a skipped upload result."""
-        return cls(
-            id=id,
-            status=UploadStatus.SKIPPED,
-            warning_messages=warning_messages,
-            warning_codes=warning_codes,
-            **kwargs,
-        )
+    def add_warning(
+        self,
+        message: str | None,
+        code: str | None,
+    ) -> None:
+        """Add a warning message and optional code to the upload result."""
+        if message is None and code is None:
+            raise ValueError("At least one of message or code must be provided")
+        if self.warning_messages is None:
+            self.warning_messages = []
+        if self.warning_codes is None:
+            self.warning_codes = []
+        self.warning_messages.append(message)
+        self.warning_codes.append(code)
 
 
 class BaseBatchUploadResult(UploadResult):

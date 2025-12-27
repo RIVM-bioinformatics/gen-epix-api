@@ -8,6 +8,7 @@ from gen_epix.commondb.domain.literal import MAX_CODE_FIELD_LENGTH, NULL_ID
 from gen_epix.commondb.domain.model.base import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    Model,
     UploadResult,
 )
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
@@ -213,20 +214,36 @@ class SampleForUpload(Sample):
 
     ENTITY: ClassVar = Entity(persistable=False)
     NAME = "SampleForUpload"
-    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "read_sets",
-        "seqs",
-        "seq_taxonomies",
-        "seq_classifications",
-        "locus_profiles",
-        "allele_profiles",
-        "snp_profiles",
-        "mlva_profiles",
-        "kmer_profiles",
-        "distances",
-        "pcr_measurements",
-        "ast_measurements",
-    ]
+
+    FOR_UPLOAD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+        ReadSet: ReadSetForUpload,
+        Seq: SeqForUpload,
+        SeqTaxonomy: SeqTaxonomy,
+        SeqClassification: SeqClassification,
+        LocusProfile: LocusProfile,
+        AlleleProfile: AlleleProfileForUpload,
+        SnpProfile: SnpProfile,
+        MlvaProfile: MlvaProfile,
+        KmerProfile: KmerProfile,
+        SeqDistance: SeqDistance,
+        PcrMeasurement: PcrMeasurement,
+        AstMeasurement: AstMeasurement,
+    }
+
+    MODEL_RESULT_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+        ReadSetForUpload: "read_sets",
+        SeqForUpload: "seqs",
+        SeqTaxonomy: "seq_taxonomies",
+        SeqClassification: "seq_classifications",
+        LocusProfile: "locus_profiles",
+        AlleleProfileForUpload: "allele_profiles",
+        SnpProfile: "snp_profiles",
+        MlvaProfile: "mlva_profiles",
+        KmerProfile: "kmer_profiles",
+        SeqDistance: "seq_distances",  # Uses seq_distances to match SampleUploadResult field name
+        PcrMeasurement: "pcr_measurements",
+        AstMeasurement: "ast_measurements",
+    }
 
     # Sample level data
     external_ids: list[ExternalIdentifierForUpload] | None = Field(
@@ -271,7 +288,7 @@ class SampleForUpload(Sample):
         default=None,
         description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    distances: list[SeqDistance] | None = Field(
+    seq_distances: list[SeqDistance] | None = Field(
         default=None,
         description="The genetic distances associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
@@ -307,7 +324,7 @@ class SampleForUpload(Sample):
         # If sample has NULL_ID, then associated items can have any sample_id
         if self.id is not None and self.id != NULL_ID:
             sample_id = self.id
-            for field_name in self.RESULT_FIELD_NAMES:
+            for field_name in self.MODEL_RESULT_FIELD_NAME_MAP.values():
                 items = getattr(self, field_name)
                 for item in items or []:
                     if item.sample_id != NULL_ID and item.sample_id != sample_id:
@@ -325,78 +342,66 @@ class SampleUploadResult(UploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleUploadResult"
 
-    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "sample_result",
+    SUB_RESULT_FIELD_NAMES: ClassVar[list[str]] = [
+        "sample",
     ]
-    RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
-        "external_id_results",
-        "read_set_results",
-        "seq_results",
-        "seq_taxonomy_results",
-        "seq_classification_results",
-        "locus_profile_results",
-        "allele_profile_results",
-        "snp_profile_results",
-        "mlva_profile_results",
-        "kmer_profile_results",
-        "distance_results",
-        "pcr_measurement_results",
-        "ast_measurement_results",
-    ]
+    SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
+        "external_ids",
+    ] + list(SampleForUpload.MODEL_RESULT_FIELD_NAME_MAP.values())
 
-    sample_result: UploadResult | None = Field(
+    sample: UploadResult | None = Field(
         default=None,
         description="The result of uploading the sample itself.",
     )
-    external_id_results: list[UploadResult] | None = Field(
+    external_ids: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
     )
-    read_set_results: list[UploadResult] | None = Field(
+    read_sets: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the read sets associated with the sample, if any were provided, in the same order as provided.",
     )
-    seq_results: list[UploadResult] | None = Field(
+    seqs: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the sequences associated with the sample, if any were provided, in the same order as provided.",
     )
-    seq_taxonomy_results: list[UploadResult] | None = Field(
+    seq_taxonomies: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the seq taxonomies associated with the sample, if any were provided, in the same order as provided.",
     )
-    seq_classification_results: list[UploadResult] | None = Field(
+    seq_classifications: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the seq classifications associated with the sample, if any were provided, in the same order as provided.",
     )
-    locus_profile_results: list[UploadResult] | None = Field(
+    locus_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the locus profiles associated with the sample, if any were provided, in the same order as provided.",
     )
-    allele_profile_results: list[UploadResult] | None = Field(
+    allele_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the allele profiles associated with the sample, if any were provided, in the same order as provided.",
     )
-    snp_profile_results: list[UploadResult] | None = Field(
+    snp_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the SNP profiles associated with the sample, if any were provided, in the same order as provided.",
     )
-    mlva_profile_results: list[UploadResult] | None = Field(
+    mlva_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the MLVA profiles associated with the sample, if any were provided, in the same order as provided.",
     )
-    kmer_profile_results: list[UploadResult] | None = Field(
+    kmer_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the k-mer profiles associated with the sample, if any were provided, in the same order as provided.",
     )
-    distance_results: list[UploadResult] | None = Field(
+    seq_distances: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the genetic distances associated with the sample, if any were provided, in the same order as provided.",
     )
-    pcr_measurement_results: list[UploadResult] | None = Field(
+    pcr_measurements: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the PCR measurements associated with the sample, if any were provided, in the same order as provided.",
     )
-    ast_measurement_results: list[UploadResult] | None = Field(
+    ast_measurements: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the AST measurements associated with the sample, if any were provided, in the same order as provided.",
     )
@@ -522,6 +527,6 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
         "sample_results",
     ]
 
-    sample_results: list[SampleUploadResult] = Field(
+    samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."
     )

@@ -275,11 +275,18 @@ class PersonForUpload(Person):
 
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonForUpload"
-    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "measurements",
-        "observations",
-        "specimens",
-    ]
+
+    FOR_UPLOAD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+        Measurement: MeasurementForUpload,
+        Observation: ObservationForUpload,
+        Specimen: SpecimenForUpload,
+    }
+
+    MODEL_RESULT_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+        MeasurementForUpload: "measurements",
+        ObservationForUpload: "observations",
+        SpecimenForUpload: "specimens",
+    }
 
     # Person identification
     person_id: UUID = Field(
@@ -323,7 +330,7 @@ class PersonForUpload(Person):
         # TODO: verify that each list of results is unique, e.g. no identical measurements
         # Verify that result person_ids are consistent with person id
         person_id = NULL_ID if self.id is None else self.id
-        for field_name in self.RESULT_FIELD_NAMES:
+        for field_name in self.MODEL_RESULT_FIELD_NAME_MAP:
             items = getattr(self, field_name)
             for item in items or []:
                 if item.person_id == NULL_ID or item.person_id == person_id:
@@ -347,11 +354,7 @@ class PersonUploadResult(UploadResult):
     ]
     SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
         "external_id_results",
-        "data_collection_id_results",
-        "measurement_results",
-        "observation_results",
-        "specimen_results",
-    ]
+    ] + list(PersonForUpload.MODEL_RESULT_FIELD_NAME_MAP.values())
 
     person_result: UploadResult | None = Field(
         default=None,

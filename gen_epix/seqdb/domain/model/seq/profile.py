@@ -125,7 +125,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         ge=0,
     )
     allele_profile: str = Field(
-        description="The alleles detected in the sequence for the loci in the locus set."
+        description="String representation of the alleles detected in the sequence for the loci in the locus set, with the format depending on allele_profile_format."
     )
     allele_profile_format: enum.AlleleProfileFormat = Field(
         default=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
@@ -158,7 +158,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
                 for i in range(0, len(allele_bytes), 16)
             )
         else:
-            if profile_hash is None:
+            if profile_hash == NULL_ID:
                 raise ValueError(
                     "Unable to calculate allele profile hash for this format"
                 )
@@ -177,7 +177,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
             )
 
         # Set or verify allele_profile_hash
-        if profile_hash is None:
+        if profile_hash == NULL_ID:
             self.allele_profile_hash = computed_profile_hash
         elif profile_hash != computed_profile_hash:
             raise ValueError(
