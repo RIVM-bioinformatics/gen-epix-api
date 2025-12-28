@@ -591,24 +591,24 @@ class TestModelAlleleProfileForUpload(TestCase):
         self.assertEqual(allele_profile.locus_set_id, locus_set_id)
         self.assertIsNone(allele_profile.locus_detection_protocol_code)
         self.assertIsNone(allele_profile.locus_set_code)
-        self.assertIsNone(allele_profile.alleles)
+        self.assertIsNone(allele_profile.allele_ids)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
     def test_valid_with_alleles(self) -> None:
-        """Test valid AlleleProfileForUpload with alleles."""
-        alleles = [
-            model.AlleleForUpload(locus_code="locus1", seq="ATCG"),
-            model.AlleleForUpload(locus_code="locus2", seq="GCTA"),
+        """Test valid AlleleProfileForUpload with allele_ids."""
+        allele_ids = [
+            uuid4(),
+            uuid4(),
         ]
         allele_profile = model.AlleleProfileForUpload(
             locus_detection_protocol_code="PROTOCOL123",
             locus_set_code="LOCUSSET123",
             locus_code_map_code="MAP123",
-            alleles=alleles,
-            # Don't provide n_loci for upload format with alleles
+            allele_ids=allele_ids,
+            # Don't provide n_loci for upload format with allele_ids
         )
         self.assertEqual(allele_profile.allele_profile, "")
-        self.assertEqual(len(allele_profile.alleles or []), 2)
+        self.assertEqual(len(allele_profile.allele_ids or []), 2)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
     def test_valid_with_locus_allele_id_map(self) -> None:
@@ -622,22 +622,22 @@ class TestModelAlleleProfileForUpload(TestCase):
             # Don't provide n_loci for upload format with locus_allele_id_map
         )
         self.assertEqual(allele_profile.allele_profile, "")
-        self.assertIsNone(allele_profile.alleles)
+        self.assertIsNone(allele_profile.allele_ids)
         self.assertEqual(allele_profile.locus_allele_id_map, locus_allele_id_map)
 
     def test_valid_with_locus_code_map_when_needed(self) -> None:
-        """Test valid AlleleProfileForUpload with locus_code_map when alleles have locus_code."""
-        alleles = [model.AlleleForUpload(locus_code="locus1", seq="ATCG")]
+        """Test valid AlleleProfileForUpload with locus_code_map when using allele_ids."""
+        allele_ids = [uuid4()]
         allele_profile = model.AlleleProfileForUpload(
             locus_detection_protocol_code="PROTOCOL123",
             locus_set_code="LOCUSSET123",
             locus_code_map_code="MAP123",
-            alleles=alleles,
-            # Don't provide n_loci for upload format with alleles
+            allele_ids=allele_ids,
+            # Don't provide n_loci for upload format with allele_ids
         )
         self.assertEqual(allele_profile.locus_code_map_code, "MAP123")
         self.assertEqual(allele_profile.allele_profile, "")
-        self.assertEqual(len(allele_profile.alleles or []), 1)
+        self.assertEqual(len(allele_profile.allele_ids or []), 1)
         self.assertIsNone(allele_profile.locus_allele_id_map)
 
     def test_invalid_missing_protocol_fields(self) -> None:
@@ -687,15 +687,15 @@ class TestModelAlleleProfileForUpload(TestCase):
             )
 
     def test_valid_without_locus_code_map_when_not_needed(self) -> None:
-        """Test valid AlleleProfileForUpload without locus_code_map when using allele_ids instead of alleles."""
-        # Test using allele_ids instead of alleles to avoid locus_code_map requirement
+        """Test valid AlleleProfileForUpload without locus_code_map when using allele_ids."""
+        # Test using allele_ids to avoid locus_code_map requirement
         allele_id1, allele_id2 = uuid4(), uuid4()
         allele_profile = TestModelAlleleProfileForUpload._get_allele_profile_for_ids(
             [allele_id1, allele_id2]
         )
         self.assertIsNone(allele_profile.locus_code_map_code)
         self.assertEqual(allele_profile.locus_code_map_id, NULL_ID)
-        self.assertIsNone(allele_profile.alleles)
+        self.assertIsNone(allele_profile.allele_ids)
 
     def test_quality_mixin_inheritance(self) -> None:
         """Test that AlleleProfileForUpload inherits QualityMixin properties."""

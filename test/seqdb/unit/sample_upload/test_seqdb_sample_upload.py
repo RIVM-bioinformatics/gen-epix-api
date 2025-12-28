@@ -28,11 +28,14 @@ from gen_epix.seqdb.services.seq.upload import (
     _create_or_update_data,
     _initialize_upload_result,
     _retrieve_and_verify_reference_data,
+    seq_service_upload_samples,
+)
+from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_allele_profiles,
+    _verify_batch_associated_data,
     _verify_batch_external_ids,
     _verify_batch_sample_existence,
     _verify_batch_seqs,
-    seq_service_upload_samples,
 )
 
 
@@ -954,7 +957,7 @@ class TestVerifyBatch(TestCase):
         self.service.repository.crud.return_value = {}
 
         # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_seqs
+        from gen_epix.seqdb.services.seq.upload_verify_batch import _verify_batch_seqs
 
         result = _verify_batch_seqs(self.service, cmd, retval, uow)
 
@@ -972,7 +975,7 @@ class TestVerifyBatch(TestCase):
                     locus_detection_protocol_id=uuid4(),
                     locus_set_id=uuid4(),
                     locus_code_map_id=uuid4(),
-                    locus_allele_id_map={},
+                    locus_allele_id_map={"locus1": uuid4()},
                 )
             ],
         )
@@ -1253,8 +1256,7 @@ class TestVerifyBatchExternalIds(TestCase):
         )
         self.service.crud.side_effect = [
             [mock_issuer],  # First call for identifier issuers by ID
-            [],  # Second call for identifier issuers by code (none)
-            [mock_external_id],  # Third call for external IDs
+            [mock_external_id],  # Second call for external IDs
         ]
 
         # Execute
@@ -1262,6 +1264,9 @@ class TestVerifyBatchExternalIds(TestCase):
 
         # Verify
         self.assertFalse(result)
+        # Check that error was added to external_id_result (code is passed as message in upload.py)
+        self.assertIsNotNone(ext_id_result.error_messages)
+        self.assertIn("f8a9b0c1", ext_id_result.error_messages)
         # Check that error was added to external_id_result (code is passed as message in upload.py)
         self.assertIsNotNone(ext_id_result.error_messages)
         self.assertIn("f8a9b0c1", ext_id_result.error_messages)
@@ -1308,8 +1313,7 @@ class TestVerifyBatchExternalIds(TestCase):
         )
         self.service.crud.side_effect = [
             [mock_issuer],  # First call for identifier issuers by ID
-            [],  # Second call for identifier issuers by code (none)
-            [mock_external_id],  # Third call for external IDs
+            [mock_external_id],  # Second call for external IDs
         ]
 
         # Execute
@@ -1362,8 +1366,16 @@ class TestVerifyBatchSeqs(TestCase):
                 )
             ],
         )
+
+        # Get the computed seq_hash from the actual sequence object
+        computed_seq_hash = sample.seqs[0].seq_hash
+
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        cmd = command.UploadSamplesCommand(
+            user=self.user,
+            sample_batch=sample_batch,
+            on_exists=OnExistsUploadAction.UPDATE,  # Allow existing sequences to be skipped
+        )
 
         seq_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
@@ -1378,7 +1390,7 @@ class TestVerifyBatchSeqs(TestCase):
         self.service.repository.read_fields.return_value = [
             (
                 sample_id,
-                seq_hash,
+                computed_seq_hash,  # Use the computed hash
                 read_set_id,
                 None,
                 assembly_protocol_id,
@@ -1421,6 +1433,9 @@ class TestVerifyBatchSeqs(TestCase):
                 )
             ],
         )
+
+        # Get the computed seq_hash from the actual sequence object
+        computed_seq_hash = sample.seqs[0].seq_hash
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
@@ -1437,7 +1452,7 @@ class TestVerifyBatchSeqs(TestCase):
         self.service.repository.read_fields.return_value = [
             (
                 sample_id,
-                seq_hash,
+                computed_seq_hash,  # Use the computed hash
                 read_set_id,
                 None,
                 assembly_protocol_id,
@@ -1449,6 +1464,7 @@ class TestVerifyBatchSeqs(TestCase):
         result = _verify_batch_seqs(self.service, cmd, retval, uow)
 
         # Verify
+        self.assertFalse(result)
         self.assertFalse(result)
         # Check that error was added to seq_result (code is passed as message in upload.py)
         self.assertIsNotNone(seq_result.error_messages)
@@ -1473,6 +1489,10 @@ class TestVerifyBatchSeqs(TestCase):
                 )
             ],
         )
+
+        # Get the computed seq_hash from the actual sequence object
+        computed_seq_hash = sample.seqs[0].seq_hash
+
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(
             user=self.user,
@@ -1493,7 +1513,7 @@ class TestVerifyBatchSeqs(TestCase):
         self.service.repository.read_fields.return_value = [
             (
                 sample_id,
-                seq_hash,
+                computed_seq_hash,  # Use the computed hash
                 sample.seqs[0].read_set_id,
                 None,
                 sample.seqs[0].assembly_protocol_id,
@@ -1608,7 +1628,6 @@ class TestVerifyBatchAssociatedData(TestCase):
 
     def test_associated_data_id_does_not_exist(self) -> None:
         """Test error when associated data ID does not exist."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_associated_data
 
         seq_id = uuid4()
         sample = model.SampleForUpload(
@@ -1636,8 +1655,14 @@ class TestVerifyBatchAssociatedData(TestCase):
 
         # Mock: seq ID doesn't exist
         self.service.repository.crud.return_value = [False]
-        # read_fields should return empty since ID doesn't exist
-        self.service.repository.read_fields.return_value = []
+        # Multiple calls for the various verification functions
+        self.service.repository.read_fields.side_effect = [
+            [],  # No existing objects for associated data
+            [],  # _verify_batch_seqs - no seq data
+            [],  # _verify_batch_allele_profiles - protocols
+            [],  # _verify_batch_allele_profiles - locus sets
+            [],  # _verify_batch_allele_profiles - allele profiles
+        ]
 
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
 
@@ -1646,7 +1671,6 @@ class TestVerifyBatchAssociatedData(TestCase):
 
     def test_associated_data_sample_id_mismatch(self) -> None:
         """Test error when associated data points to different sample."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_associated_data
 
         seq_id = uuid4()
         sample_id = uuid4()
@@ -1677,8 +1701,12 @@ class TestVerifyBatchAssociatedData(TestCase):
 
         # Mock: seq exists but belongs to different sample
         self.service.repository.crud.return_value = [True]
-        self.service.repository.read_fields.return_value = [
-            (seq_id, different_sample_id)
+        self.service.repository.read_fields.side_effect = [
+            [(seq_id, different_sample_id)],  # Associated data (id, sample_id)
+            [],  # _verify_batch_seqs - no seq data
+            [],  # _verify_batch_allele_profiles - protocols
+            [],  # _verify_batch_allele_profiles - locus sets
+            [],  # _verify_batch_allele_profiles - allele profiles
         ]
 
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
@@ -1688,7 +1716,6 @@ class TestVerifyBatchAssociatedData(TestCase):
 
     def test_associated_data_exists_error_on_exists(self) -> None:
         """Test error when associated data exists and on_exists=ERROR."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_associated_data
 
         seq_id = uuid4()
         sample_id = uuid4()
@@ -1718,9 +1745,13 @@ class TestVerifyBatchAssociatedData(TestCase):
 
         # Mock: seq exists and belongs to same sample
         self.service.repository.crud.return_value = [True]
-        # read_fields returns (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, id)
-        self.service.repository.read_fields.return_value = [
-            (sample_id, uuid4(), None, None, uuid4(), seq_id)  # Mock seq data
+        # Multiple calls: associated data (id,sample_id), _verify_batch_seqs, _verify_batch_allele_profiles
+        self.service.repository.read_fields.side_effect = [
+            [(seq_id, sample_id)],  # Associated data (id, sample_id)
+            [],  # _verify_batch_seqs - no existing seqs
+            [],  # _verify_batch_allele_profiles - protocols
+            [],  # _verify_batch_allele_profiles - locus sets
+            [],  # _verify_batch_allele_profiles - allele profiles
         ]
 
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
@@ -1730,7 +1761,6 @@ class TestVerifyBatchAssociatedData(TestCase):
 
     def test_associated_data_no_id_assigns_sample_id(self) -> None:
         """Test that associated data without ID gets assigned sample ID."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_associated_data
 
         sample_id = uuid4()
         sample = model.SampleForUpload(
@@ -1756,8 +1786,13 @@ class TestVerifyBatchAssociatedData(TestCase):
             ],
         )
 
-        # No IDs to check, but mock read_fields anyway for _verify_batch_seqs call
-        self.service.repository.read_fields.return_value = []
+        # No IDs to check, but mock read_fields for all the verification calls
+        self.service.repository.read_fields.side_effect = [
+            [],  # _verify_batch_seqs - no existing seqs
+            [],  # _verify_batch_allele_profiles - protocols
+            [],  # _verify_batch_allele_profiles - locus sets
+            [],  # _verify_batch_allele_profiles - allele profiles
+        ]
 
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
 
@@ -2141,6 +2176,199 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Check that error was added to retval (code is passed as message in upload.py)
         self.assertIsNotNone(retval.error_messages)
         self.assertIn("d8a3b7f4", retval.error_messages)
+
+    def test_locus_code_map_id_does_not_exist(self) -> None:
+        """Test error when locus code map ID does not exist."""
+        batch_id = uuid4()
+        sample_id = uuid4()
+        code_map_id = uuid4()
+
+        sample = model.SampleForUpload(
+            id=sample_id,
+            created_in_data_collection_id=self.data_collection_id,
+            allele_profiles=[
+                model.AlleleProfileForUpload(
+                    sample_id=sample_id,
+                    locus_detection_protocol_id=uuid4(),
+                    locus_set_id=uuid4(),
+                    locus_code_map_id=code_map_id,
+                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile=create_allele_profile_base64(),
+                )
+            ],
+        )
+        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
+        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+
+        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
+        sample_result = model.SampleUploadResult(
+            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        )
+        retval = model.SampleBatchUploadResult(
+            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
+        )
+        uow = Mock()
+
+        # Mock no locus code map found (third call is for locus code maps)
+        self.service.repository.read_fields.side_effect = [
+            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
+            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
+            [],  # Locus code maps (empty - not found)
+            [],  # Allele profiles
+        ]
+
+        # Execute
+        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+
+        # Verify
+        self.assertFalse(result)
+        self.assertIsNotNone(allele_profile_result.error_messages)
+        self.assertIn("b9e4f7c2", allele_profile_result.error_messages)
+
+    def test_locus_code_map_code_does_not_exist(self) -> None:
+        """Test error when locus code map code does not exist."""
+        batch_id = uuid4()
+        sample_id = uuid4()
+
+        sample = model.SampleForUpload(
+            id=sample_id,
+            created_in_data_collection_id=self.data_collection_id,
+            allele_profiles=[
+                model.AlleleProfileForUpload(
+                    sample_id=sample_id,
+                    locus_detection_protocol_id=uuid4(),
+                    locus_set_id=uuid4(),
+                    locus_code_map_code="INVALID_CODE",
+                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile=create_allele_profile_base64(),
+                )
+            ],
+        )
+        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
+        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+
+        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
+        sample_result = model.SampleUploadResult(
+            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        )
+        retval = model.SampleBatchUploadResult(
+            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
+        )
+        uow = Mock()
+
+        # Mock no locus code map found (third call is for locus code maps)
+        self.service.repository.read_fields.side_effect = [
+            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
+            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
+            [],  # Locus code maps (empty - not found)
+            [],  # Allele profiles
+        ]
+
+        # Execute
+        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+
+        # Verify
+        self.assertFalse(result)
+        self.assertIsNotNone(allele_profile_result.error_messages)
+        self.assertIn("c7a9b2e4", allele_profile_result.error_messages)
+
+    def test_locus_code_map_id_code_mismatch(self) -> None:
+        """Test error when locus code map ID and code don't match."""
+        batch_id = uuid4()
+        sample_id = uuid4()
+        code_map_id = uuid4()
+        different_id = uuid4()
+
+        sample = model.SampleForUpload(
+            id=sample_id,
+            created_in_data_collection_id=self.data_collection_id,
+            allele_profiles=[
+                model.AlleleProfileForUpload(
+                    sample_id=sample_id,
+                    locus_detection_protocol_id=uuid4(),
+                    locus_set_id=uuid4(),
+                    locus_code_map_id=code_map_id,
+                    locus_code_map_code="TEST_CODE",
+                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile=create_allele_profile_base64(),
+                )
+            ],
+        )
+        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
+        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+
+        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
+        sample_result = model.SampleUploadResult(
+            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        )
+        retval = model.SampleBatchUploadResult(
+            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
+        )
+        uow = Mock()
+
+        # Mock locus code map with different ID than expected
+        self.service.repository.read_fields.side_effect = [
+            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
+            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
+            [(different_id, "TEST_CODE")],  # Locus code maps with mismatched ID
+            [],  # Allele profiles
+        ]
+
+        # Execute
+        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+
+        # Verify
+        self.assertFalse(result)
+        self.assertIsNotNone(allele_profile_result.error_messages)
+        self.assertIn("a4d7b9c3", allele_profile_result.error_messages)
+
+    def test_locus_code_map_code_sets_id(self) -> None:
+        """Test that providing only locus code map code sets the ID."""
+        batch_id = uuid4()
+        sample_id = uuid4()
+        code_map_id = uuid4()
+
+        sample = model.SampleForUpload(
+            id=sample_id,
+            created_in_data_collection_id=self.data_collection_id,
+            allele_profiles=[
+                model.AlleleProfileForUpload(
+                    sample_id=sample_id,
+                    locus_detection_protocol_id=uuid4(),
+                    locus_set_id=uuid4(),
+                    locus_code_map_code="TEST_CODE",
+                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile=create_allele_profile_base64(),
+                )
+            ],
+        )
+        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
+        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+
+        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
+        sample_result = model.SampleUploadResult(
+            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        )
+        retval = model.SampleBatchUploadResult(
+            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
+        )
+        uow = Mock()
+
+        # Mock locus code map found by code
+        self.service.repository.read_fields.side_effect = [
+            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
+            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
+            [(code_map_id, "TEST_CODE")],  # Locus code maps
+            [],  # Allele profiles
+        ]
+
+        # Execute
+        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+
+        # Verify
+        self.assertTrue(result)
+        # Check that the ID was set
+        self.assertEqual(sample.allele_profiles[0].locus_code_map_id, code_map_id)
 
 
 class TestRetrieveAndVerifyReferenceData(TestCase):

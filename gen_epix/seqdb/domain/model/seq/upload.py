@@ -5,13 +5,13 @@ from uuid import UUID
 from pydantic import Field, computed_field, field_validator, model_validator
 
 from gen_epix.commondb.domain.literal import MAX_CODE_FIELD_LENGTH, NULL_ID
-from gen_epix.commondb.domain.model.base import (
+from gen_epix.commondb.domain.model import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    ExternalIdentifierForUpload,
     Model,
     UploadResult,
 )
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
@@ -58,6 +58,24 @@ class SeqForUpload(Seq):
         default=NULL_ID,
         description="The UUID of the sample that the sequence is associated with. If not available, the null ID is put.",
     )
+    assembly_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the assembly protocol, if available. If not available, the null ID is put. Must be present if assembly_protocol_code is not present. The use of assembly_protocol_id is preferred over assembly_protocol_code since the latter may change.",
+    )
+    assembly_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the assembly protocol. Must be present if assembly_protocol_id is not present. The use of assembly_protocol_code is meant for situations where the assembly_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+
+    @model_validator(mode="after")
+    def _validate_assembly_protocol_reference(self) -> Self:
+        """Validate upload-specific fields."""
+        if not self.assembly_protocol_code and self.assembly_protocol_id == NULL_ID:
+            raise ValueError(
+                "Either assembly_protocol_code or assembly_protocol_id must be provided."
+            )
+        return self
 
 
 class AlleleForUpload(Allele):
@@ -139,9 +157,9 @@ class AlleleProfileForUpload(AlleleProfile):
         default="",
         description="The allele profile as a string representation, e.g. a comma-separated list of allele codes or ids, in the order defined by the locus set. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
-    alleles: list[AlleleForUpload] | None = Field(
+    allele_ids: list[UUID | None] | None = Field(
         default=None,
-        description="List of all alleles detected for this sample and for the loci within the locus set, in any order. Must be present if allele_profile and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+        description="List of all allele IDs detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as allele ID. Must be present if allele_profile and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
     locus_allele_id_map: dict[str, UUID] | None = Field(
         default=None,
@@ -153,25 +171,54 @@ class AlleleProfileForUpload(AlleleProfile):
         """
         Override parent validation for upload format to handle alleles and locus_allele_id_map.
         """
-        # Check if we're using upload-specific formats
-        using_alleles = self.alleles is not None
-        using_locus_allele_id_map = self.locus_allele_id_map is not None
-        using_allele_profile_string = self.allele_profile != ""
+        n_profiles = sum(
+            [
+                self.allele_profile != "",
+                self.allele_ids is not None,
+                self.locus_allele_id_map is not None,
+            ]
+        )
+        if n_profiles != 1:
+            raise ValueError(
+                "Exactly one of allele_profile, allele_ids, or locus_allele_id_map must be provided."
+            )
 
-        if (
-            using_allele_profile_string
-            and not using_alleles
-            and not using_locus_allele_id_map
-        ):
+        if self.allele_profile != "":
             # Use parent validation for allele_profile string format
             super()._validate_model()
-        else:
-            # For upload formats with alleles/locus_allele_id_map, set defaults
+        elif self.allele_ids is not None:
+            # Set or verify n_loci
+            computed_n_loci = sum(x is not None for x in self.allele_ids)
+            if self.n_loci == 0:
+                if computed_n_loci == 0:
+                    raise ValueError("Unable to calculate number of loci")
+                self.n_loci = computed_n_loci
+            elif self.n_loci != computed_n_loci:
+                raise ValueError(
+                    f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
+                )
+            # Set or verify allele_profile_hash
+            computed_profile_hash = AlleleProfile.get_allele_profile_hash(
+                self.allele_ids
+            )  # Will raise ValueError if invalid
             if self.allele_profile_hash == NULL_ID:
-                # Set a placeholder hash since we can't calculate it from alleles/map
-                from uuid import uuid4
-
-                self.allele_profile_hash = uuid4()
+                self.allele_profile_hash = computed_profile_hash
+            elif self.allele_profile_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided allele profile hash does not match computed hash"
+                )
+        elif self.locus_allele_id_map is not None:
+            # Set or verify n_loci
+            computed_n_loci = len(self.locus_allele_id_map)
+            if self.n_loci == 0:
+                if computed_n_loci == 0:
+                    raise ValueError("Unable to calculate number of loci")
+                self.n_loci = computed_n_loci
+            elif self.n_loci != computed_n_loci:
+                raise ValueError(
+                    f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
+                )
+            # Set or verify allele_profile_hash: not possible with this representation since loci are unordered
 
         # Upload-specific validation
         if (
@@ -183,26 +230,13 @@ class AlleleProfileForUpload(AlleleProfile):
             )
         if self.locus_set_code is None and self.locus_set_id == NULL_ID:
             raise ValueError("Either locus_set_code or locus_set_id must be provided.")
-        if self.locus_code_map_id == NULL_ID and self.locus_code_map_code is None:
-            for allele in self.alleles or []:
-                if allele.locus_code is not None:
-                    raise ValueError(
-                        "Either locus_code_map_id or locus_code_map_code must be provided when alleles contain locus_code."
-                    )
-            if self.locus_allele_id_map is not None:
-                raise ValueError(
-                    "Either locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is provided."
-                )
-        n_profiles = sum(
-            [
-                self.allele_profile != "",
-                self.alleles is not None,
-                self.locus_allele_id_map is not None,
-            ]
-        )
-        if n_profiles != 1:
+        if (
+            self.locus_allele_id_map is not None
+            and self.locus_code_map_id == NULL_ID
+            and self.locus_code_map_code is None
+        ):
             raise ValueError(
-                "Exactly one of allele_profile, alleles, or locus_allele_id_map must be provided."
+                "Either locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
             )
         return self
 
@@ -230,7 +264,7 @@ class SampleForUpload(Sample):
         AstMeasurement: AstMeasurement,
     }
 
-    MODEL_RESULT_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+    MODEL_DATA_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
         ReadSetForUpload: "read_sets",
         SeqForUpload: "seqs",
         SeqTaxonomy: "seq_taxonomies",
@@ -324,7 +358,7 @@ class SampleForUpload(Sample):
         # If sample has NULL_ID, then associated items can have any sample_id
         if self.id is not None and self.id != NULL_ID:
             sample_id = self.id
-            for field_name in self.MODEL_RESULT_FIELD_NAME_MAP.values():
+            for field_name in self.MODEL_DATA_FIELD_NAME_MAP.values():
                 items = getattr(self, field_name)
                 for item in items or []:
                     if item.sample_id != NULL_ID and item.sample_id != sample_id:
@@ -336,7 +370,8 @@ class SampleForUpload(Sample):
 
 class SampleUploadResult(UploadResult):
     """
-    The result of uploading a single sample.
+    The result of uploading a single sample. The field names for the results for
+    the associated data match those in SampleForUpload to facilitate processing.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
@@ -347,7 +382,7 @@ class SampleUploadResult(UploadResult):
     ]
     SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
         "external_ids",
-    ] + list(SampleForUpload.MODEL_RESULT_FIELD_NAME_MAP.values())
+    ] + list(SampleForUpload.MODEL_DATA_FIELD_NAME_MAP.values())
 
     sample: UploadResult | None = Field(
         default=None,

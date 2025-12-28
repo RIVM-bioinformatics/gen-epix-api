@@ -4,7 +4,7 @@
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_001",
-                    "identifier": "SAMPLE_001"
+                    "external_id": "SAMPLE_001"
                 }
             ],
             "seqs": [
@@ -23,7 +23,7 @@
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_002",
-                    "identifier": "SAMPLE_002"
+                    "external_id": "SAMPLE_002"
                 }
             ],
             "seqs": [
@@ -45,7 +45,7 @@
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_003",
-                    "identifier": "SAMPLE_003"
+                    "external_id": "SAMPLE_003"
                 }
             ],
             "seqs": [
@@ -72,7 +72,7 @@
             "external_ids": [
                 {
                     "identifier_issuer_code": "LAB_004",
-                    "identifier": "SAMPLE_004"
+                    "external_id": "SAMPLE_004"
                 }
             ],
             "seqs": [
