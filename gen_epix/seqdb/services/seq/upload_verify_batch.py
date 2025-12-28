@@ -417,7 +417,8 @@ def _verify_batch_seqs(
     # Get dict[(sample_id, seq_hash), [(read_set_id, read_set2_id, assembly_protocol_id, id)]
     sample_ids = list({sample.id for sample in samples if sample.id is not None})
     if not sample_ids:
-        return success  # No samples with ID, nothing to verify
+        # No samples with ID, nothing to verify
+        return success
     result_iter = self.repository.read_fields(
         uow,
         user_id,
@@ -611,6 +612,7 @@ def _verify_batch_allele_profiles(
                         "a8f3e7b2",
                         f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and assembly protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
                     )
+                    break
 
     # Finalise checks
     if has_existing_allele_profiles and cmd.on_exists == OnExistsUploadAction.ERROR:
@@ -721,9 +723,9 @@ def _set_and_verify_id_by_code(
             }
         # Verify locus detection protocols in allele profiles
         for sample, sample_result in zip(samples, sample_results):
-            link_objs = getattr(sample, data_field_name) or []
+            objs = getattr(sample, data_field_name) or []
             obj_results = getattr(sample_result, data_field_name) or []
-            for i, (obj, obj_result) in enumerate(zip(link_objs, obj_results)):
+            for i, (obj, obj_result) in enumerate(zip(objs, obj_results)):
                 link_id = getattr(obj, link_id_field_name)
                 if link_id == NULL_ID:
                     link_id = None
@@ -754,7 +756,7 @@ def _set_and_verify_id_by_code(
                             new_obj = obj.model_copy(
                                 update={link_id_field_name: code_id_map[link_code]}
                             )
-                            link_objs[i] = new_obj
+                            objs[i] = new_obj
                         else:
                             setattr(obj, link_id_field_name, code_id_map[link_code])
     return success

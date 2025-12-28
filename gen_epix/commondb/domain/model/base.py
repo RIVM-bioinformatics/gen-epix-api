@@ -194,34 +194,34 @@ class UploadResult(Model):
 
     def add_error(
         self,
-        message: str | None,
         code: str | None,
+        message: str | None,
     ) -> None:
-        """Add an error message and optional code to the upload result."""
-        if message is None and code is None:
+        """Add an error code and/or message to the upload result."""
+        if code is None and message is None:
             raise ValueError("At least one of message or code must be provided")
-        if self.error_messages is None:
-            self.error_messages = []
         if self.error_codes is None:
             self.error_codes = []
-        self.error_messages.append(message)
+        if self.error_messages is None:
+            self.error_messages = []
         self.error_codes.append(code)
+        self.error_messages.append(message)
         self.status = UploadStatus.FAILED
 
     def add_warning(
         self,
-        message: str | None,
         code: str | None,
+        message: str | None,
     ) -> None:
-        """Add a warning message and optional code to the upload result."""
-        if message is None and code is None:
+        """Add a warning code and/or message to the upload result."""
+        if code is None and message is None:
             raise ValueError("At least one of message or code must be provided")
-        if self.warning_messages is None:
-            self.warning_messages = []
         if self.warning_codes is None:
             self.warning_codes = []
-        self.warning_messages.append(message)
+        if self.warning_messages is None:
+            self.warning_messages = []
         self.warning_codes.append(code)
+        self.warning_messages.append(message)
 
 
 class BaseBatchUploadResult(UploadResult):
