@@ -10,6 +10,7 @@
             "seqs": [
                 {
                     "code": "seq_001_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
@@ -29,6 +30,7 @@
             "seqs": [
                 {
                     "code": "seq_002_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat"
@@ -51,6 +53,7 @@
             "seqs": [
                 {
                     "code": "seq_003a_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg"
@@ -59,6 +62,7 @@
                 },
                 {
                     "code": "seq_003b_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc"
@@ -78,6 +82,7 @@
             "seqs": [
                 {
                     "code": "seq_004a_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga"
@@ -89,6 +94,7 @@
                 },
                 {
                     "code": "seq_004b_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag"

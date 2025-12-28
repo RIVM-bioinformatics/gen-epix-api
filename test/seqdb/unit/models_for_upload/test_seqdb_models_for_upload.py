@@ -376,6 +376,7 @@ class TestModelSeqForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
+            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)
@@ -385,7 +386,10 @@ class TestModelSeqForUpload(TestCase):
         sample_id = uuid4()
         code = "test_seq_upload"
         seq_upload = model.SeqForUpload(
-            sample_id=sample_id, code=code, contigs=[model.Contig(seq="ATCGATCG")]
+            sample_id=sample_id,
+            code=code,
+            contigs=[model.Contig(seq="ATCGATCG")],
+            assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
         )
         self.assertEqual(seq_upload.sample_id, sample_id)
         self.assertEqual(seq_upload.code, code)
@@ -405,7 +409,10 @@ class TestModelSeqForUpload(TestCase):
     def test_sample_id_with_null_id(self) -> None:
         """Test SeqForUpload with NULL_ID for sample_id."""
         seq_upload = model.SeqForUpload(
-            sample_id=NULL_ID, code="test_seq", contigs=[model.Contig(seq="ATCGATCG")]
+            sample_id=NULL_ID,
+            code="test_seq",
+            contigs=[model.Contig(seq="ATCGATCG")],
+            assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
         )
         self.assertEqual(seq_upload.sample_id, NULL_ID)
 
@@ -511,6 +518,53 @@ class TestModelSeqForUpload(TestCase):
         # Empty contigs should result in not available
         empty_seq_upload = self._create_sample_seq_for_upload(contigs=[])
         self.assertFalse(empty_seq_upload.is_available)
+
+    def test_assembly_protocol_id_validation(self) -> None:
+        """Test that assembly_protocol_id is properly validated."""
+        assembly_protocol_id = uuid4()
+        seq_upload = self._create_sample_seq_for_upload(
+            assembly_protocol_id=assembly_protocol_id,
+            assembly_protocol_code=None,  # Override default to test only ID
+        )
+        self.assertEqual(seq_upload.assembly_protocol_id, assembly_protocol_id)
+        self.assertIsNone(seq_upload.assembly_protocol_code)
+
+    def test_assembly_protocol_code_validation(self) -> None:
+        """Test that assembly_protocol_code is properly validated."""
+        protocol_code = "TEST_ASSEMBLY_PROTOCOL"
+        seq_upload = self._create_sample_seq_for_upload(
+            assembly_protocol_code=protocol_code,
+            assembly_protocol_id=NULL_ID,  # Override default to test only code
+        )
+        self.assertEqual(seq_upload.assembly_protocol_code, protocol_code)
+        self.assertEqual(seq_upload.assembly_protocol_id, NULL_ID)
+
+    def test_assembly_protocol_both_provided(self) -> None:
+        """Test that both assembly_protocol_id and assembly_protocol_code can be provided."""
+        assembly_protocol_id = uuid4()
+        protocol_code = "TEST_ASSEMBLY_PROTOCOL"
+        seq_upload = self._create_sample_seq_for_upload(
+            assembly_protocol_id=assembly_protocol_id,
+            assembly_protocol_code=protocol_code,
+        )
+        self.assertEqual(seq_upload.assembly_protocol_id, assembly_protocol_id)
+        self.assertEqual(seq_upload.assembly_protocol_code, protocol_code)
+
+    def test_assembly_protocol_validation_failure(self) -> None:
+        """Test that validation fails when neither assembly_protocol_id nor assembly_protocol_code is provided."""
+        with self.assertRaises(ValidationError) as context:
+            model.SeqForUpload(
+                sample_id=uuid4(),
+                code="test_seq",
+                contigs=[model.Contig(seq="ATCGATCG")],
+                assembly_protocol_id=NULL_ID,  # Not provided
+                assembly_protocol_code=None,  # Not provided
+            )
+
+        self.assertIn(
+            "Either assembly_protocol_code or assembly_protocol_id must be provided",
+            str(context.exception),
+        )
 
 
 class TestModelAlleleProfileForUpload(TestCase):
@@ -735,6 +789,7 @@ class TestModelSampleForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
+            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)
@@ -1103,6 +1158,7 @@ class TestModelSampleBatchForUpload(TestCase):
             "sample_id": uuid4(),
             "code": f"seq_upload_{uuid4().hex[:8]}",
             "contigs": [model.Contig(seq="ATCGATCG")],
+            "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
         }
         defaults.update(kwargs)
         return model.SeqForUpload(**defaults)
