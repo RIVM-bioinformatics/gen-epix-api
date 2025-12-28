@@ -27,7 +27,6 @@ from gen_epix.seqdb.services.seq.upload import (
     _check_user_rights,
     _create_or_update_data,
     _initialize_upload_result,
-    _retrieve_and_verify_reference_data,
     seq_service_upload_samples,
 )
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
@@ -2451,7 +2450,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         self.assertEqual(sample.allele_profiles[0].locus_code_map_id, code_map_id)
 
 
-class TestRetrieveAndVerifyReferenceData(TestCase):
+class TestVerifyReferenceData(TestCase):
     """Test the _retrieve_and_verify_reference_data function."""
 
     def setUp(self) -> None:
@@ -2466,21 +2465,6 @@ class TestRetrieveAndVerifyReferenceData(TestCase):
             is_active=True,
         )
         self.data_collection_id = uuid4()
-
-    def test_placeholder_implementation_returns_true(self) -> None:
-        """Test that the placeholder implementation returns True."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        upload_result = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[]
-        )
-
-        # Execute
-        result = _retrieve_and_verify_reference_data(self.service, cmd, upload_result)
-
-        # Verify - placeholder always returns True
-        self.assertTrue(result)
 
 
 class TestCreateOrUpdateData(TestCase):

@@ -198,6 +198,25 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
             return value.value
         return value
 
+    def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
+        """
+        Parse and return the allele IDs from the allele profile based on its format.
+        """
+        n_loci = self.n_loci
+        allele_ids: list[UUID | None] = [None] * n_loci
+        if self.allele_profile_format == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+            allele_bytes = base64.b64decode(self.allele_profile)
+            null_id_bytes = NULL_ID.bytes
+            for i, j in zip(range(0, len(allele_bytes), 16), range(n_loci)):
+                allele_id_bytes = allele_bytes[i : i + 16]
+                if allele_id_bytes != null_id_bytes:
+                    allele_ids[j] = UUID(bytes=allele_id_bytes)
+        else:
+            raise NotImplementedError(
+                "Unable to parse allele IDs for this allele profile format"
+            )
+        return allele_ids
+
     @staticmethod
     def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
         sha256 = hashlib.sha256()

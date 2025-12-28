@@ -9,6 +9,9 @@ from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_external_ids,
     _verify_batch_sample_existence,
 )
+from gen_epix.seqdb.services.seq.upload_verify_refdata import (
+    _verify_refdata_allele_profiles,
+)
 
 
 def seq_service_upload_samples(
@@ -41,7 +44,7 @@ def seq_service_upload_samples(
 
     # Step 4: Look up, complete and verify reference data links
     # (May return early with errors in upload_result)
-    success = _retrieve_and_verify_reference_data(self, cmd, retval)
+    success = _verify_refdata(self, cmd, retval)
     if not success:  # Early return due to errors
         return retval
 
@@ -183,50 +186,22 @@ def _verify_batch(
     return success
 
 
-def _retrieve_and_verify_reference_data(
+def _verify_refdata(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
-    upload_result: model.SampleBatchUploadResult,
+    retval: model.SampleBatchUploadResult,
 ) -> bool:
     """
-    Look up, complete and verify reference data links.
-
-    Step 4: Look up, complete and verify reference data links
-    4.1 Sequence reads: currently nothing to do
-    4.2 Sequences: currently nothing to do
-    4.3 Allele profiles
-    4.3.1 Retrieve unique locus set data
-    4.3.1.1 Go over all sample_batch.samples and all allele profiles in them
-    4.3.1.1.1 Extract all unique locus set IDs and codes. Map code to ID if both are provided. Error if a code maps to more than one ID. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.1.1.2 Retrieve all unique locus sets by both ID and code. Verify that those retrieved by code and that also had an ID provided, indeed actually have that ID. Error if not.
-    4.3.2 Retrieve unique locus code map data
-    4.3.2.1 Go over all sample_batch.samples and all allele profiles in them
-    4.3.2.1.1 Extract all unique locus code maps IDs and codes.
-    4.3.2.1.2 Retrieve all unique locus code maps by both ID and code. Verify that those retrieved by code and that also had an ID provided, indeed actually have that ID. Error if not. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.3 Verify and convert allele profile representation
-    4.3.3.1 Initialise a unique map (dict) of allele ID to locus ID
-    4.3.3.2 Go over all sample_batch.samples and all allele profiles in them
-    4.3.3.2.1 If the allele profile is stored in the locus_allele_id_map field, i.e. explicitly contains (locus code map, locus code) or ID:
-    4.3.3.2.1.1 Fill in the locus ID based on the locus code map retrieved in 4.3.1.1.1.
-    4.3.3.2.1.2 Verify that those alleles for which both locus ID and code were provided, that the code indeed corresponds to the stored locus ID. Error if not. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.3.2.1.3 Convert the locus_allele_id_map allele profile representation to the allele_ids representation whereby the list of allele IDs is stored in the same order as the locus IDs in the locus set.
-    4.3.3.2.2 If the allele profile is stored in the allele_profile, and depending on the allele_profile_format, convert it to the allele_ids representation
-    4.3.3.2.3 Gover over all the allele IDs, and corresponding locus IDs via the locus set, in the allele_ids field
-    4.3.3.2.3.1 If the allele ID already exists as key in the map of 4.3.3.1: check if the locus ID (i.e. the value) is the same. Error if not. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.3.2.3.2 If the allele ID does not exist as key, add it with the locus ID as value
-    4.3.4 Retrieve unique allele data and verify locus IDs
-    4.3.4.1 Retrieve any existing alleles for the unique allele IDs in the map of 4.3.3.1. Use the repository.crud method with READ_ALL operation and an UuidSetMemberFilter on the unique allele IDs.
-    4.3.4.2 Verify that the retrieved alleles correspond to the same locus ID as in the map. Error if not. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.4.3 Create a subset of the map of 4.3.3.1 containing only the (allele ID, locus ID) pairs that are not yet persisted, i.e. that are new and should be provided as part of the sample_batch.
-    4.3.4.4 Loop over all sample_batch.alleles
-    4.3.4.4.1 Fill in locus ID if (locus code map, locus code) was provided
-    4.3.4.4.2 Verify the locus Id against the map of 3.1.3.1. Error if not identical. Adjust SampleBatchUploadResult return value accordingly and return.
-    4.3.4.4.3 If the allele is not yet persisted, flag it as such.
-    4.3.4.4.4 Verify that all the alleles that are new and as such to be persisted in the map of 4.3.4.3 are indeed present in sample_batch.alleles. Error if not. Adjust SampleBatchUploadResult return value accordingly and return.
+    Verify and complete reference data.
     """
-    # TODO: Implement reference data lookup and verification
-    # Return True since all operations were successful for now
-    return True
+    success = True
+    # Handle transaction
+    with self.repository.uow() as uow:
+        # Read sets: nothing to do
+        # Sequences: nothing to do
+        # Allele profiles
+        success &= _verify_refdata_allele_profiles(self, cmd, retval, uow)
+    return success
 
 
 def _create_or_update_data(
