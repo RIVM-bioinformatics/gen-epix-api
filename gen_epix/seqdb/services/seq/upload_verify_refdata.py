@@ -145,7 +145,7 @@ def _verify_refdata_allele_profiles(
                 f"Length of allele_ids ({len(allele_ids)}) does not match number of loci in locus set ({len(locus_ids)})",
             )
             continue
-        uq_allele_ids.update(x for x in allele_ids if x is not None or x != NULL_ID)  # type: ignore[arg-type]
+        uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)  # type: ignore[arg-type]
 
     # Retrieve existing (allele ID, locus ID) pairs in chunks
     uq_allele_ids_list = list(uq_allele_ids)

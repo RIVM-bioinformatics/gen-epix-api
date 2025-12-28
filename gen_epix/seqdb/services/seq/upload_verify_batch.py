@@ -295,7 +295,6 @@ def _verify_batch_associated_data(
     # Verify each associated data type for each sample
     has_existing_data = False
     for field_name, model_class in model_class_map.items():
-        print(f"DEBUG: Processing field_name={field_name}, model_class={model_class}")
         # Collect all IDs for this associated data type and determine existence
         obj_ids: list[UUID] = list(
             {
@@ -305,7 +304,6 @@ def _verify_batch_associated_data(
                 if y.id is not None
             }
         )
-        print(f"DEBUG: obj_ids for {field_name} = {obj_ids}")
 
         # Get existing object data if there are IDs to check
         existing_obj_ids = set()
@@ -334,14 +332,9 @@ def _verify_batch_associated_data(
 
         # Process all objects (both with and without IDs)
         for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
-            print(f"DEBUG: Processing sample {i}, field_name={field_name}")
             sample_data = getattr(sample, field_name) or []
             sample_result_data = getattr(sample_result, field_name) or []
-            print(
-                f"DEBUG: sample_data length = {len(sample_data)}, sample_result_data length = {len(sample_result_data)}"
-            )
             for obj, obj_result in zip(sample_data, sample_result_data):
-                print(f"DEBUG: Processing obj.id = {obj.id}")
                 sample_id = obj.sample_id
                 if sample_id == NULL_ID:
                     sample_id = None
@@ -350,11 +343,7 @@ def _verify_batch_associated_data(
                     obj_id = None
                 if obj_id is None:
                     # Instance does not exist yet, assign sample ID if existing
-                    print(
-                        f"DEBUG: Setting obj.sample_id from {obj.sample_id} to {sample.id}"
-                    )
                     obj.sample_id = sample.id
-                    print(f"DEBUG: After assignment, obj.sample_id = {obj.sample_id}")
                     continue
                 if obj_id not in existing_obj_ids:
                     success = False

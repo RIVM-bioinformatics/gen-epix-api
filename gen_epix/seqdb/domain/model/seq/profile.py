@@ -1,6 +1,6 @@
 import base64
 import hashlib
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_serializer, model_validator
