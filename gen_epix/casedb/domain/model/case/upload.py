@@ -11,8 +11,11 @@ from pydantic import (
 )
 
 from gen_epix.casedb.domain.model.case.operational_data import Case
+from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
+from gen_epix.casedb.domain.model.seqdb import Sample
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
+from gen_epix.casedb.domain.model.seqdb import SequencingProtocol as SequencingProtocol
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
@@ -25,6 +28,7 @@ from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain.model import ReadSetForUpload as SeqdbReadSetForUpload
 from gen_epix.seqdb.domain.model import SeqForUpload as SeqdbSeqForUpload
+from gen_epix.util import copy_model_field
 
 
 class ReadSetForUpload(SeqdbReadSetForUpload):
@@ -56,6 +60,8 @@ class ReadSetForUpload(SeqdbReadSetForUpload):
         default=None,
         description="The external identifier of the sample in seqdb that the read set is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
+    sample: Sample | None = copy_model_field(SeqdbSeqForUpload, "sample")
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(SeqdbReadSetForUpload, "sequencing_protocol")
 
     @model_validator(mode="after")
     def _validate_read_set_for_upload(self) -> Self:
@@ -99,6 +105,10 @@ class SeqForUpload(SeqdbSeqForUpload):
         default=None,
         description="The external identifier of the sample in seqdb that the sequence is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
+    sample: Sample | None = copy_model_field(SeqdbSeqForUpload, "sample")
+    assembly_protocol: AssemblyProtocol | None = copy_model_field(SeqdbSeqForUpload, "assembly_protocol")
+    read_set: ReadSet | None = copy_model_field(SeqdbSeqForUpload, "read_set")
+    read_set2: ReadSet | None = copy_model_field(SeqdbSeqForUpload, "read_set2")
 
     @model_validator(mode="after")
     def _validate_seq_for_upload(self) -> Self:
