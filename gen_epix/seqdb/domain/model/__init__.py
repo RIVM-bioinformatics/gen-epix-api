@@ -17,6 +17,7 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
+from gen_epix.commondb.domain.model import ModelFieldProps
 from gen_epix.commondb.domain.model import Organization as Organization
 from gen_epix.commondb.domain.model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
@@ -220,3 +221,38 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
     common_model.UserInvitationConstraints: UserInvitationConstraints,
     common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
+
+# Additional field properties for models that have already been stored (persisted)
+STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
+    Sample: {"props": ModelFieldProps(is_mutable_always=True, is_dict=True)},
+    ReadSet: {
+        "fwd_uri": ModelFieldProps(is_mutable_always=True),
+        "rev_uri": ModelFieldProps(is_mutable_always=True),
+        "fwd_file_id": ModelFieldProps(is_mutable_always=True),
+        "rev_file_id": ModelFieldProps(is_mutable_always=True),
+        "file_format": ModelFieldProps(is_mutable_always=True),
+        "file_compression": ModelFieldProps(is_mutable_always=True),
+        "sequencing_run_code": ModelFieldProps(is_mutable_always=True),
+    },
+    Seq: {
+        "uri": ModelFieldProps(is_mutable_always=True),
+        "file_id": ModelFieldProps(is_mutable_always=True),
+        "file_format": ModelFieldProps(is_mutable_always=True),
+        "file_compression": ModelFieldProps(is_mutable_always=True),
+        "read_set_id": ModelFieldProps(is_mutable_if_empty=True),
+        "contigs": ModelFieldProps(is_list=True),
+    },
+}
+# Complete the stored model field props with default props for all other models/fields
+for service_type, model_classes in SORTED_MODELS_BY_SERVICE_TYPE.items():
+    for model_class in model_classes:
+        if model_class not in STORED_MODEL_FIELD_PROPS:
+            STORED_MODEL_FIELD_PROPS[model_class] = {
+                x: ModelFieldProps() for x in model_class.model_fields
+            }  # Default props
+            continue
+        for field_name in model_class.model_fields:
+            if field_name not in STORED_MODEL_FIELD_PROPS[model_class]:
+                STORED_MODEL_FIELD_PROPS[model_class][
+                    field_name
+                ] = ModelFieldProps()  # Default props

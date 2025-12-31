@@ -4,12 +4,8 @@ from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
-from gen_epix.commondb.domain.model.base import BaseBatchForUpload as BaseBatchForUpload
-from gen_epix.commondb.domain.model.base import (
-    BaseBatchUploadResult as BaseBatchUploadResult,
-)
 from gen_epix.commondb.domain.model.base import Model as Model
-from gen_epix.commondb.domain.model.base import UploadResult as UploadResult
+from gen_epix.commondb.domain.model.base import ModelFieldProps as ModelFieldProps
 from gen_epix.commondb.domain.model.organization import Contact as Contact
 from gen_epix.commondb.domain.model.organization import DataCollection as DataCollection
 from gen_epix.commondb.domain.model.organization import (
@@ -46,6 +42,14 @@ from gen_epix.commondb.domain.model.organization import (
 from gen_epix.commondb.domain.model.organization import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.system import Outage as Outage
 from gen_epix.commondb.domain.model.system import PackageMetadata as PackageMetadata
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchForUpload as BaseBatchForUpload,
+)
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchUploadResult as BaseBatchUploadResult,
+)
+from gen_epix.commondb.domain.model.upload import ForUploadMixin as ForUploadMixin
+from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 

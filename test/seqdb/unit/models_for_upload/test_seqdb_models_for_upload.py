@@ -82,35 +82,12 @@ class TestModelAlleleForUpload(TestCase):
     def test_valid_with_locus_id(self) -> None:
         """Test valid AlleleForUpload with locus_id."""
         locus_id = uuid4()
-        allele = model.AlleleForUpload(
-            locus_id=locus_id, locus_code="locus123", seq="ATCG"
-        )
+        allele = model.AlleleForUpload(locus_id=locus_id, seq="ATCG")
         self.assertEqual(allele.locus_id, locus_id)
-        self.assertEqual(allele.locus_code, "locus123")
-
-    def test_valid_with_locus_code_only(self) -> None:
-        """Test valid AlleleForUpload with only locus_code."""
-        allele = model.AlleleForUpload(locus_code="locus123", seq="ATCG")
-        self.assertEqual(allele.locus_id, NULL_ID)
-        self.assertEqual(allele.locus_code, "locus123")
-
-    def test_valid_with_both_locus_fields(self) -> None:
-        """Test valid AlleleForUpload with both locus fields."""
-        locus_id = uuid4()
-        allele = model.AlleleForUpload(
-            locus_id=locus_id, locus_code="locus123", seq="ATCG"
-        )
-        self.assertEqual(allele.locus_id, locus_id)
-        self.assertEqual(allele.locus_code, "locus123")
-
-    def test_invalid_missing_both_locus_fields(self) -> None:
-        """Test ValidationError when both locus fields are missing."""
-        with pytest.raises(ValidationError):
-            model.AlleleForUpload(seq="ATCG")
 
     def test_inheritance_from_seqdb_allele(self) -> None:
         """Test that AlleleForUpload inherits seqdb.Allele properties."""
-        allele = model.AlleleForUpload(locus_code="locus123", seq="ATCG", length=4)
+        allele = model.AlleleForUpload(seq="ATCG", length=4)
         self.assertEqual(allele.seq, "atcg")  # seq is normalized to lowercase
         self.assertEqual(allele.length, 4)
 
@@ -123,16 +100,13 @@ class TestModelAlleleForUpload(TestCase):
             hashlib.sha256(sequence.lower().encode("ascii")).digest()[:16].hex()
         )
 
-        allele = model.AlleleForUpload(
-            locus_code="locus123", seq=sequence, id=expected_hash
-        )
+        allele = model.AlleleForUpload(seq=sequence, id=expected_hash)
         self.assertEqual(allele.id, expected_hash)
 
     def test_invalid_id_mismatches_hash(self) -> None:
         """Test ValidationError when id doesn't match computed seq_hash."""
         with pytest.raises(ValidationError):
             model.AlleleForUpload(
-                locus_code="locus123",
                 seq="ATCG",
                 id=uuid4(),  # Random id that won't match computed seq_hash
             )
@@ -1265,7 +1239,7 @@ class TestModelSampleBatchForUpload(TestCase):
 
     def test_valid_with_alleles(self) -> None:
         """Test valid SampleBatchForUpload with alleles."""
-        allele = model.AlleleForUpload(locus_code="locus123", seq="ATCG")
+        allele = model.AlleleForUpload(locus_id=uuid4(), seq="ATCG")
         allele_id = uuid4()
         sample = model.SampleForUpload(
             id=uuid4(),
@@ -1420,8 +1394,8 @@ class TestModelSampleBatchForUpload(TestCase):
         sample2 = self._create_sample_with_seqs(num_seqs=1)
 
         # Create reference alleles
-        allele1 = model.AlleleForUpload(locus_code="locus1", seq="ATCGATCG")
-        allele2 = model.AlleleForUpload(locus_code="locus2", seq="GCTAGCTA")
+        allele1 = model.AlleleForUpload(locus_id=uuid4(), seq="ATCGATCG")
+        allele2 = model.AlleleForUpload(locus_id=uuid4(), seq="GCTAGCTA")
 
         sample_batch = model.SampleBatchForUpload(
             samples=[sample1, sample2], alleles=[allele1, allele2]

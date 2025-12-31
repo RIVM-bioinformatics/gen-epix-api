@@ -1,16 +1,21 @@
 from typing import Any
 
-from gen_epix.commondb.domain.enum import UploadStatus
-from gen_epix.commondb.domain.model import UploadResult
-from gen_epix.seqdb.domain import command, enum, model
+from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
+from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+    _upsert_batch_create_associated_data,
+    _upsert_batch_create_samples,
+    _upsert_batch_refdata,
+    _upsert_batch_update_associated_data,
+    _upsert_batch_update_samples,
+)
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_associated_data,
     _verify_batch_external_ids,
+    _verify_batch_refdata,
     _verify_batch_sample_existence,
-)
-from gen_epix.seqdb.services.seq.upload_verify_refdata import (
-    _verify_refdata_allele_profiles,
 )
 
 
@@ -19,129 +24,118 @@ def seq_service_upload_samples(
     cmd: command.UploadSamplesCommand,
 ) -> model.SampleBatchUploadResult:
     """
-    Upload a batch of samples along with their associated data.
-    The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
-
-    Args:
-        self: The SeqService instance
-        cmd: Command containing the sample batch and upload options
-
-    Returns:
-        SampleBatchUploadResult containing the results of the upload operation
+    See command.UploadSamplesCommand for details.
     """
-    # Step 1: Check user rights
-    _check_user_rights(self, cmd)
+    #  Check user rights
+    _verify_user_rights(self, cmd)
 
-    # Step 2: Initialize the upload result
-    retval = _initialize_upload_result(cmd)
+    # Initialize the upload result
+    retval = _init_retval(cmd)
+    retval.add_info(
+        code="f1e2d3c4",
+        message="Upload started",
+    )
 
-    # Step 3: Check existence of samples and associated data
-    # (May return early with errors in upload_result)
-    success = _verify_batch(self, cmd, retval)
-    if not success:  # Early return due to errors
-        return retval
+    with self.repository.uow() as uow:
+        # Verify batch
+        retval.add_info(
+            code="8b4c2f91",
+            message="Verification started",
+        )
+        success = _verify_batch(self, cmd, retval, uow)
+        retval.add_info(
+            code="a3f7e9d2",
+            message="Verification ended",
+        )
+        if not success:
+            # Do not proceed with upsert due to errors
+            retval.add_info(
+                code="d6e5c3b4",
+                message="Verification found errors, upsert will not proceed",
+            )
+            return retval
 
-    # Step 4: Look up, complete and verify reference data links
-    # (May return early with errors in upload_result)
-    success = _verify_refdata(self, cmd, retval)
-    if not success:  # Early return due to errors
-        return retval
+        # Upsert the batch data
+        retval.add_info(
+            code="c1a2b3d4",
+            message="Upsert started",
+        )
+        success = _upsert_batch(self, cmd, retval, uow)
+        retval.add_info(
+            code="e4f5a6b7",
+            message="Upsert ended",
+        )
+        if not success:
+            # Rollback due to errors, but do not raise an exception since those will be reported in retval
+            retval.add_info(
+                code="f8e7d6c5",
+                message="Upsert found errors, rolling back changes",
+            )
+            uow.rollback()
+            retval.add_info(
+                code="b2c3d4e5",
+                message="Upsert found errors, changes have been rolled back",
+            )
+    retval.add_info(
+        code="a1b2c3d4",
+        message="Upload ended",
+    )
 
-    # Step 5: Create or update the data
-    _create_or_update_data(self, cmd, {}, retval)
+    # TODO: update any distances
 
-    # Step 6: Return the upload result
     return retval
 
 
-def _check_user_rights(
+def _verify_user_rights(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
 ) -> None:
     """
-    Check if the user has the necessary rights to upload samples.
-
-    Step 1: Check user rights
-    1.1 Get user roles
-    1.2 If user has any of the roles in the GE_APP_ADMIN role set, they are authorized.
-    1.3 If user does not have any of the roles in the GE_APP_ADMIN role set, ABAC must be applied through the substeps below. The substeps below cannot yet be implemented since the ABAC policies are not yet available, so placeholders are added that must be included in the generated code.
-    1.3.1 [PLACEHOLDER] Retrieve ABAC rights from cmd._policies.
-    1.3.2 [PLACEHOLDER] For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
-    1.3.3 [PLACEHOLDER] Error if the user is not authorized
-    1.3.4 Consider the user authorized in any case for now, until ABAC can be implemented
+    Verify if the user has the necessary rights to upload samples.
     """
-    # 1.1 Get user roles
     user_roles = cmd.user.roles if cmd.user else set()
 
-    # 1.2 If user has any of the roles in the GE_APP_ADMIN role set, they are authorized
+    # If user has any of the roles in the GE_APP_ADMIN role set, they are authorized
     if user_roles & enum.RoleSet.GE_APP_ADMIN.value:
         return  # User is authorized
 
-    # 1.3 If user does not have any of the roles in the GE_APP_ADMIN role set, ABAC must be applied
-    # 1.3.1 [PLACEHOLDER] Retrieve ABAC rights from cmd._policies
+    # If user does not have any of the roles in the GE_APP_ADMIN role set, ABAC must be applied
     # TODO: Implement ABAC rights retrieval when policies are available
 
-    # 1.3.2 [PLACEHOLDER] For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
-    for sample in cmd.sample_batch.samples:
-        # TODO: Implement ABAC authorization check for WRITE access to data collection
-        data_collection_id = sample.created_in_data_collection_id
-        # Placeholder: Check if user has WRITE access to this data collection
-        # user_has_write_access = check_abac_write_access(abac_rights, data_collection_id)
-        pass
-
-    # 1.3.3 [PLACEHOLDER] Error if the user is not authorized
-    # TODO: Implement authorization error when ABAC is available
-    # if not user_is_authorized:
-    #     raise PermissionError(f"User {cmd.user.email if cmd.user else 'anonymous'} lacks required permissions to upload samples")
-
-    # 1.3.4 Consider the user authorized in any case for now, until ABAC can be implemented
-    # TODO: Remove this when ABAC authorization is fully implemented
-    return  # User is considered authorized for now
+    # TODO: Check if user has WRITE access to all created in data collections
+    # TODO: For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
+    data_collection_ids = {
+        x.created_in_data_collection_id for x in cmd.sample_batch.samples
+    }
+    is_authorized = True
+    if not is_authorized:
+        raise exc.UnauthorizedAuthError(
+            f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample.id if sample.id else 'new sample'}"
+        )
 
 
-def _initialize_upload_result(
+def _init_retval(
     cmd: command.UploadSamplesCommand,
 ) -> model.SampleBatchUploadResult:
     """
     Initialize the upload result that will be the return value.
-
-    Step 2: Initialize the upload result (SampleBatchUploadResult)
-    2.1 For each sample in cmd.sample_batch.samples:
-    2.1.1 For all associated data types (read_sets, seqs, allele_profiles, etc.):
-    2.1.1.1 Create UploadResult for each instance with status PENDING
-    2.1.1.1 Set the ID of the existing instance if available
-    2.1.2 Create SampleUploadResult
-    2.2 Create SampleBatchUploadResult
     """
-    # Placeholder: create basic result structure
+    # Initialize some
     sample_results = []
-    base_upload_result = UploadResult(
-        status=UploadStatus.PENDING,
-    )
 
     def _create_sub_result(obj: Any | None) -> UploadResult | None:
         if obj is None:
             return None
-        return UploadResult(
-            id=getattr(obj, "id", None),
-            status=UploadStatus.PENDING,
-        )
+        return UploadResult(id=getattr(obj, "id", None))
 
     def _create_sub_results(objs: list | None) -> list[UploadResult] | None:
         if objs is None:
             return None
-        return [
-            UploadResult(
-                id=getattr(x, "id", None),
-                status=UploadStatus.PENDING,
-            )
-            for x in objs
-        ]
+        return [UploadResult(id=getattr(x, "id", None)) for x in objs]
 
+    # Create a result for each sample with subresults for associated data
     for sample in cmd.sample_batch.samples:
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.SKIPPED,
             sample=_create_sub_result(sample.props),
             external_ids=_create_sub_results(sample.external_ids),
             read_sets=_create_sub_results(sample.read_sets),
@@ -161,7 +155,6 @@ def _initialize_upload_result(
 
     return model.SampleBatchUploadResult(
         batch_id=cmd.sample_batch.id,
-        status=UploadStatus.SKIPPED,
         samples=sample_results,
     )
 
@@ -170,72 +163,43 @@ def _verify_batch(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
+    uow: BaseUnitOfWork,
 ) -> bool:
     """
     Check existence of samples and associated data.
     """
     success = True
-    # Handle transaction
-    with self.repository.uow() as uow:
-        # Verify existence of samples by ID
-        success &= _verify_batch_sample_existence(self, cmd, retval, uow)
-        # Verify existence and consistency of external IDs
-        success &= _verify_batch_external_ids(self, cmd, retval, uow)
-        # Verify existence and consistency of associated data as needed
-        success &= _verify_batch_associated_data(self, cmd, retval, uow)
+
+    # Verify existence of samples by ID
+    success &= _verify_batch_sample_existence(self, cmd, retval, uow)
+    # Verify existence and consistency of external IDs
+    success &= _verify_batch_external_ids(self, cmd, retval, uow)
+    # Verify existence and consistency of associated data as needed
+    success &= _verify_batch_associated_data(self, cmd, retval, uow)
+    # Verify reference data
+    success &= _verify_batch_refdata(self, cmd, retval, uow)
+
     return success
 
 
-def _verify_refdata(
+def _upsert_batch(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
+    uow: BaseUnitOfWork,
 ) -> bool:
     """
-    Verify and complete reference data.
+    Create or update the sample and any reference data.
     """
     success = True
-    # Handle transaction
-    with self.repository.uow() as uow:
-        # Read sets: nothing to do
-        # Sequences: nothing to do
-        # Allele profiles
-        success &= _verify_refdata_allele_profiles(self, cmd, retval, uow)
+
+    # Add any new reference data
+    success &= _upsert_batch_refdata(self, cmd, retval, uow)
+    # Upsert sample data
+    success &= _upsert_batch_create_samples(self, cmd, retval, uow)
+    success &= _upsert_batch_update_samples(self, cmd, retval, uow)
+    # Upsert associated data
+    success &= _upsert_batch_create_associated_data(self, cmd, retval, uow)
+    success &= _upsert_batch_update_associated_data(self, cmd, retval, uow)
+
     return success
-
-
-def _create_or_update_data(
-    self: BaseSeqService,
-    cmd: command.UploadSamplesCommand,
-    reference_data: dict[str, Any],
-    upload_result: model.SampleBatchUploadResult,
-) -> None:
-    """
-    Create or update the sample data within a single unit of work.
-
-    Step 5: Create or update the data
-    5.1 Begin single Unit of Work encompassing all remaining steps
-    5.2 Add new reference data
-    5.2.1 Upload all the new sample_batch.alleles flagged in 3.1.4.4.3 using repository.crud with operation=CREATE_SOME
-    5.3 Add sample data - loop over each sample in cmd.sample_batch.samples
-    5.3.1 If new: create the sample and fill in the resulting sample_id in any associated data.
-    5.3.2 If existing: update the sample
-    5.3.2.1 If on_exists=UPDATE, update the props dict. For any of the new props that have value None, delete the key.
-    5.3.2.2 If on_exists=SKIP, do not make any changes.
-    5.3.3  Adjust the corresponding SampleUploadResult.sample_result correspondingly, including its status.
-    5.3.4 Create any external identifiers that did not exist yet. Adjust the corresponding SampleUploadResult.external_ids_results correspondingly, including its status.
-    5.3.5 Go over each type of associated data (read sets, seqs, allele profiles, ...).
-    5.3.5.1 If new: create the instance and fill in the instance's id
-    5.3.5.2 If existing:
-    5.3.5.2.1 If on_exists=UPDATE, update the provided fields that are updatable through an upload action - these are the following:
-    5.3.5.2.1.1 ReadSet: fwd_uri, rev_uri, fwd_file_id, rev_file_id, file_format, file_compression, sequencing_run_code
-    5.3.5.2.1.2 Seq: uri, file_id, file_format, file_compression, read_set_id if existing value is None, read_set2_id if existing value is None, assembly_protocol_id if existing value is None, file_hash if existing value is None, contigs if existing value is empty list
-    5.3.5.2.1.3 AlleleProfile: allele_profile, allele_profile_format, seq_id if existing value is None
-    5.3.5.2.1.4 Error if a non-updatable field is different between existing and new value.
-    5.3.5.2.2 If on_exists=SKIP, do not make any changes.
-    5.3.5.3 Adjust the corresponding SampleUploadResult.external_ids_results correspondingly, including its status. If Error, roll back and stop here.
-    5.4 Update profile distances. This is a placeholder step, to be added and described as such.
-    """
-    # TODO: Implement data creation and update within UoW
-    # Update upload_result as operations proceed
-    pass

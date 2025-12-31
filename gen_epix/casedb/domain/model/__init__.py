@@ -113,13 +113,13 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
-from gen_epix.commondb.domain.model import UploadResult as UploadResult
 from gen_epix.commondb.domain.model import User as User
 from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
 from gen_epix.commondb.domain.model import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 

@@ -14,13 +14,13 @@ from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
 from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import (
+from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
-    Model,
     UploadResult,
 )
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain.model import ReadSetForUpload as SeqdbReadSetForUpload

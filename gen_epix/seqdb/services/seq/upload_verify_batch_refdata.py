@@ -2,9 +2,10 @@ import base64
 from typing import Any
 from uuid import UUID
 
+import gen_epix.commondb.domain.model.upload
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import UploadResult
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -12,7 +13,7 @@ from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
 
-def _verify_refdata_allele_profiles(
+def _verify_batch_refdata_allele_profiles(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
@@ -28,12 +29,14 @@ def _verify_refdata_allele_profiles(
 
     # Get all allele profiles that are to be processed
     allele_profiles: list[model.AlleleProfileForUpload] = []
-    allele_profile_results: list[model.UploadResult] = []
+    allele_profile_results: list[gen_epix.commondb.domain.model.upload.UploadResult] = (
+        []
+    )
     for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
         objs = sample.allele_profiles or []
         obj_results = sample_result.allele_profiles or []
         for j, (obj, obj_result) in enumerate(zip(objs, obj_results)):
-            if obj_result.status in [UploadStatus.FAILED, UploadStatus.SKIPPED]:
+            if obj_result.status != UploadStatus.PENDING:
                 continue
             allele_profiles.append(obj)
             allele_profile_results.append(obj_result)
@@ -81,15 +84,15 @@ def _verify_refdata_allele_profiles(
     rev_locus_code_map_map = {
         x.id: {y: x for x, y in x.code_map.items()} for x in locus_code_map_map.values()
     }
+    allele_ids: list[UUID | None]
 
     # Convert to allele_profile representation and get unique allele IDs
     for profile, profile_result in zip(allele_profiles, allele_profile_results):
-        if profile_result.status in [UploadStatus.FAILED, UploadStatus.SKIPPED]:
+        if profile_result.status != UploadStatus.PENDING:
             continue
         locus_ids = locus_set_map[profile.locus_set_id].locus_ids
         n_loci = len(locus_ids)
         locus_allele_id_map = profile.locus_allele_id_map
-        allele_ids: list[UUID | None]
         if locus_allele_id_map is not None:
             # Convert locus_allele_id_map representation to allele_ids
             locus_code_map_id = profile.locus_code_map_id
@@ -145,14 +148,14 @@ def _verify_refdata_allele_profiles(
                 f"Length of allele_ids ({len(allele_ids)}) does not match number of loci in locus set ({len(locus_ids)})",
             )
             continue
-        uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)  # type: ignore[arg-type]
+        uq_allele_ids.update(x for x in allele_ids if x is not None and x != NULL_ID)
 
     # Retrieve existing (allele ID, locus ID) pairs in chunks
     uq_allele_ids_list = list(uq_allele_ids)
     chunk_size = 1000  # TODO: make configurable
     existing_allele_locus_map: dict[UUID, UUID] = {}
     for i in range(0, len(uq_allele_ids_list), chunk_size):
-        result_iter = self.repository.read_fields(  # type: ignore[assignment]
+        result_iter = self.repository.read_fields(
             uow,
             user_id,
             model.Allele,
@@ -171,10 +174,11 @@ def _verify_refdata_allele_profiles(
     for i, (profile, profile_result) in enumerate(
         zip(allele_profiles, allele_profile_results)
     ):
-        if profile_result.status in [UploadStatus.FAILED, UploadStatus.SKIPPED]:
+        if profile_result.status != UploadStatus.PENDING:
             continue
         locus_ids = locus_set_map[profile.locus_set_id].locus_ids
-        allele_ids: list[UUID | None] = profile.allele_ids  # type: ignore[assignment]
+        assert profile.allele_ids is not None
+        allele_ids = profile.allele_ids
         n_loci = len(locus_ids)
         invalid_locus_allele_pairs: list[tuple[UUID, UUID]] = []
         for locus_id, allele_id in zip(locus_ids, allele_ids):
@@ -220,14 +224,12 @@ def _verify_refdata_allele_profiles(
         profile.allele_profile_format = enum.AlleleProfileFormat.SORTED_ALLELE_IDS
         profile.allele_ids = None
 
-    # Verify that any new alleles have been provided with the correct locus IDs
+    # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
         provided_alleles = cmd.sample_batch.alleles or []
-        provided_allele_locus_map = {x.id: x.locus_id for x in provided_alleles}
+        provided_allele_ids = {x.id for x in provided_alleles}
         # Determine if any missing alleles
-        missing_allele_ids = set(new_allele_locus_map.keys()) - set(
-            provided_allele_locus_map.keys()
-        )
+        missing_allele_ids = set(new_allele_locus_map.keys()) - provided_allele_ids
         if missing_allele_ids:
             # Some new alleles are missing
             success = False
@@ -246,9 +248,7 @@ def _verify_refdata_allele_profiles(
                 f"Missing new alleles: {missing_alleles_str}",
             )
         # Determine if any extra alleles
-        extra_allele_ids = set(provided_allele_locus_map.keys()) - set(
-            new_allele_locus_map.keys()
-        )
+        extra_allele_ids: set[UUID] = provided_allele_ids - set(new_allele_locus_map.keys())  # type: ignore[assignment]
         if extra_allele_ids:
             # Some extra (superfluous) alleles provided
             extra_allele_ids_list = sorted(extra_allele_ids)
@@ -265,18 +265,24 @@ def _verify_refdata_allele_profiles(
             )
         # Verify locus IDs of provided alleles
         extra_allele_indexes: list[int] = []
-        for i, (allele_id, locus_id) in enumerate(provided_allele_locus_map.items()):
-            if allele_id in extra_allele_ids:
+        for i, allele in enumerate(provided_alleles):
+            assert allele.id is not None
+            if allele.id in extra_allele_ids:
                 # Superfluous allele: flag for deletion
                 extra_allele_indexes.append(i)
                 continue
-            expected_locus_id = new_allele_locus_map[allele_id]
+            # Set allele locus ID if not already set
+            expected_locus_id = new_allele_locus_map[allele.id]
+            locus_id = allele.locus_id
+            if locus_id is None or locus_id == NULL_ID:
+                allele.locus_id = expected_locus_id
+                continue
             if locus_id != expected_locus_id:
                 # Incorrect locus ID
                 success = False
                 retval.add_error(
                     "e4f3g2h1",
-                    f"Incorrect locus ID for new allele {allele_id}: expected {expected_locus_id}, got {locus_id}",
+                    f"Incorrect locus ID for new allele {allele.id}: expected {expected_locus_id}, got {locus_id}",
                 )
         # Remove any extra alleles
         for index in sorted(extra_allele_indexes, reverse=True):
@@ -314,12 +320,12 @@ def _retrieve_refdata_for_associated_data(
             link_id: UUID | None = getattr(obj, link_id_field_name, None)
             if link_id is None or link_id == NULL_ID:
                 continue
-            if obj_result.status in [UploadStatus.FAILED, UploadStatus.SKIPPED]:
+            if obj_result.status != UploadStatus.PENDING:
                 continue
             link_ids.add(link_id)
 
     # Retrieve corresponding objects
-    link_objs: list[linked_model_class] = self.repository.crud(  # type: ignore[assignment]
+    link_objs: list[model.Model] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         linked_model_class,

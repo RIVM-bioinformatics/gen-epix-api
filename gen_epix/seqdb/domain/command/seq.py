@@ -16,9 +16,21 @@ from gen_epix.seqdb.domain import enum, model
 
 class UploadSamplesCommand(Command, UploadCommandMixin):
     """
-    Upload a batch of samples along with their associated data.
-    The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
+    Upload a batch of samples along with their associated data. The data are uploaded
+    as a single atomic unit of work, so that either all data are successfully
+    uploaded or none are.
+
+    The upload process consists of the following steps:
+    1) Check if the user has the rights to upload the data in question.
+    2) Verify the validity of the sample data. The verification does not fail fast
+       but rather proceeds with the remaining data and checks to the extent possible,
+       so that all errors can be reported back to the caller instead of just the
+       first encountered one.
+    3) Upsert (create and/or update) the sample data.
+
+    The return value contains the results of the upload
+    operation, whether successful or otherwise, and with details for each sample and
+    associated data item.
     """
 
     sample_batch: model.SampleBatchForUpload = Field(

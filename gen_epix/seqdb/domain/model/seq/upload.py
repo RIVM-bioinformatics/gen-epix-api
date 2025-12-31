@@ -4,12 +4,12 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, field_validator, model_validator
 
-from gen_epix.commondb.domain.literal import MAX_CODE_FIELD_LENGTH, NULL_ID
-from gen_epix.commondb.domain.model import (
+from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model import ExternalIdentifierForUpload, Model
+from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
-    ExternalIdentifierForUpload,
-    Model,
+    ForUploadMixin,
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
@@ -32,7 +32,7 @@ from gen_epix.seqdb.domain.model.seq.sample import Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 
 
-class ReadSetForUpload(ReadSet):
+class ReadSetForUpload(ReadSet, ForUploadMixin):
     """
     A read set intended for upload.
     """
@@ -46,7 +46,7 @@ class ReadSetForUpload(ReadSet):
     )
 
 
-class SeqForUpload(Seq):
+class SeqForUpload(Seq, ForUploadMixin):
     """
     A sequence intended for upload.
     """
@@ -89,24 +89,8 @@ class AlleleForUpload(Allele):
 
     locus_id: UUID = Field(
         default=NULL_ID,
-        description="The UUID of the locus, if available. Must be present if locus_code is not present. "
-        "If not available, the null ID is put. The use of locus_id is preferred over locus_code "
-        "since the latter may change and implies an additional mapping step.",
+        description="The UUID of the locus, if available. If not available, the null ID is put.",
     )
-    locus_code: str | None = Field(
-        default=None,
-        description="The external code of the locus, to be mapped to locus_id through a LocusCodeMap "
-        "supplied elsewhere. Must be present if locus_id is not present. The use of locus_code "
-        "is meant for situations where the locus_id is not known, but the code is.",
-        max_length=MAX_CODE_FIELD_LENGTH,
-    )
-
-    @model_validator(mode="after")
-    def _validate_locus_reference(self) -> Self:
-        """Ensure that either locus_code or locus_id is set."""
-        if self.locus_code is None and self.locus_id == NULL_ID:
-            raise ValueError("Either 'locus_code' or 'locus_id' must be provided.")
-        return self
 
 
 class AlleleProfileForUpload(AlleleProfile):
@@ -241,7 +225,7 @@ class AlleleProfileForUpload(AlleleProfile):
         return self
 
 
-class SampleForUpload(Sample):
+class SampleForUpload(Sample, ForUploadMixin):
     """
     A sample intended for upload, together with any relevant associated data.
     """
@@ -458,7 +442,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
     # New reference data required to enable storage of the sample data
     alleles: list[AlleleForUpload] | None = Field(
         default=None,
-        description="All unique allele_ids present in src_allele_profiles.allele_ids and that are not yet stored. This provides the means to store these new unique alleles together with any allele profiles, while at the same time compacting the src_allele_profiles by having each unique allele sequence stored only once in the model. Any additional alleles already stored, or not known to be stored, may be included as well.",
+        description="All unique allele_ids present in any of the sample allele profiles and that are not yet stored. Their locus_id must be set either to the correct locus ID or to the NULL_ID. In the latter case the locus_id will be derived from the allele profiles, where this information is implicitly or explicitly stored. Providing the new alleles separately allows to provide them only once instead of repeatedly for each allele profile that contains them. In addition, it avoids having to have two separate calls, first to store the new alleles and then the new profiles. Any additional alleles that were already stored, or are not known to be stored, may be included as well.",
     )
 
     # Computed fields

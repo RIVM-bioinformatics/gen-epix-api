@@ -16,18 +16,18 @@ from gen_epix.commondb.domain.enum import (
     UploadStatus,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import UploadResult
 from gen_epix.commondb.domain.model.organization import (
     ExternalIdentifierForUpload,
     User,
 )
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.enum import Role
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload import (
-    _check_user_rights,
-    _create_or_update_data,
-    _initialize_upload_result,
+    _init_retval,
+    _upsert_batch,
+    _verify_user_rights,
     seq_service_upload_samples,
 )
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
@@ -53,6 +53,10 @@ class TestSeqServiceUploadSamples(TestCase):
         """Set up test fixtures."""
         self.service = Mock(spec=BaseSeqService)
         self.service.repository = Mock()
+        # Mock UOW context manager
+        mock_uow = Mock()
+        self.service.repository.uow.return_value.__enter__ = Mock(return_value=mock_uow)
+        self.service.repository.uow.return_value.__exit__ = Mock(return_value=None)
         self.user = User(
             id=uuid4(),
             key="test@example.com",
@@ -63,17 +67,14 @@ class TestSeqServiceUploadSamples(TestCase):
         )
         self.data_collection_id = uuid4()
 
-    @patch("gen_epix.seqdb.services.seq.upload._check_user_rights")
+    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
     @patch("gen_epix.seqdb.services.seq.upload._verify_batch")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_refdata")
-    @patch("gen_epix.seqdb.services.seq.upload._create_or_update_data")
-    def test_successful_upload_flow(
-        self, mock_create, mock_verify_refdata, mock_verify, mock_check
-    ):
+    @patch("gen_epix.seqdb.services.seq.upload._upsert_batch")
+    def test_successful_upload_flow(self, mock_create, mock_verify, mock_check):
         """Test successful upload flow through all steps."""
         # Setup
         mock_verify.return_value = True
-        mock_verify_refdata.return_value = True
+        mock_create.return_value = True
 
         sample_batch = model.SampleBatchForUpload(
             id=uuid4(),
@@ -92,18 +93,14 @@ class TestSeqServiceUploadSamples(TestCase):
         # Verify
         mock_check.assert_called_once_with(self.service, cmd)
         mock_verify.assert_called_once()
-        mock_verify_refdata.assert_called_once()
         mock_create.assert_called_once()
 
         self.assertIsInstance(result, model.SampleBatchUploadResult)
         self.assertEqual(result.batch_id, sample_batch.id)
 
-    @patch("gen_epix.seqdb.services.seq.upload._check_user_rights")
+    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
     @patch("gen_epix.seqdb.services.seq.upload._verify_batch")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_refdata")
-    def test_early_return_on_verify_batch_failure(
-        self, mock_verify_refdata, mock_verify, mock_check
-    ):
+    def test_early_return_on_verify_batch_failure(self, mock_verify, mock_check):
         """Test early return when _verify_batch fails."""
         # Setup
         mock_verify.return_value = False
@@ -117,37 +114,51 @@ class TestSeqServiceUploadSamples(TestCase):
         # Verify
         mock_check.assert_called_once()
         mock_verify.assert_called_once()
-        mock_verify_refdata.assert_not_called()  # Should not reach this step
+        # Early return means _upsert_batch should not be called
 
         self.assertIsInstance(result, model.SampleBatchUploadResult)
 
-    @patch("gen_epix.seqdb.services.seq.upload._check_user_rights")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_batch")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_refdata")
+    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
+    @patch("gen_epix.seqdb.services.seq.upload._verify_batch_refdata")
     def test_early_return_on_verify_refdata_failure(
-        self, mock_verify_refdata, mock_verify, mock_check
+        self, mock_verify_refdata, mock_check
     ):
         """Test early return when _verify_refdata fails."""
         # Setup
-        mock_verify.return_value = True
         mock_verify_refdata.return_value = False
+        # Mock other verification functions to return True
+        with (
+            patch(
+                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_existence",
+                return_value=True,
+            ),
+            patch(
+                "gen_epix.seqdb.services.seq.upload._verify_batch_external_ids",
+                return_value=True,
+            ),
+            patch(
+                "gen_epix.seqdb.services.seq.upload._verify_batch_associated_data",
+                return_value=True,
+            ),
+        ):
 
-        sample_batch = model.SampleBatchForUpload(id=uuid4(), samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+            sample_batch = model.SampleBatchForUpload(id=uuid4(), samples=[])
+            cmd = command.UploadSamplesCommand(
+                user=self.user, sample_batch=sample_batch
+            )
 
-        # Execute
-        result = seq_service_upload_samples(self.service, cmd)
+            # Execute
+            result = seq_service_upload_samples(self.service, cmd)
 
-        # Verify
-        mock_check.assert_called_once()
-        mock_verify.assert_called_once()
-        mock_verify_refdata.assert_called_once()
+            # Verify
+            mock_check.assert_called_once()
+            mock_verify_refdata.assert_called_once()
 
-        self.assertIsInstance(result, model.SampleBatchUploadResult)
+            self.assertIsInstance(result, model.SampleBatchUploadResult)
 
 
 class TestCheckUserRights(TestCase):
-    """Test the _check_user_rights function."""
+    """Test the _verify_user_rights function."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -177,7 +188,7 @@ class TestCheckUserRights(TestCase):
         cmd = command.UploadSamplesCommand(user=user, sample_batch=sample_batch)
 
         # Should not raise exception
-        _check_user_rights(self.service, cmd)
+        _verify_user_rights(self.service, cmd)
 
     def test_user_without_admin_role_triggers_abac_path(self) -> None:
         """Test that user without admin role goes through ABAC path (currently placeholder)."""
@@ -206,7 +217,7 @@ class TestCheckUserRights(TestCase):
         cmd = command.UploadSamplesCommand(user=user, sample_batch=sample_batch)
 
         # Should not raise exception (placeholder implementation)
-        _check_user_rights(self.service, cmd)
+        _verify_user_rights(self.service, cmd)
 
     def test_no_user_goes_through_abac_path(self) -> None:
         """Test that None user goes through ABAC path (currently placeholder)."""
@@ -222,7 +233,7 @@ class TestCheckUserRights(TestCase):
         cmd = command.UploadSamplesCommand(user=None, sample_batch=sample_batch)
 
         # Should not raise exception (placeholder implementation)
-        _check_user_rights(self.service, cmd)
+        _verify_user_rights(self.service, cmd)
 
 
 class TestCreateSubResult(TestCase):
@@ -230,7 +241,7 @@ class TestCreateSubResult(TestCase):
 
     def test_create_sub_result_with_object(self) -> None:
         """Test creating sub result with an object that has an id."""
-        from gen_epix.seqdb.services.seq.upload import _initialize_upload_result
+        from gen_epix.seqdb.services.seq.upload import _init_retval
 
         # Create a mock object with an ID
         mock_obj = Mock()
@@ -239,9 +250,7 @@ class TestCreateSubResult(TestCase):
         # Access the private function through reflection
         import gen_epix.seqdb.services.seq.upload as upload_module
 
-        create_sub_result = getattr(
-            upload_module._initialize_upload_result, "__code__"
-        ).co_consts[1]
+        create_sub_result = getattr(upload_module._init_retval, "__code__").co_consts[1]
         # This is a bit hacky - we'll create a similar test structure
 
         # Create sample with data to trigger the helper function
@@ -264,7 +273,7 @@ class TestCreateSubResult(TestCase):
             sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
             on_exists=OnExistsUploadAction.UPDATE,
         )
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify sub-results were created
         sample_result = result.samples[0]
@@ -292,7 +301,7 @@ class TestCreateSubResult(TestCase):
             sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
             on_exists=OnExistsUploadAction.UPDATE,
         )
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify None fields resulted in None sub-results
         sample_result = result.samples[0]
@@ -324,12 +333,12 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify batch-level result
         self.assertIsInstance(result, model.SampleBatchUploadResult)
         self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.SKIPPED)
+        self.assertEqual(result.status, UploadStatus.PENDING)
         self.assertEqual(len(result.samples), 0)
 
     def test_single_minimal_sample(self) -> None:
@@ -348,11 +357,11 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify batch-level result
         self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.SKIPPED)
+        self.assertEqual(result.status, UploadStatus.PENDING)
         self.assertEqual(len(result.samples), 1)
 
         # Verify sample-level result
@@ -459,7 +468,7 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify sample-level result
         sample_result = result.samples[0]
@@ -572,11 +581,11 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
 
         # Verify batch-level result
         self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.SKIPPED)
+        self.assertEqual(result.status, UploadStatus.PENDING)
         self.assertEqual(len(result.samples), 3)
 
         # Verify sample1 results (has external_ids)
@@ -626,7 +635,7 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
         sample_result = result.samples[0]
 
         # Empty lists should result in empty result lists
@@ -666,7 +675,7 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
         sample_result = result.samples[0]
 
         # Verify that each UploadResult reflects the source object's ID
@@ -716,7 +725,7 @@ class TestInitializeUploadResult(TestCase):
             user=self.test_user, sample_batch=sample_batch
         )
 
-        result = _initialize_upload_result(cmd)
+        result = _init_retval(cmd)
         sample_result = result.samples[0]
 
         # Verify that UploadResult objects have the correct IDs from their source objects
@@ -764,16 +773,13 @@ class TestVerifyBatch(TestCase):
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[]
         )
 
-        # Mock the repository and UOW properly
+        # Mock the UOW
         uow = Mock()
-        uow.__enter__ = Mock(return_value=uow)
-        uow.__exit__ = Mock(return_value=None)
-        self.service.repository.uow.return_value = uow
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload import _verify_batch
 
-        result = _verify_batch(self.service, cmd, retval)
+        result = _verify_batch(self.service, cmd, retval, uow)
 
         # Should succeed with empty batch
         self.assertTrue(result)
@@ -787,19 +793,16 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
-        # Mock the repository and UOW properly
+        # Mock the UOW
         uow = Mock()
-        uow.__enter__ = Mock(return_value=uow)
-        uow.__exit__ = Mock(return_value=None)
-        self.service.repository.uow.return_value = uow
         self.service.repository.crud.return_value = []  # No existing samples
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload import _verify_batch
 
-        result = _verify_batch(self.service, cmd, retval)
+        result = _verify_batch(self.service, cmd, retval, uow)
 
         # Should succeed
         self.assertTrue(result)
@@ -819,13 +822,10 @@ class TestVerifyBatch(TestCase):
             sample_batch=sample_batch,
             on_exists=OnExistsUploadAction.SKIP,  # Use SKIP to allow existing samples
         )
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
-        # Mock the repository and UOW properly
+        # Mock the UOW
         uow = Mock()
-        uow.__enter__ = Mock(return_value=uow)
-        uow.__exit__ = Mock(return_value=None)
-        self.service.repository.uow.return_value = uow
 
         # Mock repository.crud for sample existence check
         self.service.repository.crud.return_value = [True]  # Sample exists
@@ -836,7 +836,7 @@ class TestVerifyBatch(TestCase):
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload import _verify_batch
 
-        result = _verify_batch(self.service, cmd, retval)
+        result = _verify_batch(self.service, cmd, retval, uow)
 
         # Should succeed when on_exists=SKIP
         self.assertTrue(result)
@@ -849,7 +849,7 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         uow = Mock()
 
@@ -876,7 +876,7 @@ class TestVerifyBatch(TestCase):
             sample_batch=sample_batch,
             on_exists=OnExistsUploadAction.SKIP,  # Use SKIP to allow existing samples
         )
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         uow = Mock()
         # Mock repository to return that sample DOES exist
@@ -900,7 +900,7 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
@@ -927,7 +927,7 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         # Mock the service methods to handle the function call correctly
         mock_issuer = Mock()
@@ -967,7 +967,7 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         # Mock repository to return assembly protocol mapping and empty seqs
         # The _verify_batch_seqs function calls _set_and_verify_id_by_code first, then reads existing seqs
@@ -1006,7 +1006,7 @@ class TestVerifyBatch(TestCase):
         )
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _initialize_upload_result(cmd)
+        retval = _init_retval(cmd)
 
         # Mock repository to return no existing profiles
         uow = Mock()
@@ -1073,12 +1073,8 @@ class TestVerifyBatchSampleExistence(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertIsNotNone(retval.error_messages)
-        self.assertIn("d3f5b6a1", retval.error_codes)
-        self.assertIn(
-            "One or more samples already exist and on_exists=ERROR.",
-            retval.error_messages,
-        )
+        self.assertTrue(retval.has_errors())
+        self.assertTrue(retval.has_log_code("d3f5b6a1"))
 
     def test_sample_id_does_not_exist(self) -> None:
         """Test error when provided sample ID does not exist."""
@@ -1106,15 +1102,8 @@ class TestVerifyBatchSampleExistence(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to sample_result (code is passed as message in upload.py)
-        self.assertIsNotNone(sample_result.error_messages)
-        self.assertIn("b2c3d4e5", sample_result.error_codes)
-        # Error messages now contain the full error message, not just "ID does not exist"
-        self.assertTrue(
-            any(
-                "Sample with ID" in msg and "does not exist" in msg
-                for msg in sample_result.error_messages
-            )
-        )
+        self.assertTrue(sample_result.has_errors())
+        self.assertTrue(sample_result.has_log_code("b2c3d4e5"))
 
 
 class TestVerifyBatchExternalIds(TestCase):
@@ -1150,9 +1139,9 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        ext_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_id_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[ext_id_result]
+            status=UploadStatus.PENDING, external_ids=[external_id_result]
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1171,8 +1160,8 @@ class TestVerifyBatchExternalIds(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertIsNotNone(ext_id_result.error_messages)
-        self.assertIn("b9e4f7c2", ext_id_result.error_codes)
+        self.assertTrue(external_id_result.has_errors())
+        self.assertTrue(external_id_result.has_log_code("b9e4f7c2"))
 
     def test_identifier_issuer_code_does_not_exist(self) -> None:
         """Test error when identifier issuer code does not exist."""
@@ -1191,9 +1180,9 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        ext_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_id_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[ext_id_result]
+            status=UploadStatus.PENDING, external_ids=[external_id_result]
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1212,10 +1201,14 @@ class TestVerifyBatchExternalIds(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertIsNotNone(ext_id_result.error_messages)
+        self.assertTrue(external_id_result.has_errors())
         # Should contain both ID and code not exist errors
-        self.assertIn("b9e4f7c2", ext_id_result.error_codes)  # ID does not exist
-        self.assertIn("c7a9b2e4", ext_id_result.error_codes)  # Code does not exist
+        self.assertTrue(
+            external_id_result.has_log_code("b9e4f7c2")
+        )  # ID does not exist
+        self.assertTrue(
+            external_id_result.has_log_code("c7a9b2e4")
+        )  # Code does not exist
 
     def test_identifier_issuer_id_code_mismatch(self) -> None:
         """Test error when identifier issuer ID and code don't match."""
@@ -1236,9 +1229,9 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        ext_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_id_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[ext_id_result]
+            status=UploadStatus.PENDING, external_ids=[external_id_result]
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1261,9 +1254,9 @@ class TestVerifyBatchExternalIds(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertIsNotNone(ext_id_result.error_messages)
+        self.assertTrue(external_id_result.has_errors())
         # The ID doesn't exist in our mock, so we get "ID does not exist" error instead of mismatch
-        self.assertIn("a4d7b9c3", ext_id_result.error_codes)
+        self.assertTrue(external_id_result.has_log_code("a4d7b9c3"))
 
     def test_external_id_sample_id_mismatch(self) -> None:
         """Test error when external ID maps to different sample ID."""
@@ -1284,9 +1277,9 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        ext_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_id_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[ext_id_result]
+            status=UploadStatus.PENDING, external_ids=[external_id_result]
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1315,11 +1308,8 @@ class TestVerifyBatchExternalIds(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertIsNotNone(ext_id_result.error_messages)
-        self.assertIn("f8a9b0c1", ext_id_result.error_codes)
-        # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertIsNotNone(ext_id_result.error_messages)
-        self.assertIn("f8a9b0c1", ext_id_result.error_codes)
+        self.assertTrue(external_id_result.has_errors())
+        self.assertTrue(external_id_result.has_log_code("f8a9b0c1"))
 
     def test_external_id_exists_with_error_on_exists(self) -> None:
         """Test error when external ID exists and on_exists=ERROR."""
@@ -1373,8 +1363,8 @@ class TestVerifyBatchExternalIds(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertIsNotNone(retval.error_messages)
-        self.assertIn("a1c7d9f3", retval.error_codes)
+        self.assertTrue(retval.has_errors())
+        self.assertTrue(retval.has_log_code("a1c7d9f3"))
 
 
 class TestVerifyBatchSeqs(TestCase):
@@ -1460,8 +1450,8 @@ class TestVerifyBatchSeqs(TestCase):
         # Verify
         self.assertTrue(result)
         # Check that warning was added to seq_result with correct code
-        self.assertIsNotNone(seq_result.warning_messages)
-        self.assertIn("a2b3c4d5", seq_result.warning_codes)
+        self.assertTrue(seq_result.has_warnings())
+        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
         self.assertEqual(seq_result.status, UploadStatus.SKIPPED)
         self.assertEqual(sample.seqs[0].id, existing_seq_id)
 
@@ -1522,8 +1512,8 @@ class TestVerifyBatchSeqs(TestCase):
         self.assertFalse(result)
         self.assertFalse(result)
         # Check that error was added to seq_result (code is passed as message in upload.py)
-        self.assertIsNotNone(seq_result.error_messages)
-        self.assertIn("f1e2d3c4", seq_result.error_codes)
+        self.assertTrue(seq_result.has_errors())
+        self.assertTrue(seq_result.has_log_code("f1e2d3c4"))
 
     def test_seqs_exist_with_error_on_exists(self) -> None:
         """Test error when seqs exist and on_exists=ERROR."""
@@ -1582,8 +1572,8 @@ class TestVerifyBatchSeqs(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertIsNotNone(retval.error_messages)
-        self.assertIn("b4c5d6e7", retval.error_codes)
+        self.assertTrue(retval.has_errors())
+        self.assertTrue(retval.has_log_code("b4c5d6e7"))
 
 
 class TestVerifyBatchSampleExistenceAdvanced(TestCase):
@@ -1632,7 +1622,7 @@ class TestVerifyBatchSampleExistenceAdvanced(TestCase):
 
         # Should return False due to ERROR action with existing sample
         self.assertFalse(success)
-        self.assertIsNotNone(result.error_messages)
+        self.assertTrue(result.has_errors())
 
     def test_sample_does_not_exist_success(self) -> None:
         """Test success path when sample does not exist."""
@@ -1724,7 +1714,7 @@ class TestVerifyBatchAssociatedData(TestCase):
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
-        self.assertIn("d4f5e6a7", result.samples[0].seqs[0].error_codes)
+        self.assertTrue(result.samples[0].seqs[0].has_log_code("d4f5e6a7"))
 
     def test_associated_data_sample_id_mismatch(self) -> None:
         """Test error when associated data points to different sample."""
@@ -1769,7 +1759,7 @@ class TestVerifyBatchAssociatedData(TestCase):
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
-        self.assertIn("e5f6a7b8", result.samples[0].seqs[0].error_codes)
+        self.assertTrue(result.samples[0].seqs[0].has_log_code("e5f6a7b8"))
 
     def test_associated_data_exists_error_on_exists(self) -> None:
         """Test error when associated data exists and on_exists=ERROR."""
@@ -1814,7 +1804,7 @@ class TestVerifyBatchAssociatedData(TestCase):
         success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
-        self.assertIn("c6e7f8a0", result.error_codes)
+        self.assertTrue(result.has_log_code("c6e7f8a0"))
 
     def test_associated_data_no_id_assigns_sample_id(self) -> None:
         """Test that associated data without ID gets assigned sample ID."""
@@ -1923,8 +1913,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("b9e4f7c2", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
 
     def test_locus_detection_protocol_code_does_not_exist(self) -> None:
         """Test error when locus detection protocol code does not exist."""
@@ -1965,8 +1955,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("c7a9b2e4", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("c7a9b2e4"))
 
     def test_locus_detection_protocol_id_code_mismatch(self) -> None:
         """Test error when locus detection protocol ID and code don't match."""
@@ -2015,8 +2005,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("a4d7b9c3", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("a4d7b9c3"))
 
     def test_locus_set_id_does_not_exist(self) -> None:
         """Test error when locus set ID does not exist."""
@@ -2058,8 +2048,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("b9e4f7c2", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
 
     def test_allele_profile_exists_gets_skipped(self) -> None:
         """Test allele profile with same hash and seq gets skipped with warning."""
@@ -2121,13 +2111,13 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify - function should succeed and find the existing allele profile
         self.assertTrue(result)
         # Check that warning was added with correct code - debug by checking result structure
-        if allele_profile_result.warning_messages is None:
-            # Function didn't add warning, test expectation might be wrong
-            self.assertTrue(result)  # At least function should succeed
-        else:
-            self.assertIn("c7d8e9f0", allele_profile_result.warning_messages)
+        if allele_profile_result.has_warnings():
+            self.assertTrue(allele_profile_result.has_log_code("c7d8e9f0"))
             self.assertEqual(allele_profile_result.status, UploadStatus.SKIPPED)
             self.assertEqual(sample.allele_profiles[0].id, existing_profile_id)
+        else:
+            # Function didn't add warning, test expectation might be wrong
+            self.assertTrue(result)  # At least function should succeed
 
     def test_allele_profile_exists_no_seq_error(self) -> None:
         """Test error when allele profile exists but new profile has no seq ID."""
@@ -2190,8 +2180,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify - should fail because allele profile with same hash exists but different seq_id and new seq_id is None
         self.assertFalse(result)
         # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("a8f3e7b2", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("a8f3e7b2"))
 
     def test_allele_profiles_exist_with_error_on_exists(self) -> None:
         """Test error when allele profiles exist and on_exists=ERROR."""
@@ -2252,8 +2242,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify
         self.assertFalse(result)
         # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertIsNotNone(retval.error_messages)
-        self.assertIn("d8a3b7f4", retval.error_codes)
+        self.assertTrue(retval.has_errors())
+        self.assertTrue(retval.has_log_code("d8a3b7f4"))
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""
@@ -2300,8 +2290,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
 
         # Verify
         self.assertFalse(result)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("b9e4f7c2", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
 
     def test_locus_code_map_code_does_not_exist(self) -> None:
         """Test error when locus code map code does not exist."""
@@ -2347,8 +2337,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
 
         # Verify
         self.assertFalse(result)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("c7a9b2e4", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("c7a9b2e4"))
 
     def test_locus_code_map_id_code_mismatch(self) -> None:
         """Test error when locus code map ID and code don't match."""
@@ -2397,8 +2387,8 @@ class TestVerifyBatchAlleleProfiles(TestCase):
 
         # Verify
         self.assertFalse(result)
-        self.assertIsNotNone(allele_profile_result.error_messages)
-        self.assertIn("a4d7b9c3", allele_profile_result.error_codes)
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("a4d7b9c3"))
 
     def test_locus_code_map_code_sets_id(self) -> None:
         """Test that providing only locus code map code sets the ID."""
@@ -2452,7 +2442,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
 
 
 class TestVerifyReferenceData(TestCase):
-    """Test the _verify_refdata function."""
+    """Test the _verify_batch_refdata function."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -2477,29 +2467,27 @@ class TestVerifyReferenceData(TestCase):
         return mock_uow
 
     def test_verify_refdata_empty_samples(self) -> None:
-        """Test that _verify_refdata succeeds with empty samples."""
+        """Test that _verify_batch_refdata succeeds with empty samples."""
         batch_id = uuid4()
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
-        self.service.repository.uow.assert_called_once()
 
     def test_verify_refdata_no_allele_profiles(self) -> None:
-        """Test that _verify_refdata succeeds with samples that have no allele profiles."""
+        """Test that _verify_batch_refdata succeeds with samples that have no allele profiles."""
         batch_id = uuid4()
         sample_id = uuid4()
 
@@ -2511,20 +2499,19 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
 
     def test_verify_refdata_successful_allele_profiles(self) -> None:
         """Test successful verification when no allele profiles are provided."""
@@ -2540,12 +2527,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager - minimal mocking since no profiles to verify
         mock_uow = self._setup_mock_uow()
@@ -2569,10 +2556,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
         # Note: crud may not be called if no allele profiles to verify
 
     def test_verify_refdata_invalid_locus_codes(self) -> None:
@@ -2602,12 +2588,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager and repository responses
         mock_uow = self._setup_mock_uow()
@@ -2643,7 +2629,7 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertFalse(success)
         # Verify error was added to result
@@ -2652,8 +2638,8 @@ class TestVerifyReferenceData(TestCase):
         self.assertTrue(len(upload_result.samples[0].allele_profiles) > 0)
         allele_profile_result = upload_result.samples[0].allele_profiles[0]
         self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
-        self.assertTrue(len(allele_profile_result.error_messages) > 0)
-        self.assertIn("Invalid locus codes", allele_profile_result.error_messages[0])
+        self.assertTrue(allele_profile_result.has_errors())
+        self.assertTrue(allele_profile_result.has_log_code("e7a4b2d1"))
 
     def test_verify_refdata_allele_locus_mismatch(self) -> None:
         """Test that _verify_refdata fails when existing allele has wrong locus ID."""
@@ -2682,12 +2668,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager and repository responses
         mock_uow = self._setup_mock_uow()
@@ -2729,7 +2715,7 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertFalse(success)
         # The error should be detected (success=False) when alleles have wrong locus mappings
@@ -2765,12 +2751,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager and repository responses
         mock_uow = self._setup_mock_uow()
@@ -2811,12 +2797,12 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertFalse(success)
         # The error should be detected (success=False) when new alleles are missing
-        self.assertTrue(len(upload_result.error_messages) > 0)
-        self.assertIn("Missing new alleles", upload_result.error_messages[0])
+        self.assertTrue(upload_result.has_errors())
+        self.assertTrue(upload_result.has_log_code("a9b8c7d6"))
 
     def test_verify_refdata_extra_alleles_warning(self) -> None:
         """Test that _verify_refdata gives warning for superfluous alleles in batch."""
@@ -2854,12 +2840,12 @@ class TestVerifyReferenceData(TestCase):
         )
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager and repository responses
         mock_uow = self._setup_mock_uow()
@@ -2900,7 +2886,7 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         # Extra alleles should not cause failure, but based on implementation behavior
         # we need to check what actually happens
@@ -2930,12 +2916,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Pre-mark the allele profile result as SKIPPED
         upload_result.samples[0].allele_profiles[0].status = UploadStatus.SKIPPED
@@ -2943,7 +2929,7 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)  # Should succeed because skipped items are ignored
         # Verify no repository calls were made (nothing to verify)
@@ -2976,12 +2962,12 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager and repository responses
         mock_uow = self._setup_mock_uow()
@@ -3017,7 +3003,7 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertFalse(success)
         # Verify error was added to result
@@ -3026,11 +3012,9 @@ class TestVerifyReferenceData(TestCase):
         self.assertTrue(len(upload_result.samples[0].allele_profiles) > 0)
         allele_profile_result = upload_result.samples[0].allele_profiles[0]
         self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
-        self.assertTrue(len(allele_profile_result.error_messages) > 0)
-        self.assertIn("Length of allele_ids", allele_profile_result.error_messages[0])
-        self.assertIn(
-            "does not match number of loci", allele_profile_result.error_messages[0]
-        )
+        self.assertTrue(allele_profile_result.has_errors())
+        # TODO: replace with actual log code rather than log message
+        self.assertTrue(allele_profile_result.has_log_code("d3f5c6b2"))
 
     def test_verify_refdata_allele_profile_format_not_implemented(self) -> None:
         """Test error when allele profile format is not implemented."""
@@ -3051,20 +3035,19 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
 
     def test_verify_refdata_multiple_samples_no_profiles(self) -> None:
         """Test that _verify_refdata succeeds with multiple samples that have no allele profiles."""
@@ -3087,20 +3070,19 @@ class TestVerifyReferenceData(TestCase):
         )
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
 
     def test_verify_refdata_empty_batch_alternative(self) -> None:
         """Test that _verify_refdata succeeds with truly empty sample batch (alternative pattern)."""
@@ -3108,20 +3090,19 @@ class TestVerifyReferenceData(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        from gen_epix.seqdb.services.seq.upload import (
-            _initialize_upload_result,
-            _verify_refdata,
+        from gen_epix.seqdb.services.seq.upload import _init_retval
+        from gen_epix.seqdb.services.seq.upload_verify_batch import (
+            _verify_batch_refdata,
         )
 
-        upload_result = _initialize_upload_result(cmd)
+        upload_result = _init_retval(cmd)
 
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_refdata(self.service, cmd, upload_result)
+        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
 
         self.assertTrue(success)
-        self.service.repository.uow.assert_called_once()
 
     def test_verify_refdata_assertion_error_no_allele_data(self) -> None:
         """Test assertion error when no allele data is provided."""
@@ -3130,7 +3111,7 @@ class TestVerifyReferenceData(TestCase):
 
 
 class TestCreateOrUpdateData(TestCase):
-    """Test the _create_or_update_data function."""
+    """Test the _upsert_batch function."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -3154,12 +3135,11 @@ class TestCreateOrUpdateData(TestCase):
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[]
         )
 
-        # Mock the UOW context manager properly
+        # Mock UOW
         mock_uow = Mock()
-        mock_context_manager = Mock()
-        mock_context_manager.__enter__ = Mock(return_value=mock_uow)
-        mock_context_manager.__exit__ = Mock(return_value=None)
-        self.service.repository.uow.return_value = mock_context_manager
 
         # Execute - should not raise
-        _create_or_update_data(self.service, cmd, upload_result)
+        success = _upsert_batch(self.service, cmd, upload_result, mock_uow)
+
+        # Should return True and not raise
+        self.assertTrue(success)

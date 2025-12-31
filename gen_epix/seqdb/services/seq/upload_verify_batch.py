@@ -16,6 +16,9 @@ from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
+from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
+    _verify_batch_refdata_allele_profiles,
+)
 
 
 def _verify_batch_sample_existence(
@@ -93,98 +96,6 @@ def _verify_batch_external_ids(
         is_same_service=False,
         is_frozen=True,
     )
-    # identifier_issuer_ids = list(
-    #     {
-    #         y.identifier_issuer_id
-    #         for x in samples
-    #         for y in x.external_ids or []
-    #         if y.identifier_issuer_id is not None
-    #     }
-    # )
-    # identifier_issuer_by_id_map: dict[UUID, model.IdentifierIssuer] = {}
-    # identifier_issuers: list[model.IdentifierIssuer] = []
-    # if identifier_issuer_ids:
-    #     identifier_issuers = self.crud(  # type:ignore[assignment]
-    #         command.IdentifierIssuerCrudCommand(
-    #             user=cmd.user,
-    #             obj_ids=list(identifier_issuer_ids),
-    #             operation=CrudOperation.READ_SOME,
-    #         )
-    #     )
-    #     identifier_issuer_by_id_map = {  # type: ignore[misc]
-    #         x.id: x for x in identifier_issuers if x.id is not None
-    #     }
-    #     for sample, sample_result in zip(samples, sample_results):
-    #         for external_id, external_id_result in zip(
-    #             sample.external_ids or [], sample_result.external_ids or []
-    #         ):
-    #             identifier_issuer_id = external_id.identifier_issuer_id
-    #             if identifier_issuer_id is None:
-    #                 continue
-    #             if identifier_issuer_id not in identifier_issuer_by_id_map:
-    #                 success = False
-    #                 external_id_result.add_error(
-    #                     "c4d5e6f7",
-    #                     f"Identifier issuer with ID {identifier_issuer_id} does not exist",
-    #                 )
-
-    # # Retrieve and verify identifier issuers in external IDs provided by code
-    # identifier_issuer_codes = list(
-    #     {
-    #         y.identifier_issuer_code
-    #         for x in samples
-    #         for y in x.external_ids or []
-    #         if y.identifier_issuer_code is not None
-    #     }
-    # )
-    # identifier_issuer_by_code_map: dict[str, model.IdentifierIssuer] = {}
-    # if identifier_issuer_codes:
-    #     identifier_issuers = self.crud(  # type:ignore[assignment]
-    #         command.IdentifierIssuerCrudCommand(
-    #             user=cmd.user,
-    #             operation=CrudOperation.READ_ALL,
-    #             query_filter=StringSetFilter(
-    #                 key="code", members=frozenset(identifier_issuer_codes)
-    #             ),
-    #         )
-    #     )
-    #     identifier_issuer_by_code_map = {x.code: x for x in identifier_issuers}
-    #     for sample, sample_result in zip(samples, sample_results):
-    #         for i, (external_id, external_id_result) in enumerate(
-    #             zip(
-    #                 sample.external_ids or [],
-    #                 sample_result.external_ids or [],
-    #             )
-    #         ):
-    #             identifier_issuer_code = external_id.identifier_issuer_code
-    #             if identifier_issuer_code is None:
-    #                 continue
-    #             if identifier_issuer_code not in identifier_issuer_by_code_map:
-    #                 success = False
-    #                 external_id_result.add_error(
-    #                     "d6e7f8a9",
-    #                     f"Identifier issuer with code {identifier_issuer_code} does not exist",
-    #                 )
-    #                 continue
-    #             identifier_issuer = identifier_issuer_by_code_map[
-    #                 identifier_issuer_code
-    #             ]
-    #             if external_id.identifier_issuer_id is not None:
-    #                 if external_id.identifier_issuer_id != identifier_issuer.id:
-    #                     success = False
-    #                     external_id_result.add_error(
-    #                         "e7f8a9b0",
-    #                         f"Identifier issuer code {identifier_issuer_code} with ID {identifier_issuer.id} does not match provided ID {external_id.identifier_issuer_id}",
-    #                     )
-    #             else:
-    #                 # Add identifier issuer ID, must be as a new instance since external_ids are frozen
-    #                 if sample.external_ids is not None:
-    #                     sample.external_ids[i] = external_id.model_copy(
-    #                         update={"identifier_issuer_id": identifier_issuer.id}
-    #                     )
-    #             # Add to ID map as well
-    #             if identifier_issuer.id is not None:
-    #                 identifier_issuer_by_id_map[identifier_issuer.id] = identifier_issuer  # type: ignore[misc]
 
     # Retrieve and verify external IDs
     external_identifier_tuples = list(
@@ -237,11 +148,8 @@ def _verify_batch_external_ids(
             for external_id, external_id_result in zip(
                 sample.external_ids or [], sample_result.external_ids or []
             ):
-                if external_id_result.status in [
-                    UploadStatus.SKIPPED,
-                    UploadStatus.FAILED,
-                ]:
-                    # Already skipped or failed, no need to check existence
+                if external_id_result.status != UploadStatus.PENDING:
+                    # Not pending (likely skipped or failed), no need to check existence
                     continue
                 key: tuple[UUID, str] = (external_id.identifier_issuer_id, external_id.external_id)  # type: ignore[assignment]
                 if key in existing_external_id_map:
@@ -748,4 +656,22 @@ def _set_and_verify_id_by_code(
                             objs[i] = new_obj
                         else:
                             setattr(obj, link_id_field_name, code_id_map[link_code])
+    return success
+
+
+def _verify_batch_refdata(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: fastapp.BaseUnitOfWork,
+) -> bool:
+    """
+    Verify and complete reference data.
+    """
+    success = True
+    # Read sets: nothing to do
+    # Sequences: nothing to do
+    # Allele profiles
+    success &= _verify_batch_refdata_allele_profiles(self, cmd, retval, uow)
+
     return success

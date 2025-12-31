@@ -12,8 +12,12 @@ from pydantic import (
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.base import BaseBatchUploadResult, UploadResult
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchUploadResult,
+    ForUploadMixin,
+    UploadResult,
+)
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
     DrugExposure,
@@ -64,7 +68,7 @@ class ConceptFieldsForUploadMixin:
         return self
 
 
-class MeasurementForUpload(Measurement, ConceptFieldsForUploadMixin):
+class MeasurementForUpload(Measurement, ForUploadMixin, ConceptFieldsForUploadMixin):
     """
     An measurement record intended for upload. Equal to a Measurement, with
     additional variables. The different concepts can be given either as their UUID
@@ -137,7 +141,7 @@ class MeasurementForUpload(Measurement, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class ObservationForUpload(Observation, ConceptFieldsForUploadMixin):
+class ObservationForUpload(Observation, ForUploadMixin, ConceptFieldsForUploadMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables. The different concepts can be given either as their UUID
@@ -203,7 +207,7 @@ class ObservationForUpload(Observation, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class SpecimenForUpload(Specimen, ConceptFieldsForUploadMixin):
+class SpecimenForUpload(Specimen, ForUploadMixin, ConceptFieldsForUploadMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables. The different concepts can be given either as their UUID
@@ -268,7 +272,7 @@ class SpecimenForUpload(Specimen, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class PersonForUpload(Person):
+class PersonForUpload(Person, ForUploadMixin):
     """
     A person, together with any relevant associated data, intended for upload.
     """
