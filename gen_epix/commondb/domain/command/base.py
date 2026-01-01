@@ -8,8 +8,7 @@ from uuid import UUID
 
 from pydantic import Field, field_serializer
 
-from gen_epix.commondb.domain import enum as commondb_enum
-from gen_epix.commondb.domain import model
+from gen_epix.commondb.domain import enum, model
 from gen_epix.fastapp import Command as ServiceCommand
 from gen_epix.fastapp import CrudCommand as ServiceCrudCommand
 from gen_epix.fastapp import UpdateAssociationCommand as ServiceUpdateAssociationCommand
@@ -49,7 +48,7 @@ class UpdateAssociationCommand(ServiceUpdateAssociationCommand, Command):
 class UploadCommandMixin:
     """Mixin class for ForUpload classes providing common functionality."""
 
-    on_exists: commondb_enum.OnExistsUploadAction = Field(
-        default=commondb_enum.OnExistsUploadAction.ERROR,
+    on_exists: enum.OnExistsUploadAction = Field(
+        default=enum.OnExistsUploadAction.ERROR,
         description="Action to take if one of the entities in the batch already exists upon upload.",
     )

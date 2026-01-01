@@ -36,19 +36,15 @@ class UploadLogItem(BaseModel):
 
 class UploadResult(Model):
     """
-    Represents the result of an upload operation, capturing success/failure status,
-    error information, performance metrics, and hierarchical sub-results.
-
-    This class serves as the base for all upload result types and supports
-    automatic status calculation based on sub-results for complex upload operations.
+    Represents the result of an upload operation, including status and logs.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
 
-    # List of field names in subclasses that contain single sub-results for generic model validation
-    SUB_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
-    # List of field names in subclasses that each contains each a list of sub-results for generic model validation
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = []
+    # List of field names in child classes that contain single results for generic model validation
+    CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
+    # List of field names in child classes that each contains each a list of results for generic model validation
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = []
 
     id: UUID | None = Field(
         default=None,
@@ -68,14 +64,14 @@ class UploadResult(Model):
     def n_items_processed(self) -> int:
         """The number of records processed during the upload operation."""
         n = int(self.status != UploadStatus.PENDING)  # Count self if not pending
-        for field_name in self.SUB_RESULT_FIELD_NAMES:
-            sub_result: UploadResult | None = getattr(self, field_name, None)
-            if sub_result is not None:
-                n += sub_result.n_items_processed
-        for field_name in self.SUB_RESULT_LIST_FIELD_NAMES:
-            sub_results: list[UploadResult] = getattr(self, field_name, None) or []
-            for sub_result in sub_results:
-                n += sub_result.n_items_processed
+        for field_name in self.CHILD_RESULT_FIELD_NAMES:
+            child_result: UploadResult | None = getattr(self, field_name, None)
+            if child_result is not None:
+                n += child_result.n_items_processed
+        for field_name in self.CHILD_RESULT_LIST_FIELD_NAMES:
+            child_results: list[UploadResult] = getattr(self, field_name, None) or []
+            for child_result in child_results:
+                n += child_result.n_items_processed
         return n
 
     @computed_field
@@ -113,14 +109,14 @@ class UploadResult(Model):
     ) -> int:
         """Check if any sub-results have the specified status."""
         n = int(include_self and self.status == status)
-        for field_name in self.SUB_RESULT_FIELD_NAMES:
-            sub_result: UploadResult | None = getattr(self, field_name, None)
-            if sub_result is not None and sub_result.status == status:
+        for field_name in self.CHILD_RESULT_FIELD_NAMES:
+            child_result: UploadResult | None = getattr(self, field_name, None)
+            if child_result is not None and child_result.status == status:
                 n += 1
-        for field_name in self.SUB_RESULT_LIST_FIELD_NAMES:
-            sub_results: list[UploadResult] = getattr(self, field_name, None) or []
-            for sub_result in sub_results:
-                if sub_result.status == status:
+        for field_name in self.CHILD_RESULT_LIST_FIELD_NAMES:
+            child_results: list[UploadResult] = getattr(self, field_name, None) or []
+            for child_result in child_results:
+                if child_result.status == status:
                     n += 1
         return n
 
