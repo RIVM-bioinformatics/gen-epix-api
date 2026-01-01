@@ -21,7 +21,7 @@ from gen_epix.commondb.domain.model.organization import (
     User,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult
-from gen_epix.seqdb.domain import command, model
+from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.enum import Role
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload import (
@@ -32,9 +32,9 @@ from gen_epix.seqdb.services.seq.upload import (
 )
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_allele_profiles,
-    _verify_batch_associated_data,
-    _verify_batch_external_ids,
+    _verify_batch_sample_children,
     _verify_batch_sample_existence,
+    _verify_batch_sample_external_ids,
     _verify_batch_seqs,
 )
 
@@ -119,7 +119,7 @@ class TestSeqServiceUploadSamples(TestCase):
         self.assertIsInstance(result, model.SampleBatchUploadResult)
 
     @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_batch_refdata")
+    @patch("gen_epix.seqdb.services.seq.upload._verify_batch_sample_refdata")
     def test_early_return_on_verify_refdata_failure(
         self, mock_verify_refdata, mock_check
     ):
@@ -133,11 +133,11 @@ class TestSeqServiceUploadSamples(TestCase):
                 return_value=True,
             ),
             patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_external_ids",
+                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_external_ids",
                 return_value=True,
             ),
             patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_associated_data",
+                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_children",
                 return_value=True,
             ),
         ):
@@ -904,12 +904,12 @@ class TestVerifyBatch(TestCase):
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_external_ids,
+            _verify_batch_sample_external_ids,
         )
 
         uow = Mock()
 
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Should succeed with no external IDs
         self.assertTrue(result)
@@ -942,12 +942,12 @@ class TestVerifyBatch(TestCase):
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_external_ids,
+            _verify_batch_sample_external_ids,
         )
 
         uow = Mock()
 
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Should succeed
         self.assertTrue(result)
@@ -1155,7 +1155,7 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Verify
         self.assertFalse(result)
@@ -1196,7 +1196,7 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Verify
         self.assertFalse(result)
@@ -1249,7 +1249,7 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Verify
         self.assertFalse(result)
@@ -1303,7 +1303,7 @@ class TestVerifyBatchExternalIds(TestCase):
 
         # Execute
         uow = Mock()
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Verify
         self.assertFalse(result)
@@ -1358,7 +1358,7 @@ class TestVerifyBatchExternalIds(TestCase):
 
         # Execute
         uow = Mock()
-        result = _verify_batch_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
 
         # Verify
         self.assertFalse(result)
@@ -1711,7 +1711,7 @@ class TestVerifyBatchAssociatedData(TestCase):
             [],  # _verify_batch_allele_profiles - allele profiles
         ]
 
-        success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
+        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
         self.assertTrue(result.samples[0].seqs[0].has_log_code("d4f5e6a7"))
@@ -1756,7 +1756,7 @@ class TestVerifyBatchAssociatedData(TestCase):
             [],  # _verify_batch_allele_profiles - allele profiles
         ]
 
-        success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
+        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
         self.assertTrue(result.samples[0].seqs[0].has_log_code("e5f6a7b8"))
@@ -1801,7 +1801,7 @@ class TestVerifyBatchAssociatedData(TestCase):
             [],  # _verify_batch_allele_profiles - allele profiles
         ]
 
-        success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
+        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
 
         self.assertFalse(success)
         self.assertTrue(result.has_log_code("c6e7f8a0"))
@@ -1849,7 +1849,7 @@ class TestVerifyBatchAssociatedData(TestCase):
             [],  # Existing allele profiles (empty)
         ]
 
-        success = _verify_batch_associated_data(self.service, cmd, result, self.uow)
+        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
 
         self.assertTrue(success)
         # Verify sample_id was assigned
@@ -2155,7 +2155,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         uow = Mock()
 
         # Mock existing protocols, locus sets, locus code maps, and allele profile with different seq
-        computed_hash = sample.allele_profiles[0].allele_profile_hash
+        computed_hash = sample.allele_profiles[0].allele_profile_hash  # type: ignore[arg-type]
         self.service.repository.read_fields.side_effect = [
             [(protocol_id, "PROTOCOL_CODE")],  # Protocols
             [(locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
@@ -2198,7 +2198,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
                     locus_detection_protocol_id=uuid4(),
                     locus_set_id=uuid4(),
                     seq_id=seq_id,
-                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                     allele_profile=create_allele_profile_base64(),  # Let model compute the hash
                 )
             ],
@@ -2260,7 +2260,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
                     locus_detection_protocol_id=uuid4(),
                     locus_set_id=uuid4(),
                     locus_code_map_id=code_map_id,
-                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                     allele_profile=create_allele_profile_base64(),
                 )
             ],
@@ -2307,7 +2307,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
                     locus_detection_protocol_id=uuid4(),
                     locus_set_id=uuid4(),
                     locus_code_map_code="INVALID_CODE",
-                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                     allele_profile=create_allele_profile_base64(),
                 )
             ],
@@ -2357,7 +2357,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
                     locus_set_id=uuid4(),
                     locus_code_map_id=code_map_id,
                     locus_code_map_code="TEST_CODE",
-                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                     allele_profile=create_allele_profile_base64(),
                 )
             ],
@@ -2407,7 +2407,7 @@ class TestVerifyBatchAlleleProfiles(TestCase):
                     locus_detection_protocol_id=protocol_id,
                     locus_set_id=locus_set_id,
                     locus_code_map_code="TEST_CODE",
-                    allele_profile_format="SORTED_ALLELE_IDS",
+                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                     allele_profile=create_allele_profile_base64(),
                 )
             ],
@@ -2438,11 +2438,13 @@ class TestVerifyBatchAlleleProfiles(TestCase):
         # Verify - should succeed since all lookups succeed
         self.assertTrue(result)
         # Check that the ID was set
-        self.assertEqual(sample.allele_profiles[0].locus_code_map_id, code_map_id)
+        self.assertEqual(
+            sample.allele_profiles[0].locus_code_map_id, code_map_id
+        )  # types: ignore[arg-type]
 
 
 class TestVerifyReferenceData(TestCase):
-    """Test the _verify_batch_refdata function."""
+    """Test the _verify_batch_sample_refdata function."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -2467,14 +2469,14 @@ class TestVerifyReferenceData(TestCase):
         return mock_uow
 
     def test_verify_refdata_empty_samples(self) -> None:
-        """Test that _verify_batch_refdata succeeds with empty samples."""
+        """Test that _verify_batch_sample_refdata succeeds with empty samples."""
         batch_id = uuid4()
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2482,12 +2484,14 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
 
     def test_verify_refdata_no_allele_profiles(self) -> None:
-        """Test that _verify_batch_refdata succeeds with samples that have no allele profiles."""
+        """Test that _verify_batch_sample_refdata succeeds with samples that have no allele profiles."""
         batch_id = uuid4()
         sample_id = uuid4()
 
@@ -2501,7 +2505,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2509,7 +2513,9 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
 
@@ -2529,7 +2535,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2556,7 +2562,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
         # Note: crud may not be called if no allele profiles to verify
@@ -2590,7 +2598,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2629,14 +2637,20 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertFalse(success)
         # Verify error was added to result
         self.assertEqual(len(upload_result.samples), 1)
         self.assertIsNotNone(upload_result.samples[0].allele_profiles)
-        self.assertTrue(len(upload_result.samples[0].allele_profiles) > 0)
-        allele_profile_result = upload_result.samples[0].allele_profiles[0]
+        self.assertTrue(
+            len(upload_result.samples[0].allele_profiles) > 0
+        )  # types: ignore[arg-type]
+        allele_profile_result = upload_result.samples[0].allele_profiles[
+            0
+        ]  # types: ignore[arg-type]
         self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
         self.assertTrue(allele_profile_result.has_errors())
         self.assertTrue(allele_profile_result.has_log_code("e7a4b2d1"))
@@ -2661,7 +2675,7 @@ class TestVerifyReferenceData(TestCase):
                     locus_detection_protocol_id=protocol_id,
                     locus_set_id=locus_set_id,
                     locus_code_map_id=locus_code_map_id,
-                    allele_ids=allele_ids,
+                    allele_ids=allele_ids,  # types: ignore[arg-type]
                 )
             ],
         )
@@ -2670,7 +2684,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2715,7 +2729,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertFalse(success)
         # The error should be detected (success=False) when alleles have wrong locus mappings
@@ -2753,7 +2769,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2797,7 +2813,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertFalse(success)
         # The error should be detected (success=False) when new alleles are missing
@@ -2842,7 +2860,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2886,7 +2904,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         # Extra alleles should not cause failure, but based on implementation behavior
         # we need to check what actually happens
@@ -2918,7 +2938,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -2929,7 +2949,9 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)  # Should succeed because skipped items are ignored
         # Verify no repository calls were made (nothing to verify)
@@ -2964,7 +2986,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -3003,7 +3025,9 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertFalse(success)
         # Verify error was added to result
@@ -3037,7 +3061,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -3045,7 +3069,9 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
 
@@ -3072,7 +3098,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -3080,7 +3106,9 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
 
@@ -3092,7 +3120,7 @@ class TestVerifyReferenceData(TestCase):
 
         from gen_epix.seqdb.services.seq.upload import _init_retval
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_refdata,
+            _verify_batch_sample_refdata,
         )
 
         upload_result = _init_retval(cmd)
@@ -3100,7 +3128,9 @@ class TestVerifyReferenceData(TestCase):
         # Mock UoW context manager
         mock_uow = self._setup_mock_uow()
 
-        success = _verify_batch_refdata(self.service, cmd, upload_result, mock_uow)
+        success = _verify_batch_sample_refdata(
+            self.service, cmd, upload_result, mock_uow
+        )
 
         self.assertTrue(success)
 

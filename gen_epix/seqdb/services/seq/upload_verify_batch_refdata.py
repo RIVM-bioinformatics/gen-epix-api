@@ -5,9 +5,7 @@ from uuid import UUID
 import gen_epix.commondb.domain.model.upload
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
@@ -291,48 +289,49 @@ def _verify_batch_refdata_allele_profiles(
     return success
 
 
-def _retrieve_refdata_for_associated_data(
-    self: BaseSeqService,
-    cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
-    uow: BaseUnitOfWork,
-    data_model_class: type[model.Model],
-    link_id_field_name: str,
-    linked_model_class: type[model.Model],
-    linked_model_id_field_name: str = "id",
-) -> dict[UUID, model.Model]:
-    user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = retval.samples
-    link_ids: set[UUID] = set()
+# def _retrieve_child_refdata(
+#     self: BaseService,
+#     cmd: command.Command,
+#     retval: BaseBatchUploadResult,
+#     uow: BaseUnitOfWork,
+#     parent_for_upload_model_class: type[model.Model],
+#     parents: list[model.Model],
+#     parent_results: list[UploadResult],
+#     child_model_class: type[model.Model],
+#     link_id_field_name: str,
+#     linked_model_class: type[model.Model],
+#     linked_model_id_field_name: str = "id",
+# ) -> dict[UUID, model.Model]:
+#     user_id = cmd.user.id if cmd.user else None
+#     link_ids: set[UUID] = set()
 
-    # Get unique IDs from all samples
-    for_upload_model_class = model.SampleForUpload.FOR_UPLOAD_MODEL_CLASS_MAP[
-        data_model_class
-    ]
-    data_field_name = model.SampleForUpload.MODEL_DATA_FIELD_NAME_MAP[
-        for_upload_model_class
-    ]
-    for sample, sample_result in zip(samples, sample_results):
-        objs: list[model.Model] = getattr(sample, data_field_name) or []
-        obj_results: list[UploadResult] = getattr(sample_result, data_field_name) or []
-        for obj, obj_result in zip(objs, obj_results):
-            link_id: UUID | None = getattr(obj, link_id_field_name, None)
-            if link_id is None or link_id == NULL_ID:
-                continue
-            if obj_result.status != UploadStatus.PENDING:
-                continue
-            link_ids.add(link_id)
+#     # Get unique IDs from all samples
+#     for_upload_model_class = parent_for_upload_model_class.FOR_UPLOAD_CHILD_MODEL_CLASS_MAP[ # type: ignore[attr-defined]
+#         child_model_class
+#     ]
+#     child_field_name = parent_for_upload_model_class.CHILD_MODEL_FIELD_NAME_MAP[ # type: ignore[attr-defined]
+#         for_upload_model_class
+#     ]
+#     for parent, parent_result in zip(parents, parent_results):
+#         children: list[model.Model] = getattr(parent, child_field_name) or []
+#         child_results: list[UploadResult] = getattr(parent_result, child_field_name) or []
+#         for child, child_result in zip(children, child_results):
+#             link_id: UUID | None = getattr(child, link_id_field_name, None)
+#             if link_id is None or link_id == NULL_ID:
+#                 continue
+#             if child_result.status != UploadStatus.PENDING:
+#                 continue
+#             link_ids.add(link_id)
 
-    # Retrieve corresponding objects
-    link_objs: list[model.Model] = self.repository.crud(  # type: ignore[assignment]
-        uow,
-        user_id,
-        linked_model_class,
-        None,
-        list(link_ids),
-        CrudOperation.READ_SOME,
-    )
+#     # Retrieve corresponding objects
+#     link_objs: list[model.Model] = self.repository.crud(  # type: ignore[assignment]
+#         uow,
+#         user_id,
+#         linked_model_class,
+#         None,
+#         list(link_ids),
+#         CrudOperation.READ_SOME,
+#     )
 
-    # Finalize output
-    return {getattr(x, linked_model_id_field_name): x for x in link_objs}
+#     # Finalize output
+#     return {getattr(x, linked_model_id_field_name): x for x in link_objs}

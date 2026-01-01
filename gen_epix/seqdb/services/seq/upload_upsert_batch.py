@@ -3,12 +3,13 @@ from uuid import UUID
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.enum import CrudOperation
+from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
 
-def _upsert_batch_refdata(
+def _upsert_batch_create_sample_refdata(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
@@ -42,31 +43,6 @@ def _upsert_batch_create_samples(
 ) -> bool:
     """
     Upsert sample data as part of creating or updating the sample data.
-
-
-    Step 5: Create or update the data
-    5.1 Begin single Unit of Work encompassing all remaining steps
-    5.2 Add new reference data
-    5.2.1 Upload all the new sample_batch.alleles flagged in 3.1.4.4.3 using repository.crud with operation=CREATE_SOME
-    5.3 Add sample data - loop over each sample in cmd.sample_batch.samples
-    5.3.1 If new: create the sample and fill in the resulting sample_id in any associated data.
-    5.3.2 If existing: update the sample
-    5.3.2.1 If on_exists=UPDATE, update the props dict. For any of the new props that have value None, delete the key.
-    5.3.2.2 If on_exists=SKIP, do not make any changes.
-    5.3.3  Adjust the corresponding SampleUploadResult.sample_result correspondingly, including its status.
-    5.3.4 Create any external identifiers that did not exist yet. Adjust the corresponding SampleUploadResult.external_ids_results correspondingly, including its status.
-    5.3.5 Go over each type of associated data (read sets, seqs, allele profiles, ...).
-    5.3.5.1 If new: create the instance and fill in the instance's id
-    5.3.5.2 If existing:
-    5.3.5.2.1 If on_exists=UPDATE, update the provided fields that are updatable through an upload action - these are the following:
-    5.3.5.2.1.1 ReadSet: fwd_uri, rev_uri, fwd_file_id, rev_file_id, file_format, file_compression, sequencing_run_code
-    5.3.5.2.1.2 Seq: uri, file_id, file_format, file_compression, read_set_id if existing value is None, read_set2_id if existing value is None, assembly_protocol_id if existing value is None, file_hash if existing value is None, contigs if existing value is empty list
-    5.3.5.2.1.3 AlleleProfile: allele_profile, allele_profile_format, seq_id if existing value is None
-    5.3.5.2.1.4 Error if a non-updatable field is different between existing and new value.
-    5.3.5.2.2 If on_exists=SKIP, do not make any changes.
-    5.3.5.3 Adjust the corresponding SampleUploadResult.external_ids_results correspondingly, including its status. If Error, roll back and stop here.
-    5.4 Update profile distances. This is a placeholder step, to be added and described as such.
-
     """
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
@@ -82,7 +58,7 @@ def _upsert_batch_create_samples(
         return True
 
     # Create samples
-    _upload_create_objects(
+    _upsert_batch_create_objects(
         self,
         uow,
         user_id,
@@ -119,7 +95,7 @@ def _upsert_batch_update_samples(
     if not to_update_sample_result_pairs:
         return success
 
-    return _upload_update_objects(
+    return _upsert_batch_update_objects(
         self,
         uow,
         user_id,
@@ -131,104 +107,148 @@ def _upsert_batch_update_samples(
     return success
 
 
-def _upsert_batch_create_associated_data(
+def _upsert_batch_create_sample_children(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
     """
-    Create associated data as part of creating or updating the sample data.
+    Create child models as part of creating or updating the sample data.
+    """
+    return _upsert_batch_create_children(
+        self,
+        cmd,
+        uow,
+        model.SampleForUpload,
+        cmd.sample_batch.samples,  # type: ignore[arg-type]
+        retval.samples,  # type: ignore[arg-type]
+    )
+
+
+def _upsert_batch_update_sample_children(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: BaseUnitOfWork,
+) -> bool:
+    """
+    Update child models as part of creating or updating the sample data.
+    """
+    return _upsert_batch_update_children(
+        self,
+        cmd,
+        uow,
+        model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
+        model.SampleForUpload,
+        cmd.sample_batch.samples,  # type: ignore[arg-type]
+        retval.samples,  # type: ignore[arg-type]
+    )
+
+
+def _upsert_batch_create_children(
+    self: BaseService,
+    cmd: command.Command,
+    uow: BaseUnitOfWork,
+    parent_for_upload_model_class: type[model.Model],
+    parents: list[model.Model],
+    parent_results: list[UploadResult],
+) -> bool:
+    """
+    Create child models as part of creating or updating the sample data.
     """
     user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = retval.samples
     success = False
 
     # Prepare some data
     rev_map = {
-        y: x for x, y in model.SampleForUpload.FOR_UPLOAD_MODEL_CLASS_MAP.items()
+        y: x for x, y in parent_for_upload_model_class.FOR_UPLOAD_CHILD_MODEL_CLASS_MAP.items()  # type: ignore[attr-defined]
     }
     model_class_map: dict[str, type[model.Model]] = {
         y: rev_map[x]
-        for x, y in model.SampleForUpload.MODEL_DATA_FIELD_NAME_MAP.items()
+        for x, y in parent_for_upload_model_class.CHILD_MODEL_FIELD_NAME_MAP.items()  # type: ignore[attr-defined]
     }
 
-    # Create each associated data type for each sample
+    # Create each child model for each parent
     for field_name, model_class in model_class_map.items():
         # Determine which objects need to be created
-        to_create_obj_result_pairs = []
-        for sample, sample_result in zip(samples, sample_results):
-            objs: list[model.Model] | None = getattr(sample, field_name)
-            obj_results: list[UploadResult] | None = getattr(sample_result, field_name)
-            for obj, obj_result in zip(objs or [], obj_results or []):
-                if obj.id is None and obj_result.status == UploadStatus.PENDING:
-                    to_create_obj_result_pairs.append((obj, obj_result))
-        if not to_create_obj_result_pairs:
+        to_create_child_result_pairs = []
+        for parent, parent_result in zip(parents, parent_results):
+            children: list[model.Model] | None = getattr(parent, field_name)
+            child_results: list[UploadResult] | None = getattr(
+                parent_result, field_name
+            )
+            for child, child_result in zip(children or [], child_results or []):
+                if child.id is None and child_result.status == UploadStatus.PENDING:
+                    to_create_child_result_pairs.append((child, child_result))
+        if not to_create_child_result_pairs:
             continue
 
         # Create the objects
-        _upload_create_objects(
+        _upsert_batch_create_objects(
             self,
             uow,
             user_id,
             model_class,
-            to_create_obj_result_pairs,
+            to_create_child_result_pairs,
         )
 
     success = True
     return success
 
 
-def _upsert_batch_update_associated_data(
-    self: BaseSeqService,
-    cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+def _upsert_batch_update_children(
+    self: BaseService,
+    cmd: command.Command,
     uow: BaseUnitOfWork,
+    stored_model_field_props: dict[type[model.Model], dict[str, model.ModelFieldProps]],
+    parent_for_upload_model_class: type[model.Model],
+    parents: list[model.Model],
+    parent_results: list[UploadResult],
 ) -> bool:
     """
-    Update associated data as part of creating or updating the sample data.
+    Update child models as part of creating or updating the parent data.
     """
     user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = retval.samples
     success = True
 
     # Prepare some data
     rev_map = {
-        y: x for x, y in model.SampleForUpload.FOR_UPLOAD_MODEL_CLASS_MAP.items()
+        y: x for x, y in parent_for_upload_model_class.FOR_UPLOAD_CHILD_MODEL_CLASS_MAP.items()  # type: ignore[attr-defined]
     }
     model_class_map: dict[str, type[model.Model]] = {
         y: rev_map[x]
-        for x, y in model.SampleForUpload.MODEL_DATA_FIELD_NAME_MAP.items()
+        for x, y in parent_for_upload_model_class.CHILD_MODEL_FIELD_NAME_MAP.items()  # type: ignore[attr-defined]
     }
 
-    # Update each associated data type for each sample
+    # Update each child model for each parent
     for field_name, model_class in model_class_map.items():
-        # Determine which objects need to be updated
-        to_update_obj_result_pairs = []
-        for sample, sample_result in zip(samples, sample_results):
-            objs: list[model.Model] | None = getattr(sample, field_name)
-            obj_results: list[UploadResult] | None = getattr(sample_result, field_name)
-            for obj, obj_result in zip(objs or [], obj_results or []):
-                if obj.id is not None and obj_result.status == UploadStatus.PENDING:
-                    to_update_obj_result_pairs.append((obj, obj_result))
-        if not to_update_obj_result_pairs:
+        # Determine which children need to be updated
+        to_update_child_result_pairs = []
+        for parent, parent_result in zip(parents, parent_results):
+            children: list[model.Model] | None = getattr(parent, field_name)
+            child_results: list[UploadResult] | None = getattr(
+                parent_result, field_name
+            )
+            for child, child_result in zip(children or [], child_results or []):
+                if child.id is not None and child_result.status == UploadStatus.PENDING:
+                    to_update_child_result_pairs.append((child, child_result))
+        if not to_update_child_result_pairs:
             continue
 
-        success &= _upload_update_objects(
+        success &= _upsert_batch_update_objects(
             self,
             uow,
             user_id,
             model_class,
-            model.STORED_MODEL_FIELD_PROPS[model_class],
-            to_update_obj_result_pairs,
+            stored_model_field_props[model_class],
+            to_update_child_result_pairs,
         )
     return success
 
 
-def _upload_create_objects(
-    self: BaseSeqService,
+def _upsert_batch_create_objects(
+    self: BaseService,
     uow: BaseUnitOfWork,
     user_id: UUID | None,
     model_class: type[model.Model],
@@ -258,8 +278,8 @@ def _upload_create_objects(
     return True
 
 
-def _upload_update_objects(
-    self: BaseSeqService,
+def _upsert_batch_update_objects(
+    self: BaseService,
     uow: BaseUnitOfWork,
     user_id: UUID | None,
     model_class: type[model.Model],
@@ -282,7 +302,7 @@ def _upload_update_objects(
         operation=CrudOperation.READ_SOME,
     )
 
-    # Determine which samples actually need to be updated instead of having identical data
+    # Determine which objects actually need to be updated instead of having identical data
     to_update_objs: list[model.Model] = []
     to_update_obj_results: list[model.UploadResult] = []
     for (obj, obj_result), existing_obj in zip(
@@ -310,13 +330,9 @@ def _upload_update_objects(
                     setattr(existing_obj, field_name, new_value)
             elif field_props.is_dict:
                 # Field content is a dict: update keys individually
-                is_updated |= _upload_update_objects_dict_value(
-                    existing_value, new_value
-                )
+                is_updated |= _upsert_batch_update_dict_value(existing_value, new_value)
             elif field_props.is_list:
-                is_updated |= _upload_update_objects_list_value(
-                    existing_value, new_value
-                )
+                is_updated |= _upsert_batch_update_list_value(existing_value, new_value)
             else:
                 # Field content is a single value: compare directly
                 if new_value != existing_value:
@@ -355,7 +371,7 @@ def _upload_update_objects(
     return success
 
 
-def _upload_update_objects_dict_value(content: dict, updates: dict | None) -> bool:
+def _upsert_batch_update_dict_value(content: dict, updates: dict | None) -> bool:
     """
     Update a dictionary in place with new values and return whether any updates were
     made.
@@ -393,7 +409,7 @@ def _upload_update_objects_dict_value(content: dict, updates: dict | None) -> bo
     return is_updated
 
 
-def _upload_update_objects_list_value(
+def _upsert_batch_update_list_value(
     existing_value: list, new_value: list | None
 ) -> bool:
     """

@@ -233,7 +233,7 @@ class SampleForUpload(Sample, ForUploadMixin):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME = "SampleForUpload"
 
-    FOR_UPLOAD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+    FOR_UPLOAD_CHILD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
         ReadSet: ReadSetForUpload,
         Seq: SeqForUpload,
         SeqTaxonomy: SeqTaxonomy,
@@ -248,7 +248,7 @@ class SampleForUpload(Sample, ForUploadMixin):
         AstMeasurement: AstMeasurement,
     }
 
-    MODEL_DATA_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+    CHILD_MODEL_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
         ReadSetForUpload: "read_sets",
         SeqForUpload: "seqs",
         SeqTaxonomy: "seq_taxonomies",
@@ -342,7 +342,7 @@ class SampleForUpload(Sample, ForUploadMixin):
         # If sample has NULL_ID, then associated items can have any sample_id
         if self.id is not None and self.id != NULL_ID:
             sample_id = self.id
-            for field_name in self.MODEL_DATA_FIELD_NAME_MAP.values():
+            for field_name in self.CHILD_MODEL_FIELD_NAME_MAP.values():
                 items = getattr(self, field_name)
                 for item in items or []:
                     if item.sample_id != NULL_ID and item.sample_id != sample_id:
@@ -366,7 +366,7 @@ class SampleUploadResult(UploadResult):
     ]
     SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
         "external_ids",
-    ] + list(SampleForUpload.MODEL_DATA_FIELD_NAME_MAP.values())
+    ] + list(SampleForUpload.CHILD_MODEL_FIELD_NAME_MAP.values())
 
     sample: UploadResult | None = Field(
         default=None,
