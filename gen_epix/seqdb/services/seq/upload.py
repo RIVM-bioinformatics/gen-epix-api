@@ -1,7 +1,7 @@
-from typing import Any, Callable
+from typing import Any
 
-from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult, UploadResult
-from gen_epix.fastapp.service import BaseService
+from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.commondb.services.upload import upload_batch
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
@@ -159,75 +159,3 @@ def _upsert_batch(
     success &= _upsert_batch_update_sample_children(self, cmd, retval, uow)
 
     return success
-
-
-def upload_batch(
-    self: BaseService,
-    cmd: command.Command,
-    verify_user_rights_fn: Callable[[BaseService, command.Command], None],
-    init_retval_fn: Callable[[command.Command], BaseBatchUploadResult],
-    verify_batch_fn: Callable[
-        [BaseService, command.Command, BaseBatchUploadResult, BaseUnitOfWork], bool
-    ],
-    upsert_batch_fn: Callable[
-        [BaseService, command.Command, BaseBatchUploadResult, BaseUnitOfWork], bool
-    ],
-) -> BaseBatchUploadResult:
-    """
-    See command.UploadSamplesCommand for details.
-    """
-    #  Check user rights
-    verify_user_rights_fn(self, cmd)
-
-    # Initialize the upload result
-    retval = init_retval_fn(cmd)
-    retval.add_info(
-        code="f1e2d3c4",
-        message="Upload started",
-    )
-
-    with self.repository.uow() as uow:
-        # Verify batch
-        retval.add_info(
-            code="8b4c2f91",
-            message="Verification started",
-        )
-        success = verify_batch_fn(self, cmd, retval, uow)
-        retval.add_info(
-            code="a3f7e9d2",
-            message="Verification ended",
-        )
-        if not success:
-            # Do not proceed with upsert due to errors
-            retval.add_info(
-                code="d6e5c3b4",
-                message="Verification found errors, upload will not proceed",
-            )
-            return retval
-
-        # Upsert the batch data
-        retval.add_info(
-            code="c1a2b3d4",
-            message="Upsert started",
-        )
-        success = upsert_batch_fn(self, cmd, retval, uow)
-        retval.add_info(
-            code="e4f5a6b7",
-            message="Upsert ended",
-        )
-        if not success:
-            # Rollback due to errors, but do not raise an exception since those will be reported in retval
-            retval.add_info(
-                code="f8e7d6c5",
-                message="Upload had errors, rolling back changes",
-            )
-            uow.rollback()
-            retval.add_info(
-                code="b2c3d4e5",
-                message="Upload had errors, changes have been rolled back",
-            )
-    retval.add_info(
-        code="7b9e4a2f",
-        message="Upload ended",
-    )
-    return retval
