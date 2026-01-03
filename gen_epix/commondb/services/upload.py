@@ -110,7 +110,6 @@ def upload_batch(
 def verify_external_identifiers(
     self: BaseService,
     cmd: command.Command,
-    retval: BaseBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
     parent_model_class: type[model.Model],
     parent_for_upload_model_class: type[model.Model],
@@ -154,33 +153,27 @@ def verify_external_identifiers(
     # This leaves the possibility that the same external identifier for a
     # different identifier issuer is retrieved: this is addressed after
     # retrieval, allowing a straightforward filter here
-    existing_external_identifiers: list[model.ExternalIdentifier] = (
-        self.app.handle(  # type:ignore[assignment]
-            command.ExternalIdentifierCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.READ_ALL,
-                query_filter=CompositeFilter(
-                    operator=LogicalOperator.AND,
-                    filters=[
-                        EqualsNumberFilter(
-                            key="identifier_type",
-                            value=parent_identifier_type.value,
-                        ),
-                        UuidSetFilter(
-                            key="identifier_issuer_id",
-                            members=frozenset(
-                                {x[0] for x in external_identifier_tuples}
-                            ),
-                        ),
-                        StringSetFilter(
-                            key="external_id",
-                            members=frozenset(
-                                {x[1] for x in external_identifier_tuples}
-                            ),
-                        ),
-                    ],
-                ),
-            )
+    existing_external_identifiers: list[model.ExternalIdentifier] = self.app.handle(
+        command.ExternalIdentifierCrudCommand(
+            user=cmd.user,
+            operation=CrudOperation.READ_ALL,
+            query_filter=CompositeFilter(
+                operator=LogicalOperator.AND,
+                filters=[
+                    EqualsNumberFilter(
+                        key="identifier_type",
+                        value=parent_identifier_type.value,
+                    ),
+                    UuidSetFilter(
+                        key="identifier_issuer_id",
+                        members=frozenset({x[0] for x in external_identifier_tuples}),
+                    ),
+                    StringSetFilter(
+                        key="external_id",
+                        members=frozenset({x[1] for x in external_identifier_tuples}),
+                    ),
+                ],
+            ),
         )
     )
     existing_external_identifier_map: dict[
@@ -193,13 +186,10 @@ def verify_external_identifiers(
     # Verify external IDs for each parent
     for parent, parent_result in zip(parents, parent_results):
         external_identifiers: list[model.ExternalIdentifier] = (
-            getattr(parent, external_identifiers_field_name) or []  # type: ignore[attr-defined]
+            getattr(parent, external_identifiers_field_name) or []
         )
         external_identifier_results: list[UploadResult] = (
-            getattr(  # type: ignore[attr-defined]
-                parent_result, external_identifiers_field_name
-            )
-            or []
+            getattr(parent_result, external_identifiers_field_name) or []
         )
         for external_identifier, external_identifier_result in zip(
             external_identifiers, external_identifier_results
@@ -655,7 +645,7 @@ def create_parents(
     user_id = cmd.user.id if cmd.user else None
 
     # Determine which parents need to be created
-    to_create_parent_result_pairs = [
+    to_create_parent_result_pairs: list[tuple[model.Model, model.UploadResult]] = [
         (x, y)
         for x, y in zip(parents, parent_results)
         if (x.id is None or x.id == NULL_ID or x.is_new_id)  # type: ignore[attr-defined]
@@ -664,28 +654,15 @@ def create_parents(
     if not to_create_parent_result_pairs:
         return True
 
-    # Create samples
+    # Create parents
     create_objects(
         self,
         uow,
         user_id,
         parent_model_class,
-        to_create_parent_result_pairs,  # type:ignore[arg-type]
+        to_create_parent_result_pairs,
     )
 
-    return True
-
-
-def create_external_identifiers(
-    self: BaseService,
-    cmd: command.Command,
-    uow: BaseUnitOfWork,
-    external_identifier_class: type[model.Model],
-    parents: list[model.Model],
-    parent_results: list[model.UploadResult],
-    external_identifiers_field_name: str = "external_identifiers",
-) -> bool:
-    # TODO
     return True
 
 
@@ -705,7 +682,7 @@ def update_parents(
     success = True
 
     # Determine which parents need to be updated
-    to_update_parent_result_pairs = [
+    to_update_parent_result_pairs: list[tuple[model.Model, model.UploadResult]] = [
         (x, y)
         for x, y in zip(parents, parent_results)
         if x.id is not None
@@ -722,7 +699,7 @@ def update_parents(
         user_id,
         parent_model_class,
         stored_model_field_props,
-        to_update_parent_result_pairs,  # type:ignore[arg-type]
+        to_update_parent_result_pairs,
     )
 
     return success
@@ -766,7 +743,7 @@ def create_children(
                     child.id is None or child.id == NULL_ID
                 ) and child_result.status == UploadStatus.PENDING:
                     # Set parent ID link in child, which is known for certain at this point
-                    setattr(child, parent_link_id_field_name, parent.id)  # type: ignore[attr-defined]
+                    setattr(child, parent_link_id_field_name, parent.id)
                     # Collect for creation
                     to_create_child_result_pairs.append((child, child_result))
         if not to_create_child_result_pairs:
@@ -826,7 +803,7 @@ def update_children(
                     and child_result.status == UploadStatus.PENDING
                 ):
                     # Set parent ID link in child, which is known for certain at this point
-                    setattr(child, parent_link_id_field_name, parent.id)  # type: ignore[attr-defined]
+                    setattr(child, parent_link_id_field_name, parent.id)
                     # Collect for update
                     to_update_child_result_pairs.append((child, child_result))
         if not to_update_child_result_pairs:
@@ -840,6 +817,73 @@ def update_children(
             stored_model_field_props[model_class],
             to_update_child_result_pairs,
         )
+    return success
+
+
+def create_external_identifiers(
+    self: BaseService,
+    cmd: command.Command,
+    identifier_type: IdentifierType,
+    parents: list[model.Model],
+    parent_results: list[model.UploadResult],
+    external_identifiers_field_name: str = "external_identifiers",
+) -> bool:
+    success = True
+
+    # Determine which external identifiers need to be created and derive actual model from for upload version
+    to_create_external_identifier_result_pairs: list[
+        tuple[model.ExternalIdentifier, model.UploadResult]
+    ] = []
+    for parent, parent_result in zip(parents, parent_results):
+        external_identifiers_for_upload: list[model.ExternalIdentifierForUpload] = (
+            getattr(parent, external_identifiers_field_name) or []
+        )
+        external_identifier_results: list[UploadResult] = (
+            getattr(parent_result, external_identifiers_field_name) or []
+        )
+        for external_identifier_for_upload, external_identifier_result in zip(
+            external_identifiers_for_upload, external_identifier_results
+        ):
+            if external_identifier_result.status != UploadStatus.PENDING:
+                # Not pending (likely skipped or failed), no need to create
+                continue
+            external_identifier = model.ExternalIdentifier(
+                id=None,
+                internal_id=parent.id,  # type: ignore[arg-type]
+                identifier_type=identifier_type,
+                identifier_issuer_id=external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
+                external_id=external_identifier_for_upload.external_id,
+            )
+            to_create_external_identifier_result_pairs.append(
+                (external_identifier, external_identifier_result)
+            )
+    if not to_create_external_identifier_result_pairs:
+        return success
+
+    # Create external identifiers
+    external_identifiers = [x[0] for x in to_create_external_identifier_result_pairs]
+    external_identifier_results = [
+        x[1] for x in to_create_external_identifier_result_pairs
+    ]
+    external_identifier_crud_command_class = self.app.domain.get_crud_command_for_model(
+        model.ExternalIdentifier
+    )
+    create_cmd = external_identifier_crud_command_class(
+        user=cmd.user,
+        operation=CrudOperation.CREATE_SOME,
+        objs=external_identifiers,  # type: ignore[arg-type]
+    )
+    created_external_identifiers: list[model.ExternalIdentifier] = self.app.handle(
+        create_cmd
+    )  # type:ignore[assignment]
+
+    # Update results
+    for created_external_identifier, external_identifier_result in zip(
+        created_external_identifiers, external_identifier_results
+    ):
+        external_identifier_result.id = created_external_identifier.id
+        external_identifier_result.status = UploadStatus.CREATED
+
     return success
 
 

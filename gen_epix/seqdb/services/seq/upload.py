@@ -7,6 +7,7 @@ from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_upsert_batch import (
     _upsert_batch_create_sample_children,
+    _upsert_batch_create_sample_external_identifiers,
     _upsert_batch_create_sample_refdata,
     _upsert_batch_create_samples,
     _upsert_batch_update_sample_children,
@@ -156,5 +157,7 @@ def _upsert_batch(
     # Upsert child models
     success &= _upsert_batch_create_sample_children(self, cmd, retval, uow)
     success &= _upsert_batch_update_sample_children(self, cmd, retval, uow)
+    # Create external identifiers
+    success &= _upsert_batch_create_sample_external_identifiers(self, cmd, retval, uow)
 
     return success

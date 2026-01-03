@@ -50,7 +50,6 @@ def _verify_batch_sample_external_identifiers(
     return verify_external_identifiers(
         self,
         cmd,
-        retval,
         uow,
         model.Sample,
         model.SampleForUpload,

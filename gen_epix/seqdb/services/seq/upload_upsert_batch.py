@@ -1,5 +1,7 @@
+from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.services.upload import (
     create_children,
+    create_external_identifiers,
     create_parents,
     update_children,
     update_parents,
@@ -107,6 +109,22 @@ def _upsert_batch_update_sample_children(
         model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
         model.SampleForUpload,
         "sample_id",
+        cmd.sample_batch.samples,  # type: ignore[arg-type]
+        retval.samples,  # type: ignore[arg-type]
+    )
+
+
+def _upsert_batch_create_sample_external_identifiers(
+    self: BaseSeqService,
+    cmd: command.UploadSamplesCommand,
+    retval: model.SampleBatchUploadResult,
+    uow: BaseUnitOfWork,
+) -> bool:
+    """Create external identifiers for samples."""
+    return create_external_identifiers(
+        self,
+        cmd,
+        IdentifierType.SAMPLE,
         cmd.sample_batch.samples,  # type: ignore[arg-type]
         retval.samples,  # type: ignore[arg-type]
     )

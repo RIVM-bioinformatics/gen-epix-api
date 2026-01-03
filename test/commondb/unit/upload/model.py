@@ -17,6 +17,7 @@ from gen_epix.commondb.domain.model.upload import (
 )
 from gen_epix.commondb.services.upload import (
     create_children,
+    create_external_identifiers,
     create_parents,
     update_children,
     update_parents,
@@ -372,7 +373,6 @@ def verify_batch(
     success &= verify_external_identifiers(
         service,
         cmd,
-        retval,
         uow,
         Parent,
         ParentForUpload,
@@ -457,6 +457,17 @@ def upsert_batch(
         STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
         ParentForUpload,
         "parent_id",
+        cmd.parent_batch.parents,  # type: ignore[arg-type]
+        retval.parents,  # type: ignore[arg-type]
+    )
+
+    # Create external identifiers last to preserve atomicity without two-phase commit:
+    # if there were any errors after this and a rollback is therefore needed, the
+    # external identifiers could otherwise have already been changed in the meantime
+    success &= create_external_identifiers(
+        service,
+        cmd,
+        IdentifierType.PERSON,
         cmd.parent_batch.parents,  # type: ignore[arg-type]
         retval.parents,  # type: ignore[arg-type]
     )
