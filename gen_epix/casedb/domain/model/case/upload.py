@@ -61,7 +61,9 @@ class ReadSetForUpload(SeqdbReadSetForUpload):
         description="The external identifier of the sample in seqdb that the read set is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
     sample: Sample | None = copy_model_field(SeqdbSeqForUpload, "sample")
-    sequencing_protocol: SequencingProtocol | None = copy_model_field(SeqdbReadSetForUpload, "sequencing_protocol")
+    sequencing_protocol: SequencingProtocol | None = copy_model_field(
+        SeqdbReadSetForUpload, "sequencing_protocol"
+    )
 
     @model_validator(mode="after")
     def _validate_read_set_for_upload(self) -> Self:
@@ -106,7 +108,9 @@ class SeqForUpload(SeqdbSeqForUpload):
         description="The external identifier of the sample in seqdb that the sequence is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
     sample: Sample | None = copy_model_field(SeqdbSeqForUpload, "sample")
-    assembly_protocol: AssemblyProtocol | None = copy_model_field(SeqdbSeqForUpload, "assembly_protocol")
+    assembly_protocol: AssemblyProtocol | None = copy_model_field(
+        SeqdbSeqForUpload, "assembly_protocol"
+    )
     read_set: ReadSet | None = copy_model_field(SeqdbSeqForUpload, "read_set")
     read_set2: ReadSet | None = copy_model_field(SeqdbSeqForUpload, "read_set2")
 
@@ -140,7 +144,7 @@ class CaseForUpload(Case):
     }
 
     # Case level data
-    external_ids: list[ExternalIdentifierForUpload] | None = Field(
+    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="The external identifiers associated with the case, if available.",
     )
@@ -163,7 +167,7 @@ class CaseForUpload(Case):
         description="The sequences to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different case type column.",
     )
 
-    @field_validator("external_ids", "data_collection_ids", mode="after")
+    @field_validator("external_identifiers", "data_collection_ids", mode="after")
     def _validate_associated_ids(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
@@ -175,11 +179,11 @@ class CaseForUpload(Case):
 
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
-        # Verify that external_ids contains no duplicates
-        if self.external_ids is not None and len(self.external_ids) != len(
-            set(self.external_ids)
-        ):
-            raise ValueError("external_ids must not contain duplicates.")
+        # Verify that external_identifiers contains no duplicates
+        if self.external_identifiers is not None and len(
+            self.external_identifiers
+        ) != len(set(self.external_identifiers)):
+            raise ValueError("external_identifiers may not contain duplicates.")
         # Verify that has_content is consistent with content
         if not self.has_content and self.content:
             raise ValueError(
@@ -239,11 +243,11 @@ class CaseUploadResult(UploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "CaseUploadResult"
 
-    SUB_RESULT_FIELD_NAMES: ClassVar = [
+    CHILD_RESULT_FIELD_NAMES: ClassVar = [
         "case_result",
     ]
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
-        "external_id_results",
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = [
+        "external_identifier_results",
         "data_collection_id_results",
         "read_set_results",
         "seq_results",
@@ -253,7 +257,7 @@ class CaseUploadResult(UploadResult):
         default=None,
         description="The result of uploading or matching the case itself.",
     )
-    external_id_results: list[UploadResult] | None = Field(
+    external_identifier_results: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading or matching the external identifiers associated with the case, if any were provided, in the same order as provided.",
     )
@@ -287,13 +291,13 @@ class CaseBatchForUpload(BaseBatchForUpload):
         case_ids = [x.id for x in self.cases if x.id is not None]
         if len(case_ids) != len(set(case_ids)):
             raise ValueError("cases must not contain duplicate case IDs.")
-        # Verify that cases contains no duplicate external_ids
-        all_external_ids = []
+        # Verify that cases contains no duplicate external identifiers
+        all_external_identifiers = []
         for case in self.cases:
-            if case.external_ids is not None:
-                all_external_ids.extend(case.external_ids)
-        if len(all_external_ids) != len(set(all_external_ids)):
-            raise ValueError("cases must not contain duplicate external_ids.")
+            if case.external_identifiers is not None:
+                all_external_identifiers.extend(case.external_identifiers)
+        if len(all_external_identifiers) != len(set(all_external_identifiers)):
+            raise ValueError("cases must not contain duplicate external identifiers.")
         return self
 
     @computed_field

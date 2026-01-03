@@ -34,7 +34,7 @@ from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_allele_profiles,
     _verify_batch_sample_children,
     _verify_batch_sample_existence,
-    _verify_batch_sample_external_ids,
+    _verify_batch_sample_external_identifiers,
     _verify_batch_seqs,
 )
 
@@ -133,7 +133,7 @@ class TestSeqServiceUploadSamples(TestCase):
                 return_value=True,
             ),
             patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_external_ids",
+                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_external_identifiers",
                 return_value=True,
             ),
             patch(
@@ -373,7 +373,7 @@ class TestInitializeUploadResult(TestCase):
         self.assertEqual(sample_result.status, UploadStatus.PENDING)
 
         # All list fields should be None (no data provided)
-        self.assertIsNone(sample_result.external_ids)
+        self.assertIsNone(sample_result.external_identifiers)
         self.assertIsNone(sample_result.read_sets)
         self.assertIsNone(sample_result.seqs)
         self.assertIsNone(sample_result.seq_taxonomies)
@@ -397,7 +397,7 @@ class TestInitializeUploadResult(TestCase):
             id=sample_id,
             created_in_data_collection_id=self.data_collection_id,
             props={"key": "value"},  # Sample has props
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_code="TEST_ISSUER", external_id="TEST_ID_1"
                 ),
@@ -472,14 +472,14 @@ class TestInitializeUploadResult(TestCase):
         # Type guard: sample_result.sample_result is not None after the assertion above
         self.assertEqual(sample_result.status, UploadStatus.PENDING)
 
-        # Verify external ID results (2 items)
-        self.assertIsNotNone(sample_result.external_ids)
-        # Type guard: external_id_results is not None after the assertion above
-        assert sample_result.external_ids is not None
-        self.assertEqual(len(sample_result.external_ids), 2)
-        for ext_id_result in sample_result.external_ids:
-            self.assertIsInstance(ext_id_result, UploadResult)
-            self.assertEqual(ext_id_result.status, UploadStatus.PENDING)
+        # Verify external identifier results (2 items)
+        self.assertIsNotNone(sample_result.external_identifiers)
+        # Type guard: external identifier results is not None after the assertion above
+        assert sample_result.external_identifiers is not None
+        self.assertEqual(len(sample_result.external_identifiers), 2)
+        for external_identifier_result in sample_result.external_identifiers:
+            self.assertIsInstance(external_identifier_result, UploadResult)
+            self.assertEqual(external_identifier_result.status, UploadStatus.PENDING)
 
         # Verify read set results (3 items)
         self.assertIsNotNone(sample_result.read_sets)
@@ -541,7 +541,7 @@ class TestInitializeUploadResult(TestCase):
         sample1 = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_code="TEST", external_id="SAMPLE_1"
                 )
@@ -580,17 +580,17 @@ class TestInitializeUploadResult(TestCase):
         self.assertEqual(result.status, UploadStatus.PENDING)
         self.assertEqual(len(result.samples), 3)
 
-        # Verify sample1 results (has external_ids)
+        # Verify sample1 results (has external_identifiers)
         sample1_result = result.samples[0]
-        self.assertIsNotNone(sample1_result.external_ids)
-        # Type guard: external_id_results is not None after the assertion above
-        assert sample1_result.external_ids is not None
-        self.assertEqual(len(sample1_result.external_ids), 1)
+        self.assertIsNotNone(sample1_result.external_identifiers)
+        # Type guard: external_identifier_results is not None after the assertion above
+        assert sample1_result.external_identifiers is not None
+        self.assertEqual(len(sample1_result.external_identifiers), 1)
         self.assertIsNone(sample1_result.seqs)
 
         # Verify sample2 results (has seqs)
         sample2_result = result.samples[1]
-        self.assertIsNone(sample2_result.external_ids)
+        self.assertIsNone(sample2_result.external_identifiers)
         self.assertIsNotNone(sample2_result.seqs)
         # Type guard: seq_results is not None after the assertion above
         assert sample2_result.seqs is not None
@@ -598,7 +598,7 @@ class TestInitializeUploadResult(TestCase):
 
         # Verify sample3 results (has props)
         sample3_result = result.samples[2]
-        self.assertIsNone(sample3_result.external_ids)
+        self.assertIsNone(sample3_result.external_identifiers)
         self.assertIsNone(sample3_result.seqs)
 
     def test_empty_lists_vs_none_distinction(self) -> None:
@@ -610,7 +610,7 @@ class TestInitializeUploadResult(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[],  # Empty list
+            external_identifiers=[],  # Empty list
             read_sets=[],  # Empty list
             seqs=None,  # Explicitly None
         )
@@ -624,10 +624,10 @@ class TestInitializeUploadResult(TestCase):
         sample_result = result.samples[0]
 
         # Empty lists should result in empty result lists
-        self.assertIsNotNone(sample_result.external_ids)
-        # Type guard: external_id_results is not None after the assertion above
-        assert sample_result.external_ids is not None
-        self.assertEqual(len(sample_result.external_ids), 0)
+        self.assertIsNotNone(sample_result.external_identifiers)
+        # Type guard: external_identifier_results is not None after the assertion above
+        assert sample_result.external_identifiers is not None
+        self.assertEqual(len(sample_result.external_identifiers), 0)
 
         self.assertIsNotNone(sample_result.read_sets)
         # Type guard: read_set_results is not None after the assertion above
@@ -645,7 +645,7 @@ class TestInitializeUploadResult(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_code="TEST", external_id="ID1"
                 ),
@@ -664,11 +664,11 @@ class TestInitializeUploadResult(TestCase):
         sample_result = result.samples[0]
 
         # Verify that each UploadResult reflects the source object's ID
-        self.assertIsNotNone(sample_result.external_ids)
-        # Type guard: external_id_results is not None after the assertion above
-        assert sample_result.external_ids is not None
-        upload_result1 = sample_result.external_ids[0]
-        upload_result2 = sample_result.external_ids[1]
+        self.assertIsNotNone(sample_result.external_identifiers)
+        # Type guard: external_identifier_results is not None after the assertion above
+        assert sample_result.external_identifiers is not None
+        upload_result1 = sample_result.external_identifiers[0]
+        upload_result2 = sample_result.external_identifiers[1]
 
         # ExternalIdentifierForUpload objects don't have an id field, so UploadResult id should be None
         self.assertIsNone(upload_result1.id)
@@ -886,12 +886,14 @@ class TestVerifyBatch(TestCase):
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_external_ids,
+            _verify_batch_sample_external_identifiers,
         )
 
         uow = Mock()
 
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Should succeed with no external IDs
         self.assertTrue(result)
@@ -901,7 +903,7 @@ class TestVerifyBatch(TestCase):
         batch_id = uuid4()
         sample = model.SampleForUpload(
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_code="TEST", external_id="SAMPLE_1"
                 )
@@ -924,12 +926,14 @@ class TestVerifyBatch(TestCase):
 
         # Import the function and test it
         from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_external_ids,
+            _verify_batch_sample_external_identifiers,
         )
 
         uow = Mock()
 
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Should succeed
         self.assertTrue(result)
@@ -1089,7 +1093,7 @@ class TestVerifyBatchSampleExistence(TestCase):
 
 
 class TestVerifyBatchExternalIds(TestCase):
-    """Test the _verify_batch_external_ids function."""
+    """Test the _verify_batch_external_identifiers function."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -1112,7 +1116,7 @@ class TestVerifyBatchExternalIds(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_id=issuer_id, external_id="TEST_ID"
                 )
@@ -1121,9 +1125,10 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        external_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[external_id_result]
+            status=UploadStatus.PENDING,
+            external_identifiers=[external_identifier_result],
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1137,13 +1142,15 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Verify
         self.assertFalse(result)
-        # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertTrue(external_id_result.has_errors())
-        self.assertTrue(external_id_result.has_log_code("b9e4f7c2"))
+        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
+        self.assertTrue(external_identifier_result.has_errors())
+        self.assertTrue(external_identifier_result.has_log_code("b9e4f7c2"))
 
     def test_identifier_issuer_code_does_not_exist(self) -> None:
         """Test error when identifier issuer code does not exist."""
@@ -1151,7 +1158,7 @@ class TestVerifyBatchExternalIds(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_id=uuid4(),  # Provide an ID to avoid None in UuidSetFilter
                     identifier_issuer_code="INVALID_CODE",
@@ -1162,9 +1169,10 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        external_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[external_id_result]
+            status=UploadStatus.PENDING,
+            external_identifiers=[external_identifier_result],
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1178,18 +1186,20 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Verify
         self.assertFalse(result)
-        # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertTrue(external_id_result.has_errors())
+        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
+        self.assertTrue(external_identifier_result.has_errors())
         # Should contain both ID and code not exist errors
         self.assertTrue(
-            external_id_result.has_log_code("b9e4f7c2")
+            external_identifier_result.has_log_code("b9e4f7c2")
         )  # ID does not exist
         self.assertTrue(
-            external_id_result.has_log_code("c7a9b2e4")
+            external_identifier_result.has_log_code("c7a9b2e4")
         )  # Code does not exist
 
     def test_identifier_issuer_id_code_mismatch(self) -> None:
@@ -1200,7 +1210,7 @@ class TestVerifyBatchExternalIds(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_id=issuer_id,
                     identifier_issuer_code="TEST_CODE",
@@ -1211,9 +1221,10 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        external_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[external_id_result]
+            status=UploadStatus.PENDING,
+            external_identifiers=[external_identifier_result],
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1233,14 +1244,16 @@ class TestVerifyBatchExternalIds(TestCase):
         uow = Mock()
 
         # Execute
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Verify
         self.assertFalse(result)
-        # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertTrue(external_id_result.has_errors())
+        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
+        self.assertTrue(external_identifier_result.has_errors())
         # The ID doesn't exist in our mock, so we get "ID does not exist" error instead of mismatch
-        self.assertTrue(external_id_result.has_log_code("a4d7b9c3"))
+        self.assertTrue(external_identifier_result.has_log_code("a4d7b9c3"))
 
     def test_external_id_sample_id_mismatch(self) -> None:
         """Test error when external ID maps to different sample ID."""
@@ -1252,7 +1265,7 @@ class TestVerifyBatchExternalIds(TestCase):
         sample = model.SampleForUpload(
             id=sample_id,
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_id=issuer_id, external_id="TEST_ID"
                 )
@@ -1261,9 +1274,10 @@ class TestVerifyBatchExternalIds(TestCase):
         sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
 
-        external_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[external_id_result]
+            status=UploadStatus.PENDING,
+            external_identifiers=[external_identifier_result],
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1273,7 +1287,7 @@ class TestVerifyBatchExternalIds(TestCase):
         existing_identifier_issuer = model.IdentifierIssuer(
             id=issuer_id, code="TEST_CODE", name="Test Issuer"
         )
-        existing_external_id = model.ExternalIdentifier(
+        existing_external_identifier = model.ExternalIdentifier(
             id=uuid4(),
             identifier_type=IdentifierType.SAMPLE,
             identifier_issuer_id=issuer_id,
@@ -1284,18 +1298,20 @@ class TestVerifyBatchExternalIds(TestCase):
         self.service.app = Mock()
         self.service.app.handle.side_effect = [
             [existing_identifier_issuer],
-            [existing_external_id],
+            [existing_external_identifier],
         ]
 
         # Execute
         uow = Mock()
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Verify
         self.assertFalse(result)
-        # Check that error was added to external_id_result (code is passed as message in upload.py)
-        self.assertTrue(external_id_result.has_errors())
-        self.assertTrue(external_id_result.has_log_code("f8a9b0c1"))
+        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
+        self.assertTrue(external_identifier_result.has_errors())
+        self.assertTrue(external_identifier_result.has_log_code("f8a9b0c1"))
 
     def test_external_id_exists_with_error_on_exists(self) -> None:
         """Test error when external ID exists and on_exists=ERROR."""
@@ -1305,7 +1321,7 @@ class TestVerifyBatchExternalIds(TestCase):
         sample = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
-            external_ids=[
+            external_identifiers=[
                 ExternalIdentifierForUpload(
                     identifier_issuer_id=identifier_issuer_id, external_id="TEST_ID"
                 )
@@ -1318,9 +1334,10 @@ class TestVerifyBatchExternalIds(TestCase):
             on_exists=OnExistsUploadAction.ERROR,
         )
 
-        external_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[external_id_result]
+            status=UploadStatus.PENDING,
+            external_identifiers=[external_identifier_result],
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
@@ -1330,7 +1347,7 @@ class TestVerifyBatchExternalIds(TestCase):
         existing_identifier_issuer = model.IdentifierIssuer(
             id=identifier_issuer_id, code="TEST_CODE", name="Test Issuer"
         )
-        existing_external_id = model.ExternalIdentifier(
+        existing_external_identifier = model.ExternalIdentifier(
             id=uuid4(),
             identifier_type=IdentifierType.SAMPLE,
             identifier_issuer_id=identifier_issuer_id,
@@ -1341,12 +1358,14 @@ class TestVerifyBatchExternalIds(TestCase):
         self.service.app = Mock()
         self.service.app.handle.side_effect = [
             [existing_identifier_issuer],
-            [existing_external_id],
+            [existing_external_identifier],
         ]
 
         # Execute
         uow = Mock()
-        result = _verify_batch_sample_external_ids(self.service, cmd, retval, uow)
+        result = _verify_batch_sample_external_identifiers(
+            self.service, cmd, retval, uow
+        )
 
         # Verify
         self.assertFalse(result)

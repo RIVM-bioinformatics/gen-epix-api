@@ -10,7 +10,7 @@ from gen_epix.commondb.domain.enum import (
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services.upload import (
     verify_child_existence,
-    verify_external_ids,
+    verify_external_identifiers,
     verify_link_id,
     verify_parent_existence,
 )
@@ -40,14 +40,14 @@ def _verify_batch_sample_existence(
     )
 
 
-def _verify_batch_sample_external_ids(
+def _verify_batch_sample_external_identifiers(
     self: BaseSeqService,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
-    """Retrieve and verify identifier issuers in external IDs"""
-    return verify_external_ids(
+    """Verify sample external identifiers"""
+    return verify_external_identifiers(
         self,
         cmd,
         retval,

@@ -264,7 +264,7 @@ class SampleForUpload(Sample, ForUploadMixin):
     }
 
     # Sample level data
-    external_ids: list[ExternalIdentifierForUpload] | None = Field(
+    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="The external identifiers associated with the sample, if available.",
     )
@@ -319,7 +319,7 @@ class SampleForUpload(Sample, ForUploadMixin):
         description="The AST measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
 
-    @field_validator("external_ids", mode="after")
+    @field_validator("external_identifiers", mode="after")
     def _validate_associated_ids(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
@@ -331,11 +331,11 @@ class SampleForUpload(Sample, ForUploadMixin):
 
     @model_validator(mode="after")
     def _validate_sample_for_upload(self) -> Self:
-        # Verify that external_ids contains no duplicates
-        if self.external_ids is not None and len(self.external_ids) != len(
-            set(self.external_ids)
-        ):
-            raise ValueError("external_ids must not contain duplicates.")
+        # Verify that external_identifiers contains no duplicates
+        if self.external_identifiers is not None and len(
+            self.external_identifiers
+        ) != len(set(self.external_identifiers)):
+            raise ValueError("external_identifiers must not contain duplicates.")
         # TODO: verify that each list of results is unique, e.g. no identical read sets
         # Verify that result sample_ids are consistent with sample id
         # If sample has an ID, then associated items must have NULL_ID or the same sample_id
@@ -363,10 +363,10 @@ class SampleUploadResult(UploadResult):
 
     CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
     CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
-        "external_ids",
+        "external_identifiers",
     ] + list(SampleForUpload.CHILD_MODEL_FIELD_NAME_MAP.values())
 
-    external_ids: list[UploadResult] | None = Field(
+    external_identifiers: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
     )
@@ -518,13 +518,13 @@ class SampleBatchForUpload(BaseBatchForUpload):
         sample_ids = [x.id for x in self.samples if x.id is not None]
         if len(sample_ids) != len(set(sample_ids)):
             raise ValueError("Samples must not contain duplicate sample IDs.")
-        # Verify that samples contains no duplicate external_ids
-        all_external_ids = []
+        # Verify that samples contains no duplicate external_identifiers
+        all_external_identifiers = []
         for sample in self.samples:
-            if sample.external_ids is not None:
-                all_external_ids.extend(sample.external_ids)
-        if len(all_external_ids) != len(set(all_external_ids)):
-            raise ValueError("Samples must not contain duplicate external_ids.")
+            if sample.external_identifiers is not None:
+                all_external_identifiers.extend(sample.external_identifiers)
+        if len(all_external_identifiers) != len(set(all_external_identifiers)):
+            raise ValueError("Samples must not contain duplicate external_identifiers.")
         return self
 
 

@@ -633,13 +633,13 @@ class TestCaseUpload(CaseUploadSetup):
             if value is not None:
                 case_content[case_type_col_id] = value
         # Add read sets and seqs if applicable
-        external_id: commondb_model.ExternalIdentifierForUpload | None = None
+        external_identifier: commondb_model.ExternalIdentifierForUpload | None = None
         if found_read_set_case_type_col_ids or found_seq_case_type_col_ids:
             # Get external identifier if applicable
             identifier_issuer_id = UUID(row["seqdb.identifier_issuer_id"])
             sample_id_case_type_col_id = UUID(row["seqdb.sample_id_case_type_col_id"])
             sample_id = case_content.get(sample_id_case_type_col_id)
-            external_id = (
+            external_identifier = (
                 commondb_model.ExternalIdentifierForUpload(
                     identifier_issuer_id=identifier_issuer_id, external_id=sample_id
                 )
@@ -654,7 +654,7 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets.append(
                     model.ReadSetForUpload(
                         case_type_col_id=case_type_col_id,
-                        external_sample_id=external_id,
+                        external_sample_id=external_identifier,
                         sequencing_protocol_id=sequencing_protocol_id,
                     )
                 )
@@ -662,7 +662,7 @@ class TestCaseUpload(CaseUploadSetup):
                 seqs.append(
                     model.SeqForUpload(
                         case_type_col_id=case_type_col_id,
-                        external_sample_id=external_id,
+                        external_sample_id=external_identifier,
                         assembly_protocol_id=assembly_protocol_id,
                     )
                 )
@@ -672,7 +672,9 @@ class TestCaseUpload(CaseUploadSetup):
                 id=row["case.id"],
                 case_type_id=row["case.case_type_id"],
                 created_in_data_collection_id=row["case.created_in_data_collection_id"],
-                external_ids=None if external_id is None else [external_id],
+                external_identifiers=(
+                    None if external_identifier is None else [external_identifier]
+                ),
                 read_sets=read_sets,
                 seqs=seqs,
                 code=row["case.code"],

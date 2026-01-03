@@ -297,7 +297,7 @@ class PersonForUpload(Person, ForUploadMixin):
         default=NULL_ID,
         description="The id of the person, if available. If not, it must be filled with the null ID. Must be present if external_person_ids are not provided.",
     )
-    external_ids: list[ExternalIdentifierForUpload] | None = Field(
+    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
         default=None,
         description="List of external person identifiers. Must have at least one element if person_id is not provided.",
     )
@@ -314,7 +314,7 @@ class PersonForUpload(Person, ForUploadMixin):
     )
     # TODO: add other associated data types when needed
 
-    @field_validator("external_ids", mode="after")
+    @field_validator("external_identifiers", mode="after")
     def _validate_associated_ids(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
@@ -326,11 +326,11 @@ class PersonForUpload(Person, ForUploadMixin):
 
     @model_validator(mode="after")
     def _validate_person_for_upload(self) -> Self:
-        # Verify that external_ids contains no duplicates
-        if self.external_ids is not None and len(self.external_ids) != len(
-            set(self.external_ids)
-        ):
-            raise ValueError("external_ids must not contain duplicates.")
+        # Verify that external identifiers contains no duplicates
+        if self.external_identifiers is not None and len(
+            self.external_identifiers
+        ) != len(set(self.external_identifiers)):
+            raise ValueError("external_identifiers must not contain duplicates.")
         # TODO: verify that each list of results is unique, e.g. no identical measurements
         # Verify that result person_ids are consistent with person id
         person_id = NULL_ID if self.id is None else self.id
@@ -355,10 +355,10 @@ class PersonUploadResult(UploadResult):
 
     CHILD_RESULT_FIELD_NAMES: ClassVar = []
     CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = [
-        "external_id_results",
+        "external_identifiers",
     ] + list(PersonForUpload.MODEL_RESULT_FIELD_NAME_MAP.values())
 
-    external_ids: list[UploadResult] | None = Field(
+    external_identifiers: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the person, if any were provided, in the same order as provided.",
     )
@@ -412,13 +412,13 @@ class PersonBatchForUpload(Model):
         person_ids = [x.id for x in self.persons if x.id is not None]
         if len(person_ids) != len(set(person_ids)):
             raise ValueError("Persons must not contain duplicate person IDs.")
-        # Verify that persons contains no duplicate external_ids
-        all_external_ids = []
+        # Verify that persons contains no duplicate external_identifiers
+        all_external_identifiers = []
         for person in self.persons:
-            if person.external_ids is not None:
-                all_external_ids.extend(person.external_ids)
-        if len(all_external_ids) != len(set(all_external_ids)):
-            raise ValueError("Persons must not contain duplicate external_ids.")
+            if person.external_identifiers is not None:
+                all_external_identifiers.extend(person.external_identifiers)
+        if len(all_external_identifiers) != len(set(all_external_identifiers)):
+            raise ValueError("Persons must not contain duplicate external_identifiers.")
         return self
 
 

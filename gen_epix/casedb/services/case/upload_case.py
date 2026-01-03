@@ -210,7 +210,7 @@ def _get_seqdb_sample(
     sample = seqdb_model.SampleForUpload(
         id=value.sample_id,
         created_in_data_collection_id=created_in_data_collection_id,
-        external_ids=(
+        external_identifiers=(
             None if value.external_sample_id is None else {value.external_sample_id}
         ),
     )

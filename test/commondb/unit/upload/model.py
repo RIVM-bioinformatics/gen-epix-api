@@ -21,7 +21,7 @@ from gen_epix.commondb.services.upload import (
     update_children,
     update_parents,
     verify_child_existence,
-    verify_external_ids,
+    verify_external_identifiers,
     verify_link_id,
     verify_parent_existence,
 )
@@ -195,8 +195,8 @@ class ParentForUpload(Parent, ForUploadMixin):
     z: dict[str, str | None] | None = Field(
         description="An optional dict with values that can be None as well to indicate removal of keys.",
     )
-    external_ids: list[ExternalIdentifierForUpload] | None = Field(
-        default=None, description="External IDs for the Parent model, if any."
+    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
+        default=None, description="External identifiers for the Parent model, if any."
     )
     children1: list[Child1ForUpload] | None = Field(
         default=None,
@@ -217,12 +217,12 @@ class ParentBatchForUpload(BaseBatchForUpload):
 class ParentUploadResult(UploadResult):
     CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
     CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
-        "external_ids",
+        "external_identifiers",
         "children1",
         "children2",
     ]
 
-    external_ids: list[UploadResult] | None = Field(
+    external_identifiers: list[UploadResult] | None = Field(
         default=None, description="List of external ID upload results."
     )
     children1: list[UploadResult] | None = Field(
@@ -347,7 +347,7 @@ def init_retval(
     # TODO: use reflection to reduce boilerplate
     for parent in cmd.parent_batch.parents:
         parent_result = ParentUploadResult(
-            external_ids=_create_child_results(parent.external_ids),
+            external_identifiers=_create_child_results(parent.external_identifiers),
             children1=_create_child_results(parent.children1),
             children2=_create_child_results(parent.children2),
         )
@@ -369,7 +369,7 @@ def verify_batch(
     success = True
 
     # Verify existence and consistency of external IDs
-    success &= verify_external_ids(
+    success &= verify_external_identifiers(
         service,
         cmd,
         retval,

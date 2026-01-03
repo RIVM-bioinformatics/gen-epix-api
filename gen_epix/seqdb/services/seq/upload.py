@@ -15,7 +15,7 @@ from gen_epix.seqdb.services.seq.upload_upsert_batch import (
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_batch_sample_children,
     _verify_batch_sample_existence,
-    _verify_batch_sample_external_ids,
+    _verify_batch_sample_external_identifiers,
     _verify_batch_sample_refdata,
 )
 
@@ -92,7 +92,7 @@ def _init_retval(
     # TODO: use reflection to reduce boilerplate
     for sample in cmd.sample_batch.samples:
         sample_result = model.SampleUploadResult(
-            external_ids=_create_child_results(sample.external_ids),
+            external_identifiers=_create_child_results(sample.external_identifiers),
             read_sets=_create_child_results(sample.read_sets),
             seqs=_create_child_results(sample.seqs),
             seq_taxonomies=_create_child_results(sample.seq_taxonomies),
@@ -126,7 +126,7 @@ def _verify_batch(
     success = True
 
     # Verify existence and consistency of external IDs
-    success &= _verify_batch_sample_external_ids(self, cmd, retval, uow)
+    success &= _verify_batch_sample_external_identifiers(self, cmd, retval, uow)
     # Verify existence of samples by ID
     success &= _verify_batch_sample_existence(self, cmd, retval, uow)
     # Verify existence and consistency of child models as needed

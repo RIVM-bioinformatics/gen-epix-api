@@ -107,7 +107,7 @@ def upload_batch(
     return retval
 
 
-def verify_external_ids(
+def verify_external_identifiers(
     self: BaseService,
     cmd: command.Command,
     retval: BaseBatchUploadResult,
@@ -117,7 +117,7 @@ def verify_external_ids(
     parent_identifier_type: IdentifierType,
     parents: list[model.Model],
     parent_results: list[model.UploadResult],
-    external_ids_field_name: str = "external_ids",
+    external_identifiers_field_name: str = "external_identifiers",
 ) -> bool:
     """Retrieve and verify identifier issuers in external IDs"""
     success = True
@@ -130,7 +130,7 @@ def verify_external_ids(
         parent_for_upload_model_class,
         parents,
         parent_results,
-        external_ids_field_name,
+        external_identifiers_field_name,
         "identifier_issuer_id",
         "identifier_issuer_code",
         model.IdentifierIssuer,
@@ -143,7 +143,7 @@ def verify_external_ids(
         {
             (y.identifier_issuer_id, y.external_id)
             for x in parents
-            for y in x.external_ids or []  # type: ignore[attr-defined]
+            for y in x.external_identifiers or []  # type: ignore[attr-defined]
         }
     )
     if not external_identifier_tuples:
@@ -154,7 +154,7 @@ def verify_external_ids(
     # This leaves the possibility that the same external identifier for a
     # different identifier issuer is retrieved: this is addressed after
     # retrieval, allowing a straightforward filter here
-    existing_external_ids: list[model.ExternalIdentifier] = (
+    existing_external_identifiers: list[model.ExternalIdentifier] = (
         self.app.handle(  # type:ignore[assignment]
             command.ExternalIdentifierCrudCommand(
                 user=cmd.user,
@@ -183,35 +183,40 @@ def verify_external_ids(
             )
         )
     )
-    existing_external_id_map: dict[tuple[UUID, str], model.ExternalIdentifier] = {
-        (x.identifier_issuer_id, x.external_id): x for x in existing_external_ids
+    existing_external_identifier_map: dict[
+        tuple[UUID, str], model.ExternalIdentifier
+    ] = {
+        (x.identifier_issuer_id, x.external_id): x
+        for x in existing_external_identifiers
     }
 
     # Verify external IDs for each parent
     for parent, parent_result in zip(parents, parent_results):
-        external_ids: list[model.ExternalIdentifier] = (
-            getattr(parent, external_ids_field_name) or []  # type: ignore[attr-defined]
+        external_identifiers: list[model.ExternalIdentifier] = (
+            getattr(parent, external_identifiers_field_name) or []  # type: ignore[attr-defined]
         )
-        external_id_results: list[UploadResult] = (
+        external_identifier_results: list[UploadResult] = (
             getattr(  # type: ignore[attr-defined]
-                parent_result, external_ids_field_name
+                parent_result, external_identifiers_field_name
             )
             or []
         )
-        for external_id, external_id_result in zip(external_ids, external_id_results):
-            if external_id_result.status != UploadStatus.PENDING:
+        for external_identifier, external_identifier_result in zip(
+            external_identifiers, external_identifier_results
+        ):
+            if external_identifier_result.status != UploadStatus.PENDING:
                 # Not pending (likely skipped or failed), no need to check existence
                 continue
             key: tuple[UUID, str] = (
-                external_id.identifier_issuer_id,
-                external_id.external_id,
+                external_identifier.identifier_issuer_id,
+                external_identifier.external_id,
             )
-            if key not in existing_external_id_map:
+            if key not in existing_external_identifier_map:
                 continue
             # External ID already exists
-            existing_external_id = existing_external_id_map[key]
-            external_id_result.id = existing_external_id.id
-            external_id_result.status = UploadStatus.SKIPPED
+            existing_external_identifier = existing_external_identifier_map[key]
+            external_identifier_result.id = existing_external_identifier.id
+            external_identifier_result.status = UploadStatus.SKIPPED
             # Cross-validate with parent ID if given and not new ID, otherwise fill in parent ID
             if (
                 parent.id is not None
@@ -219,15 +224,15 @@ def verify_external_ids(
                 and not parent.is_new_id  # type: ignore[attr-defined]
             ):
                 # Parent already exists
-                if existing_external_id.internal_id != parent.id:
+                if existing_external_identifier.internal_id != parent.id:
                     success = False
-                    external_id_result.add_error(
+                    external_identifier_result.add_error(
                         "f8a9b0c1",
-                        f"External identifier {external_id.external_id} refers to {parent_model_class.NAME}.id={existing_external_id.internal_id}, which does not match uploaded {parent_model_class.NAME}.id={parent.id}",
+                        f"External identifier {external_identifier.external_id} refers to {parent_model_class.NAME}.id={existing_external_identifier.internal_id}, which does not match uploaded {parent_model_class.NAME}.id={parent.id}",
                     )
             else:
                 # Parent does not exist yet, fill in parent ID
-                parent.id = existing_external_id.internal_id
+                parent.id = existing_external_identifier.internal_id
                 parent_result.id = parent.id
 
     return success
@@ -671,13 +676,14 @@ def create_parents(
     return True
 
 
-def create_external_links(
+def create_external_identifiers(
     self: BaseService,
     cmd: command.Command,
     uow: BaseUnitOfWork,
-    linked_model_class: type[model.Model],
+    external_identifier_class: type[model.Model],
     parents: list[model.Model],
     parent_results: list[model.UploadResult],
+    external_identifiers_field_name: str = "external_identifiers",
 ) -> bool:
     # TODO
     return True

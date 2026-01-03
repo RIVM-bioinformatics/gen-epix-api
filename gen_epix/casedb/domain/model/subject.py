@@ -7,7 +7,6 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import DataCollection, IdentifierIssuer
 from gen_epix.fastapp.domain import Entity, create_links
@@ -34,7 +33,7 @@ class Subject(Model):
     data_collection: DataCollection | None = Field(
         default=None, description="The data collection"
     )
-    external_ids: dict[IdentifierIssuer, str] | None = Field(
+    external_identifiers: dict[IdentifierIssuer, str] | None = Field(
         default=None, description="A dictionary of external identifiers for the subject"
     )
     content: dict[str, Any] = Field(
