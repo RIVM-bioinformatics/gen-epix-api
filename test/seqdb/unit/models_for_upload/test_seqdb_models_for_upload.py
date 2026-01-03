@@ -722,7 +722,7 @@ class TestModelAlleleProfileForUpload(TestCase):
             [allele_id1, allele_id2]
         )
         self.assertIsNone(allele_profile.locus_code_map_code)
-        self.assertEqual(allele_profile.locus_code_map_id, NULL_ID)
+        self.assertEqual(allele_profile.locus_code_map_id, None)
         self.assertIsNone(allele_profile.allele_ids)
 
     def test_quality_mixin_inheritance(self) -> None:

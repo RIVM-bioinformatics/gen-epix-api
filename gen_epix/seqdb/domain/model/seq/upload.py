@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, field_validator, model_validator
 
+from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import ExternalIdentifierForUpload, Model
 from gen_epix.commondb.domain.model.upload import (
@@ -128,8 +129,8 @@ class AlleleProfileForUpload(AlleleProfile):
         description="The code of the locus set. Must be present if locus_set_id is not present. The use of locus_set_code is meant for situations where the locus_set_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    locus_code_map_id: UUID = Field(
-        default=NULL_ID,
+    locus_code_map_id: UUID | None = Field(
+        default=None,
         description="The id of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_code is not provided and any alleles have locus_code filled in. The use of locus_code_map_id is preferred over locus_code_map_code since the latter may change.",
     )
     locus_code_map_code: str | None = Field(
@@ -202,6 +203,13 @@ class AlleleProfileForUpload(AlleleProfile):
                 raise ValueError(
                     f"Provided n_loci does not match computed n_loci: {self.n_loci} != {computed_n_loci}"
                 )
+            # Verify locus code map provided
+            if (
+                self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+            ) and self.locus_code_map_code is None:
+                raise ValueError(
+                    "locus_code_map_id or locus_code_map_code must be provided when locus_allele_id_map is used."
+                )
             # Set or verify allele_profile_hash: not possible with this representation since loci are unordered
 
         # Upload-specific validation
@@ -233,7 +241,8 @@ class SampleForUpload(Sample, ForUploadMixin):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME = "SampleForUpload"
 
-    FOR_UPLOAD_CHILD_MODEL_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+    IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
         ReadSet: ReadSetForUpload,
         Seq: SeqForUpload,
         SeqTaxonomy: SeqTaxonomy,
@@ -247,14 +256,13 @@ class SampleForUpload(Sample, ForUploadMixin):
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
-
-    CHILD_MODEL_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
-        ReadSetForUpload: "read_sets",
-        SeqForUpload: "seqs",
+    CHILDREN_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+        ReadSet: "read_sets",
+        Seq: "seqs",
         SeqTaxonomy: "seq_taxonomies",
         SeqClassification: "seq_classifications",
         LocusProfile: "locus_profiles",
-        AlleleProfileForUpload: "allele_profiles",
+        AlleleProfile: "allele_profiles",
         SnpProfile: "snp_profiles",
         MlvaProfile: "mlva_profiles",
         KmerProfile: "kmer_profiles",
@@ -262,6 +270,10 @@ class SampleForUpload(Sample, ForUploadMixin):
         PcrMeasurement: "pcr_measurements",
         AstMeasurement: "ast_measurements",
     }
+    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+        x: "sample_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
+    }
+    EXTERNAL_IDENTIFIERS_FIELD_NAME: ClassVar[str] = "external_identifiers"
 
     # Sample level data
     external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
@@ -320,7 +332,7 @@ class SampleForUpload(Sample, ForUploadMixin):
     )
 
     @field_validator("external_identifiers", mode="after")
-    def _validate_associated_ids(
+    def _validate_external_identifiers(
         cls, value: list[Hashable] | None
     ) -> list[Hashable] | None:
         if value is None:
@@ -342,7 +354,7 @@ class SampleForUpload(Sample, ForUploadMixin):
         # If sample has NULL_ID, then associated items can have any sample_id
         if self.id is not None and self.id != NULL_ID:
             sample_id = self.id
-            for field_name in self.CHILD_MODEL_FIELD_NAME_MAP.values():
+            for field_name in self.CHILDREN_FIELD_NAME_MAP.values():
                 items = getattr(self, field_name)
                 for item in items or []:
                     if item.sample_id != NULL_ID and item.sample_id != sample_id:
@@ -364,7 +376,7 @@ class SampleUploadResult(UploadResult):
     CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
     CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
         "external_identifiers",
-    ] + list(SampleForUpload.CHILD_MODEL_FIELD_NAME_MAP.values())
+    ] + list(SampleForUpload.CHILDREN_FIELD_NAME_MAP.values())
 
     external_identifiers: list[UploadResult] | None = Field(
         default=None,

@@ -7,35 +7,26 @@ Tests the seq_service_upload_samples function and its component steps.
 import base64
 from typing import Any
 from unittest import TestCase
-from unittest.mock import Mock, patch
-from uuid import uuid4
+from unittest.mock import Mock
+from uuid import UUID, uuid4
 
 from gen_epix.commondb.domain.enum import (
-    IdentifierType,
     OnExistsUploadAction,
     UploadStatus,
+    UploadStatusSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifierForUpload,
-    User,
-)
-from gen_epix.commondb.domain.model.upload import UploadResult
+from gen_epix.commondb.domain.model import UploadResult, User
+from gen_epix.fastapp.app import App
+from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.enum import Role
-from gen_epix.seqdb.domain.service.seq import BaseSeqService
-from gen_epix.seqdb.services.seq.upload import (
-    _init_retval,
-    _upsert_batch,
-    _verify_user_rights,
-    seq_service_upload_samples,
-)
+from gen_epix.seqdb.domain.service import BaseSeqService
+from gen_epix.seqdb.services.seq import SampleBatchUploader
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
-    _verify_batch_allele_profiles,
-    _verify_batch_sample_children,
-    _verify_batch_sample_existence,
-    _verify_batch_sample_external_identifiers,
-    _verify_batch_seqs,
+    _verify_children_allele_profiles,
+    _verify_children_seqs,
+    _verify_sample_refdata,
 )
 
 
@@ -46,2186 +37,604 @@ def create_allele_profile_base64(num_alleles: int = 4) -> str:
     return base64.b64encode(concatenated_bytes).decode("ascii")
 
 
-class TestSeqServiceUploadSamples(TestCase):
-    """Test the main seq_service_upload_samples function."""
+class BaseUploadTestCase(TestCase):
+    """Base test case with common fixtures and utilities."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
+        # Test user
+        self.user = User(
+            id=uuid4(),
+            key="test@example.com",
+            email="test@example.com",
+            roles={Role.APP_ADMIN.value},
+            organization_id=uuid4(),
+            is_active=True,
+        )
+
+        # Test IDs
+        self.sample_id = UUID("550e8400-e29b-41d4-a716-446655440001")
+        self.read_set_id = UUID("550e8400-e29b-41d4-a716-446655440002")
+        self.seq_id = UUID("550e8400-e29b-41d4-a716-446655440003")
+        self.allele_profile_id = UUID("550e8400-e29b-41d4-a716-446655440004")
+        self.sequencing_protocol_id = UUID("550e8400-e29b-41d4-a716-446655440005")
+        self.assembly_protocol_id = UUID("550e8400-e29b-41d4-a716-446655440006")
+        self.locus_detection_protocol_id = UUID("550e8400-e29b-41d4-a716-446655440007")
+        self.locus_set_id = UUID("550e8400-e29b-41d4-a716-446655440008")
+        self.locus_code_map_id = UUID("550e8400-e29b-41d4-a716-446655440009")
+        self.seq_hash = UUID("550e8400-e29b-41d4-a716-446655440010")
+        self.locus_id = UUID("550e8400-e29b-41d4-a716-446655440011")
+        self.allele_id = UUID("550e8400-e29b-41d4-a716-446655440012")
+        self.identifier_issuer_id = UUID("550e8400-e29b-41d4-a716-446655440013")
+        self.data_collection_id = UUID("550e8400-e29b-41d4-a716-446655440014")
+        self.batch_id = UUID("550e8400-e29b-41d4-a716-446655440015")
+        self.identifier_issuer_code = "IDENTIFIER_ISSUER_CODE"
+        self.identifier_issuer = model.IdentifierIssuer(
+            id=self.identifier_issuer_id,
+            code=self.identifier_issuer_code,
+            name="Identifier issuer",
+        )
+        self.generated_ids = [
+            UUID("550e8400-e29b-41d4-a716-446655440021"),
+            UUID("550e8400-e29b-41d4-a716-446655440022"),
+            UUID("550e8400-e29b-41d4-a716-446655440023"),
+            UUID("550e8400-e29b-41d4-a716-446655440024"),
+            UUID("550e8400-e29b-41d4-a716-446655440025"),
+            UUID("550e8400-e29b-41d4-a716-446655440026"),
+            UUID("550e8400-e29b-41d4-a716-446655440027"),
+            UUID("550e8400-e29b-41d4-a716-446655440028"),
+            UUID("550e8400-e29b-41d4-a716-446655440029"),
+            UUID("550e8400-e29b-41d4-a716-446655440030"),
+        ]
+
+        # Mock service
         self.service = Mock(spec=BaseSeqService)
+        self.service.generate_id = Mock(side_effect=uuid4)
         self.service.repository = Mock()
+
         # Mock UOW context manager
-        mock_uow = Mock()
-        self.service.repository.uow.return_value.__enter__ = Mock(return_value=mock_uow)
-        self.service.repository.uow.return_value.__exit__ = Mock(return_value=None)
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
-
-    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_batch")
-    @patch("gen_epix.seqdb.services.seq.upload._upsert_batch")
-    def test_successful_upload_flow(self, mock_create, mock_verify, mock_check):
-        """Test successful upload flow through all steps."""
-        # Setup
-        mock_verify.return_value = True
-        mock_create.return_value = True
-
-        sample_batch = model.SampleBatchForUpload(
-            id=uuid4(),
-            samples=[
-                model.SampleForUpload(
-                    id=uuid4(),
-                    created_in_data_collection_id=self.data_collection_id,
-                )
-            ],
-        )
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        # Execute
-        result = seq_service_upload_samples(self.service, cmd)
-
-        # Verify
-        mock_check.assert_called_once_with(self.service, cmd)
-        mock_verify.assert_called_once()
-        mock_create.assert_called_once()
-
-        self.assertIsInstance(result, model.SampleBatchUploadResult)
-        self.assertEqual(result.batch_id, sample_batch.id)
-
-    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_batch")
-    def test_early_return_on_verify_batch_failure(self, mock_verify, mock_check):
-        """Test early return when _verify_batch fails."""
-        # Setup
-        mock_verify.return_value = False
-
-        sample_batch = model.SampleBatchForUpload(id=uuid4(), samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        # Execute
-        result = seq_service_upload_samples(self.service, cmd)
-
-        # Verify
-        mock_check.assert_called_once()
-        mock_verify.assert_called_once()
-        # Early return means _upsert_batch should not be called
-
-        self.assertIsInstance(result, model.SampleBatchUploadResult)
-
-    @patch("gen_epix.seqdb.services.seq.upload._verify_user_rights")
-    @patch("gen_epix.seqdb.services.seq.upload._verify_batch_sample_refdata")
-    def test_early_return_on_verify_refdata_failure(
-        self, mock_verify_refdata, mock_check
-    ):
-        """Test early return when _verify_refdata fails."""
-        # Setup
-        mock_verify_refdata.return_value = False
-        # Mock other verification functions to return True
-        with (
-            patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_existence",
-                return_value=True,
-            ),
-            patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_external_identifiers",
-                return_value=True,
-            ),
-            patch(
-                "gen_epix.seqdb.services.seq.upload._verify_batch_sample_children",
-                return_value=True,
-            ),
-        ):
-
-            sample_batch = model.SampleBatchForUpload(id=uuid4(), samples=[])
-            cmd = command.UploadSamplesCommand(
-                user=self.user, sample_batch=sample_batch
-            )
-
-            # Execute
-            result = seq_service_upload_samples(self.service, cmd)
-
-            # Verify
-            mock_check.assert_called_once()
-            mock_verify_refdata.assert_called_once()
-
-            self.assertIsInstance(result, model.SampleBatchUploadResult)
-
-
-class TestCheckUserRights(TestCase):
-    """Test the _verify_user_rights function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.data_collection_id = uuid4()
-
-    def test_user_with_admin_role_authorized(self) -> None:
-        """Test that user with admin role is authorized."""
-        user = User(
-            id=uuid4(),
-            key="admin@example.com",
-            email="admin@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-
-        sample_batch = model.SampleBatchForUpload(
-            id=uuid4(),
-            samples=[
-                model.SampleForUpload(
-                    id=uuid4(),
-                    created_in_data_collection_id=self.data_collection_id,
-                )
-            ],
-        )
-        cmd = command.UploadSamplesCommand(user=user, sample_batch=sample_batch)
-
-        # Should not raise exception
-        _verify_user_rights(self.service, cmd)
-
-    def test_user_without_admin_role_triggers_abac_path(self) -> None:
-        """Test that user without admin role goes through ABAC path (currently placeholder)."""
-        user = User(
-            id=uuid4(),
-            key="user@example.com",
-            email="user@example.com",
-            roles={Role.ORG_USER.value},  # Not an admin role
-            organization_id=uuid4(),
-            is_active=True,
-        )
-
-        sample_batch = model.SampleBatchForUpload(
-            id=uuid4(),
-            samples=[
-                model.SampleForUpload(
-                    id=uuid4(),
-                    created_in_data_collection_id=self.data_collection_id,
-                ),
-                model.SampleForUpload(
-                    id=uuid4(),
-                    created_in_data_collection_id=uuid4(),
-                ),
-            ],
-        )
-        cmd = command.UploadSamplesCommand(user=user, sample_batch=sample_batch)
-
-        # Should not raise exception (placeholder implementation)
-        _verify_user_rights(self.service, cmd)
-
-    def test_no_user_goes_through_abac_path(self) -> None:
-        """Test that None user goes through ABAC path (currently placeholder)."""
-        sample_batch = model.SampleBatchForUpload(
-            id=uuid4(),
-            samples=[
-                model.SampleForUpload(
-                    id=uuid4(),
-                    created_in_data_collection_id=self.data_collection_id,
-                )
-            ],
-        )
-        cmd = command.UploadSamplesCommand(user=None, sample_batch=sample_batch)
-
-        # Should not raise exception (placeholder implementation)
-        _verify_user_rights(self.service, cmd)
-
-
-class TestCreateSubResult(TestCase):
-    """Test the _create_sub_result helper function."""
-
-    def test_create_sub_result_with_object(self) -> None:
-        """Test creating sub result with an object that has an id."""
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-
-        # Create a mock object with an ID
-        mock_obj = Mock()
-        mock_obj.id = uuid4()
-
-        # Access the private function through reflection
-        import gen_epix.seqdb.services.seq.upload as upload_module
-
-        create_sub_result = getattr(upload_module._init_retval, "__code__").co_consts[1]
-        # This is a bit hacky - we'll create a similar test structure
-
-        # Create sample with data to trigger the helper function
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=uuid4(),
-            read_sets=[
-                model.ReadSetForUpload(id=uuid4(), sequencing_protocol_id=uuid4())
-            ],  # Non-None object
-        )
-        cmd = command.UploadSamplesCommand(
-            user=User(
-                id=uuid4(),
-                key="test@example.com",
-                organization_id=uuid4(),
-                email="test@example.com",
-                roles={Role.ORG_USER},
-                is_active=True,
-            ),
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.UPDATE,
-        )
-        result = _init_retval(cmd)
-
-        # Verify sub-results were created
-        sample_result = result.samples[0]
-        self.assertIsNotNone(sample_result.read_sets)
-        self.assertEqual(len(sample_result.read_sets), 1)
-        self.assertEqual(sample_result.read_sets[0].id, sample.read_sets[0].id)
-
-    def test_create_sub_result_with_none(self) -> None:
-        """Test creating sub result with None object."""
-        # Create sample without optional data to trigger None path
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=uuid4(),
-            # All optional fields are None
-        )
-        cmd = command.UploadSamplesCommand(
-            user=User(
-                id=uuid4(),
-                key="test@example.com",
-                organization_id=uuid4(),
-                email="test@example.com",
-                roles={Role.ORG_USER},
-                is_active=True,
-            ),
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.UPDATE,
-        )
-        result = _init_retval(cmd)
-
-        # Verify None fields resulted in None sub-results
-        sample_result = result.samples[0]
-        self.assertIsNone(sample_result.read_sets)
-        self.assertIsNone(sample_result.seqs)
-        self.assertIsNone(sample_result.allele_profiles)
-
-
-class TestInitializeUploadResult(TestCase):
-    """Test the _initialize_upload_result function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.data_collection_id = uuid4()
-        self.test_user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-
-    def test_empty_sample_batch(self) -> None:
-        """Test initializing upload result with empty sample batch."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-
-        # Verify batch-level result
-        self.assertIsInstance(result, model.SampleBatchUploadResult)
-        self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.PENDING)
-        self.assertEqual(len(result.samples), 0)
-
-    def test_single_minimal_sample(self) -> None:
-        """Test initializing upload result with a single minimal sample."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        # Create minimal sample with required fields
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-        )
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-
-        # Verify batch-level result
-        self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.PENDING)
-        self.assertEqual(len(result.samples), 1)
-
-        # Verify sample-level result
-        sample_result = result.samples[0]
-        self.assertIsInstance(sample_result, model.SampleUploadResult)
-        self.assertEqual(sample_result.status, UploadStatus.PENDING)
-
-        # Type guard: sample_result.sample_result is not None after the assertion above
-        self.assertEqual(sample_result.status, UploadStatus.PENDING)
-
-        # All list fields should be None (no data provided)
-        self.assertIsNone(sample_result.external_identifiers)
-        self.assertIsNone(sample_result.read_sets)
-        self.assertIsNone(sample_result.seqs)
-        self.assertIsNone(sample_result.seq_taxonomies)
-        self.assertIsNone(sample_result.seq_classifications)
-        self.assertIsNone(sample_result.locus_profiles)
-        self.assertIsNone(sample_result.allele_profiles)
-        self.assertIsNone(sample_result.snp_profiles)
-        self.assertIsNone(sample_result.mlva_profiles)
-        self.assertIsNone(sample_result.kmer_profiles)
-        self.assertIsNone(sample_result.seq_distances)
-        self.assertIsNone(sample_result.pcr_measurements)
-        self.assertIsNone(sample_result.ast_measurements)
-
-    def test_sample_with_all_data_types(self) -> None:
-        """Test initializing upload result with a sample containing all data types."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        # Create sample with all associated data types
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            props={"key": "value"},  # Sample has props
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST_ISSUER", external_id="TEST_ID_1"
-                ),
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST_ISSUER", external_id="TEST_ID_2"
-                ),
-            ],
-            read_sets=[
-                model.ReadSetForUpload(
-                    sample_id=sample_id,
-                    sequencing_protocol_id=uuid4(),
-                ),
-                model.ReadSetForUpload(
-                    sample_id=sample_id,
-                    sequencing_protocol_id=uuid4(),
-                ),
-                model.ReadSetForUpload(
-                    sample_id=sample_id,
-                    sequencing_protocol_id=uuid4(),
-                ),
-            ],
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=sample_id,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                ),
-                model.SeqForUpload(
-                    sample_id=sample_id,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="GCTAGCTA")],
-                ),
-            ],
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_id=uuid4(),
-                    locus_allele_id_map={
-                        "locus1": uuid4(),
-                        "locus2": uuid4(),
-                    },
-                )
-            ],
-            # Add other data types as needed for comprehensive testing
-            pcr_measurements=[
-                model.PcrMeasurement(
-                    sample_id=sample_id, pcr_protocol_id=uuid4(), pcr_result="positive"
-                ),
-                model.PcrMeasurement(
-                    sample_id=sample_id, pcr_protocol_id=uuid4(), pcr_result="negative"
-                ),
-            ],
-            ast_measurements=[
-                model.AstMeasurement(
-                    sample_id=sample_id, ast_protocol_id=uuid4(), ast_result="resistant"
-                )
-            ],
-        )
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-
-        # Verify sample-level result
-        sample_result = result.samples[0]
-
-        # Type guard: sample_result.sample_result is not None after the assertion above
-        self.assertEqual(sample_result.status, UploadStatus.PENDING)
-
-        # Verify external identifier results (2 items)
-        self.assertIsNotNone(sample_result.external_identifiers)
-        # Type guard: external identifier results is not None after the assertion above
-        assert sample_result.external_identifiers is not None
-        self.assertEqual(len(sample_result.external_identifiers), 2)
-        for external_identifier_result in sample_result.external_identifiers:
-            self.assertIsInstance(external_identifier_result, UploadResult)
-            self.assertEqual(external_identifier_result.status, UploadStatus.PENDING)
-
-        # Verify read set results (3 items)
-        self.assertIsNotNone(sample_result.read_sets)
-        # Type guard: read_set_results is not None after the assertion above
-        assert sample_result.read_sets is not None
-        self.assertEqual(len(sample_result.read_sets), 3)
-        for read_set_result in sample_result.read_sets:
-            self.assertIsInstance(read_set_result, UploadResult)
-            self.assertEqual(read_set_result.status, UploadStatus.PENDING)
-
-        # Verify seq results (2 items)
-        self.assertIsNotNone(sample_result.seqs)
-        # Type guard: seq_results is not None after the assertion above
-        assert sample_result.seqs is not None
-        self.assertEqual(len(sample_result.seqs), 2)
-        for seq_result in sample_result.seqs:
-            self.assertIsInstance(seq_result, UploadResult)
-            self.assertEqual(seq_result.status, UploadStatus.PENDING)
-
-        # Verify allele profile results (1 item)
-        self.assertIsNotNone(sample_result.allele_profiles)
-        # Type guard: allele_profile_results is not None after the assertion above
-        assert sample_result.allele_profiles is not None
-        self.assertEqual(len(sample_result.allele_profiles), 1)
-        self.assertIsInstance(sample_result.allele_profiles[0], UploadResult)
-        self.assertEqual(sample_result.allele_profiles[0].status, UploadStatus.PENDING)
-
-        # Verify PCR measurement results (2 items)
-        self.assertIsNotNone(sample_result.pcr_measurements)
-        # Type guard: pcr_measurement_results is not None after the assertion above
-        assert sample_result.pcr_measurements is not None
-        self.assertEqual(len(sample_result.pcr_measurements), 2)
-        for pcr_result in sample_result.pcr_measurements:
-            self.assertIsInstance(pcr_result, UploadResult)
-            self.assertEqual(pcr_result.status, UploadStatus.PENDING)
-
-        # Verify AST measurement results (1 item)
-        self.assertIsNotNone(sample_result.ast_measurements)
-        # Type guard: ast_measurement_results is not None after the assertion above
-        assert sample_result.ast_measurements is not None
-        self.assertEqual(len(sample_result.ast_measurements), 1)
-        self.assertIsInstance(sample_result.ast_measurements[0], UploadResult)
-        self.assertEqual(sample_result.ast_measurements[0].status, UploadStatus.PENDING)
-
-        # Verify that data types not provided remain None
-        self.assertIsNone(sample_result.seq_taxonomies)
-        self.assertIsNone(sample_result.seq_classifications)
-        self.assertIsNone(sample_result.locus_profiles)
-        self.assertIsNone(sample_result.snp_profiles)
-        self.assertIsNone(sample_result.mlva_profiles)
-        self.assertIsNone(sample_result.kmer_profiles)
-        self.assertIsNone(sample_result.seq_distances)
-
-    def test_multiple_samples(self) -> None:
-        """Test initializing upload result with multiple samples."""
-        batch_id = uuid4()
-
-        # Create multiple samples with different data configurations
-        sample1 = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST", external_id="SAMPLE_1"
-                )
-            ],
-        )
-
-        sample2 = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=NULL_ID,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                )
-            ],
-        )
-
-        sample3 = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            props={"metadata": "sample3"},
-        )
-
-        sample_batch = model.SampleBatchForUpload(
-            id=batch_id, samples=[sample1, sample2, sample3]
-        )
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-
-        # Verify batch-level result
-        self.assertEqual(result.batch_id, batch_id)
-        self.assertEqual(result.status, UploadStatus.PENDING)
-        self.assertEqual(len(result.samples), 3)
-
-        # Verify sample1 results (has external_identifiers)
-        sample1_result = result.samples[0]
-        self.assertIsNotNone(sample1_result.external_identifiers)
-        # Type guard: external_identifier_results is not None after the assertion above
-        assert sample1_result.external_identifiers is not None
-        self.assertEqual(len(sample1_result.external_identifiers), 1)
-        self.assertIsNone(sample1_result.seqs)
-
-        # Verify sample2 results (has seqs)
-        sample2_result = result.samples[1]
-        self.assertIsNone(sample2_result.external_identifiers)
-        self.assertIsNotNone(sample2_result.seqs)
-        # Type guard: seq_results is not None after the assertion above
-        assert sample2_result.seqs is not None
-        self.assertEqual(len(sample2_result.seqs), 1)
-
-        # Verify sample3 results (has props)
-        sample3_result = result.samples[2]
-        self.assertIsNone(sample3_result.external_identifiers)
-        self.assertIsNone(sample3_result.seqs)
-
-    def test_empty_lists_vs_none_distinction(self) -> None:
-        """Test that empty lists and None are handled correctly."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        # Create sample with empty lists (not None)
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[],  # Empty list
-            read_sets=[],  # Empty list
-            seqs=None,  # Explicitly None
-        )
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-        sample_result = result.samples[0]
-
-        # Empty lists should result in empty result lists
-        self.assertIsNotNone(sample_result.external_identifiers)
-        # Type guard: external_identifier_results is not None after the assertion above
-        assert sample_result.external_identifiers is not None
-        self.assertEqual(len(sample_result.external_identifiers), 0)
-
-        self.assertIsNotNone(sample_result.read_sets)
-        # Type guard: read_set_results is not None after the assertion above
-        assert sample_result.read_sets is not None
-        self.assertEqual(len(sample_result.read_sets), 0)
-
-        # None should result in None
-        self.assertIsNone(sample_result.seqs)
-
-    def test_upload_result_object_independence(self) -> None:
-        """Test that each UploadResult object is independent (no shared references)."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST", external_id="ID1"
-                ),
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST", external_id="ID2"
-                ),
-            ],
-        )
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-        sample_result = result.samples[0]
-
-        # Verify that each UploadResult reflects the source object's ID
-        self.assertIsNotNone(sample_result.external_identifiers)
-        # Type guard: external_identifier_results is not None after the assertion above
-        assert sample_result.external_identifiers is not None
-        upload_result1 = sample_result.external_identifiers[0]
-        upload_result2 = sample_result.external_identifiers[1]
-
-        # ExternalIdentifierForUpload objects don't have an id field, so UploadResult id should be None
-        self.assertIsNone(upload_result1.id)
-        self.assertIsNone(upload_result2.id)
-
-        # Verify they have the same status but are different objects
-        self.assertEqual(upload_result1.status, UploadStatus.PENDING)
-        self.assertEqual(upload_result2.status, UploadStatus.PENDING)
-        self.assertIsNot(upload_result1, upload_result2)
-
-    def test_upload_result_reflects_source_object_ids(self) -> None:
-        """Test that UploadResult objects properly reflect the ID of their source objects."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        seq_id_1 = uuid4()
-        seq_id_2 = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    id=seq_id_1,
-                    sample_id=sample_id,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                ),
-                model.SeqForUpload(
-                    id=seq_id_2,
-                    sample_id=sample_id,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="GCTAGCTA")],
-                ),
-            ],
-        )
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.test_user, sample_batch=sample_batch
-        )
-
-        result = _init_retval(cmd)
-        sample_result = result.samples[0]
-
-        # Verify that UploadResult objects have the correct IDs from their source objects
-        self.assertIsNotNone(sample_result.seqs)
-        # Type guard: seq_results is not None after the assertion above
-        assert sample_result.seqs is not None
-        seq_result_1 = sample_result.seqs[0]
-        seq_result_2 = sample_result.seqs[1]
-
-        self.assertEqual(seq_result_1.id, seq_id_1)
-        self.assertEqual(seq_result_2.id, seq_id_2)
-        self.assertEqual(seq_result_1.status, UploadStatus.PENDING)
-        self.assertEqual(seq_result_2.status, UploadStatus.PENDING)
-
-        # Type guard: sample_result is not None after the assertion above
-        self.assertIsNone(sample_result.id)
-
-
-class TestVerifyBatch(TestCase):
-    """Test the _verify_batch function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
-
-    def test_verify_batch_empty_samples(self) -> None:
-        """Test _verify_batch with empty sample batch."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[]
-        )
-
-        # Mock the UOW
-        uow = Mock()
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch
-
-        result = _verify_batch(self.service, cmd, retval, uow)
-
-        # Should succeed with empty batch
-        self.assertTrue(result)
-
-    def test_verify_batch_with_samples_no_ids(self) -> None:
-        """Test _verify_batch with samples that have no existing IDs."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-            props={},  # Add props to avoid field validation issues
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        # Mock the UOW
-        uow = Mock()
-        self.service.repository.crud.return_value = []  # No existing samples
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch
-
-        result = _verify_batch(self.service, cmd, retval, uow)
-
-        # Should succeed
-        self.assertTrue(result)
-
-    def test_verify_batch_with_existing_sample_ids(self) -> None:
-        """Test _verify_batch with samples that have existing IDs."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            props={},  # Add props to avoid field validation issues
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.SKIP,  # Use SKIP to allow existing samples
-        )
-        retval = _init_retval(cmd)
-
-        # Mock the UOW
-        uow = Mock()
-
-        # Mock repository.crud for sample existence check
-        self.service.repository.crud.return_value = [True]  # Sample exists
-
-        # Mock repository.read_fields for seq verification (returns empty iterator)
+        self.uow = Mock(spec=BaseUnitOfWork)
+        self.uow.__enter__ = Mock(return_value=self.uow)
+        self.uow.__exit__ = Mock(return_value=None)
+        self.service.repository.uow.return_value = self.uow
+
+        # Mock repository methods
+        self.service.repository.crud.return_value = []
         self.service.repository.read_fields.return_value = []
 
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch
-
-        result = _verify_batch(self.service, cmd, retval, uow)
-
-        # Should succeed when on_exists=SKIP
-        self.assertTrue(result)
-
-    def test_verify_batch_sample_existence_with_no_ids(self) -> None:
-        """Test _verify_batch_sample_existence when samples have no IDs."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        uow = Mock()
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_sample_existence
-
-        result = _verify_batch_sample_existence(self.service, cmd, retval, uow)
-
-        # Should succeed without checking anything
-        self.assertTrue(result)
-
-    def test_verify_batch_sample_existence_with_ids(self) -> None:
-        """Test _verify_batch_sample_existence when samples have IDs that exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            props={},  # Add props to avoid field validation issues
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.SKIP,  # Use SKIP to allow existing samples
-        )
-        retval = _init_retval(cmd)
-
-        uow = Mock()
-        # Mock repository to return that sample DOES exist
-        self.service.repository.crud.return_value = [True]
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_sample_existence
-
-        result = _verify_batch_sample_existence(self.service, cmd, retval, uow)
-
-        # Should succeed when on_exists=SKIP
-        self.assertTrue(result)
-        # Should have called repository to check existence
-        self.service.repository.crud.assert_called_once()
-
-    def test_verify_batch_external_ids_empty(self) -> None:
-        """Test _verify_batch_external_ids with no external IDs."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_external_identifiers,
-        )
-
-        uow = Mock()
-
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
-
-        # Should succeed with no external IDs
-        self.assertTrue(result)
-
-    def test_verify_batch_external_ids_with_data(self) -> None:
-        """Test _verify_batch_external_ids with external ID data."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_code="TEST", external_id="SAMPLE_1"
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        # Mock the service methods to handle the function call correctly
-        mock_issuer = Mock()
-        mock_issuer.code = "TEST"
-        mock_issuer.id = uuid4()
-        # For cross-service calls, we need to mock self.app.handle
-        self.service.app = Mock()
-        self.service.app.handle.return_value = [mock_issuer]
-
-        # Mock the crud function for external identifier lookup
-        self.service.crud.return_value = []
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_external_identifiers,
-        )
-
-        uow = Mock()
-
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
-
-        # Should succeed
-        self.assertTrue(result)
-
-    def test_verify_batch_seqs_with_data(self) -> None:
-        """Test _verify_batch_seqs with sequence data."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=NULL_ID,
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        # Mock repository to return assembly protocol mapping and empty seqs
-        # The _verify_batch_seqs function calls _set_and_verify_id_by_code first, then reads existing seqs
-        assembly_protocol_id = sample.seqs[0].assembly_protocol_id
-        self.service.repository.read_fields.side_effect = [
-            [
-                (assembly_protocol_id, "ASSEMBLY_CODE")
-            ],  # Assembly protocols for _set_and_verify_id_by_code
-            [],  # Existing sequences (empty)
-        ]
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload_verify_batch import _verify_batch_seqs
-
-        uow = Mock()
-
-        result = _verify_batch_seqs(self.service, cmd, retval, uow)
-
-        # Should succeed
-        self.assertTrue(result)
-
-    def test_verify_batch_allele_profiles_with_data(self) -> None:
-        """Test _verify_batch_allele_profiles with allele profile data."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=NULL_ID,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_id=uuid4(),
-                    locus_allele_id_map={"locus1": uuid4()},
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        retval = _init_retval(cmd)
-
-        # Mock repository to return no existing profiles
-        uow = Mock()
-        uow.__enter__ = Mock(return_value=uow)
-        uow.__exit__ = Mock(return_value=None)
-        self.service.repository.uow.return_value = uow
-        self.service.repository.crud.return_value = {}
-
-        # Import the function and test it
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_allele_profiles,
-        )
-
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
-
-        # Should succeed
-        self.assertTrue(result)
-
-
-class TestVerifyBatchSampleExistence(TestCase):
-    """Test the _verify_batch_sample_existence function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
-
-    def test_sample_exists_with_error_on_exists(self) -> None:
-        """Test error when sample exists and on_exists=ERROR."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.ERROR,
-        )
-
-        sample_result = model.SampleUploadResult(status=UploadStatus.PENDING)
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock sample exists
-        self.service.repository.crud.return_value = [True]
-
-        # Execute
-        result = _verify_batch_sample_existence(self.service, cmd, retval, uow)
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("d3f5b6a1"))
-
-    def test_sample_id_does_not_exist(self) -> None:
-        """Test error when provided sample ID does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        sample_result = model.SampleUploadResult(status=UploadStatus.PENDING)
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock sample does not exist
-        self.service.repository.crud.return_value = [False]
-
-        # Execute
-        result = _verify_batch_sample_existence(self.service, cmd, retval, uow)
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to sample_result (code is passed as message in upload.py)
-        self.assertTrue(sample_result.has_errors())
-        self.assertTrue(sample_result.has_log_code("b2c3d4e5"))
-
-
-class TestVerifyBatchExternalIds(TestCase):
-    """Test the _verify_batch_external_identifiers function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.crud = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
-
-    def test_identifier_issuer_id_does_not_exist(self) -> None:
-        """Test error when identifier issuer ID does not exist."""
-        batch_id = uuid4()
-        issuer_id = uuid4()
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_id=issuer_id, external_id="TEST_ID"
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING,
-            external_identifiers=[external_identifier_result],
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-
-        # Mock no identifier issuer found
-        self.service.app = Mock()
+        # Mock app for cross-service calls
+        self.service.app = Mock(spec=App)
         self.service.app.handle.return_value = []
-        # Mock the crud function for external identifier lookup
-        self.service.crud.return_value = []
-        uow = Mock()
 
-        # Execute
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
+        self.batch_uploader = SampleBatchUploader(self.service)
 
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
-        self.assertTrue(external_identifier_result.has_errors())
-        self.assertTrue(external_identifier_result.has_log_code("b9e4f7c2"))
+    def assertBatchProcessed(self, upload_result: UploadResult) -> None:
+        if upload_result.status not in UploadStatusSet.PROCESSED.value:
+            self.fail(
+                f"Upload was not processed, status: {upload_result.status.value}",
+            )
 
-    def test_identifier_issuer_code_does_not_exist(self) -> None:
-        """Test error when identifier issuer code does not exist."""
-        batch_id = uuid4()
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_id=uuid4(),  # Provide an ID to avoid None in UuidSetFilter
-                    identifier_issuer_code="INVALID_CODE",
-                    external_id="TEST_ID",
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+    def assertBatchFailed(self, upload_result: UploadResult) -> None:
+        if upload_result.status not in UploadStatusSet.FAILED.value:
+            self.fail(
+                f"Upload did not fail, status: {upload_result.status.value}",
+            )
 
-        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING,
-            external_identifiers=[external_identifier_result],
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
+    def assertHasLogCode(
+        self, upload_result: UploadResult, code: list[str] | str
+    ) -> None:
+        if isinstance(code, str):
+            code = [code]
+        missing_codes = [x for x in code if not upload_result.has_log_code(x)]
+        if missing_codes:
+            missing_codes_str = ", ".join(missing_codes)
+            if len(missing_codes) == 1:
+                self.fail(f"Log missing for code {missing_codes_str}")
+            self.fail(f"Logs missing for codes {missing_codes_str}")
 
-        # Mock no identifier issuers found by the cross-service call
-        self.service.app = Mock()
-        self.service.app.handle.return_value = []
-        # Mock the crud function for external identifier lookup
-        self.service.crud.return_value = []
-        uow = Mock()
+    def assertStatusCount(
+        self,
+        upload_result: UploadResult,
+        n_skipped: int = 0,
+        n_created: int = 0,
+        n_updated: int = 0,
+        n_failed: int = 0,
+        n_pending: int = 0,
+        n_processed: int = 0,
+        include_self: bool = False,
+    ) -> None:
+        expected_status_count = {
+            UploadStatus.SKIPPED: n_skipped,
+            UploadStatus.CREATED: n_created,
+            UploadStatus.UPDATED: n_updated,
+            UploadStatus.FAILED: n_failed,
+            UploadStatus.PENDING: n_pending,
+            UploadStatus.PROCESSED: n_processed,
+        }
+        actual_status_count = upload_result.get_status_count(include_self=include_self)
+        different_status_count = {
+            (x, expected_status_count[x], actual_status_count[x])
+            for x in UploadStatus
+            if actual_status_count[x] != expected_status_count[x]
+        }
+        if different_status_count:
+            different_status_count_str = ""
+            different_status_count_str = ", ".join(
+                f"{x[0].value} ({x[1]}/{x[2]})" for x in different_status_count
+            )
+            self.fail(
+                f"Status count mismatch (expected/actual): {different_status_count_str}"
+            )
 
-        # Execute
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
-        self.assertTrue(external_identifier_result.has_errors())
-        # Should contain both ID and code not exist errors
-        self.assertTrue(
-            external_identifier_result.has_log_code("b9e4f7c2")
-        )  # ID does not exist
-        self.assertTrue(
-            external_identifier_result.has_log_code("c7a9b2e4")
-        )  # Code does not exist
-
-    def test_identifier_issuer_id_code_mismatch(self) -> None:
-        """Test error when identifier issuer ID and code don't match."""
-        batch_id = uuid4()
-        issuer_id = uuid4()
-        different_id = uuid4()
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_id=issuer_id,
-                    identifier_issuer_code="TEST_CODE",
-                    external_id="TEST_ID",
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING,
-            external_identifiers=[external_identifier_result],
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-
-        # Mock identifier issuer with different ID
-        existing_identifier_issuer = model.IdentifierIssuer(
-            id=different_id, code="TEST_CODE", name="Test Issuer"
-        )
-        # For cross-service calls
-        self.service.app = Mock()
-        # Mock the crud function for external identifier lookup
-        self.service.app.handle.side_effect = [
-            [existing_identifier_issuer],
-            [],
-        ]
-        uow = Mock()
-
-        # Execute
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
-        self.assertTrue(external_identifier_result.has_errors())
-        # The ID doesn't exist in our mock, so we get "ID does not exist" error instead of mismatch
-        self.assertTrue(external_identifier_result.has_log_code("a4d7b9c3"))
-
-    def test_external_id_sample_id_mismatch(self) -> None:
-        """Test error when external ID maps to different sample ID."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        different_sample_id = uuid4()
-        issuer_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_id=issuer_id, external_id="TEST_ID"
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING,
-            external_identifiers=[external_identifier_result],
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-
-        # Mock identifier issuer and existing external ID
-        existing_identifier_issuer = model.IdentifierIssuer(
-            id=issuer_id, code="TEST_CODE", name="Test Issuer"
-        )
-        existing_external_identifier = model.ExternalIdentifier(
-            id=uuid4(),
-            identifier_type=IdentifierType.SAMPLE,
-            identifier_issuer_id=issuer_id,
-            external_id="TEST_ID",
-            internal_id=different_sample_id,  # Different sample ID
-        )
-        # First call for cross-service identifier issuers, second for external IDs
-        self.service.app = Mock()
-        self.service.app.handle.side_effect = [
-            [existing_identifier_issuer],
-            [existing_external_identifier],
-        ]
-
-        # Execute
-        uow = Mock()
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
-        )
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to external_identifier_result (code is passed as message in upload.py)
-        self.assertTrue(external_identifier_result.has_errors())
-        self.assertTrue(external_identifier_result.has_log_code("f8a9b0c1"))
-
-    def test_external_id_exists_with_error_on_exists(self) -> None:
-        """Test error when external ID exists and on_exists=ERROR."""
-        batch_id = uuid4()
-        identifier_issuer_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=self.data_collection_id,
-            external_identifiers=[
-                ExternalIdentifierForUpload(
-                    identifier_issuer_id=identifier_issuer_id, external_id="TEST_ID"
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
+    def create_command_and_result_for_samples(
+        self,
+        samples: list[model.SampleForUpload] | model.SampleForUpload,
+        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        batch_id: UUID | None = None,
+        alleles: list[model.AlleleForUpload] | None = None,
+    ) -> tuple[command.UploadSamplesCommand, model.SampleBatchUploadResult]:
+        """Create a test upload command."""
+        if not isinstance(samples, list):
+            samples = [samples]
+        sample_batch = model.SampleBatchForUpload(batch_id=batch_id or self.batch_id, samples=samples, alleles=alleles)  # type: ignore[call-arg]
         cmd = command.UploadSamplesCommand(
             user=self.user,
             sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.ERROR,
+            on_exists=on_exists,  # type: ignore[call-arg]
+        )
+        retval = self.batch_uploader.init_batch_upload_result(cmd)
+        return cmd, retval
+
+    def create_sample_for_upload(
+        self,
+        sample_id: UUID | None = None,
+        created_in_data_collection_id: UUID | None = None,
+        props: dict[str, Any] | None = None,
+        read_sets: list[model.ReadSetForUpload] | None = None,
+        seqs: list[model.SeqForUpload] | None = None,
+        allele_profiles: list[model.AlleleProfileForUpload] | None = None,
+    ) -> model.SampleForUpload:
+        """Helper to create a SampleForUpload with default or specified properties."""
+        return model.SampleForUpload(
+            id=sample_id,
+            created_in_data_collection_id=created_in_data_collection_id
+            or self.data_collection_id,
+            props=props or {},
+            read_sets=read_sets or [],
+            seqs=seqs or [],
+            allele_profiles=allele_profiles or [],
         )
 
-        external_identifier_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING,
-            external_identifiers=[external_identifier_result],
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
+    def create_read_set_for_upload(
+        self,
+        sample_id: UUID | None = None,
+        read_set_id: UUID | None = None,
+        sequencing_protocol_id: UUID | None = None,
+        fwd_uri: str | None = None,
+        rev_uri: str | None = None,
+        fwd_file_id: UUID | None = None,
+        rev_file_id: UUID | None = None,
+        file_format: enum.ReadsFileFormat | None = None,
+        file_compression: enum.FileCompression | None = None,
+        fwd_reads_hash: UUID | None = None,
+        rev_reads_hash: UUID | None = None,
+        sequencing_run_code: str | None = None,
+    ) -> model.ReadSetForUpload:
+        """Helper to create a ReadSetForUpload with default or specified properties."""
+        return model.ReadSetForUpload(
+            id=read_set_id,
+            sample_id=sample_id or NULL_ID,
+            sequencing_protocol_id=sequencing_protocol_id
+            or self.sequencing_protocol_id,
+            fwd_uri=fwd_uri or "s3://bucket/fwd.fastq.gz",
+            rev_uri=rev_uri or "s3://bucket/rev.fastq.gz",
+            fwd_file_id=fwd_file_id,
+            rev_file_id=rev_file_id,
+            file_format=file_format,
+            file_compression=file_compression,
+            fwd_reads_hash=fwd_reads_hash,
+            rev_reads_hash=rev_reads_hash,
+            sequencing_run_code=sequencing_run_code,
         )
 
-        # Mock identifier issuer and existing external ID
-        existing_identifier_issuer = model.IdentifierIssuer(
-            id=identifier_issuer_id, code="TEST_CODE", name="Test Issuer"
-        )
-        existing_external_identifier = model.ExternalIdentifier(
-            id=uuid4(),
-            identifier_type=IdentifierType.SAMPLE,
-            identifier_issuer_id=identifier_issuer_id,
-            external_id="TEST_ID",
-            internal_id=sample.id,
-        )
-        # First call for cross-service identifier issuers, second for external IDs
-        self.service.app = Mock()
-        self.service.app.handle.side_effect = [
-            [existing_identifier_issuer],
-            [existing_external_identifier],
-        ]
-
-        # Execute
-        uow = Mock()
-        result = _verify_batch_sample_external_identifiers(
-            self.service, cmd, retval, uow
+    def create_seq_for_upload(
+        self,
+        sample_id: UUID | None = None,
+        seq_id: UUID | None = None,
+        seq_hash: UUID | None = None,
+        read_set_id: UUID | None = None,
+        read_set2_id: UUID | None = None,
+        assembly_protocol_id: UUID | None = None,
+        contigs: list[model.Contig] | None = None,
+    ) -> model.SeqForUpload:
+        """Helper to create a SeqForUpload with default or specified properties."""
+        return model.SeqForUpload(
+            id=seq_id,
+            sample_id=sample_id or NULL_ID,
+            read_set_id=read_set_id,
+            read_set2_id=read_set2_id,
+            assembly_protocol_id=assembly_protocol_id or self.assembly_protocol_id,
+            contigs=contigs or [model.Contig(seq="ATCGATCG")],
         )
 
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("a1c7d9f3"))
+    def create_allele_profile_for_upload(
+        self,
+        sample_id: UUID | None = None,
+        seq_id: UUID | None = None,
+        allele_profile_id: UUID | None = None,
+        locus_detection_protocol_id: UUID | None = None,
+        locus_detection_protocol_code: str | None = None,
+        locus_set_id: UUID | None = None,
+        locus_set_code: str | None = None,
+        locus_code_map_id: UUID | None = None,
+        locus_code_map_code: str | None = None,
+        allele_profile: str | None = None,
+        allele_profile_format: enum.AlleleProfileFormat = enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+        allele_ids: list[UUID | None] | None = None,
+        locus_allele_id_map: dict[str, UUID] | None = None,
+    ) -> model.AlleleProfileForUpload:
+        """Helper to create an AlleleProfileForUpload with default or specified properties."""
+        return model.AlleleProfileForUpload(
+            id=allele_profile_id,
+            sample_id=sample_id or NULL_ID,
+            seq_id=seq_id,
+            locus_detection_protocol_id=locus_detection_protocol_id
+            or self.locus_detection_protocol_id,
+            locus_detection_protocol_code=locus_detection_protocol_code,
+            locus_set_id=locus_set_id or self.locus_set_id,
+            locus_set_code=locus_set_code,
+            locus_code_map_id=locus_code_map_id or self.locus_code_map_id,
+            locus_code_map_code=locus_code_map_code,
+            allele_profile=allele_profile
+            or (
+                ""
+                if allele_ids or locus_allele_id_map
+                else create_allele_profile_base64()
+            ),
+            allele_profile_format=allele_profile_format,
+            allele_ids=allele_ids,
+            locus_allele_id_map=locus_allele_id_map,
+        )
 
 
-class TestVerifyBatchSeqs(TestCase):
+class TestVerifyBatchSeqs(BaseUploadTestCase):
     """Test the _verify_batch_seqs function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
 
     def test_seq_exists_same_read_sets_gets_skipped(self) -> None:
         """Test seq with same hash and read sets gets skipped with warning."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        read_set_id = uuid4()
-        assembly_protocol_id = uuid4()
-        existing_seq_id = uuid4()
-        seq_hash = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=sample_id,
-                    seq_hash=seq_hash,
-                    read_set_id=read_set_id,
-                    read_set2_id=None,
-                    assembly_protocol_id=assembly_protocol_id,
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                )
-            ],
+        # Create input and output
+        seq = self.create_seq_for_upload(
+            sample_id=self.sample_id,
+            read_set_id=self.read_set_id,
+            read_set2_id=None,
         )
-
-        # Get the computed seq_hash from the actual sequence object
-        computed_seq_hash = sample.seqs[0].seq_hash
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.UPDATE,  # Allow existing sequences to be skipped
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            seqs=[seq],
         )
+        seq_hash = sample.seqs[0].seq_hash
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        seq_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, seqs=[seq_result]
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock existing seq with same hash and read sets
+        # Prepare mocks
         self.service.repository.read_fields.side_effect = [
             [
-                (assembly_protocol_id, "ASSEMBLY_CODE")
-            ],  # Assembly protocols (for _set_and_verify_id_by_code)
+                (self.assembly_protocol_id, "ASSEMBLY_CODE")
+            ],  # Existing assembly protocol (id, code) tuples
             [
                 (
-                    sample_id,
-                    computed_seq_hash,  # Use the computed hash
-                    read_set_id,
+                    self.sample_id,
+                    seq_hash,
+                    self.read_set_id,
                     None,
-                    assembly_protocol_id,
-                    existing_seq_id,
+                    self.assembly_protocol_id,
+                    self.generated_ids[0],
                 )
-            ],  # Existing seqs
+            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
         ]
 
         # Execute
-        result = _verify_batch_seqs(self.service, cmd, retval, uow)
+        success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertTrue(result)
-        # Check that warning was added to seq_result with correct code
-        self.assertTrue(seq_result.has_warnings())
-        self.assertTrue(seq_result.has_log_code("a2b3c4d5"))
-        self.assertEqual(seq_result.status, UploadStatus.SKIPPED)
-        self.assertEqual(sample.seqs[0].id, existing_seq_id)
+        self.assertTrue(success)
+        self.assertTrue(retval.samples[0].seqs[0].has_warnings())
+        self.assertTrue(retval.samples[0].seqs[0].has_log_code("a2b3c4d5"))
+        self.assertEqual(retval.samples[0].seqs[0].status, UploadStatus.SKIPPED)
 
     def test_seq_exists_no_read_sets_error(self) -> None:
         """Test error when seq exists with same hash but new seq has no read sets."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        read_set_id = uuid4()
-        assembly_protocol_id = uuid4()
-        existing_seq_id = uuid4()
-        seq_hash = uuid4()
+        # Create input and output
+        seq = self.create_seq_for_upload(
+            sample_id=self.sample_id,
+            read_set_id=None,  # No read set provided
+            read_set2_id=None,
+        )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            seqs=[seq],
+        )
+        seq_hash = sample.seqs[0].seq_hash
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=sample_id,
-                    seq_hash=seq_hash,
-                    read_set_id=None,  # No read set provided
-                    read_set2_id=None,
-                    assembly_protocol_id=assembly_protocol_id,
-                    contigs=[model.Contig(seq="ATCGATCG")],
+        # Prepare mocks
+        self.service.repository.read_fields.side_effect = [
+            [
+                (self.assembly_protocol_id, "ASSEMBLY_PROTOCOL_CODE")
+            ],  # Existing assembly protocol (id, code) tuples
+            [
+                (
+                    self.sample_id,
+                    seq_hash,
+                    self.read_set_id,
+                    None,
+                    self.assembly_protocol_id,
+                    self.generated_ids[0],
                 )
-            ],
-        )
-
-        # Get the computed seq_hash from the actual sequence object
-        computed_seq_hash = sample.seqs[0].seq_hash
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        seq_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, seqs=[seq_result]
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock existing seq with same hash but different read sets
-        self.service.repository.read_fields.return_value = [
-            (
-                sample_id,
-                computed_seq_hash,  # Use the computed hash
-                read_set_id,
-                None,
-                assembly_protocol_id,
-                existing_seq_id,
-            )
+            ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
         ]
 
         # Execute
-        result = _verify_batch_seqs(self.service, cmd, retval, uow)
+        success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertFalse(result)
-        self.assertFalse(result)
+        self.assertFalse(success)
         # Check that error was added to seq_result (code is passed as message in upload.py)
-        self.assertTrue(seq_result.has_errors())
-        self.assertTrue(seq_result.has_log_code("f1e2d3c4"))
+        self.assertTrue(retval.samples[0].seqs[0].has_errors())
+        self.assertTrue(retval.samples[0].seqs[0].has_log_code("f1e2d3c4"))
 
     def test_seqs_exist_with_error_on_exists(self) -> None:
         """Test error when seqs exist and on_exists=ERROR."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        seq_hash = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            seqs=[
-                model.SeqForUpload(
-                    sample_id=sample_id,
-                    seq_hash=seq_hash,
-                    read_set_id=uuid4(),
-                    assembly_protocol_id=uuid4(),
-                    contigs=[model.Contig(seq="ATCGATCG")],
-                )
-            ],
+        # Create input and output
+        seq = self.create_seq_for_upload(
+            sample_id=self.sample_id,
+            read_set_id=self.read_set_id,
+        )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            seqs=[seq],
+        )
+        seq_hash = sample.seqs[0].seq_hash
+        cmd, retval = self.create_command_and_result_for_samples(
+            sample, on_exists=OnExistsUploadAction.ERROR
         )
 
-        # Get the computed seq_hash from the actual sequence object
-        computed_seq_hash = sample.seqs[0].seq_hash
-
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.ERROR,
-        )
-
-        seq_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, seqs=[seq_result]
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock existing seq
+        # Prepare mocks
         self.service.repository.read_fields.return_value = [
             (
-                sample_id,
-                computed_seq_hash,  # Use the computed hash
-                sample.seqs[0].read_set_id,
+                self.sample_id,
+                seq_hash,
+                self.read_set_id,
                 None,
-                sample.seqs[0].assembly_protocol_id,
-                uuid4(),
+                self.assembly_protocol_id,
+                self.generated_ids[0],
             )
         ]
 
         # Execute
-        result = _verify_batch_seqs(self.service, cmd, retval, uow)
+        success = _verify_children_seqs(self.batch_uploader, cmd, retval, self.uow)
 
         # Verify
-        self.assertFalse(result)
+        self.assertFalse(success)
         # Check that error was added to retval (code is passed as message in upload.py)
         self.assertTrue(retval.has_errors())
         self.assertTrue(retval.has_log_code("b4c5d6e7"))
 
 
-class TestVerifyBatchSampleExistenceAdvanced(TestCase):
-    """Test the _verify_batch_sample_existence function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            organization_id=uuid4(),
-            email="test@example.com",
-            is_active=True,
-            roles={Role.ORG_USER},
-        )
-        self.uow = Mock()
-
-    def test_sample_exists_early_return(self) -> None:
-        """Test early return when sample existence verification fails."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_sample_existence
-
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=uuid4(),
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.ERROR,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[model.SampleUploadResult(status=UploadStatus.PENDING)],
-        )
-
-        # Mock sample exists
-        self.service.repository.crud.return_value = [True]
-
-        success = _verify_batch_sample_existence(self.service, cmd, result, self.uow)
-
-        # Should return False due to ERROR action with existing sample
-        self.assertFalse(success)
-        self.assertTrue(result.has_errors())
-
-    def test_sample_does_not_exist_success(self) -> None:
-        """Test success path when sample does not exist."""
-        from gen_epix.seqdb.services.seq.upload import _verify_batch_sample_existence
-
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=uuid4(),
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.ERROR,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[model.SampleUploadResult(status=UploadStatus.PENDING)],
-        )
-
-        # Mock sample does not exist (call to repository.crud)
-        self.service.repository.crud.return_value = [False]
-
-        success = _verify_batch_sample_existence(self.service, cmd, result, self.uow)
-
-        # Should return False since sample ID doesn't exist (referencing non-existent sample is error)
-        self.assertFalse(success)
-
-
-class TestVerifyBatchAssociatedData(TestCase):
-    """Test the _verify_batch_associated_data function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            organization_id=uuid4(),
-            email="test@example.com",
-            is_active=True,
-            roles={Role.ORG_USER},
-        )
-        self.uow = Mock()
-
-    def test_associated_data_id_does_not_exist(self) -> None:
-        """Test error when associated data ID does not exist."""
-
-        seq_id = uuid4()
-        sample = model.SampleForUpload(
-            id=uuid4(),
-            created_in_data_collection_id=uuid4(),
-            seqs=[
-                model.SeqForUpload(id=seq_id, assembly_protocol_id=uuid4())
-            ],  # ID that doesn't exist
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.UPDATE,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[
-                model.SampleUploadResult(
-                    status=UploadStatus.PENDING,
-                    seqs=[UploadResult(status=UploadStatus.PENDING)],
-                )
-            ],
-        )
-
-        # Mock: seq ID doesn't exist
-        self.service.repository.crud.return_value = [False]
-        # Multiple calls for the various verification functions
-        self.service.repository.read_fields.side_effect = [
-            [],  # No existing objects for associated data
-            [],  # _verify_batch_seqs - no seq data
-            [],  # _verify_batch_allele_profiles - protocols
-            [],  # _verify_batch_allele_profiles - locus sets
-            [],  # _verify_batch_allele_profiles - allele profiles
-        ]
-
-        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
-
-        self.assertFalse(success)
-        self.assertTrue(result.samples[0].seqs[0].has_log_code("d4f5e6a7"))
-
-    def test_associated_data_sample_id_mismatch(self) -> None:
-        """Test error when associated data points to different sample."""
-
-        seq_id = uuid4()
-        sample_id = uuid4()
-        different_sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=uuid4(),
-            seqs=[model.SeqForUpload(id=seq_id, assembly_protocol_id=uuid4())],
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.UPDATE,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[
-                model.SampleUploadResult(
-                    status=UploadStatus.PENDING,
-                    seqs=[UploadResult(status=UploadStatus.PENDING)],
-                )
-            ],
-        )
-
-        # Mock: seq exists but belongs to different sample
-        self.service.repository.crud.return_value = [True]
-        self.service.repository.read_fields.side_effect = [
-            [(seq_id, different_sample_id)],  # Associated data (id, sample_id)
-            [],  # _verify_batch_seqs - no seq data
-            [],  # _verify_batch_allele_profiles - protocols
-            [],  # _verify_batch_allele_profiles - locus sets
-            [],  # _verify_batch_allele_profiles - allele profiles
-        ]
-
-        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
-
-        self.assertFalse(success)
-        self.assertTrue(result.samples[0].seqs[0].has_log_code("e5f6a7b8"))
-
-    def test_associated_data_exists_error_on_exists(self) -> None:
-        """Test error when associated data exists and on_exists=ERROR."""
-
-        seq_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=uuid4(),
-            seqs=[model.SeqForUpload(id=seq_id, assembly_protocol_id=uuid4())],
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.ERROR,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[
-                model.SampleUploadResult(
-                    status=UploadStatus.PENDING,
-                    seqs=[UploadResult(status=UploadStatus.PENDING)],
-                )
-            ],
-        )
-
-        # Mock: seq exists and belongs to same sample
-        self.service.repository.crud.return_value = [True]
-        # Multiple calls: associated data (id,sample_id), _verify_batch_seqs, _verify_batch_allele_profiles
-        self.service.repository.read_fields.side_effect = [
-            [(seq_id, sample_id)],  # Associated data (id, sample_id)
-            [],  # _verify_batch_seqs - no existing seqs
-            [],  # _verify_batch_allele_profiles - protocols
-            [],  # _verify_batch_allele_profiles - locus sets
-            [],  # _verify_batch_allele_profiles - allele profiles
-        ]
-
-        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
-
-        self.assertFalse(success)
-        self.assertTrue(result.has_log_code("c6e7f8a0"))
-
-    def test_associated_data_no_id_assigns_sample_id(self) -> None:
-        """Test that associated data without ID gets assigned sample ID."""
-
-        sample_id = uuid4()
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=uuid4(),
-            seqs=[model.SeqForUpload(id=None, assembly_protocol_id=uuid4())],  # No ID
-        )
-
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=model.SampleBatchForUpload(id=uuid4(), samples=[sample]),
-            on_exists=OnExistsUploadAction.UPDATE,
-        )
-
-        result = model.SampleBatchUploadResult(
-            batch_id=uuid4(),
-            status=UploadStatus.PENDING,
-            samples=[
-                model.SampleUploadResult(
-                    status=UploadStatus.PENDING,
-                    seqs=[UploadResult(status=UploadStatus.PENDING)],
-                )
-            ],
-        )
-
-        # No IDs to check, but mock read_fields for all the verification calls
-        # The function will call multiple verification subfunctions that each call read_fields:
-        # 1. _verify_batch_seqs: assembly protocols + existing sequences
-        # 2. _verify_batch_allele_profiles: protocols + locus sets + locus code maps + existing allele profiles
-        # Provide enough mock values for all calls
-        self.service.repository.read_fields.side_effect = [
-            [
-                (sample.seqs[0].assembly_protocol_id, "ASSEMBLY_CODE")
-            ],  # Assembly protocols for seqs
-            [],  # Existing sequences (empty)
-            [],  # Locus detection protocols for allele profiles
-            [],  # Locus sets for allele profiles
-            [],  # Locus code maps for allele profiles
-            [],  # Existing allele profiles (empty)
-        ]
-
-        success = _verify_batch_sample_children(self.service, cmd, result, self.uow)
-
-        self.assertTrue(success)
-        # Verify sample_id was assigned
-        self.assertEqual(sample.seqs[0].sample_id, sample_id)
-
-
-class TestVerifyBatchAlleleProfiles(TestCase):
+class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     """Test the _verify_batch_allele_profiles function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
 
     def test_locus_detection_protocol_id_does_not_exist(self) -> None:
         """Test error when locus detection protocol ID does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        protocol_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=uuid4(),
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        # Set the format after creation
+        allele_profile.allele_profile_format = "SORTED_ALLELE_IDS"
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock: protocols (empty), locus sets (empty), locus code maps (empty), allele profiles (empty)
         self.service.repository.read_fields.side_effect = [[], [], [], []]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
+        self.assertFalse(success)
+        # Check that error was added to allele_profile_result
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("e3b5c7d9"))
 
     def test_locus_detection_protocol_code_does_not_exist(self) -> None:
         """Test error when locus detection protocol code does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_code="INVALID_CODE",
-                    locus_set_id=uuid4(),
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_detection_protocol_id=NULL_ID,
+            locus_detection_protocol_code="INVALID_CODE",
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock no protocol found
         self.service.repository.read_fields.return_value = []
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("c7a9b2e4"))
+        self.assertFalse(success)
+        # Check that error was added to allele_profile_result
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("d2c4b6a8"))
 
     def test_locus_detection_protocol_id_code_mismatch(self) -> None:
         """Test error when locus detection protocol ID and code don't match."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        protocol_id = uuid4()
-        different_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_detection_protocol_code="TEST_CODE",
-                    locus_set_id=uuid4(),
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_detection_protocol_code="WRONG_CODE",
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        # Mock protocol with different ID than expected - need full tuple for read_fields
+        # Prepare mocks
+        # Mock protocol with the correct ID but different code than expected
         self.service.repository.read_fields.side_effect = [
-            [(different_id, "TEST_CODE")],  # Protocols
-            [],  # Locus sets
-            [],  # Locus code maps
-            [],  # Allele profiles - empty tuple
+            [
+                (self.locus_detection_protocol_id, "CORRECT_CODE")
+            ],  # Protocol with correct ID, wrong code
+            [(self.locus_set_id, "SOME_LOCUS_SET_CODE")],  # Locus set exists
+            [],  # Locus code maps (empty)
+            [],  # Allele profiles (empty)
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("a4d7b9c3"))
-
-    def test_locus_set_id_does_not_exist(self) -> None:
-        """Test error when locus set ID does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=locus_set_id,
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
-        )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
-        # Mock: protocols (empty), locus sets (empty), locus code maps (empty), allele profiles (empty)
-        self.service.repository.read_fields.side_effect = [[], [], [], []]
-
-        # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
-
-        # Verify
-        self.assertFalse(result)
-        # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
+        self.assertFalse(success)
+        # Check that error was added to allele_profile_result
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("c7a9b2e4"))
 
     def test_allele_profile_exists_gets_skipped(self) -> None:
         """Test allele profile with same hash and seq gets skipped with warning."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        seq_id = uuid4()
-        protocol_id = uuid4()
-        locus_set_id = uuid4()
-        existing_profile_id = uuid4()
-        profile_hash = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    seq_id=seq_id,
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            seq_id=self.seq_id,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        # Explicitly set locus_code_map_id to None to match mock expectations
+        allele_profile.locus_code_map_id = None
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        allele_profile_hash = sample.allele_profiles[0].allele_profile_hash
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        # Mock existing protocols, locus sets, locus code maps, and allele profile
-        computed_hash = sample.allele_profiles[0].allele_profile_hash
+        # Prepare mocks
         self.service.repository.read_fields.side_effect = [
-            [(protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
-            [],  # Locus code maps (empty)
+            [
+                (self.locus_detection_protocol_id, "PROTOCOL_CODE")
+            ],  # Existing protocols (id, code) tuples
+            [
+                (self.locus_set_id, "LOCUS_SET_CODE")
+            ],  # Existing locus sets (id, code) tuples
+            [],  # Existing locus code maps (empty)
             [
                 (
-                    sample_id,
-                    computed_hash,  # Use computed hash
-                    protocol_id,
-                    locus_set_id,
-                    seq_id,
-                    existing_profile_id,
+                    self.sample_id,
+                    allele_profile_hash,
+                    self.locus_detection_protocol_id,
+                    self.locus_set_id,
+                    self.seq_id,
+                    self.generated_ids[0],
                 )
-            ],  # Allele profiles
+            ],  # Existing allele profiles (sample_id, hash, protocol_id, locus_set_id, seq_id, profile_id) tuples
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify - function should succeed and find the existing allele profile
-        self.assertTrue(result)
+        self.assertTrue(success)
         # Check that warning was added with correct code - debug by checking result structure
-        if allele_profile_result.has_warnings():
-            self.assertTrue(allele_profile_result.has_log_code("c7d8e9f0"))
-            self.assertEqual(allele_profile_result.status, UploadStatus.SKIPPED)
-            self.assertEqual(sample.allele_profiles[0].id, existing_profile_id)
+        if retval.samples[0].allele_profiles[0].has_warnings():
+            self.assertTrue(
+                retval.samples[0].allele_profiles[0].has_log_code("c7d8e9f0")
+            )
+            self.assertEqual(
+                retval.samples[0].allele_profiles[0].status, UploadStatus.SKIPPED
+            )
+            self.assertEqual(sample.allele_profiles[0].id, self.generated_ids[0])
         else:
             # Function didn't add warning, test expectation might be wrong
-            self.assertTrue(result)  # At least function should succeed
+            self.assertTrue(success)  # At least function should succeed
 
     def test_allele_profile_exists_no_seq_error(self) -> None:
         """Test error when allele profile exists but new profile has no seq ID."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        protocol_id = uuid4()
-        locus_set_id = uuid4()
+        # Create input and output
         existing_profile_id = uuid4()
-        profile_hash = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    seq_id=None,  # No seq ID provided
-                    allele_profile_format="SORTED_ALLELE_IDS",
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            seq_id=None,  # No seq ID provided
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        # Explicitly set locus_code_map_id to None to match mock expectations
+        allele_profile.locus_code_map_id = None
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        # Mock existing protocols, locus sets, locus code maps, and allele profile with different seq
-        computed_hash = sample.allele_profiles[0].allele_profile_hash  # type: ignore[arg-type]
+        # Prepare mocks
+        # Mock existing protocols, locus sets, and allele profile with different seq
+        computed_hash = sample.allele_profiles[0].allele_profile_hash
         self.service.repository.read_fields.side_effect = [
-            [(protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
+            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
                 (
-                    sample_id,
-                    computed_hash,  # Use computed hash
-                    protocol_id,
-                    locus_set_id,
+                    self.sample_id,
+                    computed_hash,
+                    self.locus_detection_protocol_id,
+                    self.locus_set_id,
                     uuid4(),  # Different seq ID
                     existing_profile_id,
                 )
             ],  # Allele profiles
-            [],  # Extra empty response in case there are more calls
-            [],  # Extra empty response in case there are more calls
-            [],  # Extra empty response in case there are more calls
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
-        # Verify - should fail because allele profile with same hash exists but different seq_id and new seq_id is None
-        self.assertFalse(result)
-        # Check that error was added to allele_profile_result (code is passed as message in upload.py)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("a8f3e7b2"))
+        # Verify
+        self.assertFalse(success)
+        # Check that error was added to allele_profile_result
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("a8f3e7b2"))
 
     def test_allele_profiles_exist_with_error_on_exists(self) -> None:
         """Test error when allele profiles exist and on_exists=ERROR."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        seq_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    seq_id=seq_id,
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    allele_profile=create_allele_profile_base64(),  # Let model compute the hash
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            seq_id=self.seq_id,  # Explicitly set seq_id to match mock
+            locus_code_map_id=NULL_ID,  # Explicitly set to None to avoid default
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(
-            user=self.user,
-            sample_batch=sample_batch,
-            on_exists=OnExistsUploadAction.ERROR,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
+        )
+        cmd, retval = self.create_command_and_result_for_samples(
+            sample, on_exists=OnExistsUploadAction.ERROR
         )
 
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
-        )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
-
+        # Prepare mocks
         profile = sample.allele_profiles[0]
         # Mock existing protocols, locus sets, and allele profile
         self.service.repository.read_fields.side_effect = [
@@ -2233,322 +642,209 @@ class TestVerifyBatchAlleleProfiles(TestCase):
             [(profile.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [
                 (
-                    sample_id,
+                    self.sample_id,
                     profile.allele_profile_hash,
                     profile.locus_detection_protocol_id,
                     profile.locus_set_id,
-                    seq_id,
+                    profile.seq_id,  # Use the actual seq_id from the profile
                     uuid4(),
                 )
             ],  # Allele profiles
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        # Check that error was added to retval (code is passed as message in upload.py)
+        self.assertFalse(success)
+        # Check that error was added to retval
         self.assertTrue(retval.has_errors())
         self.assertTrue(retval.has_log_code("d8a3b7f4"))
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        code_map_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_id=code_map_id,
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    allele_profile=create_allele_profile_base64(),
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock no locus code map found (third call is for locus code maps)
         self.service.repository.read_fields.side_effect = [
-            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
-            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
-            [],  # Locus code maps (empty - not found)
-            [],  # Allele profiles
+            [
+                (self.locus_detection_protocol_id, "PROTOCOL_CODE")
+            ],  # Existing protocols (id, code) tuples
+            [
+                (self.locus_set_id, "LOCUS_SET_CODE")
+            ],  # Existing locus sets (id, code) tuples
+            [],  # Existing locus code maps (empty - not found)
+            [],  # Existing allele profiles
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("b9e4f7c2"))
+        self.assertFalse(success)
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("e3b5c7d9"))
 
     def test_locus_code_map_code_does_not_exist(self) -> None:
         """Test error when locus code map code does not exist."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_code="INVALID_CODE",
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    allele_profile=create_allele_profile_base64(),
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=NULL_ID,
+            locus_code_map_code="INVALID_CODE",
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock no locus code map found (third call is for locus code maps)
         self.service.repository.read_fields.side_effect = [
-            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
-            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
+            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
             [],  # Locus code maps (empty - not found)
             [],  # Allele profiles
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("c7a9b2e4"))
+        self.assertFalse(success)
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("d2c4b6a8"))
 
     def test_locus_code_map_id_code_mismatch(self) -> None:
-        """Test error when locus code map ID and code don't match."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        code_map_id = uuid4()
+        """Test error when locus code map ID and code both exist but don't match."""
+        # Create input and output
         different_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_id=code_map_id,
-                    locus_code_map_code="TEST_CODE",
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    allele_profile=create_allele_profile_base64(),
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_code="LOCUS_CODE_MAP_CODE",
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock locus code map with different ID than expected
         self.service.repository.read_fields.side_effect = [
-            [(uuid4(), "PROTOCOL_CODE")],  # Protocols
-            [(uuid4(), "LOCUS_SET_CODE")],  # Locus sets
-            [(different_id, "TEST_CODE")],  # Locus code maps with mismatched ID
+            [
+                (self.locus_detection_protocol_id, "LOCUS_DETECTION_PROTOCOL_CODE")
+            ],  # Protocols
+            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
+            [
+                (self.locus_code_map_id, "DIFFERENT_CODE"),
+                (different_id, "LOCUS_CODE_MAP_CODE"),
+            ],  # Locus code maps with mismatched ID
             [],  # Allele profiles
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify
-        self.assertFalse(result)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("a4d7b9c3"))
+        self.assertFalse(success)
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("a4d7b9c3"))
 
     def test_locus_code_map_code_sets_id(self) -> None:
         """Test that providing only locus code map code sets the ID."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        code_map_id = uuid4()
-        protocol_id = uuid4()
-        locus_set_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_code="TEST_CODE",
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    allele_profile=create_allele_profile_base64(),
-                )
-            ],
+        # Create input and output
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=NULL_ID,
+            locus_code_map_code="TEST_CODE",
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        allele_profile_result = UploadResult(status=UploadStatus.PENDING)
-        sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, allele_profiles=[allele_profile_result]
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-        retval = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
-        )
-        uow = Mock()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
+        # Prepare mocks
         # Mock locus code map found by code
         self.service.repository.read_fields.side_effect = [
-            [(protocol_id, "PROTOCOL_CODE")],  # Protocols
-            [(locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
-            [(code_map_id, "TEST_CODE")],  # Locus code maps
+            [(self.locus_detection_protocol_id, "PROTOCOL_CODE")],  # Protocols
+            [(self.locus_set_id, "LOCUS_SET_CODE")],  # Locus sets
+            [(self.locus_code_map_id, "TEST_CODE")],  # Locus code maps
             [],  # Allele profiles
         ]
 
         # Execute
-        result = _verify_batch_allele_profiles(self.service, cmd, retval, uow)
+        success = _verify_children_allele_profiles(
+            self.batch_uploader, cmd, retval, self.uow
+        )
 
         # Verify - should succeed since all lookups succeed
-        self.assertTrue(result)
+        self.assertTrue(success)
         # Check that the ID was set
         self.assertEqual(
-            sample.allele_profiles[0].locus_code_map_id, code_map_id
-        )  # types: ignore[arg-type]
-
-
-class TestVerifyReferenceData(TestCase):
-    """Test the _verify_batch_sample_refdata function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.service.repository = Mock()
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
+            sample.allele_profiles[0].locus_code_map_id, self.locus_code_map_id
         )
-        self.data_collection_id = uuid4()
 
-    def _setup_mock_uow(self) -> Mock:
-        """Helper to set up a properly mocked unit of work context manager."""
-        mock_uow = Mock()
-        self.service.repository.uow.return_value = mock_uow
-        mock_uow.__enter__ = Mock(return_value=mock_uow)
-        mock_uow.__exit__ = Mock(return_value=None)
-        return mock_uow
+
+class TestVerifyReferenceData(BaseUploadTestCase):
+    """Test the _verify_batch_sample_refdata function."""
 
     def test_verify_refdata_empty_samples(self) -> None:
         """Test that _verify_batch_sample_refdata succeeds with empty samples."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
+        # Create input and output
+        sample_batch = model.SampleBatchForUpload(id=self.batch_id, samples=[])
         cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        retval = self.batch_uploader.init_batch_upload_result(cmd)
 
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
-
+        # Verify
         self.assertTrue(success)
 
     def test_verify_refdata_no_allele_profiles(self) -> None:
         """Test that _verify_batch_sample_refdata succeeds with samples that have no allele profiles."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
+        # Create input and output
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
             # No allele profiles
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
-
+        # Verify
         self.assertTrue(success)
 
     def test_verify_refdata_successful_allele_profiles(self) -> None:
         """Test successful verification when no allele profiles are provided."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
         # Create sample with no allele profiles - this should always succeed
-        sample = model.SampleForUpload(
-            id=sample_id,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
             created_in_data_collection_id=self.data_collection_id,
             # No allele_profiles - should succeed
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
-
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager - minimal mocking since no profiles to verify
-        mock_uow = self._setup_mock_uow()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
         def mock_crud(
             uow: Any,
@@ -2569,59 +865,35 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         self.assertTrue(success)
         # Note: crud may not be called if no allele profiles to verify
 
     def test_verify_refdata_invalid_locus_codes(self) -> None:
         """Test that _verify_refdata fails with invalid locus codes in locus_allele_id_map."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-        locus_code_map_id = uuid4()
-        protocol_id = uuid4()
-
-        # Create allele profile with invalid locus codes
+        # Create input and output
         locus_allele_id_map = {"invalid_locus": uuid4(), "another_invalid": uuid4()}
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_id=locus_code_map_id,
-                    locus_allele_id_map=locus_allele_id_map,
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_allele_id_map=locus_allele_id_map,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
+        cmd, upload_result = self.create_command_and_result_for_samples(sample)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager and repository responses
-        mock_uow = self._setup_mock_uow()
-
+        # Prepare mocks
         # Mock locus set
         locus_ids = [uuid4(), uuid4()]
         mock_locus_set = Mock()
-        mock_locus_set.id = locus_set_id
+        mock_locus_set.id = self.locus_set_id
         mock_locus_set.locus_ids = locus_ids
 
         # Mock locus code map with valid codes (different from invalid ones in input)
         mock_locus_code_map = Mock()
-        mock_locus_code_map.id = locus_code_map_id
+        mock_locus_code_map.id = self.locus_code_map_id
         mock_locus_code_map.code = "TEST_MAP"
         mock_locus_code_map.code_map = {
             "valid_locus1": "code1",
@@ -2644,70 +916,46 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
+        # Execute
+        success = _verify_sample_refdata(
+            self.batch_uploader, cmd, upload_result, self.uow
         )
 
+        # Verify
         self.assertFalse(success)
         # Verify error was added to result
-        self.assertEqual(len(upload_result.samples), 1)
-        self.assertIsNotNone(upload_result.samples[0].allele_profiles)
+        self.assertTrue(upload_result.samples[0].allele_profiles[0].has_errors())
         self.assertTrue(
-            len(upload_result.samples[0].allele_profiles) > 0
-        )  # types: ignore[arg-type]
-        allele_profile_result = upload_result.samples[0].allele_profiles[
-            0
-        ]  # types: ignore[arg-type]
-        self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
-        self.assertTrue(allele_profile_result.has_errors())
-        self.assertTrue(allele_profile_result.has_log_code("e7a4b2d1"))
+            upload_result.samples[0].allele_profiles[0].has_log_code("e7a4b2d1")
+        )
+        self.assertEqual(
+            upload_result.samples[0].allele_profiles[0].status, UploadStatus.FAILED
+        )
 
     def test_verify_refdata_allele_locus_mismatch(self) -> None:
         """Test that _verify_refdata fails when existing allele has wrong locus ID."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-        locus_code_map_id = uuid4()
-        protocol_id = uuid4()
-
-        # Create valid allele profile with allele_ids
+        # Create input and output
         allele_ids = [uuid4(), uuid4()]
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_id=locus_code_map_id,
-                    allele_ids=allele_ids,  # types: ignore[arg-type]
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            allele_ids=allele_ids,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager and repository responses
-        mock_uow = self._setup_mock_uow()
-
+        # Prepare mocks
         # Mock locus set
         locus_ids = [uuid4(), uuid4()]
         mock_locus_set = Mock()
-        mock_locus_set.id = locus_set_id
+        mock_locus_set.id = self.locus_set_id
         mock_locus_set.locus_ids = locus_ids
 
         # Mock locus code map
         mock_locus_code_map = Mock()
-        mock_locus_code_map.id = locus_code_map_id
+        mock_locus_code_map.id = self.locus_code_map_id
         mock_locus_code_map.code_map = {"locus1": "code1", "locus2": "code2"}
 
         def mock_crud(
@@ -2736,63 +984,40 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
+        # Verify
         self.assertFalse(success)
         # The error should be detected (success=False) when alleles have wrong locus mappings
-        # NOTE: The specific error reporting mechanism may vary by implementation
 
     def test_verify_refdata_missing_new_alleles(self) -> None:
         """Test that _verify_refdata fails when new alleles are missing from batch."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-        locus_code_map_id = uuid4()
-        protocol_id = uuid4()
-
         # Create allele profile with new alleles (not in existing db)
         new_allele_id = uuid4()
         existing_allele_id = uuid4()
         allele_ids = [new_allele_id, existing_allele_id]
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_id=locus_code_map_id,
-                    allele_ids=allele_ids,
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=self.locus_code_map_id,
+            allele_ids=allele_ids,
         )
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
+        )
+        cmd, retval = self.create_command_and_result_for_samples(sample)
         # Don't provide the new allele in the batch.alleles
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
-
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager and repository responses
-        mock_uow = self._setup_mock_uow()
 
         # Mock locus set
         locus_ids = [uuid4(), uuid4()]
         mock_locus_set = Mock()
-        mock_locus_set.id = locus_set_id
+        mock_locus_set.id = self.locus_set_id
         mock_locus_set.locus_ids = locus_ids
 
         # Mock locus code map
         mock_locus_code_map = Mock()
-        mock_locus_code_map.id = locus_code_map_id
+        mock_locus_code_map.id = self.locus_code_map_id
         mock_locus_code_map.code_map = {"locus1": "code1", "locus2": "code2"}
 
         def mock_crud(
@@ -2820,70 +1045,46 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         self.assertFalse(success)
         # The error should be detected (success=False) when new alleles are missing
-        self.assertTrue(upload_result.has_errors())
-        self.assertTrue(upload_result.has_log_code("a9b8c7d6"))
+        self.assertTrue(retval.has_errors())
+        self.assertTrue(retval.has_log_code("a9b8c7d6"))
 
     def test_verify_refdata_extra_alleles_warning(self) -> None:
         """Test that _verify_refdata gives warning for superfluous alleles in batch."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-        locus_code_map_id = uuid4()
-        protocol_id = uuid4()
-
         # Create allele profile with existing alleles only
         allele_ids = [uuid4(), uuid4()]
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_id=locus_code_map_id,
-                    allele_ids=allele_ids,
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=self.locus_code_map_id,
+            allele_ids=allele_ids,
         )
-
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            created_in_data_collection_id=self.data_collection_id,
+            allele_profiles=[allele_profile],
+        )
         # Provide extra allele that's not needed
         extra_allele = model.AlleleForUpload(
             locus_id=uuid4(),
             seq="ATCG",
             # Don't provide ID, let it be computed from seq
         )
-        sample_batch = model.SampleBatchForUpload(
-            id=batch_id, samples=[sample], alleles=[extra_allele]
+        cmd, retval = self.create_command_and_result_for_samples(
+            sample, alleles=[extra_allele]
         )
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
-
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager and repository responses
-        mock_uow = self._setup_mock_uow()
 
         # Mock locus set
         locus_ids = [uuid4(), uuid4()]
         mock_locus_set = Mock()
-        mock_locus_set.id = locus_set_id
+        mock_locus_set.id = self.locus_set_id
         mock_locus_set.locus_ids = locus_ids
 
         # Mock locus code map
         mock_locus_code_map = Mock()
-        mock_locus_code_map.id = locus_code_map_id
+        mock_locus_code_map.id = self.locus_code_map_id
         mock_locus_code_map.code_map = {"locus1": "code1", "locus2": "code2"}
 
         def mock_crud(
@@ -2911,9 +1112,7 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.read_fields.side_effect = mock_read_fields
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         # Extra alleles should not cause failure, but based on implementation behavior
         # we need to check what actually happens
@@ -2923,42 +1122,22 @@ class TestVerifyReferenceData(TestCase):
 
     def test_verify_refdata_skipped_samples_ignored(self) -> None:
         """Test that _verify_refdata ignores samples with FAILED/SKIPPED status."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=uuid4(),
-                    locus_set_id=uuid4(),
-                    locus_code_map_id=uuid4(),
-                    # Invalid data that would normally cause errors
-                    locus_allele_id_map={"invalid": uuid4()},
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=self.locus_code_map_id,
+            # Invalid data that would normally cause errors
+            locus_allele_id_map={"invalid": uuid4()},
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-
-        upload_result = _init_retval(cmd)
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Pre-mark the allele profile result as SKIPPED
-        upload_result.samples[0].allele_profiles[0].status = UploadStatus.SKIPPED
+        retval.samples[0].allele_profiles[0].status = UploadStatus.SKIPPED
 
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         self.assertTrue(success)  # Should succeed because skipped items are ignored
         # Verify no repository calls were made (nothing to verify)
@@ -2966,50 +1145,28 @@ class TestVerifyReferenceData(TestCase):
 
     def test_verify_refdata_allele_profile_length_mismatch(self) -> None:
         """Test that _verify_refdata fails when allele profile length doesn't match locus set."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-        locus_set_id = uuid4()
-        locus_code_map_id = uuid4()
-        protocol_id = uuid4()
-
         # Create allele profile with wrong number of alleles
         allele_ids = [uuid4()]  # Only one allele, but locus set will have more
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
-            allele_profiles=[
-                model.AlleleProfileForUpload(
-                    sample_id=sample_id,
-                    locus_detection_protocol_id=protocol_id,
-                    locus_set_id=locus_set_id,
-                    locus_code_map_id=locus_code_map_id,
-                    allele_ids=allele_ids,
-                )
-            ],
+        allele_profile = self.create_allele_profile_for_upload(
+            sample_id=self.sample_id,
+            locus_code_map_id=self.locus_code_map_id,
+            allele_ids=allele_ids,
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
+            allele_profiles=[allele_profile],
         )
-
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager and repository responses
-        mock_uow = self._setup_mock_uow()
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Mock locus set with MORE loci than alleles provided
         locus_ids = [uuid4(), uuid4(), uuid4()]  # Three loci
         mock_locus_set = Mock()
-        mock_locus_set.id = locus_set_id
+        mock_locus_set.id = self.locus_set_id
         mock_locus_set.locus_ids = locus_ids
 
         # Mock locus code map
         mock_locus_code_map = Mock()
-        mock_locus_code_map.id = locus_code_map_id
+        mock_locus_code_map.id = self.locus_code_map_id
         mock_locus_code_map.code_map = {
             "locus1": "code1",
             "locus2": "code2",
@@ -3032,16 +1189,15 @@ class TestVerifyReferenceData(TestCase):
 
         self.service.repository.crud.side_effect = mock_crud
 
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
         self.assertFalse(success)
         # Verify error was added to result
-        self.assertEqual(len(upload_result.samples), 1)
-        self.assertIsNotNone(upload_result.samples[0].allele_profiles)
-        self.assertTrue(len(upload_result.samples[0].allele_profiles) > 0)
-        allele_profile_result = upload_result.samples[0].allele_profiles[0]
+        self.assertEqual(len(retval.samples), 1)
+        self.assertIsNotNone(retval.samples[0].allele_profiles)
+        self.assertTrue(len(retval.samples[0].allele_profiles) > 0)
+        allele_profile_result = retval.samples[0].allele_profiles[0]
         self.assertEqual(allele_profile_result.status, UploadStatus.FAILED)
         self.assertTrue(allele_profile_result.has_errors())
         # TODO: replace with actual log code rather than log message
@@ -3055,128 +1211,50 @@ class TestVerifyReferenceData(TestCase):
 
     def test_verify_refdata_with_empty_allele_profiles_list(self) -> None:
         """Test that _verify_refdata succeeds with empty allele profiles list."""
-        batch_id = uuid4()
-        sample_id = uuid4()
-
-        sample = model.SampleForUpload(
-            id=sample_id,
-            created_in_data_collection_id=self.data_collection_id,
+        sample = self.create_sample_for_upload(
+            sample_id=self.sample_id,
             allele_profiles=[],  # Empty list
         )
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[sample])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
-
+        # Verify
         self.assertTrue(success)
 
     def test_verify_refdata_multiple_samples_no_profiles(self) -> None:
         """Test that _verify_refdata succeeds with multiple samples that have no allele profiles."""
-        batch_id = uuid4()
         sample_id1 = uuid4()
         sample_id2 = uuid4()
 
-        sample1 = model.SampleForUpload(
-            id=sample_id1,
-            created_in_data_collection_id=self.data_collection_id,
+        sample1 = self.create_sample_for_upload(
+            sample_id=sample_id1,
             # No allele profiles
         )
-        sample2 = model.SampleForUpload(
-            id=sample_id2,
-            created_in_data_collection_id=self.data_collection_id,
+        sample2 = self.create_sample_for_upload(
+            sample_id=sample_id2,
             # No allele profiles
         )
-        sample_batch = model.SampleBatchForUpload(
-            id=batch_id, samples=[sample1, sample2]
-        )
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        cmd, retval = self.create_command_and_result_for_samples([sample1, sample2])
 
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
-
+        # Verify
         self.assertTrue(success)
 
     def test_verify_refdata_empty_batch_alternative(self) -> None:
         """Test that _verify_refdata succeeds with truly empty sample batch (alternative pattern)."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
+        cmd, retval = self.create_command_and_result_for_samples([])
 
-        from gen_epix.seqdb.services.seq.upload import _init_retval
-        from gen_epix.seqdb.services.seq.upload_verify_batch import (
-            _verify_batch_sample_refdata,
-        )
+        # Execute
+        success = _verify_sample_refdata(self.batch_uploader, cmd, retval, self.uow)
 
-        upload_result = _init_retval(cmd)
-
-        # Mock UoW context manager
-        mock_uow = self._setup_mock_uow()
-
-        success = _verify_batch_sample_refdata(
-            self.service, cmd, upload_result, mock_uow
-        )
-
+        # Verify
         self.assertTrue(success)
 
     def test_verify_refdata_assertion_error_no_allele_data(self) -> None:
         """Test assertion error when no allele data is provided."""
         # Skip this test since pydantic validates fields before we get to the assertion
         self.skipTest("Cannot test AssertionError due to pydantic validation")
-
-
-class TestCreateOrUpdateData(TestCase):
-    """Test the _upsert_batch function."""
-
-    def setUp(self) -> None:
-        """Set up test fixtures."""
-        self.service = Mock(spec=BaseSeqService)
-        self.user = User(
-            id=uuid4(),
-            key="test@example.com",
-            email="test@example.com",
-            roles={Role.APP_ADMIN.value},
-            organization_id=uuid4(),
-            is_active=True,
-        )
-        self.data_collection_id = uuid4()
-
-    def test_placeholder_implementation_does_not_raise(self) -> None:
-        """Test that the placeholder implementation does not raise an exception."""
-        batch_id = uuid4()
-        sample_batch = model.SampleBatchForUpload(id=batch_id, samples=[])
-        cmd = command.UploadSamplesCommand(user=self.user, sample_batch=sample_batch)
-        upload_result = model.SampleBatchUploadResult(
-            batch_id=batch_id, status=UploadStatus.PENDING, samples=[]
-        )
-
-        # Mock UOW
-        mock_uow = Mock()
-
-        # Execute - should not raise
-        success = _upsert_batch(self.service, cmd, upload_result, mock_uow)
-
-        # Should return True and not raise
-        self.assertTrue(success)

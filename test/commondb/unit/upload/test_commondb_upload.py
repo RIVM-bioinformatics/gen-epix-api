@@ -74,15 +74,12 @@ from test.commondb.unit.upload.model import (
     Child2ForUpload,
     Parent,
     ParentBatchForUpload,
+    ParentBatchUploader,
     ParentBatchUploadResult,
     ParentForUpload,
     Ref1,
     Ref2,
     UploadParentsCommand,
-    init_retval,
-    upsert_batch,
-    verify_batch,
-    verify_user_rights,
 )
 from unittest import TestCase
 from unittest.mock import Mock
@@ -103,7 +100,6 @@ from gen_epix.commondb.domain.model.organization import (
     User,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult
-from gen_epix.commondb.services import upload
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.service import BaseService
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -156,11 +152,10 @@ class BaseUploadTestCase(TestCase):
         self.service.repository = Mock()
 
         # Mock UOW context manager
-        self.mock_uow = Mock(spec=BaseUnitOfWork)
-        self.service.repository.uow.return_value.__enter__ = Mock(
-            return_value=self.mock_uow
-        )
-        self.service.repository.uow.return_value.__exit__ = Mock(return_value=None)
+        self.uow = Mock(spec=BaseUnitOfWork)
+        self.uow.__enter__ = Mock(return_value=self.uow)
+        self.uow.__exit__ = Mock(return_value=None)
+        self.service.repository.uow.return_value = self.uow
 
         # Mock repository methods
         self.service.repository.crud.return_value = []
@@ -169,6 +164,8 @@ class BaseUploadTestCase(TestCase):
         # Mock app for cross-service calls
         self.service.app = Mock(spec=App)
         self.service.app.handle.return_value = []
+
+        self.batch_uploader = ParentBatchUploader(self.service)
 
     def create_parent_for_upload(
         self,
@@ -354,13 +351,8 @@ class BaseUploadTestCase(TestCase):
             pass
         else:
             cmd = self.create_command_for_parents(cmd, on_exists)
-        retval = upload.upload_batch(
-            self.service,
+        retval = self.batch_uploader.upload_batch(
             cmd,
-            verify_user_rights,  # type: ignore[arg-type]
-            init_retval,  # type: ignore[arg-type]
-            verify_batch,  # type: ignore[arg-type]
-            upsert_batch,  # type: ignore[arg-type]
         )
         return retval  # type: ignore[return-value]
 

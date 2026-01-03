@@ -15,17 +15,7 @@ from gen_epix.commondb.domain.model.upload import (
     ForUploadMixin,
     UploadResult,
 )
-from gen_epix.commondb.services.upload import (
-    create_children,
-    create_external_identifiers,
-    create_parents,
-    update_children,
-    update_parents,
-    verify_child_existence,
-    verify_external_identifiers,
-    verify_link_id,
-    verify_parent_existence,
-)
+from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp.service import BaseService
 
 
@@ -180,16 +170,22 @@ class Child2ForUpload(Child2, ForUploadMixin):
 
 
 class ParentForUpload(Parent, ForUploadMixin):
-    FOR_UPLOAD_CHILD_MODEL_CLASS_MAP: ClassVar[
+    IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[
         dict[type[model.Model], type[ForUploadMixin]]
     ] = {
         Child1: Child1ForUpload,
         Child2: Child2ForUpload,
     }
-    CHILD_MODEL_FIELD_NAME_MAP: ClassVar[dict[type[ForUploadMixin], str]] = {
-        Child1ForUpload: "children1",
-        Child2ForUpload: "children2",
+    CHILDREN_FIELD_NAME_MAP: ClassVar[dict[type[model.Model], str]] = {
+        Child1: "children1",
+        Child2: "children2",
     }
+    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar[dict[type[model.Model], str]] = {
+        Child1: "parent_id",
+        Child2: "parent_id",
+    }
+    EXTERNAL_IDENTIFIERS_FIELD_NAME: ClassVar[str] = "external_identifiers"
     c: dict[str, str | None] = Field(
         description="A dict with values that can be None as well to indicate removal of keys.",
     )
@@ -324,201 +320,61 @@ STORED_MODEL_FIELD_PROPS = {
 }
 
 
-def verify_user_rights(
-    service: BaseService,
-    cmd: UploadParentsCommand,
-) -> None:
-    """Verify that the user has rights to upload Parent models."""
-    pass
+class ParentBatchUploader(BatchUploader):
+    """Service to handle batch upload of Parent models."""
 
-
-def init_retval(
-    cmd: UploadParentsCommand,
-) -> ParentBatchUploadResult:
-    """Initialize the upload result for the Parent batch upload."""
-    # Initialize some
-    parent_results = []
-
-    def _create_child_results(objs: list | None) -> list[UploadResult] | None:
-        if objs is None:
-            return None
-        return [UploadResult(id=getattr(x, "id", None)) for x in objs]
-
-    # Create a result for each parent with a child result for each child model
-    # TODO: use reflection to reduce boilerplate
-    for parent in cmd.parent_batch.parents:
-        parent_result = ParentUploadResult(
-            external_identifiers=_create_child_results(parent.external_identifiers),
-            children1=_create_child_results(parent.children1),
-            children2=_create_child_results(parent.children2),
+    def __init__(self, service: BaseService) -> None:
+        super().__init__(
+            service=service,
+            stored_model_field_props=STORED_MODEL_FIELD_PROPS,
+            cmd_batch_field_name="parent_batch",
+            batch_class=ParentBatchForUpload,
+            batch_result_class=ParentBatchUploadResult,
+            batch_parents_field_name="parents",
+            parent_class=Parent,
+            parent_for_upload_class=ParentForUpload,
+            parent_result_class=ParentUploadResult,
+            external_identifier_model_class=model.ExternalIdentifier,
         )
-        parent_results.append(parent_result)
 
-    return ParentBatchUploadResult(
-        batch_id=cmd.parent_batch.id,
-        parents=parent_results,
-    )
-
-
-def verify_batch(
-    service: BaseService,
-    cmd: UploadParentsCommand,
-    retval: ParentBatchUploadResult,
-    uow: Any,
-) -> bool:
-    """Verify existence of Parent and Child models in the batch."""
-    success = True
-
-    # Verify existence and consistency of external IDs
-    success &= verify_external_identifiers(
-        service,
-        cmd,
-        uow,
-        Parent,
-        ParentForUpload,
-        IdentifierType.PERSON,
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-    # Verify existence of parents by ID
-    success &= verify_parent_existence(
-        service,
-        cmd,
-        retval,
-        uow,
-        Parent,
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-    # Verify existence and consistency of child models as needed
-    success &= verify_child_existence(
-        service,
-        cmd,
-        retval,
-        uow,
-        ParentForUpload,
-        "parent_id",
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-    # Verify reference data links
-    success &= verify_refdata_links(
-        service,
-        cmd,
-        retval,
-        uow,
-    )
-
-    return success
-
-
-def upsert_batch(
-    service: BaseService,
-    cmd: UploadParentsCommand,
-    retval: ParentBatchUploadResult,
-    uow: Any,
-) -> bool:
-    """Create or update the Parent and any Child models."""
-    success = True
-
-    # Upsert parent data
-    success &= create_parents(
-        service,
-        cmd,
-        uow,
-        Parent,
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-    success &= update_parents(
-        service,
-        cmd,
-        uow,
-        STORED_MODEL_FIELD_PROPS[Parent],
-        Parent,
-        parents=cmd.parent_batch.parents,  # type: ignore[arg-type]
-        parent_results=retval.parents,  # type: ignore[arg-type]
-    )
-
-    # Upsert child data
-    success &= create_children(
-        service,
-        cmd,
-        uow,
-        ParentForUpload,
-        "parent_id",
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-    success &= update_children(
-        service,
-        cmd,
-        uow,
-        STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
-        ParentForUpload,
-        "parent_id",
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-
-    # Create external identifiers last to preserve atomicity without two-phase commit:
-    # if there were any errors after this and a rollback is therefore needed, the
-    # external identifiers could otherwise have already been changed in the meantime
-    success &= create_external_identifiers(
-        service,
-        cmd,
-        IdentifierType.PERSON,
-        cmd.parent_batch.parents,  # type: ignore[arg-type]
-        retval.parents,  # type: ignore[arg-type]
-    )
-
-    return success
-
-
-def verify_refdata_links(
-    self: BaseService,
-    cmd: UploadParentsCommand,
-    retval: ParentBatchUploadResult,
-    uow: Any,
-) -> bool:
-    """
-    Verify and complete reference data for allele profiles.
-    """
-    success = True
-    user_id = cmd.user.id if cmd.user else None
-    parents = cmd.parent_batch.parents
-    parent_results = retval.parents
-
-    # Verify all Child1.ref1_id
-    success &= verify_link_id(
+    def verify_refdata(
         self,
-        cmd,
-        uow,
-        ParentForUpload,
-        parents,  # type: ignore[arg-type]
-        parent_results,  # type: ignore[arg-type]
-        "children1",
-        "ref1_id",
-        "ref1_code",
-        Ref1,
-        is_same_service=True,
-        is_frozen=False,
-    )
+        cmd: UploadParentsCommand,
+        retval: ParentBatchUploadResult,
+        uow: Any,
+    ) -> bool:
+        """
+        Verify and complete reference data for allele profiles.
+        """
+        success = True
+        user_id = cmd.user.id if cmd.user else None
+        parents = cmd.parent_batch.parents
+        parent_results = retval.parents
 
-    # Verify all Child2.ref2_id
-    success &= verify_link_id(
-        self,
-        cmd,
-        uow,
-        ParentForUpload,
-        parents,  # type: ignore[arg-type]
-        parent_results,  # type: ignore[arg-type]
-        "children2",
-        "ref2_id",
-        "ref2_code",
-        Ref2,
-        is_same_service=False,
-        is_frozen=False,
-    )
+        # Verify all Child1.ref1_id
+        success &= self.verify_link_id(
+            cmd,
+            retval,
+            uow,
+            "children1",
+            "ref1_id",
+            "ref1_code",
+            Ref1,
+            is_same_service=True,
+            is_frozen=False,
+        )
 
-    return success
+        # Verify all Child2.ref2_id
+        success &= self.verify_link_id(
+            cmd,
+            retval,
+            uow,
+            "children2",
+            "ref2_id",
+            "ref2_code",
+            Ref2,
+            is_same_service=False,
+            is_frozen=False,
+        )
+
+        return success

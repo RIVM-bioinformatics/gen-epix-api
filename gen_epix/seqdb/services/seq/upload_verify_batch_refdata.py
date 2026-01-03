@@ -5,14 +5,14 @@ from uuid import UUID
 import gen_epix.commondb.domain.model.upload
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.service.seq import BaseSeqService
 
 
 def _verify_batch_refdata_allele_profiles(
-    self: BaseSeqService,
+    self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: Any,
@@ -48,7 +48,7 @@ def _verify_batch_refdata_allele_profiles(
         for x in allele_profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_sets: list[model.LocusSet] = self.repository.crud(  # type: ignore[assignment]
+    locus_sets: list[model.LocusSet] = self.service.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.LocusSet,
@@ -64,7 +64,7 @@ def _verify_batch_refdata_allele_profiles(
         for x in allele_profiles
         if x.locus_code_map_id is not None and x.locus_code_map_id != NULL_ID
     }
-    locus_code_maps: list[model.LocusCodeMap] = self.repository.crud(  # type: ignore[assignment]
+    locus_code_maps: list[model.LocusCodeMap] = self.service.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.LocusCodeMap,
@@ -153,7 +153,7 @@ def _verify_batch_refdata_allele_profiles(
     chunk_size = 1000  # TODO: make configurable
     existing_allele_locus_map: dict[UUID, UUID] = {}
     for i in range(0, len(uq_allele_ids_list), chunk_size):
-        result_iter = self.repository.read_fields(
+        result_iter = self.service.repository.read_fields(
             uow,
             user_id,
             model.Allele,
@@ -306,10 +306,10 @@ def _verify_batch_refdata_allele_profiles(
 #     link_ids: set[UUID] = set()
 
 #     # Get unique IDs from all samples
-#     for_upload_model_class = parent_for_upload_model_class.FOR_UPLOAD_CHILD_MODEL_CLASS_MAP[ # type: ignore[attr-defined]
+#     for_upload_model_class = parent_for_upload_model_class.CHILD_FOR_UPLOAD_CLASS_MAP[ # type: ignore[attr-defined]
 #         child_model_class
 #     ]
-#     child_field_name = parent_for_upload_model_class.CHILD_MODEL_FIELD_NAME_MAP[ # type: ignore[attr-defined]
+#     child_field_name = parent_for_upload_model_class.CHILDREN_FIELD_NAME_MAP[ # type: ignore[attr-defined]
 #         for_upload_model_class
 #     ]
 #     for parent, parent_result in zip(parents, parent_results):

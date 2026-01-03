@@ -2,91 +2,40 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import (
-    IdentifierType,
-    OnExistsUploadAction,
-    UploadStatus,
-)
+from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.services.upload import (
-    verify_child_existence,
-    verify_external_identifiers,
-    verify_link_id,
-    verify_parent_existence,
-)
+from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
-from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
     _verify_batch_refdata_allele_profiles,
 )
 
 
-def _verify_batch_sample_existence(
-    self: BaseSeqService,
-    cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
-    uow: fastapp.BaseUnitOfWork,
-) -> bool:
-    """Check sample existence when ID is given"""
-    return verify_parent_existence(
-        self,
-        cmd,
-        retval,
-        uow,
-        model.Sample,
-        cmd.sample_batch.samples,  # type: ignore[arg-type]
-        retval.samples,  # type: ignore[arg-type]
-    )
-
-
-def _verify_batch_sample_external_identifiers(
-    self: BaseSeqService,
-    cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
-    uow: fastapp.BaseUnitOfWork,
-) -> bool:
-    """Verify sample external identifiers"""
-    return verify_external_identifiers(
-        self,
-        cmd,
-        uow,
-        model.Sample,
-        model.SampleForUpload,
-        IdentifierType.SAMPLE,
-        cmd.sample_batch.samples,  # type: ignore[arg-type]
-        retval.samples,  # type: ignore[arg-type]
-    )
-
-
-def _verify_batch_sample_children(
-    self: BaseSeqService,
+def _verify_sample_children(
+    self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Check child model existence and consistency"""
+    success = True
     # Generic child model verifications
-    success = verify_child_existence(
-        self,
+    success &= self.verify_children(
         cmd,
         retval,
         uow,
-        model.SampleForUpload,
-        "sample_id",
-        cmd.sample_batch.samples,  # type: ignore[arg-type]
-        retval.samples,  # type: ignore[arg-type]
     )
 
     # Child model specific verifications
-    success &= _verify_batch_seqs(self, cmd, retval, uow)
-    success &= _verify_batch_allele_profiles(self, cmd, retval, uow)
+    success &= _verify_children_seqs(self, cmd, retval, uow)
+    success &= _verify_children_allele_profiles(self, cmd, retval, uow)
 
     return success
 
 
-def _verify_batch_seqs(
-    self: BaseSeqService,
+def _verify_children_seqs(
+    self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
@@ -98,13 +47,10 @@ def _verify_batch_seqs(
     success = True
 
     # Retrieve and verify assembly protocols provided by ID and/or code
-    success &= verify_link_id(
-        self,
+    success &= self.verify_link_id(
         cmd,
+        retval,
         uow,
-        model.SampleForUpload,
-        samples,  # type: ignore[arg-type]
-        sample_results,  # type: ignore[arg-type]
         model.Seq,
         "assembly_protocol_id",
         "assembly_protocol_code",
@@ -116,7 +62,7 @@ def _verify_batch_seqs(
     if not sample_ids:
         # No samples with ID, nothing to verify
         return success
-    result_iter = self.repository.read_fields(
+    result_iter = self.service.repository.read_fields(
         uow,
         user_id,
         model.Seq,
@@ -186,8 +132,8 @@ def _verify_batch_seqs(
     return success
 
 
-def _verify_batch_allele_profiles(
-    self: BaseSeqService,
+def _verify_children_allele_profiles(
+    self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
@@ -199,19 +145,16 @@ def _verify_batch_allele_profiles(
     success = True
 
     # Get sample IDs
-    sample_ids = list({sample.id for sample in samples if sample.id is not None})
+    sample_ids = list({x.id for x in samples if x.id is not None})
     if not sample_ids:
         # No existing samples, nothing to verify
         return success
 
     # Retrieve and verify locus detection protocols provided by ID and/or code
-    success &= verify_link_id(
-        self,
+    success &= self.verify_link_id(
         cmd,
+        retval,
         uow,
-        model.SampleForUpload,
-        samples,  # type: ignore[arg-type]
-        sample_results,  # type: ignore[arg-type]
         model.AlleleProfile,
         "locus_detection_protocol_id",
         "locus_detection_protocol_code",
@@ -219,13 +162,10 @@ def _verify_batch_allele_profiles(
     )
 
     # Retrieve and verify locus sets provided by ID and/or code
-    success &= verify_link_id(
-        self,
+    success &= self.verify_link_id(
         cmd,
+        retval,
         uow,
-        model.SampleForUpload,
-        samples,  # type: ignore[arg-type]
-        sample_results,  # type: ignore[arg-type]
         model.AlleleProfile,
         "locus_set_id",
         "locus_set_code",
@@ -233,13 +173,10 @@ def _verify_batch_allele_profiles(
     )
 
     # Retrieve and verify locus code maps provided by ID and/or code
-    success &= verify_link_id(
-        self,
+    success &= self.verify_link_id(
         cmd,
+        retval,
         uow,
-        model.SampleForUpload,
-        samples,  # type: ignore[arg-type]
-        sample_results,  # type: ignore[arg-type]
         model.AlleleProfile,
         "locus_code_map_id",
         "locus_code_map_code",
@@ -247,7 +184,7 @@ def _verify_batch_allele_profiles(
     )
 
     # Get dict[(sample_id, allele_profile_hash), [(locus_detection_protocol_id, locus_set_id, seq_id,id)]
-    result_iter = self.repository.read_fields(
+    result_iter = self.service.repository.read_fields(
         uow,
         user_id,
         model.AlleleProfile,
@@ -327,8 +264,8 @@ def _verify_batch_allele_profiles(
     return success
 
 
-def _verify_batch_sample_refdata(
-    self: BaseSeqService,
+def _verify_sample_refdata(
+    self: BatchUploader,
     cmd: command.UploadSamplesCommand,
     retval: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
