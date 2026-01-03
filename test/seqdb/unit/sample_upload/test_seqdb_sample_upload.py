@@ -369,12 +369,8 @@ class TestInitializeUploadResult(TestCase):
         self.assertIsInstance(sample_result, model.SampleUploadResult)
         self.assertEqual(sample_result.status, UploadStatus.PENDING)
 
-        # For minimal sample: props exists but is empty dict, so sample_result should be UploadResult
-        self.assertIsNotNone(sample_result.sample)
-        self.assertIsInstance(sample_result.sample, UploadResult)
         # Type guard: sample_result.sample_result is not None after the assertion above
-        assert sample_result.sample is not None
-        self.assertEqual(sample_result.sample.status, UploadStatus.PENDING)
+        self.assertEqual(sample_result.status, UploadStatus.PENDING)
 
         # All list fields should be None (no data provided)
         self.assertIsNone(sample_result.external_ids)
@@ -473,12 +469,8 @@ class TestInitializeUploadResult(TestCase):
         # Verify sample-level result
         sample_result = result.samples[0]
 
-        # Verify that results are created for provided data
-        self.assertIsNotNone(sample_result.sample)  # Props provided
-        self.assertIsInstance(sample_result.sample, UploadResult)
         # Type guard: sample_result.sample_result is not None after the assertion above
-        assert sample_result.sample is not None
-        self.assertEqual(sample_result.sample.status, UploadStatus.PENDING)
+        self.assertEqual(sample_result.status, UploadStatus.PENDING)
 
         # Verify external ID results (2 items)
         self.assertIsNotNone(sample_result.external_ids)
@@ -590,9 +582,6 @@ class TestInitializeUploadResult(TestCase):
 
         # Verify sample1 results (has external_ids)
         sample1_result = result.samples[0]
-        self.assertIsInstance(
-            sample1_result.sample, UploadResult
-        )  # Props exist as empty dict
         self.assertIsNotNone(sample1_result.external_ids)
         # Type guard: external_id_results is not None after the assertion above
         assert sample1_result.external_ids is not None
@@ -601,9 +590,6 @@ class TestInitializeUploadResult(TestCase):
 
         # Verify sample2 results (has seqs)
         sample2_result = result.samples[1]
-        self.assertIsInstance(
-            sample2_result.sample, UploadResult
-        )  # Props exist as empty dict
         self.assertIsNone(sample2_result.external_ids)
         self.assertIsNotNone(sample2_result.seqs)
         # Type guard: seq_results is not None after the assertion above
@@ -612,7 +598,6 @@ class TestInitializeUploadResult(TestCase):
 
         # Verify sample3 results (has props)
         sample3_result = result.samples[2]
-        self.assertIsInstance(sample3_result.sample, UploadResult)  # Has props
         self.assertIsNone(sample3_result.external_ids)
         self.assertIsNone(sample3_result.seqs)
 
@@ -740,11 +725,8 @@ class TestInitializeUploadResult(TestCase):
         self.assertEqual(seq_result_1.status, UploadStatus.PENDING)
         self.assertEqual(seq_result_2.status, UploadStatus.PENDING)
 
-        # Verify sample_result has None id because sample.props doesn't have an id
-        self.assertIsNotNone(sample_result.sample)
         # Type guard: sample_result is not None after the assertion above
-        assert sample_result.sample is not None
-        self.assertIsNone(sample_result.sample.id)
+        self.assertIsNone(sample_result.id)
 
 
 class TestVerifyBatch(TestCase):
@@ -1238,14 +1220,16 @@ class TestVerifyBatchExternalIds(TestCase):
         )
 
         # Mock identifier issuer with different ID
-        mock_issuer = model.IdentifierIssuer(
+        existing_identifier_issuer = model.IdentifierIssuer(
             id=different_id, code="TEST_CODE", name="Test Issuer"
         )
         # For cross-service calls
         self.service.app = Mock()
-        self.service.app.handle.return_value = [mock_issuer]
         # Mock the crud function for external identifier lookup
-        self.service.crud.return_value = []
+        self.service.app.handle.side_effect = [
+            [existing_identifier_issuer],
+            [],
+        ]
         uow = Mock()
 
         # Execute
@@ -1286,10 +1270,10 @@ class TestVerifyBatchExternalIds(TestCase):
         )
 
         # Mock identifier issuer and existing external ID
-        mock_issuer = model.IdentifierIssuer(
+        existing_identifier_issuer = model.IdentifierIssuer(
             id=issuer_id, code="TEST_CODE", name="Test Issuer"
         )
-        mock_external_id = model.ExternalIdentifier(
+        existing_external_id = model.ExternalIdentifier(
             id=uuid4(),
             identifier_type=IdentifierType.SAMPLE,
             identifier_issuer_id=issuer_id,
@@ -1298,8 +1282,10 @@ class TestVerifyBatchExternalIds(TestCase):
         )
         # First call for cross-service identifier issuers, second for external IDs
         self.service.app = Mock()
-        self.service.app.handle.return_value = [mock_issuer]
-        self.service.crud.return_value = [mock_external_id]
+        self.service.app.handle.side_effect = [
+            [existing_identifier_issuer],
+            [existing_external_id],
+        ]
 
         # Execute
         uow = Mock()
@@ -1314,14 +1300,14 @@ class TestVerifyBatchExternalIds(TestCase):
     def test_external_id_exists_with_error_on_exists(self) -> None:
         """Test error when external ID exists and on_exists=ERROR."""
         batch_id = uuid4()
-        issuer_id = uuid4()
+        identifier_issuer_id = uuid4()
 
         sample = model.SampleForUpload(
             id=uuid4(),
             created_in_data_collection_id=self.data_collection_id,
             external_ids=[
                 ExternalIdentifierForUpload(
-                    identifier_issuer_id=issuer_id, external_id="TEST_ID"
+                    identifier_issuer_id=identifier_issuer_id, external_id="TEST_ID"
                 )
             ],
         )
@@ -1332,29 +1318,31 @@ class TestVerifyBatchExternalIds(TestCase):
             on_exists=OnExistsUploadAction.ERROR,
         )
 
-        ext_id_result = UploadResult(status=UploadStatus.PENDING)
+        external_id_result = UploadResult(status=UploadStatus.PENDING)
         sample_result = model.SampleUploadResult(
-            status=UploadStatus.PENDING, external_ids=[ext_id_result]
+            status=UploadStatus.PENDING, external_ids=[external_id_result]
         )
         retval = model.SampleBatchUploadResult(
             batch_id=batch_id, status=UploadStatus.PENDING, samples=[sample_result]
         )
 
         # Mock identifier issuer and existing external ID
-        mock_issuer = model.IdentifierIssuer(
-            id=issuer_id, code="TEST_CODE", name="Test Issuer"
+        existing_identifier_issuer = model.IdentifierIssuer(
+            id=identifier_issuer_id, code="TEST_CODE", name="Test Issuer"
         )
-        mock_external_id = model.ExternalIdentifier(
+        existing_external_id = model.ExternalIdentifier(
             id=uuid4(),
             identifier_type=IdentifierType.SAMPLE,
-            identifier_issuer_id=issuer_id,
+            identifier_issuer_id=identifier_issuer_id,
             external_id="TEST_ID",
             internal_id=sample.id,
         )
         # First call for cross-service identifier issuers, second for external IDs
         self.service.app = Mock()
-        self.service.app.handle.return_value = [mock_issuer]
-        self.service.crud.return_value = [mock_external_id]
+        self.service.app.handle.side_effect = [
+            [existing_identifier_issuer],
+            [existing_external_id],
+        ]
 
         # Execute
         uow = Mock()

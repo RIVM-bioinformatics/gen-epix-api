@@ -1,9 +1,8 @@
-from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.services.upload import (
-    _upsert_batch_create_children,
-    _upsert_batch_create_objects,
-    _upsert_batch_update_children,
-    _upsert_batch_update_objects,
+    create_children,
+    create_parents,
+    update_children,
+    update_parents,
 )
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -43,32 +42,15 @@ def _upsert_batch_create_samples(
     retval: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
-    """
-    Upsert sample data as part of creating or updating the sample data.
-    """
-    user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = retval.samples
-
-    # Determine which samples need to be created
-    to_create_sample_result_pairs = [
-        (x, y)
-        for x, y in zip(samples, sample_results)
-        if x.id is None and y.status == UploadStatus.PENDING
-    ]
-    if not to_create_sample_result_pairs:
-        return True
-
-    # Create samples
-    _upsert_batch_create_objects(
+    """Create samples."""
+    return create_parents(
         self,
+        cmd,
         uow,
-        user_id,
         model.Sample,
-        to_create_sample_result_pairs,  # type:ignore[arg-type]
+        cmd.sample_batch.samples,  # type: ignore[arg-type]
+        retval.samples,  # type: ignore[arg-type]
     )
-
-    return True
 
 
 def _upsert_batch_update_samples(
@@ -77,36 +59,16 @@ def _upsert_batch_update_samples(
     retval: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
-    """
-    Update existing sample data as part of updating the sample data.
-    This function only updates samples that already exist; it does not create new samples.
-    It updates the props dictionary of each sample based on the provided updates,
-    and adjusts the corresponding SampleUploadResult accordingly.
-    """
-    user_id = cmd.user.id if cmd.user else None
-    samples = cmd.sample_batch.samples
-    sample_results = retval.samples
-    success = True
-
-    # Determine which samples need to be updated
-    to_update_sample_result_pairs = [
-        (x, y)
-        for x, y in zip(samples, sample_results)
-        if x.id is not None and y.status == UploadStatus.PENDING
-    ]
-    if not to_update_sample_result_pairs:
-        return success
-
-    return _upsert_batch_update_objects(
+    """Update samples."""
+    return update_parents(
         self,
+        cmd,
         uow,
-        user_id,
-        model.Sample,
         model.STORED_MODEL_FIELD_PROPS[model.Sample],
-        to_update_sample_result_pairs,  # type:ignore[arg-type]
+        model.Sample,
+        cmd.sample_batch.samples,  # type: ignore[arg-type]
+        retval.samples,  # type: ignore[arg-type]
     )
-
-    return success
 
 
 def _upsert_batch_create_sample_children(
@@ -118,11 +80,12 @@ def _upsert_batch_create_sample_children(
     """
     Create child models as part of creating or updating the sample data.
     """
-    return _upsert_batch_create_children(
+    return create_children(
         self,
         cmd,
         uow,
         model.SampleForUpload,
+        "sample_id",
         cmd.sample_batch.samples,  # type: ignore[arg-type]
         retval.samples,  # type: ignore[arg-type]
     )
@@ -137,12 +100,13 @@ def _upsert_batch_update_sample_children(
     """
     Update child models as part of creating or updating the sample data.
     """
-    return _upsert_batch_update_children(
+    return update_children(
         self,
         cmd,
         uow,
         model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
         model.SampleForUpload,
+        "sample_id",
         cmd.sample_batch.samples,  # type: ignore[arg-type]
         retval.samples,  # type: ignore[arg-type]
     )

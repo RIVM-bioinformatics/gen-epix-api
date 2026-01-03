@@ -353,28 +353,22 @@ class PersonUploadResult(UploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonUploadResult"
 
-    SUB_RESULT_FIELD_NAMES: ClassVar = [
-        "person_result",
-    ]
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
+    CHILD_RESULT_FIELD_NAMES: ClassVar = []
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = [
         "external_id_results",
     ] + list(PersonForUpload.MODEL_RESULT_FIELD_NAME_MAP.values())
 
-    person_result: UploadResult | None = Field(
-        default=None,
-        description="The result of uploading the person itself.",
-    )
-    external_id_results: list[UploadResult] | None = Field(
+    external_ids: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the person, if any were provided, in the same order as provided.",
     )
-    measurement_results: list[UploadResult] | None = Field(
+    measurements: list[UploadResult] | None = Field(
         description="The results of uploading the individual measurements, if any were provided, in the same order as provided."
     )
-    observation_results: list[UploadResult] | None = Field(
+    observations: list[UploadResult] | None = Field(
         description="The results of uploading the individual observations, if any were provided, in the same order as provided."
     )
-    specimen_results: list[UploadResult] | None = Field(
+    specimens: list[UploadResult] | None = Field(
         description="The results of uploading the individual specimens, if any were provided, in the same order as provided."
     )
 
@@ -436,10 +430,8 @@ class PersonBatchUploadResult(BaseBatchUploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonBatchUploadResult"
 
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
-        "person_results",
-    ]
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = ["persons"]
 
-    person_results: list[PersonUploadResult] = Field(
+    persons: list[PersonUploadResult] = Field(
         description="The results of uploading the individual persons, in the same order as provided."
     )

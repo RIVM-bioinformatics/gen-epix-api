@@ -361,17 +361,11 @@ class SampleUploadResult(UploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleUploadResult"
 
-    SUB_RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "sample",
-    ]
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
+    CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
         "external_ids",
     ] + list(SampleForUpload.CHILD_MODEL_FIELD_NAME_MAP.values())
 
-    sample: UploadResult | None = Field(
-        default=None,
-        description="The result of uploading the sample itself.",
-    )
     external_ids: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
@@ -542,8 +536,8 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleBatchUploadResult"
 
-    SUB_RESULT_LIST_FIELD_NAMES: ClassVar = [
-        "sample_results",
+    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = [
+        "samples",
     ]
 
     samples: list[SampleUploadResult] = Field(

@@ -92,7 +92,6 @@ def _init_retval(
     # TODO: use reflection to reduce boilerplate
     for sample in cmd.sample_batch.samples:
         sample_result = model.SampleUploadResult(
-            sample=_create_child_result(sample.props),
             external_ids=_create_child_results(sample.external_ids),
             read_sets=_create_child_results(sample.read_sets),
             seqs=_create_child_results(sample.seqs),
@@ -126,10 +125,10 @@ def _verify_batch(
     """
     success = True
 
-    # Verify existence of samples by ID
-    success &= _verify_batch_sample_existence(self, cmd, retval, uow)
     # Verify existence and consistency of external IDs
     success &= _verify_batch_sample_external_ids(self, cmd, retval, uow)
+    # Verify existence of samples by ID
+    success &= _verify_batch_sample_existence(self, cmd, retval, uow)
     # Verify existence and consistency of child models as needed
     success &= _verify_batch_sample_children(self, cmd, retval, uow)
     # Verify reference data

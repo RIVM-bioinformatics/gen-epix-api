@@ -323,6 +323,16 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/upload/",
+            ]
+        )
+
     def test_commondb_integration(self) -> None:
         import pytest
 

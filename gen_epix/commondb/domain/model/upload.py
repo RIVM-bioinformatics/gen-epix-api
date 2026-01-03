@@ -1,10 +1,9 @@
 import datetime
 import uuid
-from functools import cached_property
 from typing import Callable, ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, computed_field, field_serializer, model_validator
+from pydantic import BaseModel, Field, field_serializer, model_validator
 
 from gen_epix.commondb.domain.enum import UploadStatus, UploadStatusSet
 from gen_epix.commondb.domain.model.base import Model
@@ -59,66 +58,27 @@ class UploadResult(Model):
         description="A list of log items capturing messages and events that occurred during the upload operation.",
     )
 
-    @computed_field
-    @cached_property
-    def n_items_processed(self) -> int:
-        """The number of records processed during the upload operation."""
-        n = int(self.status != UploadStatus.PENDING)  # Count self if not pending
+    def get_status_count(self, include_self: bool = True) -> dict[UploadStatus, int]:
+        """
+        Count the number of occurrences of each UploadStatus in this result (if
+        include_self) and, recursively, that of its child results.
+        """
+        retval: dict[UploadStatus, int] = {x: 0 for x in UploadStatus}
+        if include_self:
+            retval[self.status] += 1
         for field_name in self.CHILD_RESULT_FIELD_NAMES:
             child_result: UploadResult | None = getattr(self, field_name, None)
             if child_result is not None:
-                n += child_result.n_items_processed
+                child_status_count = child_result.get_status_count(include_self=True)
+                for status, count in child_status_count.items():
+                    retval[status] += count
         for field_name in self.CHILD_RESULT_LIST_FIELD_NAMES:
             child_results: list[UploadResult] = getattr(self, field_name, None) or []
             for child_result in child_results:
-                n += child_result.n_items_processed
-        return n
-
-    @computed_field
-    @cached_property
-    def n_created(self) -> int:
-        """Number of results, including self, with status CREATED."""
-        return self.get_n_results_with_status(UploadStatus.CREATED)
-
-    @computed_field
-    @cached_property
-    def n_updated(self) -> int:
-        """Number of results, including self, with status UPDATED."""
-        return self.get_n_results_with_status(UploadStatus.UPDATED)
-
-    @computed_field
-    @cached_property
-    def n_skipped(self) -> int:
-        """Number of results, including self, with status SKIPPED."""
-        return self.get_n_results_with_status(UploadStatus.SKIPPED)
-
-    @computed_field
-    @cached_property
-    def n_failed(self) -> int:
-        """Number of results, including self, with status FAILED."""
-        return self.get_n_results_with_status(UploadStatus.FAILED)
-
-    @computed_field
-    @cached_property
-    def n_pending(self) -> int:
-        """Number of results, including self, with status PENDING."""
-        return self.get_n_results_with_status(UploadStatus.PENDING)
-
-    def get_n_results_with_status(
-        self, status: UploadStatus, include_self: bool = True
-    ) -> int:
-        """Check if any sub-results have the specified status."""
-        n = int(include_self and self.status == status)
-        for field_name in self.CHILD_RESULT_FIELD_NAMES:
-            child_result: UploadResult | None = getattr(self, field_name, None)
-            if child_result is not None and child_result.status == status:
-                n += 1
-        for field_name in self.CHILD_RESULT_LIST_FIELD_NAMES:
-            child_results: list[UploadResult] = getattr(self, field_name, None) or []
-            for child_result in child_results:
-                if child_result.status == status:
-                    n += 1
-        return n
+                child_status_count = child_result.get_status_count(include_self=True)
+                for status, count in child_status_count.items():
+                    retval[status] += count
+        return retval
 
     @model_validator(mode="after")
     def _validate_upload_result(self) -> Self:
@@ -190,6 +150,7 @@ class BaseBatchUploadResult(UploadResult):
     NAME: ClassVar = "BaseBatchUploadResult"
 
     batch_id: UUID = Field(
+        default_factory=uuid.uuid4,
         description="The unique identifier for the upload batch that this result belongs to.",
     )
 

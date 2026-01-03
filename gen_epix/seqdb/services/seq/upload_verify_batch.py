@@ -9,10 +9,10 @@ from gen_epix.commondb.domain.enum import (
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services.upload import (
-    _verify_batch_parent_children,
-    _verify_batch_parent_existence,
-    _verify_batch_parent_external_ids,
-    _verify_batch_set_and_verify_id_by_code,
+    verify_child_existence,
+    verify_external_ids,
+    verify_link_id,
+    verify_parent_existence,
 )
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
@@ -29,7 +29,7 @@ def _verify_batch_sample_existence(
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Check sample existence when ID is given"""
-    return _verify_batch_parent_existence(
+    return verify_parent_existence(
         self,
         cmd,
         retval,
@@ -47,7 +47,7 @@ def _verify_batch_sample_external_ids(
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Retrieve and verify identifier issuers in external IDs"""
-    return _verify_batch_parent_external_ids(
+    return verify_external_ids(
         self,
         cmd,
         retval,
@@ -68,7 +68,7 @@ def _verify_batch_sample_children(
 ) -> bool:
     """Check child model existence and consistency"""
     # Generic child model verifications
-    success = _verify_batch_parent_children(
+    success = verify_child_existence(
         self,
         cmd,
         retval,
@@ -99,7 +99,7 @@ def _verify_batch_seqs(
     success = True
 
     # Retrieve and verify assembly protocols provided by ID and/or code
-    success &= _verify_batch_set_and_verify_id_by_code(
+    success &= verify_link_id(
         self,
         cmd,
         uow,
@@ -206,7 +206,7 @@ def _verify_batch_allele_profiles(
         return success
 
     # Retrieve and verify locus detection protocols provided by ID and/or code
-    success &= _verify_batch_set_and_verify_id_by_code(
+    success &= verify_link_id(
         self,
         cmd,
         uow,
@@ -220,7 +220,7 @@ def _verify_batch_allele_profiles(
     )
 
     # Retrieve and verify locus sets provided by ID and/or code
-    success &= _verify_batch_set_and_verify_id_by_code(
+    success &= verify_link_id(
         self,
         cmd,
         uow,
@@ -234,7 +234,7 @@ def _verify_batch_allele_profiles(
     )
 
     # Retrieve and verify locus code maps provided by ID and/or code
-    success &= _verify_batch_set_and_verify_id_by_code(
+    success &= verify_link_id(
         self,
         cmd,
         uow,

@@ -135,18 +135,29 @@ class DevRepositoryConfigSet(Enum):
 
 class UploadStatus(Enum):
     PENDING = "PENDING"  # Yet to be processed
-    SKIPPED = "SKIPPED"  # Not processed due to conditions
+    SKIPPED = "SKIPPED"  # No changes stored
     FAILED = "FAILED"
     CREATED = "CREATED"
     UPDATED = "UPDATED"
+    PROCESSED = "PROCESSED"  # Skipped, created or updated (not failed)
 
 
 class UploadStatusSet(Enum):
     NOT_FAILED = frozenset(
         {
+            UploadStatus.PENDING,
             UploadStatus.SKIPPED,
             UploadStatus.CREATED,
             UploadStatus.UPDATED,
-            UploadStatus.PENDING,
+            UploadStatus.PROCESSED,
+        }
+    )
+    FAILED = frozenset({UploadStatus.FAILED})
+    PROCESSED = frozenset(
+        {
+            UploadStatus.SKIPPED,
+            UploadStatus.CREATED,
+            UploadStatus.UPDATED,
+            UploadStatus.PROCESSED,
         }
     )
