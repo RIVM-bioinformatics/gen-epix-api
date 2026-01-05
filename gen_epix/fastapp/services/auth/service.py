@@ -86,53 +86,7 @@ class AuthService(BaseAuthService):
 
         if not self._idp_clients:
             # No authentication -> create/retrieve root user
-            user_manager = self.app.user_manager
-            if not user_manager:
-                raise exc.InitializationServiceError(
-                    "No authentication services configured and no user generator provided"
-                )
-            self._no_auth_user = user_manager.create_root_user_from_claims({})
-
-            async def dummy_get_existing_user(
-                request: Request, _security_scopes: SecurityScopes
-            ) -> model.User:
-                claims = await self._no_auth_idp_client(request)
-                if claims:
-                    user = await self.get_existing_user_from_claims(
-                        claims, request_userinfo=False
-                    )
-                    if user:
-                        return user
-                return self._no_auth_user
-
-            async def dummy_get_new_user(
-                request: Request, _security_scopes: SecurityScopes
-            ) -> model.User:
-                claims = await self._no_auth_idp_client(request)
-                if claims:
-                    user = await self.get_new_user_from_claims(
-                        claims, request_userinfo=False
-                    )
-                    if user:
-                        return user
-                raise exc.UnauthorizedAuthError(
-                    "Unable to create user due to missing header or claims"
-                )
-
-            registered_user_dependency: model.User = Annotated[  # type: ignore
-                model.User,
-                Security(dummy_get_existing_user, scopes=["openid", "profile"]),
-            ]
-            new_user_dependency: model.User = Annotated[  # type: ignore
-                model.User,
-                Security(dummy_get_new_user, scopes=["openid", "profile"]),
-            ]
-            idp_user_dependency: IDPUser = Annotated[  # type: ignore
-                IDPUser,
-                Security(dummy_get_new_user, scopes=["openid", "profile"]),
-            ]
-
-            return registered_user_dependency, new_user_dependency, idp_user_dependency
+            return self._create_no_auth_dependencies()
 
         # Init get_current_user function definition and environment
         # TODO: generate get_current_user and get_new_user functions
@@ -421,6 +375,69 @@ class AuthService(BaseAuthService):
         ]
 
         # Create CurrentUser/NewUser, injecting get_current_user/get_new_user
+        return self._create_or_inject_current_or_new_user(
+            n_security_bases,
+            get_idp_user_functions,
+            get_current_user_functions,
+            get_new_user_functions,
+        )
+
+    def _create_no_auth_dependencies(self) -> tuple[model.User, model.User, IDPUser]:
+        user_manager = self.app.user_manager
+        if not user_manager:
+            raise exc.InitializationServiceError(
+                "No authentication services configured and no user generator provided"
+            )
+        self._no_auth_user = user_manager.create_root_user_from_claims({})
+
+        async def dummy_get_existing_user(
+            request: Request, _security_scopes: SecurityScopes
+        ) -> model.User:
+            claims = await self._no_auth_idp_client(request)
+            if claims:
+                user = await self.get_existing_user_from_claims(
+                    claims, request_userinfo=False
+                )
+                if user:
+                    return user
+            return self._no_auth_user
+
+        async def dummy_get_new_user(
+            request: Request, _security_scopes: SecurityScopes
+        ) -> model.User:
+            claims = await self._no_auth_idp_client(request)
+            if claims:
+                user = await self.get_new_user_from_claims(
+                    claims, request_userinfo=False
+                )
+                if user:
+                    return user
+            raise exc.UnauthorizedAuthError(
+                "Unable to create user due to missing header or claims"
+            )
+
+        registered_user_dependency: model.User = Annotated[  # type: ignore
+            model.User,
+            Security(dummy_get_existing_user, scopes=["openid", "profile"]),
+        ]
+        new_user_dependency: model.User = Annotated[  # type: ignore
+            model.User,
+            Security(dummy_get_new_user, scopes=["openid", "profile"]),
+        ]
+        idp_user_dependency: IDPUser = Annotated[  # type: ignore
+            IDPUser,
+            Security(dummy_get_new_user, scopes=["openid", "profile"]),
+        ]
+
+        return registered_user_dependency, new_user_dependency, idp_user_dependency
+
+    def _create_or_inject_current_or_new_user(
+        self,
+        n_security_bases: int,
+        get_idp_user_functions: list[Any],
+        get_current_user_functions: list[Any],
+        get_new_user_functions: list[Any],
+    ) -> tuple[model.User, model.User, IDPUser]:
         if n_security_bases > len(get_current_user_functions):
             msg = (
                 f"More than {len(get_current_user_functions)} "
@@ -450,6 +467,7 @@ class AuthService(BaseAuthService):
                 scopes=["openid", "profile"],
             ),
         ]
+
         return registered_user_dependency, new_user_dependency, idp_user_dependency
 
     def get_identity_providers(
