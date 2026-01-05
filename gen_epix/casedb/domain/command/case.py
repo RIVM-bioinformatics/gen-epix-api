@@ -11,6 +11,7 @@ from gen_epix.commondb.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -59,10 +60,14 @@ class CreateCaseSetCommand(Command):
         return self
 
 
-class BaseUploadCasesCommand(Command):
+class BaseUploadCasesCommand(Command, UploadBatchCommandMixin):
     """
     Base class for uploading cases.
     """
+
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
+    BATCH_FOR_UPLOAD_FIELD_NAME: ClassVar = "case_batch"
+    BATCH_UPLOAD_RESULT_CLASS: ClassVar = model.CaseBatchUploadResult
 
     case_type_id: UUID = Field(
         description="The case type ID that all the cases must belong to. All cases in the case set must have this case type ID."
@@ -70,35 +75,22 @@ class BaseUploadCasesCommand(Command):
     created_in_data_collection_id: UUID = Field(
         description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
     )
-    data_collection_ids: set[UUID] = Field(
-        description="The additional data collection IDs that all the cases must belong to. All cases in the case set must have these data collection IDs or None."
-    )
     case_batch: model.CaseBatchForUpload = Field(
         description="The unique cases to validate."
     )
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if any(x.case_type_id != self.case_type_id for x in self.case_batch.cases):
+        cases_for_upload = self.case_batch.cases
+        cases = [x.case for x in cases_for_upload if x.case is not None]
+        if any(x.case_type_id != self.case_type_id for x in cases):
             raise ValueError("All cases must belong to the given case type ID.")
         if any(
             x.created_in_data_collection_id != self.created_in_data_collection_id
-            for x in self.case_batch.cases
+            for x in cases
         ):
             raise ValueError(
-                "All cases must belong to the given created in data collection ID."
-            )
-        if any(
-            x.data_collection_ids is not None
-            and x.data_collection_ids != self.data_collection_ids
-            for x in self.case_batch.cases
-        ):
-            raise ValueError(
-                "All cases must have the same data collection IDs or None."
+                "All cases must belong to the given created_in_data_collection_id."
             )
         return self
 
@@ -109,25 +101,19 @@ class ValidateCasesCommand(BaseUploadCasesCommand):
     case type and have the same created in data collection.
     """
 
-    is_update: bool = Field(
-        description="Whether the cases already exist and their content should first be merged with the new content, before validation.",
-    )
+    pass
 
 
 class UploadCasesCommand(BaseUploadCasesCommand):
     """
-    Upload a batch of cases along with their associated data.
+    Upload a batch of cases along with their associated data and return an upload
+    result.
+
     The data are uploaded as a single atomic unit of work, so that
     either all data are successfully uploaded or none are.
     """
 
-    case_batch: model.CaseBatchForUpload = Field(
-        description="Cases to upload, along with any associated data.",
-    )
-    is_update: bool = Field(
-        default=False,
-        description="Whether the cases already exist and should be updated.",
-    )
+    pass
 
 
 class RetrieveCaseSetStatsCommand(Command):

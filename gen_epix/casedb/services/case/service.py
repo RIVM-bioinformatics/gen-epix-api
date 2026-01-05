@@ -146,23 +146,25 @@ class CaseService(BaseCaseService):
 
     def create_reads_sets_for_cases(
         self, cmd: command.CreateReadSetsForCasesCommand
-    ) -> list[model.ReadSet]:
-        retval: list[model.ReadSet] = case_service_create_read_sets_or_seqs_for_cases(
-            self, cmd
+    ) -> list[model.ReadSetForUpload]:
+        retval: list[model.ReadSetForUpload] = (
+            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
         )  # type:ignore[assignment]
         return retval
 
-    def create_seq_for_case(self, cmd: command.CreateSeqsForCasesCommand) -> model.Seq:
-        retval: list[model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
-            self, cmd
+    def create_seq_for_case(
+        self, cmd: command.CreateSeqsForCasesCommand
+    ) -> model.SeqForUpload:
+        retval: list[model.SeqForUpload] = (
+            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
         )  # type:ignore[assignment]
         return retval[0]
 
     def create_seqs_for_cases(
         self, cmd: command.CreateSeqsForCasesCommand
-    ) -> list[model.Seq]:
-        retval: list[model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
-            self, cmd
+    ) -> list[model.SeqForUpload]:
+        retval: list[model.SeqForUpload] = (
+            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
         )  # type:ignore[assignment]
         return retval
 

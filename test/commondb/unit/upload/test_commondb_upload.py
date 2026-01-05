@@ -133,7 +133,7 @@ class BaseUploadTestCase(TestCase):
             code=self.identifier_issuer_code,
             name="Test Issuer",
         )
-        self.generated_ids = [
+        self.random_ids = [
             UUID("550e8400-e29b-41d4-a716-446655440010"),
             UUID("550e8400-e29b-41d4-a716-446655440011"),
             UUID("550e8400-e29b-41d4-a716-446655440012"),
@@ -185,15 +185,17 @@ class BaseUploadTestCase(TestCase):
         return ParentForUpload(
             id=parent_id or NULL_ID,
             is_new_id=is_new_id,  # type: ignore[call-arg]
-            a=a,
-            b=b or [],
-            c=c or {},
-            x=x,
-            y=y,
-            z=z,
             external_identifiers=external_identifiers,
             children1=children1,
             children2=children2,
+            parent=Parent(
+                a=a,
+                b=b or [],
+                c=c or {},
+                x=x,
+                y=y,
+                z=z,
+            ),
         )
 
     def get_parent_from_for_upload(
@@ -202,29 +204,30 @@ class BaseUploadTestCase(TestCase):
         id: UUID | None = None,
         a: str | None = None,
         b: list[str] | None = None,
-        c: dict[str, str] | None = None,
+        c: dict[str, str | None] | None = None,
         x: str | None = None,
         y: list[str] | None = None,
-        z: dict[str, str] | None = None,
+        z: dict[str, str | None] | None = None,
     ) -> Parent:
-        """Get the Parent model corresponding to a ParentForUpload model, with optional overrides."""
+        """Get the Parent model contained in a ParentForUpload model, with optional overrides."""
+        parent = parent_for_upload.parent
         return Parent(
-            id=id or parent_for_upload.id,
-            a=a or parent_for_upload.a,
-            b=b or parent_for_upload.b,
+            id=id or parent.id if parent else None,
+            a=a or parent.a if parent else None,  # type: ignore[arg-type]
+            b=b or parent.b if parent else None,  # type: ignore[arg-type]
             c=c
             or (
                 {}
-                if parent_for_upload.c is None
-                else {x: y for x, y in parent_for_upload.c.items() if y is not None}
+                if parent is None or parent.c is None
+                else {x: y for x, y in parent.c.items() if y is not None}
             ),
-            x=x or parent_for_upload.x,
-            y=y or parent_for_upload.y,
+            x=x or parent.x if parent else None,
+            y=y or parent.y if parent else None,
             z=z
             or (
                 {}
-                if parent_for_upload.z is None
-                else {x: y for x, y in parent_for_upload.z.items() if y is not None}
+                if parent is None or parent.z is None
+                else {x: y for x, y in parent.z.items() if y is not None}
             ),
         )
 
@@ -290,11 +293,17 @@ class BaseUploadTestCase(TestCase):
         self,
         parents: list[ParentForUpload] | ParentForUpload,
         on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        validate_command: bool = True,
     ) -> UploadParentsCommand:
         """Create a test upload command."""
         if not isinstance(parents, list):
             parents = [parents]
-        parent_batch = ParentBatchForUpload(batch_id=uuid4(), parents=parents)  # type: ignore[call-arg]
+        if validate_command:
+            parent_batch = ParentBatchForUpload(batch_id=uuid4(), parents=parents)  # type: ignore[call-arg]
+        else:
+            parent_batch = ParentBatchForUpload.model_construct(
+                batch_id=uuid4(), parents=parents
+            )
         cmd = UploadParentsCommand(
             user=self.user,
             parent_batch=parent_batch,
@@ -345,12 +354,15 @@ class BaseUploadTestCase(TestCase):
         self,
         cmd: UploadParentsCommand | list[ParentForUpload] | ParentForUpload,
         on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        validate_command: bool = True,
     ) -> ParentBatchUploadResult:
         """Upload a batch of parents and return the upload result."""
         if isinstance(cmd, UploadParentsCommand):
             pass
         else:
-            cmd = self.create_command_for_parents(cmd, on_exists)
+            cmd = self.create_command_for_parents(
+                cmd, on_exists, validate_command=validate_command
+            )
         retval = self.batch_uploader.upload_batch(
             cmd,
         )
@@ -424,7 +436,7 @@ class TestObjectExistence(BaseUploadTestCase):
         # Create upload batch
         parent = self.create_parent_for_upload()
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
+        created_parent_id = self.random_ids[0]
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parents returned IDs
         ]
@@ -472,7 +484,7 @@ class TestChildObjectProvision(BaseUploadTestCase):
         # Create upload batch
         parent = self.create_parent_for_upload()
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
+        created_parent_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
         ]
@@ -492,8 +504,8 @@ class TestChildObjectProvision(BaseUploadTestCase):
         child1 = self.create_child1_for_upload(ref1_code=existing_ref1.code)
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -519,8 +531,8 @@ class TestChildObjectProvision(BaseUploadTestCase):
         child2 = self.create_child2_for_upload(ref2_code=existing_ref2.code)
         parent = self.create_parent_for_upload(children2=[child2])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child2_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child2_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child2_id,  # ID of the newly created child2
@@ -548,9 +560,9 @@ class TestChildObjectProvision(BaseUploadTestCase):
         child2 = self.create_child2_for_upload(ref2_code=existing_ref2.code)
         parent = self.create_parent_for_upload(children1=[child1], children2=[child2])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
-        created_child2_id = self.generated_ids[2]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
+        created_child2_id = self.random_ids[2]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -584,7 +596,7 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         """Test 3.1.1: Reference model ID not found - should fail."""
         # Create upload batch
         child1 = self.create_child1_for_upload(
-            ref1_id=self.generated_ids[0], ref1_code=None
+            ref1_id=self.random_ids[0], ref1_code=None
         )
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
@@ -603,8 +615,8 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=None)  # type: ignore[arg-type]
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -648,8 +660,8 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         )
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -674,7 +686,7 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
         other_existing_ref1 = self.create_ref1(
-            self.generated_ids[0], "other_existing_code"
+            self.random_ids[0], "other_existing_code"
         )
         child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=other_existing_ref1.code)  # type: ignore[arg-type]
         parent = self.create_parent_for_upload(children1=[child1])
@@ -697,8 +709,8 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=existing_ref1.code)  # type: ignore[arg-type]
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -732,8 +744,8 @@ class TestReferenceDataLinks(BaseUploadTestCase):
         child2 = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
         parent = self.create_parent_for_upload(children2=[child2])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child2_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child2_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child2_id,  # ID of the newly created child2
@@ -762,8 +774,8 @@ class TestParentLinks(BaseUploadTestCase):
         )
         parent = self.create_parent_for_upload(children1=[child1])
         # Set up mocks
-        created_parent_id = self.generated_ids[0]
-        created_child1_id = self.generated_ids[1]
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_child1_id,  # ID of the newly created child1
@@ -789,10 +801,11 @@ class TestParentLinks(BaseUploadTestCase):
             parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
         )
         parent = self.create_parent_for_upload(
-            parent_id=self.generated_ids[0], is_new_id=True, children1=[child1]
+            parent_id=self.parent_id, is_new_id=True, children1=[child1]
         )
+        parent.id = self.random_ids[1]  # Different ID than child's parent_id
         # Set up mocks
-        created_child1_id = self.generated_ids[1]
+        created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
             created_child1_id,  # ID of the newly created child1
         ]
@@ -804,7 +817,9 @@ class TestParentLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        retval = self.upload_batch(parent)
+        retval = self.upload_batch(
+            parent, validate_command=False
+        )  # Skip command validation to allow inconsistent IDs
         self.assertBatchFailed(retval)
         self.assertStatusCount(retval, n_pending=1, n_failed=1)
 
@@ -818,15 +833,16 @@ class TestParentLinks(BaseUploadTestCase):
         parent = self.create_parent_for_upload(
             parent_id=self.parent_id, children1=[child1]
         )
+        existing_parent = self.get_parent_from_for_upload(parent)
         # Set up mocks
         created_parent_id = parent.id
-        created_child1_id = self.generated_ids[0]
+        created_child1_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
             created_child1_id,  # ID of the newly created child1
         ]
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
-            [parent],  # Existing parents
+            [existing_parent],  # Existing parents
             [created_child1_id],  # Create children1 returned IDs
         ]
         self.service.repository.read_fields.side_effect = [
@@ -862,7 +878,7 @@ class TestFieldMutability(BaseUploadTestCase):
         retval = self.upload_batch(parent)
         self.assertBatchProcessed(retval)
         self.assertStatusCount(retval, n_updated=1)
-        self.assertEqual(parent.a, resulting_value)
+        self.assertEqual(existing_parent.a, resulting_value)
 
     def test_5_1_2_always_mutable_list_field(self) -> None:
         """Test 5.1.2: Always mutable list field - should be updated."""
@@ -1011,7 +1027,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
         )
-        existing_parent_id = self.generated_ids[0]
+        existing_parent_id = self.random_ids[0]
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=existing_parent_id
         )
@@ -1040,7 +1056,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
         )
-        existing_parent_id = self.generated_ids[0]
+        existing_parent_id = self.random_ids[0]
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=existing_parent_id
         )
@@ -1068,8 +1084,8 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
         )
-        other_parent_id = self.generated_ids[0]
-        existing_parent_id = self.generated_ids[1]
+        other_parent_id = self.random_ids[0]
+        existing_parent_id = self.random_ids[1]
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=other_parent_id
         )
@@ -1097,8 +1113,8 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         external_identifier_for_upload = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
         )
-        created_external_identifier_id = self.generated_ids[0]
-        created_parent_id = self.generated_ids[1]
+        created_external_identifier_id = self.random_ids[0]
+        created_parent_id = self.random_ids[1]
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier_for_upload]
         )
@@ -1136,12 +1152,12 @@ class TestExternalIdentifiers(BaseUploadTestCase):
             external_id="ext_id_2"
         )
         parent = self.create_parent_for_upload(
-            external_identifiers=[external_identifier1, external_identifier2]
+            parent_id=self.parent_id,
+            external_identifiers=[external_identifier1, external_identifier2],
         )
-        existing_external_identifier1 = ExternalIdentifier(
-            id=uuid4(),
-            **external_identifier1.model_dump(),
-            internal_id=parent.id,  # Same parent ID
+        existing_external_identifier1 = self.get_external_identifier_from_for_upload(
+            external_identifier1,
+            parent.id,  # type: ignore[arg-type]
         )
         # Set up mocks
         self.service.app.handle.side_effect = [
@@ -1165,10 +1181,10 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier1, external_identifier2]
         )
-        existing_external_identifier1 = ExternalIdentifier(
-            id=uuid4(),
-            **external_identifier1.model_dump(),
-            internal_id=uuid4(),  # Different parent ID
+        different_id = self.random_ids[0]
+        existing_external_identifier1 = self.get_external_identifier_from_for_upload(
+            external_identifier1,
+            different_id,  # Different parent ID
         )
         # Set up mocks
         self.service.app.handle.side_effect = [
@@ -1255,7 +1271,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
         """Test parent with both children and external identifiers."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload()
-        child1 = self.create_child1_for_upload()
+        child1 = self.create_child1_for_upload(ref1_id=self.ref1_id)
         child2 = self.create_child2_for_upload()
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier],
@@ -1272,7 +1288,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
     def test_update_existing_parent_with_new_children(self) -> None:
         """Test updating an existing parent with new child objects."""
         # Create upload batch
-        child1 = self.create_child1_for_upload()
+        child1 = self.create_child1_for_upload(ref1_id=self.ref1_id)
         parent = self.create_parent_for_upload(
             parent_id=self.parent_id, children1=[child1]
         )

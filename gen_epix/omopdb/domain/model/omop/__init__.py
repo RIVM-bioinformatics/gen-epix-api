@@ -70,4 +70,5 @@ from gen_epix.omopdb.domain.model.omop.upload import (
 from gen_epix.omopdb.domain.model.omop.upload import (
     SpecimenForUpload as SpecimenForUpload,
 )
-from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
+
+# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject

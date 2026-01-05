@@ -84,9 +84,9 @@ from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProto
 from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
-from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
+from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSetForUpload
 from gen_epix.casedb.domain.model.seqdb import Sample as Sample
-from gen_epix.casedb.domain.model.seqdb import Seq as Seq
+from gen_epix.casedb.domain.model.seqdb import Seq as SeqForUpload
 from gen_epix.casedb.domain.model.seqdb import SequencingProtocol as SequencingProtocol
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
@@ -120,8 +120,11 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
+from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
+from gen_epix.util import add_parent_class_docs
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
@@ -162,8 +165,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AssemblyProtocol,
             File,
             Sample,
-            ReadSet,
-            Seq,
+            ReadSetForUpload,
+            SeqForUpload,
         ],
         enum.ServiceType.SUBJECT: [
             Subject,
@@ -220,3 +223,29 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+# Additional field properties for models that have already been stored (persisted)
+STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
+    Case: {
+        "content": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=False),
+    },
+}
+complete_stored_model_field_props(
+    STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE
+)
+add_parent_class_docs(
+    set.union(
+        *[
+            set(y)  # type: ignore[arg-type]
+            for x, y in SORTED_MODELS_BY_SERVICE_TYPE.items()
+            if x
+            not in {
+                enum.ServiceType.AUTH,
+                enum.ServiceType.SYSTEM,
+                enum.ServiceType.RBAC,
+                enum.ServiceType.ORGANIZATION,
+            }
+        ]
+    ),
+    exclude=(Model,),
+)

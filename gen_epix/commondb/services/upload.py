@@ -1,18 +1,14 @@
-from typing import Any, Generator
+from typing import Generator
 from uuid import UUID
 
+import gen_epix.fastapp.model
 from gen_epix import fastapp
-from gen_epix.commondb.domain import exc
-from gen_epix.commondb.domain.enum import (
-    IdentifierType,
-    OnExistsUploadAction,
-    UploadStatus,
-)
+from gen_epix.commondb.domain import command, exc, model
+from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
-    ForUploadMixin,
     UploadResult,
 )
 from gen_epix.fastapp.enum import CrudOperation
@@ -23,7 +19,6 @@ from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_number import EqualsNumberFilter
 from gen_epix.filter.string_set import StringSetFilter
 from gen_epix.filter.uuid_set import UuidSetFilter
-from gen_epix.seqdb.domain import command, model
 
 
 class BatchUploader:
@@ -33,117 +28,124 @@ class BatchUploader:
 
     def __init__(
         self,
-        service: BaseService,
+        upload_batch_command_class: type[command.UploadBatchCommandMixin],
         stored_model_field_props: dict[
-            type[model.Model], dict[str, model.ModelFieldProps]
+            type[model.Model], dict[str, gen_epix.fastapp.model.ModelFieldProps]
         ],
-        cmd_batch_field_name: str,
-        batch_class: type[BaseBatchForUpload],
-        batch_result_class: type[BaseBatchUploadResult],
-        batch_parents_field_name: str,
-        parent_class: type[model.Model],
-        parent_for_upload_class: type[model.Model],
-        parent_result_class: type[model.UploadResult],
-        external_identifier_model_class: type[
-            model.ExternalIdentifier
-        ] = model.ExternalIdentifier,
+        service: BaseService,
     ):
+        self.upload_batch_command_class = upload_batch_command_class
         self.service = service
-        self.stored_model_field_props = (
-            stored_model_field_props.copy()
-        )  # Copy since the dict may be modified
-        self.cmd_batch_field_name = cmd_batch_field_name
-        self.batch_class = batch_class
-        self.batch_result_class = batch_result_class
-        self.batch_parents_field_name = batch_parents_field_name
-        self.parent_class = parent_class
-        self.parent_for_upload_class = parent_for_upload_class
-        self.parent_result_class = parent_result_class
-        self.external_identifier_model_class = external_identifier_model_class
+        self.stored_model_field_props = stored_model_field_props
+
+        # Derive some constants for convenience
+        self.cmd_batch_field_name = (
+            self.upload_batch_command_class.BATCH_FOR_UPLOAD_FIELD_NAME
+        )
+        self.batch_for_upload_class = (
+            self.upload_batch_command_class.BATCH_FOR_UPLOAD_CLASS
+        )
+        self.batch_upload_result_class = (
+            self.upload_batch_command_class.BATCH_UPLOAD_RESULT_CLASS
+        )
+        self.batch_parents_for_upload_field_name = (
+            self.batch_for_upload_class.PARENTS_FOR_UPLOAD_FIELD_NAME
+        )
+        self.parent_for_upload_class = (
+            self.batch_for_upload_class.PARENT_FOR_UPLOAD_CLASS
+        )
+        self.parent_identifier_type = (
+            self.parent_for_upload_class.PARENT_IDENTIFIER_TYPE
+        )
+        self.parent_class = self.parent_for_upload_class.PARENT_CLASS
+        self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
+        self.external_identifier_for_upload_class = (
+            self.parent_for_upload_class.EXTERNAL_IDENTIFIER_FOR_UPLOAD_CLASS
+        )
+        self.external_identifier_class = (
+            self.parent_for_upload_class.EXTERNAL_IDENTIFIER_CLASS
+        )
         self.external_identifier_crud_command_class = (
             self.service.app.domain.get_crud_command_for_model(
-                self.external_identifier_model_class
+                self.external_identifier_class
             )
+        )
+        self.child_for_upload_class_map = (
+            self.parent_for_upload_class.CHILD_FOR_UPLOAD_CLASS_MAP
+        )
+        self.children_field_name_map = (
+            self.parent_for_upload_class.CHILDREN_FIELD_NAME_MAP
+        )
+        self.child_model_parent_id_field_name_map = (
+            self.parent_for_upload_class.CHILD_PARENT_ID_FIELD_NAME_MAP
+        )
+        self.external_identifiers_field_name = (
+            self.parent_for_upload_class.EXTERNAL_IDENTIFIERS_FIELD_NAME
         )
 
-        # Get some class variables for easier access
-        self.parent_identifier_type: IdentifierType = BatchUploader._get_class_var(
-            self.parent_for_upload_class, "IDENTIFIER_TYPE"
-        )
-        self.child_for_upload_class_map: dict[
-            type[model.Model], type[ForUploadMixin]
-        ] = BatchUploader._get_class_var(
-            self.parent_for_upload_class, "CHILD_FOR_UPLOAD_CLASS_MAP"
-        )
-        self.children_field_name_map: dict[type[model.Model], str] = (
-            BatchUploader._get_class_var(
-                self.parent_for_upload_class, "CHILDREN_FIELD_NAME_MAP"
-            )
-        )
-        self.child_model_parent_id_field_name_map: dict[type[model.Model], str] = (
-            BatchUploader._get_class_var(
-                self.parent_for_upload_class, "CHILD_PARENT_ID_FIELD_NAME_MAP"
-            )
-        )
-        self.external_identifiers_field_name: str = BatchUploader._get_class_var(
-            self.parent_for_upload_class, "EXTERNAL_IDENTIFIERS_FIELD_NAME"
-        )
+        # # Expand stored_model_field_props_map with for upload models as key
+        # if self.parent_for_upload_class not in self.stored_model_field_props:
+        #     self.stored_model_field_props[self.parent_for_upload_class] = (
+        #         self.stored_model_field_props[self.parent_class]
+        #     )
+        # for (
+        #     model_class,
+        #     for_upload_model_class,
+        # ) in self.child_for_upload_class_map.items():
+        #     if (
+        #         for_upload_model_class
+        #         not in self.stored_model_field_props  # type:ignore[comparison-overlap]
+        #     ):
+        #         self.stored_model_field_props[for_upload_model_class] = (
+        #             self.stored_model_field_props[  # type:ignore[arg-type]
+        #                 model_class
+        #             ]
+        #         )
 
-        # Expand stored_model_field_props_map with for upload models as key
-        if self.parent_for_upload_class not in self.stored_model_field_props:
-            self.stored_model_field_props[self.parent_for_upload_class] = (
-                self.stored_model_field_props[self.parent_class]
-            )
-        for (
-            model_class,
-            for_upload_model_class,
-        ) in self.child_for_upload_class_map.items():
-            if (
-                for_upload_model_class not in self.stored_model_field_props
-            ):  # type:ignore[comparison-overlap]
-                self.stored_model_field_props[for_upload_model_class] = (
-                    self.stored_model_field_props[  # type:ignore[arg-type]
-                        model_class
-                    ]
-                )
-
-    def get_batch_for_upload(self, cmd: command.Command) -> BaseBatchForUpload:
+    def get_batch_for_upload(
+        self, cmd: command.UploadBatchCommandMixin
+    ) -> BaseBatchForUpload:
         """Get the batch for upload from the command."""
-        batch: BaseBatchForUpload = getattr(cmd, self.cmd_batch_field_name)
-        return batch
+        return cmd.get_batch_for_upload()
 
-    def get_parents_for_upload(self, cmd: command.Command) -> list[model.Model]:
+    def get_parents_for_upload(
+        self, cmd: command.UploadBatchCommandMixin
+    ) -> list[model.ParentForUpload]:
         """Get parent models from the command."""
-        parents: list[model.Model] = getattr(
-            self.get_batch_for_upload(cmd), self.batch_parents_field_name
-        )
-        return parents
+        return self.get_batch_for_upload(cmd).get_parents_for_upload()
 
     def get_parent_results(
         self, retval: BaseBatchUploadResult
-    ) -> list[model.UploadResult]:
+    ) -> list[model.ParentUploadResult]:
         """Get parent upload results from the batch upload result."""
-        parent_results: list[model.UploadResult] = getattr(
-            retval, self.batch_parents_field_name
-        )
-        return parent_results
+        return retval.get_parent_results()
 
     def parent_result_items(
-        self, cmd: command.Command, retval: BaseBatchUploadResult
-    ) -> Generator[tuple[model.Model, model.UploadResult], None, None]:
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        retval: BaseBatchUploadResult,
+    ) -> Generator[tuple[model.ParentForUpload, model.ParentUploadResult], None, None]:
         """Get (parent, parent_result) items from the batch upload result."""
-        parents: list[model.Model] = self.get_parents_for_upload(cmd)
-        parent_results: list[model.UploadResult] = self.get_parent_results(retval)
+        parents = cmd.get_batch_for_upload().get_parents_for_upload()
+        parent_results = retval.get_parent_results()
         for parent, parent_result in zip(parents, parent_results):
             yield parent, parent_result
 
     def upload_batch(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
     ) -> BaseBatchUploadResult:
         """
         See command.UploadSamplesCommand for details.
         """
+        # Verify arguments
+        if not isinstance(cmd, command.Command):
+            raise exc.InvalidArgumentsError(
+                "" f"cmd must be a Command, got {type(cmd)}"
+            )
+        if cmd.id is None:
+            raise exc.InvalidArgumentsError("cmd.id must be set")
+
         #  Check user rights
         self.verify_user_rights(cmd)
 
@@ -215,19 +217,21 @@ class BatchUploader:
 
         return retval
 
-    def verify_user_rights(self, cmd: command.Command) -> None:
+    def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """Verify that the user has rights to perform the upload. Override as needed."""
         pass
 
-    def init_batch_upload_result(self, cmd: command.Command) -> BaseBatchUploadResult:
+    def init_batch_upload_result(
+        self, cmd: command.UploadBatchCommandMixin
+    ) -> BaseBatchUploadResult:
         """Initialize the batch upload result. Override as needed."""
         # Initialize parent results
-        parent_results: list[model.UploadResult] = []
-        for parent in self.get_parents_for_upload(cmd):
+        parent_results: list[model.ParentUploadResult] = []
+        for parent_for_upload in self.get_parents_for_upload(cmd):
             # Intialize parent result
             parent_result = self.parent_result_class(status=UploadStatus.PENDING)
             # Initialise external identifier results
-            external_identifiers = getattr(parent, self.external_identifiers_field_name)
+            external_identifiers = parent_for_upload.external_identifiers
             external_identifier_results = (
                 None
                 if external_identifiers is None
@@ -236,40 +240,38 @@ class BatchUploader:
                     for _ in external_identifiers
                 ]
             )
-            setattr(
-                parent_result,
-                self.external_identifiers_field_name,
-                external_identifier_results,
-            )
+            parent_result.external_identifiers = external_identifier_results
             # Initialize child results
-            for (
-                child_model_class,
-                child_for_upload_class,
-            ) in self.child_for_upload_class_map.items():
-                children_field_name = self.children_field_name_map[child_model_class]
-                children = getattr(parent, children_field_name)
+            for children_field_name in self.children_field_name_map.values():
+                children: list[model.Model] | None = getattr(
+                    parent_for_upload, children_field_name
+                )
                 child_results = (
                     None
                     if children is None
                     else [
-                        UploadResult(
-                            id=getattr(x, "id", None), status=UploadStatus.PENDING
-                        )
+                        UploadResult(id=x.id, status=UploadStatus.PENDING)
                         for x in children
                     ]
                 )
                 setattr(parent_result, children_field_name, child_results)
             # Add parent result to parent results
             parent_results.append(parent_result)
+
         # Initialize batch result
-        kwargs = {self.batch_parents_field_name: parent_results}
-        retval = self.batch_result_class(
-            batch_id=cmd.id, status=UploadStatus.PENDING, **kwargs
+        kwargs = {self.batch_parents_for_upload_field_name: parent_results}
+        retval = self.batch_upload_result_class(
+            batch_id=cmd.id,  # type: ignore[attr-defined]
+            status=UploadStatus.PENDING,
+            **kwargs,  # type: ignore[arg-type]
         )
         return retval
 
     def verify_batch(
-        self, cmd: command.Command, retval: BaseBatchUploadResult, uow: BaseUnitOfWork
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        retval: BaseBatchUploadResult,
+        uow: BaseUnitOfWork,
     ) -> bool:
         """
         Verify parents, children, external identifiers and reference data.
@@ -284,7 +286,10 @@ class BatchUploader:
         return success
 
     def upsert_batch(
-        self, cmd: command.Command, retval: BaseBatchUploadResult, uow: BaseUnitOfWork
+        self,
+        cmd: command.UploadBatchCommandMixin,
+        retval: BaseBatchUploadResult,
+        uow: BaseUnitOfWork,
     ) -> bool:
         """
         Create or update parents, children, external identifiers and reference data.
@@ -306,7 +311,7 @@ class BatchUploader:
 
     def verify_external_identifiers(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
@@ -331,7 +336,7 @@ class BatchUploader:
             {
                 (y.identifier_issuer_id, y.external_id)
                 for x in self.get_parents_for_upload(cmd)
-                for y in x.external_identifiers or []  # type: ignore[attr-defined]
+                for y in getattr(x, self.external_identifiers_field_name) or []  # type: ignore[attr-defined]
             }
         )
         if not external_identifier_tuples:
@@ -424,7 +429,7 @@ class BatchUploader:
 
     def verify_parents(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
@@ -495,7 +500,7 @@ class BatchUploader:
 
     def verify_children(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
@@ -639,7 +644,7 @@ class BatchUploader:
 
     def verify_refdata(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
@@ -652,7 +657,7 @@ class BatchUploader:
 
     def verify_link_id(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
         child_field_name_or_class: str | type[model.Model],
@@ -833,7 +838,7 @@ class BatchUploader:
 
     def create_parents(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -843,14 +848,20 @@ class BatchUploader:
         success = True
 
         # Determine which parents need to be created
-        to_create_parent_result_pairs: list[tuple[model.Model, model.UploadResult]] = [
-            (x, y)
+        to_create_parent_result_tuples: list[
+            tuple[model.ParentForUpload, model.Model, model.UploadResult]
+        ] = [
+            (x, x.get_parent(), y)
             for x, y in self.parent_result_items(cmd, retval)
             if (x.id is None or x.id == NULL_ID or x.is_new_id)  # type: ignore[attr-defined]
             and y.status == UploadStatus.PENDING
+            and x.get_parent() is not None
         ]
-        if not to_create_parent_result_pairs:
+        if not to_create_parent_result_tuples:
             return success
+        to_create_parent_result_pairs = [
+            (x[1], x[2]) for x in to_create_parent_result_tuples
+        ]
 
         # Create parents
         success &= self.create_objects(
@@ -859,11 +870,15 @@ class BatchUploader:
             to_create_parent_result_pairs,
         )
 
+        # Update parent IDs in ParentForUpload instances
+        for parent_for_upload, parent, _ in to_create_parent_result_tuples:
+            parent_for_upload.id = parent.id
+
         return success
 
     def update_parents(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -873,28 +888,39 @@ class BatchUploader:
         success = True
 
         # Determine which parents need to be updated
-        to_update_parent_result_pairs: list[tuple[model.Model, model.UploadResult]] = [
-            (x, y)
+        to_update_parent_result_tuples: list[
+            tuple[model.ParentForUpload, model.Model, model.UploadResult]
+        ] = [
+            (x, x.get_parent(), y)  # type:ignore[arg-type]
             for x, y in self.parent_result_items(cmd, retval)
             if x.id is not None
             and x.id != NULL_ID
             and not x.is_new_id  # type: ignore[attr-defined]
             and y.status == UploadStatus.PENDING
+            and x.get_parent() is not None
         ]
-        if not to_update_parent_result_pairs:
+        if not to_update_parent_result_tuples:
             return success
+        to_update_parent_result_pairs = [
+            (x[1], x[2]) for x in to_update_parent_result_tuples
+        ]
 
+        # Update parents
         success &= self.update_objects(
             uow,
             cmd.user.id if cmd.user else None,
             to_update_parent_result_pairs,
         )
 
+        # Update parent IDs in ParentForUpload instances (should already be set, but just in case)
+        for parent_for_upload, parent, parent_result in to_update_parent_result_tuples:
+            parent_for_upload.id = parent.id
+
         return success
 
     def create_children(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -941,7 +967,7 @@ class BatchUploader:
 
     def update_children(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -987,7 +1013,7 @@ class BatchUploader:
 
     def create_external_identifiers(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -1053,7 +1079,7 @@ class BatchUploader:
 
     def create_refdata(
         self,
-        cmd: command.Command,
+        cmd: command.UploadBatchCommandMixin,
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
@@ -1149,38 +1175,34 @@ class BatchUploader:
         ):
             # Only check props for updates, other fields are not updatable
             is_updated = False
-            for children_field_name, field_props in stored_model_field_props.items():
-                existing_value = getattr(existing_obj, children_field_name)
+            for field_name, field_props in stored_model_field_props.items():
+                existing_value = getattr(existing_obj, field_name)
                 # Field if the field, with its existing value, is (still) mutable
                 if not field_props.is_mutable_value(existing_value):
                     success = False
                     obj_result.status = UploadStatus.FAILED
                     obj_result.add_error(
                         "d3c9f6b1",
-                        f"Field {children_field_name} with existing value {existing_value} may not be updated.",
+                        f"Field {field_name} with existing value {existing_value} may not be updated.",
                     )
                     continue
                 # Update the existing object's field if the new value is different
-                new_value = getattr(obj, children_field_name)
+                new_value = getattr(obj, field_name)
                 if existing_value is None:
                     # Existing value is None: set new value if not None
                     if new_value:
                         is_updated = True
-                        setattr(existing_obj, children_field_name, new_value)
-                elif field_props.is_dict:
+                        setattr(existing_obj, field_name, new_value)
+                elif field_props.is_sub_field_dict:
                     # Field content is a dict: update keys individually
-                    is_updated |= BatchUploader.update_dict_value(
-                        existing_value, new_value
-                    )
-                elif field_props.is_list:
-                    is_updated |= BatchUploader.update_list_value(
+                    is_updated |= BatchUploader.update_sub_field_dict(
                         existing_value, new_value
                     )
                 else:
                     # Field content is a single value: compare directly
                     if new_value != existing_value:
                         is_updated = True
-                        setattr(existing_obj, children_field_name, new_value)
+                        setattr(existing_obj, field_name, new_value)
             # Determine whether to update, i.e. if any values are indeed different, or otherwise skip
             if not is_updated:
                 obj_result.status = UploadStatus.SKIPPED
@@ -1213,37 +1235,7 @@ class BatchUploader:
         return success
 
     @staticmethod
-    def update_list_value(existing_value: list, new_value: list | None) -> bool:
-        """
-        Update a list in place with new values and return whether any updates were made.
-
-        An update is made if:
-        - The new value is None and the existing list is not empty: clear the existing
-        list.
-        - The new value is a list and is different from the existing list: replace the
-        existing list.
-        """
-        is_updated = False
-        if new_value is None:
-            if existing_value:
-                # Existing list is not empty, clear it
-                is_updated = True
-                existing_value.clear()
-        else:
-            # Replace existing list with new list if different
-            if new_value != existing_value:
-                is_updated = True
-                min_len = min(len(existing_value), len(new_value))
-                max_len = max(len(existing_value), len(new_value))
-                for i in range(min_len):
-                    existing_value[i] = new_value[i]
-                if len(new_value) > len(existing_value):
-                    # New value has more items, extend the existing list
-                    existing_value.extend(new_value[min_len:max_len])
-        return is_updated
-
-    @staticmethod
-    def update_dict_value(content: dict, updates: dict | None) -> bool:
+    def update_sub_field_dict(content: dict, updates: dict | None) -> bool:
         """
         Update a dictionary in place with new values and return whether any updates were
         made.
@@ -1280,11 +1272,11 @@ class BatchUploader:
                     pass
         return is_updated
 
-    @staticmethod
-    def _get_class_var(model_class: type[model.Model], attr_name: str) -> Any:
-        """Check that a class has a ClassVar attribute."""
-        if not hasattr(model_class, attr_name):
-            raise exc.InitializationServiceError(
-                f"{model_class.__name__} must have {attr_name} attribute"
-            )
-        return getattr(model_class, attr_name)
+    # @staticmethod
+    # def _get_class_var(model_class: type[model.Model], attr_name: str) -> Any:
+    #     """Check that a class has a ClassVar attribute."""
+    #     if not hasattr(model_class, attr_name):
+    #         raise exc.InitializationServiceError(
+    #             f"{model_class.__name__} must have {attr_name} attribute"
+    #         )
+    #     return getattr(model_class, attr_name)

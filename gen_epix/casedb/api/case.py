@@ -35,10 +35,6 @@ class ValidateCasesRequestBody(PydanticBaseModel):
     created_in_data_collection_id: UUID = copy_model_field(
         command.ValidateCasesCommand, "created_in_data_collection_id"
     )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.ValidateCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
     case_batch: model.CaseBatchForUpload = copy_model_field(
         command.ValidateCasesCommand, "case_batch"
     )
@@ -49,10 +45,6 @@ class UploadCasesRequestBody(PydanticBaseModel):
     created_in_data_collection_id: UUID = copy_model_field(
         command.UploadCasesCommand, "created_in_data_collection_id"
     )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.UploadCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.UploadCasesCommand, "is_update")
     case_batch: model.CaseBatchForUpload = copy_model_field(
         command.UploadCasesCommand, "case_batch"
     )
@@ -635,9 +627,9 @@ def create_case_endpoints(
     async def create__read_sets_for_cases(
         user: registered_user_dependency,  # type: ignore
         read_sets: list[model.ReadSetForUpload],
-    ) -> list[model.ReadSet]:
+    ) -> list[model.ReadSetForUpload]:
         try:
-            created_read_sets: list[model.ReadSet] = app.handle(
+            created_read_sets: list[model.ReadSetForUpload] = app.handle(
                 command.CreateReadSetsForCasesCommand(
                     user=user,
                     read_sets=read_sets,
@@ -682,9 +674,9 @@ def create_case_endpoints(
     async def create_seqs_for_cases(
         user: registered_user_dependency,  # type: ignore
         seqs: list[model.SeqForUpload],
-    ) -> list[model.Seq]:
+    ) -> list[model.SeqForUpload]:
         try:
-            created_seqs: list[model.Seq] = app.handle(
+            created_seqs: list[model.SeqForUpload] = app.handle(
                 command.CreateSeqsForCasesCommand(
                     user=user,
                     seqs=seqs,

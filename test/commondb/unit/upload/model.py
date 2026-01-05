@@ -3,23 +3,17 @@ from uuid import UUID
 
 from pydantic import Field, model_validator
 
-from gen_epix.commondb.domain import model
-from gen_epix.commondb.domain.command import Command
-from gen_epix.commondb.domain.command.base import UploadCommandMixin
+import gen_epix.fastapp.model
+from gen_epix.commondb.domain import command as commondb_command
+from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
-from gen_epix.commondb.domain.model.upload import (
-    BaseBatchForUpload,
-    BaseBatchUploadResult,
-    ForUploadMixin,
-    UploadResult,
-)
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp.service import BaseService
 
 
-class Ref1(model.Model):
+class Ref1(commondb_model.Model):
     code: str = Field(description="A unique code")
     a: str = Field(
         default="",
@@ -27,7 +21,7 @@ class Ref1(model.Model):
     )
 
 
-class Ref2(model.Model):
+class Ref2(commondb_model.Model):
     code: str = Field(description="A unique code")
     a: str = Field(
         default="",
@@ -35,7 +29,7 @@ class Ref2(model.Model):
     )
 
 
-class Parent(model.Model):
+class Parent(commondb_model.Model):
     a: str = Field(
         default="",
         description="A single value that can always be mutated after first storage.",
@@ -44,7 +38,7 @@ class Parent(model.Model):
         default_factory=list,
         description="A list value that can always be mutated after first storage.",
     )
-    c: dict[str, str] = Field(
+    c: dict[str, str | None] = Field(
         default_factory=dict,
         description="A dict value that can always be mutated after first storage.",
     )
@@ -56,13 +50,13 @@ class Parent(model.Model):
         default=None,
         description="A list value that can be mutated only if the current value is empty (None).",
     )
-    z: dict[str, str] | None = Field(
+    z: dict[str, str | None] | None = Field(
         default=None,
         description="A dict value that can be mutated only if the current value is empty (None).",
     )
 
 
-class Child1(model.Model):
+class Child1(commondb_model.Model):
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref1_id: UUID = Field(description="The ID of the Ref1 model.")
     a: str = Field(
@@ -73,7 +67,7 @@ class Child1(model.Model):
         default_factory=list,
         description="A list value that can always be mutated after first storage.",
     )
-    c: dict[str, str] = Field(
+    c: dict[str, str | None] = Field(
         default_factory=dict,
         description="A dict value that can always be mutated after first storage.",
     )
@@ -85,13 +79,13 @@ class Child1(model.Model):
         default=None,
         description="A list value that can be mutated only if the current value is empty (None).",
     )
-    z: dict[str, str] | None = Field(
+    z: dict[str, str | None] | None = Field(
         default=None,
         description="A dict value that can be mutated only if the current value is empty (None).",
     )
 
 
-class Child2(model.Model):
+class Child2(commondb_model.Model):
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
     a: str = Field(
@@ -102,7 +96,7 @@ class Child2(model.Model):
         default_factory=list,
         description="A list value that can always be mutated after first storage.",
     )
-    c: dict[str, str] = Field(
+    c: dict[str, str | None] = Field(
         default_factory=dict,
         description="A dict value that can always be mutated after first storage.",
     )
@@ -114,13 +108,13 @@ class Child2(model.Model):
         default=None,
         description="A list value that can be mutated only if the current value is empty (None).",
     )
-    z: dict[str, str] | None = Field(
+    z: dict[str, str | None] | None = Field(
         default=None,
         description="A dict value that can be mutated only if the current value is empty (None).",
     )
 
 
-class Child1ForUpload(Child1, ForUploadMixin):
+class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -132,12 +126,6 @@ class Child1ForUpload(Child1, ForUploadMixin):
     ref1_code: str | None = Field(
         default=None,
         description="The code of the Ref1 model, if available. Otherwise put None.",
-    )
-    c: dict[str, str | None] = Field(
-        description="A dict with values that can be None as well to indicate removal of keys.",
-    )
-    z: dict[str, str | None] | None = Field(
-        description="An optional dict with values that can be None as well to indicate removal of keys.",
     )
 
     @model_validator(mode="after")
@@ -152,7 +140,7 @@ class Child1ForUpload(Child1, ForUploadMixin):
         return self
 
 
-class Child2ForUpload(Child2, ForUploadMixin):
+class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -161,39 +149,28 @@ class Child2ForUpload(Child2, ForUploadMixin):
         default=None,
         description="The code of the Ref2 model, if available. Otherwise put None.",
     )
-    c: dict[str, str | None] = Field(
-        description="A dict with values that can be None as well to indicate removal of keys.",
-    )
-    z: dict[str, str | None] | None = Field(
-        description="An optional dict with values that can be None as well to indicate removal of keys.",
-    )
 
 
-class ParentForUpload(Parent, ForUploadMixin):
-    IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
-    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[
-        dict[type[model.Model], type[ForUploadMixin]]
-    ] = {
+class ParentForUpload(commondb_model.ParentForUpload):
+    PARENT_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
+    PARENT_CLASS: ClassVar = Parent
+    PARENT_FIELD_NAME: ClassVar = "parent"
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
         Child1: Child1ForUpload,
         Child2: Child2ForUpload,
     }
-    CHILDREN_FIELD_NAME_MAP: ClassVar[dict[type[model.Model], str]] = {
+    CHILDREN_FIELD_NAME_MAP: ClassVar = {
         Child1: "children1",
         Child2: "children2",
     }
-    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar[dict[type[model.Model], str]] = {
+    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         Child1: "parent_id",
         Child2: "parent_id",
     }
-    EXTERNAL_IDENTIFIERS_FIELD_NAME: ClassVar[str] = "external_identifiers"
-    c: dict[str, str | None] = Field(
-        description="A dict with values that can be None as well to indicate removal of keys.",
-    )
-    z: dict[str, str | None] | None = Field(
-        description="An optional dict with values that can be None as well to indicate removal of keys.",
-    )
-    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
-        default=None, description="External identifiers for the Parent model, if any."
+
+    parent: Parent | None = Field(
+        default=None,
+        description="The Parent model itself, if to be created or updated as a whole.",
     )
     children1: list[Child1ForUpload] | None = Field(
         default=None,
@@ -205,19 +182,8 @@ class ParentForUpload(Parent, ForUploadMixin):
     )
 
 
-class ParentBatchForUpload(BaseBatchForUpload):
-    parents: list[ParentForUpload] = Field(
-        default_factory=list, description="List of Parent models to be uploaded."
-    )
-
-
-class ParentUploadResult(UploadResult):
-    CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
-    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
-        "external_identifiers",
-        "children1",
-        "children2",
-    ]
+class ParentUploadResult(commondb_model.ParentUploadResult):
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
 
     external_identifiers: list[UploadResult] | None = Field(
         default=None, description="List of external ID upload results."
@@ -230,15 +196,31 @@ class ParentUploadResult(UploadResult):
     )
 
 
-class ParentBatchUploadResult(BaseBatchUploadResult):
-    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = ["parents"]
+class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
+    PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "parents"
+
+    parents: list[ParentForUpload] = Field(
+        default_factory=list, description="List of Parent models to be uploaded."
+    )
+
+
+class ParentBatchUploadResult(commondb_model.BaseBatchUploadResult):
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload  # type: ignore[assignment]
+    PARENT_RESULT_CLASS: ClassVar = ParentUploadResult
 
     parents: list[ParentUploadResult] = Field(
         default_factory=list, description="List of Parent upload results."
     )
 
 
-class UploadParentsCommand(Command, UploadCommandMixin):
+class UploadParentsCommand(
+    commondb_command.Command, commondb_command.UploadBatchCommandMixin
+):
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload
+    BATCH_FOR_UPLOAD_FIELD_NAME: ClassVar = "parent_batch"
+    BATCH_UPLOAD_RESULT_CLASS: ClassVar = ParentBatchUploadResult
+
     parent_batch: ParentBatchForUpload = Field(
         description="The batch of Parent models to be uploaded."
     )
@@ -246,75 +228,69 @@ class UploadParentsCommand(Command, UploadCommandMixin):
 
 STORED_MODEL_FIELD_PROPS = {
     Parent: {
-        "a": model.ModelFieldProps(
+        "a": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
         ),
-        "b": model.ModelFieldProps(
+        "b": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_list=True,
         ),
-        "c": model.ModelFieldProps(
+        "c": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
-        "x": model.ModelFieldProps(
+        "x": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
         ),
-        "y": model.ModelFieldProps(
+        "y": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_list=True,
         ),
-        "z": model.ModelFieldProps(
+        "z": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
     },
     Child1: {
-        "a": model.ModelFieldProps(
+        "a": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
         ),
-        "b": model.ModelFieldProps(
+        "b": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_list=True,
         ),
-        "c": model.ModelFieldProps(
+        "c": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
-        "x": model.ModelFieldProps(
+        "x": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
         ),
-        "y": model.ModelFieldProps(
+        "y": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_list=True,
         ),
-        "z": model.ModelFieldProps(
+        "z": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
     },
     Child2: {
-        "a": model.ModelFieldProps(
+        "a": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
         ),
-        "b": model.ModelFieldProps(
+        "b": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_list=True,
         ),
-        "c": model.ModelFieldProps(
+        "c": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_always=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
-        "x": model.ModelFieldProps(
+        "x": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
         ),
-        "y": model.ModelFieldProps(
+        "y": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_list=True,
         ),
-        "z": model.ModelFieldProps(
+        "z": gen_epix.fastapp.model.ModelFieldProps(
             is_mutable_if_empty=True,
-            is_dict=True,
+            is_sub_field_dict=True,
         ),
     },
 }
@@ -325,16 +301,9 @@ class ParentBatchUploader(BatchUploader):
 
     def __init__(self, service: BaseService) -> None:
         super().__init__(
-            service=service,
-            stored_model_field_props=STORED_MODEL_FIELD_PROPS,
-            cmd_batch_field_name="parent_batch",
-            batch_class=ParentBatchForUpload,
-            batch_result_class=ParentBatchUploadResult,
-            batch_parents_field_name="parents",
-            parent_class=Parent,
-            parent_for_upload_class=ParentForUpload,
-            parent_result_class=ParentUploadResult,
-            external_identifier_model_class=model.ExternalIdentifier,
+            UploadParentsCommand,
+            STORED_MODEL_FIELD_PROPS,
+            service,
         )
 
     def verify_refdata(

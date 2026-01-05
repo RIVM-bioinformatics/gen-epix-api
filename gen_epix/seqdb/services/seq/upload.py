@@ -2,9 +2,7 @@ from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
-from gen_epix.seqdb.services.seq.upload_upsert_batch import (
-    _create_sample_refdata,
-)
+from gen_epix.seqdb.services.seq.upload_upsert_batch import _create_sample_refdata
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_sample_children,
     _verify_sample_refdata,
@@ -18,16 +16,9 @@ class SampleBatchUploader(BatchUploader):
         service: BaseSeqService,
     ):
         super().__init__(
+            command.UploadSamplesCommand,
+            model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
             service,
-            stored_model_field_props=model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
-            cmd_batch_field_name="sample_batch",
-            batch_class=model.SampleBatchForUpload,
-            batch_result_class=model.SampleBatchUploadResult,
-            batch_parents_field_name="samples",
-            parent_class=model.Sample,
-            parent_for_upload_class=model.SampleForUpload,
-            parent_result_class=model.SampleUploadResult,
-            external_identifier_model_class=model.ExternalIdentifier,
         )
 
     def verify_user_rights(

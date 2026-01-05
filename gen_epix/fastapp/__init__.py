@@ -23,6 +23,7 @@ from gen_epix.fastapp.log import LogItem as LogItem
 from gen_epix.fastapp.model import Command as Command
 from gen_epix.fastapp.model import CrudCommand as CrudCommand
 from gen_epix.fastapp.model import Model as Model
+from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps
 from gen_epix.fastapp.model import Permission as Permission
 from gen_epix.fastapp.model import Policy as Policy
 from gen_epix.fastapp.model import Role as Role

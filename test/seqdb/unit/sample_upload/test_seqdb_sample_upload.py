@@ -74,7 +74,7 @@ class BaseUploadTestCase(TestCase):
             code=self.identifier_issuer_code,
             name="Identifier issuer",
         )
-        self.generated_ids = [
+        self.random_ids = [
             UUID("550e8400-e29b-41d4-a716-446655440021"),
             UUID("550e8400-e29b-41d4-a716-446655440022"),
             UUID("550e8400-e29b-41d4-a716-446655440023"),
@@ -327,7 +327,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                     self.read_set_id,
                     None,
                     self.assembly_protocol_id,
-                    self.generated_ids[0],
+                    self.random_ids[0],
                 )
             ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
         ]
@@ -368,7 +368,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                     self.read_set_id,
                     None,
                     self.assembly_protocol_id,
-                    self.generated_ids[0],
+                    self.random_ids[0],
                 )
             ],  # Existing seq (sample_id, seq_hash, read_set_id, read_set2_id, assembly_protocol_id, seq_id) tuples
         ]
@@ -406,7 +406,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
                 self.read_set_id,
                 None,
                 self.assembly_protocol_id,
-                self.generated_ids[0],
+                self.random_ids[0],
             )
         ]
 
@@ -548,7 +548,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
                     self.locus_detection_protocol_id,
                     self.locus_set_id,
                     self.seq_id,
-                    self.generated_ids[0],
+                    self.random_ids[0],
                 )
             ],  # Existing allele profiles (sample_id, hash, protocol_id, locus_set_id, seq_id, profile_id) tuples
         ]
@@ -568,7 +568,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
             self.assertEqual(
                 retval.samples[0].allele_profiles[0].status, UploadStatus.SKIPPED
             )
-            self.assertEqual(sample.allele_profiles[0].id, self.generated_ids[0])
+            self.assertEqual(sample.allele_profiles[0].id, self.random_ids[0])
         else:
             # Function didn't add warning, test expectation might be wrong
             self.assertTrue(success)  # At least function should succeed

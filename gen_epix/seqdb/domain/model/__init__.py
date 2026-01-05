@@ -17,7 +17,6 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
-from gen_epix.commondb.domain.model import ModelFieldProps
 from gen_epix.commondb.domain.model import Organization as Organization
 from gen_epix.commondb.domain.model import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
@@ -38,6 +37,8 @@ from gen_epix.commondb.domain.model import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
@@ -124,6 +125,7 @@ from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
+from gen_epix.util import add_parent_class_docs
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
@@ -224,7 +226,7 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
 
 # Additional field properties for models that have already been stored (persisted)
 STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
-    Sample: {"props": ModelFieldProps(is_mutable_always=True, is_dict=True)},
+    Sample: {"props": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True)},
     ReadSet: {
         "fwd_uri": ModelFieldProps(is_mutable_always=True),
         "rev_uri": ModelFieldProps(is_mutable_always=True),
@@ -240,19 +242,24 @@ STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] 
         "file_format": ModelFieldProps(is_mutable_always=True),
         "file_compression": ModelFieldProps(is_mutable_always=True),
         "read_set_id": ModelFieldProps(is_mutable_if_empty=True),
-        "contigs": ModelFieldProps(is_list=True),
     },
 }
-# Complete the stored model field props with default props for all other models/fields
-for service_type, model_classes in SORTED_MODELS_BY_SERVICE_TYPE.items():
-    for model_class in model_classes:
-        if model_class not in STORED_MODEL_FIELD_PROPS:
-            STORED_MODEL_FIELD_PROPS[model_class] = {
-                x: ModelFieldProps() for x in model_class.model_fields
-            }  # Default props
-            continue
-        for field_name in model_class.model_fields:
-            if field_name not in STORED_MODEL_FIELD_PROPS[model_class]:
-                STORED_MODEL_FIELD_PROPS[model_class][
-                    field_name
-                ] = ModelFieldProps()  # Default props
+complete_stored_model_field_props(
+    STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE
+)
+add_parent_class_docs(
+    set.union(
+        *[
+            set(y)  # type: ignore[arg-type]
+            for x, y in SORTED_MODELS_BY_SERVICE_TYPE.items()
+            if x
+            not in {
+                enum.ServiceType.AUTH,
+                enum.ServiceType.SYSTEM,
+                enum.ServiceType.RBAC,
+                enum.ServiceType.ORGANIZATION,
+            }
+        ]
+    ),
+    exclude=(Model,),
+)

@@ -8,8 +8,6 @@ from pydantic import Field
 from gen_epix import fastapp
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.upload import CaseForUpload
-from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSet
-from gen_epix.casedb.domain.model.seqdb import Seq as Seq
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter

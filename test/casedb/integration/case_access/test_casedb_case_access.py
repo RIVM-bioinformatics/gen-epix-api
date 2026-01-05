@@ -136,11 +136,13 @@ class TestCaseAccess(CaseAccessSetup):
             if for_create_upload:
                 return model.CaseForUpload(
                     id=row["case.id"],
-                    case_type_id=row["case.case_type_id"],
-                    created_in_data_collection_id=row[
-                        "case.created_in_data_collection_id"
-                    ],
-                    content=case_content,
+                    case=model.Case(
+                        case_type_id=row["case.case_type_id"],
+                        created_in_data_collection_id=row[
+                            "case.created_in_data_collection_id"
+                        ],
+                        content=case_content,
+                    ),
                 )
             return model.Case(
                 id=row["case.id"],
@@ -201,12 +203,13 @@ class TestCaseAccess(CaseAccessSetup):
                     created_in_data_collection_id=row[
                         "case.created_in_data_collection_id"
                     ],
-                    is_update=False,
-                    case_batch=model.CaseBatchForUpload(  # type:ignore[list-item]
-                        cases=[_create_case(row, for_create_upload=True)]
+                    case_batch=model.CaseBatchForUpload(
+                        cases=[
+                            _create_case(  # type:ignore[list-item]
+                                row, for_create_upload=True
+                            )
+                        ]
                     ),
-                    data_collection_ids=set(),
-                    props={"id_present": "keep"},
                 )
             elif row_operation == "RETRIEVE_CASES_BY_ID":
                 cmd = command.RetrieveCasesByIdCommand(

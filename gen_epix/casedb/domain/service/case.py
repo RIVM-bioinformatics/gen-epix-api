@@ -552,7 +552,7 @@ class BaseCaseService(BaseService):
     def create_reads_sets_for_cases(
         self,
         cmd: command.CreateReadSetsForCasesCommand,
-    ) -> list[model.ReadSet]:
+    ) -> list[model.ReadSetForUpload]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -566,7 +566,7 @@ class BaseCaseService(BaseService):
     def create_seqs_for_cases(
         self,
         cmd: command.CreateSeqsForCasesCommand,
-    ) -> list[model.Seq]:
+    ) -> list[model.SeqForUpload]:
         raise NotImplementedError()
 
     @abc.abstractmethod

@@ -17,7 +17,66 @@ from gen_epix.casedb.services.case.case_date import (
     case_service_get_case_date_case_type_col_mappers_from_cols,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp import CrudOperation
+
+
+class CaseBatchUploader(BatchUploader):
+    def __init__(self, service: BaseCaseService) -> None:
+        super().__init__(
+            command.UploadCasesCommand,
+            model.STORED_MODEL_FIELD_PROPS,  # type: ignore[arg-type]
+            service,
+        )
+        self.service = service
+
+    def verify_user_rights(  # type:ignore[reportIncompatibleMethodOverride]
+        self, cmd: command.UploadCasesCommand  # type:ignore[override]
+    ) -> None:
+        # Get complete case type
+        case_type_id = cmd.case_type_id
+        created_in_data_collection_id = cmd.created_in_data_collection_id
+        sub_cmd = command.RetrieveCompleteCaseTypeCommand(
+            user=cmd.user, case_type_id=case_type_id
+        )
+        sub_cmd._policies.extend(cmd._policies)
+        complete_case_type: model.CompleteCaseType = (
+            self.service.retrieve_complete_case_type(sub_cmd)
+        )
+
+        # Determine case type columns with write access
+        case_type_access_abac = complete_case_type.case_type_access_abacs.get(
+            created_in_data_collection_id
+        )
+        if case_type_access_abac is None:
+            raise exc.UnauthorizedAuthError(
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to access cases in the given data collection"
+            )
+        write_case_type_col_ids = case_type_access_abac.write_case_type_col_ids
+        if not write_case_type_col_ids:
+            raise exc.UnauthorizedAuthError(
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write any case type columns for cases in the given data collection"
+            )
+
+        # Determine if uploaded cases only contain writable columns
+        unauthorized_case_type_cols = set()
+        for case_for_upload in cmd.case_batch.cases:
+            case = case_for_upload.case
+            if case is None:
+                continue
+            content = case.content
+            if not content:
+                continue
+            unauthorized_case_type_cols.update(
+                set(content.keys()) - write_case_type_col_ids
+            )
+        if unauthorized_case_type_cols:
+            unauthorized_case_type_cols_str = ", ".join(
+                str(x) for x in unauthorized_case_type_cols
+            )
+            raise exc.UnauthorizedAuthError(
+                f"User {None if cmd.user is None else cmd.user.id} is not allowed to write case type columns {unauthorized_case_type_cols_str} contained in the batch, for the given data collection"
+            )
 
 
 def case_service_upload_cases(
@@ -28,32 +87,20 @@ def case_service_upload_cases(
     if not cases_for_upload:
         return []
 
+    # Create a CaseUploadBatch with only the cases and a SampleUploadBatch with only the read sets and seqs
+    # TODO:
+    raise NotImplementedError(
+        "Uploading cases with read sets and seqs is not yet implemented"
+    )
+
+    batch_uploader = CaseBatchUploader(self)
+
     # TODO handle cmd.is_update=True and cmd.cases_set.cases[i].has_content=False
     if cmd.is_update:
         raise NotImplementedError("Updating cases via upload is not yet implemented")
     if any(x.has_content is False for x in cases_for_upload):
         raise NotImplementedError(
             "Uploading cases without content is not yet implemented"
-        )
-
-    # Get case type and created_in data collection IDs
-    case_type_id = cmd.case_type_id
-    created_in_data_collection_id = cmd.created_in_data_collection_id
-
-    # @ABAC: verify if cases may be created in the given data collection(s)
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-    is_allowed = case_abac.is_allowed(
-        case_type_id,
-        enum.CaseRight.ADD_CASE,
-        True,
-        created_in_data_collection_id=created_in_data_collection_id,
-        tgt_data_collection_ids=cmd.data_collection_ids,
-    )
-    if not is_allowed:
-        assert cmd.user is not None
-        raise exc.UnauthorizedAuthError(
-            f"User {cmd.user.id} is not allowed to create cases in the given data collection(s)"
         )
 
     # Convert cases for upload to regular cases
@@ -80,7 +127,7 @@ def case_service_upload_cases(
         sub_cmd
     )
 
-    # Create cases and case data collection links
+    # Create cases
     with self.repository.uow() as uow:
         # Validate case data
         case_validation_report = self.validate_cases(cmd)
@@ -179,20 +226,6 @@ def case_service_upload_cases(
 
         # TODO Create seqdb ReadSets and Seqs and add their IDs to the case content
 
-        # Associate cases with data collections
-        curr_cmd = command.CaseDataCollectionLinkCrudCommand(
-            user=cmd.user,
-            operation=CrudOperation.CREATE_SOME,
-            objs=[
-                model.CaseDataCollectionLink(
-                    case_id=x.id, data_collection_id=y  # type: ignore[arg-type]
-                )
-                for x in cases
-                for y in cmd.data_collection_ids
-            ],
-        )
-        curr_cmd._policies.extend(cmd._policies)
-        case_data_collection_links = self.crud(curr_cmd)
     return cases
 
 
@@ -221,13 +254,13 @@ def _get_seqdb_sample(
 def _upload_read_sets_or_seqs_for_cases(
     self: BaseCaseService,
     cmd: command.CreateReadSetsForCasesCommand | command.CreateSeqsForCasesCommand,
-) -> list[model.ReadSet] | list[model.Seq]:
+) -> list[model.ReadSetForUpload] | list[model.SeqForUpload]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
     # Parse input
-    read_sets: list[model.ReadSet] = []
-    seqs: list[model.Seq] = []
+    read_sets: list[model.ReadSetForUpload] = []
+    seqs: list[model.SeqForUpload] = []
     case_ids: list[UUID] = []
     case_type_col_ids: list[UUID] = []
     if isinstance(cmd, command.CreateReadSetsForCasesCommand):
@@ -260,7 +293,7 @@ def _upload_read_sets_or_seqs_for_cases(
         )
 
         # Create ReadSets or Seqs
-        created_objs: list[model.ReadSet] | list[model.Seq]
+        created_objs: list[model.ReadSetForUpload] | list[model.SeqForUpload]
         command_class = (
             seqdb_command.ReadSetCrudCommand
             if is_read_set

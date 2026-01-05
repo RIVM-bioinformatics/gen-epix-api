@@ -1,16 +1,15 @@
-from collections.abc import Hashable
+from test.commondb.unit.upload.model import ParentForUpload, ParentUploadResult
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, field_validator, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import ExternalIdentifierForUpload, Model
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
-    ForUploadMixin,
+    IsNewIdMixin,
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
@@ -33,7 +32,7 @@ from gen_epix.seqdb.domain.model.seq.sample import Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
 
 
-class ReadSetForUpload(ReadSet, ForUploadMixin):
+class ReadSetForUpload(ReadSet, IsNewIdMixin):
     """
     A read set intended for upload.
     """
@@ -47,7 +46,7 @@ class ReadSetForUpload(ReadSet, ForUploadMixin):
     )
 
 
-class SeqForUpload(Seq, ForUploadMixin):
+class SeqForUpload(Seq, IsNewIdMixin):
     """
     A sequence intended for upload.
     """
@@ -233,7 +232,7 @@ class AlleleProfileForUpload(AlleleProfile):
         return self
 
 
-class SampleForUpload(Sample, ForUploadMixin):
+class SampleForUpload(ParentForUpload):
     """
     A sample intended for upload, together with any relevant associated data.
     """
@@ -241,8 +240,10 @@ class SampleForUpload(Sample, ForUploadMixin):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME = "SampleForUpload"
 
-    IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
-    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {
+    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
+    PARENT_CLASS: ClassVar = Sample
+    PARENT_FIELD_NAME: ClassVar = "sample"
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
         ReadSet: ReadSetForUpload,
         Seq: SeqForUpload,
         SeqTaxonomy: SeqTaxonomy,
@@ -256,7 +257,7 @@ class SampleForUpload(Sample, ForUploadMixin):
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
-    CHILDREN_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+    CHILDREN_FIELD_NAME_MAP: ClassVar = {
         ReadSet: "read_sets",
         Seq: "seqs",
         SeqTaxonomy: "seq_taxonomies",
@@ -270,18 +271,17 @@ class SampleForUpload(Sample, ForUploadMixin):
         PcrMeasurement: "pcr_measurements",
         AstMeasurement: "ast_measurements",
     }
-    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {
+    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "sample_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
     }
-    EXTERNAL_IDENTIFIERS_FIELD_NAME: ClassVar[str] = "external_identifiers"
 
-    # Sample level data
-    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
+    # Parent
+    sample: Sample | None = Field(
         default=None,
-        description="The external identifiers associated with the sample, if available.",
+        description="The sample model itself, if to be created or updated as a whole.",
     )
 
-    # Associated data
+    # Children
     read_sets: list[ReadSetForUpload] | None = Field(
         default=None,
         description="The read sets associated with the sample. If None, this element is not taken into consideration during the upload.",
@@ -331,40 +331,8 @@ class SampleForUpload(Sample, ForUploadMixin):
         description="The AST measurements associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
 
-    @field_validator("external_identifiers", mode="after")
-    def _validate_external_identifiers(
-        cls, value: list[Hashable] | None
-    ) -> list[Hashable] | None:
-        if value is None:
-            return None
-        if len(set(value)) != len(value):
-            raise ValueError("Associated IDs must be unique.")
-        return value
 
-    @model_validator(mode="after")
-    def _validate_sample_for_upload(self) -> Self:
-        # Verify that external_identifiers contains no duplicates
-        if self.external_identifiers is not None and len(
-            self.external_identifiers
-        ) != len(set(self.external_identifiers)):
-            raise ValueError("external_identifiers must not contain duplicates.")
-        # TODO: verify that each list of results is unique, e.g. no identical read sets
-        # Verify that result sample_ids are consistent with sample id
-        # If sample has an ID, then associated items must have NULL_ID or the same sample_id
-        # If sample has NULL_ID, then associated items can have any sample_id
-        if self.id is not None and self.id != NULL_ID:
-            sample_id = self.id
-            for field_name in self.CHILDREN_FIELD_NAME_MAP.values():
-                items = getattr(self, field_name)
-                for item in items or []:
-                    if item.sample_id != NULL_ID and item.sample_id != sample_id:
-                        raise ValueError(
-                            f"sample_id of {field_name} must be NULL_ID or match the sample's ID when sample has an ID."
-                        )
-        return self
-
-
-class SampleUploadResult(UploadResult):
+class SampleUploadResult(ParentUploadResult):
     """
     The result of uploading a single sample. The field names for the results for
     the associated data match those in SampleForUpload to facilitate processing.
@@ -373,15 +341,8 @@ class SampleUploadResult(UploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleUploadResult"
 
-    CHILD_RESULT_FIELD_NAMES: ClassVar[list[str]] = []
-    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar[list[str]] = [
-        "external_identifiers",
-    ] + list(SampleForUpload.CHILDREN_FIELD_NAME_MAP.values())
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload  # type: ignore[assignment]
 
-    external_identifiers: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the external identifiers associated with the sample, if any were provided, in the same order as provided.",
-    )
     read_sets: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the read sets associated with the sample, if any were provided, in the same order as provided.",
@@ -441,6 +402,9 @@ class SampleBatchForUpload(BaseBatchForUpload):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleBatchForUpload"
 
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload
+    PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "samples"
+
     samples: list[SampleForUpload] = Field(
         description="The samples to be uploaded.",
     )
@@ -452,73 +416,73 @@ class SampleBatchForUpload(BaseBatchForUpload):
     )
 
     # Computed fields
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_read_sets(self) -> bool:
         """Indicates whether there are any read sets in the sample set."""
         return any(len(x.read_sets or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_seqs(self) -> bool:
         """Indicates whether there are any sequences in the sample set."""
         return any(len(x.seqs or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_seq_taxonomies(self) -> bool:
         """Indicates whether there are any seq taxonomies in the sample set."""
         return any(len(x.seq_taxonomies or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_seq_classifications(self) -> bool:
         """Indicates whether there are any seq classifications in the sample set."""
         return any(len(x.seq_classifications or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_locus_profiles(self) -> bool:
         """Indicates whether there are any locus profiles in the sample set."""
         return any(len(x.locus_profiles or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_allele_profiles(self) -> bool:
         """Indicates whether there are any allele profiles in the sample set."""
         return any(len(x.allele_profiles or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_snp_profiles(self) -> bool:
         """Indicates whether there are any SNP profiles in the sample set."""
         return any(len(x.snp_profiles or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_mlva_profiles(self) -> bool:
         """Indicates whether there are any MLVA profiles in the sample set."""
         return any(len(x.mlva_profiles or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_kmer_profiles(self) -> bool:
         """Indicates whether there are any k-mer profiles in the sample set."""
         return any(len(x.kmer_profiles or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_distances(self) -> bool:
         """Indicates whether there are any distances in the sample set."""
         return any(len(x.distances or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_pcr_measurements(self) -> bool:
         """Indicates whether there are any PCR measurements in the sample set."""
         return any(len(x.pcr_measurements or []) > 0 for x in self.samples)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_ast_measurements(self) -> bool:
         """Indicates whether there are any AST measurements in the sample set."""
@@ -548,9 +512,8 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SampleBatchUploadResult"
 
-    CHILD_RESULT_LIST_FIELD_NAMES: ClassVar = [
-        "samples",
-    ]
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = SampleBatchForUpload  # type: ignore[assignment]
+    PARENT_RESULT_CLASS: ClassVar = SampleUploadResult  # type: ignore[assignment]
 
     samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."

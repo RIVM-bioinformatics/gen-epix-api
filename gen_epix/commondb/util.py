@@ -4,10 +4,13 @@ import importlib
 import logging
 import os
 import pickle
+from collections.abc import Hashable, Iterable
 from enum import Enum
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
+from gen_epix import fastapp
 from gen_epix.commondb.config import AppCfg
 from gen_epix.commondb.domain.enum import (
     AppType,
@@ -16,7 +19,7 @@ from gen_epix.commondb.domain.enum import (
     DevRepositoryConfig,
     DevRepositoryConfigSet,
 )
-from gen_epix.fastapp import Domain
+from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
 from gen_epix.fastapp.repositories.sa import SARepository
@@ -364,3 +367,101 @@ def get_app_cfgs(
                 "app_cfg"
             ] = seqdb_app_cfgs[name]
     return app_cfgs
+
+
+def complete_stored_model_field_props(
+    stored_model_field_props: dict[type[fastapp.Model], dict[str, ModelFieldProps]],
+    sorted_models_by_service_type: dict[Any, list[type[fastapp.Model]]],
+) -> None:
+    """
+    Complete the stored_model_field_props with default props for all other models/fields
+    """
+    # Complete the stored model field props with default props for all other models/fields
+    for model_classes in sorted_models_by_service_type.values():
+        for model_class in model_classes:
+            entity = model_class.ENTITY
+            if entity is None:
+                raise ValueError(
+                    f"Model class {model_class.__name__} does not have an ENTITY defined."
+                )
+            if not entity.persistable:
+                if model_class in stored_model_field_props:
+                    raise ValueError(
+                        f"Model class {model_class.__name__} is not persistable but has stored field props defined."
+                    )
+                continue
+            if model_class not in stored_model_field_props:
+                # Add default props for all fields
+                stored_model_field_props[model_class] = {
+                    x: ModelFieldProps() for x in model_class.model_fields
+                }  # Default props
+                continue
+            for field_name in model_class.model_fields:
+                # Add default props for any missing fields
+                if field_name not in stored_model_field_props[model_class]:
+                    stored_model_field_props[model_class][
+                        field_name
+                    ] = ModelFieldProps()  # Default props
+
+
+def register_domain_entities(
+    domain: Domain,
+    sorted_service_types: Iterable[Hashable],
+    sorted_models_by_service_type: dict[Hashable, list[type[Model]]],
+    commands_by_service_type: dict[Hashable, set[type[Command]]],
+    common_model_map: dict[type[Model], type[Model]] | None = None,
+    common_command_map: dict[type[Command], type[Command]] | None = None,
+    set_schema_to_service_type: bool = False,
+) -> None:
+    """
+    Register service types, models and commands with a domain. In case some
+    models or commands are subclassed from another domain and the provides
+    models and commands contain their parent classes, they can be substituted
+    in the input and subsequently be registered as the actual classes, by
+    providing a mapping.
+
+    If `set_schema_to_service_type` is enabled, the schema name of the model
+    will be set to the lower case service name for persistable entities, unless
+    the schema name is already set.
+    """
+    if not common_model_map:
+        common_model_map = {}
+    for service_type in sorted_service_types:
+        # Register the service type
+        domain.register_service_type(service_type)
+        schema_name = (
+            str(service_type.value).lower()
+            if isinstance(service_type, Enum)
+            else str(service_type)
+        )
+        # Register the models
+        for i, model_class in enumerate(
+            sorted_models_by_service_type.get(service_type, [])
+        ):
+            if model_class in common_model_map:
+                # Substitute the model class with its commondb implementation,
+                # also in the input
+                model_class = common_model_map[model_class]
+                sorted_models_by_service_type[service_type][i] = model_class
+            if model_class.ENTITY is None:
+                raise exc.InitializationServiceError(
+                    f"Entity for model class {model_class} is not initialized."
+                )
+            if (
+                set_schema_to_service_type
+                and model_class.ENTITY.persistable
+                and model_class.ENTITY.schema_name is None
+            ):
+                model_class.ENTITY.schema_name = schema_name
+            domain.register_entity(
+                model_class.ENTITY, model_class=model_class, service_type=service_type
+            )
+        # Register the commands
+        for command_class in commands_by_service_type.get(service_type, []):
+            if common_command_map and command_class in common_command_map:
+                # Substitute the command class with its commondb implementation,
+                # also in the input
+                commands_by_service_type[service_type].remove(command_class)
+                command_class = common_command_map[command_class]
+                commands_by_service_type[service_type].add(command_class)
+            domain.register_command(command_class, service_type=service_type)
