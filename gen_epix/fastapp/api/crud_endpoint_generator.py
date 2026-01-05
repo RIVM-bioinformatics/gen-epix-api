@@ -90,16 +90,16 @@ class CrudEndpointGenerator:
         invalid_ids = []
         try:
             ids = [id_class(x) for x in ids_str.split(",")]
-        except:
+        except (ValueError, TypeError):
             try:
                 raw_ids = json.loads(ids_str)
                 ids = []
                 for id_ in raw_ids:
                     try:
                         ids.append(id_class(id_))
-                    except:
+                    except (ValueError, TypeError):
                         invalid_ids.append(id_)
-            except:
+            except (json.JSONDecodeError, TypeError):
                 invalid_ids.append(ids_str)
                 ids = None
         return ids, invalid_ids
@@ -351,7 +351,7 @@ class CrudEndpointGenerator:
             except Exception as exception:
                 try:
                     request_ids = [create_obj.id]
-                except:
+                except (AttributeError, TypeError):
                     request_ids = None
                 handle_exception_fn(
                     "02c70ca7" + route.endpoint_basename,
@@ -410,7 +410,7 @@ class CrudEndpointGenerator:
             except Exception as exception:
                 try:
                     request_ids = [x.id for x in create_objs]
-                except:
+                except (AttributeError, TypeError):
                     request_ids = None
                 handle_exception_fn(
                     "e96480ac" + route.endpoint_basename,
