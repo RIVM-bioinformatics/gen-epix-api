@@ -186,7 +186,7 @@ def _get_correct_app_type(
 
 
 def create_demo_data_from_repository(
-    user_id: str,
+    user_id: UUID,
     entities: list,
     dict_repository: DictRepository,
     sa_repository: SARepository,
