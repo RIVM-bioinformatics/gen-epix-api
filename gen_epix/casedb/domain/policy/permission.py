@@ -38,10 +38,7 @@ class RoleGenerator(CommonRoleGenerator):
                 PermissionTypeSet.E,
             ),
             # case with impact on abac
-            (
-                command.CaseTypeSetCrudCommand,
-                PermissionTypeSet.D,
-            ),  # Create/update has no impact on abac
+            # Create/update has no impact on abac
             (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CUD),
             (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
             (
