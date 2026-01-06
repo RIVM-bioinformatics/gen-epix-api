@@ -285,7 +285,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         CaseTypeColSetCrudCommand,
         CaseTypeColSetMemberCrudCommand,
         CaseTypeCrudCommand,
-        CaseTypeDimCrudCommand,
         CaseTypeSetCaseTypeUpdateAssociationCommand,
         CaseTypeSetCategoryCrudCommand,
         CaseTypeSetCrudCommand,
