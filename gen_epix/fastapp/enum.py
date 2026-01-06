@@ -361,3 +361,7 @@ class FieldTypeSet(Enum):
             FieldType.DB_METADATA,
         ]
     )
+
+class OnCycle(Enum):
+    RAISE = "RAISE"
+    IGNORE = "IGNORE"
