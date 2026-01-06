@@ -362,6 +362,6 @@ class FieldTypeSet(Enum):
         ]
     )
 
-class OnCycle(Enum):
+class ErrorHandlingMode(Enum):
     RAISE = "RAISE"
     IGNORE = "IGNORE"
