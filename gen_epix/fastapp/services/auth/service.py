@@ -19,6 +19,7 @@ from gen_epix.fastapp.services.auth.model import (
     OidcServerCfg,
 )
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class AuthService(BaseAuthService):
@@ -533,31 +534,10 @@ class AuthService(BaseAuthService):
     ) -> model.User:
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
-        user_manager = self.app.user_manager
-        if not user_manager:
-            # No user generator configured
-            raise exc.UnauthorizedAuthError()
-
-        user_key = user_manager.get_user_key_from_claims(claims.claims)
-        if not user_key and request_userinfo:
-            claims.claims.update(
-                self._idp_client_by_id[claims.idp_client_id].get_claims_from_userinfo(
-                    claims.token
-                )
-            )
-            user_key = user_manager.get_user_key_from_claims(claims.claims)
-        if not user_key:
-            if self._logger:
-                self._logger.warning(
-                    self.create_log_message(
-                        "d3b7e9f1",
-                        "No user key found in claims",
-                        sub=sub,
-                        user_key=user_key,
-                    )
-                )
-            raise exc.UnauthorizedAuthError()
-
+        user_manager: BaseUserManager = self.app.user_manager
+        user_key = self._generate_user_key_from_claims(
+            claims, request_userinfo, sub, user_manager
+        )
         try:
             # Retrieve existing user
             user = user_manager.retrieve_user_by_key(user_key)
@@ -610,35 +590,79 @@ class AuthService(BaseAuthService):
                 return user_manager.create_root_user_from_claims(claims.claims)
 
             # Automatically create the user if configured
-            try:
-                user_or_none = user_manager.create_user_from_claims(claims.claims)
-                if not user_or_none:
-                    raise exc.UnauthorizedAuthError()
-                user = user_or_none
-                if self._logger:
-                    self._logger.info(
-                        self.create_log_message(
-                            "fe8bfbd0",
-                            "Automatically created user",
-                            issuer=issuer,
-                            sub=sub,
-                            user_key=user_key,
-                        )
-                    )
-                return user
-            except Exception as exception:
-                if self._logger:
-                    self._logger.error(
-                        self.create_log_message(
-                            "08e3c18b",
-                            "Could not automatically create user",
-                            issuer=issuer,
-                            sub=sub,
-                            user_key=user_key,
-                            exception=exception,
-                        )
-                    )
+            return self._create_user_from_claims(
+                claims, issuer, sub, user_manager, user_key
+            )
+
+    def _create_user_from_claims(
+        self,
+        claims: Claims,
+        issuer: str,
+        sub: str,
+        user_manager: BaseUserManager,
+        user_key: str,
+    ) -> model.User:
+        try:
+            user_or_none = user_manager.create_user_from_claims(claims.claims)
+            if not user_or_none:
                 raise exc.UnauthorizedAuthError()
+            user = user_or_none
+            if self._logger:
+                self._logger.info(
+                    self.create_log_message(
+                        "fe8bfbd0",
+                        "Automatically created user",
+                        issuer=issuer,
+                        sub=sub,
+                        user_key=user_key,
+                    )
+                )
+            return user
+        except Exception as exception:
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "08e3c18b",
+                        "Could not automatically create user",
+                        issuer=issuer,
+                        sub=sub,
+                        user_key=user_key,
+                        exception=exception,
+                    )
+                )
+            raise exc.UnauthorizedAuthError()
+
+    def _generate_user_key_from_claims(
+        self,
+        claims: Claims,
+        request_userinfo: bool,
+        sub: str,
+        user_manager: BaseUserManager | None,
+    ) -> str:
+        if not user_manager:
+            # No user generator configured
+            raise exc.UnauthorizedAuthError()
+
+        user_key = user_manager.get_user_key_from_claims(claims.claims)
+        if not user_key and request_userinfo:
+            claims.claims.update(
+                self._idp_client_by_id[claims.idp_client_id].get_claims_from_userinfo(
+                    claims.token
+                )
+            )
+            user_key = user_manager.get_user_key_from_claims(claims.claims)
+        if not user_key:
+            if self._logger:
+                self._logger.warning(
+                    self.create_log_message(
+                        "d3b7e9f1",
+                        "No user key found in claims",
+                        sub=sub,
+                        user_key=user_key,
+                    )
+                )
+            raise exc.UnauthorizedAuthError()
+        return user_key
 
     def _init_idp_client(
         self, idp_cfg: dict[str, str | list], ssl_context: ssl.SSLContext | bool = True
