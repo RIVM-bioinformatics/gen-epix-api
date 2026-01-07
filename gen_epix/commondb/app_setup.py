@@ -109,10 +109,12 @@ def create_fast_api(
         )
 
     # Add routers
-    handle_exception = generate_handle_exception_function(app=app, logger=api_logger)
+    app_handle_exception = handle_exception or generate_handle_exception_function(
+        app=app, logger=api_logger
+    )
     routers = create_routers_fn(
         app=app,
-        handle_exception=handle_exception,
+        handle_exception=app_handle_exception,
     )
     for router in routers:
         fast_api.include_router(router, prefix=cfg["api"]["route"]["v1"])
