@@ -23,12 +23,12 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.125.0",
+    "fastapi[standard]==0.128.0",
     "gunicorn==23.0.*",
     "starlette==0.50.0",
     "httpx==0.28.1",
     "pyjwt==2.10.1",
-    "urllib3==2.6.2",
+    "urllib3==2.6.3",
     "sqlalchemy==2.0.45",
     "sqlalchemy_utils==0.42.1",
     "pydantic==2.12.5",
@@ -37,7 +37,7 @@ dependencies = [
     "dynaconf==3.2.12",
     "PyYAML==6.0.3",
     "scipy==1.16.3",
-    "numpy==2.3.5",
+    "numpy==2.4.0",
     "biopython==1.86",
     "cachetools==6.2.4",
     "slowapi==0.1.9",
