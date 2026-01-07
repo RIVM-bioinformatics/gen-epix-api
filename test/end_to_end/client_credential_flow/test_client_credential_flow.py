@@ -195,8 +195,8 @@ def test_oauth_client_credentials_flow_missing_token(
 
     # Should receive 401 due to missing Bearer token
     assert (
-        response.status_code == 403
-    ), f"Expected 403, got {response.status_code}: {response.text}"
+        response.status_code == 401
+    ), f"Expected 401, got {response.status_code}: {response.text}"
 
     logger.info("✅ Missing token test passed")
 
