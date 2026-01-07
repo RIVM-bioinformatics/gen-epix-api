@@ -2,12 +2,9 @@ from datetime import datetime
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field
 
 from gen_epix import fastapp
-from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.upload import CaseForUpload
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
@@ -148,43 +145,6 @@ class CaseSetRights(BaseCaseRights):
     )
     write_case_set: bool = Field(
         description="Whether the case set is allowed to be written",
-    )
-
-
-class CaseDataIssue(PydanticBaseModel):
-    case_type_col_id: UUID = Field(description="The ID of the case type column")
-    original_value: str | None = Field(description="The value of the case type column")
-    updated_value: str | None = Field(
-        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
-    )
-    data_rule: enum.CaseColDataRule = Field(description="The type of validation issue")
-    details: str | None = Field(description="The details of the data issue")
-
-
-class ValidatedCase(PydanticBaseModel):
-    case: CaseForUpload = Field(description="The case with validated content.")
-    data_issues: list[CaseDataIssue] = Field(
-        description="The data issues found for the case."
-    )
-
-
-class CaseValidationReport(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_validation_reports",
-        persistable=False,
-    )
-    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
-    created_in_data_collection_id: UUID = Field(
-        description="The data collection ID in which the cases would be created."
-    )
-    is_update: bool = Field(
-        description="Whether the cases are intended to be updated or newly created."
-    )
-    data_collection_ids: set[UUID] = Field(
-        description="The additional data collections that the cases would be put in, other than the created_in_data_collection."
-    )
-    validated_cases: list[ValidatedCase] = Field(
-        description="The cases containing validated content and any data issues found during validation."
     )
 
 

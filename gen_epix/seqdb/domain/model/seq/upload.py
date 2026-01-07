@@ -1,4 +1,3 @@
-from test.commondb.unit.upload.model import ParentForUpload, ParentUploadResult
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -10,6 +9,8 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     IsNewIdMixin,
+    ParentForUpload,
+    ParentUploadResult,
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
@@ -44,6 +45,24 @@ class ReadSetForUpload(ReadSet, IsNewIdMixin):
         default=NULL_ID,
         description="The UUID of the sample that the read set is associated with. If not available, the null ID is put.",
     )
+    sequencing_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sequencing protocol, if available. If not available, the null ID is put. Must be present if sequencing_protocol_code is not present. The use of sequencing_protocol_id is preferred over sequencing_protocol_code since the latter may change.",
+    )
+    sequencing_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the sequencing protocol. Must be present if sequencing_protocol_id is not present. The use of sequencing_protocol_code is meant for situations where the sequencing_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+
+    @model_validator(mode="after")
+    def _validate_sequencing_protocol(self) -> Self:
+        """Validate sequencing protocol."""
+        if not self.sequencing_protocol_code and self.sequencing_protocol_id == NULL_ID:
+            raise ValueError(
+                "Either sequencing_protocol_code or sequencing_protocol_id must be provided."
+            )
+        return self
 
 
 class SeqForUpload(Seq, IsNewIdMixin):
@@ -69,8 +88,8 @@ class SeqForUpload(Seq, IsNewIdMixin):
     )
 
     @model_validator(mode="after")
-    def _validate_assembly_protocol_reference(self) -> Self:
-        """Validate upload-specific fields."""
+    def _validate_assembly_protocol(self) -> Self:
+        """Validate assembly protocol."""
         if not self.assembly_protocol_code and self.assembly_protocol_id == NULL_ID:
             raise ValueError(
                 "Either assembly_protocol_code or assembly_protocol_id must be provided."

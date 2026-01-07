@@ -114,7 +114,7 @@ class UploadResult(Model):
         code: str,
         message: str,
     ) -> None:
-        """Add an error log item."""
+        """Add an error log item. Sets the upload status to FAILED."""
         self.logs.append(
             UploadLogItem(code=code, message=message, severity=LogLevel.ERROR)
         )
@@ -139,6 +139,20 @@ class UploadResult(Model):
         self.logs.append(
             UploadLogItem(code=code, message=message, severity=LogLevel.INFO)
         )
+
+    def add_logs(self, upload_log_items: list[UploadLogItem] | UploadLogItem) -> None:
+        """
+        Add log items to the upload result. If any of the added log items has severity
+        ERROR, the upload status is set to FAILED.
+        """
+        if isinstance(upload_log_items, list):
+            self.logs.extend(upload_log_items)
+            if any(log.severity == LogLevel.ERROR for log in upload_log_items):
+                self.status = UploadStatus.FAILED
+        else:
+            self.logs.append(upload_log_items)
+            if upload_log_items.severity == LogLevel.ERROR:
+                self.status = UploadStatus.FAILED
 
     def has_errors(self) -> bool:
         """Check if there are any error log items."""
@@ -247,7 +261,7 @@ class ParentForUpload(Model, IsNewIdMixin):
         """
         Validate consistency of IDs with the parent (self) field, if provided.
         """
-        parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)  # type: ignore[assignment]
+        parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         if parent is None:
             return self
         if parent.id == NULL_ID:
@@ -312,6 +326,12 @@ class ParentForUpload(Model, IsNewIdMixin):
         """
         parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         return parent
+
+    def get_external_identifiers(self) -> list[ExternalIdentifierForUpload] | None:
+        """
+        Get the list of external identifiers for upload, or an empty list if none are set.
+        """
+        return self.external_identifiers
 
 
 class ParentUploadResult(UploadResult):

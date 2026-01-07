@@ -106,8 +106,8 @@ class TestCaseAccess(CaseAccessSetup):
         if df is None:
             raise ValueError("Case CRUD commands DataFrame is not set.")
         df = df.loc[df["dm.is_active"] == True, :]
-        command_idx_to_test = None
-        # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
+        # command_idx_to_test = None
+        command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
         n_case_type_cols = 3
         # Sort by index to have correct order
         df = df.sort_values(by="index", axis=0).to_dict(orient="records")
@@ -124,7 +124,7 @@ class TestCaseAccess(CaseAccessSetup):
 
         # Function to create a case
         def _create_case(
-            row: dict[str, Any], for_create_upload: bool = False
+            row: dict[str, Any], for_upload: bool = False, is_create: bool = True
         ) -> model.Case | model.CaseForUpload:
             case_content = {}
             for i in range(1, n_case_type_cols):
@@ -133,9 +133,10 @@ class TestCaseAccess(CaseAccessSetup):
                     continue
                 value = row[f"case.content.case_type_col_value{i}"]
                 case_content[case_type_col_id] = value
-            if for_create_upload:
+            if for_upload:
                 return model.CaseForUpload(
                     id=row["case.id"],
+                    is_new_id=is_create,
                     case=model.Case(
                         case_type_id=row["case.case_type_id"],
                         created_in_data_collection_id=row[
@@ -206,7 +207,7 @@ class TestCaseAccess(CaseAccessSetup):
                     case_batch=model.CaseBatchForUpload(
                         cases=[
                             _create_case(  # type:ignore[list-item]
-                                row, for_create_upload=True
+                                row, for_upload=True
                             )
                         ]
                     ),

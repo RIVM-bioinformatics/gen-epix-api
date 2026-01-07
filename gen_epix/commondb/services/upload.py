@@ -83,25 +83,6 @@ class BatchUploader:
             self.parent_for_upload_class.EXTERNAL_IDENTIFIERS_FIELD_NAME
         )
 
-        # # Expand stored_model_field_props_map with for upload models as key
-        # if self.parent_for_upload_class not in self.stored_model_field_props:
-        #     self.stored_model_field_props[self.parent_for_upload_class] = (
-        #         self.stored_model_field_props[self.parent_class]
-        #     )
-        # for (
-        #     model_class,
-        #     for_upload_model_class,
-        # ) in self.child_for_upload_class_map.items():
-        #     if (
-        #         for_upload_model_class
-        #         not in self.stored_model_field_props  # type:ignore[comparison-overlap]
-        #     ):
-        #         self.stored_model_field_props[for_upload_model_class] = (
-        #             self.stored_model_field_props[  # type:ignore[arg-type]
-        #                 model_class
-        #             ]
-        #         )
-
     def get_batch_for_upload(
         self, cmd: command.UploadBatchCommandMixin
     ) -> BaseBatchForUpload:
@@ -139,10 +120,7 @@ class BatchUploader:
         See command.UploadSamplesCommand for details.
         """
         # Verify arguments
-        if not isinstance(cmd, command.Command):
-            raise exc.InvalidArgumentsError(
-                "" f"cmd must be a Command, got {type(cmd)}"
-            )
+        assert isinstance(cmd, command.Command)
         if cmd.id is None:
             raise exc.InvalidArgumentsError("cmd.id must be set")
 
@@ -167,6 +145,13 @@ class BatchUploader:
                 code="a3f7e9d2",
                 message="Verification ended",
             )
+            if cmd.verify_only:
+                # Stop here if only verification was requested
+                retval.add_info(
+                    code="b5c6d7e8",
+                    message="Verification only requested, upload will not proceed",
+                )
+                return retval
             if not success:
                 # Do not proceed with upsert due to errors
                 retval.add_error(
@@ -218,13 +203,17 @@ class BatchUploader:
         return retval
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
-        """Verify that the user has rights to perform the upload. Override as needed."""
+        """
+        Verify that the user has rights to perform the upload.
+        This base implementation performs no verification. Override as needed.
+        """
         pass
 
     def init_batch_upload_result(
         self, cmd: command.UploadBatchCommandMixin
     ) -> BaseBatchUploadResult:
         """Initialize the batch upload result. Override as needed."""
+        assert isinstance(cmd, command.Command)
         # Initialize parent results
         parent_results: list[model.ParentUploadResult] = []
         for parent_for_upload in self.get_parents_for_upload(cmd):
@@ -261,7 +250,7 @@ class BatchUploader:
         # Initialize batch result
         kwargs = {self.batch_parents_for_upload_field_name: parent_results}
         retval = self.batch_upload_result_class(
-            batch_id=cmd.id,  # type: ignore[attr-defined]
+            batch_id=cmd.id,
             status=UploadStatus.PENDING,
             **kwargs,  # type: ignore[arg-type]
         )
@@ -316,6 +305,7 @@ class BatchUploader:
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Retrieve and verify identifier issuers in external IDs"""
+        assert isinstance(cmd, command.Command)
         success = True
 
         # Retrieve and verify identifier issuers in external IDs provided by ID
@@ -332,12 +322,14 @@ class BatchUploader:
         )
 
         # Retrieve and verify external IDs
-        external_identifier_tuples = list(
-            {
-                (y.identifier_issuer_id, y.external_id)
-                for x in self.get_parents_for_upload(cmd)
-                for y in getattr(x, self.external_identifiers_field_name) or []  # type: ignore[attr-defined]
-            }
+        external_identifier_tuples: list[tuple[UUID, str]] = (
+            list(  # type:ignore[assignment]
+                {
+                    (y.identifier_issuer_id, y.external_id)
+                    for x in self.get_parents_for_upload(cmd)
+                    for y in x.get_external_identifiers() or []
+                }
+            )
         )
         if not external_identifier_tuples:
             return success
@@ -354,7 +346,7 @@ class BatchUploader:
                     operation=CrudOperation.READ_ALL,
                     query_filter=CompositeFilter(
                         operator=LogicalOperator.AND,
-                        filters=[
+                        filters=[  # type:ignore[arg-type]
                             EqualsNumberFilter(
                                 key="identifier_type",
                                 value=self.parent_identifier_type.value,
@@ -411,7 +403,7 @@ class BatchUploader:
                 if (
                     parent.id is not None
                     and parent.id != NULL_ID
-                    and not parent.is_new_id  # type: ignore[attr-defined]
+                    and not parent.is_new_id
                 ):
                     # Parent already exists
                     if existing_external_identifier.internal_id != parent.id:
@@ -434,12 +426,17 @@ class BatchUploader:
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Check parent model existence when ID is given"""
+        assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
 
         # Get parent IDs and check existence
         parent_id_is_new_id_pairs = list(
-            {(x.id, x.is_new_id) for x in self.get_parents_for_upload(cmd) if x.id is not None and x.id != NULL_ID}  # type: ignore[attr-defined]
+            {
+                (x.id, x.is_new_id)
+                for x in self.get_parents_for_upload(cmd)
+                if x.id is not None and x.id != NULL_ID
+            }
         )
         parent_ids = [x[0] for x in parent_id_is_new_id_pairs]
         new_parent_ids = {x for x, is_new in parent_id_is_new_id_pairs if is_new}
@@ -477,7 +474,7 @@ class BatchUploader:
                     )
                     continue
                 # Parent ID given as new ID and does not exist, this is acceptable
-                if parent.is_new_id:  # type: ignore[attr-defined]
+                if parent.is_new_id:
                     continue
                 # Parent ID given but not as new ID, and exists
                 if parent_id in existing_parent_ids:
@@ -486,11 +483,11 @@ class BatchUploader:
                 # Parent ID given but not as new ID, and does not exist
                 success = False
                 parent_result.add_error(
-                    "b2c3d4e5",
+                    "a9b7c4e2",
                     f"{self.parent_class.NAME}.id={parent.id} does not exist.",
                 )
 
-        if has_existing_parents and cmd.on_exists == OnExistsUploadAction.ERROR:  # type: ignore[attr-defined]
+        if has_existing_parents and cmd.on_exists == OnExistsUploadAction.ERROR:
             success = False
             retval.add_error(
                 "d3f5b6a1",
@@ -505,6 +502,7 @@ class BatchUploader:
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Check child model existence and consistency"""
+        assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
 
@@ -585,8 +583,9 @@ class BatchUploader:
                                 )
                             if child.id in existing_child_ids:
                                 # Child exists: check if parent ID matches existing data
+                                assert child.id is not None
                                 existing_parent_id = existing_child_parent_id_map.get(
-                                    child.id  # type: ignore[arg-type]
+                                    child.id
                                 )
                                 if existing_parent_id != parent.id:
                                     success = False
@@ -634,7 +633,7 @@ class BatchUploader:
                     # Child ID given but not as new ID, and exists
                     has_existing_data = True
 
-        if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:  # type: ignore[attr-defined]
+        if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:
             success = False
             retval.add_error(
                 "c6e7f8a0",
@@ -670,6 +669,7 @@ class BatchUploader:
         is_frozen: bool = False,
     ) -> bool:
         """Set and verify entities provided by ID and/or code, filling in IDs and verifying consistency"""
+        assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
 
@@ -845,15 +845,16 @@ class BatchUploader:
         """
         Create any parents.
         """
+        assert isinstance(cmd, command.Command)
         success = True
 
         # Determine which parents need to be created
         to_create_parent_result_tuples: list[
             tuple[model.ParentForUpload, model.Model, model.UploadResult]
-        ] = [
+        ] = [  # type:ignore[assignment]
             (x, x.get_parent(), y)
             for x, y in self.parent_result_items(cmd, retval)
-            if (x.id is None or x.id == NULL_ID or x.is_new_id)  # type: ignore[attr-defined]
+            if (x.id is None or x.id == NULL_ID or x.is_new_id)
             and y.status == UploadStatus.PENDING
             and x.get_parent() is not None
         ]
@@ -885,6 +886,7 @@ class BatchUploader:
         """
         Update any parents.
         """
+        assert isinstance(cmd, command.Command)
         success = True
 
         # Determine which parents need to be updated
@@ -895,7 +897,7 @@ class BatchUploader:
             for x, y in self.parent_result_items(cmd, retval)
             if x.id is not None
             and x.id != NULL_ID
-            and not x.is_new_id  # type: ignore[attr-defined]
+            and not x.is_new_id
             and y.status == UploadStatus.PENDING
             and x.get_parent() is not None
         ]
@@ -927,6 +929,7 @@ class BatchUploader:
         """
         Create any child models. Assumes that the parent models already exist.
         """
+        assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = False
 
@@ -974,6 +977,7 @@ class BatchUploader:
         """
         Update any child models. Assumes that the parent models already exist.
         """
+        assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
         success = True
 
@@ -1017,6 +1021,7 @@ class BatchUploader:
         retval: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
+        assert isinstance(cmd, command.Command)
         success = True
 
         # Determine which external identifiers need to be created and derive actual model from for upload version
@@ -1271,12 +1276,3 @@ class BatchUploader:
                     # New value is the same, do nothing
                     pass
         return is_updated
-
-    # @staticmethod
-    # def _get_class_var(model_class: type[model.Model], attr_name: str) -> Any:
-    #     """Check that a class has a ClassVar attribute."""
-    #     if not hasattr(model_class, attr_name):
-    #         raise exc.InitializationServiceError(
-    #             f"{model_class.__name__} must have {attr_name} attribute"
-    #         )
-    #     return getattr(model_class, attr_name)

@@ -60,9 +60,15 @@ class CreateCaseSetCommand(Command):
         return self
 
 
-class BaseUploadCasesCommand(Command, UploadBatchCommandMixin):
+class UploadCasesCommand(Command, UploadBatchCommandMixin):
     """
-    Base class for uploading cases.
+    Upload a batch of cases along with their associated data and return an upload
+    result. The upload can be stopped after the verification step by setting the
+    'verify_only' property to True, so that the returned upload result only contains
+    the verification results.
+
+    The data are uploaded as a single atomic unit of work, so that
+    either all data are successfully uploaded or none are.
     """
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
@@ -93,27 +99,6 @@ class BaseUploadCasesCommand(Command, UploadBatchCommandMixin):
                 "All cases must belong to the given created_in_data_collection_id."
             )
         return self
-
-
-class ValidateCasesCommand(BaseUploadCasesCommand):
-    """
-    Validate case data and return a validation report. All cases must belong to the same
-    case type and have the same created in data collection.
-    """
-
-    pass
-
-
-class UploadCasesCommand(BaseUploadCasesCommand):
-    """
-    Upload a batch of cases along with their associated data and return an upload
-    result.
-
-    The data are uploaded as a single atomic unit of work, so that
-    either all data are successfully uploaded or none are.
-    """
-
-    pass
 
 
 class RetrieveCaseSetStatsCommand(Command):

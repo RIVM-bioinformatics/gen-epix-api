@@ -5,9 +5,6 @@ from gen_epix.casedb.domain.model.case.complete_case_type import (
 from gen_epix.casedb.domain.model.case.non_persistable import (
     BaseCaseRights as BaseCaseRights,
 )
-from gen_epix.casedb.domain.model.case.non_persistable import (
-    CaseDataIssue as CaseDataIssue,
-)
 from gen_epix.casedb.domain.model.case.non_persistable import CaseQuery as CaseQuery
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseQueryResult as CaseQueryResult,
@@ -22,12 +19,6 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 from gen_epix.casedb.domain.model.case.non_persistable import CaseSetStat as CaseSetStat
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseTypeStat as CaseTypeStat,
-)
-from gen_epix.casedb.domain.model.case.non_persistable import (
-    CaseValidationReport as CaseValidationReport,
-)
-from gen_epix.casedb.domain.model.case.non_persistable import (
-    ValidatedCase as ValidatedCase,
 )
 from gen_epix.casedb.domain.model.case.operational_data import Case as Case
 from gen_epix.casedb.domain.model.case.operational_data import (
@@ -79,6 +70,7 @@ from gen_epix.casedb.domain.model.case.upload import (
 from gen_epix.casedb.domain.model.case.upload import (
     CaseBatchUploadResult as CaseBatchUploadResult,
 )
+from gen_epix.casedb.domain.model.case.upload import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.case.upload import CaseForUpload as CaseForUpload
 from gen_epix.casedb.domain.model.case.upload import (
     CaseUploadResult as CaseUploadResult,

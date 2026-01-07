@@ -1,18 +1,22 @@
-from test.commondb.unit.upload.model import ParentForUpload, ParentUploadResult
 from typing import ClassVar, Self
 from uuid import UUID
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, computed_field, field_serializer, model_validator
 
+from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     IsNewIdMixin,
+    ParentForUpload,
+    ParentUploadResult,
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
@@ -50,13 +54,21 @@ class ReadSetForUpload(Model, IsNewIdMixin):
         description="The external identifier of the sample in seqdb that the read set is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
     sequencing_protocol_id: UUID = copy_model_field(
-        seqdb_model.ReadSet, "sequencing_protocol_id"
+        seqdb_model.ReadSetForUpload, "sequencing_protocol_id"
+    )
+    sequencing_protocol_code: str | None = copy_model_field(
+        seqdb_model.ReadSetForUpload, "sequencing_protocol_code"
     )
 
     @model_validator(mode="after")
     def _validate_read_set_for_upload(self) -> Self:
+        """Validate sample ID and sequencing protocol."""
         if self.sample_id == NULL_ID and self.external_sample_id is None:
             raise ValueError("Either sample_id or external_sample_id must be provided.")
+        if not self.sequencing_protocol_code and self.sequencing_protocol_id == NULL_ID:
+            raise ValueError(
+                "Either sequencing_protocol_code or sequencing_protocol_id must be provided."
+            )
         return self
 
     @field_serializer(
@@ -95,13 +107,21 @@ class SeqForUpload(Model, IsNewIdMixin):
         description="The external identifier of the sample in seqdb that the sequence is associated with. If not available, None is put. Must be provided if sample_id is not provided.",
     )
     assembly_protocol_id: UUID = copy_model_field(
-        seqdb_model.ReadSet, "sequencing_protocol_id"
+        seqdb_model.SeqForUpload, "assembly_protocol_id"
+    )
+    assembly_protocol_code: str | None = copy_model_field(
+        seqdb_model.SeqForUpload, "assembly_protocol_code"
     )
 
     @model_validator(mode="after")
     def _validate_seq_for_upload(self) -> Self:
+        """Validate sample ID and assembly protocol."""
         if self.sample_id == NULL_ID and self.external_sample_id is None:
             raise ValueError("Either sample_id or external_sample_id must be provided.")
+        if not self.assembly_protocol_code and self.assembly_protocol_id == NULL_ID:
+            raise ValueError(
+                "Either assembly_protocol_code or assembly_protocol_id must be provided."
+            )
         return self
 
     @field_serializer(
@@ -152,9 +172,11 @@ class CaseForUpload(ParentForUpload):
 
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
-        # Verify that read_sets contains no duplicate case_type_col_id and no inconsistent external ID to sample ID mappings
+        """
+        Verify that read_sets and seqs contain no duplicate case_type_col_id and no
+        inconsistent external ID to sample ID mappings
+        """
         self._validate_read_sets_or_seqs(self.read_sets)
-        # Verify that seqs contains no duplicate case_type_col_id and no inconsistent external ID to sample ID mappings
         self._validate_read_sets_or_seqs(self.seqs)
         return self
 
@@ -180,7 +202,12 @@ class CaseForUpload(ParentForUpload):
                 value.external_sample_id
             )
             sample_id = value.sample_id
-            if external_sample_id is not None and sample_id != NULL_ID:
+            if (
+                external_sample_id is not None
+                and sample_id is not None
+                and sample_id != NULL_ID
+            ):
+                # Both provided, check for consistency
                 if external_sample_id in sample_id_map:
                     if sample_id_map[external_sample_id] != sample_id:
                         raise ValueError(
@@ -190,9 +217,23 @@ class CaseForUpload(ParentForUpload):
                     sample_id_map[external_sample_id] = sample_id
 
 
+class CaseDataIssue(PydanticBaseModel):
+    case_type_col_id: UUID = Field(description="The ID of the case type column")
+    original_value: str | None = Field(description="The value of the case type column")
+    updated_value: str | None = Field(
+        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
+    )
+    data_issue_type: enum.DataIssueType = Field(
+        description="The type of validation issue"
+    )
+    code: str = Field(description="The code of the data issue")
+    message: str | None = Field(description="The details of the data issue")
+
+
 class CaseUploadResult(ParentUploadResult):
     """
-    The result of uploading a single case.
+    The result of uploading a single case. The case content validation results as well
+    as the resulting cases are included as well.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
@@ -200,6 +241,19 @@ class CaseUploadResult(ParentUploadResult):
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
 
+    validated_content: dict[UUID, str | None] = Field(
+        default_factory=dict,
+        description="The validated content of the case after validation or upload.",
+    )
+    data_issues: list[CaseDataIssue] = Field(
+        default_factory=list,
+        description="The data issues found for the original case content.",
+    )
+
+    external_identifiers: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the external identifiers associated with the case, if any were provided, in the same order as provided.",
+    )
     read_sets: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the read sets associated with the case, if any were provided, in the same order as provided.",
@@ -225,8 +279,8 @@ class CaseBatchForUpload(BaseBatchForUpload):
 
     @model_validator(mode="after")
     def _validate_external_sample_ids(self) -> Self:
-        # Verify that cases contains no duplicate external sample identifiers
-        external_identifier_map: dict[ExternalIdentifierForUpload, i] = {}
+        """Verify that cases contains no duplicate external sample identifiers"""
+        external_identifier_map: dict[ExternalIdentifierForUpload, int] = {}
         for i, case_for_upload in enumerate(self.cases):
             for (
                 children_field_name
@@ -266,20 +320,11 @@ class CaseBatchUploadResult(BaseBatchUploadResult):
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
-    NAME: ClassVar = "SampleUploadResult"
+    NAME: ClassVar = "CaseBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = CaseBatchForUpload
     PARENT_RESULT_CLASS: ClassVar = CaseUploadResult
 
-    external_identifiers: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the external identifiers associated with the case, if any were provided, in the same order as provided.",
-    )
-    read_sets: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the read sets associated with the case, if any were provided, in the same order as provided.",
-    )
-    seqs: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the sequences associated with the case, if any were provided, in the same order as provided.",
+    cases: list[CaseUploadResult] = Field(
+        description="The results of uploading the cases."
     )

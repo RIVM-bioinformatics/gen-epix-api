@@ -129,9 +129,6 @@ from gen_epix.casedb.domain.command.case import (
     TreeAlgorithmCrudCommand as TreeAlgorithmCrudCommand,
 )
 from gen_epix.casedb.domain.command.case import UploadCasesCommand as UploadCasesCommand
-from gen_epix.casedb.domain.command.case import (
-    ValidateCasesCommand as ValidateCasesCommand,
-)
 from gen_epix.casedb.domain.command.geo import RegionCrudCommand as RegionCrudCommand
 from gen_epix.casedb.domain.command.geo import (
     RegionRelationCrudCommand as RegionRelationCrudCommand,
@@ -316,7 +313,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveSequencingProtocolsCommand,
         TreeAlgorithmClassCrudCommand,
         TreeAlgorithmCrudCommand,
-        ValidateCasesCommand,
     },
     enum.ServiceType.GEO: {
         RegionCrudCommand,

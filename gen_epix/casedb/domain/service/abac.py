@@ -78,7 +78,6 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseSetStatsCommand,
         command.RetrieveCaseTypeStatsCommand,
-        command.ValidateCasesCommand,
     }
 
     @abc.abstractmethod

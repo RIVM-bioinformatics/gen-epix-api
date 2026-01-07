@@ -2,6 +2,7 @@ import abc
 from collections.abc import Iterable
 
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
@@ -22,6 +23,7 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
+        f(seqdb_command.UploadSamplesCommand, self.upload_samples)
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
@@ -55,3 +57,10 @@ class BaseSeqdbService(BaseService):
     #     cmd: command.RetrieveAlleleProfileCommand,
     # ) -> model.SeqDbAlleleProfile | list[model.SeqDbAlleleProfile]:
     #     raise NotImplementedError()
+
+    @abc.abstractmethod
+    def upload_samples(
+        self,
+        cmd: seqdb_command.UploadSamplesCommand,
+    ) -> seqdb_model.SampleBatchUploadResult:
+        raise NotImplementedError()

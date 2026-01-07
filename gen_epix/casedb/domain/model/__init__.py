@@ -53,9 +53,6 @@ from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseTypeStat as CaseTypeStat
 from gen_epix.casedb.domain.model.case import CaseUploadResult as CaseUploadResult
-from gen_epix.casedb.domain.model.case import (
-    CaseValidationReport as CaseValidationReport,
-)
 from gen_epix.casedb.domain.model.case import Col as Col
 from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
@@ -65,10 +62,10 @@ from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUplo
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
-from gen_epix.casedb.domain.model.case import ValidatedCase as ValidatedCase
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
 )
+from gen_epix.casedb.domain.model.case.upload import CaseDataIssue as CaseDataIssue
 from gen_epix.casedb.domain.model.geo import Region as Region
 from gen_epix.casedb.domain.model.geo import RegionRelation as RegionRelation
 from gen_epix.casedb.domain.model.geo import RegionSet as RegionSet
@@ -79,15 +76,17 @@ from gen_epix.casedb.domain.model.ontology import ConceptSet as ConceptSet
 from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
-from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
-from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
+
+# from gen_epix.casedb.domain.model.seqdb import AlleleProfile as AlleleProfile
+# from gen_epix.casedb.domain.model.seqdb import AssemblyProtocol as AssemblyProtocol
 from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
-from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSetForUpload
-from gen_epix.casedb.domain.model.seqdb import Sample as Sample
-from gen_epix.casedb.domain.model.seqdb import Seq as SeqForUpload
-from gen_epix.casedb.domain.model.seqdb import SequencingProtocol as SequencingProtocol
+
+# from gen_epix.casedb.domain.model.seqdb import ReadSet as ReadSetForUpload
+# from gen_epix.casedb.domain.model.seqdb import Sample as Sample
+# from gen_epix.casedb.domain.model.seqdb import Seq as SeqForUpload
+# from gen_epix.casedb.domain.model.seqdb import SequencingProtocol as SequencingProtocol
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
 from gen_epix.commondb.domain import enum as common_enum
@@ -158,15 +157,15 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             RegionSetShape,
         ],
         enum.ServiceType.SEQDB: [
-            AlleleProfile,
+            # AlleleProfile,
             GeneticSequence,
             PhylogeneticTree,
-            SequencingProtocol,
-            AssemblyProtocol,
+            # SequencingProtocol,
+            # AssemblyProtocol,
             File,
-            Sample,
-            ReadSetForUpload,
-            SeqForUpload,
+            # Sample,
+            # ReadSetForUpload,
+            # SeqForUpload,
         ],
         enum.ServiceType.SUBJECT: [
             Subject,
@@ -207,7 +206,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseSetQuery,
             CaseRights,
             CaseSetRights,
-            CaseValidationReport,
         ],
         enum.ServiceType.ABAC: list(
             _COMMON_SORTED_MODELS_BY_SERVICE_TYPE[common_enum.ServiceType.ABAC]

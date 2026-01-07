@@ -1,33 +1,34 @@
 import re
 from decimal import Decimal, InvalidOperation
 from itertools import combinations
-from typing import Any, NoReturn
+from typing import NoReturn
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.enum import (
-    CaseColDataRule,
     ColType,
     ColTypeSet,
     ConceptRelationType,
+    DataIssueType,
     RegionRelationType,
 )
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.case_date import (
+    case_service_get_case_date_case_type_col_mappers_from_cols,
+)
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
-from gen_epix.transform import Transformer
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import NoMatchStrategy, TimeUnit, TimeUnitTransformStrategy
-from gen_epix.transform.transform_result import TransformResult
 from gen_epix.transform.transformers import IntervalTransformer
 from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
 from gen_epix.util import map_paired_elements
 
 
-class CaseTransformer(Transformer):
+class CaseValidator:
     N_DECIMALS = {
         ColType.DECIMAL_0: 0,
         ColType.DECIMAL_1: 1,
@@ -57,21 +58,19 @@ class CaseTransformer(Transformer):
 
     TIME_MATCHERS = {
         ColType.TIME_YEAR: lambda x: (
-            x if x is None or CaseTransformer.TIME_YEAR_PATTERN.match(x) else NoReturn
+            x if x is None or CaseValidator.TIME_YEAR_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_QUARTER: lambda x: (
-            x
-            if x is None or CaseTransformer.TIME_QUARTER_PATTERN.match(x)
-            else NoReturn
+            x if x is None or CaseValidator.TIME_QUARTER_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_MONTH: lambda x: (
-            x if x is None or CaseTransformer.TIME_MONTH_PATTERN.match(x) else NoReturn
+            x if x is None or CaseValidator.TIME_MONTH_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_WEEK: lambda x: (
-            x if x is None or CaseTransformer.TIME_WEEK_PATTERN.match(x) else NoReturn
+            x if x is None or CaseValidator.TIME_WEEK_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_DAY: lambda x: (
-            x if x is None or CaseTransformer.TIME_DAY_PATTERN.match(x) else NoReturn
+            x if x is None or CaseValidator.TIME_DAY_PATTERN.match(x) else NoReturn
         ),
     }
 
@@ -87,7 +86,7 @@ class CaseTransformer(Transformer):
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
             return None
-        if CaseTransformer.DECIMAL_PATTERN.match(value) is None:
+        if CaseValidator.DECIMAL_PATTERN.match(value) is None:
             return NoReturn
         try:
             num_value = round(Decimal(value), n_decimals)
@@ -99,9 +98,11 @@ class CaseTransformer(Transformer):
         self,
         case_service: BaseCaseService,
         complete_case_type: model.CompleteCaseType,
+        user_id: UUID,
     ):
         self.case_service = case_service
         self.complete_case_type = complete_case_type
+        self.user_id = user_id
         # Unique concept and region sets across the complete case type
         self.concept_set_ids: set[UUID] = set()
         self.interval_concept_set_ids: set[UUID] = set()
@@ -128,93 +129,85 @@ class CaseTransformer(Transformer):
 
         self._init_metadata()
 
-    def transform(self, obj: ObjectAdapter) -> ObjectAdapter:
-        raise NotImplementedError()
+    def validate_and_transform(
+        self, cmd: command.UploadCasesCommand, retval: model.CaseBatchUploadResult
+    ) -> model.CaseBatchUploadResult:
+        """
+        Validate and transform the content of the cases in batch upload command.
+        Where applicable, individual values are transformed from synonymous values to
+        standard values, and combinations of values are transformed based on defined
+        relations.
 
-    def __call__(self, obj: Any) -> TransformResult:
-        case_validation_report, contents, updated_contents, is_update = (
-            self._setup_reporting(obj)
+        The method adds resulting ValidatedCaseForUpload to the upload result,
+        including any data issues found during validation and transformation.
+        """
+        contents, updated_contents, data_issues_list = self._get_content_references(
+            cmd, retval
         )
+        self.validate_unknown_columns(contents, data_issues_list)
+        self.transform_individual_values(contents, updated_contents, data_issues_list)
+        self.transform_value_pairs(contents, updated_contents, data_issues_list)
+        self.calculate_case_date(cmd, updated_contents, data_issues_list)
 
-        self._handle_unknown_columns(case_validation_report, contents)
+        return retval
 
-        self._transform_individual_values(
-            case_validation_report, contents, updated_contents, is_update
-        )
-
-        self._transform_value_pairs(case_validation_report, contents, updated_contents)
-
-        return TransformResult(
-            success=True, original_object=obj, transformed_object=case_validation_report
-        )
-
-    def _setup_reporting(self, cmd: command.ValidateCasesCommand) -> tuple[
-        model.CaseValidationReport,
-        list[dict[UUID, str | None]],
-        list[dict[UUID, str | None]],
-        bool,
-    ]:
-        """Set up the case validation report and content lists for processing."""
-        if cmd.case_type_id != self.complete_case_type.id:
-            raise ValueError("Invalid case type")
-
-        is_update = cmd.is_update
-        contents = [x.content for x in cmd.case_batch.cases]
-
-        # Create case validation report with empty content for cases
-        case_validation_report = model.CaseValidationReport(
-            case_type_id=cmd.case_type_id,
-            created_in_data_collection_id=cmd.created_in_data_collection_id,
-            is_update=cmd.is_update,
-            data_collection_ids=cmd.data_collection_ids,
-            validated_cases=[
-                model.ValidatedCase(
-                    case=model.CaseForUpload(
-                        **x.model_dump(
-                            exclude={"content"},
-                            exclude_none=True,
-                            exclude_defaults=True,
-                        ),
-                        content={},
-                    ),
-                    data_issues=[],
-                )
-                for x in cmd.case_batch.cases
-            ],
-        )
-        updated_contents = [
-            x.case.content for x in case_validation_report.validated_cases
-        ]
-
-        return case_validation_report, contents, updated_contents, is_update
-
-    def _handle_unknown_columns(
+    def _get_content_references(
         self,
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
+        cmd: command.UploadCasesCommand,
+        retval: model.CaseBatchUploadResult,
+    ) -> tuple[
+        list[dict[UUID, str | None] | None],
+        list[dict[UUID, str | None] | None],
+        list[list[model.CaseDataIssue] | None],
+    ]:
+        """
+        Get references to contents, updated_contents and data_issues_list for all
+        cases, as a convenience for easily updating these in-place.
+        """
+        if cmd.case_type_id != self.complete_case_type.id:
+            raise ValueError("Cases are not for the correct case type")
+
+        # Get contents, updated_contents and data_issues_list references
+        contents = [
+            None if x.case is None else x.case.content for x in cmd.case_batch.cases
+        ]
+        updated_contents = [
+            None if x is None else x.validated_content for x in retval.cases
+        ]
+        data_issues_list = [None if x is None else x.data_issues for x in retval.cases]
+
+        return contents, updated_contents, data_issues_list
+
+    def validate_unknown_columns(
+        self,
+        contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
         """Handle any unknown case type columns and add appropriate data issues."""
-        for i, content in enumerate(contents):
+        for content, data_issues in zip(contents, data_issues_list):
+            if content is None:
+                continue
+            assert data_issues is not None
             for case_type_col_id in content.keys():
                 if case_type_col_id in self.complete_case_type.case_type_cols:
                     continue
                 # Unknown case type col
-                case_validation_report.validated_cases[i].data_issues.append(
+                data_issues.append(
                     model.CaseDataIssue(
                         case_type_col_id=case_type_col_id,
                         original_value=content[case_type_col_id],
                         updated_value=None,
-                        data_rule=CaseColDataRule.UNAUTHORIZED,
-                        details="Unknown case type column",
+                        data_issue_type=DataIssueType.UNAUTHORIZED,
+                        code="a7b3f9d2",
+                        message="Unknown case type column",
                     )
                 )
 
-    def _transform_individual_values(
+    def transform_individual_values(
         self,
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
-        is_update: bool,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
         """Validate and transform individual values."""
         msg_template = "{orig_value}"
@@ -223,19 +216,22 @@ class CaseTransformer(Transformer):
             assert case_type_col_id is not None
             col = self.complete_case_type.cols[case_type_col.col_id]
             if col.col_type == ColType.REGULAR_LANGUAGE:
-                assert col.concept_set_id
+                pattern = self.regex_patterns[
+                    col.concept_set_id
+                ]  # type:ignore[arg-type]
                 transform_fn = lambda x: (
-                    x
-                    if x is None or self.regex_patterns[col.concept_set_id].match(x)
-                    else NoReturn
+                    x if x is None or pattern.match(x) else NoReturn
                 )
+                code = "b1c4e5f6"
                 msg_template = "{orig_value} does not match regex"
             elif col.col_type in ColTypeSet.STRING_SET.value:
-                assert col.concept_set_id
-                concept_value_map = self.concept_value_maps[col.concept_set_id]
+                concept_set_id = col.concept_set_id
+                assert concept_set_id is not None
+                concept_value_map = self.concept_value_maps[concept_set_id]
                 transform_fn = lambda x: (
                     concept_value_map.get(x.lower(), NoReturn) if x else None
                 )
+                code = "c2d5f6a7"
                 msg_template = "{orig_value} cannot be mapped to concept"
             elif col.col_type in ColTypeSet.HAS_REGION_SET.value:
                 assert col.region_set_id
@@ -243,60 +239,80 @@ class CaseTransformer(Transformer):
                 transform_fn = lambda x: (
                     region_value_map.get(x.lower(), NoReturn) if x else None
                 )
+                code = "d3e9f1a8"
                 msg_template = "{orig_value} cannot be mapped to region"
             elif col.col_type in ColTypeSet.TIME.value:
                 transform_fn = self.TIME_MATCHERS[col.col_type]
+                code = "e4f1a2b9"
                 msg_template = (
                     "{orig_value} is not a valid " + col.col_type.value + " value"
                 )
             elif col.col_type in ColTypeSet.NUMBER.value:
                 n_decimals = self.N_DECIMALS[col.col_type]
-                transform_fn = lambda x: CaseTransformer._transform_decimal(
-                    x, n_decimals
-                )
+                code = "f5a2b3c0"
+                transform_fn = lambda x: CaseValidator._transform_decimal(x, n_decimals)
             elif col.col_type == ColType.ORGANIZATION:
                 organization_value_map = self.organization_value_map
                 transform_fn = lambda x: (
                     organization_value_map.get(x.lower(), NoReturn) if x else None
                 )
+                code = "a6b1c2d3"
                 msg_template = "{orig_value} cannot be mapped to organization"
             else:
                 # TODO: transform any other col_types
+                code = "8f7a2d1b"
                 transform_fn = lambda x: x
             # Update value
-            for i, (content, updated_content) in enumerate(
-                zip(contents, updated_contents)
+            for content, updated_content, data_issues in zip(
+                contents, updated_contents, data_issues_list
             ):
+                if content is None:
+                    continue
+                assert updated_content is not None
+                assert data_issues is not None
                 if case_type_col_id not in content:
                     continue
                 orig_value = content[case_type_col_id]
-                if orig_value is None:
-                    if is_update:
-                        # Deletion of value by providing None -> keep in content
-                        updated_content[case_type_col_id] = None
-                    # Unnecessary None -> do not add
-                    continue
-                new_value = transform_fn(orig_value)
+                new_value: str | None | NoReturn = transform_fn(orig_value)  # type: ignore[assignment]
                 if new_value == NoReturn:
                     new_value = None
                     # No mapping found
-                    case_validation_report.validated_cases[i].data_issues.append(
+                    data_issues.append(
                         model.CaseDataIssue(
                             case_type_col_id=case_type_col_id,
                             original_value=orig_value,
                             updated_value=new_value,
-                            data_rule=CaseColDataRule.INVALID,
-                            details=msg_template.format(orig_value=orig_value),
+                            data_issue_type=DataIssueType.INVALID,
+                            code=code,
+                            message=msg_template.format(orig_value=orig_value),
                         )
                     )
+                    # None is not added to updated_content, since an explicit None value is interpreted as deletion of a value during update
                     continue
+                if new_value != orig_value:
+                    # Value transformed
+                    data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=case_type_col_id,
+                            original_value=orig_value,
+                            updated_value=new_value,
+                            data_issue_type=DataIssueType.DERIVED,
+                            code=code,
+                            message="Value transformed",
+                        )
+                    )
+                    if new_value is None:
+                        raise AssertionError(
+                            f"Unexpected None value after transformation of value {orig_value} for case type column {case_type_col_id}"
+                        )
+                # Add to updated_content
                 updated_content[case_type_col_id] = new_value
 
-    def _transform_value_pairs(
+    def transform_value_pairs(
         self,
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
         """
         Validate and transform pairs of values.
@@ -305,6 +321,7 @@ class CaseTransformer(Transformer):
 
         # Go over each case type dimension
         for case_type_dim in self.complete_case_type.case_type_dims.values():
+            assert case_type_dim.id is not None
             dim_type = self.complete_case_type.dims[case_type_dim.dim_id]
             case_type_col_ids = (
                 self.complete_case_type.ordered_case_type_col_ids_by_dim[
@@ -313,9 +330,9 @@ class CaseTransformer(Transformer):
             )
             # Handle each type of dimension
             if dim_type.dim_type == enum.DimType.GEO:
-                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
                 self._transform_geo_value_pairs(
-                    col_pairs, case_validation_report, contents, updated_contents
+                    contents, updated_contents, data_issues_list, col_pairs
                 )
             elif dim_type.dim_type == enum.DimType.TIME:
                 # Sort col_pairs by time resolution descending (DAY, WEEK, MONTH, QUARTER, YEAR)
@@ -327,26 +344,82 @@ class CaseTransformer(Transformer):
                         len(case_type_col_ids),
                     )
                 )
-                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
                 self._transform_time_value_pairs(
-                    col_pairs, case_validation_report, contents, updated_contents
+                    contents, updated_contents, data_issues_list, col_pairs
                 )
             elif dim_type.dim_type == enum.DimType.NUMBER:
-                col_pairs = CaseTransformer._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
                 self._transform_number_value_pairs(
-                    col_pairs, case_validation_report, contents, updated_contents
+                    contents, updated_contents, data_issues_list, col_pairs
                 )
             elif dim_type.dim_type == enum.DimType.TEXT:
                 pass
             else:
                 continue
 
+    def calculate_case_date(
+        self,
+        cmd: command.UploadCasesCommand,
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
+    ) -> None:
+        """Calculate case date based on TIME dimension columns."""
+        # Determine case type columns from which the case date needs to be derived
+        # Calculate case date where possible
+        case_date_case_type_dim_id = self.complete_case_type.case_date_case_type_dim_id
+        if case_date_case_type_dim_id is None:
+            case_date_case_type_col_mappers = {}
+        else:
+            case_type_cols = [
+                self.complete_case_type.case_type_cols[x]
+                for x in self.complete_case_type.ordered_case_type_col_ids_by_dim[
+                    case_date_case_type_dim_id
+                ]
+            ]
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers_from_cols(
+                    case_type_cols,
+                    self.complete_case_type.cols,
+                )
+            )
+        if not case_date_case_type_col_mappers:
+            # No case date columns defined, skip calculation
+            return
+
+        # Calculate case dates
+        for case_for_upload, updated_content, data_issues in zip(
+            cmd.case_batch.cases, updated_contents, data_issues_list
+        ):
+            case = case_for_upload.case
+            if case is None:
+                continue
+            assert updated_content is not None
+            assert data_issues is not None
+            for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
+                iso_datetime_value: str | None = case.content.get(case_type_col_id)
+                if iso_datetime_value is None:
+                    continue
+                orig_case_date = case.case_date
+                case.case_date = mapper(iso_datetime_value)
+                if case.case_date != orig_case_date:
+                    data_issues.append(
+                        model.CaseDataIssue(
+                            case_type_col_id=case_type_col_id,
+                            original_value=iso_datetime_value,
+                            updated_value=str(case.case_date),
+                            data_issue_type=DataIssueType.DERIVED,
+                            code="b2c3d4e5",
+                            message="Case date updated",
+                        )
+                    )
+
     def _transform_geo_value_pairs(
         self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pairs: list[tuple[UUID, UUID]],
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """
         Validate and transform GEO pairs of values.
@@ -369,9 +442,13 @@ class CaseTransformer(Transformer):
             region_relation_map = self.region_relation_maps.get(
                 (col1.region_set_id, col2.region_set_id), {}
             )
-            for i, (content, updated_content) in enumerate(
-                zip(contents, updated_contents)
+            for content, updated_content, data_issues in zip(
+                contents, updated_contents, data_issues_list
             ):
+                if content is None:
+                    continue
+                assert updated_content is not None
+                assert data_issues is not None
                 from_region_id = updated_content.get(col_pair[0])
                 if from_region_id is None:
                     continue
@@ -380,20 +457,20 @@ class CaseTransformer(Transformer):
                     continue
 
                 self._set_derived_value(
-                    case_validation_report,
-                    i,
                     content,
                     updated_content,
+                    data_issues,
+                    "f8d3e9a2",
                     col_pair,
                     to_region_id,
                 )
 
     def _transform_time_value_pairs(
         self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pairs: list[tuple[UUID, UUID]],
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """Validate and transform TIME pairs of values."""
         # For TIME dim: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
@@ -426,9 +503,13 @@ class CaseTransformer(Transformer):
                 strategy=TimeUnitTransformStrategy.EXACT_ONLY,
             )
 
-            for i, (content, updated_content) in enumerate(
-                zip(contents, updated_contents)
+            for content, updated_content, data_issues in zip(
+                contents, updated_contents, data_issues_list
             ):
+                if content is None:
+                    continue
+                assert updated_content is not None
+                assert data_issues is not None
                 from_time = updated_content.get(col_pair[0])
                 if from_time is None:
                     continue
@@ -452,20 +533,20 @@ class CaseTransformer(Transformer):
                     continue
 
                 self._set_derived_value(
-                    case_validation_report,
-                    i,
                     content,
                     updated_content,
+                    data_issues,
+                    "d4e2f3a4",
                     col_pair,
                     to_time,
                 )
 
     def _transform_number_value_pairs(
         self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pairs: list[tuple[UUID, UUID]],
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """
         Validate and transform NUMBER pairs of values.
@@ -487,31 +568,31 @@ class CaseTransformer(Transformer):
             # DECIMAL_XXX -> INTERVAL transformation
             if is_col1_decimal and is_col2_interval:
                 self._transform_decimal_to_interval(
-                    col_pair,
-                    col2,
-                    case_validation_report,
                     contents,
                     updated_contents,
+                    data_issues_list,
+                    col_pair,
+                    col2,
                 )
 
             # INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer
             elif is_col1_interval and is_col2_interval:
                 self._transform_interval_to_interval(
+                    contents,
+                    updated_contents,
+                    data_issues_list,
                     col_pair,
                     col1,
                     col2,
-                    case_validation_report,
-                    contents,
-                    updated_contents,
                 )
 
     def _transform_decimal_to_interval(
         self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
         col2: model.Col,
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """Process DECIMAL_XXX -> INTERVAL transformation."""
         # Check if we have an interval transformer for col2's concept set
@@ -521,7 +602,13 @@ class CaseTransformer(Transformer):
         if interval_transformer is None:
             return
 
-        for i, (content, updated_content) in enumerate(zip(contents, updated_contents)):
+        for content, updated_content, data_issues in zip(
+            contents, updated_contents, data_issues_list
+        ):
+            if content is None:
+                continue
+            assert updated_content is not None
+            assert data_issues is not None
             from_number_str = updated_content.get(col_pair[0])
             if from_number_str is None:
                 continue
@@ -538,22 +625,22 @@ class CaseTransformer(Transformer):
                 continue
 
             self._set_derived_value(
-                case_validation_report,
-                i,
                 content,
                 updated_content,
+                data_issues,
+                "c9d4e1f2",
                 col_pair,
                 to_interval_id,
             )
 
     def _transform_interval_to_interval(
         self,
+        contents: list[dict[UUID, str | None] | None],
+        updated_contents: list[dict[UUID, str | None] | None],
+        data_issues_list: list[list[model.CaseDataIssue] | None],
         col_pair: tuple[UUID, UUID],
         col1: model.Col,
         col2: model.Col,
-        case_validation_report: model.CaseValidationReport,
-        contents: list[dict[UUID, str | None]],
-        updated_contents: list[dict[UUID, str | None]],
     ) -> None:
         """Process INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer."""
         # Check if both columns have concept sets
@@ -576,11 +663,11 @@ class CaseTransformer(Transformer):
             interval_to_interval_transformer = IntervalToIntervalTransformer(
                 src_field="interval_value",
                 src_interval_names=src_transformer._interval_names,
-                src_lower_bounds=src_transformer._lower_bounds,
-                src_upper_bounds=src_transformer._upper_bounds,
+                src_lower_bounds=src_transformer._lower_bounds,  # type:ignore[arg-type]
+                src_upper_bounds=src_transformer._upper_bounds,  # type:ignore[arg-type]
                 tgt_interval_names=tgt_transformer._interval_names,
-                tgt_lower_bounds=tgt_transformer._lower_bounds,
-                tgt_upper_bounds=tgt_transformer._upper_bounds,
+                tgt_lower_bounds=tgt_transformer._lower_bounds,  # type:ignore[arg-type]
+                tgt_upper_bounds=tgt_transformer._upper_bounds,  # type:ignore[arg-type]
                 src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
@@ -592,7 +679,13 @@ class CaseTransformer(Transformer):
             # Skip if transformer creation fails
             return
 
-        for i, (content, updated_content) in enumerate(zip(contents, updated_contents)):
+        for content, updated_content, data_issues in zip(
+            contents, updated_contents, data_issues_list
+        ):
+            if content is None:
+                continue
+            assert updated_content is not None
+            assert data_issues is not None
             from_interval_id = updated_content.get(col_pair[0])
             if from_interval_id is None:
                 continue
@@ -615,20 +708,20 @@ class CaseTransformer(Transformer):
                 continue
 
             self._set_derived_value(
-                case_validation_report,
-                i,
                 content,
                 updated_content,
+                data_issues,
+                "a8f2d5e7",
                 col_pair,
                 to_interval_id,
             )
 
     def _set_derived_value(
         self,
-        case_validation_report: model.CaseValidationReport,
-        case_index: int,
-        content: dict,
-        updated_content: dict,
+        content: dict[UUID, str | None],
+        updated_content: dict[UUID, str | None],
+        data_issues: list[model.CaseDataIssue],
+        code: str,
         col_pair: tuple,
         new_value: str,
     ) -> None:
@@ -642,25 +735,26 @@ class CaseTransformer(Transformer):
             and updated_content[col_pair[1]] != new_value
         ):
             # Overwrite existing different value
-            case_validation_report.validated_cases[case_index].data_issues.append(
+            data_issues.append(
                 model.CaseDataIssue(
                     case_type_col_id=col_pair[1],
                     original_value=content[col_pair[1]],
                     updated_value=new_value,
-                    data_rule=CaseColDataRule.CONFLICT,
-                    details=f"Value overwritten based on derived value from '{content[col_pair[0]]}'",
+                    data_issue_type=DataIssueType.CONFLICT,
+                    code=code,
+                    message=f"Value overwritten based on derived value from '{content[col_pair[0]]}'",
                 )
             )
         else:
             # Set derived value
-            case_validation_report.validated_cases[case_index].data_issues.append(
+            data_issues.append(
                 model.CaseDataIssue(
                     case_type_col_id=col_pair[1],
                     original_value=content.get(col_pair[1]),
                     updated_value=new_value,
-                    data_rule=CaseColDataRule.DERIVED,
-                    # TODO: time dimension should always derive from the highest resolution value first
-                    details=f"Value derived from '{content.get(col_pair[0])}'",
+                    data_issue_type=DataIssueType.DERIVED,
+                    code=code,
+                    message=f"Value derived from '{content.get(col_pair[0])}'",
                 )
             )
 
@@ -709,7 +803,7 @@ class CaseTransformer(Transformer):
                     if concepts[x].code is not None
                 }
                 | {
-                    concepts[x].name.lower(): str(x)
+                    concepts[x].name.lower(): str(x)  # type: ignore[index]
                     for x in concept_ids
                     if concepts[x].name is not None
                 }
@@ -783,7 +877,6 @@ class CaseTransformer(Transformer):
             self.region_relation_maps[(from_region_set_id, to_region_set_id)].update(
                 mapping
             )
-            self.region_contained_in.update(mapping)
 
     def _init_organization_metadata(self) -> None:
         self.organization_value_map = {}
@@ -845,7 +938,7 @@ class CaseTransformer(Transformer):
 
         # concept_contained_in maps (from_concept_set_id, to_concept_set_id) to map from_concept_id to to_concept_id
         concept_contained_in: dict[tuple[UUID, UUID], dict[str, str]] = {}
-        for concept_relation in app.handle(
+        concept_relations: list[model.ConceptRelation] = app.handle(
             command.ConceptRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
                 query_filter=CompositeFilter(
@@ -862,7 +955,8 @@ class CaseTransformer(Transformer):
                     operator=LogicalOperator.AND,
                 ),
             )
-        ):
+        )
+        for concept_relation in concept_relations:
             from_concept = concepts[concept_relation.from_concept_id]
             to_concept = concepts[concept_relation.to_concept_id]
             if concept_relation.relation == ConceptRelationType.CONTAINS:
@@ -906,8 +1000,8 @@ class CaseTransformer(Transformer):
         )
 
         # Retrieve region relations
-        region_contained_in: dict[tuple[UUID, UUID], dict[UUID, UUID]] = {}
-        region_relations = app.handle(
+        region_contained_in: dict[tuple[UUID, UUID], dict[str, str]] = {}
+        region_relations: list[model.RegionRelation] = app.handle(
             command.RegionRelationCrudCommand(
                 operation=CrudOperation.READ_ALL,
             )

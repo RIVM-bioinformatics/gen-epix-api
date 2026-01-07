@@ -60,6 +60,10 @@ class UploadBatchCommandMixin:
     # The BaseBatchUploadResult child class that will contain the results of the upload
     BATCH_UPLOAD_RESULT_CLASS: ClassVar[type[model.BaseBatchUploadResult]] = None  # type: ignore[assignment]
 
+    verify_only: bool = Field(
+        default=False,
+        description="If true, the upload is only verified but not actually performed.",
+    )
     on_exists: enum.OnExistsUploadAction = Field(
         default=enum.OnExistsUploadAction.ERROR,
         description="Action to take if one of the entities in the batch already exists upon upload.",

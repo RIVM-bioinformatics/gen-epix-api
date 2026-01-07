@@ -6,6 +6,7 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
@@ -18,13 +19,13 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 def case_service_create_read_sets_or_seqs_for_cases(
     self: BaseCaseService,
     cmd: command.CreateReadSetsForCasesCommand | command.CreateSeqsForCasesCommand,
-) -> list[model.ReadSetForUpload] | list[model.SeqForUpload]:
+) -> list[seqdb_model.ReadSet] | list[seqdb_model.Seq]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
     # Parse input
-    read_sets: list[model.ReadSetForUpload] = []
-    seqs: list[model.SeqForUpload] = []
+    read_sets: list[seqdb_model.ReadSet] = []
+    seqs: list[seqdb_model.Seq] = []
     case_ids: list[UUID] = []
     case_type_col_ids: list[UUID] = []
     if isinstance(cmd, command.CreateReadSetsForCasesCommand):
@@ -57,7 +58,7 @@ def case_service_create_read_sets_or_seqs_for_cases(
         )
 
         # Create ReadSets or Seqs
-        created_objs: list[model.ReadSetForUpload] | list[model.SeqForUpload]
+        created_objs: list[seqdb_model.ReadSet] | list[seqdb_model.Seq]
         command_class = (
             seqdb_command.ReadSetCrudCommand
             if is_read_set
@@ -123,7 +124,7 @@ def case_service_create_file_for_read_set_or_seq(
     if is_read_set:
         assert isinstance(cmd, command.CreateFileForReadSetCommand)
         # Verify no file linked yet
-        read_set: model.ReadSetForUpload = self.app.handle(
+        read_set: seqdb_model.ReadSet = self.app.handle(
             seqdb_command.ReadSetCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.READ_ONE,
@@ -158,7 +159,7 @@ def case_service_create_file_for_read_set_or_seq(
 
     elif isinstance(cmd, command.CreateFileForSeqCommand):
         # Verify no file linked yet
-        seq: model.SeqForUpload = self.app.handle(
+        seq: seqdb_model.Seq = self.app.handle(
             seqdb_command.SeqCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.READ_ONE,

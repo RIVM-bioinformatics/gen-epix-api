@@ -30,26 +30,6 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     )
 
 
-class ValidateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.ValidateCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.ValidateCasesCommand, "created_in_data_collection_id"
-    )
-    case_batch: model.CaseBatchForUpload = copy_model_field(
-        command.ValidateCasesCommand, "case_batch"
-    )
-
-
-class UploadCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.UploadCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.UploadCasesCommand, "created_in_data_collection_id"
-    )
-    case_batch: model.CaseBatchForUpload = copy_model_field(
-        command.UploadCasesCommand, "case_batch"
-    )
-
-
 class CreateCaseSetRequestBody(PydanticBaseModel):
     case_set: model.CaseSet
     data_collection_ids: set[UUID] = Field(
@@ -275,49 +255,17 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/validate/cases",
-        operation_id="validate__cases",
-        name="Validate cases",
-        description=command.ValidateCasesCommand.__doc__,
-    )
-    async def validate__cases(
-        user: registered_user_dependency,  # type: ignore
-        request_body: ValidateCasesRequestBody,
-    ) -> model.CaseValidationReport:
-        try:
-            cmd = command.ValidateCasesCommand(
-                user=user,
-                case_type_id=request_body.case_type_id,
-                created_in_data_collection_id=request_body.created_in_data_collection_id,
-                data_collection_ids=request_body.data_collection_ids,
-                is_update=request_body.is_update,
-                case_batch=request_body.case_batch,
-            )
-            retval: model.CaseValidationReport = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("9f8e7d6c", user, exception)
-        return retval
-
-    @router.post(
-        "/create/cases",
-        operation_id="create__cases",
-        name="Create cases",
+        "/upload/cases",
+        operation_id="upload__cases",
+        name="Upload cases",
         description=command.UploadCasesCommand.__doc__,
     )
-    async def create__cases(
+    async def upload__cases(
         user: registered_user_dependency,  # type: ignore
-        request_body: UploadCasesRequestBody,
-    ) -> list[model.Case]:
+        cmd: command.UploadCasesCommand,
+    ) -> list[model.CaseBatchUploadResult]:
         try:
-            cmd = command.UploadCasesCommand(
-                user=user,
-                case_type_id=request_body.case_type_id,
-                created_in_data_collection_id=request_body.created_in_data_collection_id,
-                data_collection_ids=request_body.data_collection_ids,
-                is_update=request_body.is_update,
-                case_batch=request_body.case_batch,
-            )
-            retval: list[model.Case] = app.handle(cmd)
+            retval: list[model.CaseBatchUploadResult] = app.handle(cmd)
         except Exception as exception:
             handle_exception("b413ab76", user, exception)
         return retval

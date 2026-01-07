@@ -219,7 +219,7 @@ class TestCaseUpload(CaseUploadSetup):
         uq_users = {str(x.id): x for x in uq_users_list}
 
         # Get read set and seq case type columns
-        cols: list[model.Col] = env.app.handle(  # type: ignore[assignment]
+        cols: list[model.Col] = env.app.handle(
             command.ColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
@@ -288,7 +288,6 @@ class TestCaseUpload(CaseUploadSetup):
                     created_in_data_collection_id=row[
                         "case.created_in_data_collection_id"
                     ],
-                    is_update=False,
                     case_batch=model.CaseBatchForUpload(
                         cases=[
                             self._create_case(  # type: ignore[list-item]
@@ -300,7 +299,6 @@ class TestCaseUpload(CaseUploadSetup):
                             )
                         ]  # type:ignore[arg-type]
                     ),
-                    data_collection_ids=set(),
                     props={"id_present": "keep"},
                 )
             elif row_operation == "RETRIEVE_CASES_BY_ID":
@@ -356,22 +354,31 @@ class TestCaseUpload(CaseUploadSetup):
 
         # Convert case data to cases and new_cases
         df = env.props["command._case_data"]
-        all_cases: dict[
-            UUID,
-            model.CaseForUpload,
-        ] = {}
-        all_validated_cases: dict[
-            UUID,
-            model.CaseForUpload,
-        ] = {}
+        all_cases: dict[UUID, model.Case] = {}
+        all_cases_for_upload: dict[UUID, model.CaseForUpload] = {}
+        all_validated_cases: dict[UUID, model.Case] = {}
+        all_validated_cases_for_upload: dict[UUID, model.CaseForUpload] = {}
         for row in df.to_dict(orient="records"):
             case_id = UUID(row["id"])
-            all_cases.setdefault(
-                case_id, model.CaseForUpload(**row, content=case_content.get(case_id, {}))  # type: ignore[misc]
+            case_type_id = UUID(row["case_type_id"])
+            created_in_data_collection_id = UUID(row["created_in_data_collection_id"])
+            case = model.Case(
+                id=case_id,
+                case_type_id=case_type_id,
+                created_in_data_collection_id=created_in_data_collection_id,
+                content=case_content.get(case_id, {}),
             )
-            all_validated_cases.setdefault(
-                case_id, model.CaseForUpload(**row, content=validated_case_content.get(case_id, {}))  # type: ignore[misc]
+            all_cases.setdefault(case_id, case)
+            all_cases_for_upload.setdefault(
+                case_id, model.CaseForUpload(id=case_id, case=case)
             )
+            validated_case = model.Case(
+                id=case_id,
+                case_type_id=case_type_id,
+                created_in_data_collection_id=created_in_data_collection_id,
+                content=validated_case_content.get(case_id, {}),
+            )
+            all_validated_cases.setdefault(case_id, validated_case)
 
         # Parse validate case command data
         df = env.props["command.validate_cases"]
@@ -479,10 +486,10 @@ class TestCaseUpload(CaseUploadSetup):
 
             # Create cases and expected new cases
             case_batch = model.CaseBatchForUpload(
-                cases=[all_cases[x].model_copy() for x in case_ids]
+                cases=[all_cases_for_upload[x].model_copy() for x in case_ids]
             )
             expected_validated_cases = [
-                all_validated_cases[x].model_copy() for x in case_ids
+                all_validated_cases_for_upload[x].model_copy() for x in case_ids
             ]
             for expected_validated_case in expected_validated_cases:
                 # Keep only writable case type cols in expected validated case
@@ -493,17 +500,16 @@ class TestCaseUpload(CaseUploadSetup):
                 }
 
             # Create command
-            cmd = command.ValidateCasesCommand(
+            cmd = command.UploadCasesCommand(
                 user=user,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                data_collection_ids=set(),
-                is_update=is_update,
+                verify_only=True,
                 case_batch=case_batch,
             )
             # Execute command
             is_allowed = row["is_allowed"]
-            validation_report: model.CaseValidationReport | None = None
+            validation_report: model.CaseBatchUploadResult | None = None
             try:
                 if is_allowed:
                     validation_report = env.app.handle(cmd)
@@ -525,11 +531,11 @@ class TestCaseUpload(CaseUploadSetup):
                 # Both DERIVED and CONFLICT are acceptable differences since they represent
                 # values that were correctly transformed or overwritten
                 acceptable_difference_col_ids: set[UUID] = set()
-                for validated_case in validation_report.validated_cases:
-                    for data_issue in validated_case.data_issues:
-                        if data_issue.data_rule in (
-                            enum.CaseColDataRule.DERIVED,
-                            enum.CaseColDataRule.CONFLICT,
+                for case_result in validation_report.cases:
+                    for data_issue in case_result.data_issues:
+                        if data_issue.data_issue_type in (
+                            enum.DataIssueType.DERIVED,
+                            enum.DataIssueType.CONFLICT,
                         ):
                             acceptable_difference_col_ids.add(
                                 data_issue.case_type_col_id
@@ -541,7 +547,12 @@ class TestCaseUpload(CaseUploadSetup):
 
                 # Compare cases to new cases
                 actual_validated_cases = [
-                    x.case for x in validation_report.validated_cases
+                    model.Case(
+                        id=x.id,
+                        created_in_data_collection=created_in_data_collection_id,
+                        content=x.validated_content,
+                    )
+                    for x in validation_report.cases
                 ]
                 case_differences: set[tuple[UUID, str | None, str | None]] = set()
                 acceptable_differences: set[tuple[UUID, str | None, str | None]] = set()

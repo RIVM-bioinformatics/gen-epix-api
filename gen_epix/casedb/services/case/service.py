@@ -9,7 +9,6 @@ from gen_epix.casedb.services.case.case_date import (
     case_service_calculate_case_date,
     case_service_get_case_date_case_type_col_mappers,
 )
-from gen_epix.casedb.services.case.case_transformer import CaseTransformer
 from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
 from gen_epix.casedb.services.case.create_seq import (
     case_service_create_file_for_read_set_or_seq,
@@ -87,56 +86,22 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_type_stats,
 )
 from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.datetime_range import DatetimeRangeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import map_paired_elements
 
 
 class CaseService(BaseCaseService):
 
-    def validate_cases(
-        self, cmd: command.ValidateCasesCommand | command.UploadCasesCommand
-    ) -> model.CaseValidationReport:
-        case_type_id = cmd.case_type_id
-        created_in_data_collection_id = cmd.created_in_data_collection_id
-
-        # @ABAC: verify if case set or cases may be created in the given data collection(s)
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        assert case_abac is not None
-        is_allowed = case_abac.is_allowed(
-            case_type_id,
-            enum.CaseRight.ADD_CASE,
-            True,
-            created_in_data_collection_id=created_in_data_collection_id,
-            tgt_data_collection_ids=cmd.data_collection_ids,
-        )
-        if not is_allowed:
-            assert cmd.user is not None
-            raise exc.UnauthorizedAuthError(
-                f"User {cmd.user.id} is not allowed to create a case set/cases in the given data collection(s)"
-            )
-
-        # TODO: merge data with existing cases when updating
-        curr_cmd = command.RetrieveCompleteCaseTypeCommand(
-            user=cmd.user, case_type_id=case_type_id
-        )
-        curr_cmd._policies.extend(cmd._policies)
-        complete_case_type = case_service_retrieve_complete_case_type(self, curr_cmd)
-        transformer = CaseTransformer(self, complete_case_type)
-        transform_result = transformer(cmd)
-        if not transform_result.success:
-            raise exc.DataException(f"Failed to transform case data")
-        case_validation_report: model.CaseValidationReport = (
-            transform_result.transformed_object  # type:ignore[assignment]
-        )
-
-        return case_validation_report
-
-    def upload_cases(self, cmd: command.UploadCasesCommand) -> list[model.Case] | None:
+    def upload_cases(
+        self, cmd: command.UploadCasesCommand
+    ) -> model.CaseBatchUploadResult:
         return case_service_upload_cases(self, cmd)
 
     def create_case_set(
@@ -146,26 +111,18 @@ class CaseService(BaseCaseService):
 
     def create_reads_sets_for_cases(
         self, cmd: command.CreateReadSetsForCasesCommand
-    ) -> list[model.ReadSetForUpload]:
-        retval: list[model.ReadSetForUpload] = (
-            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
-        )  # type:ignore[assignment]
+    ) -> list[seqdb_model.ReadSet]:
+        retval: list[seqdb_model.ReadSet] = (
+            case_service_create_read_sets_or_seqs_for_cases(self, cmd)  # type: ignore[assignment]
+        )
         return retval
-
-    def create_seq_for_case(
-        self, cmd: command.CreateSeqsForCasesCommand
-    ) -> model.SeqForUpload:
-        retval: list[model.SeqForUpload] = (
-            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
-        )  # type:ignore[assignment]
-        return retval[0]
 
     def create_seqs_for_cases(
         self, cmd: command.CreateSeqsForCasesCommand
-    ) -> list[model.SeqForUpload]:
-        retval: list[model.SeqForUpload] = (
-            case_service_create_read_sets_or_seqs_for_cases(self, cmd)
-        )  # type:ignore[assignment]
+    ) -> list[seqdb_model.Seq]:
+        retval: list[seqdb_model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
+            self, cmd
+        )  # type: ignore[assignment]
         return retval
 
     def create_file_for_read_set(
@@ -309,12 +266,12 @@ class CaseService(BaseCaseService):
     def retrieve_sequencing_protocols(
         self,
         cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[model.SequencingProtocol]:
+    ) -> list[seqdb_model.SequencingProtocol]:
         return case_service_retrieve_sequencing_protocols(self, cmd)
 
     def retrieve_assembly_protocols(
         self, cmd: command.RetrieveAssemblyProtocolsCommand
-    ) -> list[model.AssemblyProtocol]:
+    ) -> list[seqdb_model.AssemblyProtocol]:
         return case_service_retrieve_assembly_protocols(self, cmd)
 
     def _read_association_with_valid_ids(
@@ -479,6 +436,14 @@ class CaseService(BaseCaseService):
         if not filter_content and calculate_case_date:
             raise ValueError("Cannot calculate case date when filter_content is False")
 
+        # Special case: case_type_id is NULL_ID -> take case type of first case
+        if case_type_id == NULL_ID:
+            if not case_ids:
+                raise exc.InvalidArgumentsError(
+                    "case_ids must be provided if case_type_id is not"
+                )
+            raise NotImplementedError()
+
         # @ABAC: verify access to case type
         access_data_collections = case_abac.get_combinations_with_access_right(
             right
@@ -497,8 +462,9 @@ class CaseService(BaseCaseService):
                 user_id,
                 model.CaseType,
                 None,
-                [case_type_id],
-                CrudOperation.READ_SOME,
+                None,
+                CrudOperation.READ_ALL,
+                filter=EqualsUuidFilter(key="id", value=case_type_id),
             )
         )
         if not case_types:
