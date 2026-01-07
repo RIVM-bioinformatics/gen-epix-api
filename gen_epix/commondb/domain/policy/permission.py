@@ -79,6 +79,11 @@ class RoleGenerator:
         },
         Role.ORG_USER: {
             # organization
+            (command.IdentifierIssuerCrudCommand, PermissionTypeSet.R),
+            (
+                command.OrganizationIdentifierIssuerLinkCrudCommand,
+                PermissionTypeSet.R,
+            ),
             (command.UserCrudCommand, PermissionTypeSet.R),
             (command.DataCollectionCrudCommand, PermissionTypeSet.R),
             (command.OrganizationCrudCommand, PermissionTypeSet.R),
