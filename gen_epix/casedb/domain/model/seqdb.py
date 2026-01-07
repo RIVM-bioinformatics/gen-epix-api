@@ -38,18 +38,6 @@ class GeneticSequence(Model):
         return None if value is None else {str(x): y for x, y in value.items()}
 
 
-# class AlleleProfile(Model):
-#     """
-#     An allele profile. Temporary implementation.
-#     """
-
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="allele_profiles",
-#     )
-#     # TODO: add link to sequence and gene set
-#     allele_profile: str | None = Field(default=None, description="The allele profile")
-
-
 class PhylogeneticTree(Model):
     """
     A phylogenetic tree, including a description of the leaves and how it was
@@ -88,94 +76,8 @@ class PhylogeneticTree(Model):
     )
 
 
-# class SequencingProtocol(SeqdbSequencingProtocol):
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="sequencing_protocols",
-#         persistable=False,
-#         keys=create_keys({1: "code", 2: ("name", "version")}),
-#     )
-
-
-# class AssemblyProtocol(SeqdbAssemblyProtocol):
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="assembly_protocols",
-#         persistable=False,
-#         keys=create_keys({1: "code", 2: ("name", "version")}),
-#     )
-
-
 class File(SeqdbFile):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",
         persistable=False,
     )
-
-
-# class Sample(SeqdbSample):
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="samples",
-#         persistable=False,
-#         keys=create_keys({1: "code"}),
-#     )
-
-
-# class ReadSet(SeqdbReadSet):
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="read_sets",
-#         table_name="read_set",
-#         persistable=False,
-#         keys=create_keys({1: "code"}),
-#         links=create_links(
-#             {
-#                 1: ("sample_id", Sample, "sample"),
-#                 2: (
-#                     "sequencing_protocol_id",
-#                     SequencingProtocol,
-#                     "sequencing_protocol",
-#                 ),
-#                 3: (
-#                     "fwd_file_id",
-#                     File,
-#                     "fwd_file",
-#                 ),
-#                 4: (
-#                     "rev_file_id",
-#                     File,
-#                     "rev_file",
-#                 ),
-#             }
-#         ),
-#     )
-#     sequencing_protocol: SequencingProtocol | None = copy_model_field(  # type:ignore
-#         SeqdbReadSet, "sequencing_protocol"
-#     )
-#     sample: Sample | None = copy_model_field(  # type:ignore
-#         SeqdbReadSet, "sample"
-#     )
-
-
-# class Seq(SeqdbSeq):
-#     ENTITY: ClassVar = Entity(
-#         snake_case_plural_name="seqs",
-#         table_name="seq",
-#         persistable=False,
-#         keys=create_keys(
-#             {
-#                 1: "code",
-#             }
-#         ),
-#         links=create_links(
-#             {
-#                 1: ("sample_id", Sample, "sample"),
-#                 2: ("read_set_id", ReadSet, "read_set"),
-#                 3: ("read_set2_id", ReadSet, "read_set2"),
-#                 4: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
-#             }
-#         ),
-#     )
-#     sample: Sample | None = copy_model_field(SeqdbSeq, "sample")
-#     read_set: ReadSet | None = copy_model_field(SeqdbSeq, "read_set")
-#     read_set2: ReadSet | None = copy_model_field(SeqdbSeq, "read_set2")
-#     assembly_protocol: AssemblyProtocol | None = copy_model_field(
-#         SeqdbSeq, "assembly_protocol"
-#     )

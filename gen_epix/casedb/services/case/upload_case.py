@@ -442,7 +442,7 @@ class CaseBatchUploader(BatchUploader):
             assert external_sample_id is not None
             sample_for_upload = seqdb_model.SampleForUpload(
                 id=sample_id,
-                sample=model.Sample(
+                sample=seqdb_model.Sample(
                     id=sample_id,
                     created_in_data_collection_id=cmd.created_in_data_collection_id,
                 ),

@@ -18,7 +18,6 @@ from gen_epix.seqdb.domain.model.seq.classification import (
     SeqClassification,
     SeqTaxonomy,
 )
-from gen_epix.seqdb.domain.model.seq.distance import SeqDistance
 from gen_epix.seqdb.domain.model.seq.locus import Allele
 from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
 from gen_epix.seqdb.domain.model.seq.profile import (
@@ -272,7 +271,6 @@ class SampleForUpload(ParentForUpload):
         SnpProfile: SnpProfile,
         MlvaProfile: MlvaProfile,
         KmerProfile: KmerProfile,
-        SeqDistance: SeqDistance,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
@@ -286,7 +284,6 @@ class SampleForUpload(ParentForUpload):
         SnpProfile: "snp_profiles",
         MlvaProfile: "mlva_profiles",
         KmerProfile: "kmer_profiles",
-        SeqDistance: "seq_distances",  # Uses seq_distances to match SampleUploadResult field name
         PcrMeasurement: "pcr_measurements",
         AstMeasurement: "ast_measurements",
     }
@@ -336,10 +333,6 @@ class SampleForUpload(ParentForUpload):
     kmer_profiles: list[KmerProfile] | None = Field(
         default=None,
         description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
-    )
-    seq_distances: list[SeqDistance] | None = Field(
-        default=None,
-        description="The genetic distances associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
     pcr_measurements: list[PcrMeasurement] | None = Field(
         default=None,
@@ -397,10 +390,6 @@ class SampleUploadResult(ParentUploadResult):
     kmer_profiles: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the k-mer profiles associated with the sample, if any were provided, in the same order as provided.",
-    )
-    seq_distances: list[UploadResult] | None = Field(
-        default=None,
-        description="The results of uploading the genetic distances associated with the sample, if any were provided, in the same order as provided.",
     )
     pcr_measurements: list[UploadResult] | None = Field(
         default=None,
@@ -488,12 +477,6 @@ class SampleBatchForUpload(BaseBatchForUpload):
     def has_kmer_profiles(self) -> bool:
         """Indicates whether there are any k-mer profiles in the sample set."""
         return any(len(x.kmer_profiles or []) > 0 for x in self.samples)
-
-    @computed_field  # type:ignore[prop-decorator]
-    @property
-    def has_distances(self) -> bool:
-        """Indicates whether there are any distances in the sample set."""
-        return any(len(x.distances or []) > 0 for x in self.samples)
 
     @computed_field  # type:ignore[prop-decorator]
     @property

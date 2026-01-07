@@ -12,9 +12,6 @@ from gen_epix.casedb.api.case import (
     CreateFileForSeqRequestBody as CreateFileForSeqRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    RetrieveAlleleProfileRequestBody as RetrieveAlleleProfileRequestBody,
-)
-from gen_epix.casedb.api.case import (
     RetrieveCasesByIdsRequestBody as RetrieveCasesByIdsRequestBody,
 )
 from gen_epix.casedb.api.case import (

@@ -442,7 +442,16 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "case_ids must be provided if case_type_id is not"
                 )
-            raise NotImplementedError()
+            case_type_ids: list[UUID] = (
+                self.repository.read_fields(  # type:ignore[assignment]
+                    uow,
+                    user_id,
+                    model.Case,
+                    ["case_type_id"],
+                    filter=EqualsUuidFilter(key="id", value=case_ids[0]),
+                )
+            )
+            case_type_id = case_type_ids[0]
 
         # @ABAC: verify access to case type
         access_data_collections = case_abac.get_combinations_with_access_right(

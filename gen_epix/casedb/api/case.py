@@ -15,6 +15,7 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
 
 
@@ -97,16 +98,6 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand,
-        "genetic_sequence_case_type_col_id",
-    )
-    case_ids: list[UUID] = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
-    )
-
-
-class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
     genetic_sequence_case_type_col_id: UUID = copy_model_field(
         command.RetrieveGeneticSequenceByCaseCommand,
         "genetic_sequence_case_type_col_id",
@@ -263,9 +254,9 @@ def create_case_endpoints(
     async def upload__cases(
         user: registered_user_dependency,  # type: ignore
         cmd: command.UploadCasesCommand,
-    ) -> list[model.CaseBatchUploadResult]:
+    ) -> model.CaseBatchUploadResult:
         try:
-            retval: list[model.CaseBatchUploadResult] = app.handle(cmd)
+            retval: model.CaseBatchUploadResult = app.handle(cmd)
         except Exception as exception:
             handle_exception("b413ab76", user, exception)
         return retval
@@ -544,29 +535,6 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/allele_profile",
-        operation_id="retrieve__allele_profile",
-        name="Retrieve allele profile",
-        description=command.RetrieveAlleleProfileCommand.__doc__,
-    )
-    async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    ) -> list[model.AlleleProfile]:
-        try:
-            retval: list[model.AlleleProfile] = app.handle(
-                command.RetrieveAlleleProfileCommand(
-                    user=user,
-                    genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
-                    case_ids=request_body.case_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception(  # type:ignore[call-arg]
-                "a4c03b54", user, exception, request_ids=request_body.case_ids
-            )
-        return retval
-
-    @router.post(
         "/create_read_sets_for_cases",
         operation_id="create__read_sets_for_cases",
         name="Create reads sets for cases",
@@ -667,9 +635,9 @@ def create_case_endpoints(
     )
     async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.SequencingProtocol]:
+    ) -> list[seqdb_model.SequencingProtocol]:
         try:
-            retval: list[model.SequencingProtocol] = app.handle(
+            retval: list[seqdb_model.SequencingProtocol] = app.handle(
                 command.RetrieveSequencingProtocolsCommand(
                     user=user,
                 )
@@ -686,9 +654,9 @@ def create_case_endpoints(
     )
     async def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.AssemblyProtocol]:
+    ) -> list[seqdb_model.AssemblyProtocol]:
         try:
-            retval: list[model.AssemblyProtocol] = app.handle(
+            retval: list[seqdb_model.AssemblyProtocol] = app.handle(
                 command.RetrieveAssemblyProtocolsCommand(
                     user=user,
                 )

@@ -144,7 +144,7 @@ class SeqdbService(BaseSeqdbService):
     ) -> seqdb_model.SampleBatchUploadResult:
         user = cmd.user
         cmd.user = self.seqdb_user
-        result = self.seqdb_app.handle(cmd)
+        result: seqdb_model.SampleBatchUploadResult = self.seqdb_app.handle(cmd)
         cmd.user = user
         return result
 
