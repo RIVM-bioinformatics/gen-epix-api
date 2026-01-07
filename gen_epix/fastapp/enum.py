@@ -365,3 +365,9 @@ class FieldTypeSet(Enum):
 class ErrorHandlingMode(Enum):
     RAISE = "RAISE"
     IGNORE = "IGNORE"
+
+
+class Suffix(Enum):
+    PKL = ".pkl"
+    JSON = ".json"
+    ZIP = ".zip"

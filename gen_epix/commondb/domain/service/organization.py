@@ -68,7 +68,6 @@ class BaseOrganizationService(BaseService):
 
     def generate_user_invitation_token(self, **kwargs: Any) -> str:
         return str(uuid.uuid4())
-        return str(uuid.uuid4())
 
     @abc.abstractmethod
     def update_user(
