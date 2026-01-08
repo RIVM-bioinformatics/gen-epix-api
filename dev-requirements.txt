@@ -21,4 +21,4 @@ openpyxl==3.1.*
 types-cachetools==6.2.*
 
 # TODO: remove if run.py no longer uses it
-uvicorn==0.38.0
+uvicorn==0.40.0

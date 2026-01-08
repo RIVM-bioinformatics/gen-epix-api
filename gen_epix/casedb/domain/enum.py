@@ -340,6 +340,7 @@ class ColTypeSet(Enum):
     )
 
 
+# !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly
 class DimColTypeSet(Enum):
     TEXT = frozenset(
         ColTypeSet.LANGUAGE.value.union(
@@ -349,11 +350,18 @@ class DimColTypeSet(Enum):
         )
     )
     IDENTIFIER = ColTypeSet.ID.value
-    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL})
+    NUMBER = ColTypeSet.NUMBER.value.union({ColType.INTERVAL, ColType.NOMINAL})
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value
-    OTHER = ColTypeSet.OTHER.value
+    OTHER =  frozenset(
+        ColTypeSet.LANGUAGE.value.union(
+            {ColType.TEXT},
+            ColTypeSet.STRING_SET.value,
+            ColTypeSet.GENETIC.value,
+            ColTypeSet.OTHER.value,
+        )
+    )
 
 
 class ColTypeOrder(Enum):
