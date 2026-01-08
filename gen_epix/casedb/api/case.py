@@ -256,6 +256,7 @@ def create_case_endpoints(
         cmd: command.UploadCasesCommand,
     ) -> model.CaseBatchUploadResult:
         try:
+            cmd.user = user
             retval: model.CaseBatchUploadResult = app.handle(cmd)
         except Exception as exception:
             handle_exception("b413ab76", user, exception)
