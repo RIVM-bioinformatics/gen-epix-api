@@ -290,46 +290,16 @@ class SAMapper(BaseSAMapper):
         service_metadata_field_names: Iterable[str] | None,
         db_metadata_field_names: Iterable[str] | None,
     ) -> None:
-
-        # Helper function to check provided field names
-        def _check_field_names(
-            field_names: Iterable[str] | None,
-            name: str,
-            valid_field_names: Iterable[str],
-        ) -> tuple[str, ...] | None:
-            if field_names is None:
-                return None
-            if isinstance(field_names, Iterable):
-                out_field_names: tuple[str, ...] = tuple(field_names)
-            else:
-                raise exc.RepositoryServiceError(
-                    f"Row {row_class.__name__} {name} must be a tuple"
-                )
-            invalid_field_names = set(out_field_names) - set(valid_field_names)
-            if invalid_field_names:
-                invalid_field_names_str = ", ".join(invalid_field_names)
-                raise exc.RepositoryServiceError(
-                    f"Row {row_class.__name__} {name} provided field(s) {invalid_field_names_str} are not in the db model"
-                )
-            return out_field_names
-
         # Check provided field names
-        row_field_names = set(
-            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
-        )
-        actual_row_only_field_names = [
-            x for x in row_class.__table__.columns.keys() if x not in row_field_names
-        ]
-        actual_row_only_field_names_set = set(actual_row_only_field_names)
-        service_metadata_field_names = _check_field_names(
+        (
             service_metadata_field_names,
-            "service_metadata_field_names",
-            actual_row_only_field_names_set,
-        )
-        db_metadata_field_names = _check_field_names(
             db_metadata_field_names,
-            "db_metadata_field_names",
+            actual_row_only_field_names,
             actual_row_only_field_names_set,
+        ) = self._retrieve_field_names(
+            row_class,
+            service_metadata_field_names,
+            db_metadata_field_names,
         )
 
         # Set service_metadata_field_names and db_metadata_field_names
@@ -390,6 +360,59 @@ class SAMapper(BaseSAMapper):
             self._row_field_names_by_set[field_type_set] = tuple(
                 self._row_field_names_by_set[field_type_set]
             )
+
+    def _retrieve_field_names(
+        self,
+        row_class: type,
+        service_metadata_field_names: Iterable[str] | None = None,
+        db_metadata_field_names: Iterable[str] | None = None,
+    ) -> tuple[tuple[str, ...] | None, tuple[str, ...] | None, list[str], set[str]]:
+        row_field_names = set(
+            self._row_field_names_by_set[FieldTypeSet.MODEL_DB_COMMON]
+        )
+        actual_row_only_field_names = [
+            x for x in row_class.__table__.columns.keys() if x not in row_field_names
+        ]
+        actual_row_only_field_names_set = set(actual_row_only_field_names)
+        service_metadata_field_names = self._check_field_names(
+            service_metadata_field_names,
+            "service_metadata_field_names",
+            actual_row_only_field_names_set,
+        )
+        db_metadata_field_names = self._check_field_names(
+            db_metadata_field_names,
+            "db_metadata_field_names",
+            actual_row_only_field_names_set,
+        )
+
+        return (
+            service_metadata_field_names,
+            db_metadata_field_names,
+            actual_row_only_field_names,
+            actual_row_only_field_names_set,
+        )
+
+    def _check_field_names(
+        self,
+        field_names: Iterable[str] | None,
+        name: str,
+        valid_field_names: Iterable[str],
+    ) -> tuple[str, ...] | None:
+        if field_names is None:
+            return None
+        if isinstance(field_names, Iterable):
+            out_field_names: tuple[str, ...] = tuple(field_names)
+        else:
+            raise exc.RepositoryServiceError(
+                f"Row {row_class.__name__} {name} must be a tuple"
+            )
+        invalid_field_names = set(out_field_names) - set(valid_field_names)
+        if invalid_field_names:
+            invalid_field_names_str = ", ".join(invalid_field_names)
+            raise exc.RepositoryServiceError(
+                f"Row {row_class.__name__} {name} provided field(s) {invalid_field_names_str} are not in the db model"
+            )
+        return out_field_names
 
     def _init_relationship_field_names(
         self, model_class: type[Model], row_class: type, field_name_map: dict[str, str]
