@@ -55,6 +55,21 @@ class CaseValidator:
     TIME_MONTH_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
     TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
     TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+    # !TODO: consider full and partial ISO 8601 pattern
+    TIME_ISO_PATTERN = re.compile(
+        r"^("
+        r"\d{4}"  # YYYY (year only)
+        r"|"
+        r"\d{4}-(0[1-9]|1[0-2])"  # YYYY-MM (year + month only)
+        r"|"
+        r"\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])"  # YYYY-MM-DD
+        r"|"
+        r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
+        r"|"
+        r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
+        r")"
+        r"(T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(\.\d+)?(Z|[+-]([01]\d|2[0-3]):([0-5]\d))?)?$"
+    )
 
     TIME_MATCHERS = {
         ColType.TIME_YEAR: lambda x: (
@@ -397,9 +412,13 @@ class CaseValidator:
             assert updated_content is not None
             assert data_issues is not None
             for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
-                iso_datetime_value: str | None = case.content.get(case_type_col_id)
+                iso_datetime_value: str | None = updated_content.get(case_type_col_id)
                 if iso_datetime_value is None:
                     continue
+                if not re.match(self.TIME_ISO_PATTERN, iso_datetime_value):
+                    raise AssertionError(
+                        f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
+                    )
                 orig_case_date = case.case_date
                 case.case_date = mapper(iso_datetime_value)
                 if case.case_date != orig_case_date:
