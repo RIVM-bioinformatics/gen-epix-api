@@ -101,16 +101,6 @@ class AuthService(BaseAuthService):
                 )
             )
 
-        def _warn(request: Request) -> None:
-            if self._logger:
-                self._logger.warning(
-                    self.create_log_message(
-                        "f8853e9e",
-                        "Unable to verify provided user",
-                        request=request,
-                    )
-                )
-
         idp_client_list = self._idp_clients + ([None] * (5 - len(self._idp_clients)))
 
         async def get_current_user1(
@@ -120,7 +110,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user1(
@@ -130,7 +120,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user1(
@@ -140,7 +130,7 @@ class AuthService(BaseAuthService):
         ) -> IDPUser:
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user2(
@@ -153,7 +143,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_existing_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user2(
@@ -166,7 +156,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_new_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user2(
@@ -179,7 +169,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_idp_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user3(
@@ -195,7 +185,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_existing_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user3(
@@ -211,7 +201,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_new_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user3(
@@ -227,7 +217,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_idp_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user4(
@@ -246,7 +236,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_existing_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user4(
@@ -265,7 +255,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_new_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user4(
@@ -284,7 +274,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_idp_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user5(
@@ -306,7 +296,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_existing_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user5(
@@ -328,7 +318,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_new_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user5(
@@ -350,7 +340,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_idp_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         get_idp_user_functions = [
@@ -431,6 +421,16 @@ class AuthService(BaseAuthService):
         ]
 
         return registered_user_dependency, new_user_dependency, idp_user_dependency
+
+    def _warn(self, request: Request) -> None:
+        if self._logger:
+            self._logger.warning(
+                self.create_log_message(
+                    "f8853e9e",
+                    "Unable to verify provided user",
+                    request=request,
+                )
+            )
 
     def _create_or_inject_current_or_new_user(
         self,
