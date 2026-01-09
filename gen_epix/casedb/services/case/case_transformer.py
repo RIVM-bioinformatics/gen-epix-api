@@ -56,8 +56,8 @@ class CaseValidator:
     TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
     TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
     # !TODO: consider full and partial ISO 8601 pattern
-    TIME_ISO_PATTERN = re.compile(
-        r"^("
+    ISODATE_PATTERN = re.compile(
+        r"^"
         r"\d{4}"  # YYYY (year only)
         r"|"
         r"\d{4}-(0[1-9]|1[0-2])"  # YYYY-MM (year + month only)
@@ -67,8 +67,7 @@ class CaseValidator:
         r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
         r"|"
         r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
-        r")"
-        r"(T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(\.\d+)?(Z|[+-]([01]\d|2[0-3]):([0-5]\d))?)?$"
+        r"$"
     )
 
     TIME_MATCHERS = {
@@ -415,7 +414,7 @@ class CaseValidator:
                 iso_datetime_value: str | None = updated_content.get(case_type_col_id)
                 if iso_datetime_value is None:
                     continue
-                if not re.match(self.TIME_ISO_PATTERN, iso_datetime_value):
+                if not re.match(self.ISODATE_PATTERN, iso_datetime_value):
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
@@ -745,6 +744,10 @@ class CaseValidator:
         new_value: str,
     ) -> None:
         # Add derived value to updated_content
+        orig_updated_value = updated_content.get(col_pair[1])
+        if new_value == orig_updated_value:
+            # Same value, no need to log data issue
+            return
         updated_content[col_pair[1]] = new_value
 
         # Log data issue in validation report
