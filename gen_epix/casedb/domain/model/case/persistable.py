@@ -16,10 +16,7 @@ from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, Etiologic
 from gen_epix.casedb.domain.model.subject import Subject
 from gen_epix.commondb.domain.model import DataCollection, Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-
-
-CASE_TYPE_ID_DESCRIPTION = "The ID of the case type. FOREIGN KEY"
-CASE_TYPE_DESCRIPTION = "The case type"
+from gen_epix.util import copy_model_field
 
 
 class GeneticDistanceProtocol(Model):
@@ -396,8 +393,8 @@ class CaseTypeSetMember(Model):
     case_type_set: CaseTypeSet | None = Field(
         default=None, description="The case type set"
     )
-    case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The case type")
 
 
 class CaseTypeDim(Model):
@@ -413,8 +410,8 @@ class CaseTypeDim(Model):
             }
         ),
     )
-    case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
     dim: Dim | None = Field(default=None, description="The dimension")
     occurrence: int = Field(
@@ -471,8 +468,8 @@ class CaseTypeCol(Model):  # type: ignore
             }
         ),
     )
-    case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     case_type_dim_id: UUID = Field(
         description="The ID of the case type dimension. FOREIGN KEY"
     )
@@ -589,8 +586,8 @@ class CaseTypeColSet(Model):
         #     1: ("case_type_id", CaseType, "case_type"),
         # }),
     )
-    # case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    # case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    # case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
+    # case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     name: str = Field(
         description="The name of a case type column set, UNIQUE", max_length=255
     )
@@ -649,8 +646,8 @@ class Case(Model):
             }
         ),
     )
-    case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     subject_id: UUID | None = Field(
         default=None, description="The ID of the subject. FOREIGN KEY"
     )
@@ -754,8 +751,8 @@ class CaseSet(Model):
             }
         ),
     )
-    case_type_id: UUID = Field(description=CASE_TYPE_ID_DESCRIPTION)
-    case_type: CaseType | None = Field(default=None, description=CASE_TYPE_DESCRIPTION)
+    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the case set was created. FOREIGN KEY",
     )
