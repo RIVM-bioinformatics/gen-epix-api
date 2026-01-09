@@ -23,6 +23,8 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,
             command.UserInvitationCrudCommand,
+            command.OrganizationSetOrganizationUpdateAssociationCommand,
+            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
         }
         self.has_user_id_attr_command_classes: set[type[command.Command]] = set()
 
@@ -104,4 +106,5 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
                     valid_user_ids
                 ):
                     raise exc.UnauthorizedAuthError(msg2)
+
         raise NotImplementedError
