@@ -12,6 +12,7 @@ from gen_epix.casedb.domain.enum import (
     DataIssueType,
     RegionRelationType,
 )
+from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
     case_service_get_case_date_case_type_col_mappers_from_cols,
@@ -162,7 +163,7 @@ class CaseValidator:
         self.validate_unknown_columns(contents, data_issues_list)
         self.transform_individual_values(contents, updated_contents, data_issues_list)
         self.transform_value_pairs(contents, updated_contents, data_issues_list)
-        self.calculate_case_date(cmd, updated_contents, data_issues_list)
+        self.calculate_case_date(cmd, retval, updated_contents)
 
         return retval
 
@@ -311,7 +312,7 @@ class CaseValidator:
                             case_type_col_id=case_type_col_id,
                             original_value=orig_value,
                             updated_value=new_value,
-                            data_issue_type=DataIssueType.DERIVED,
+                            data_issue_type=DataIssueType.TRANSFORMED,
                             code=code,
                             message="Value transformed",
                         )
@@ -376,8 +377,8 @@ class CaseValidator:
     def calculate_case_date(
         self,
         cmd: command.UploadCasesCommand,
+        retval: CaseBatchUploadResult,
         updated_contents: list[dict[UUID, str | None] | None],
-        data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
         """Calculate case date based on TIME dimension columns."""
         # Determine case type columns from which the case date needs to be derived
@@ -403,14 +404,14 @@ class CaseValidator:
             return
 
         # Calculate case dates
-        for case_for_upload, updated_content, data_issues in zip(
-            cmd.case_batch.cases, updated_contents, data_issues_list
+        for case_for_upload, case_result, updated_content in zip(
+            cmd.case_batch.cases, retval.cases, updated_contents
         ):
             case = case_for_upload.case
             if case is None:
                 continue
             assert updated_content is not None
-            assert data_issues is not None
+            assert case_result is not None
             for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
                 iso_datetime_value: str | None = updated_content.get(case_type_col_id)
                 if iso_datetime_value is None:
@@ -422,15 +423,9 @@ class CaseValidator:
                 orig_case_date = case.case_date
                 case.case_date = mapper(iso_datetime_value)
                 if case.case_date != orig_case_date:
-                    data_issues.append(
-                        model.CaseDataIssue(
-                            case_type_col_id=case_type_col_id,
-                            original_value=iso_datetime_value,
-                            updated_value=str(case.case_date),
-                            data_issue_type=DataIssueType.DERIVED,
-                            code="b2c3d4e5",
-                            message="Case date updated",
-                        )
+                    case_result.add_info(
+                        code="b2c3d4e5",
+                        message="Case date updated based on TIME dimension column",
                     )
 
     def _transform_geo_value_pairs(

@@ -360,6 +360,7 @@ class DataIssueType(Enum):
     UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"
+    TRANSFORMED = "TRANSFORMED"
 
 
 class DataIssueTypeSet(Enum):
@@ -378,5 +379,6 @@ class DataIssueTypeSet(Enum):
     INFO = frozenset(
         {
             DataIssueType.DERIVED,
+            DataIssueType.TRANSFORMED,
         }
     )

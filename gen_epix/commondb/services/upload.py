@@ -178,7 +178,7 @@ class BatchUploader:
                 )
                 uow.rollback()
                 retval.add_info(
-                    code="b2c3d4e5",
+                    code="7729440d",
                     message="Upload had errors, changes have been rolled back",
                 )
         retval.add_info(
