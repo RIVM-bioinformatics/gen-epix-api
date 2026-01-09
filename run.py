@@ -89,8 +89,8 @@ class Run:
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
-        ssl_keyfile = Run.APP_SSL_KEYFILE
-        ssl_certfile = Run.APP_SSL_CERTFILE
+        ssl_keyfile = Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
+        ssl_certfile = Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
