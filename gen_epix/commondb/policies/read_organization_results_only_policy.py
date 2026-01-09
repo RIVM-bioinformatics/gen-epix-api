@@ -23,6 +23,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,
             command.UserInvitationCrudCommand,
+            command.OrganizationIdentifierIssuerLinkCrudCommand,
             command.OrganizationSetOrganizationUpdateAssociationCommand,
             command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
         }
@@ -78,6 +79,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
                 x.organization_id not in organization_ids for x in retval
             ):
                 raise exc.UnauthorizedAuthError(msg2)
+            return retval
         for command_class in self.has_user_id_attr_command_classes:
             if not isinstance(cmd, command_class):
                 continue
@@ -106,5 +108,6 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
                     valid_user_ids
                 ):
                     raise exc.UnauthorizedAuthError(msg2)
+                return retval
 
         raise NotImplementedError
