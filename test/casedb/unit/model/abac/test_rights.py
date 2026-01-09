@@ -435,6 +435,20 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                 current_data_collection_ids={self.dc1},
             )
 
+        # set is_create_or_delete to False to other path
+        self.assertFalse(
+            abac.is_allowed(
+                case_type_id=self.case_type_id_1,
+                right=CaseRight.ADD_CASE,
+                is_create_or_delete=False,
+                created_in_data_collection_id=self.dc1,
+                current_data_collection_ids={self.dc1},
+                tgt_data_collection_ids={
+                    self.dc3
+                },  # Add tgt to not get a no-operation add
+            )
+        )
+
     def test_is_allowed_add_remaining_target_no_access_no_share_false(self) -> None:
         access_map = {
             self.case_type_id_1: {
