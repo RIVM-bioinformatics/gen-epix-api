@@ -478,6 +478,7 @@ class BatchUploader:
                     continue
                 # Parent ID given but not as new ID, and exists
                 if parent_id in existing_parent_ids:
+                    parent_result.id = parent_id
                     has_existing_parents = True
                     continue
                 # Parent ID given but not as new ID, and does not exist
