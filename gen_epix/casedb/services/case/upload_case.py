@@ -137,6 +137,8 @@ class CaseBatchUploader(BatchUploader):
 
         # Create new command with only cases and content updated during verification
         cases_only_cmd = cmd.model_copy()
+        cases_only_cmd.case_batch = cmd.case_batch.model_copy()
+        cases_only_cmd.case_batch.cases = [x.model_copy() for x in cmd.case_batch.cases]
         cases_for_validation: list[model.Case] = []
         for i, (case_for_upload, case_result) in enumerate(
             zip(cases_only_cmd.case_batch.cases, retval.cases)
@@ -242,6 +244,8 @@ class CaseBatchUploader(BatchUploader):
                     seqdb_model.ReadSetForUpload
                 ][(sample_index, i)]
                 result = retval.cases[case_index].read_sets[child_index]  # type: ignore[index]
+                result.id = seqdb_result.id
+                result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
@@ -249,6 +253,8 @@ class CaseBatchUploader(BatchUploader):
                     seqdb_model.SeqForUpload
                 ][(sample_index, i)]
                 result = retval.cases[case_index].seqs[child_index]  # type: ignore[index]
+                result.id = seqdb_result.id
+                result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
 
         return success
