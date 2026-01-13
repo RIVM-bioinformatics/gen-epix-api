@@ -1,3 +1,4 @@
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
@@ -39,13 +40,12 @@ class SampleBatchUploader(BatchUploader):
 
         # TODO: Check if user has WRITE access to all created in data collections
         # TODO: For each sample in the batch, verify user has WRITE access to sample.created_in_data_collection_id
-        data_collection_ids = {
-            x.created_in_data_collection_id for x in cmd.sample_batch.samples
-        }
         is_authorized = True
         if not is_authorized:
+            data_collection_id = NULL_ID
+            sample_id = NULL_ID
             raise exc.UnauthorizedAuthError(
-                f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample.id if sample.id else 'new sample'}"
+                f"User {cmd.user.email if cmd.user else 'anonymous'} lacks WRITE access to data collection {data_collection_id} for sample {sample_id if sample_id else 'new sample'}"
             )
 
     def verify_batch(
