@@ -99,7 +99,7 @@ class Domain:
         self._models: set[type[Model]] = set()
         self._crud_commands: set[type[CrudCommand]] = set()
         self._commands: set[type[Command]] = set()
-        self._domain_permissions: set[Permission] = set()
+        self._permissions: set[Permission] = set()
         self._entity_dag: dict[Entity, list[Entity]] = {}
         self._dag_sorted_entities: list[Entity] = []
 
@@ -191,7 +191,7 @@ class Domain:
 
     @property
     def permissions(self) -> frozenset[Permission]:
-        return frozenset(self._domain_permissions)
+        return frozenset(self._permissions)
 
     def get_commands(
         self, include_crud: bool = False, frozen: bool = True
@@ -316,8 +316,8 @@ class Domain:
         Get permissions for all the commands in the domain.
         """
         if frozen:
-            return frozenset(self._domain_permissions)
-        return set(self._domain_permissions)
+            return frozenset(self._permissions)
+        return set(self._permissions)
 
     def get_model_excluded_permissions(self) -> dict[type[Model], PermissionTypeSet]:
         """
@@ -766,7 +766,7 @@ class Domain:
     ) -> frozenset[Permission]:
         permissions = Domain.get_command_permissions(command_class)
         self._commands.add(command_class)
-        self._domain_permissions.update(permissions)
+        self._permissions.update(permissions)
         self._command_for_name[command_name] = command_class
         self._name_for_command[command_class] = command_name
         return permissions
@@ -837,5 +837,5 @@ class Domain:
                 )
 
     def _verify_permission_exists(self, permission: Permission) -> None:
-        if permission not in self._domain_permissions:
+        if permission not in self._permissions:
             raise exc.DomainException(f"Permission {permission} is not registered")
