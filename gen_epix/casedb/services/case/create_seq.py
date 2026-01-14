@@ -141,13 +141,13 @@ def case_service_create_file_for_read_set_or_seq(
             )
         # Compute file hash then create file
         file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
-        file = _create_file(self, cmd)
+        file_id = _create_file(self, cmd)
         # Update ReadSet with file ID and hash
         if cmd.is_fwd:
-            read_set.fwd_file_id = file.id
+            read_set.fwd_file_id = file_id
             read_set.fwd_reads_hash = file_hash
         else:
-            read_set.rev_file_id = file.id
+            read_set.rev_file_id = file_id
             read_set.rev_reads_hash = file_hash
         self.app.handle(
             seqdb_command.ReadSetCrudCommand(
@@ -170,9 +170,9 @@ def case_service_create_file_for_read_set_or_seq(
             raise exc.InvalidArgumentsError("The Seq already has a file linked")
         # Compute file hash then create file
         file_hash = _get_hash_uuid(cmd.file_content, cmd.file_compression)
-        file = _create_file(self, cmd)
+        file_id = _create_file(self, cmd)
         # Update Seq with file ID and hash
-        seq.file_id = file.id
+        seq.file_id = file_id
         seq.file_hash = file_hash
         self.app.handle(
             seqdb_command.SeqCrudCommand(
@@ -185,8 +185,8 @@ def case_service_create_file_for_read_set_or_seq(
     else:
         raise ValueError("Invalid command type")
 
-    assert file.id is not None
-    return file.id
+    assert file_id is not None
+    return file_id
 
 
 def _get_cases_for_create_read_sets_or_seqs(
