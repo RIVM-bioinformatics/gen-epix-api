@@ -1,8 +1,8 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
-import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
@@ -29,6 +29,8 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
         f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
+        f(seqdb_command.CreateFileCommand, self.create_file)
+
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -52,8 +54,8 @@ class BaseSeqdbService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def upload_samples(
+    def create_file(
         self,
-        cmd: seqdb_command.UploadSamplesCommand,
-    ) -> seqdb_model.SampleBatchUploadResult:
+        cmd: seqdb_command.CreateFileCommand,
+    ) -> UUID:
         raise NotImplementedError()
