@@ -1,6 +1,6 @@
 import base64
 from collections.abc import Callable
-from typing import Annotated, Any, NoReturn, Self
+from typing import Annotated, Any, NoReturn
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, Form
@@ -15,6 +15,7 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
 
 
@@ -28,54 +29,6 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
         description="The members of the case type col set."
     )
-
-
-class ValidateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.ValidateCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.ValidateCasesCommand, "created_in_data_collection_id"
-    )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.ValidateCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.ValidateCasesCommand, "cases"
-    )
-
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
-
-
-class CreateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.CreateCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.CreateCasesCommand, "created_in_data_collection_id"
-    )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.CreateCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.CreateCasesCommand, "cases"
-    )
-
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
@@ -154,16 +107,6 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
     )
 
 
-class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand,
-        "genetic_sequence_case_type_col_id",
-    )
-    case_ids: list[UUID] = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
-    )
-
-
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -182,7 +125,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
-class CreateFileForForReadSetRequestBody(PydanticBaseModel):
+class CreateFileForReadSetRequestBody(PydanticBaseModel):
     file_content: str = Field(
         description="The content of the file to create as base64 encoded bytes."
     )
@@ -303,49 +246,18 @@ def create_case_endpoints(
         return retval
 
     @router.post(
-        "/validate/cases",
-        operation_id="validate__cases",
-        name="Validate cases",
-        description=command.ValidateCasesCommand.__doc__,
+        "/upload/cases",
+        operation_id="upload__cases",
+        name="Upload cases",
+        description=command.UploadCasesCommand.__doc__,
     )
-    async def validate__cases(
+    async def upload__cases(
         user: registered_user_dependency,  # type: ignore
-        request_body: ValidateCasesRequestBody,
-    ) -> model.CaseValidationReport:
+        cmd: command.UploadCasesCommand,
+    ) -> model.CaseBatchUploadResult:
         try:
-            cmd = command.ValidateCasesCommand(
-                user=user,
-                case_type_id=request_body.case_type_id,
-                created_in_data_collection_id=request_body.created_in_data_collection_id,
-                is_update=request_body.is_update,
-                cases=request_body.cases,
-                data_collection_ids=request_body.data_collection_ids,
-            )
-            retval: model.CaseValidationReport = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("9f8e7d6c", user, exception)
-        return retval
-
-    @router.post(
-        "/create/cases",
-        operation_id="create__cases",
-        name="Create cases",
-        description=command.CreateCasesCommand.__doc__,
-    )
-    async def create__cases(
-        user: registered_user_dependency,  # type: ignore
-        request_body: CreateCasesRequestBody,
-    ) -> list[model.Case]:
-        try:
-            cmd = command.CreateCasesCommand(
-                user=user,
-                cases=request_body.cases,
-                data_collection_ids=request_body.data_collection_ids,
-                case_type_id=request_body.case_type_id,
-                created_in_data_collection_id=request_body.created_in_data_collection_id,
-                is_update=request_body.is_update,
-            )
-            retval: list[model.Case] = app.handle(cmd)
+            cmd.user = user
+            retval: model.CaseBatchUploadResult = app.handle(cmd)
         except Exception as exception:
             handle_exception("b413ab76", user, exception)
         return retval
@@ -624,29 +536,6 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/allele_profile",
-        operation_id="retrieve__allele_profile",
-        name="Retrieve allele profile",
-        description=command.RetrieveAlleleProfileCommand.__doc__,
-    )
-    async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    ) -> list[model.AlleleProfile]:
-        try:
-            retval: list[model.AlleleProfile] = app.handle(
-                command.RetrieveAlleleProfileCommand(
-                    user=user,
-                    genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
-                    case_ids=request_body.case_ids,
-                )
-            )
-        except Exception as exception:
-            handle_exception(  # type:ignore[call-arg]
-                "a4c03b54", user, exception, request_ids=request_body.case_ids
-            )
-        return retval
-
-    @router.post(
         "/create_read_sets_for_cases",
         operation_id="create__read_sets_for_cases",
         name="Create reads sets for cases",
@@ -654,13 +543,13 @@ def create_case_endpoints(
     )
     async def create__read_sets_for_cases(
         user: registered_user_dependency,  # type: ignore
-        case_read_sets: list[model.CaseReadSet],
-    ) -> list[model.ReadSet]:
+        read_sets: list[model.ReadSetForUpload],
+    ) -> list[model.ReadSetForUpload]:
         try:
-            created_read_sets: list[model.ReadSet] = app.handle(
+            created_read_sets: list[model.ReadSetForUpload] = app.handle(
                 command.CreateReadSetsForCasesCommand(
                     user=user,
-                    case_read_sets=case_read_sets,
+                    read_sets=read_sets,
                 )
             )
         except Exception as exception:
@@ -677,7 +566,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
         case_type_col_id: UUID,
-        request_body: CreateFileForForReadSetRequestBody,
+        request_body: CreateFileForReadSetRequestBody,
     ) -> UUID:
         try:
             created_file_id: UUID = app.handle(
@@ -701,13 +590,13 @@ def create_case_endpoints(
     )
     async def create_seqs_for_cases(
         user: registered_user_dependency,  # type: ignore
-        case_seqs: list[model.CaseSeq],
-    ) -> list[model.Seq]:
+        seqs: list[model.SeqForUpload],
+    ) -> list[model.SeqForUpload]:
         try:
-            created_seqs: list[model.Seq] = app.handle(
+            created_seqs: list[model.SeqForUpload] = app.handle(
                 command.CreateSeqsForCasesCommand(
                     user=user,
-                    case_seqs=case_seqs,
+                    seqs=seqs,
                 )
             )
         except Exception as exception:
@@ -747,9 +636,9 @@ def create_case_endpoints(
     )
     async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.SequencingProtocol]:
+    ) -> list[seqdb_model.SequencingProtocol]:
         try:
-            retval: list[model.SequencingProtocol] = app.handle(
+            retval: list[seqdb_model.SequencingProtocol] = app.handle(
                 command.RetrieveSequencingProtocolsCommand(
                     user=user,
                 )
@@ -766,9 +655,9 @@ def create_case_endpoints(
     )
     async def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.AssemblyProtocol]:
+    ) -> list[seqdb_model.AssemblyProtocol]:
         try:
-            retval: list[model.AssemblyProtocol] = app.handle(
+            retval: list[seqdb_model.AssemblyProtocol] = app.handle(
                 command.RetrieveAssemblyProtocolsCommand(
                     user=user,
                 )

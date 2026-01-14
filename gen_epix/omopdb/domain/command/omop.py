@@ -4,10 +4,31 @@
 
 from typing import ClassVar
 
-from gen_epix.commondb.domain.command import CrudCommand
+from pydantic import Field
+
+from gen_epix.commondb.domain.command import Command, CrudCommand
+from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.omopdb.domain import model
 
 
+# Non-CRUD commands
+class UploadPersonsCommand(Command, UploadBatchCommandMixin):
+    """
+    Upload a batch of persons along with their associated data.
+    The data are uploaded as a single atomic unit of work, so that
+    either all data are successfully uploaded or none are.
+    """
+
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = model.PersonBatchForUpload
+    BATCH_FOR_UPLOAD_FIELD_NAME: ClassVar = "person_batch"
+    BATCH_UPLOAD_RESULT_CLASS: ClassVar = model.PersonBatchUploadResult
+
+    person_batch: model.PersonBatchForUpload = Field(
+        description="Persons to upload, along with any associated data.",
+    )
+
+
+# CRUD commands
 class PersonCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Person
 

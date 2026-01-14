@@ -65,6 +65,10 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
+        case_type_stats = app.handle(
+            command.RetrieveCaseTypeStatsCommand(user=root_user)
+        )
+
         # Get all users and permissions
         users = app.handle(
             command.UserCrudCommand(

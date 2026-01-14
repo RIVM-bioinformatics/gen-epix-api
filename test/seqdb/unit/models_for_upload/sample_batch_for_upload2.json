@@ -1,15 +1,16 @@
 {
     "samples": [
         {
-            "external_ids": [
+            "external_identifiers": [
                 {
                     "identifier_issuer_code": "LAB_001",
-                    "identifier": "SAMPLE_001"
+                    "external_id": "SAMPLE_001"
                 }
             ],
             "seqs": [
                 {
                     "code": "seq_001_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "atcgatcgtagctagcatcgatcgtagctagcatcgatcgtagctagc"
@@ -20,15 +21,16 @@
             "created_in_data_collection_id": "11111111-2222-3333-4444-555555555555"
         },
         {
-            "external_ids": [
+            "external_identifiers": [
                 {
                     "identifier_issuer_code": "LAB_002",
-                    "identifier": "SAMPLE_002"
+                    "external_id": "SAMPLE_002"
                 }
             ],
             "seqs": [
                 {
                     "code": "seq_002_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "gctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgat"
@@ -42,15 +44,16 @@
             "created_in_data_collection_id": "22222222-3333-4444-5555-666666666666"
         },
         {
-            "external_ids": [
+            "external_identifiers": [
                 {
                     "identifier_issuer_code": "LAB_003",
-                    "identifier": "SAMPLE_003"
+                    "external_id": "SAMPLE_003"
                 }
             ],
             "seqs": [
                 {
                     "code": "seq_003a_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "tagctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcg"
@@ -59,6 +62,7 @@
                 },
                 {
                     "code": "seq_003b_single",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "gatcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatc"
@@ -69,15 +73,16 @@
             "created_in_data_collection_id": "33333333-4444-5555-6666-777777777777"
         },
         {
-            "external_ids": [
+            "external_identifiers": [
                 {
                     "identifier_issuer_code": "LAB_004",
-                    "identifier": "SAMPLE_004"
+                    "external_id": "SAMPLE_004"
                 }
             ],
             "seqs": [
                 {
                     "code": "seq_004a_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "tcgtagctagcatcgatcgtagctagcatcgatcgtagctagcatcga"
@@ -89,6 +94,7 @@
                 },
                 {
                     "code": "seq_004b_double",
+                    "assembly_protocol_code": "STANDARD_ASSEMBLY",
                     "contigs": [
                         {
                             "seq": "ctagcatcgatcgtagctagcatcgatcgtagctagcatcgatcgtag"

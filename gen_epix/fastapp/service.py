@@ -480,7 +480,7 @@ class BaseService(abc.ABC):
 
     def _get_user_and_repository(self, cmd: Command) -> tuple[User, BaseRepository]:
         user = cmd.user
-        if user is None or user.id is None:
+        if user is None:
             raise exc.UnauthorizedAuthError("No user provided")
         if self.repository is None:
             raise exc.InitializationServiceError("No repository provided")

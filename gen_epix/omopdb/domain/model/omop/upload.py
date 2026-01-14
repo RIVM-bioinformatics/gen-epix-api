@@ -1,51 +1,55 @@
+from test.commondb.unit.upload.model import ParentUploadResult
 from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, computed_field, field_serializer, model_validator
 
+from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model import Model
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchForUpload,
+    BaseBatchUploadResult,
+    IsNewIdMixin,
+    ParentForUpload,
+    UploadResult,
+)
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
-    DrugExposure,
-    LocationHistory,
     Measurement,
     Observation,
     Person,
     Specimen,
 )
 
+# class Subject(Model):
+#     ENTITY: ClassVar = Entity(persistable=False)
 
-class Subject(Model):
-    ENTITY: ClassVar = Entity(persistable=False)
-
-    id: UUID | None = Field(default=None, description="The ID of the subject.")
-    person: Person | None = Field(
-        default=None, description="The person associated with the subject."
-    )
-    specimen_records: list[Specimen] = Field(
-        description="The list of specimen records associated with the subject."
-    )
-    observation_records: list[Observation] = Field(
-        description="The list of observations records associated with the subject."
-    )
-    measurement_records: list[Measurement] = Field(
-        description="The list of measurements records associated with the subject."
-    )
-    drug_exposure_records: list[DrugExposure] = Field(
-        description="The list of drug exposure records associated with the subject."
-    )
-    location_history_records: list[LocationHistory] = Field(
-        description="The list of location history records associated with the subject."
-    )
+#     id: UUID | None = Field(default=None, description="The ID of the subject.")
+#     person: Person | None = Field(
+#         default=None, description="The person associated with the subject."
+#     )
+#     specimen_records: list[Specimen] = Field(
+#         description="The specimen records associated with the subject."
+#     )
+#     observation_records: list[Observation] = Field(
+#         description="The observations records associated with the subject."
+#     )
+#     measurement_records: list[Measurement] = Field(
+#         description="The measurements records associated with the subject."
+#     )
+#     drug_exposure_records: list[DrugExposure] = Field(
+#         description="The drug exposure records associated with the subject."
+#     )
+#     location_history_records: list[LocationHistory] = Field(
+#         description="The location history records associated with the subject."
+#     )
 
 
 class ConceptFieldsForUploadMixin:
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = []
 
     @model_validator(mode="after")
-    def _validate_model(self) -> Self:
+    def _validate_concept_fields_for_upload(self) -> Self:
         for id_field, int_id_field in self.CONCEPT_FIELD_PAIRS:
             id_value = getattr(self, id_field)
             int_id_value = getattr(self, int_id_field)
@@ -56,7 +60,7 @@ class ConceptFieldsForUploadMixin:
         return self
 
 
-class MeasurementForUpload(Measurement, ConceptFieldsForUploadMixin):
+class MeasurementForUpload(Measurement, IsNewIdMixin, ConceptFieldsForUploadMixin):
     """
     An measurement record intended for upload. Equal to a Measurement, with
     additional variables. The different concepts can be given either as their UUID
@@ -129,7 +133,7 @@ class MeasurementForUpload(Measurement, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class ObervationForUpload(Observation, ConceptFieldsForUploadMixin):
+class ObservationForUpload(Observation, IsNewIdMixin, ConceptFieldsForUploadMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables. The different concepts can be given either as their UUID
@@ -195,7 +199,7 @@ class ObervationForUpload(Observation, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class SpecimenForUpload(Specimen, ConceptFieldsForUploadMixin):
+class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables. The different concepts can be given either as their UUID
@@ -260,70 +264,82 @@ class SpecimenForUpload(Specimen, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
-class PersonForUpload(Person):
+class PersonForUpload(ParentForUpload):
     """
     A person, together with any relevant associated data, intended for upload.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonForUpload"
-    RESULT_FIELD_NAMES: ClassVar[list[str]] = [
-        "measurements",
-        "observations",
-        "specimens",
-    ]
 
-    # Person identification
-    person_id: UUID = Field(
-        default=NULL_ID,
-        description="The id of the person, if available. If not, it must be filled with the null ID. Must be present if external_person_ids are not provided.",
-    )
-    is_existing_person: bool = Field(
-        description="Indicates whether the person should already exist in the database.",
-    )
-    created_in_data_collection_id: UUID = Field(
-        default=NULL_ID,
-        description="The id of the data collection in which the person was or is to be created, if available. If not, it must be filled with the null ID.",
-    )
-    external_person_ids: list[ExternalIdentifierForUpload] | None = Field(
+    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
+    PARENT_CLASS: ClassVar = Person
+    PARENT_FIELD_NAME: ClassVar = "person"
+    CHILDREN_FIELD_NAME_MAP: ClassVar = {
+        Measurement: "measurements",
+        Observation: "observations",
+        Specimen: "specimens",
+    }
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
+        Measurement: MeasurementForUpload,
+        Observation: ObservationForUpload,
+        Specimen: SpecimenForUpload,
+    }
+    CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
+        x: "person_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
+    }
+
+    # Parent
+    person: Person | None = Field(
         default=None,
-        description="List of external person identifiers. Must have at least one element if person_id is not provided.",
+        description="The person model itself, if to be created or updated as a whole.",
     )
 
-    # Associated data
+    # Children
     measurements: list[MeasurementForUpload] | None = Field(
-        description="The measurements.",
+        description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
-    observations: list[ObervationForUpload] | None = Field(
-        description="The observations.",
+    observations: list[ObservationForUpload] | None = Field(
+        description="The observations. If None, this element is not taken into consideration during the upload.",
     )
     specimens: list[SpecimenForUpload] | None = Field(
-        description="The specimens.",
+        description="The specimens. If None, this element is not taken into consideration during the upload.",
     )
     # TODO: add other associated data types when needed
 
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        if self.person_id is None or self.person_id == NULL_ID:
-            return self
-        for field_name in self.RESULT_FIELD_NAMES:
-            items = getattr(self, field_name)
-            for item in items or []:
-                if item.person_id in (None, NULL_ID):
-                    continue
-                raise ValueError(
-                    f"person_id of {field_name} is not None or the null ID, while the person_id variable is not provided."
-                )
-        return self
+
+class PersonUploadResult(ParentUploadResult):
+    """
+    The result of uploading a single person.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonUploadResult"
+
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
+
+    measurements: list[UploadResult] | None = Field(
+        description="The results of uploading the individual measurements, if any were provided, in the same order as provided."
+    )
+    observations: list[UploadResult] | None = Field(
+        description="The results of uploading the individual observations, if any were provided, in the same order as provided."
+    )
+    specimens: list[UploadResult] | None = Field(
+        description="The results of uploading the individual specimens, if any were provided, in the same order as provided."
+    )
 
 
-class PersonSetForUpload(Model):
+class PersonBatchForUpload(BaseBatchForUpload):
     """
     A set of persons intended for upload, together with any new reference data required
     for the storage of these data.
     """
 
     ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonBatchForUpload"
+
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
+    PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "persons"
 
     persons: list[PersonForUpload] = Field(
         description="The persons intended for upload.",
@@ -331,22 +347,51 @@ class PersonSetForUpload(Model):
 
     # New reference data required to enable storage of the person data
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_measurements(self) -> bool:
         """Indicates whether there are any measurements in the person set."""
         return any(len(x.measurements or []) > 0 for x in self.persons)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_observations(self) -> bool:
         """Indicates whether there are any observations in the person set."""
         return any(len(x.observations or []) > 0 for x in self.persons)
 
-    @computed_field
+    @computed_field  # type:ignore[prop-decorator]
     @property
     def has_specimens(self) -> bool:
         """Indicates whether there are any specimens in the person set."""
         return any(len(x.specimens or []) > 0 for x in self.persons)
 
-    # TODO: add model validator to make sure person are unique
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        # Verify that persons contain no duplicate person_ids
+        person_ids = [x.id for x in self.persons if x.id is not None]
+        if len(person_ids) != len(set(person_ids)):
+            raise ValueError("Persons must not contain duplicate person IDs.")
+        # Verify that persons contains no duplicate external_identifiers
+        all_external_identifiers = []
+        for person in self.persons:
+            if person.external_identifiers is not None:
+                all_external_identifiers.extend(person.external_identifiers)
+        if len(all_external_identifiers) != len(set(all_external_identifiers)):
+            raise ValueError("Persons must not contain duplicate external_identifiers.")
+        return self
+
+
+class PersonBatchUploadResult(BaseBatchUploadResult):
+    """
+    The result of uploading a batch of persons.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "PersonBatchUploadResult"
+
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = PersonBatchForUpload  # type: ignore[assignment]
+    PARENT_RESULT_CLASS: ClassVar = PersonUploadResult  # type: ignore[assignment]
+
+    persons: list[PersonUploadResult] = Field(
+        description="The results of uploading the individual persons, in the same order as provided."
+    )

@@ -1,3 +1,4 @@
+import gzip
 import hashlib
 from typing import Any
 from unittest.mock import Mock, patch
@@ -19,7 +20,6 @@ from gen_epix.casedb.services.case.create_seq import (
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-import gzip
 
 
 class TestCasedbCaseCreateSeq:
@@ -83,10 +83,10 @@ class TestCasedbCaseCreateSeq:
         """Create sample CaseReadSet objects for testing."""
         case_id = uuid4()
         case_type_col_id = uuid4()
-        read_set = Mock(spec=model.ReadSet)
+        read_set = Mock(spec=model.ReadSetForUpload)
         read_set.id = uuid4()
 
-        case_read_set = Mock(spec=model.CaseReadSet)
+        case_read_set = Mock(spec=model.ReadSetForUpload)
         case_read_set.case_id = case_id
         case_read_set.case_type_col_id = case_type_col_id
         case_read_set.read_set = read_set
@@ -98,10 +98,10 @@ class TestCasedbCaseCreateSeq:
         """Create sample CaseSeq objects for testing."""
         case_id = uuid4()
         case_type_col_id = uuid4()
-        seq = Mock(spec=model.Seq)
+        seq = Mock(spec=model.SeqForUpload)
         seq.id = uuid4()
 
-        case_seq = Mock(spec=model.CaseSeq)
+        case_seq = Mock(spec=model.SeqForUpload)
         case_seq.case_id = case_id
         case_seq.case_type_col_id = case_type_col_id
         case_seq.seq = seq
@@ -118,13 +118,13 @@ class TestCasedbCaseCreateSeq:
             # Setup command
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = sample_case_read_sets
+            cmd.read_sets = sample_case_read_sets
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
             mock_case.content = {}
 
-            created_read_set = Mock(spec=model.ReadSet)
+            created_read_set = Mock(spec=model.ReadSetForUpload)
             created_read_set.id = uuid4()
 
             with patch(
@@ -162,13 +162,13 @@ class TestCasedbCaseCreateSeq:
             # Setup command
             cmd = Mock(spec=command.CreateSeqsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_seqs = sample_case_seqs
+            cmd.seqs = sample_case_seqs
 
             # Setup mocks
             mock_case = Mock(spec=model.Case)
             mock_case.content = {}
 
-            created_seq = Mock(spec=model.Seq)
+            created_seq = Mock(spec=model.SeqForUpload)
             created_seq.id = uuid4()
 
             with patch(
@@ -204,7 +204,7 @@ class TestCasedbCaseCreateSeq:
             """Test that empty read_sets list returns empty list."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = []
+            cmd.read_sets = []
 
             result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
 
@@ -216,7 +216,7 @@ class TestCasedbCaseCreateSeq:
             """Test that empty seqs list returns empty list."""
             cmd = Mock(spec=command.CreateSeqsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_seqs = []
+            cmd.seqs = []
 
             result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
 
@@ -252,7 +252,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_read_set = Mock(spec=model.ReadSet)
+            mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = None
             mock_read_set.rev_file_id = None
 
@@ -310,7 +310,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_read_set = Mock(spec=model.ReadSet)
+            mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.rev_file_id = uuid4()  # Already has reverse file
 
             with patch(
@@ -354,7 +354,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_read_set = Mock(spec=model.ReadSet)
+            mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = None
             mock_read_set.rev_file_id = None
 
@@ -419,7 +419,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_read_set = Mock(spec=model.ReadSet)
+            mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = None
             mock_read_set.rev_file_id = None
 
@@ -483,7 +483,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_seq = Mock(spec=model.Seq)
+            mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
 
             created_file = Mock(spec=model.File)
@@ -546,7 +546,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_seq = Mock(spec=model.Seq)
+            mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
 
             created_file = Mock(spec=model.File)
@@ -631,7 +631,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_read_set = Mock(spec=model.ReadSet)
+            mock_read_set = Mock(spec=model.ReadSetForUpload)
             mock_read_set.fwd_file_id = uuid4()  # Already has file
 
             with patch(
@@ -664,7 +664,7 @@ class TestCasedbCaseCreateSeq:
             mock_case = Mock(spec=model.Case)
             mock_case.content = {cmd.case_type_col_id: str(uuid4())}
 
-            mock_seq = Mock(spec=model.Seq)
+            mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = uuid4()  # Already has file
 
             with patch(
@@ -969,7 +969,7 @@ class TestCasedbCaseCreateSeq:
             """Test the complete workflow with full ABAC access."""
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = sample_case_read_sets
+            cmd.read_sets = sample_case_read_sets
 
             # Setup ABAC with full access
             case_abac = Mock(spec=model.CaseAbac)
@@ -990,7 +990,7 @@ class TestCasedbCaseCreateSeq:
             case.case_type_id = case_type_col.case_type_id
             case.content = {}
 
-            created_read_set = Mock(spec=model.ReadSet)
+            created_read_set = Mock(spec=model.ReadSetForUpload)
             created_read_set.id = uuid4()
 
             with patch(
@@ -1035,10 +1035,10 @@ class TestCasedbCaseCreateSeq:
             for i in range(3):
                 case_id = uuid4()
                 case_type_col_id = uuid4()
-                read_set = Mock(spec=model.ReadSet)
+                read_set = Mock(spec=model.ReadSetForUpload)
                 read_set.id = uuid4()
 
-                case_read_set = Mock(spec=model.CaseReadSet)
+                case_read_set = Mock(spec=model.ReadSetForUpload)
                 case_read_set.case_id = case_id
                 case_read_set.case_type_col_id = case_type_col_id
                 case_read_set.read_set = read_set
@@ -1046,7 +1046,7 @@ class TestCasedbCaseCreateSeq:
 
             cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
             cmd.user = mock_user
-            cmd.case_read_sets = case_read_sets
+            cmd.read_sets = case_read_sets
 
             # Setup mocks for multiple cases
             mock_cases = []
@@ -1056,7 +1056,7 @@ class TestCasedbCaseCreateSeq:
                 mock_case.content = {}
                 mock_cases.append(mock_case)
 
-                created_read_set = Mock(spec=model.ReadSet)
+                created_read_set = Mock(spec=model.ReadSetForUpload)
                 created_read_set.id = uuid4()
                 created_read_sets.append(created_read_set)
 

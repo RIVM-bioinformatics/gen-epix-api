@@ -174,6 +174,9 @@ from gen_epix.omopdb.domain.command.omop import (
     SurveyConductCrudCommand as SurveyConductCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
+    UploadPersonsCommand as UploadPersonsCommand,
+)
+from gen_epix.omopdb.domain.command.omop import (
     VisitDetailCrudCommand as VisitDetailCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
@@ -227,6 +230,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
         SurveyConductCrudCommand,
+        UploadPersonsCommand,
         VisitDetailCrudCommand,
         VisitOccurrenceCrudCommand,
         VocabularyCrudCommand,

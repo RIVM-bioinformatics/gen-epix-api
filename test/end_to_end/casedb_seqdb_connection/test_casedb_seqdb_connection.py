@@ -143,9 +143,6 @@ def test_casedb_seqdb_connection(
         pytest.fail(f"OAuth discovery endpoint failed: {e}")
 
     # Create root user
-    # root_user: model.User = test_util.get_existing_root_user(
-    #     casedb_app_composer.cfg, casedb_app
-    # )
     root_user = test_util.create_root_user_from_claims(
         casedb_app_composer.cfg, casedb_app
     )

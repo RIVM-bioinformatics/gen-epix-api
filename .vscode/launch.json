@@ -427,12 +427,12 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.integration.case_validation",
+            "name": "test.casedb.integration.case_upload",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_integration_case_validation"
+                "test_casedb_integration_case_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -510,6 +510,28 @@
             "program": "run.py",
             "args": [
                 "test_seqdb_unit"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.unit.models_for_upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_models_for_upload"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+{
+            "name": "test.seqdb.unit.sample_upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_unit_sample_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -642,6 +664,17 @@
             "program": "run.py",
             "args": [
                 "test_commondb_unit_auth"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.commondb.unit.upload",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_upload"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

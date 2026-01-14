@@ -334,7 +334,7 @@ class DimColTypeSet(Enum):
     TIME = ColTypeSet.TIME.value
     GEO = ColTypeSet.GEO.value
     ORGANIZATION = ColTypeSet.ORGANIZATION.value
-    OTHER =  frozenset(
+    OTHER = frozenset(
         ColTypeSet.LANGUAGE.value.union(
             {ColType.TEXT},
             ColTypeSet.STRING_SET.value,
@@ -354,19 +354,31 @@ class ColTypeOrder(Enum):
     }
 
 
-class CaseColDataRule(Enum):
+class DataIssueType(Enum):
     MISSING = "MISSING"
     INVALID = "INVALID"
     UNAUTHORIZED = "UNAUTHORIZED"
     CONFLICT = "CONFLICT"
     DERIVED = "DERIVED"
+    TRANSFORMED = "TRANSFORMED"
 
 
-class CaseColDataRuleSet(Enum):
-    PREVENTS_UPLOAD = frozenset(
+class DataIssueTypeSet(Enum):
+    ERROR = frozenset(
         {
-            CaseColDataRule.INVALID,
-            CaseColDataRule.UNAUTHORIZED,
-            CaseColDataRule.CONFLICT,
+            DataIssueType.INVALID,
+            DataIssueType.UNAUTHORIZED,
+            DataIssueType.CONFLICT,
+        }
+    )
+    WARNING = frozenset(
+        {
+            DataIssueType.MISSING,
+        }
+    )
+    INFO = frozenset(
+        {
+            DataIssueType.DERIVED,
+            DataIssueType.TRANSFORMED,
         }
     )

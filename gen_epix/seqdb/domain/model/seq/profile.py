@@ -1,6 +1,6 @@
 import base64
 import hashlib
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_serializer, model_validator
@@ -90,7 +90,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         table_name="allele_profile",
         persistable=True,
         keys=create_keys(
-            {1: ("seq_id", "locus_set_id", "locus_detection_protocol_id")}
+            {1: ("sample_id", "seq_id", "locus_set_id", "locus_detection_protocol_id")}
         ),
         links=create_links(
             {
@@ -125,7 +125,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         ge=0,
     )
     allele_profile: str = Field(
-        description="The alleles detected in the sequence for the loci in the locus set."
+        description="String representation of the alleles detected in the sequence for the loci in the locus set, with the format depending on allele_profile_format."
     )
     allele_profile_format: enum.AlleleProfileFormat = Field(
         default=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
@@ -158,7 +158,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
                 for i in range(0, len(allele_bytes), 16)
             )
         else:
-            if profile_hash is None:
+            if profile_hash == NULL_ID:
                 raise ValueError(
                     "Unable to calculate allele profile hash for this format"
                 )
@@ -177,7 +177,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
             )
 
         # Set or verify allele_profile_hash
-        if profile_hash is None:
+        if profile_hash == NULL_ID:
             self.allele_profile_hash = computed_profile_hash
         elif profile_hash != computed_profile_hash:
             raise ValueError(
@@ -197,6 +197,25 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         if isinstance(value, enum.AlleleProfileFormat):
             return value.value
         return value
+
+    def get_allele_ids(self, **kwargs: Any) -> list[UUID | None]:
+        """
+        Parse and return the allele IDs from the allele profile based on its format.
+        """
+        n_loci = self.n_loci
+        allele_ids: list[UUID | None] = [None] * n_loci
+        if self.allele_profile_format == enum.AlleleProfileFormat.SORTED_ALLELE_IDS:
+            allele_bytes = base64.b64decode(self.allele_profile)
+            null_id_bytes = NULL_ID.bytes
+            for i, j in zip(range(0, len(allele_bytes), 16), range(n_loci)):
+                allele_id_bytes = allele_bytes[i : i + 16]
+                if allele_id_bytes != null_id_bytes:
+                    allele_ids[j] = UUID(bytes=allele_id_bytes)
+        else:
+            raise NotImplementedError(
+                "Unable to parse allele IDs for this allele profile format"
+            )
+        return allele_ids
 
     @staticmethod
     def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
@@ -222,6 +241,7 @@ class SnpProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "ref_seq_id",
                     "snp_detection_protocol_id",
@@ -290,6 +310,7 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "mlva_detection_protocol_id",
                 )
@@ -348,6 +369,7 @@ class KmerProfile(Model, HasSampleMixin, QualityMixin):
         keys=create_keys(
             {
                 1: (
+                    "sample_id",
                     "seq_id",
                     "kmer_detection_protocol_id",
                 )

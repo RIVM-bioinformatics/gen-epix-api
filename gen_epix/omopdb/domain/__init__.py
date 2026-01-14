@@ -1,3 +1,4 @@
+from gen_epix.commondb.util import register_domain_entities
 from gen_epix.fastapp import Domain
 from gen_epix.omopdb.domain.command import COMMANDS_BY_SERVICE_TYPE, COMMON_COMMAND_MAP
 from gen_epix.omopdb.domain.model import (
@@ -5,7 +6,6 @@ from gen_epix.omopdb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,
     SORTED_SERVICE_TYPES,
 )
-from gen_epix.util import register_domain_entities
 
 DOMAIN = Domain("omopdb")
 

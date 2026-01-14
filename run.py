@@ -89,8 +89,8 @@ class Run:
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
-        ssl_keyfile = Run.APP_SSL_KEYFILE
-        ssl_certfile = Run.APP_SSL_CERTFILE
+        ssl_keyfile = Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
+        ssl_certfile = Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -323,6 +323,16 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/upload/",
+            ]
+        )
+
     def test_commondb_integration(self) -> None:
         import pytest
 
@@ -403,13 +413,13 @@ class Run:
             ]
         )
 
-    def test_casedb_integration_case_validation(self) -> None:
+    def test_casedb_integration_case_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/case_validation",
+                "test/casedb/integration/case_upload",
             ]
         )
 
@@ -480,6 +490,26 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/unit",
+            ]
+        )
+
+    def test_seqdb_unit_models_for_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/models_for_upload",
+            ]
+        )
+
+    def test_seqdb_unit_sample_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/sample_upload",
             ]
         )
 

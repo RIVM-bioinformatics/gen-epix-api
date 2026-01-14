@@ -7,6 +7,7 @@ from gen_epix.casedb.domain import command, exc, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.casedb.domain.repository import BaseCaseRepository
 from gen_epix.fastapp import BaseService
+from gen_epix.seqdb.domain import model as seqdb_model
 
 
 class BaseCaseService(BaseService):
@@ -43,7 +44,7 @@ class BaseCaseService(BaseService):
         command.CaseSetMemberCrudCommand,
         command.CaseDataCollectionLinkCrudCommand,
         command.CaseSetDataCollectionLinkCrudCommand,
-        command.ValidateCasesCommand,
+        command.UploadCasesCommand,
     }
     CASCADE_DELETE_MODEL_CLASSES: dict[
         type[model.Model], tuple[type[model.Model], ...]
@@ -156,8 +157,7 @@ class BaseCaseService(BaseService):
         )
         f(command.TreeAlgorithmClassCrudCommand, self.crud_tree_algorithm_class)
         f(command.TreeAlgorithmCrudCommand, self.crud_tree_algorithm)
-        f(command.ValidateCasesCommand, self.validate_cases)
-        f(command.CreateCasesCommand, self.create_cases)
+        f(command.UploadCasesCommand, self.upload_cases)
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
         f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_type_stats)
@@ -472,13 +472,9 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def validate_cases(
-        self, cmd: command.ValidateCasesCommand
-    ) -> model.CaseValidationReport:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def create_cases(self, cmd: command.CreateCasesCommand) -> list[model.Case] | None:
+    def upload_cases(
+        self, cmd: command.UploadCasesCommand
+    ) -> model.CaseBatchUploadResult | None:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -552,7 +548,7 @@ class BaseCaseService(BaseService):
     def create_reads_sets_for_cases(
         self,
         cmd: command.CreateReadSetsForCasesCommand,
-    ) -> list[model.ReadSet]:
+    ) -> list[seqdb_model.ReadSet]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -566,7 +562,7 @@ class BaseCaseService(BaseService):
     def create_seqs_for_cases(
         self,
         cmd: command.CreateSeqsForCasesCommand,
-    ) -> list[model.Seq]:
+    ) -> list[seqdb_model.Seq]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -580,12 +576,12 @@ class BaseCaseService(BaseService):
     def retrieve_sequencing_protocols(
         self,
         cmd: command.RetrieveSequencingProtocolsCommand,
-    ) -> list[model.SequencingProtocol]:
+    ) -> list[seqdb_model.SequencingProtocol]:
         raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_assembly_protocols(
         self,
         cmd: command.RetrieveAssemblyProtocolsCommand,
-    ) -> list[model.AssemblyProtocol]:
+    ) -> list[seqdb_model.AssemblyProtocol]:
         raise NotImplementedError()
