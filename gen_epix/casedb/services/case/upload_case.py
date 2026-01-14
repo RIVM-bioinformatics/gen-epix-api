@@ -198,11 +198,23 @@ class CaseBatchUploader(BatchUploader):
         # Use the general parent method for upserting the cases
         success &= super().upsert_batch(cases_only_cmd, retval, uow)
 
+        # Determine if there are samples to be created
+        has_samples = self.has_samples(cmd, retval)
+        if not has_samples:
+            return success
+
         # Upsert samples via seqdb service, again through full upload including verification
         curr_success = True
         if success:
             # Only upload samples if case upload succeeded
             curr_success = self.upload_samples(cmd, retval, False)
+            if curr_success:
+                for case, case_only in zip(
+                    cmd.case_batch.cases, cases_only_cmd.case_batch.cases
+                ):
+                    case_only.case.content = case.case.content
+                success &= super().upsert_batch(cases_only_cmd, retval, uow)
+
         if not curr_success:
             # Sample upload failed but cases were already created: the rest of the
             # upload will be rolled back as well, with the exception of any new external
@@ -213,6 +225,18 @@ class CaseBatchUploader(BatchUploader):
         success &= curr_success
 
         return success
+
+    def has_samples(
+        self,
+        cmd: command.UploadCasesCommand,
+        retval: model.CaseBatchUploadResult,
+    ) -> bool:
+        """
+        Determine if there are any samples to be created in seqdb from the cases to
+        be uploaded.
+        """
+        upload_samples_cmd, _ = self._get_upload_samples_command(cmd, retval)
+        return upload_samples_cmd is not None
 
     def upload_samples(
         self,
@@ -236,26 +260,32 @@ class CaseBatchUploader(BatchUploader):
         )
         success = seqdb_retval.get_status_count()[UploadStatus.FAILED] == 0
 
-        # Map verification results back to cases
+        # Map verification results back to cases and child ids back to cases
         for sample_index, sample_result in enumerate(seqdb_retval.samples):
             # Map read sets and seqs back to cases
             for i, seqdb_result in enumerate(sample_result.read_sets or []):
                 case_index, child_index = sample_case_index_map[
                     seqdb_model.ReadSetForUpload
                 ][(sample_index, i)]
+                case = cmd.case_batch.cases[case_index]
+                case_content = case.case.content
                 result = retval.cases[case_index].read_sets[child_index]  # type: ignore[index]
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                case_content[case.read_sets[child_index].case_type_col_id] = str(seqdb_result.id)
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
                     seqdb_model.SeqForUpload
                 ][(sample_index, i)]
+                case = cmd.case_batch.cases[case_index]
+                case_content = case.case.content
                 result = retval.cases[case_index].seqs[child_index]  # type: ignore[index]
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                case_content[case.seqs[child_index].case_type_col_id] = str(seqdb_result.id)
 
         return success
 
