@@ -97,7 +97,7 @@ def test_casedb_seqdb_connection(
     """Test CaseDB to SeqDB connection with OAuth authentication."""
     # Set environment variables for both casedb and seqdb
     set_envvar()
-    http_protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
+    protocol = "https" if SSL_CERTFILE and SSL_KEYFILE else "http"
 
     # Create casedb app instance
     casedb_app_cfg = AppCfg(
@@ -114,7 +114,7 @@ def test_casedb_seqdb_connection(
 
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{http_protocol}://localhost:9000/health")
+            response = client.get(f"{protocol}://localhost:9000/health")
             assert response.status_code == 200
             logging.info("✅ OAuth server is accessible")
     except Exception as e:
@@ -123,7 +123,7 @@ def test_casedb_seqdb_connection(
     # Test that the SeqDB server is accessible
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{http_protocol}://127.0.0.1:8001/v1/health")
+            response = client.get(f"{protocol}://127.0.0.1:8001/v1/health")
             assert response.status_code == 200
             logging.info("✅ SeqDB server is accessible")
     except Exception as e:
@@ -133,7 +133,7 @@ def test_casedb_seqdb_connection(
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
             response = client.get(
-                f"{http_protocol}://localhost:9000/.well-known/openid-configuration"
+                f"{protocol}://localhost:9000/.well-known/openid-configuration"
             )
             assert response.status_code == 200
             discovery_data = response.json()

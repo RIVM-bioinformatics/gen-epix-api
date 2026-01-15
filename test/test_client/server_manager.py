@@ -67,7 +67,7 @@ class ServerManager:
         self.app = app
         self.host = host
         self.port = port or self.DEFAULT_PORTS.get(service, 0)
-        self.http_protocol = "https" if ssl_certfile and ssl_keyfile else "http"
+        self.protocol = "https" if ssl_certfile and ssl_keyfile else "http"
         self.ssl_certfile = ssl_certfile
         self.ssl_keyfile = ssl_keyfile
 
@@ -76,7 +76,7 @@ class ServerManager:
 
         # oauth specific fields
         self.process: subprocess.Popen[str] | None = None
-        self.base_url = f"{self.http_protocol}://localhost:{self.port}"
+        self.base_url = f"{self.protocol}://localhost:{self.port}"
         self.oauth_discovery_url = oauth_discovery_url
 
         if self.service in ServerTypeSet.NON_AUTH.value:
@@ -298,7 +298,7 @@ class ServerManager:
             try:
                 with httpx.Client(timeout=5.0, verify=self.ssl_certfile) as client:
                     response = client.get(
-                        f"{self.http_protocol}://{self.host}:{self.port}{health_url}"
+                        f"{self.protocol}://{self.host}:{self.port}{health_url}"
                     )
                     if response.status_code == 200:
                         return True
