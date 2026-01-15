@@ -30,7 +30,7 @@ class RemoteApp(App):
         domain: Domain,
         host: str,
         port: int | None,
-        protocol: HttpProtocol = HttpProtocol.HTTPS,
+        protocol: HttpProtocol | str = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
         add_generated_crud_route_handlers: bool = True,
@@ -82,7 +82,7 @@ class RemoteApp(App):
 
     @property
     def protocol(self) -> HttpProtocol:
-        return self._protocol
+        return HttpProtocol[self._protocol.upper()]
 
     @property
     def host_url(self) -> str:
