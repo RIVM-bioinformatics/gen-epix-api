@@ -82,6 +82,8 @@ class RemoteApp(App):
 
     @property
     def protocol(self) -> HttpProtocol:
+        if isinstance(self._protocol, HttpProtocol):
+            return self._protocol
         return HttpProtocol[self._protocol.upper()]
 
     @property
