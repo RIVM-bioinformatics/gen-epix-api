@@ -22,7 +22,7 @@ from gen_epix.casedb.domain.model.case.reference_data import (
     Col,
     Dim,
 )
-from gen_epix.casedb.services.case.case_transformer import CaseValidator
+from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.model.organization import Organization
 
 

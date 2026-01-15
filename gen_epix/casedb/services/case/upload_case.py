@@ -9,7 +9,7 @@ import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.enum import DataIssueTypeSet
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.case_transformer import CaseValidator
+from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
