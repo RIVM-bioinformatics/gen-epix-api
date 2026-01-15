@@ -163,24 +163,37 @@ class BaseRbacServiceTestCase(TestCase):
             self.permission4,
         }
 
+        # Create command name to class mapping for mocks
+        command_name_to_class = {
+            TestCommand.__name__: TestCommand,
+            TestCommand2.__name__: TestCommand2,
+        }
+
         self.mock_domain.permissions = all_permissions
         self.mock_domain.get_permission.side_effect = lambda cmd_class, perm_type: next(
             (
                 p
                 for p in all_permissions
-                if p.command_class == cmd_class and p.permission_type == perm_type
+                if p.command_name
+                == (
+                    cmd_class.__name__
+                    if hasattr(cmd_class, "__name__")
+                    else str(cmd_class)
+                )
+                and p.permission_type == perm_type
             ),
             None,
         )
         self.mock_domain.get_permissions_for_command.side_effect = lambda cmd_class: {
-            p for p in all_permissions if p.command_class == cmd_class
+            p for p in all_permissions if p.command_name == cmd_class.__name__
         }
         self.mock_domain.get_command_for_permission.side_effect = (
-            lambda perm: perm.command_class
+            lambda perm: command_name_to_class.get(perm.command_name)
         )
         self.mock_domain.get_permission_for_command_instance.side_effect = (
             lambda cmd: next(
-                (p for p in all_permissions if p.command_class == type(cmd)), None
+                (p for p in all_permissions if p.command_name == type(cmd).__name__),
+                None,
             )
         )
         self.mock_domain.get_permissions_for_domain.return_value = all_permissions
@@ -302,7 +315,7 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         """Test registering role with invalid permissions fails."""
         # Setup
         invalid_permission = Permission(
-            TestCommand, PermissionType.DELETE
+            command_name="TestCommand", permission_type=PermissionType.DELETE
         )  # Not in domain
         permissions = {self.permission1, invalid_permission}
 
@@ -349,7 +362,7 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
             TestRole.USER: {(TestCommand, PermissionType.READ)},
             TestRole.ADMIN: {
                 (TestCommand, PermissionType.READ),
-                (TestCommand, PermissionType.WRITE),
+                (TestCommand, PermissionType.UPDATE),
             },
         }
 
@@ -701,7 +714,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         }
         role_permission_sets = {
             TestRole.GUEST: {(TestCommand, PermissionTypeSet({PermissionType.READ}))},
-            TestRole.USER: {(TestCommand, PermissionTypeSet({PermissionType.WRITE}))},
+            TestRole.USER: {(TestCommand, PermissionTypeSet({PermissionType.UPDATE}))},
             TestRole.ADMIN: {(TestCommand2, PermissionTypeSet({PermissionType.READ}))},
         }
 
@@ -716,14 +729,14 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
             expanded[TestRole.USER],
             {
                 (TestCommand, PermissionType.READ),
-                (TestCommand, PermissionType.WRITE),
+                (TestCommand, PermissionType.UPDATE),
             },
         )
         self.assertEqual(
             expanded[TestRole.ADMIN],
             {
                 (TestCommand, PermissionType.READ),
-                (TestCommand, PermissionType.WRITE),
+                (TestCommand, PermissionType.UPDATE),
                 (TestCommand2, PermissionType.READ),
             },
         )
@@ -731,7 +744,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
             expanded[TestRole.ROOT],
             {
                 (TestCommand, PermissionType.READ),
-                (TestCommand, PermissionType.WRITE),
+                (TestCommand, PermissionType.UPDATE),
                 (TestCommand2, PermissionType.READ),
             },
         )
@@ -795,7 +808,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
             TestRole.USER: {
                 (
                     TestCommand,
-                    PermissionTypeSet({PermissionType.READ, PermissionType.WRITE}),
+                    PermissionTypeSet({PermissionType.READ, PermissionType.UPDATE}),
                 )
             },
         }
@@ -810,7 +823,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
             expanded[TestRole.USER],
             {
                 (TestCommand, PermissionType.READ),
-                (TestCommand, PermissionType.WRITE),
+                (TestCommand, PermissionType.UPDATE),
             },
         )
 
@@ -837,8 +850,10 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         # Verify
         self.assertTrue(is_root)
 
-    def test_retrieve_user_is_non_rbac_authorized_returns_true_by_default(self) -> None:
-        """Test that retrieve_user_is_non_rbac_authorized returns True by default."""
+    def test_retrieve_user_is_non_rbac_authorized_returns_false_by_default(
+        self,
+    ) -> None:
+        """Test that retrieve_user_is_non_rbac_authorized returns False by default in concrete implementation."""
         # Setup
         cmd = self.create_test_command()
 
@@ -846,7 +861,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         is_authorized = self.service.retrieve_user_is_non_rbac_authorized(cmd)
 
         # Verify
-        self.assertTrue(is_authorized)
+        self.assertFalse(is_authorized)
 
     def test_retrieve_user_is_non_rbac_authorized_can_be_overridden(self) -> None:
         """Test that retrieve_user_is_non_rbac_authorized can be overridden."""
