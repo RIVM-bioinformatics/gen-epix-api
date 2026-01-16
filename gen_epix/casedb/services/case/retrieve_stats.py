@@ -4,6 +4,10 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set_member import (
+    case_service_crud_case_set_member,
+)
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.base import Filter
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
@@ -109,7 +113,7 @@ def case_service_retrieve_case_set_stats(
             query_filter=case_set_query_filter,
         )
         curr_cmd._policies.extend(cmd._policies)
-        case_sets: list[model.CaseSet] = self.crud(curr_cmd)  # type: ignore[assignment]
+        case_sets: list[model.CaseSet] = case_service_crud_case_set(self,curr_cmd)  # type: ignore[assignment]
         case_set_ids: set[UUID] = {x.id for x in case_sets}  # type: ignore[misc]
 
         # Retrieve case set members
@@ -123,7 +127,7 @@ def case_service_retrieve_case_set_stats(
             query_filter=case_set_member_query_filter,
         )
         curr_cmd._policies.extend(cmd._policies)
-        case_set_members: list[model.CaseSetMember] = self.crud(curr_cmd)  # type: ignore[assignment]
+        case_set_members: list[model.CaseSetMember] = case_service_crud_case_set_member(self, curr_cmd)  # type: ignore[assignment]
         case_set_case_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
             ((x.case_set_id, x.case_id) for x in case_set_members), as_set=True
         )
