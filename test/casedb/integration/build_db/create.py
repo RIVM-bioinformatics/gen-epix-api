@@ -16,27 +16,9 @@ import pytest
 from gen_epix.casedb.domain import enum, exc, model
 
 
-@pytest.mark.scenario_ids("TC-RBAC-01-12")
-@pytest.mark.scenario_ids("TC-RBAC-01-13")
-@pytest.mark.scenario_ids("TC-RBAC-03-01")
-@pytest.mark.scenario_ids("TC-RBAC-03-09")
-@pytest.mark.scenario_ids("TC-RBAC-02-08")
-@pytest.mark.scenario_ids("TC-RBAC-02-09")
-@pytest.mark.scenario_ids("TC-RBAC-02-10")
-@pytest.mark.scenario_ids("TC-RBAC-02-11")
-@pytest.mark.scenario_ids("TC-RBAC-02-12")
-@pytest.mark.scenario_ids("TC-RBAC-02-02")
-@pytest.mark.scenario_ids("TC-RBAC-02-05")
-@pytest.mark.scenario_ids("TC-RBAC-02-06")
-@pytest.mark.scenario_ids("TC-RBAC-02-07")
-@pytest.mark.scenario_ids("TC-BIO-01-01")
-@pytest.mark.scenario_ids("TC-BIO-01-02")
-@pytest.mark.scenario_ids("TC-BIO-02-01")
-@pytest.mark.scenario_ids("TC-BIO-02-02")
-@pytest.mark.scenario_ids("TC-BIO-03-01")
-@pytest.mark.scenario_ids("TC-BIO-03-02")
-@pytest.mark.scenario_ids("TC-BIO-04-01")
-@pytest.mark.scenario_ids("TC-BIO-04-02")
+@pytest.mark.scenario_ids(
+    "TC-RBAC-01-12,TC-RBAC-01-13,TC-RBAC-03-01,TC-RBAC-03-09,TC-RBAC-02-08,TC-RBAC-02-09,TC-RBAC-02-10,TC-RBAC-02-11,TC-RBAC-02-12,TC-RBAC-02-02,TC-RBAC-02-05,TC-RBAC-02-06,TC-RBAC-02-07,TC-BIO-01-01,TC-BIO-01-02,TC-BIO-02-01,TC-BIO-02-02,TC-BIO-03-01,TC-BIO-03-02,TC-BIO-04-01,TC-BIO-04-02"
+)
 class TestCreate:
     # CREATE tests
 
