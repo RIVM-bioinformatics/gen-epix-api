@@ -55,6 +55,10 @@ class DictRepository(BaseRepository):
         else:
             raise NotImplementedError(f"Unsupported file type: {file_type}")
 
+    @classmethod
+    def drop_repository(cls, **kwargs: Any) -> None:
+        return None
+
     @staticmethod
     def create_repository_from_pkl(
         repository_class: type[BaseRepository],

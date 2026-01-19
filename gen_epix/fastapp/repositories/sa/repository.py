@@ -45,20 +45,43 @@ class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
     @classmethod
-    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+    def _process_repository_params(
+        cls, kwargs: dict[str, Any]
+    ) -> tuple[list[Entity], str, dict[str, Any]]:
+        """Helper method to process common repository parameters and handle connection string/file logic."""
         entities = kwargs.pop("entities", [])
         connection_string = kwargs.pop("connection_string", None)
         file = kwargs.pop("file", None)
+
         if connection_string is None:
             if file is None:
                 raise exc.RepositoryInitializationServiceError(
                     "Either connection_string or file must be provided"
                 )
             connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
+
+        return entities, connection_string, kwargs
+
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities, connection_string, remaining_kwargs = cls._process_repository_params(
+            kwargs
+        )
         return cls.create_sa_repository(
             entities=entities,
             connection_string=connection_string,
-            **kwargs,
+            **remaining_kwargs,
+        )
+
+    @classmethod
+    def drop_repository(cls, **kwargs: Any) -> None:
+        entities, connection_string, remaining_kwargs = cls._process_repository_params(
+            kwargs
+        )
+        return cls.drop_sa_repository(
+            entities=entities,
+            connection_string=connection_string,
+            **remaining_kwargs,
         )
 
     def __init__(self, engine: Engine, **kwargs: Any):
@@ -1081,6 +1104,47 @@ class SARepository(BaseRepository):
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids_str,
         )
+
+    @classmethod
+    def drop_sa_repository(
+        cls,
+        entities: list[Entity],
+        connection_string: str,
+        **kwargs: Any,
+    ) -> None:
+        schema_names = {x.schema_name for x in entities if x.persistable}
+        is_sqlite = str(connection_string).lower().startswith("sqlite:///")
+        if is_sqlite:
+            # For sqlite, remove the file
+            sqlite_file = Path(
+                re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
+            )
+            if sqlite_file.is_file():
+                sqlite_file.unlink()
+        else:
+            engine = EngineFactory.create_engine(connection_string, echo=False)
+
+            # First drop all tables to handle foreign key constraints properly
+            metadata_set = set()
+            for entity in entities:
+                if not entity.persistable:
+                    continue
+                db_model_class = entity.db_model_class
+                metadata_set.add(db_model_class.metadata)
+
+            for metadata in metadata_set:
+                metadata.drop_all(engine)
+
+            # Then drop schemas if they exist
+            for schema_name in schema_names:
+                if not schema_name:
+                    continue
+                with engine.connect() as conn:
+                    if conn.dialect.has_schema(conn, schema_name):
+                        conn.execute(sa.schema.DropSchema(schema_name))
+                        conn.commit()
+
+        return None
 
     @classmethod
     def create_sa_repository(

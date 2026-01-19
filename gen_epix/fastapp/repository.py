@@ -29,6 +29,11 @@ class BaseRepository(abc.ABC):
     def create_repository(cls, **kwargs: Any) -> "BaseRepository":
         raise NotImplementedError()
 
+    @classmethod
+    @abc.abstractmethod
+    def drop_repository(cls, **kwargs: Any) -> None:
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def crud(
         self,
