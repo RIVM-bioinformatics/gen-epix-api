@@ -727,7 +727,9 @@ class TestUserInfo(BaseOauthIdpClientTestCase):
 class TestIdentityProvider(BaseOauthIdpClientTestCase):
     def test_get_identity_provider_fields(self) -> None:
         # 1. Input
-        client: OauthIdpClient = self.create_client()
+        client: OauthIdpClient = self.create_client(
+            discovery_url=self.server_cfg.discovery_url
+        )
 
         # 2. Execute
         idp: IdentityProvider = client.get_identity_provider()
