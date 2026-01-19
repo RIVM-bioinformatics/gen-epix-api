@@ -19,25 +19,35 @@ class TestFilterMatch:
         # Match value
         filter = ExistsFilter(key="a")
         rows = [{"a": x} for x in [None, np.nan, "", "null"]]
-        util._test_filter(filter, rows, [False, True, True, True])
-        util._test_filter(filter, rows, [True, True, True, True], na_values=set())
-        util._test_filter(filter, rows, [False, True, True, True], na_values={None})
-        util._test_filter(filter, rows, [True, False, True, True], na_values={np.nan})
-        util._test_filter(filter, rows, [True, True, False, True], na_values={""})
-        util._test_filter(filter, rows, [True, True, True, False], na_values={"null"})
-        util._test_filter(
+        util.validate_filter_behavior(filter, rows, [False, True, True, True])
+        util.validate_filter_behavior(
+            filter, rows, [True, True, True, True], na_values=set()
+        )
+        util.validate_filter_behavior(
+            filter, rows, [False, True, True, True], na_values={None}
+        )
+        util.validate_filter_behavior(
+            filter, rows, [True, False, True, True], na_values={np.nan}
+        )
+        util.validate_filter_behavior(
+            filter, rows, [True, True, False, True], na_values={""}
+        )
+        util.validate_filter_behavior(
+            filter, rows, [True, True, True, False], na_values={"null"}
+        )
+        util.validate_filter_behavior(
             filter, rows, [False, False, True, True], na_values={None, np.nan}
         )
-        util._test_filter(
+        util.validate_filter_behavior(
             filter, rows, [True, False, False, True], na_values={np.nan, ""}
         )
-        util._test_filter(
+        util.validate_filter_behavior(
             filter, rows, [True, True, False, False], na_values={"", "null"}
         )
         # Key does not exist
         filter = ExistsFilter(key="b")
         rows = [{"a": x} for x in [None, np.nan, "", "null"]]
-        util._test_filter(filter, rows, [False, False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False, False])
 
     def test_string_set_match(self) -> None:
         for key in ["a", uuid.uuid4()]:
@@ -47,9 +57,13 @@ class TestFilterMatch:
             }
             rows = [{key: x} for x in ["x", "Y", "z", "", None]]
             filter = StringSetFilter(case_sensitive=True, **fixed_args)
-            util._test_filter(filter, rows, [True, False, False, False, False])
+            util.validate_filter_behavior(
+                filter, rows, [True, False, False, False, False]
+            )
             filter = StringSetFilter(case_sensitive=False, **fixed_args)
-            util._test_filter(filter, rows, [True, True, False, False, False])
+            util.validate_filter_behavior(
+                filter, rows, [True, True, False, False, False]
+            )
 
     def test_number_range_match(self) -> None:
         fixed_args = {
@@ -59,17 +73,17 @@ class TestFilterMatch:
         }
         rows = [{"a": x} for x in [5, 10, 15, 20, 25]]
         filter = NumberRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, True, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, False, False])
         filter = NumberRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, False, False])
         filter = NumberRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, True, False])
         filter = NumberRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, True, False])
 
     def test_date_range_match(self) -> None:
         fixed_args = {
@@ -88,17 +102,17 @@ class TestFilterMatch:
             ]
         ]
         filter = DateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, True, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, False, False])
         filter = DateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, False, False])
         filter = DateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, True, False])
         filter = DateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, True, False])
 
     def test_partial_date_range_match(self) -> None:
         # Bounds are months
@@ -117,17 +131,17 @@ class TestFilterMatch:
             ]
         ]
         filter = PartialDateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         filter = PartialDateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         filter = PartialDateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         filter = PartialDateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         # Values are quarters
         rows = [
             {"a": x}
@@ -138,17 +152,17 @@ class TestFilterMatch:
             ]
         ]
         filter = PartialDateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         filter = PartialDateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         filter = PartialDateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, False])
+        util.validate_filter_behavior(filter, rows, [False, True, False])
         filter = PartialDateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, False])
         # Values are months
         rows = [
             {"a": x}
@@ -161,17 +175,17 @@ class TestFilterMatch:
             ]
         ]
         filter = PartialDateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, True, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, False, False])
         filter = PartialDateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, True, False, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, False, False])
         filter = PartialDateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, True, False])
         filter = PartialDateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, True, False])
         # Values are weeks
         rows = [
             {"a": x}
@@ -186,19 +200,25 @@ class TestFilterMatch:
             ]
         ]
         filter = PartialDateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, False, False, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, True, True, True, False, False, False]
+        )
         filter = PartialDateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(
+        util.validate_filter_behavior(
             filter, rows, [False, False, False, True, False, False, False]
         )
         filter = PartialDateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, True, True, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, True, True, True, True, True, False]
+        )
         filter = PartialDateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, False, True, True, True, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, False, False, True, True, True, False]
+        )
         # Values are dates
         rows = [
             {"a": x}
@@ -213,17 +233,25 @@ class TestFilterMatch:
             ]
         ]
         filter = PartialDateRangeFilter(**fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, True, False, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, True, True, True, True, False, False]
+        )
         filter = PartialDateRangeFilter(lower_bound_censor=">", **fixed_args)
-        util._test_filter(filter, rows, [False, False, False, True, True, False, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, False, False, True, True, False, False]
+        )
         filter = PartialDateRangeFilter(upper_bound_censor="<=", **fixed_args)
-        util._test_filter(filter, rows, [False, True, True, True, True, True, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, True, True, True, True, True, False]
+        )
         filter = PartialDateRangeFilter(
             lower_bound_censor=">",
             upper_bound_censor="<=",
             **fixed_args,
         )
-        util._test_filter(filter, rows, [False, False, False, True, True, True, False])
+        util.validate_filter_behavior(
+            filter, rows, [False, False, False, True, True, True, False]
+        )
 
     def test_not_nested_composite_match(self) -> None:
         rows = [
@@ -250,34 +278,34 @@ class TestFilterMatch:
 
         # Two filters, AND
         filter = _get_filter("AND")
-        util._test_filter(filter, rows, [False, False, False, True])
+        util.validate_filter_behavior(filter, rows, [False, False, False, True])
         # Two filters, OR
         filter = _get_filter("OR")
-        util._test_filter(filter, rows, [False, True, True, True])
+        util.validate_filter_behavior(filter, rows, [False, True, True, True])
         # Two filters, XOR
         filter = _get_filter("XOR")
-        util._test_filter(filter, rows, [False, True, True, False])
+        util.validate_filter_behavior(filter, rows, [False, True, True, False])
         # Two filters, NAND
         filter = _get_filter("NAND")
-        util._test_filter(filter, rows, [True, True, True, False])
+        util.validate_filter_behavior(filter, rows, [True, True, True, False])
         # Two filters, NOR
         filter = _get_filter("NOR")
-        util._test_filter(filter, rows, [True, False, False, False])
+        util.validate_filter_behavior(filter, rows, [True, False, False, False])
         # Two filters, XNOR
         filter = _get_filter("XNOR")
-        util._test_filter(filter, rows, [True, False, False, True])
+        util.validate_filter_behavior(filter, rows, [True, False, False, True])
         # Two filters, IMPLIES
         filter = _get_filter("IMPLIES")
-        util._test_filter(filter, rows, [True, True, False, True])
+        util.validate_filter_behavior(filter, rows, [True, True, False, True])
         # Two filters, NIMPLIES
         filter = _get_filter("NIMPLIES")
-        util._test_filter(filter, rows, [False, False, True, False])
+        util.validate_filter_behavior(filter, rows, [False, False, True, False])
         # One filter, NOT
         filter = CompositeFilter(
             filters=[sub_filter1],
             operator="NOT",
         )
-        util._test_filter(filter, rows, [True, True, False, False])
+        util.validate_filter_behavior(filter, rows, [True, True, False, False])
         # Two filters, NOT
         with pytest.raises(ValueError):
             filter = CompositeFilter(
@@ -317,7 +345,7 @@ class TestFilterMatch:
         rows = [
             {"a": "a"},
         ]
-        util._test_filter(filter, rows, [True])
+        util.validate_filter_behavior(filter, rows, [True])
 
     def test_simple_filter_pydantic_and_plain_python_class(self) -> None:
 

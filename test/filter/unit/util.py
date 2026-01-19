@@ -5,9 +5,9 @@ from gen_epix.filter.base import Filter
 from gen_epix.filter.composite import CompositeFilter
 
 
-def _test_filter(
+def validate_filter_behavior(
     filter: Filter,
-    rows: list,
+    rows: list[dict[Any, Any]],
     expected_results: list[bool],
     na_values: set[Any] | None = None,
     map_fn: dict[Hashable, Callable[[Any], Any]] | Callable[[Any], Any] | None = None,
@@ -23,19 +23,18 @@ def _test_filter(
         print(f"\tmap_fn: {map_fn}")
         print(f"\trow: {row}")
         print(f"\texpected result: {expected_result ^ invert} (invert={invert})")
-        ...
 
     for invert in [False, True]:
         filter.invert = invert
         for row, expected_result in zip(rows, expected_results):
-            result = filter.match_row(row, na_values=na_values, map_fn=map_fn)
+            result = filter.match_row(row, na_values=na_values, map_fn=map_fn)  # type: ignore[arg-type]
             if result == (expected_result ^ invert):
                 continue
             _print_result()
             assert False
         for result, expected_result in zip(
             expected_results,
-            filter.match_rows(rows, na_values=na_values, map_fn=map_fn),
+            filter.match_rows(rows, na_values=na_values, map_fn=map_fn),  # type: ignore[arg-type]
         ):
             if result == (expected_result ^ invert):
                 continue
@@ -47,13 +46,13 @@ def _test_filter(
         if map_fn and isinstance(map_fn, dict):
             map_fn = map_fn.get(filter.key)
         for value, expected_result in zip(values, expected_results):
-            result = filter.match_value(value, na_values=na_values, map_fn=map_fn)
+            result = filter.match_value(value, na_values=na_values, map_fn=map_fn)  # type: ignore[arg-type]
             if result == (expected_result ^ invert):
                 continue
             _print_result()
             assert False
         for result, expected_result in zip(
-            filter.match_column(values, na_values=na_values, map_fn=map_fn),
+            filter.match_column(values, na_values=na_values, map_fn=map_fn),  # type: ignore[arg-type]
             expected_results,
         ):
             if result == (expected_result ^ invert):
