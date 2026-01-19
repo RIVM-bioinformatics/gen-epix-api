@@ -63,13 +63,26 @@ class BaseOauthIdpClientTestCase(TestCase):
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
         cfg_copy.enable_introspection = enable_introspection
-        # Issuer can be None to exercise initialization path; keep it as provided by doc
-        client: OauthIdpClient = OauthIdpClient(
-            server_cfg=cfg_copy,
-            logger=self.logger,
-            discovery_doc=discovery_doc or self.discovery_doc,
-            discovery_url=discovery_url,
-        )
+        # If a discovery document is supplied but no explicit discovery_url override,
+        # clear the cfg discovery_url to avoid unintended network calls during tests.
+        doc_to_apply: dict[str, Any] | None = discovery_doc or self.discovery_doc
+        if doc_to_apply is not None and discovery_url is None:
+            cfg_copy.discovery_url = None
+        # During client construction, patch update_server_config_from_discovery so
+        # __init__ doesn't perform network discovery. After construction, manually
+        # apply the discovery doc to the client's config if provided. Explicit
+        # calls to update_server_config_from_discovery in tests will use the real method.
+        with patch.object(OauthIdpClient, "update_server_config_from_discovery") as upd:
+            upd.return_value = None
+            client: OauthIdpClient = OauthIdpClient(
+                server_cfg=cfg_copy,
+                logger=self.logger,
+                discovery_doc=doc_to_apply,
+                discovery_url=discovery_url,
+            )
+        if doc_to_apply:
+            for key, value in doc_to_apply.items():
+                setattr(client.server_cfg, key, value)
         return client
 
     def patch_httpx_client(self) -> tuple[patch, Mock]:  # type: ignore[valid-type]
