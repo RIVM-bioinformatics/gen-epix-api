@@ -47,6 +47,14 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids("TC-RBAC-04-07")
+@pytest.mark.scenario_ids("TC-RBAC-04-20")
+@pytest.mark.scenario_ids("TC-RBAC-04-10")
+@pytest.mark.scenario_ids("TC-RBAC-04-12")
+@pytest.mark.scenario_ids("TC-RBAC-04-06")
+@pytest.mark.scenario_ids("TC-RBAC-04-06")
+@pytest.mark.scenario_ids("TC-RBAC-04-08")
+@pytest.mark.scenario_ids("TC-RBAC-04-09")
 class TestContent:
     def test_content(self, env: Env) -> None:
 
@@ -69,7 +77,7 @@ class TestContent:
             command.RetrieveCaseTypeStatsCommand(user=root_user)
         )
 
-        # Get all users and permissions
+        # Get \ users and permissions
         users = app.handle(
             command.UserCrudCommand(
                 user=root_user,

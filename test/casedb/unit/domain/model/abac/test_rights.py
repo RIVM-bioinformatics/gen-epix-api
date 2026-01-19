@@ -1,5 +1,6 @@
 from unittest import TestCase
 from uuid import UUID, uuid4
+import pytest
 
 from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet
 from gen_epix.casedb.domain.model.abac.rights import (
@@ -111,6 +112,7 @@ class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
         self.assertTrue(share.has_any_rights())
 
 
+@pytest.mark.scenario_ids("TC-RBAC-01-02")
 class TestCaseAbac(BaseCaseAbacTestCase):
     def test_get_combinations_with_any_rights(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {

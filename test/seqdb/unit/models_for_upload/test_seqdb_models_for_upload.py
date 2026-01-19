@@ -540,7 +540,7 @@ class TestModelSeqForUpload(TestCase):
             str(context.exception),
         )
 
-
+@pytest.mark.scenario_ids("TC-RBAC-04-11")
 class TestModelAlleleProfileForUpload(TestCase):
 
     def test_json_serialization(self) -> None:

@@ -181,6 +181,7 @@ class CaseUploadSetup:
             )
 
 
+@pytest.mark.scenario_ids("TC-RBAC-02-01")
 class TestCaseUpload(CaseUploadSetup):
     FILE_CASE_TYPE_COL_VALUE = "(FILE)"
 
