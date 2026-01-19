@@ -12,6 +12,10 @@ def validate_filter_behavior(
     na_values: set[Any] | None = None,
     map_fn: dict[Hashable, Callable[[Any], Any]] | Callable[[Any], Any] | None = None,
 ) -> None:
+    """
+    Given a filter, list of rows, and expected results, this method validates that the provided filter
+    behaves as expected for match_row, match_rows, match_value, and match_column, both with and without inversion.
+    """
     orig_invert = filter.invert
 
     def _print_result() -> None:
