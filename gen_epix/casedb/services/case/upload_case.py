@@ -550,6 +550,7 @@ class CaseBatchUploader(BatchUploader):
             sample_batch=seqdb_model.SampleBatchForUpload(
                 id=batch_id, samples=samples_for_upload
             ),
+            on_exists=cmd.on_exists,
         )
         return upload_samples_cmd, child_index_map
 
