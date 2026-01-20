@@ -54,8 +54,8 @@ class RoleGenerator(CommonRoleGenerator):
         Role.ORG_USER: COMMON_ROLE_PERMISSION_SETS[Role.ORG_USER]
         | {
             (command.AlignmentProtocolCrudCommand, PermissionTypeSet.R),
-            (command.AlleleCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleAlignmentCrudCommand, PermissionTypeSet.CRUD),
+            (command.AlleleCrudCommand, PermissionTypeSet.CRUD),
             (command.AlleleProfileCrudCommand, PermissionTypeSet.CRUD),
             (command.AssemblyProtocolCrudCommand, PermissionTypeSet.R),
             (command.AstMeasurementCrudCommand, PermissionTypeSet.CRUD),
@@ -78,9 +78,9 @@ class RoleGenerator(CommonRoleGenerator):
             (command.RefSnpSetMemberCrudCommand, PermissionTypeSet.R),
             (command.RetrieveAlleleProfileCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteContigCommand, PermissionTypeSet.E),
-            (command.RetrieveSamplesCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteSnpProfileCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeCommand, PermissionTypeSet.E),
+            (command.RetrieveSamplesCommand, PermissionTypeSet.E),
             (command.RetrieveSeqFastaCommand, PermissionTypeSet.E),
             (command.SampleCrudCommand, PermissionTypeSet.CRUD),
             (command.SampleDataCollectionLinkCrudCommand, PermissionTypeSet.CRUD),
@@ -93,8 +93,8 @@ class RoleGenerator(CommonRoleGenerator):
             (command.SeqCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqDistanceCrudCommand, PermissionTypeSet.CRUD),
             (command.SeqDistanceProtocolCrudCommand, PermissionTypeSet.R),
-            (command.SequencingProtocolCrudCommand, PermissionTypeSet.R),
             (command.SeqTaxonomyCrudCommand, PermissionTypeSet.CRUD),
+            (command.SequencingProtocolCrudCommand, PermissionTypeSet.R),
             (command.SnpDetectionProtocolCrudCommand, PermissionTypeSet.R),
             (command.SnpProfileCrudCommand, PermissionTypeSet.CRUD),
             (command.TaxonCrudCommand, PermissionTypeSet.R),
@@ -103,6 +103,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.TaxonSetMemberCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmClassCrudCommand, PermissionTypeSet.R),
             (command.TreeAlgorithmCrudCommand, PermissionTypeSet.R),
+            (command.UploadSamplesCommand, PermissionTypeSet.E),
         },
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }

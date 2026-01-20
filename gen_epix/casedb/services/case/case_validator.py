@@ -12,6 +12,7 @@ from gen_epix.casedb.domain.enum import (
     DataIssueType,
     RegionRelationType,
 )
+from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
     case_service_get_case_date_case_type_col_mappers_from_cols,
@@ -56,8 +57,8 @@ class CaseValidator:
     TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
     TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
     # !TODO: consider full and partial ISO 8601 pattern
-    TIME_ISO_PATTERN = re.compile(
-        r"^("
+    ISODATE_PATTERN = re.compile(
+        r"^"
         r"\d{4}"  # YYYY (year only)
         r"|"
         r"\d{4}-(0[1-9]|1[0-2])"  # YYYY-MM (year + month only)
@@ -67,8 +68,7 @@ class CaseValidator:
         r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
         r"|"
         r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
-        r")"
-        r"(T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(\.\d+)?(Z|[+-]([01]\d|2[0-3]):([0-5]\d))?)?$"
+        r"$"
     )
 
     TIME_MATCHERS = {
@@ -162,7 +162,7 @@ class CaseValidator:
         self.validate_unknown_columns(contents, data_issues_list)
         self.transform_individual_values(contents, updated_contents, data_issues_list)
         self.transform_value_pairs(contents, updated_contents, data_issues_list)
-        self.calculate_case_date(cmd, updated_contents, data_issues_list)
+        self.calculate_case_date(cmd, retval, updated_contents)
 
         return retval
 
@@ -311,7 +311,7 @@ class CaseValidator:
                             case_type_col_id=case_type_col_id,
                             original_value=orig_value,
                             updated_value=new_value,
-                            data_issue_type=DataIssueType.DERIVED,
+                            data_issue_type=DataIssueType.TRANSFORMED,
                             code=code,
                             message="Value transformed",
                         )
@@ -376,8 +376,8 @@ class CaseValidator:
     def calculate_case_date(
         self,
         cmd: command.UploadCasesCommand,
+        retval: CaseBatchUploadResult,
         updated_contents: list[dict[UUID, str | None] | None],
-        data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
         """Calculate case date based on TIME dimension columns."""
         # Determine case type columns from which the case date needs to be derived
@@ -403,34 +403,28 @@ class CaseValidator:
             return
 
         # Calculate case dates
-        for case_for_upload, updated_content, data_issues in zip(
-            cmd.case_batch.cases, updated_contents, data_issues_list
+        for case_for_upload, case_result, updated_content in zip(
+            cmd.case_batch.cases, retval.cases, updated_contents
         ):
             case = case_for_upload.case
             if case is None:
                 continue
             assert updated_content is not None
-            assert data_issues is not None
+            assert case_result is not None
             for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
                 iso_datetime_value: str | None = updated_content.get(case_type_col_id)
                 if iso_datetime_value is None:
                     continue
-                if not re.match(self.TIME_ISO_PATTERN, iso_datetime_value):
+                if not re.match(self.ISODATE_PATTERN, iso_datetime_value):
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
                 orig_case_date = case.case_date
                 case.case_date = mapper(iso_datetime_value)
                 if case.case_date != orig_case_date:
-                    data_issues.append(
-                        model.CaseDataIssue(
-                            case_type_col_id=case_type_col_id,
-                            original_value=iso_datetime_value,
-                            updated_value=str(case.case_date),
-                            data_issue_type=DataIssueType.DERIVED,
-                            code="b2c3d4e5",
-                            message="Case date updated",
-                        )
+                    case_result.add_info(
+                        code="b2c3d4e5",
+                        message="Case date updated based on TIME dimension column",
                     )
 
     def _transform_geo_value_pairs(
@@ -745,6 +739,10 @@ class CaseValidator:
         new_value: str,
     ) -> None:
         # Add derived value to updated_content
+        orig_updated_value = updated_content.get(col_pair[1])
+        if new_value == orig_updated_value:
+            # Same value, no need to log data issue
+            return
         updated_content[col_pair[1]] = new_value
 
         # Log data issue in validation report

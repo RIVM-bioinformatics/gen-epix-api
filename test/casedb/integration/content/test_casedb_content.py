@@ -72,7 +72,7 @@ class TestContent:
             command.RetrieveCaseTypeStatsCommand(user=root_user)
         )
 
-        # Get \ users and permissions
+        # Get all users and permissions
         users = app.handle(
             command.UserCrudCommand(
                 user=root_user,

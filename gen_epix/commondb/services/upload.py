@@ -178,7 +178,7 @@ class BatchUploader:
                 )
                 uow.rollback()
                 retval.add_info(
-                    code="b2c3d4e5",
+                    code="7729440d",
                     message="Upload had errors, changes have been rolled back",
                 )
         retval.add_info(
@@ -478,6 +478,7 @@ class BatchUploader:
                     continue
                 # Parent ID given but not as new ID, and exists
                 if parent_id in existing_parent_ids:
+                    parent_result.id = parent_id
                     has_existing_parents = True
                     continue
                 # Parent ID given but not as new ID, and does not exist
@@ -938,6 +939,7 @@ class BatchUploader:
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
             ]
+            for_upload_model_class = self.child_for_upload_class_map[model_class]
             # Determine which objects need to be created
             to_create_child_result_pairs = []
             for parent, parent_result in self.parent_result_items(cmd, retval):
@@ -954,7 +956,13 @@ class BatchUploader:
                         # Set parent ID link in child, which is known for certain at this point
                         setattr(child, parent_id_field_name, parent.id)
                         # Collect for creation
-                        to_create_child_result_pairs.append((child, child_result))
+                        if isinstance(child, for_upload_model_class):
+                            actual_child = model_class(**child.model_dump())
+                            to_create_child_result_pairs.append(
+                                (actual_child, child_result)
+                            )
+                        else:
+                            to_create_child_result_pairs.append((child, child_result))
             if not to_create_child_result_pairs:
                 continue
 

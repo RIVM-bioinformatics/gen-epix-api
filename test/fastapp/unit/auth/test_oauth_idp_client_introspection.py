@@ -12,6 +12,7 @@ from gen_epix.fastapp.services.auth.model import OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
+@pytest.mark.scenario_ids("TC-SEC-25-01", "TC-SEC-25-02")
 class TestOauthIdpClientIntrospection:
 
     CLIENT: OauthIdpClient

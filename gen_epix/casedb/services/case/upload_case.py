@@ -9,7 +9,7 @@ import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.enum import DataIssueTypeSet
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.case_validator import CaseValidator
+from gen_epix.casedb.services.case.case_transformer import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -137,6 +137,8 @@ class CaseBatchUploader(BatchUploader):
 
         # Create new command with only cases and content updated during verification
         cases_only_cmd = cmd.model_copy()
+        cases_only_cmd.case_batch = cmd.case_batch.model_copy()
+        cases_only_cmd.case_batch.cases = [x.model_copy() for x in cmd.case_batch.cases]
         cases_for_validation: list[model.Case] = []
         for i, (case_for_upload, case_result) in enumerate(
             zip(cases_only_cmd.case_batch.cases, retval.cases)
@@ -196,11 +198,23 @@ class CaseBatchUploader(BatchUploader):
         # Use the general parent method for upserting the cases
         success &= super().upsert_batch(cases_only_cmd, retval, uow)
 
+        # Determine if there are samples to be created
+        has_samples = self.has_samples(cmd, retval)
+        if not has_samples:
+            return success
+
         # Upsert samples via seqdb service, again through full upload including verification
         curr_success = True
         if success:
             # Only upload samples if case upload succeeded
             curr_success = self.upload_samples(cmd, retval, False)
+            if curr_success:
+                for case, case_only in zip(
+                    cmd.case_batch.cases, cases_only_cmd.case_batch.cases
+                ):
+                    case_only.case.content = case.case.content
+                success &= super().upsert_batch(cases_only_cmd, retval, uow)
+
         if not curr_success:
             # Sample upload failed but cases were already created: the rest of the
             # upload will be rolled back as well, with the exception of any new external
@@ -211,6 +225,18 @@ class CaseBatchUploader(BatchUploader):
         success &= curr_success
 
         return success
+
+    def has_samples(
+        self,
+        cmd: command.UploadCasesCommand,
+        retval: model.CaseBatchUploadResult,
+    ) -> bool:
+        """
+        Determine if there are any samples to be created in seqdb from the cases to
+        be uploaded.
+        """
+        upload_samples_cmd, _ = self._get_upload_samples_command(cmd, retval)
+        return upload_samples_cmd is not None
 
     def upload_samples(
         self,
@@ -234,22 +260,32 @@ class CaseBatchUploader(BatchUploader):
         )
         success = seqdb_retval.get_status_count()[UploadStatus.FAILED] == 0
 
-        # Map verification results back to cases
+        # Map verification results back to cases and child ids back to cases
         for sample_index, sample_result in enumerate(seqdb_retval.samples):
             # Map read sets and seqs back to cases
             for i, seqdb_result in enumerate(sample_result.read_sets or []):
                 case_index, child_index = sample_case_index_map[
                     seqdb_model.ReadSetForUpload
                 ][(sample_index, i)]
+                case = cmd.case_batch.cases[case_index]
+                case_content = case.case.content
                 result = retval.cases[case_index].read_sets[child_index]  # type: ignore[index]
+                result.id = seqdb_result.id
+                result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                case_content[case.read_sets[child_index].case_type_col_id] = str(seqdb_result.id)
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
                     seqdb_model.SeqForUpload
                 ][(sample_index, i)]
+                case = cmd.case_batch.cases[case_index]
+                case_content = case.case.content
                 result = retval.cases[case_index].seqs[child_index]  # type: ignore[index]
+                result.id = seqdb_result.id
+                result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                case_content[case.seqs[child_index].case_type_col_id] = str(seqdb_result.id)
 
         return success
 
@@ -514,6 +550,7 @@ class CaseBatchUploader(BatchUploader):
             sample_batch=seqdb_model.SampleBatchForUpload(
                 id=batch_id, samples=samples_for_upload
             ),
+            on_exists=cmd.on_exists,
         )
         return upload_samples_cmd, child_index_map
 

@@ -358,6 +358,7 @@ class TestOauthClientCredentialsFlow:
                 field not in decoded_token
             ), f"Token should not contain sensitive field: {field}"
 
+    @pytest.mark.scenario_ids("TC-SEC-24-02")
     def test_expiry_jwt_token(self, requestor_app: RequestorApp) -> None:
         """Test that JWT tokens have proper expiry set."""
 
@@ -471,7 +472,7 @@ class TestOauthClientCredentialsFlow:
             response.status_code == 401
         ), f"Expected 401, got {response.status_code}: {response.text}"
 
-    @pytest.mark.scenario_ids("TC-SEC-24-05")
+    @pytest.mark.scenario_ids("TC-SEC-24-05", "TC-SEC-24-04")
     def test_try_removing_signature_part(self, requestor_app: RequestorApp) -> None:
         """
         Test that removing the JWT signature invalidates the token.

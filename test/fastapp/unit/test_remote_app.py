@@ -198,7 +198,7 @@ class BaseRemoteAppTestCase(TestCase):
             domain=self.domain,
             host="example.org",
             port=8000,
-            http_protocol=HttpProtocol.HTTP,
+            protocol=HttpProtocol.HTTP,
             default_route_prefix="/",
             default_headers={"Content-Type": "application/json", "X-Test": "1"},
             add_generated_crud_route_handlers=False,
@@ -212,6 +212,28 @@ class BaseRemoteAppTestCase(TestCase):
 
 
 class TestInitAndProperties(BaseRemoteAppTestCase):
+    
+    def test_protocol_property_accepts_enum_and_string(self) -> None:
+        # Protocol as enum
+        app_enum = RemoteApp(
+            domain=self.domain,
+            host="example.org",
+            port=8000,
+            protocol=HttpProtocol.HTTPS,
+            add_generated_crud_route_handlers=False,
+        )
+        self.assertEqual(app_enum.protocol, HttpProtocol.HTTPS)
+
+        # Protocol as string (lowercase)
+        app_str = RemoteApp(
+            domain=self.domain,
+            host="example.org",
+            port=8000,
+            protocol="https",
+            add_generated_crud_route_handlers=False,
+        )
+        self.assertEqual(app_str.protocol, HttpProtocol.HTTPS)
+        
     def test_properties_and_host_url(self) -> None:
         # Create input
         # ... already created in setUp ...
@@ -221,7 +243,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         # Execute
         host: str = self.app.host
         port: int | None = self.app.port
-        protocol: HttpProtocol = self.app.http_protocol
+        protocol: HttpProtocol | str = self.app._protocol
         host_url: str = self.app.host_url
         ssl_context: Any = self.app.ssl_context
 
@@ -230,14 +252,14 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
         self.assertEqual(port, 8000)
         self.assertEqual(protocol, HttpProtocol.HTTP)
         self.assertEqual(host_url, "http://example.org:8000")
-        self.assertEqual(ssl_context, "SSLCTX")
+        self.assertEqual(ssl_context, False)
 
         # With no port
         other = RemoteApp(
             self.domain,
             "example.org",
             None,
-            http_protocol=HttpProtocol.HTTPS,
+            protocol=HttpProtocol.HTTPS,
             add_generated_crud_route_handlers=False,
         )
         self.assertEqual(other.host_url, "https://example.org")
@@ -640,7 +662,7 @@ class TestAutoRegistration(BaseRemoteAppTestCase):
                 domain=domain,
                 host="example.org",
                 port=8000,
-                http_protocol=HttpProtocol.HTTP,
+                protocol=HttpProtocol.HTTP,
                 add_generated_crud_route_handlers=True,
             )
 
