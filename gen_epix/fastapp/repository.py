@@ -30,8 +30,10 @@ class BaseRepository(abc.ABC):
         raise NotImplementedError()
 
     @classmethod
-    @abc.abstractmethod
-    def drop_repository(cls, **kwargs: Any) -> None:
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        Remove all contents of the repository.
+        """
         raise NotImplementedError()
 
     @abc.abstractmethod

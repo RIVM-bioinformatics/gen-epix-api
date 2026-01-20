@@ -56,7 +56,10 @@ class DictRepository(BaseRepository):
             raise NotImplementedError(f"Unsupported file type: {file_type}")
 
     @classmethod
-    def drop_repository(cls, **kwargs: Any) -> None:
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        No action needed for DictRepository.
+        """
         return None
 
     @staticmethod

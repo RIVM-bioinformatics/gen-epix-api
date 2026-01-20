@@ -74,15 +74,112 @@ class SARepository(BaseRepository):
         )
 
     @classmethod
-    def drop_repository(cls, **kwargs: Any) -> None:
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        Delete all database objects associated with the repository.
+        """
         entities, connection_string, remaining_kwargs = cls._process_repository_params(
             kwargs
         )
-        return cls.drop_sa_repository(
-            entities=entities,
-            connection_string=connection_string,
-            **remaining_kwargs,
-        )
+        # Get engine
+        engine = EngineFactory.create_engine(connection_string, echo=False)
+
+        # Get all actual table names from the database using schema names
+        inspector = inspect(engine)
+        actual_tables = set()
+        schema_names = {x.schema_name for x in entities if x.persistable}
+        for schema_name in schema_names:
+            if not schema_name:
+                continue
+            try:
+                # Get all table names in this schema from the database
+                table_names = inspector.get_table_names(schema=schema_name)
+                for table_name in table_names:
+                    actual_tables.add((schema_name, table_name))
+            except Exception:  # pylint: disable=broad-except
+                # Schema might not exist, continue
+                continue
+
+        # Drop all foreign key constraints from actual tables
+        constraints = []
+        for schema_name, table_name in actual_tables:
+            try:
+                for foreign_key in inspector.get_foreign_keys(
+                    table_name, schema=schema_name
+                ):
+                    if foreign_key.get("name"):
+                        constraints.append(
+                            (schema_name, table_name, foreign_key["name"])
+                        )
+            except Exception:  # pylint: disable=broad-except
+                # Skip tables that can't be inspected
+                continue
+
+        # Drop all foreign key constraints using raw SQL
+        if constraints:
+            with engine.connect() as conn:
+                # Detect database dialect for proper syntax
+                dialect_name = conn.dialect.name.lower()
+                transaction = conn.begin()
+                try:
+                    for (
+                        schema_name,
+                        table_name,
+                        constraint_name,
+                    ) in constraints:
+                        try:
+                            # NOTE: Only tested with MS SQL Server
+                            if dialect_name == "mssql":
+                                # SQL Server syntax with square brackets
+                                sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
+                            elif dialect_name in (
+                                "postgresql",
+                                "postgres",
+                                "redshift",
+                            ):
+                                # PostgreSQL/Redshift syntax with double quotes
+                                sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
+                            elif dialect_name in ("mysql", "mariadb"):
+                                # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
+                                sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
+                            elif dialect_name in ("oracle", "db2"):
+                                # Oracle and DB2 syntax
+                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                            else:
+                                # Generic SQL syntax (fallback for other databases)
+                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+
+                            conn.execute(sa.text(sql))
+                        except Exception:  # pylint: disable=broad-except
+                            # Some constraints might not exist, continue with others
+                            continue
+                    transaction.commit()
+                except Exception:  # pylint: disable=broad-except
+                    transaction.rollback()
+                    raise
+
+        # Drop all actual tables
+        with engine.connect() as conn:
+            for schema_name, table_name in actual_tables:
+                try:
+                    conn.execute(sa.text(f"DROP TABLE [{schema_name}].[{table_name}]"))
+                except Exception:  # pylint: disable=broad-except
+                    # Table might already be dropped, continue
+                    continue
+            conn.commit()
+
+        # Drop schemas if they exist
+        for schema_name in schema_names:
+            if not schema_name:
+                continue
+            with engine.connect() as conn:
+                try:
+                    if conn.dialect.has_schema(conn, schema_name):
+                        conn.execute(sa.schema.DropSchema(schema_name))
+                        conn.commit()
+                except Exception:  # pylint: disable=broad-except
+                    # Schema might not exist or have other issues
+                    continue
 
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)
@@ -1104,136 +1201,6 @@ class SARepository(BaseRepository):
             f"Model {model_class.__name__}: object ids are not unique: {duplicate_ids_str}",
             ids=duplicate_ids_str,
         )
-
-    @classmethod
-    def drop_sa_repository(
-        cls,
-        entities: list[Entity],
-        connection_string: str,
-        **kwargs: Any,
-    ) -> None:
-        schema_names = {x.schema_name for x in entities if x.persistable}
-        is_sqlite = str(connection_string).lower().startswith("sqlite:///")
-        if is_sqlite:
-            # For sqlite, remove the file
-            sqlite_file = Path(
-                re.sub(".*sqlite:///", "", connection_string, flags=re.IGNORECASE)
-            )
-            if sqlite_file.is_file():
-                sqlite_file.unlink()
-        else:
-            engine = EngineFactory.create_engine(connection_string, echo=False)
-
-            # Get all schemas we need to work with
-            metadata_set = set()
-            for entity in entities:
-                if not entity.persistable:
-                    continue
-                db_model_class = entity.db_model_class
-                metadata_set.add(db_model_class.metadata)
-
-            # 1) Get all actual table names from the database using schema names
-            inspector = inspect(engine)
-            actual_tables = set()
-
-            for schema_name in schema_names:
-                if not schema_name:
-                    continue
-                try:
-                    # Get all table names in this schema from the database
-                    table_names = inspector.get_table_names(schema=schema_name)
-                    for table_name in table_names:
-                        actual_tables.add((schema_name, table_name))
-                except Exception:  # pylint: disable=broad-except
-                    # Schema might not exist, continue
-                    continue
-
-            # 2) Drop all foreign key constraints from actual tables
-            constraint_drops = []
-
-            for schema_name, table_name in actual_tables:
-                try:
-                    for fk in inspector.get_foreign_keys(
-                        table_name, schema=schema_name
-                    ):
-                        if fk.get("name"):
-                            constraint_drops.append(
-                                (schema_name, table_name, fk["name"])
-                            )
-                except Exception:  # pylint: disable=broad-except
-                    # Skip tables that can't be inspected
-                    continue
-
-            # Drop all foreign key constraints using raw SQL
-            if constraint_drops:
-                with engine.connect() as conn:
-                    # Detect database dialect for proper syntax
-                    dialect_name = conn.dialect.name.lower()
-
-                    transaction = conn.begin()
-                    try:
-                        for (
-                            schema_name,
-                            table_name,
-                            constraint_name,
-                        ) in constraint_drops:
-                            try:
-                                # NOTE: Only tested with MS SQL Server
-                                if dialect_name == "mssql":
-                                    # SQL Server syntax with square brackets
-                                    sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
-                                elif dialect_name in (
-                                    "postgresql",
-                                    "postgres",
-                                    "redshift",
-                                ):
-                                    # PostgreSQL/Redshift syntax with double quotes
-                                    sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
-                                elif dialect_name in ("mysql", "mariadb"):
-                                    # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
-                                    sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
-                                elif dialect_name in ("oracle", "db2"):
-                                    # Oracle and DB2 syntax
-                                    sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
-                                else:
-                                    # Generic SQL syntax (fallback for other databases)
-                                    sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
-
-                                conn.execute(sa.text(sql))
-                            except Exception:  # pylint: disable=broad-except
-                                # Some constraints might not exist, continue with others
-                                continue
-                        transaction.commit()
-                    except Exception:  # pylint: disable=broad-except
-                        transaction.rollback()
-                        raise
-
-            # 3) Drop all actual tables
-            with engine.connect() as conn:
-                for schema_name, table_name in actual_tables:
-                    try:
-                        conn.execute(
-                            sa.text(f"DROP TABLE [{schema_name}].[{table_name}]")
-                        )
-                    except Exception:  # pylint: disable=broad-except
-                        # Table might already be dropped, continue
-                        continue
-                conn.commit()
-
-            # 4) Drop schemas if they exist
-            for schema_name in schema_names:
-                if not schema_name:
-                    continue
-                with engine.connect() as conn:
-                    try:
-                        if conn.dialect.has_schema(conn, schema_name):
-                            conn.execute(sa.schema.DropSchema(schema_name))
-                            conn.commit()
-                    except Exception:  # pylint: disable=broad-except
-                        # Schema might not exist or have other issues
-                        continue
-
-        return None
 
     @classmethod
     def create_sa_repository(
