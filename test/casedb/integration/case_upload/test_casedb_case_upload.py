@@ -679,23 +679,21 @@ class TestCaseUpload(CaseUploadSetup):
                     )
                 )
         # Create case or case for upload
-        if for_upload:
-            return model.CaseForUpload(
-                id=row["case.id"],
-                case_type_id=row["case.case_type_id"],
-                created_in_data_collection_id=row["case.created_in_data_collection_id"],
-                external_identifiers=(
-                    None if external_identifier is None else [external_identifier]
-                ),
-                read_sets=read_sets,
-                seqs=seqs,
-                code=row["case.code"],
-                content=case_content,
-            )
-        return model.Case(
+        case: model.Case = model.Case(
             id=row["case.id"],
             case_type_id=row["case.case_type_id"],
             created_in_data_collection_id=row["case.created_in_data_collection_id"],
             code=row["case.code"],
             content=case_content,
         )
+        if for_upload:
+            return model.CaseForUpload(
+                id=row["case.id"],
+                external_identifiers=(
+                    None if external_identifier is None else [external_identifier]
+                ),
+                read_sets=read_sets,
+                seqs=seqs,
+                case=case
+            )
+        return case
