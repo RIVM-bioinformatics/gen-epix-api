@@ -290,8 +290,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result == created_file.id
-                    assert mock_read_set.rev_file_id == created_file.id
+                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert mock_read_set.rev_file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.rev_reads_hash == expected_rev_reads_hash
 
         def test_read_set_already_has_reverse_file(
@@ -392,8 +392,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result == created_file.id
-                    assert mock_read_set.fwd_file_id == created_file.id
+                    assert result.id == created_file.id  # type: ignore[attr-defined]
+                    assert mock_read_set.fwd_file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
 
         def test_create_file_for_read_set_success_gzip_content(
@@ -457,8 +457,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result == created_file.id
-                    assert mock_read_set.fwd_file_id == created_file.id
+                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert mock_read_set.fwd_file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
 
         def test_create_file_for_seq_success(
@@ -520,8 +520,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result == created_file.id
-                    assert mock_seq.file_id == created_file.id
+                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
         def test_create_file_for_seq_success_gzip_content(
@@ -583,8 +583,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result == created_file.id
-                    assert mock_seq.file_id == created_file.id
+                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
         def test_missing_case_content_raises_error(
