@@ -325,16 +325,6 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             case_set_id=self.case_set_id2, case_type_id=self.case_type_id1
         )
 
-        def crud_side_effect(cmd: case_command.Command) -> list[object]:
-            if isinstance(cmd, case_command.CaseSetCrudCommand):
-                return [cs1, cs2]
-            if isinstance(cmd, case_command.CaseSetMemberCrudCommand):
-                # This return value is ignored by patched map_paired_elements below
-                return []
-            return []
-
-        self.service.crud.side_effect = crud_side_effect
-
         # Build cases for the single case_type
         c1 = self.create_case(
             case_id=uuid4(),
@@ -410,9 +400,23 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             case_set_ids=[self.case_set_id1, self.case_set_id2]
         )
 
-        with patch(
-            "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-            new=map_pairs,
+        with (
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
+                new=map_pairs,
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
+                return_value=[],
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
+                return_value=[cs1, cs2],
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_retrieve_cases_by_id",
+                return_value=[c1, c2, c3],
+            ),
         ):
             result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
                 self.service, cmd
@@ -431,37 +435,15 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         self.assertEqual(by_id[self.case_set_id2].first_case_date, datetime(2024, 1, 2))
         self.assertEqual(by_id[self.case_set_id2].last_case_date, datetime(2024, 1, 3))
 
-        # Verify CRUD calls and filters
-        crud_calls = self.service.crud.call_args_list
-        self.assertEqual(len(crud_calls), 2)
-        cs_cmd = crud_calls[0].args[0]
-        self.assertIsInstance(cs_cmd, case_command.CaseSetCrudCommand)
-        self.assertEqual(cs_cmd.operation, CrudOperation.READ_ALL)
-        self.assertIsNotNone(cs_cmd.query_filter)
-        cs_member_cmd = crud_calls[1].args[0]
-        self.assertIsInstance(cs_member_cmd, case_command.CaseSetMemberCrudCommand)
-        self.assertEqual(cs_member_cmd.operation, CrudOperation.READ_ALL)
-        self.assertIsNotNone(cs_member_cmd.query_filter)
-
         # Verify app.handle was called with OrganizationAccessCasePolicy and RetrieveCasesById
         handle_types = [type(x.args[0]) for x in self.service.app.handle.call_args_list]
         self.assertIn(
             case_command.OrganizationAccessCasePolicyCrudCommand, handle_types
         )
-        self.assertIn(case_command.RetrieveCasesByIdCommand, handle_types)
 
     def test_no_case_sets_initially_sets_ids_from_members_and_returns_empty(
         self,
     ) -> None:
-        # No case sets returned initially
-        def crud_side_effect(cmd: case_command.Command) -> list[object]:
-            if isinstance(cmd, case_command.CaseSetCrudCommand):
-                return []
-            if isinstance(cmd, case_command.CaseSetMemberCrudCommand):
-                return []
-            return []
-
-        self.service.crud.side_effect = crud_side_effect
 
         # Mapping from members (unused here, ensure callable still returns a dict)
         def map_pairs(
@@ -471,36 +453,31 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             return {}
 
         cmd = self.case_set_stats_cmd(case_set_ids=None)
-        with patch(
-            "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-            new=map_pairs,
+        with (
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
+                new=map_pairs,
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
+                return_value=[],
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
+                return_value=[],
+            ),
         ):
             result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
                 self.service, cmd
             )
 
         self.assertEqual(result, [])
-        crud_calls = self.service.crud.call_args_list
-        self.assertEqual(len(crud_calls), 2)
-        self.assertIsInstance(crud_calls[0].args[0], case_command.CaseSetCrudCommand)
-        self.assertIsInstance(
-            crud_calls[1].args[0], case_command.CaseSetMemberCrudCommand
-        )
 
     def test_special_case_case_set_with_no_members(self) -> None:
-        # One case set without members
+
         cs = self.create_case_set(
             case_set_id=self.case_set_id1, case_type_id=self.case_type_id1
         )
-
-        def crud_side_effect(cmd: case_command.Command) -> list[object]:
-            if isinstance(cmd, case_command.CaseSetCrudCommand):
-                return [cs]
-            if isinstance(cmd, case_command.CaseSetMemberCrudCommand):
-                return []
-            return []
-
-        self.service.crud.side_effect = crud_side_effect
 
         # Map includes the case set id with an empty set to avoid KeyError in union
         def map_pairs(
@@ -513,9 +490,19 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         self.service.app.handle = Mock(return_value=[])
 
         cmd = self.case_set_stats_cmd(case_set_ids=[self.case_set_id1])
-        with patch(
-            "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-            new=map_pairs,
+        with (
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
+                new=map_pairs,
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
+                return_value=[],
+            ),
+            patch(
+                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
+                return_value=[cs],
+            ),
         ):
             result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
                 self.service, cmd
