@@ -3,7 +3,6 @@ from collections.abc import Iterable
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
-import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.domain.enum import ServiceType
 from gen_epix.fastapp import BaseService
@@ -24,6 +23,7 @@ class BaseSeqdbService(BaseService):
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
+        f(seqdb_command.UploadSamplesCommand, self.upload_samples)
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
