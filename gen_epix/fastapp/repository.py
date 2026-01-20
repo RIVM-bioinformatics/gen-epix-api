@@ -29,6 +29,13 @@ class BaseRepository(abc.ABC):
     def create_repository(cls, **kwargs: Any) -> "BaseRepository":
         raise NotImplementedError()
 
+    @classmethod
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        Remove all contents of the repository.
+        """
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def crud(
         self,
