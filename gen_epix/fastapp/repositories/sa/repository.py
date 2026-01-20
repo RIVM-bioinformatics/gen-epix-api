@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import sqlalchemy as sa
-from sqlalchemy import Engine, delete, select
+from sqlalchemy import Engine, delete, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
@@ -1124,7 +1124,7 @@ class SARepository(BaseRepository):
         else:
             engine = EngineFactory.create_engine(connection_string, echo=False)
 
-            # First drop all tables to handle foreign key constraints properly
+            # Get all schemas we need to work with
             metadata_set = set()
             for entity in entities:
                 if not entity.persistable:
@@ -1132,17 +1132,106 @@ class SARepository(BaseRepository):
                 db_model_class = entity.db_model_class
                 metadata_set.add(db_model_class.metadata)
 
-            for metadata in metadata_set:
-                metadata.drop_all(engine)
+            # 1) Get all actual table names from the database using schema names
+            inspector = inspect(engine)
+            actual_tables = set()
 
-            # Then drop schemas if they exist
+            for schema_name in schema_names:
+                if not schema_name:
+                    continue
+                try:
+                    # Get all table names in this schema from the database
+                    table_names = inspector.get_table_names(schema=schema_name)
+                    for table_name in table_names:
+                        actual_tables.add((schema_name, table_name))
+                except Exception:  # pylint: disable=broad-except
+                    # Schema might not exist, continue
+                    continue
+
+            # 2) Drop all foreign key constraints from actual tables
+            constraint_drops = []
+
+            for schema_name, table_name in actual_tables:
+                try:
+                    for fk in inspector.get_foreign_keys(
+                        table_name, schema=schema_name
+                    ):
+                        if fk.get("name"):
+                            constraint_drops.append(
+                                (schema_name, table_name, fk["name"])
+                            )
+                except Exception:  # pylint: disable=broad-except
+                    # Skip tables that can't be inspected
+                    continue
+
+            # Drop all foreign key constraints using raw SQL
+            if constraint_drops:
+                with engine.connect() as conn:
+                    # Detect database dialect for proper syntax
+                    dialect_name = conn.dialect.name.lower()
+
+                    transaction = conn.begin()
+                    try:
+                        for (
+                            schema_name,
+                            table_name,
+                            constraint_name,
+                        ) in constraint_drops:
+                            try:
+                                # NOTE: Only tested with MS SQL Server
+                                if dialect_name == "mssql":
+                                    # SQL Server syntax with square brackets
+                                    sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
+                                elif dialect_name in (
+                                    "postgresql",
+                                    "postgres",
+                                    "redshift",
+                                ):
+                                    # PostgreSQL/Redshift syntax with double quotes
+                                    sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
+                                elif dialect_name in ("mysql", "mariadb"):
+                                    # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
+                                    sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
+                                elif dialect_name in ("oracle", "db2"):
+                                    # Oracle and DB2 syntax
+                                    sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                                else:
+                                    # Generic SQL syntax (fallback for other databases)
+                                    sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+
+                                conn.execute(sa.text(sql))
+                            except Exception:  # pylint: disable=broad-except
+                                # Some constraints might not exist, continue with others
+                                continue
+                        transaction.commit()
+                    except Exception:  # pylint: disable=broad-except
+                        transaction.rollback()
+                        raise
+
+            # 3) Drop all actual tables
+            with engine.connect() as conn:
+                for schema_name, table_name in actual_tables:
+                    try:
+                        conn.execute(
+                            sa.text(f"DROP TABLE [{schema_name}].[{table_name}]")
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        # Table might already be dropped, continue
+                        continue
+                conn.commit()
+
+            # 4) Drop schemas if they exist
             for schema_name in schema_names:
                 if not schema_name:
                     continue
                 with engine.connect() as conn:
-                    if conn.dialect.has_schema(conn, schema_name):
-                        conn.execute(sa.schema.DropSchema(schema_name))
-                        conn.commit()
+                    try:
+                        if conn.dialect.has_schema(conn, schema_name):
+                            conn.execute(sa.schema.DropSchema(schema_name))
+                            conn.commit()
+                    except Exception:  # pylint: disable=broad-except
+                        # Schema might not exist or have other issues
+                        continue
 
         return None
 
