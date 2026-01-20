@@ -806,18 +806,25 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
         cmd1, retval1 = self._make_cmd_and_result(
             [{self.col_time_day_ctc: "2024-02-02"}]
         )
-        validator.calculate_case_date(
-            cmd1, [retval1.cases[0].validated_content], [retval1.cases[0].data_issues]
-        )
-        issues = retval1.cases[0].data_issues
-        assert any(x.code == "b2c3d4e5" for x in issues)
+
+        updated_contents = [
+            None if x is None else x.validated_content for x in retval1.cases
+        ]
+
+        validator.calculate_case_date(cmd1, retval1, updated_contents)
+        logs = retval1.cases[0].logs
+
+        assert any(x.code == "b2c3d4e5" for x in logs)
         # Non ISO value -> assertion
         cmd2, retval2 = self._make_cmd_and_result([{self.col_time_day_ctc: "NOT_ISO"}])
         with pytest.raises(AssertionError):
+            updated_contents = [
+                None if x is None else x.validated_content for x in retval2.cases
+            ]
             validator.calculate_case_date(
                 cmd2,
-                [retval2.cases[0].validated_content],
-                [retval2.cases[0].data_issues],
+                retval2,
+                updated_contents,
             )
 
 
@@ -845,7 +852,7 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
         # Derived week present
         assert vc[self.col_time_week_ctc] == "2024-W09"
         # Case date set and logged
-        assert any(x.code == "b2c3d4e5" for x in case_res.data_issues)
+        assert any(x.code == "b2c3d4e5" for x in case_res.logs)
 
 
 class TestRetrieveConceptData(BaseCaseValidatorTestCase):
