@@ -853,7 +853,7 @@ class TestParentLinks(BaseUploadTestCase):
         self.assertBatchProcessed(retval)
         self.assertStatusCount(retval, n_skipped=1, n_created=1)
         self.assertEqual(parent.id, created_parent_id)
-        self.assertEqual(parent.children1[0].id, created_child1_id)  # type: ignore[index]
+        self.assertEqual(retval.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
 
 
 # Test Scenario 5: Field mutability for stored objects
@@ -1296,6 +1296,10 @@ class TestCombinedScenarios(BaseUploadTestCase):
         # Mock existing parent without children
         existing_parent = Parent(id=self.parent_id, a="existing")
         self.service.repository.crud.return_value = [existing_parent]
+        existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
+        self.service.repository.read_fields.side_effect = [
+            [(existing_ref1.id, existing_ref1.code)],
+        ]
         # Perform upload and verify result
         retval = self.upload_batch(parent, on_exists=OnExistsUploadAction.UPDATE)
         self.assertBatchProcessed(retval)
