@@ -6,6 +6,7 @@ from typing import Any, NoReturn
 
 from fastapi import HTTPException
 
+from gen_epix.casedb.domain import command, model
 from gen_epix.commondb.domain import model
 from gen_epix.fastapp import App, LogLevel, exc
 from gen_epix.fastapp.api import exc as api_exc
@@ -147,6 +148,22 @@ def log_and_raise_invalid_ids_exception(
     if logger:
         logger.info(log_message)
     raise http_exception_fmap[http_status_code](detail=detail) from exception
+
+
+def handle_command(
+    app: App,
+    user: model.User,
+    exception_code: str,
+    input_command: command.Command,
+    input_handle_exception: Callable[[str, Any, Exception], NoReturn] | None,
+) -> Any:
+    try:
+        return app.handle(input_command)
+    except Exception as exception:
+        if input_handle_exception is None:
+            input_handle_exception = handle_exception  # type: ignore[assignment]
+        input_handle_exception(exception_code, user, exception)  # type: ignore[misc]
+        raise
 
 
 def __extract_invalid_ids(

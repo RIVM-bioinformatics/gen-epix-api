@@ -9,6 +9,7 @@ from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, field_serializer, model_validator
 
 from gen_epix.casedb.domain import command, enum, model
+from gen_epix.commondb.api.exc import handle_command
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
@@ -226,21 +227,6 @@ class ColValidationRulesResponseBody(PydanticBaseModel):
         return {x.value: [z.value for z in y] for x, y in value.items()}
 
 
-def handle_command(
-    *,
-    app: App,
-    user: model.User,
-    exception_code: str,
-    command_factory: Callable[[], command.Command],
-    handle_exception: Callable[[str, Any, Exception], NoReturn],
-) -> Any:
-    try:
-        return app.handle(command_factory())
-    except Exception as exception:
-        handle_exception(exception_code, user, exception)
-        raise
-
-
 def create_case_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -269,8 +255,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="fbe272b9",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CaseTypeSetCaseTypeUpdateAssociationCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CaseTypeSetCaseTypeUpdateAssociationCommand(
                     user=user,
                     obj_id1=case_type_set_id,
                     association_objs=request_body.case_type_set_members,
@@ -296,8 +282,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="ab010768",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CaseTypeColSetCaseTypeColUpdateAssociationCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CaseTypeColSetCaseTypeColUpdateAssociationCommand(
                     user=user,
                     obj_id1=case_type_col_set_id,
                     association_objs=request_body.case_type_col_set_members,
@@ -322,8 +308,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="c6c17125",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCompleteCaseTypeCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCompleteCaseTypeCommand(
                     user=user, case_type_id=case_type_id
                 ),
             ),
@@ -345,8 +331,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="9f8e7d6c",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.ValidateCasesCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.ValidateCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
                     created_in_data_collection_id=request_body.created_in_data_collection_id,
@@ -373,8 +359,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="b413ab76",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateCasesCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateCasesCommand(
                     user=user,
                     cases=request_body.cases,
                     data_collection_ids=request_body.data_collection_ids,
@@ -401,8 +387,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="c39c42f9",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateCaseSetCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateCaseSetCommand(
                     user=user,
                     case_set=request_body.case_set,
                     data_collection_ids=request_body.data_collection_ids,
@@ -427,8 +413,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="80c99f53",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCaseTypeStatsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCaseTypeStatsCommand(
                     user=user,
                     case_type_ids=request_body.case_type_ids,
                     datetime_range_filter=request_body.datetime_range_filter,
@@ -452,8 +438,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="be54843e",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCaseSetStatsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCaseSetStatsCommand(
                     user=user,
                     case_set_ids=(
                         None
@@ -480,8 +466,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="a8f773fe",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCasesByQueryCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCasesByQueryCommand(
                     user=user,
                     case_query=request_body,
                 ),
@@ -504,8 +490,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="f6d423fe",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCasesByIdCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCasesByIdCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
                     case_ids=request_body.case_ids,
@@ -529,8 +515,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="c6f4b3c2",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCaseRightsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCaseRightsCommand(
                     user=user,
                     case_ids=request_body,
                 ),
@@ -553,8 +539,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="b9c49fe1",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveCaseSetRightsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveCaseSetRightsCommand(
                     user=user,
                     case_set_ids=request_body,
                 ),
@@ -577,8 +563,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="b8172f62",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveOrganizationContactCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveOrganizationContactCommand(
                     user=user,
                     organization_ids=request_body.organization_ids,
                     site_ids=request_body.site_ids,
@@ -603,8 +589,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="45219a88",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrievePhylogeneticTreeByCasesCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrievePhylogeneticTreeByCasesCommand(
                     user=user,
                     genetic_distance_case_type_col_id=request_body.genetic_distance_case_type_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
@@ -629,8 +615,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="1238afb2",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveGeneticSequenceByCaseCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveGeneticSequenceByCaseCommand(
                     user=user,
                     genetic_sequence_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
                     case_ids=request_body.case_ids,
@@ -694,8 +680,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="a4c03b54",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveAlleleProfileCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveAlleleProfileCommand(
                     user=user,
                     genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
                     case_ids=request_body.case_ids,
@@ -719,8 +705,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="e3d4f5a6",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateReadSetsForCasesCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateReadSetsForCasesCommand(
                     user=user,
                     case_read_sets=case_read_sets,
                 ),
@@ -745,8 +731,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="d3f4e2b1",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateFileForReadSetCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateFileForReadSetCommand(
                     user=user,
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
@@ -772,8 +758,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="a1b2c3d4",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateSeqsForCasesCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateSeqsForCasesCommand(
                     user=user,
                     case_seqs=case_seqs,
                 ),
@@ -798,8 +784,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="b5c6d7e8",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.CreateFileForSeqCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.CreateFileForSeqCommand(
                     user=user,
                     file_content=base64.b64decode(request_body.file_content),
                     case_id=case_id,
@@ -823,8 +809,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="e7f8a9b0",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveSequencingProtocolsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveSequencingProtocolsCommand(
                     user=user,
                 ),
             ),
@@ -845,8 +831,8 @@ def create_case_endpoints(
                 app=app,
                 user=user,
                 exception_code="c1d2e3f4",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.RetrieveAssemblyProtocolsCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveAssemblyProtocolsCommand(
                     user=user,
                 ),
             ),
