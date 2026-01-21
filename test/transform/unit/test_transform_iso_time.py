@@ -4,8 +4,9 @@ from gen_epix.transform.enum import (
     TimeUnitTransformStrategy as TimeUnitTransformStrategy,
 )
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
+import pytest
 
-
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
 def test_transform_iso_time() -> None:
     def assert_equal(actual: list[str | None], expected: list[str | None]) -> None:
         if (
@@ -234,6 +235,7 @@ def test_transform_iso_time() -> None:
         assert_equal(actual_outputs, expected_outputs)
 
 
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
 def test_tgt_field() -> None:
     """Test the target field name mapping."""
     # Target field equals source

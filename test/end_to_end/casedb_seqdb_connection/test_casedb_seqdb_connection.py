@@ -91,6 +91,7 @@ def seqdb_server(
         yield server
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06", "TC-SEC-31-01")
 def test_casedb_seqdb_connection(
     oauth_server: ServerManager, seqdb_server: ServerManager
 ) -> None:

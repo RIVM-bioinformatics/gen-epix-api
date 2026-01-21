@@ -45,7 +45,7 @@ def make_dummy_client(counter: Dict[str, int], expected_url: str) -> Type[Any]:
 
     return DummyClient
 
-@pytest.mark.scenario_ids("TC-SEC-25-01", "TC-SEC-25-02", "TC-SEC-28-01")
+@pytest.mark.scenario_ids("TC-SEC-25-01", "TC-SEC-25-02", "TC-SEC-28-01", "TC-OWA-07-07")
 class TestOauthIdpClientIntrospectionEndpoint:
 
     CLIENT: OauthIdpClient
