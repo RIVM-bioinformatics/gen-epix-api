@@ -64,6 +64,7 @@ def assert_logged_with_code(logger: Mock, code: str) -> None:
     assert code in arg
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestPublicInterface:
     """Public properties and abstract methods behavior."""
 
@@ -122,6 +123,7 @@ class TestPublicInterface:
             asyncio.run(client.get_claims_from_jwt("jwt-token"))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestAuthorizationHandling:
     """Authorization header parsing and scheme handling."""
 

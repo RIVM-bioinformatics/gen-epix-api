@@ -38,6 +38,7 @@ class DummyIdpClient(IdpClient):
         return await IdpClient.__call__(self, request)  # type: ignore[safe-super]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestIdpClientInitialization(TestCase):
     """Test initialization and public attributes of IdpClient."""
 
@@ -102,6 +103,7 @@ class TestIdpClientInitialization(TestCase):
         self.assertFalse(client_false.ssl_context is True)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestIdpClientAbstractMethods(TestCase):
     """Test abstract method behavior exposed via base class."""
 

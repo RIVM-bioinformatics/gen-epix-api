@@ -98,6 +98,7 @@ class BaseOauthIdpClientTestCase(TestCase):
         return p, client_mock
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestInitAndConfig(BaseOauthIdpClientTestCase):
     """Tests for initialization and discovery configuration updates."""
 
@@ -232,6 +233,7 @@ class TestInitAndConfig(BaseOauthIdpClientTestCase):
         assert self.logger.error.called is True
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestProperties(BaseOauthIdpClientTestCase):
     def test_audience_property_prefers_explicit_audience(self) -> None:
         # 1. Input
@@ -256,6 +258,7 @@ class TestProperties(BaseOauthIdpClientTestCase):
         assert client.audience == cfg.client_id
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestJwkFetching(BaseOauthIdpClientTestCase):
 
     def test_get_jwk_from_jwt_parsing_error_raises(self) -> None:
@@ -381,6 +384,7 @@ class TestJwkFetching(BaseOauthIdpClientTestCase):
                 asyncio.run(client.get_jwk_from_jwt("token"))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
 
     def test_get_claims_from_jwt_issuer_mismatch_returns_none(self) -> None:
@@ -540,6 +544,7 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
         tim_mock.introspect_token.assert_called_once()
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestTokenIntrospection(BaseOauthIdpClientTestCase):
     def test_introspect_token_skips_when_cached_recent_and_active(self) -> None:
         # 1. Input
@@ -600,6 +605,7 @@ class TestTokenIntrospection(BaseOauthIdpClientTestCase):
                 client.introspect_token("C", {"exp": client._now() + 60})
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
     def test_client_credentials_success_single_attempt(self) -> None:
         # 1. Input
@@ -670,6 +676,7 @@ class TestClientCredentialsFlow(BaseOauthIdpClientTestCase):
         assert self.logger.error.called is True
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestUserInfo(BaseOauthIdpClientTestCase):
     def test_get_claims_from_userinfo_success(self) -> None:
         # 1. Input
@@ -724,6 +731,7 @@ class TestUserInfo(BaseOauthIdpClientTestCase):
         assert claims2 == {}
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestIdentityProvider(BaseOauthIdpClientTestCase):
     def test_get_identity_provider_fields(self) -> None:
         # 1. Input
@@ -747,6 +755,7 @@ class TestIdentityProvider(BaseOauthIdpClientTestCase):
         assert idp.public is False
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestCall(BaseOauthIdpClientTestCase):
     def test_call_no_authorization_header_returns_none(self) -> None:
         # 1. Input

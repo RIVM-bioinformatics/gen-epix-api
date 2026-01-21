@@ -137,6 +137,7 @@ class BaseRepositoryTestCase(TestCase):
             assert_args(*call.args, **call.kwargs)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestUpdateAssociation(BaseRepositoryTestCase):
     """Tests for update_association covering all branches."""
 
@@ -379,7 +380,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
                 association_objs=objs,
             )
 
-
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestRaiseOnDuplicateIds(BaseRepositoryTestCase):
     """Tests for static helper raise_on_duplicate_ids."""
 
@@ -407,6 +408,7 @@ class TestRaiseOnDuplicateIds(BaseRepositoryTestCase):
         assert set(cast(list, ei.value.ids)) == {"a", "b"}
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestInitAndAbstracts(BaseRepositoryTestCase):
     """Tests for __init__, properties, and abstract methods coverage."""
 
@@ -501,7 +503,7 @@ def _valid_args_for_operation(op: CrudOperation) -> tuple[type[Model], Any, Any]
         return model_class, None, ["ID1", "ID2"]
     raise AssertionError(f"Unhandled operation: {op}")
 
-
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 @pytest.mark.parametrize("operation", list(CrudOperation))
 def test_verify_crud_args_valid(operation: CrudOperation) -> None:
     # 1. Input
@@ -516,6 +518,7 @@ def test_verify_crud_args_valid(operation: CrudOperation) -> None:
     assert True
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_verify_crud_args_errors() -> None:
     # 1. Input: various invalid shapes to hit all error branches
     model_class: type[Model] = AssocModel

@@ -140,6 +140,7 @@ class BaseDomainTestCase(TestCase):
         self.domain.register_command(DummyNonCrud, service_type=self.svc1)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-02")
 class TestStaticUtilities(TestCase):
     def test_get_service_name_variants(self) -> None:
         # Create input
@@ -176,6 +177,7 @@ class TestStaticUtilities(TestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-02")
 class TestRegistrationAndLookups(BaseDomainTestCase):
     def test_properties_and_basic_sets(self) -> None:
         # Create input

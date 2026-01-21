@@ -60,7 +60,7 @@ def make_child_entity(keys: bool = True) -> Entity:
     entity.table_name = "child"
     entity.model_class = ChildModel  # type: ignore[misc]
     entity.id_field_name = "id"
-    entity.get_link_field_names.return_value = ["parent_id"]  # type: ignore[attr-defined] 
+    entity.get_link_field_names.return_value = ["parent_id"]  # type: ignore[attr-defined]
     # Link properties
     entity.get_link_properties_by_field_name.return_value = (1, ParentModel, "parent")  # type: ignore[attr-defined]
     # Data fields
@@ -132,11 +132,13 @@ def pc_repo(parent_id: UUID, child_id: UUID) -> DictRepository:
 # Tests for create_repository
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_no_file_raises() -> None:
     with pytest.raises(exc.RepositoryInitializationServiceError):
         DictRepository.create_repository(file=None, file_type="pkl")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_detect_pkl_calls_from_pkl(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -158,6 +160,7 @@ def test_create_repository_detect_pkl_calls_from_pkl(
     assert called["pkl"] is True
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_detect_zip_calls_from_json(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -178,6 +181,7 @@ def test_create_repository_detect_zip_calls_from_json(
     assert called["zip"] is True
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_json_unsupported() -> None:
     with pytest.raises(NotImplementedError):
         DictRepository.create_repository(file="/tmp/db.json")
@@ -186,6 +190,7 @@ def test_create_repository_json_unsupported() -> None:
 # Tests for create_repository_from_pkl
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_from_pkl_plain(monkeypatch: pytest.MonkeyPatch) -> None:
     db: dict[type[Model], dict[Any, Model]] = {ParentModel: {}}
     # Mock pickle.load to return db
@@ -199,6 +204,7 @@ def test_create_repository_from_pkl_plain(monkeypatch: pytest.MonkeyPatch) -> No
     assert repo.db == db
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_from_pkl_gz(monkeypatch: pytest.MonkeyPatch) -> None:
     db: dict[type[Model], dict[Any, Model]] = {ParentModel: {}}
     monkeypatch.setattr("pickle.load", lambda handle: db)
@@ -213,6 +219,7 @@ def test_create_repository_from_pkl_gz(monkeypatch: pytest.MonkeyPatch) -> None:
 # Tests for create_repository_from_json
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_from_json_invalid_format() -> None:
     with pytest.raises(exc.RepositoryServiceError):
         DictRepository.create_repository_from_json(
@@ -220,6 +227,7 @@ def test_create_repository_from_json_invalid_format() -> None:
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_create_repository_from_json_happy(
     monkeypatch: pytest.MonkeyPatch, parent_id: UUID
 ) -> None:
@@ -260,6 +268,7 @@ def test_create_repository_from_json_happy(
 # __init__ validation tests
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_init_invalid_extra_data_raises(parent_id: UUID) -> None:
     parent_entity = make_parent_entity()
     db: dict[type[Model], dict[Any, Model]] = {
@@ -269,6 +278,7 @@ def test_init_invalid_extra_data_raises(parent_id: UUID) -> None:
         DictRepository([parent_entity], db, extra_data="bad", missing_data="ignore")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_init_invalid_missing_data_raises(parent_id: UUID) -> None:
     parent_entity = make_parent_entity()
     db: dict[type[Model], dict[Any, Model]] = {
@@ -278,12 +288,14 @@ def test_init_invalid_missing_data_raises(parent_id: UUID) -> None:
         DictRepository([parent_entity], db, extra_data="ignore", missing_data="bad")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_init_missing_data_raise(parent_id: UUID) -> None:
     parent_entity = make_parent_entity()
     with pytest.raises(ValueError):
         DictRepository([parent_entity], {}, extra_data="ignore", missing_data="raise")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_init_composite_id_field_raises(parent_id: UUID) -> None:
     entity: Entity = make_parent_entity()
     entity.id_field_name = ["id1", "id2"]  # type: ignore[assignment]
@@ -294,6 +306,7 @@ def test_init_composite_id_field_raises(parent_id: UUID) -> None:
         DictRepository([entity], db, extra_data="ignore", missing_data="ignore")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_db_property(parent_repo: DictRepository, parent_id: UUID) -> None:
     assert ParentModel in parent_repo.db
     assert parent_id in parent_repo.db[ParentModel]
@@ -302,6 +315,7 @@ def test_db_property(parent_repo: DictRepository, parent_id: UUID) -> None:
 # split_filter
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_split_filter_returns_filter_and_none(parent_repo: DictRepository) -> None:
     filter_: Filter = Mock(spec=Filter)
     f, where = parent_repo.split_filter(ParentModel, filter_)
@@ -312,6 +326,7 @@ def test_split_filter_returns_filter_and_none(parent_repo: DictRepository) -> No
 # read_fields
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_fields_no_filter(parent_repo: DictRepository) -> None:
     uow: BaseUnitOfWork = parent_repo.uow()
     tuples = list(parent_repo.read_fields(uow, None, ParentModel, ["id", "value"]))
@@ -320,6 +335,7 @@ def test_read_fields_no_filter(parent_repo: DictRepository) -> None:
     assert isinstance(tuples[0][1], str)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_fields_with_filter(parent_repo: DictRepository) -> None:
     uow: BaseUnitOfWork = parent_repo.uow()
     filter_: Filter = Mock(spec=Filter)
@@ -335,6 +351,7 @@ def test_read_fields_with_filter(parent_repo: DictRepository) -> None:
 # verify_valid_ids
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_verify_valid_ids_exists_and_duplicate(
     parent_repo: DictRepository, parent_id: UUID
 ) -> None:
@@ -364,6 +381,7 @@ def test_verify_valid_ids_exists_and_duplicate(
 # read_all, read_one, read_some
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_all_variants(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Return copies by default
     parents = pc_repo.read_all(ParentModel, filter=None)
@@ -383,6 +401,7 @@ def test_read_all_variants(pc_repo: DictRepository, parent_id: UUID) -> None:
     assert children_no_copy[0] is pc_repo.db[ChildModel][children_no_copy[0].id]  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_all_with_filter(parent_repo: DictRepository, parent_id: UUID) -> None:
     filter_: Filter = Mock(spec=Filter)
     # When return_id=True, match_rows is used
@@ -392,6 +411,7 @@ def test_read_all_with_filter(parent_repo: DictRepository, parent_id: UUID) -> N
     filter_.match_rows.assert_called()  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None:
     obj = parent_repo.read_one(ParentModel, parent_id)
     assert isinstance(obj, ParentModel)
@@ -427,6 +447,7 @@ def test_read_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None
 # upsert_some
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_create_and_update(parent_repo: DictRepository, parent_id: UUID) -> None:
     # Create new
     new_obj = ParentModel(id=uuid4(), value="new")
@@ -444,6 +465,7 @@ def test_upsert_create_and_update(parent_repo: DictRepository, parent_id: UUID) 
     assert parent_repo.db[ParentModel][parent_id].value == "updated"  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_errors(parent_repo: DictRepository, parent_id: UUID) -> None:
     # Duplicate IDs among objs
     same_id = uuid4()
@@ -481,6 +503,7 @@ def test_upsert_errors(parent_repo: DictRepository, parent_id: UUID) -> None:
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_unique_keys_among_objs(parent_repo: DictRepository) -> None:
     # Duplicate keys among objs are not detected by the current implementation; both should be inserted
     obj1 = ParentModel(id=uuid4(), value="dup")
@@ -497,6 +520,7 @@ def test_upsert_unique_keys_among_objs(parent_repo: DictRepository) -> None:
     assert obj1.id in stored_ids and obj2.id in stored_ids
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_unique_keys_against_df(
     parent_repo: DictRepository, parent_id: UUID
 ) -> None:
@@ -508,11 +532,15 @@ def test_upsert_unique_keys_against_df(
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Insert a valid child first
     ch_id = uuid4()
     initial_child = ChildModel(
-        id=ch_id, value="v", parent_id=parent_id, parent=ParentModel(id=parent_id, value="p1")
+        id=ch_id,
+        value="v",
+        parent_id=parent_id,
+        parent=ParentModel(id=parent_id, value="p1"),
     )
     pc_repo.upsert_some(
         None, ChildModel, initial_child, raise_on_present=False, raise_on_missing=False
@@ -525,7 +553,11 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
     )
     with pytest.raises(exc.InvalidIdsError):
         pc_repo.upsert_some(
-            None, ChildModel, update_bad_link_child, raise_on_present=False, raise_on_missing=True
+            None,
+            ChildModel,
+            update_bad_link_child,
+            raise_on_present=False,
+            raise_on_missing=True,
         )
 
     # Update with mismatched linked object id -> should raise InvalidLinkIdsError
@@ -537,7 +569,11 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
     )
     with pytest.raises(exc.InvalidLinkIdsError):
         pc_repo.upsert_some(
-            None, ChildModel, mismatch_child_update, raise_on_present=False, raise_on_missing=True
+            None,
+            ChildModel,
+            mismatch_child_update,
+            raise_on_present=False,
+            raise_on_missing=True,
         )
 
     # Null link sets both fields to None on update
@@ -550,6 +586,7 @@ def test_upsert_links(pc_repo: DictRepository, parent_id: UUID) -> None:
     assert stored.parent is None  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_upsert_return_id_and_no_copy(parent_repo: DictRepository) -> None:
     obj = ParentModel(id=uuid4(), value="x")
     ids = parent_repo.upsert_some(
@@ -576,12 +613,14 @@ def test_upsert_return_id_and_no_copy(parent_repo: DictRepository) -> None:
 # delete_some
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_some_link_conflict(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Child references parent_id; deleting parent should fail
     with pytest.raises(exc.LinkConstraintViolationError):
         pc_repo.delete_some(ParentModel, parent_id)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_some_success(pc_repo: DictRepository, parent_id: UUID) -> None:
     # Delete child (no backlink from other models)
     child_ids = list(pc_repo.db[ChildModel].keys())
@@ -590,6 +629,7 @@ def test_delete_some_success(pc_repo: DictRepository, parent_id: UUID) -> None:
     assert pc_repo.db[ChildModel] == {}
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_some_duplicate_ids(pc_repo: DictRepository, parent_id: UUID) -> None:
     with pytest.raises(exc.DuplicateIdsError):
         pc_repo.delete_some(ParentModel, [parent_id, parent_id])
@@ -598,6 +638,7 @@ def test_delete_some_duplicate_ids(pc_repo: DictRepository, parent_id: UUID) -> 
 # delete_all
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_all_with_filter(parent_repo: DictRepository, parent_id: UUID) -> None:
     filter_: Filter = Mock(spec=Filter)
     # One item True, rest False
@@ -607,6 +648,7 @@ def test_delete_all_with_filter(parent_repo: DictRepository, parent_id: UUID) ->
     assert parent_repo.db[ParentModel] == {}
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_delete_all_no_filter(pc_repo: DictRepository) -> None:
     # Delete all children
     deleted = pc_repo.delete_all(ChildModel, None)
@@ -619,6 +661,7 @@ def test_delete_all_no_filter(pc_repo: DictRepository) -> None:
 # exists_one, exists_some
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_exists_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> None:
     assert parent_repo.exists_one(ParentModel, parent_id) is True
     assert parent_repo.exists_one(ParentModel, uuid4()) is False
@@ -629,6 +672,7 @@ def test_exists_one_and_some(parent_repo: DictRepository, parent_id: UUID) -> No
 # crud dispatch
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> None:
     uow = parent_repo.uow()
     # READ_ALL
@@ -733,6 +777,7 @@ def test_crud_dispatch_all_ops(parent_repo: DictRepository, parent_id: UUID) -> 
 # uow
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 def test_uow_returns_dict_unit_of_work(parent_repo: DictRepository) -> None:
     uow = parent_repo.uow()
     assert isinstance(uow, DictUnitOfWork)

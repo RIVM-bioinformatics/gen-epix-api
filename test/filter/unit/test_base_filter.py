@@ -70,6 +70,7 @@ class BaseFilterTestCase(TestCase):
         return list(it)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestValueMatching(BaseFilterTestCase):
     """Test scenarios related to value matching with match_value."""
 
@@ -129,6 +130,7 @@ class TestValueMatching(BaseFilterTestCase):
         assert result is False
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestColumnMatching(BaseFilterTestCase):
     """Test scenarios related to column matching and filtering."""
 
@@ -211,6 +213,7 @@ class TestColumnMatching(BaseFilterTestCase):
         assert matched_values == ["x", "y"]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestRowMatching(BaseFilterTestCase):
     """Test scenarios related to single row matching with match_row."""
 
@@ -282,6 +285,7 @@ class TestRowMatching(BaseFilterTestCase):
             self.true_filter.match_row(row)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestRowsMatching(BaseFilterTestCase):
     """Test scenarios related to multiple rows matching with match_rows."""
 
@@ -358,6 +362,7 @@ class TestRowsMatching(BaseFilterTestCase):
             list(self.true_filter.match_rows(rows))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterRows(BaseFilterTestCase):
     """Test scenarios related to filtering rows (filter_rows)."""
 
@@ -435,6 +440,7 @@ class TestFilterRows(BaseFilterTestCase):
             list(self.true_filter.filter_rows(rows))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestKeyMethods(BaseFilterTestCase):
     """Test scenarios related to key setters and getters."""
 
@@ -467,6 +473,7 @@ class TestKeyMethods(BaseFilterTestCase):
         assert ret_key == "b"
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestCallMethod(BaseFilterTestCase):
     """Test scenarios related to the __call__ method delegation and errors."""
 
@@ -516,6 +523,7 @@ class TestCallMethod(BaseFilterTestCase):
             list(self.eq_filter(values, axis=2))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestCompositeAndTypedFilter(BaseFilterTestCase):
     """Test scenarios related to composite filters and typed filters."""
 

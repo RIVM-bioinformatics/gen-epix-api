@@ -182,6 +182,7 @@ def get_test_client() -> RBACTestClient:
     return RBACTestClient.get_test_client(DictRepository, domain=DOMAIN)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestRBAC:
 
     def test_get_user_roles(self, env: RBACTestClient) -> None:

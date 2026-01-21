@@ -13,6 +13,7 @@ from gen_epix.filter.partial_date_range import PartialDateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterMatch:
 
     def test_exists_match(self) -> None:

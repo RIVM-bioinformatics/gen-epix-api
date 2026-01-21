@@ -9,8 +9,10 @@ from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, IDPUser
 from gen_epix.fastapp.services.auth.service import AuthService
+import pytest
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class BaseAuthServiceTestCase(TestCase):
     """Base test case with common fixtures and utilities."""
 

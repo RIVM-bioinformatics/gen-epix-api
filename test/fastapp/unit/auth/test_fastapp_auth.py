@@ -20,6 +20,7 @@ def get_test_client() -> AuthTestClient:
     )  # type:ignore[no-any-return,no-untyped-call]
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-01")
 class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"
@@ -154,6 +155,7 @@ class TestAuth:
         )  # cleared in previous test
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-01")
 class TestOidcClientCredentials:
     """Test the OidcClient retrieve_jwt_with_client_credentials_flow method."""
 

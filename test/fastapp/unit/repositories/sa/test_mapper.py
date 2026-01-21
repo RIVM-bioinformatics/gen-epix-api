@@ -175,6 +175,7 @@ class _DummyMapper(BaseSAMapper):
         return super().get_mapped_field_name(field_name, reverse)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestBaseSAMapper(BaseMapperTestCase):
     def test_init_requires_entity(self) -> None:
         # 1. Input
@@ -235,6 +236,7 @@ class TestBaseSAMapper(BaseMapperTestCase):
         assert mapper_without.schema_name is None
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestSAMapper(BaseMapperTestCase):
     def test_identical_common_field_names_dump_load_and_maps(self) -> None:
         # 1. Input

@@ -22,6 +22,7 @@ from typing import Any
 from unittest import TestCase
 from unittest.mock import Mock
 from uuid import UUID, uuid4
+import pytest
 
 from gen_epix.fastapp import (
     App,
@@ -210,6 +211,7 @@ class BaseRbacServiceTestCase(TestCase):
         return TestCommand2(user=user or self.user)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestServiceInitialization(BaseRbacServiceTestCase):
     """Test service initialization and basic properties."""
 
@@ -255,6 +257,7 @@ class TestServiceInitialization(BaseRbacServiceTestCase):
         pass
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestPermissionRegistration(BaseRbacServiceTestCase):
     """Test permission registration functionality."""
 
@@ -295,6 +298,7 @@ class TestPermissionRegistration(BaseRbacServiceTestCase):
         self.assertIn("is not registered", str(cm.exception))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestRoleRegistration(BaseRbacServiceTestCase):
     """Test role registration and management."""
 
@@ -459,6 +463,7 @@ class TestRoleRegistration(BaseRbacServiceTestCase):
         self.assertIn("No roles for permission(s)", str(cm.exception))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestRoleHierarchy(BaseRbacServiceTestCase):
     """Test role hierarchy and sub-role calculations."""
 
@@ -517,6 +522,7 @@ class TestRoleHierarchy(BaseRbacServiceTestCase):
         self.assertNotIn(TestRole.ADMIN, self.service._sub_roles_by_role)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestUserPermissions(BaseRbacServiceTestCase):
     """Test user permission retrieval and authorization checks."""
 
@@ -629,6 +635,7 @@ class TestUserPermissions(BaseRbacServiceTestCase):
         self.assertFalse(has_more)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestCommandPermissions(BaseRbacServiceTestCase):
     """Test command-related permission functionality."""
 
@@ -666,6 +673,7 @@ class TestCommandPermissions(BaseRbacServiceTestCase):
         self.assertEqual(root_permissions, self.mock_domain.permissions)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestRbacPolicyRegistration(BaseRbacServiceTestCase):
     """Test RBAC policy registration."""
 
@@ -700,6 +708,7 @@ class TestRbacPolicyRegistration(BaseRbacServiceTestCase):
         self.mock_app.register_policy.assert_called()
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
     """Test hierarchical role permission expansion."""
 
@@ -828,6 +837,7 @@ class TestHierarchicalRolePermissions(BaseRbacServiceTestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
     """Test user authorization behavior methods."""
 
@@ -876,6 +886,7 @@ class TestUserAuthorizationBehavior(BaseRbacServiceTestCase):
         self.assertFalse(is_authorized)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestEdgeCasesAndErrorConditions(BaseRbacServiceTestCase):
     """Test edge cases and error conditions."""
 

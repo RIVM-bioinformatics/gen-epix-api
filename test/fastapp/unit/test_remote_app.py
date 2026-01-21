@@ -211,8 +211,9 @@ class BaseRemoteAppTestCase(TestCase):
         return self.app.register_route(cmd_class, route, add_host=True, add_prefix=True)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestInitAndProperties(BaseRemoteAppTestCase):
-    
+
     def test_protocol_property_accepts_enum_and_string(self) -> None:
         # Protocol as enum
         app_enum = RemoteApp(
@@ -233,7 +234,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
             add_generated_crud_route_handlers=False,
         )
         self.assertEqual(app_str.protocol, HttpProtocol.HTTPS)
-        
+
     def test_properties_and_host_url(self) -> None:
         # Create input
         # ... already created in setUp ...
@@ -277,6 +278,7 @@ class TestInitAndProperties(BaseRemoteAppTestCase):
             self.app.unregister_policy(DummyCmd, policy, timing=EventTiming.BEFORE)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestRouteRegistration(BaseRemoteAppTestCase):
     def test_register_route_and_get_route(self) -> None:
         # Create input
@@ -342,6 +344,7 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
             self.app.get_route(cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
     def test_get_headers_returns_defaults(self) -> None:
         # Create input
@@ -450,6 +453,7 @@ class TestHeadersAndApplyHandler(BaseRemoteAppTestCase):
         self.assertIn("Error when handling remote command DummyCmd", str(e.exception))
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
     def test_register_generated_crud_route_builds_path(self) -> None:
         # Create input
@@ -643,6 +647,7 @@ class TestGeneratedCrudRoutes(BaseRemoteAppTestCase):
                 handler(cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestAutoRegistration(BaseRemoteAppTestCase):
     def test_init_auto_registers_handlers_for_domain_crud_commands(self) -> None:
         # Create input
