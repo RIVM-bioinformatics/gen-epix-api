@@ -10,7 +10,7 @@ from gen_epix.fastapp.model import UpdateAssociationCommand
 
 
 class BaseOrganizationService(BaseService):
-    ORGANIZATION_SERVICE_TYPE = ServiceType.ORGANIZATION
+    SERVICE_TYPE = ServiceType.ORGANIZATION
 
     # Property overridden to provide narrower return value to support linter
     @property  # type: ignore

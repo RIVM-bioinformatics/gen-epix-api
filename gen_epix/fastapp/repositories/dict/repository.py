@@ -11,7 +11,7 @@ from uuid import UUID
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, Suffix
+from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, FileExtension
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
@@ -31,22 +31,22 @@ class DictRepository(BaseRepository):
         if file_type is None:
             path = Path(file)
             suffixes = [x.lower() for x in path.suffixes]
-            if Suffix.PKL.value in suffixes:
-                file_type = Suffix.PKL.value.lstrip(".")
-            elif Suffix.JSON.value in suffixes:
-                file_type = Suffix.JSON.value.lstrip(".")
-            elif Suffix.ZIP.value in suffixes:
-                file_type = Suffix.ZIP.value.lstrip(".")
+            if FileExtension.PKL.value in suffixes:
+                file_type = FileExtension.PKL.value.lstrip(".")
+            elif FileExtension.JSON.value in suffixes:
+                file_type = FileExtension.JSON.value.lstrip(".")
+            elif FileExtension.ZIP.value in suffixes:
+                file_type = FileExtension.ZIP.value.lstrip(".")
         else:
             file_type = file_type.lower()
-        if file_type == Suffix.PKL.value.lstrip("."):
+        if file_type == FileExtension.PKL.value.lstrip("."):
             return DictRepository.create_repository_from_pkl(
                 repository_class=cls,
                 entities=entities,
                 pkl_file=file,
                 **kwargs,
             )
-        if file_type == Suffix.ZIP.value.lstrip("."):
+        if file_type == FileExtension.ZIP.value.lstrip("."):
             return DictRepository.create_repository_from_json(
                 repository_class=cls,
                 entities=entities,
@@ -89,9 +89,9 @@ class DictRepository(BaseRepository):
             for entity in entities:
                 if not entity.persistable:
                     continue
-                json_file = entity.name + Suffix.JSON.value
+                json_file = entity.name + FileExtension.JSON.value
                 if json_file not in files and entity.table_name:
-                    json_file = entity.table_name + Suffix.JSON.value
+                    json_file = entity.table_name + FileExtension.JSON.value
                 if json_file not in files:
                     raise exc.RepositoryServiceError(
                         f"Missing file for entity {entity.name} in archive {zip_file}"
