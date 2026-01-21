@@ -131,12 +131,10 @@ def requestor_app(
         oauth_discovery_url=discovery_url,
     )
 
+
 @pytest.mark.scenario_ids(
-    "TC-PEN-01-22",
-    "TC-PEN-01-23",
-    "TC-PEN-01-04",
-    "TC-OWA-07-07"
-    )
+    "TC-PEN-01-22", "TC-PEN-01-23", "TC-PEN-01-04", "TC-OWA-07-07", "TC-SEC-07-01"
+)
 class TestOauthClientCredentialsFlow:
     def test_oauth_client_credentials_flow_success(
         self,
