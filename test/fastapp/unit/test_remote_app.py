@@ -16,6 +16,7 @@ from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, Stri
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.remote_app import RemoteApp
+import pytest
 
 # Helpers and dummies for testing
 

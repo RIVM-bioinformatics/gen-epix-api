@@ -157,6 +157,7 @@ class BasePolicyTestCase(TestCase):
         return cmd_class(operation=operation, obj_ids=obj_ids, objs=objs, user=user)  # type: ignore[arg-type]
 
 
+@pytest.mark.scenario_ids("TC-RBAC-30-02")
 class TestPassThroughAndErrors(BasePolicyTestCase):
     """Test scenarios for early returns and error branches."""
 
@@ -250,6 +251,7 @@ class TestPassThroughAndErrors(BasePolicyTestCase):
         assert self.abac_service.retrieve_organizations_under_admin.call_count == 0  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-RBAC-30-02")
 class TestOrganizationIdFiltering(BasePolicyTestCase):
     """Test scenarios related to organization_id attribute filtering."""
 
@@ -364,6 +366,7 @@ class TestOrganizationIdFiltering(BasePolicyTestCase):
             self.policy.filter(cmd, retval)
 
 
+@pytest.mark.scenario_ids("TC-RBAC-30-02")
 class TestUserIdFiltering(BasePolicyTestCase):
     """Test scenarios related to user_id attribute filtering (monkeypatched)."""
 

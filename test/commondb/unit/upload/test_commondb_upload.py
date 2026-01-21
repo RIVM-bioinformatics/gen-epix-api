@@ -85,6 +85,8 @@ from unittest import TestCase
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
+import pytest
+
 from gen_epix.commondb.domain.enum import (
     IdentifierType,
     OnExistsUploadAction,
@@ -428,6 +430,7 @@ class BaseUploadTestCase(TestCase):
 
 
 # Test Scenario 1: Existence of parent and/or child objects in the repository
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestObjectExistence(BaseUploadTestCase):
     """Test scenarios related to object existence in repository."""
 
@@ -476,6 +479,7 @@ class TestObjectExistence(BaseUploadTestCase):
 
 
 # Test Scenario 2: Provision of child objects
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestChildObjectProvision(BaseUploadTestCase):
     """Test scenarios related to providing different combinations of child objects."""
 
@@ -589,6 +593,7 @@ class TestChildObjectProvision(BaseUploadTestCase):
 
 
 # Test Scenario 3: Links to reference data in child objects
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestReferenceDataLinks(BaseUploadTestCase):
     """Test scenarios related to reference data linking in child objects."""
 
@@ -762,6 +767,7 @@ class TestReferenceDataLinks(BaseUploadTestCase):
 
 
 # Test Scenario 4: Parent link in child objects
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestParentLinks(BaseUploadTestCase):
     """Test scenarios related to parent links in child objects."""
 
@@ -857,6 +863,7 @@ class TestParentLinks(BaseUploadTestCase):
 
 
 # Test Scenario 5: Field mutability for stored objects
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestFieldMutability(BaseUploadTestCase):
     """Test scenarios related to field mutability for existing objects."""
 
@@ -1001,6 +1008,7 @@ class TestFieldMutability(BaseUploadTestCase):
 
 
 # Test Scenario 6: External identifiers for parent objects
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestExternalIdentifiers(BaseUploadTestCase):
     """Test scenarios related to external identifiers for parent objects."""
 
@@ -1167,7 +1175,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
             [],
-            [existing_external_identifier1, created_external_identifier2]
+            [existing_external_identifier1, created_external_identifier2],
         ]
         existing_parent = self.get_parent_from_for_upload(parent)
         self.service.repository.crud.side_effect = [
@@ -1234,6 +1242,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
 
 
 # Test Scenario 7: Upload command on_exists value
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestOnExistsActions(BaseUploadTestCase):
     """Test scenarios related to the on_exists command parameter."""
 
@@ -1276,6 +1285,7 @@ class TestOnExistsActions(BaseUploadTestCase):
 
 
 # Combined scenario tests
+@pytest.mark.scenario_ids("TC-RBAC-30-03")
 class TestCombinedScenarios(BaseUploadTestCase):
     """Test combinations of different scenarios."""
 

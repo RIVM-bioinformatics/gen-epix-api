@@ -22,6 +22,7 @@ from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpl
 from gen_epix.seqdb.domain import model
 
 
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelExternalIdentifier(TestCase):
 
     def test_valid_with_identifier_issuer_code(self) -> None:
@@ -76,7 +77,7 @@ class TestModelExternalIdentifier(TestCase):
                 identifier_issuer_code="A" * 255, external_id="B" * 256
             )
 
-
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelAlleleForUpload(TestCase):
 
     def test_valid_with_locus_id(self) -> None:
@@ -111,7 +112,7 @@ class TestModelAlleleForUpload(TestCase):
                 id=uuid4(),  # Random id that won't match computed seq_hash
             )
 
-
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelBaseSeq(TestCase):
     """Test cases for BaseSeq model validation and functionality."""
 
@@ -232,7 +233,7 @@ class TestModelBaseSeq(TestCase):
                 id=custom_hash,
             )
 
-
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelSeq(TestCase):
     """Test cases for Seq model functionality and inheritance."""
 
@@ -339,7 +340,7 @@ class TestModelSeq(TestCase):
         for contig in seq.contigs:
             self.assertIsInstance(contig, model.Contig)
 
-
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelSeqForUpload(TestCase):
     """Test cases for SeqForUpload model functionality and upload-specific features."""
 
@@ -541,7 +542,7 @@ class TestModelSeqForUpload(TestCase):
         )
 
 
-@pytest.mark.scenario_ids("TC-RBAC-04-11")
+@pytest.mark.scenario_ids("TC-RBAC-04-11", "TC-RBAC-31-01")
 class TestModelAlleleProfileForUpload(TestCase):
 
     def test_json_serialization(self) -> None:
@@ -754,7 +755,7 @@ class TestModelAlleleProfileForUpload(TestCase):
             **kwargs,
         )
 
-
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelSampleForUpload(TestCase):
 
     @staticmethod
@@ -1126,6 +1127,7 @@ class TestModelSampleForUpload(TestCase):
             self.assertIsInstance(seq, model.SeqForUpload)
 
 
+@pytest.mark.scenario_ids("TC-RBAC-31-01")
 class TestModelSampleBatchForUpload(TestCase):
 
     def setUp(self) -> None:

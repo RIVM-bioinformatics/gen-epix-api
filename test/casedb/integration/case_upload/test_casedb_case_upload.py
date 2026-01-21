@@ -188,6 +188,7 @@ class CaseUploadSetup:
     "TC-BIO-04-01",
     "TC-RBAC-02-02",
     "TC-RBAC-02-04",
+    "TC-11-09-01"
 )
 class TestCaseUpload(CaseUploadSetup):
     FILE_CASE_TYPE_COL_VALUE = "(FILE)"

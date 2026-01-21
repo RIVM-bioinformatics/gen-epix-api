@@ -13,6 +13,9 @@ from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.test.test_client import TestClient as Env
 
 
+@pytest.mark.scenario_ids(
+    "TC-RBAC-01-15", "TC-RBAC-02-10", "TC-RBAC-02-12", "TC-RBAC-03-05", "TC-RBAC-03-07"
+)
 class TestUpdate:
     # UPDATE tests
 

@@ -12,6 +12,7 @@ from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.seqdb.domain import exc, model
 
 
+@pytest.mark.scenario_ids("TC-11-09-04")
 class TestRead:
 
     def test_read_user(self, env: Env) -> None:
