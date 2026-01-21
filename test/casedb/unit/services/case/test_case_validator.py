@@ -604,7 +604,7 @@ class BaseCaseValidatorTestCase(TestCase):
         retval = model.CaseBatchUploadResult(cases=case_results)
         return cmd, retval
 
-
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestGetContentReferences(BaseCaseValidatorTestCase):
     def test_wrong_case_type_raises(self) -> None:
         validator = self._create_validator()
@@ -615,6 +615,7 @@ class TestGetContentReferences(BaseCaseValidatorTestCase):
             validator.validate_and_transform(cmd, retval)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
     def test_unknown_column_logged(self) -> None:
         validator = self._create_validator()
@@ -630,6 +631,7 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert issue.code == "a7b3f9d2"
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestTransformIndividualValues(BaseCaseValidatorTestCase):
     def test_all_branches(self) -> None:
         validator = self._create_validator()
@@ -707,6 +709,7 @@ class TestTransformIndividualValues(BaseCaseValidatorTestCase):
         assert "a6b1c2d3" in codes1  # organization invalid
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestTransformIndividualValuesEdgeCases(BaseCaseValidatorTestCase):
     def test_empty_string_in_string_set_raises(self) -> None:
         validator = self._create_validator()
@@ -720,6 +723,7 @@ class TestTransformIndividualValuesEdgeCases(BaseCaseValidatorTestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestTransformValuePairs(BaseCaseValidatorTestCase):
     def test_geo_time_number_pairs_and_conflicts(self) -> None:
         validator = self._create_validator()
@@ -788,6 +792,7 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
         assert "c9d4e1f2" in codes or "a8f2d5e7" in codes  # NUMBER derived
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCalculateCaseDate(BaseCaseValidatorTestCase):
     def test_no_case_date_dim_returns(self) -> None:
         validator = self._create_validator()
@@ -828,6 +833,7 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
     def test_pipeline_updates_and_logs(self) -> None:
         validator = self._create_validator()
@@ -855,6 +861,7 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
         assert any(x.code == "b2c3d4e5" for x in case_res.logs)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveConceptData(BaseCaseValidatorTestCase):
     def test_retrieve_concept_data_builds_maps(self) -> None:
         complete = self._build_complete_case_type()
@@ -974,6 +981,7 @@ class TestRetrieveConceptData(BaseCaseValidatorTestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveRegionData(BaseCaseValidatorTestCase):
     def test_retrieve_region_data_builds_maps(self) -> None:
         complete = self._build_complete_case_type()

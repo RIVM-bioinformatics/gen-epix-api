@@ -129,6 +129,7 @@ class BaseRetrieveStatsTestCase(TestCase):
         return abac
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCaseTypeStats(BaseRetrieveStatsTestCase):
     def test_no_case_type_ids_full_access_reads_all(self) -> None:
         dt_filter = TypedDatetimeRangeFilter(
@@ -315,6 +316,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
                 case_service_retrieve_case_type_stats(self.service, cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCaseSetStats(BaseRetrieveStatsTestCase):
     def test_case_set_ids_filter_and_stats(self) -> None:
         # Input case sets and members

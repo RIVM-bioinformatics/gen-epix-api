@@ -12,6 +12,7 @@ PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: list = []
 
 
+@pytest.mark.scenario_ids("TC-PERF-09-01")
 class TestStartup:
     USER_JOURNEYS = None
 

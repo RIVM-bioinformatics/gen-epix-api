@@ -11,10 +11,12 @@ import pandas as pd
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
+import pytest
 
 PERFORMANCE_DF: list[dict] = []
 
 
+@pytest.mark.scenario_ids("TC-PERF-09-01")
 class TestRead:
 
     def test_read_case_sets(self) -> None:

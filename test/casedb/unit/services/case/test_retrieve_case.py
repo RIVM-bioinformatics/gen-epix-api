@@ -261,6 +261,7 @@ class BaseRetrieveCaseTestCase(TestCase):
 
 
 # Tests for query-based retrieval
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
     """Tests covering branches of case_service_retrieve_cases_by_query."""
 
@@ -573,6 +574,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
 
 
 # Tests for ID-based retrieval
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
     """Tests covering branches of case_service_retrieve_cases_by_id."""
 
@@ -674,6 +676,7 @@ class TestRetrieveCasesById(BaseRetrieveCaseTestCase):
         assert [x.id for x in result] == [self.case_id1]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 def test_mapping_branches_decimal_col_type() -> None:
     # 1. Setup minimal class instance
     base: BaseRetrieveCaseTestCase = BaseRetrieveCaseTestCase()
@@ -725,6 +728,7 @@ def test_mapping_branches_decimal_col_type() -> None:
     base.assertQueryResult(result, [base.case_id1], False)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 def test_mapping_branches_text_col_type() -> None:
     # 1. Setup minimal class instance
     base: BaseRetrieveCaseTestCase = BaseRetrieveCaseTestCase()

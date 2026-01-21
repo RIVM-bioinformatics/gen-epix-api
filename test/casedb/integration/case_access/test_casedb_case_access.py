@@ -89,7 +89,15 @@ class CaseAccessSetup:
         )
 
 
-@pytest.mark.scenario_ids("TC-RBAC-04-07")
+@pytest.mark.scenario_ids(
+    "TC-RBAC-04-07",
+    "TC-RBAC-04-01",
+    "TC-BIO-04-01",
+    "TC-BIO-04-01",
+    "TC-RBAC-02-02",
+    "TC-RBAC-02-04",
+    "TC-RBAC-06-01",
+)
 class TestCaseAccess(CaseAccessSetup):
 
     def _encode_pairing_function(self, x: int, y: int) -> int:

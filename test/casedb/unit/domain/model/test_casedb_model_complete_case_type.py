@@ -1,8 +1,10 @@
 from uuid import uuid4
 
 from gen_epix.casedb.domain import enum, model
+import pytest
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestModelCompleteCaseType:
     def test_case_type_dim_col_order(self) -> None:
         case_type_id = uuid4()

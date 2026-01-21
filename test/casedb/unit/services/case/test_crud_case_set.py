@@ -81,6 +81,7 @@ class BaseCrudCaseSetTestCase(TestCase):
         return case_abac
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAdminPath(BaseCrudCaseSetTestCase):
     """Tests for admin-level operations (no ABAC)."""
 
@@ -115,6 +116,7 @@ class TestAdminPath(BaseCrudCaseSetTestCase):
             is_admin_mock.assert_called_once_with(self.service, cmd.user)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAbacNoPolicy(BaseCrudCaseSetTestCase):
     """Tests for ABAC path when no policy is present."""
 
@@ -148,6 +150,7 @@ class TestAbacNoPolicy(BaseCrudCaseSetTestCase):
             cascade_mock.assert_called_once()
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAbacCreateOperation(BaseCrudCaseSetTestCase):
     """Tests for ABAC path with create operation raising error."""
 
@@ -178,6 +181,7 @@ class TestAbacCreateOperation(BaseCrudCaseSetTestCase):
             self.service.crud.assert_not_called()  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestReadOperations(BaseCrudCaseSetTestCase):
     """Tests for read operations with ABAC policy."""
 
@@ -262,6 +266,7 @@ class TestReadOperations(BaseCrudCaseSetTestCase):
             assert kwargs.get("filter") == query_filter
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestUpdateOperation(BaseCrudCaseSetTestCase):
     """Tests for update operation with ABAC policy."""
 
@@ -300,6 +305,7 @@ class TestUpdateOperation(BaseCrudCaseSetTestCase):
             self.service.crud.assert_called_once_with(cmd)  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestDeleteAllOperation(BaseCrudCaseSetTestCase):
     """Tests for delete-all operation denial with ABAC policy."""
 
@@ -329,6 +335,7 @@ class TestDeleteAllOperation(BaseCrudCaseSetTestCase):
             self.service.crud.assert_not_called()  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestDeleteSomeOperation(BaseCrudCaseSetTestCase):
     """Tests for delete-some operation with ABAC policy."""
 
@@ -413,6 +420,7 @@ class TestDeleteSomeOperation(BaseCrudCaseSetTestCase):
             self.service.crud.assert_not_called()  # type: ignore[attr-defined]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestUserAssertions(BaseCrudCaseSetTestCase):
     """Tests for user-related assertion paths."""
 

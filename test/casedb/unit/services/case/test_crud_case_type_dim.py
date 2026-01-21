@@ -102,6 +102,7 @@ class BaseCaseTypeDimTestCase(TestCase):
 
 
 # Admin path tests
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAdminCreate(BaseCaseTypeDimTestCase):
     def test_create_sets_occurrence_and_returns_service_crud(self) -> None:
         # 1. Input
@@ -306,6 +307,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 case_service_crud_case_type_dim(self.service, cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAdminUpdate(BaseCaseTypeDimTestCase):
     def test_update_dim_id_changes_raises(self) -> None:
         # 1. Input
@@ -474,6 +476,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 
 
 # ABAC path tests
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
     def test_abac_none_policy_returns_service_crud(self) -> None:
         # 1. Input
@@ -577,6 +580,7 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
             self.assertIs(called_args[2], cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestPreconditions(BaseCaseTypeDimTestCase):
     def test_missing_user_raises(self) -> None:
         # 1. Input

@@ -22,6 +22,7 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCasedbCaseCreateSeq:
     """
     Comprehensive test suite for the create_seq.py module in gen_epix.casedb.services.case.

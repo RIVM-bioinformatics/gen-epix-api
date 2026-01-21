@@ -181,7 +181,14 @@ class CaseUploadSetup:
             )
 
 
-@pytest.mark.scenario_ids("TC-RBAC-02-01")
+@pytest.mark.scenario_ids(
+    "TC-RBAC-02-01",
+    "TC-RBAC-04-01",
+    "TC-BIO-04-01",
+    "TC-BIO-04-01",
+    "TC-RBAC-02-02",
+    "TC-RBAC-02-04",
+)
 class TestCaseUpload(CaseUploadSetup):
     FILE_CASE_TYPE_COL_VALUE = "(FILE)"
 
@@ -694,6 +701,6 @@ class TestCaseUpload(CaseUploadSetup):
                 ),
                 read_sets=read_sets,
                 seqs=seqs,
-                case=case
+                case=case,
             )
         return case

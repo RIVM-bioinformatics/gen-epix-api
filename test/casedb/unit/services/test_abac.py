@@ -20,6 +20,8 @@ from unittest import TestCase
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
+import pytest
+
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
@@ -179,6 +181,7 @@ class BaseAbacTestCase(TestCase):
             }
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
 class TestRegisterPolicies(BaseAbacTestCase):
     """Test registration of policies."""
 
@@ -204,6 +207,7 @@ class TestRegisterPolicies(BaseAbacTestCase):
             self.assertEqual(args[2], EventTiming.DURING)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
 class TestGetCaseAbac(BaseAbacTestCase):
     """Test get_case_abac behavior."""
 
@@ -415,6 +419,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         )  # AND -> empty
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
 class TestTempUpdateUserOrganization(BaseAbacTestCase):
     """Test temp_update_user_own_organization behavior."""
 

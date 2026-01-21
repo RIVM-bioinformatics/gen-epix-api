@@ -72,7 +72,7 @@ class BaseCaseAbacTestCase(TestCase):
             remove_case_set_from_data_collection_ids=remove_set_from or set(),
         )
 
-
+@pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeAccessAbac(BaseCaseAbacTestCase):
     def test_has_any_rights_false(self) -> None:
         access: CaseTypeAccessAbac = self.make_access(
@@ -98,6 +98,7 @@ class TestCaseTypeAccessAbac(BaseCaseAbacTestCase):
         self.assertTrue(access.has_any_rights())
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
     def test_has_any_rights_false(self) -> None:
         share: CaseTypeShareAbac = self.make_share(self.dc1)
@@ -112,7 +113,7 @@ class TestCaseTypeShareAbac(BaseCaseAbacTestCase):
         self.assertTrue(share.has_any_rights())
 
 
-@pytest.mark.scenario_ids("TC-RBAC-01-02")
+@pytest.mark.scenario_ids("TC-RBAC-01-02", "TC-SEC-29-01")
 class TestCaseAbac(BaseCaseAbacTestCase):
     def test_get_combinations_with_any_rights(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -1058,6 +1059,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertFalse(rights.can_delete)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestHelperFunctions(BaseCaseAbacTestCase):
     def test_get_has_right_function_branches(self) -> None:
         access: CaseTypeAccessAbac = self.make_access(

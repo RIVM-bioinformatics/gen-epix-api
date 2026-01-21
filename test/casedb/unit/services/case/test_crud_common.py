@@ -15,6 +15,7 @@ from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import CompositeFilter, EqualsStringFilter, Filter, LogicalOperator
+import pytest
 
 
 class DummyCmd:
@@ -73,6 +74,7 @@ def create_uow_mock() -> Mock:
     return uow
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestGetCaseAbacFromCommand(TestCase):
     """Tests for get_case_abac_from_command."""
 
@@ -110,6 +112,7 @@ class TestGetCaseAbacFromCommand(TestCase):
             fun.assert_called_once_with(cmd)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRoleChecks(TestCase):
     """Tests for role-based checks."""
 
@@ -176,6 +179,7 @@ class TestRoleChecks(TestCase):
         self.assertFalse(retval)
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCommandCategoryChecks(TestCase):
     """Tests for command type categorization helpers."""
 
@@ -246,6 +250,7 @@ class TestCommandCategoryChecks(TestCase):
             self.assertFalse(crud_common.is_data_command(other_cmd))  # type: ignore[arg-type]
 
 
+@pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestCrudWithAccessFilter(TestCase):
     """Tests for crud_with_access_filter including cascade delete behavior."""
 
