@@ -58,6 +58,7 @@ class BatchUploader:
             self.parent_for_upload_class.PARENT_IDENTIFIER_TYPE
         )
         self.parent_class = self.parent_for_upload_class.PARENT_CLASS
+        self.parent_field_name = self.parent_for_upload_class.PARENT_FIELD_NAME
         self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
         self.external_identifier_for_upload_class = (
             self.parent_for_upload_class.EXTERNAL_IDENTIFIER_FOR_UPLOAD_CLASS
@@ -376,9 +377,9 @@ class BatchUploader:
         }
 
         # Verify external IDs for each parent
-        for parent, parent_result in self.parent_result_items(cmd, retval):
+        for parent_for_upload, parent_result in self.parent_result_items(cmd, retval):
             external_identifiers: list[model.ExternalIdentifier] = (
-                getattr(parent, self.external_identifiers_field_name) or []
+                getattr(parent_for_upload, self.external_identifiers_field_name) or []
             )
             external_identifier_results: list[UploadResult] = (
                 getattr(parent_result, self.external_identifiers_field_name) or []
@@ -401,21 +402,23 @@ class BatchUploader:
                 external_identifier_result.status = UploadStatus.SKIPPED
                 # Cross-validate with parent ID if given and not new ID, otherwise fill in parent ID
                 if (
-                    parent.id is not None
-                    and parent.id != NULL_ID
-                    and not parent.is_new_id
+                    parent_for_upload.id is not None
+                    and parent_for_upload.id != NULL_ID
+                    and not parent_for_upload.is_new_id
                 ):
                     # Parent already exists
-                    if existing_external_identifier.internal_id != parent.id:
+                    if existing_external_identifier.internal_id != parent_for_upload.id:
                         success = False
                         external_identifier_result.add_error(
                             "f8a9b0c1",
-                            f"External identifier {external_identifier.external_id} refers to {self.parent_class.NAME}.id={existing_external_identifier.internal_id}, which does not match uploaded {self.parent_class.NAME}.id={parent.id}",
+                            f"External identifier {external_identifier.external_id} refers to {self.parent_class.NAME}.id={existing_external_identifier.internal_id}, which does not match uploaded {self.parent_class.NAME}.id={parent_for_upload.id}",
                         )
                 else:
                     # Parent does not exist yet, fill in parent ID
-                    parent.id = existing_external_identifier.internal_id
-                    parent_result.id = parent.id
+                    parent_for_upload.id = existing_external_identifier.internal_id
+                    parent = getattr(parent_for_upload, self.parent_field_name)
+                    parent.id = parent_for_upload.id
+                    parent_result.id = parent_for_upload.id
 
         return success
 
