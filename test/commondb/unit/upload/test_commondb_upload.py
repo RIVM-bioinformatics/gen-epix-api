@@ -1234,8 +1234,8 @@ class TestOnExistsActions(BaseUploadTestCase):
         self.service.repository.crud.return_value = [existing_parent]
         # Perform upload and verify result
         retval = self.upload_batch(parent, on_exists=OnExistsUploadAction.ERROR)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
+        self.assertBatchFailed(retval)
+        self.assertStatusCount(retval, n_failed=1)
 
     def test_7_2_on_exists_skip_with_existing_object_skips(self) -> None:
         """Test 7.2: on_exists=SKIP with existing object - should skip."""

@@ -440,7 +440,6 @@ class BatchUploader:
         )
         parent_ids = [x[0] for x in parent_id_is_new_id_pairs]
         new_parent_ids = {x for x, is_new in parent_id_is_new_id_pairs if is_new}
-        has_existing_parents = False
         if parent_ids:
             # Some parent IDs are given, check existence
             # Check existence of given parent IDs
@@ -479,7 +478,12 @@ class BatchUploader:
                 # Parent ID given but not as new ID, and exists
                 if parent_id in existing_parent_ids:
                     parent_result.id = parent_id
-                    has_existing_parents = True
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        success = False
+                        parent_result.add_error(
+                            "d3f5b6a1",
+                            f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                        )
                     continue
                 # Parent ID given but not as new ID, and does not exist
                 success = False
@@ -487,13 +491,6 @@ class BatchUploader:
                     "a9b7c4e2",
                     f"{self.parent_class.NAME}.id={parent.id} does not exist.",
                 )
-
-        if has_existing_parents and cmd.on_exists == OnExistsUploadAction.ERROR:
-            success = False
-            retval.add_error(
-                "d3f5b6a1",
-                f"Some {self.parent_class.NAME} already exist and on_exists=ERROR.",
-            )
         return success
 
     def verify_children(
@@ -508,7 +505,6 @@ class BatchUploader:
         success = True
 
         # Verify each child model for each parent
-        has_existing_data = False
         for model_class, children_field_name in self.children_field_name_map.items():
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
@@ -632,14 +628,12 @@ class BatchUploader:
                         )
                         continue  # Skip to next child since this one doesn't exist
                     # Child ID given but not as new ID, and exists
-                    has_existing_data = True
-
-        if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:
-            success = False
-            retval.add_error(
-                "c6e7f8a0",
-                f"Some child instances already exist and on_exists=ERROR",
-            )
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        success = False
+                        child_result.add_error(
+                            "c6e7f8a0",
+                            f"{child.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
         return success
 
     def verify_refdata(

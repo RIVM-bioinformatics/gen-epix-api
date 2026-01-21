@@ -14,6 +14,7 @@ from gen_epix.fastapp.service import BaseService
 
 
 class Ref1(commondb_model.Model):
+    NAME: ClassVar = "Ref1"
     code: str = Field(description="A unique code")
     a: str = Field(
         default="",
@@ -22,6 +23,7 @@ class Ref1(commondb_model.Model):
 
 
 class Ref2(commondb_model.Model):
+    NAME: ClassVar = "Ref2"
     code: str = Field(description="A unique code")
     a: str = Field(
         default="",
@@ -30,6 +32,7 @@ class Ref2(commondb_model.Model):
 
 
 class Parent(commondb_model.Model):
+    NAME: ClassVar = "Parent"
     a: str = Field(
         default="",
         description="A single value that can always be mutated after first storage.",
@@ -57,6 +60,7 @@ class Parent(commondb_model.Model):
 
 
 class Child1(commondb_model.Model):
+    NAME: ClassVar = "Child1"
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref1_id: UUID = Field(description="The ID of the Ref1 model.")
     a: str = Field(
@@ -86,6 +90,7 @@ class Child1(commondb_model.Model):
 
 
 class Child2(commondb_model.Model):
+    NAME: ClassVar = "Child2"
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
     a: str = Field(
@@ -115,6 +120,7 @@ class Child2(commondb_model.Model):
 
 
 class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
+    NAME: ClassVar = "Child1ForUpload"
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -141,6 +147,7 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
 
 
 class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
+    NAME: ClassVar = "Child2ForUpload"
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -152,6 +159,7 @@ class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
 
 
 class ParentForUpload(commondb_model.ParentForUpload):
+    NAME: ClassVar = "ParentForUpload"
     PARENT_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Parent
     PARENT_FIELD_NAME: ClassVar = "parent"
@@ -197,6 +205,7 @@ class ParentUploadResult(commondb_model.ParentUploadResult):
 
 
 class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
+    NAME: ClassVar = "ParentBatchForUpload"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
     PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "parents"
 
