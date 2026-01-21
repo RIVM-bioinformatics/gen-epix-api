@@ -160,3 +160,13 @@ class SeqdbService(BaseSeqdbService):
         result = self.seqdb_app.handle(cmd)
         cmd.user = casedb_user
         return result  # type: ignore[no-any-return]
+
+    def create_file(
+        self,
+        cmd: seqdb_command.CreateFileCommand,
+    ) -> UUID:
+        user = cmd.user
+        cmd.user = self.seqdb_user
+        file_id: UUID = self.seqdb_app.handle(cmd)
+        cmd.user = user
+        return file_id

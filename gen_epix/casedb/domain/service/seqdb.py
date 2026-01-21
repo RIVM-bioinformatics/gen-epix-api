@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
@@ -24,11 +25,13 @@ class BaseSeqdbService(BaseService):
             self.retrieve_genetic_sequence_fasta_by_id,
         )
         f(seqdb_command.UploadSamplesCommand, self.upload_samples)
+        f(seqdb_command.CreateFileCommand, self.create_file)
         f(seqdb_command.ReadSetCrudCommand, self.crud)
         f(seqdb_command.FileCrudCommand, self.crud)
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
         f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
+
         # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
 
     @abc.abstractmethod
@@ -57,3 +60,17 @@ class BaseSeqdbService(BaseService):
         cmd: seqdb_command.UploadSamplesCommand,
     ) -> seqdb_model.SampleBatchUploadResult:
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def create_file(
+        self,
+        cmd: seqdb_command.CreateFileCommand,
+    ) -> UUID:
+        raise NotImplementedError()
+
+    # @abc.abstractmethod
+    # def retrieve_allele_profile(
+    #     self,
+    #     cmd: command.RetrieveAlleleProfileCommand,
+    # ) -> model.SeqDbAlleleProfile | list[model.SeqDbAlleleProfile]:
+    #     raise NotImplementedError()

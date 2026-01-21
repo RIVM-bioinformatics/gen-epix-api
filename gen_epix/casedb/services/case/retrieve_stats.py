@@ -4,6 +4,13 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set_member import (
+    case_service_crud_case_set_member,
+)
+from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_cases_by_id,
+)
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.base import Filter
 from gen_epix.filter.equals_uuid import EqualsUuidFilter
@@ -109,7 +116,7 @@ def case_service_retrieve_case_set_stats(
             query_filter=case_set_query_filter,
         )
         curr_cmd._policies.extend(cmd._policies)
-        case_sets: list[model.CaseSet] = self.crud(curr_cmd)  # type: ignore[assignment]
+        case_sets: list[model.CaseSet] = case_service_crud_case_set(self, curr_cmd)  # type: ignore[assignment]
         case_set_ids: set[UUID] = {x.id for x in case_sets}  # type: ignore[misc]
 
         # Retrieve case set members
@@ -123,7 +130,7 @@ def case_service_retrieve_case_set_stats(
             query_filter=case_set_member_query_filter,
         )
         curr_cmd._policies.extend(cmd._policies)
-        case_set_members: list[model.CaseSetMember] = self.crud(curr_cmd)  # type: ignore[assignment]
+        case_set_members: list[model.CaseSetMember] = case_service_crud_case_set_member(self, curr_cmd)  # type: ignore[assignment]
         case_set_case_ids: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
             ((x.case_set_id, x.case_id) for x in case_set_members), as_set=True
         )
@@ -143,20 +150,30 @@ def case_service_retrieve_case_set_stats(
         private_data_collection_ids: set[UUID] = {x.id for x in policies if x.is_private}  # type: ignore[misc]
 
         # Retrieve case dates and whether the case is an own case
-        # @ABAC: case_set_case_ids is already filtered on cases with access, no
-        # need to apply here again, but case_date calculation requires ABAC as well
+        # @ABAC: case_set_case_ids is already filtered on case sets with access,
+        # but not on cases with access. There may still be unauthorized cases in the
+        # case_set_case_ids, so ABAC filtering on cases is required.
         case_type_ids: set[UUID] = {x.case_type_id for x in case_sets}
         case_props_map: dict[UUID, tuple[datetime.datetime, bool]] = {}
         for case_type_id in case_type_ids:
             curr_case_set_ids: set[UUID] = {x.id for x in case_sets if x.case_type_id == case_type_id}  # type: ignore[misc]
-            curr_case_ids = set.union(
-                *[case_set_case_ids[x] for x in curr_case_set_ids]
-            )
+            case_id_sets = [case_set_case_ids.get(x, set()) for x in curr_case_set_ids]
+            curr_case_ids = set.union(*case_id_sets) if case_id_sets else set()
+            if not curr_case_ids:
+                continue
             curr_cmd = command.RetrieveCasesByIdCommand(
                 user=user, case_type_id=case_type_id, case_ids=list(curr_case_ids)
             )
             curr_cmd._policies.extend(cmd._policies)
-            curr_cases: list[model.Case] = self.app.handle(curr_cmd)
+            # @ABAC: ignore invalid case IDs, which may occur due to lack of access rights, in particular when the case is not in all the data collections of the case set
+            curr_cases: list[model.Case] = case_service_retrieve_cases_by_id(
+                self, curr_cmd, on_invalid_case_id="ignore"
+            )
+            if len(curr_cases) < len(curr_case_ids):
+                # Some case IDs were not retrieved due to lack of access rights -> adjust case_set_case_ids
+                removed_case_ids = curr_case_ids - {x.id for x in curr_cases}  # type: ignore[misc]
+                for case_set_id in curr_case_set_ids:
+                    case_set_case_ids[case_set_id] -= removed_case_ids
             curr_case_props_map: dict[UUID, tuple[datetime.datetime, bool]] = {
                 x.id: (  # type: ignore[arg-type]
                     x.case_date,

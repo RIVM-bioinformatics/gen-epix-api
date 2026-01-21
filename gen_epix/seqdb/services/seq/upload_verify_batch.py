@@ -110,7 +110,12 @@ def _verify_children_seqs(
                         f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
                     )
                     seq_result.status = UploadStatus.SKIPPED
-                    has_existing_seqs = True
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        success = False
+                        seq_result.add_error(
+                            "b4c5d6e7",
+                            f"{seq.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
@@ -121,14 +126,6 @@ def _verify_children_seqs(
                         f"Seq with same hash ({seq.seq_hash}) and assembly protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
-
-    # Finalise checks
-    if has_existing_seqs and cmd.on_exists == OnExistsUploadAction.ERROR:
-        success = False
-        retval.add_error(
-            "b4c5d6e7",
-            "One or more seqs already exist and on_exists=ERROR",
-        )
     return success
 
 
@@ -203,7 +200,6 @@ def _verify_children_allele_profiles(
         key_map[(x[0], x[1])].append((x[2], x[3], x[4], x[5]))
 
     # Verify each allele profile
-    has_existing_allele_profiles = False
     for sample, sample_result in zip(samples, sample_results):
         if sample.id is None or sample.id == NULL_ID:
             # Sample does not exist
@@ -242,7 +238,12 @@ def _verify_children_allele_profiles(
                         f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
                     )
                     allele_profile_result.status = UploadStatus.SKIPPED
-                    has_existing_allele_profiles = True
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        success = False
+                        allele_profile_result.add_error(
+                            "d8a3b7f4",
+                            f"{allele_profile.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
                     break
                 if allele_profile.seq_id is None:
                     # New allele profile with same hash but unknown read sets -> error since
@@ -253,14 +254,6 @@ def _verify_children_allele_profiles(
                         f"Allele profile with same hash ({allele_profile.allele_profile_hash}) and assembly protocol already exists with ID {allele_profile_id}, but new allele profile has no seq ID provided for the new allele profile to compare",
                     )
                     break
-
-    # Finalise checks
-    if has_existing_allele_profiles and cmd.on_exists == OnExistsUploadAction.ERROR:
-        success = False
-        retval.add_error(
-            "d8a3b7f4",
-            "One or more allele profiles already exist and on_exists=ERROR",
-        )
     return success
 
 

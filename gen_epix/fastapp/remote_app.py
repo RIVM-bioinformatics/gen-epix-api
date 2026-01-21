@@ -30,7 +30,7 @@ class RemoteApp(App):
         domain: Domain,
         host: str,
         port: int | None,
-        http_protocol: HttpProtocol = HttpProtocol.HTTPS,
+        protocol: HttpProtocol | str = HttpProtocol.HTTPS,
         default_route_prefix: str | None = None,
         default_headers: dict[str, str] | None = None,
         add_generated_crud_route_handlers: bool = True,
@@ -41,15 +41,13 @@ class RemoteApp(App):
         super().__init__(domain, **kwargs)
         self._host = host
         self._port = port
-        self._http_protocol = http_protocol
+        self._protocol = protocol
         self._default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
         self._default_headers = default_headers or self.DEFAULT_REQUEST_HEADERS
         self._routes: dict[type[Command], str] = {}
 
         # Initialise SSL context
-        self._ssl_context = create_ssl_context(
-            host, ssl_cert_file, disable_ssl_verification
-        )
+        self._initialize_ssl_context(host, ssl_cert_file, disable_ssl_verification)
 
         # Create and register generated crud route handlers
         if add_generated_crud_route_handlers:
@@ -61,6 +59,19 @@ class RemoteApp(App):
                 )
                 self.register_handler(command_class, handler)
 
+    def _initialize_ssl_context(
+        self,
+        host: str,
+        ssl_cert_file: Path | str | None,
+        disable_ssl_verification: bool,
+    ) -> None:
+        if self.protocol == HttpProtocol.HTTPS:
+            self._ssl_context = create_ssl_context(
+                host, ssl_cert_file, disable_ssl_verification
+            )
+        else:
+            self._ssl_context = False
+
     @property
     def host(self) -> str:
         return self._host
@@ -70,13 +81,15 @@ class RemoteApp(App):
         return self._port
 
     @property
-    def http_protocol(self) -> HttpProtocol:
-        return self._http_protocol
+    def protocol(self) -> HttpProtocol:
+        if isinstance(self._protocol, HttpProtocol):
+            return self._protocol
+        return HttpProtocol[self._protocol.upper()]
 
     @property
     def host_url(self) -> str:
-        port_str = f":{self._port}" if self._port else ""
-        return f"{self.http_protocol.value.lower()}://{self._host}{port_str}"
+        port_str = f":{self.port}" if self.port else ""
+        return f"{self.protocol.value.lower()}://{self.host}{port_str}"
 
     @property
     def ssl_context(self) -> ssl.SSLContext | bool:

@@ -101,6 +101,8 @@ def _crud_case_set_member_with_abac(
     # For now, delegate to the main crud method with extensive logic
     # TODO: Implement the complex ABAC logic from the main crud.py file
     # This includes checking case set access rights, case access rights, etc.
-    from gen_epix.casedb.services.case.crud import _crud_data_by_non_admin
+    # from gen_epix.casedb.services.case.crud import _crud_data_by_non_admin
 
-    return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
+    # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
+    # !FIXME: Temporary workaround until the complex ABAC logic is implemented
+    return self.crud(cmd)  # type:ignore[return-value]
