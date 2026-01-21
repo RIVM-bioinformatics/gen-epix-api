@@ -14,6 +14,8 @@ from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.util import copy_model_field
+from gen_epix.commondb.api.exc import handle_command
+
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
@@ -66,20 +68,6 @@ class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
         model.OrganizationIdentifierIssuerLink
     ] = Field(description="The identifier issuers that the organization is linked to.")
 
-
-def handle_command(
-    *,
-    app: App,
-    user: model.User,
-    exception_code: str,
-    command_factory: Callable[[], command.Command],
-    handle_exception: Callable[[str, Any, Exception], NoReturn],
-) -> Any:
-    try:
-        return app.handle(command_factory())
-    except Exception as exception:
-        handle_exception(exception_code, user, exception)
-        raise
 
 
 def create_organization_endpoints(
@@ -147,8 +135,8 @@ def create_organization_endpoints(
                 app=app,
                 user=user,
                 exception_code="cad2509e",
-                handle_exception=handle_exception,
-                command_factory=lambda: retrieve_invite_user_constraints_command_class(
+                input_handle_exception=handle_exception,
+                input_command=retrieve_invite_user_constraints_command_class(
                     user=user
                 ),
             ),
@@ -190,8 +178,8 @@ def create_organization_endpoints(
                 app=app,
                 user=user,
                 exception_code="c026628e",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.OrganizationSetOrganizationUpdateAssociationCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.OrganizationSetOrganizationUpdateAssociationCommand(
                     user=user,
                     obj_id1=organization_set_id,
                     association_objs=request_body.organization_set_members,
@@ -217,8 +205,8 @@ def create_organization_endpoints(
                 app=app,
                 user=user,
                 exception_code="cf892de0",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.DataCollectionSetDataCollectionUpdateAssociationCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.DataCollectionSetDataCollectionUpdateAssociationCommand(
                     user=user,
                     obj_id1=data_collection_set_id,
                     association_objs=request_body.data_collection_set_members,
@@ -313,8 +301,8 @@ def create_organization_endpoints(
                 app=app,
                 user=user,
                 exception_code="a3c7f9d2",
-                handle_exception=handle_exception,
-                command_factory=lambda: command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+                input_handle_exception=handle_exception,
+                input_command=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
                     user=user,
                     obj_id1=organization_id,
                     association_objs=request_body.organization_identifier_issuer_links,
