@@ -10,6 +10,7 @@ def is_model_class(obj: Any) -> bool:
     return isinstance(obj, type) and hasattr(obj, "model_fields")
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-08")
 def test_model_field_descriptions() -> None:
     """Ensure every model field (including computed fields) has a non-empty description."""
     domains = [
