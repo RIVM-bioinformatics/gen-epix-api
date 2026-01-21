@@ -1159,11 +1159,22 @@ class TestExternalIdentifiers(BaseUploadTestCase):
             external_identifier1,
             parent.id,  # type: ignore[arg-type]
         )
+        created_external_identifier2 = self.get_external_identifier_from_for_upload(
+            external_identifier2,
+            parent.id,  # type: ignore[arg-type]
+        )
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
-            [existing_external_identifier1],  # The existing external identifiers
+            [],
+            [existing_external_identifier1, created_external_identifier2]
         ]
+        existing_parent = self.get_parent_from_for_upload(parent)
+        self.service.repository.crud.side_effect = [
+            [True],  # Parent exists
+            [existing_parent],  # Return the existing parent object
+        ]
+
         # Perform upload and verify result
         retval = self.upload_batch(parent)
         self.assertBatchProcessed(retval)
@@ -1191,6 +1202,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
             [self.identifier_issuer],  # The identifier issuers in the external IDs
             [existing_external_identifier1],  # The existing external identifiers
         ]
+
         # Perform upload and verify result
         retval = self.upload_batch(parent)
         self.assertBatchFailed(retval)
