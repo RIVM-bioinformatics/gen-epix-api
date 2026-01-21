@@ -4,6 +4,8 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
+import pytest
+
 import gen_epix.casedb.domain.command as case_command
 import gen_epix.casedb.domain.enum as case_enum
 import gen_epix.casedb.domain.model as case_model

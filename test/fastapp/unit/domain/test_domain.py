@@ -2,6 +2,8 @@ from enum import Enum
 from unittest import TestCase
 from uuid import UUID
 
+import pytest
+
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity

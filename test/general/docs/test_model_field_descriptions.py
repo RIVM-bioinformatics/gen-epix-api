@@ -1,5 +1,7 @@
 from typing import Any
 
+import pytest
+
 from gen_epix.casedb.domain import model as casedb_model
 from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.omopdb.domain import model as omopdb_model
