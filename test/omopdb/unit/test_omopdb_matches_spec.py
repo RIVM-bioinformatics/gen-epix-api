@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import pytest
 
 from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.domain.model.base import Model
@@ -162,6 +163,7 @@ Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 """
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestOmopSpecification:
 
     CHARACTER_REPLACEMENTS = {
