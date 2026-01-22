@@ -430,7 +430,7 @@ class BaseUploadTestCase(TestCase):
 
 
 # Test Scenario 1: Existence of parent and/or child objects in the repository
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestObjectExistence(BaseUploadTestCase):
     """Test scenarios related to object existence in repository."""
 
@@ -479,7 +479,7 @@ class TestObjectExistence(BaseUploadTestCase):
 
 
 # Test Scenario 2: Provision of child objects
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestChildObjectProvision(BaseUploadTestCase):
     """Test scenarios related to providing different combinations of child objects."""
 
@@ -593,7 +593,7 @@ class TestChildObjectProvision(BaseUploadTestCase):
 
 
 # Test Scenario 3: Links to reference data in child objects
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestReferenceDataLinks(BaseUploadTestCase):
     """Test scenarios related to reference data linking in child objects."""
 
@@ -767,7 +767,7 @@ class TestReferenceDataLinks(BaseUploadTestCase):
 
 
 # Test Scenario 4: Parent link in child objects
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestParentLinks(BaseUploadTestCase):
     """Test scenarios related to parent links in child objects."""
 
@@ -863,7 +863,7 @@ class TestParentLinks(BaseUploadTestCase):
 
 
 # Test Scenario 5: Field mutability for stored objects
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestFieldMutability(BaseUploadTestCase):
     """Test scenarios related to field mutability for existing objects."""
 
@@ -1008,7 +1008,7 @@ class TestFieldMutability(BaseUploadTestCase):
 
 
 # Test Scenario 6: External identifiers for parent objects
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestExternalIdentifiers(BaseUploadTestCase):
     """Test scenarios related to external identifiers for parent objects."""
 
@@ -1220,18 +1220,36 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         """Test 6.2.3.2: Multiple external IDs, all new - should succeed."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
-            external_id="new_ext_id_1"
+            external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
         )
         external_identifier2 = self.create_external_identifier_for_upload(
-            external_id="new_ext_id_2"
+            external_id="new_ext_id_2", identifier_issuer_id=self.identifier_issuer_id
         )
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier1, external_identifier2]
         )
+
+        created_parent_id = self.random_ids[0]
+        created_external_identifier1_id = self.get_external_identifier_from_for_upload(
+            external_identifier1,
+            id=self.random_ids[1],
+            internal_id=created_parent_id,
+        )
+        created_external_identifier2_id = self.get_external_identifier_from_for_upload(
+            external_identifier2,
+            id=self.random_ids[2],
+            internal_id=created_parent_id,
+        )
+        self.service.generate_id.side_effect = [created_parent_id]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parents returned IDs
+        ]
+
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
-            [],  # The existing external identifiers
+            [],
+            [created_external_identifier1_id, created_external_identifier2_id],
         ]
         # Perform upload and verify result
         retval = self.upload_batch(parent)
@@ -1242,7 +1260,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
 
 
 # Test Scenario 7: Upload command on_exists value
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestOnExistsActions(BaseUploadTestCase):
     """Test scenarios related to the on_exists command parameter."""
 
@@ -1255,8 +1273,8 @@ class TestOnExistsActions(BaseUploadTestCase):
         self.service.repository.crud.return_value = [existing_parent]
         # Perform upload and verify result
         retval = self.upload_batch(parent, on_exists=OnExistsUploadAction.ERROR)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
+        self.assertBatchFailed(retval)
+        self.assertStatusCount(retval, n_failed=1)
 
     def test_7_2_on_exists_skip_with_existing_object_skips(self) -> None:
         """Test 7.2: on_exists=SKIP with existing object - should skip."""
@@ -1285,7 +1303,7 @@ class TestOnExistsActions(BaseUploadTestCase):
 
 
 # Combined scenario tests
-@pytest.mark.scenario_ids("TC-RBAC-30-03")
+@pytest.mark.scenario_ids("TC-SEC-30-03")
 class TestCombinedScenarios(BaseUploadTestCase):
     """Test combinations of different scenarios."""
 
@@ -1294,14 +1312,46 @@ class TestCombinedScenarios(BaseUploadTestCase):
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload()
         child1 = self.create_child1_for_upload(ref1_id=self.ref1_id)
-        child2 = self.create_child2_for_upload()
+        # Optional reference for Child2: use None (not NULL_ID) to avoid resolution error
+        child2 = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier],
             children1=[child1],
             children2=[child2],
         )
         # Set up mocks
-
+        # Resolve Ref1 for Child1
+        existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
+        self.service.repository.read_fields.side_effect = [
+            [(existing_ref1.id, existing_ref1.code)],
+        ]
+        # ID generation for parent and children
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
+        created_child2_id = self.random_ids[2]
+        self.service.generate_id.side_effect = [
+            created_parent_id,
+            created_child1_id,
+            created_child2_id,
+        ]
+        # Create operations return IDs
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parent
+            [created_child1_id],  # Create child1
+            [created_child2_id],  # Create child2
+        ]
+        # External identifier: resolve issuer, no existing externals, then create
+        created_external_identifier = self.get_external_identifier_from_for_upload(
+            external_identifier,
+            internal_id=created_parent_id,
+            id=self.random_ids[3],
+            identifier_issuer_id=self.identifier_issuer_id,
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # Resolve IdentifierIssuer by code
+            [],  # No existing ExternalIdentifiers
+            [created_external_identifier],  # Created ExternalIdentifier
+        ]
         # Perform upload and verify result
         retval = self.upload_batch(parent)
         self.assertBatchProcessed(retval)
@@ -1346,6 +1396,25 @@ class TestCombinedScenarios(BaseUploadTestCase):
             children2=[child2_optional],
         )
         # Set up mocks
+        # Resolve Ref1 by id and code for Child1 references
+        existing_ref1 = self.create_ref1(self.ref1_id, "ref_code")
+        self.service.repository.read_fields.side_effect = [
+            [(existing_ref1.id, existing_ref1.code)],
+        ]
+        # Create IDs for parent and children
+        created_parent_id = self.random_ids[0]
+        created_child1_ids = self.random_ids[1:4]
+        created_child2_id = self.random_ids[4]
+        self.service.generate_id.side_effect = [
+            created_parent_id,
+            *created_child1_ids,
+            created_child2_id,
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parent
+            created_child1_ids,  # Create 3 Child1
+            [created_child2_id],  # Create 1 Child2
+        ]
         # Perform upload and verify result
         retval = self.upload_batch(parent)
         self.assertBatchProcessed(retval)
