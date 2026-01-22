@@ -480,6 +480,11 @@ class BatchUploader:
                 if parent_id in existing_parent_ids:
                     parent_result.id = parent_id
                     has_existing_parents = True
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        parent_result.status = UploadStatus.FAILED
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                        # Existing parent and on_exists=SKIP: do not update
+                        parent_result.status = UploadStatus.SKIPPED
                     continue
                 # Parent ID given but not as new ID, and does not exist
                 success = False
@@ -633,6 +638,9 @@ class BatchUploader:
                         continue  # Skip to next child since this one doesn't exist
                     # Child ID given but not as new ID, and exists
                     has_existing_data = True
+                    if cmd.on_exists == OnExistsUploadAction.SKIP:
+                        # Existing child and on_exists=SKIP: do not update
+                        child_result.status = UploadStatus.SKIPPED
 
         if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:
             success = False
