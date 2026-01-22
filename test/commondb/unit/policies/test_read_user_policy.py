@@ -102,7 +102,7 @@ class BaseReadUserPolicyTestCase(TestCase):
         ]
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestUnsupportedAndNonReadPaths(BaseReadUserPolicyTestCase):
     """Test unsupported command types and non-read operations."""
 
@@ -134,7 +134,7 @@ class TestUnsupportedAndNonReadPaths(BaseReadUserPolicyTestCase):
         self.abac_service.app.handle.assert_not_called()
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestUnauthenticated(BaseReadUserPolicyTestCase):
     """Test unauthenticated user conditions."""
 
@@ -168,7 +168,7 @@ class TestUnauthenticated(BaseReadUserPolicyTestCase):
         self.abac_service.app.handle.assert_not_called()
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestAppAdminBypass(BaseReadUserPolicyTestCase):
     """Test APP_ADMIN users bypass ABAC filtering."""
 
@@ -192,7 +192,7 @@ class TestAppAdminBypass(BaseReadUserPolicyTestCase):
         )
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestOrgAdminReads(BaseReadUserPolicyTestCase):
     """Test organization admin read behavior."""
 
@@ -315,7 +315,7 @@ class TestOrgAdminReads(BaseReadUserPolicyTestCase):
         self.abac_service.app.handle.assert_called_once()
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestRegularUserReads(BaseReadUserPolicyTestCase):
     """Test regular user read behavior."""
 

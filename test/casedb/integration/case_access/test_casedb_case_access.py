@@ -96,7 +96,7 @@ class CaseAccessSetup:
     "TC-BIO-04-01",
     "TC-RBAC-02-02",
     "TC-RBAC-02-04",
-    "TC-RBAC-06-01",
+    "TC-RBAC-05-01",
 )
 class TestCaseAccess(CaseAccessSetup):
 

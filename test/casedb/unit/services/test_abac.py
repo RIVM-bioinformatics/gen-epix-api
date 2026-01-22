@@ -181,7 +181,7 @@ class BaseAbacTestCase(TestCase):
             }
 
 
-@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
 class TestRegisterPolicies(BaseAbacTestCase):
     """Test registration of policies."""
 
@@ -207,7 +207,7 @@ class TestRegisterPolicies(BaseAbacTestCase):
             self.assertEqual(args[2], EventTiming.DURING)
 
 
-@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
 class TestGetCaseAbac(BaseAbacTestCase):
     """Test get_case_abac behavior."""
 
@@ -419,7 +419,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         )  # AND -> empty
 
 
-@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-06-02")
+@pytest.mark.scenario_ids("TC-SEC-29-02", "TC-RBAC-05-02")
 class TestTempUpdateUserOrganization(BaseAbacTestCase):
     """Test temp_update_user_own_organization behavior."""
 

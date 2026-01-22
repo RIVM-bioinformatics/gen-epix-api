@@ -106,7 +106,7 @@ def _set_permission_side_effect(
     )
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestInitialChecks:
     def test_user_none_returns_false(self) -> None:
         role_set_map: dict[enum.RoleSet, set[str]] = _make_role_set_map()
@@ -131,7 +131,7 @@ class TestInitialChecks:
             policy.is_allowed(bad_cmd)
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestInviteCommand:
     def test_root_can_invite_anyone(self) -> None:
         role_set_map: dict[enum.RoleSet, set[str]] = _make_role_set_map()
@@ -242,7 +242,7 @@ class TestInviteCommand:
         assert allowed is False
 
 
-@pytest.mark.scenario_ids("TC-RBAC-30-02")
+@pytest.mark.scenario_ids("TC-SEC-30-02")
 class TestUpdateCommand:
     def test_root_can_update_anyone(self) -> None:
         role_set_map: dict[enum.RoleSet, set[str]] = _make_role_set_map()
