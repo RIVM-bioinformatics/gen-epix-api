@@ -1192,7 +1192,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         """Test 6.2.3.1: Multiple external IDs, some existing for different parent - should fail."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
-            external_id="ext_id_1"
+            external_id="ext_id_1", identifier_issuer_id=self.random_ids[1]
         )
         external_identifier2 = self.create_external_identifier_for_upload(
             external_id="ext_id_2"
