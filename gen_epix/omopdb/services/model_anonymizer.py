@@ -297,13 +297,9 @@ class ModelAnonymizer(BaseAnonymizer):
             """
             if len(path) == 1 and isinstance(path[0], str):
                 return
-            if (
-                len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], str)
-            ):
+            if len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], str):
                 return
-            if (
-                len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], int)
-            ):
+            if len(path) == 2 and isinstance(path[0], str) and isinstance(path[1], int):
                 return
             if (
                 len(path) == 3

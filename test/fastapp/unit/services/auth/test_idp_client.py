@@ -34,6 +34,9 @@ class DummyIdpClient(IdpClient):
     def get_claims_from_userinfo(self, access_token: str) -> Any:
         return super().get_claims_from_userinfo(access_token)  # type: ignore[safe-super]
 
+    async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
+        raise NotImplementedError()
+
     async def __call__(self, request: Request) -> Any:
         return await IdpClient.__call__(self, request)  # type: ignore[safe-super]
 

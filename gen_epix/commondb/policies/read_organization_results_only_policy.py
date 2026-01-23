@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
@@ -79,11 +80,14 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
                 return self._filter_users_by_organization(
                     cmd, retval, organization_ids, is_read_all, is_read_one, msg1, msg2
                 )
+        raise NotImplementedError(
+            "ReadOrganizationResultsOnlyPolicy cannot filter this command type"
+        )
 
     def _filter_results_by_organization(
         self,
         retval: Any,
-        organization_ids: set[int],
+        organization_ids: set[UUID],
         is_read_all: bool,
         is_read_one: bool,
         msg1: str,
@@ -103,7 +107,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         self,
         cmd: command.Command,
         retval: Any,
-        organization_ids: set[int],
+        organization_ids: set[UUID],
         is_read_all: bool,
         is_read_one: bool,
         msg1: str,

@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 from datetime import datetime
 from typing import Any, ClassVar, Self
@@ -348,8 +349,8 @@ class CaseTypeDim(Model):
             }
         ),
     )
-    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
-    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
+    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The case type")
     dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
     dim: Dim | None = Field(default=None, description="The dimension")
     occurrence: int = Field(
@@ -392,7 +393,7 @@ class CaseTypeDim(Model):
     )
 
 
-class CaseTypeCol(Model):  # type: ignore
+class CaseTypeCol(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_type_cols",
         table_name="case_type_col",
@@ -406,8 +407,8 @@ class CaseTypeCol(Model):  # type: ignore
             }
         ),
     )
-    case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
-    case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
+    case_type_id: UUID = copy_model_field(CaseTypeDim, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
     case_type_dim_id: UUID = Field(
         description="The ID of the case type dimension. FOREIGN KEY"
     )
@@ -520,12 +521,7 @@ class CaseTypeColSet(Model):
         table_name="case_type_col_set",
         persistable=True,
         keys=create_keys({1: "name"}),
-        # links=get_links({
-        #     1: ("case_type_id", CaseType, "case_type"),
-        # }),
     )
-    # case_type_id: UUID = copy_model_field(CaseTypeSetMember, "case_type_id")
-    # case_type: CaseType | None = copy_model_field(CaseTypeSetMember, "case_type")
     name: str = Field(
         description="The name of a case type column set, UNIQUE", max_length=255
     )
@@ -545,7 +541,7 @@ class CaseTypeColSetMember(Model):
         links=create_links(
             {
                 1: ("case_type_col_set_id", CaseTypeColSet, "case_type_col_set"),
-                2: ("case_type_col_id", CaseTypeCol, "case_type_col"),  # type: ignore
+                2: ("case_type_col_id", CaseTypeCol, "case_type_col"),
             }
         ),
     )
@@ -558,7 +554,7 @@ class CaseTypeColSetMember(Model):
     case_type_col_id: UUID = Field(
         description="The ID of the case type column. FOREIGN KEY"
     )
-    case_type_col: CaseTypeCol | None = Field(  # type: ignore
+    case_type_col: CaseTypeCol | None = Field(
         default=None, description="The case type column"
     )
 
@@ -645,5 +641,5 @@ class CaseTypeSetMember(Model):
     case_type_set: CaseTypeSet | None = Field(
         default=None, description="The case type set"
     )
-    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
-    case_type: CaseType | None = Field(default=None, description="The case type")
+    case_type_id: UUID = copy_model_field(CaseTypeDim, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")

@@ -12,7 +12,6 @@ from gen_epix.casedb.services.case.case_date import (
 from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
 from gen_epix.casedb.services.case.create_seq import (
     case_service_create_file_for_read_set_or_seq,
-    case_service_create_read_sets_or_seqs_for_cases,
 )
 from gen_epix.casedb.services.case.crud_case import case_service_crud_case
 from gen_epix.casedb.services.case.crud_case_data_collection_link import (
@@ -107,22 +106,6 @@ class CaseService(BaseCaseService):
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
         return case_service_create_case_set(self, cmd)
-
-    def create_reads_sets_for_cases(
-        self, cmd: command.CreateReadSetsForCasesCommand
-    ) -> list[seqdb_model.ReadSet]:
-        retval: list[seqdb_model.ReadSet] = (
-            case_service_create_read_sets_or_seqs_for_cases(self, cmd)  # type: ignore[assignment]
-        )
-        return retval
-
-    def create_seqs_for_cases(
-        self, cmd: command.CreateSeqsForCasesCommand
-    ) -> list[seqdb_model.Seq]:
-        retval: list[seqdb_model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
-            self, cmd
-        )  # type: ignore[assignment]
-        return retval
 
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand

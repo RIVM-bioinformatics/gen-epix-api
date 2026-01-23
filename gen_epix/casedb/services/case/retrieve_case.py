@@ -169,7 +169,9 @@ def _verify_case_set_access(
 
 
 def case_service_retrieve_cases_by_id(
-    self: BaseCaseService, cmd: command.RetrieveCasesByIdCommand, on_invalid_case_id: str = "raise"
+    self: BaseCaseService,
+    cmd: command.RetrieveCasesByIdCommand,
+    on_invalid_case_id: str = "raise",
 ) -> list[model.Case]:
     case_type_id = cmd.case_type_id
     case_ids = cmd.case_ids

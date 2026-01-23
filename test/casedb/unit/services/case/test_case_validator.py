@@ -604,6 +604,7 @@ class BaseCaseValidatorTestCase(TestCase):
         retval = model.CaseBatchUploadResult(cases=case_results)
         return cmd, retval
 
+
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestGetContentReferences(BaseCaseValidatorTestCase):
     def test_wrong_case_type_raises(self) -> None:

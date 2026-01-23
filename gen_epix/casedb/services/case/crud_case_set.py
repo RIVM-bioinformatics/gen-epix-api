@@ -79,9 +79,7 @@ def _crud_case_set_with_abac(
             case_set_ids=case_set_ids,
             filter=cmd.query_filter,
         )
-        return (
-            retval[0] if cmd.operation == CrudOperation.READ_ONE else retval
-        )
+        return retval[0] if cmd.operation == CrudOperation.READ_ONE else retval
     elif is_update:
         # At least one data collection with write access is required
         self._retrieve_case_sets_with_content_right(

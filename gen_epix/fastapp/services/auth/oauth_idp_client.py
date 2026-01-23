@@ -92,7 +92,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manger: TokenIntrospectionManager = (
+            self.token_introspection_manager: TokenIntrospectionManager = (
                 TokenIntrospectionManager(
                     server_cfg=self.server_cfg,
                     discovery_url=discovery_url or self.server_cfg.discovery_url or "",
@@ -276,7 +276,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 )
             raise exc.UnauthorizedAuthError() from e
 
-    async def verify_jwt_and_get_claims(self, jwt_token: str) -> dict[str, Any] | None:
+    async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
         claims = self._decode_jwt_unverified(jwt_token)
         if not self._validate_issuer(claims):
             return None
@@ -287,7 +287,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manger.introspect_token(jwt_token, claims)
+            self.token_introspection_manager.introspect_token(jwt_token, claims)
 
         if self.logger and self.logger.level <= logging.DEBUG:
             self.logger.debug(
@@ -637,7 +637,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             self._log_unsupported_authorization_scheme(scheme)
             return None
         try:
-            claims = await self.verify_jwt_and_get_claims(token)
+            claims = await self.get_claims_from_jwt(token)
             return (
                 Claims(claims=claims, scheme=scheme, token=token, idp_client_id=self.id)
                 if claims

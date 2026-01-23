@@ -9,83 +9,10 @@ import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
-from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import enum as seqdb_enum
-
-
-def case_service_create_read_sets_or_seqs_for_cases(
-    self: BaseCaseService,
-    cmd: command.CreateReadSetsForCasesCommand | command.CreateSeqsForCasesCommand,
-) -> list[seqdb_model.ReadSet] | list[seqdb_model.Seq]:
-    user, repository = self._get_user_and_repository(cmd)
-    assert isinstance(user, model.User) and user.id is not None
-
-    # Parse input
-    read_sets: list[seqdb_model.ReadSet] = []
-    seqs: list[seqdb_model.Seq] = []
-    case_ids: list[UUID] = []
-    case_type_col_ids: list[UUID] = []
-    if isinstance(cmd, command.CreateReadSetsForCasesCommand):
-        is_read_set = True
-        read_sets = [x.read_set for x in cmd.read_sets]  # type:ignore
-        case_ids = [x.case_id for x in cmd.read_sets]
-        case_type_col_ids = [x.case_type_col_id for x in cmd.read_sets]
-    elif isinstance(cmd, command.CreateSeqsForCasesCommand):
-        is_read_set = False
-        seqs = [x.seq for x in cmd.seqs]  # type:ignore
-        case_ids = [x.case_id for x in cmd.seqs]
-        case_type_col_ids = [x.case_type_col_id for x in cmd.seqs]
-    else:
-        raise exc.InvalidArgumentsError("Invalid command type")
-
-    # Special case: nothing to create
-    if is_read_set and not read_sets:
-        return []
-    if not is_read_set and not seqs:
-        return []
-
-    # Retrieve case ABAC
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-
-    # Handle transactions
-    with repository.uow() as uow:
-        cases = _get_cases_for_create_read_sets_or_seqs(
-            self, cmd, case_abac, uow, user.id, case_ids, case_type_col_ids
-        )
-
-        # Create ReadSets or Seqs
-        created_objs: list[seqdb_model.ReadSet] | list[seqdb_model.Seq]
-        command_class = (
-            seqdb_command.ReadSetCrudCommand
-            if is_read_set
-            else seqdb_command.SeqCrudCommand
-        )
-        created_objs = self.app.handle(
-            command_class(
-                user=cmd.user,
-                operation=CrudOperation.CREATE_SOME,
-                objs=read_sets if is_read_set else seqs,  # type: ignore[arg-type]
-            )
-        )
-
-        # Update Cases with created ReadSet or Seq IDs
-        for case, case_type_col_id, created_obj in zip(
-            cases, case_type_col_ids, created_objs
-        ):
-            case.content[case_type_col_id] = str(created_obj.id)
-        super(DomainBaseCaseService, self).crud(
-            command.CaseCrudCommand(
-                user=cmd.user,
-                operation=CrudOperation.UPDATE_SOME,
-                objs=cases,  # type: ignore[arg-type]
-            )
-        )
-
-    return created_objs
 
 
 def case_service_create_file_for_read_set_or_seq(
@@ -109,7 +36,7 @@ def case_service_create_file_for_read_set_or_seq(
 
     # Handle transaction for reading case
     with repository.uow() as uow:
-        cases = _get_cases_for_create_read_sets_or_seqs(
+        cases = _get_cases_for_create_file_for_read_sets_or_seqs(
             self, cmd, case_abac, uow, user_id, [cmd.case_id], [cmd.case_type_col_id]
         )
         case = cases[0]
@@ -189,14 +116,9 @@ def case_service_create_file_for_read_set_or_seq(
     return file_id
 
 
-def _get_cases_for_create_read_sets_or_seqs(
+def _get_cases_for_create_file_for_read_sets_or_seqs(
     self: BaseCaseService,
-    cmd: (
-        command.CreateReadSetsForCasesCommand
-        | command.CreateSeqsForCasesCommand
-        | command.CreateFileForReadSetCommand
-        | command.CreateFileForSeqCommand
-    ),
+    cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
     case_abac: model.CaseAbac,
     uow: BaseUnitOfWork,
     user_id: UUID,
@@ -233,15 +155,9 @@ def _get_cases_for_create_read_sets_or_seqs(
     # TODO: Verify all case type cols are for the given case type
 
     # Verify all case type cols are of type GENETIC_READS
-    if isinstance(
-        cmd,
-        (command.CreateReadSetsForCasesCommand, command.CreateFileForReadSetCommand),
-    ):
+    if isinstance(cmd, command.CreateFileForReadSetCommand):
         expected_col_type = enum.ColType.GENETIC_READS
-    elif isinstance(
-        cmd,
-        (command.CreateSeqsForCasesCommand, command.CreateFileForSeqCommand),
-    ):
+    elif isinstance(cmd, command.CreateFileForSeqCommand):
         expected_col_type = enum.ColType.GENETIC_SEQUENCE
     else:
         raise exc.InvalidArgumentsError("Invalid command type")

@@ -69,7 +69,6 @@ class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
     ] = Field(description="The identifier issuers that the organization is linked to.")
 
 
-
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -136,9 +135,7 @@ def create_organization_endpoints(
                 user=user,
                 exception_code="cad2509e",
                 input_handle_exception=handle_exception,
-                input_command=retrieve_invite_user_constraints_command_class(
-                    user=user
-                ),
+                input_command=retrieve_invite_user_constraints_command_class(user=user),
             ),
         )
 

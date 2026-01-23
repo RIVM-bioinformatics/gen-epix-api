@@ -64,7 +64,7 @@ class AuthService(BaseAuthService):
 
     async def get_existing_user_from_token(self, token: str) -> model.User | None:
         for idp_client in self._idp_clients:
-            jwt_claims = await idp_client.verify_jwt_and_get_claims(token)
+            jwt_claims = await idp_client.get_claims_from_jwt(token)
             if jwt_claims:
                 try:
                     user = await self.get_existing_user_from_claims(

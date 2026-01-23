@@ -375,11 +375,13 @@ class SAMapper(BaseSAMapper):
         ]
         actual_row_only_field_names_set = set(actual_row_only_field_names)
         service_metadata_field_names = self._check_field_names(
+            row_class,
             service_metadata_field_names,
             "service_metadata_field_names",
             actual_row_only_field_names_set,
         )
         db_metadata_field_names = self._check_field_names(
+            row_class,
             db_metadata_field_names,
             "db_metadata_field_names",
             actual_row_only_field_names_set,
@@ -394,6 +396,7 @@ class SAMapper(BaseSAMapper):
 
     def _check_field_names(
         self,
+        row_class: type,
         field_names: Iterable[str] | None,
         name: str,
         valid_field_names: Iterable[str],

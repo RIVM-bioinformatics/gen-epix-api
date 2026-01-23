@@ -35,7 +35,7 @@ class IdpClient(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    async def verify_jwt_and_get_claims(
+    async def get_claims_from_jwt(
         self, jwt_token: str
     ) -> dict[str, str | int | bool | list[str]] | None:
         raise NotImplementedError()

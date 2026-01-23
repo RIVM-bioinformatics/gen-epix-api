@@ -6,7 +6,7 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.enum import (
     CrudOperation,
-    ErrorHandlingMode,
+    ExceptionHandlingMode,
     PermissionType,
     PermissionTypeSet,
 )
@@ -573,7 +573,7 @@ class Domain:
         service_type: Hashable | None = None,
         model_class: type[Model] | None = None,
         crud_command_class: type[CrudCommand] | None = None,
-        on_cycle: ErrorHandlingMode = ErrorHandlingMode.RAISE,
+        on_cycle: ExceptionHandlingMode = ExceptionHandlingMode.RAISE,
     ) -> Entity:
         # Set service type Model and CrudCommand
         if model_class:
@@ -613,16 +613,19 @@ class Domain:
 
         return entity
 
-    def _update_entity_dag(self, entity: Entity, on_cycle: ErrorHandlingMode) -> None:
+    def _update_entity_dag(
+        self, entity: Entity, on_cycle: ExceptionHandlingMode
+    ) -> None:
         for link in entity.links.values():
             if link.link_model_class not in self._models:
-                if on_cycle == ErrorHandlingMode.RAISE:
+                if on_cycle == ExceptionHandlingMode.RAISE:
                     raise exc.DomainException(
                         f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order"
                     )
-                if on_cycle != ErrorHandlingMode.IGNORE:
+                elif on_cycle == ExceptionHandlingMode.IGNORE:
                     continue
-                raise NotImplementedError(f"Unsupported on_cycle: {on_cycle}")
+                else:
+                    raise NotImplementedError(f"Unsupported on_cycle: {on_cycle.value}")
             link_entity = self.get_entity_for_model(link.link_model_class)  # type: ignore
             self._entity_dag[entity].append(link_entity)
         self._dag_sorted_entities.append(entity)

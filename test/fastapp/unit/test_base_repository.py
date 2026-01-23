@@ -380,6 +380,7 @@ class TestUpdateAssociation(BaseRepositoryTestCase):
                 association_objs=objs,
             )
 
+
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 class TestRaiseOnDuplicateIds(BaseRepositoryTestCase):
     """Tests for static helper raise_on_duplicate_ids."""
@@ -443,13 +444,19 @@ class TestInitAndAbstracts(BaseRepositoryTestCase):
 
         # 2-4. Call unbound functions directly to cover base raises
         with pytest.raises(NotImplementedError):
-            BaseRepository.__dict__["crud"](dummy, None, None, Model, None, None, CrudOperation.READ_ALL, None)
+            BaseRepository.__dict__["crud"](
+                dummy, None, None, Model, None, None, CrudOperation.READ_ALL, None
+            )
         with pytest.raises(NotImplementedError):
-            BaseRepository.__dict__["read_fields"](dummy, None, None, Model, ["id"], None)
+            BaseRepository.__dict__["read_fields"](
+                dummy, None, None, Model, ["id"], None
+            )
         with pytest.raises(NotImplementedError):
             BaseRepository.__dict__["split_filter"](dummy, Model, None)
         with pytest.raises(NotImplementedError):
-            BaseRepository.__dict__["verify_valid_ids"](dummy, None, uuid4(), Model, ["a"])
+            BaseRepository.__dict__["verify_valid_ids"](
+                dummy, None, uuid4(), Model, ["a"]
+            )
         with pytest.raises(NotImplementedError):
             BaseRepository.__dict__["uow"](dummy)
 
@@ -502,6 +509,7 @@ def _valid_args_for_operation(op: CrudOperation) -> tuple[type[Model], Any, Any]
     if op == CrudOperation.EXISTS_SOME:
         return model_class, None, ["ID1", "ID2"]
     raise AssertionError(f"Unhandled operation: {op}")
+
 
 @pytest.mark.scenario_ids("TC-SEC-28-03")
 @pytest.mark.parametrize("operation", list(CrudOperation))

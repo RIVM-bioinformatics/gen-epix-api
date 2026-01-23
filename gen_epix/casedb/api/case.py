@@ -16,6 +16,7 @@ from gen_epix.fastapp.api import CrudEndpointGenerator
 from gen_epix.fastapp.services.auth.service import AuthService
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
 
 
@@ -574,54 +575,6 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/retrieve/allele_profile",
-        operation_id="retrieve__allele_profile",
-        name="Retrieve allele profile",
-        description=command.RetrieveAlleleProfileCommand.__doc__,
-    )
-    async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    ) -> list[model.AlleleProfile]:
-        return cast(
-            list[model.AlleleProfile],
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="a4c03b54",
-                input_handle_exception=handle_exception,
-                input_command=command.RetrieveAlleleProfileCommand(
-                    user=user,
-                    genetic_distance_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
-                    case_ids=request_body.case_ids,
-                ),
-            ),
-        )
-
-    @router.post(
-        "/create_read_sets_for_cases",
-        operation_id="create__read_sets_for_cases",
-        name="Create reads sets for cases",
-        description=command.CreateReadSetsForCasesCommand.__doc__,
-    )
-    async def create__read_sets_for_cases(
-        user: registered_user_dependency,  # type: ignore
-        case_read_sets: list[model.CaseReadSet],
-    ) -> list[model.ReadSet]:
-        return cast(
-            list[model.ReadSet],
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="e3d4f5a6",
-                input_handle_exception=handle_exception,
-                input_command=command.CreateReadSetsForCasesCommand(
-                    user=user,
-                    case_read_sets=case_read_sets,
-                ),
-            ),
-        )
-
-    @router.post(
         "/create_file_for_read_set/{case_id}/{case_type_col_id}",
         operation_id="create_file_for_read_set",
         name="Create file for reads set",
@@ -646,30 +599,6 @@ def create_case_endpoints(
                     case_id=case_id,
                     case_type_col_id=case_type_col_id,
                     is_fwd=request_body.is_fwd,
-                ),
-            ),
-        )
-
-    @router.post(
-        "/create_seqs_for_cases",
-        operation_id="create_seqs_for_cases",
-        name="Create sequences for cases",
-        description=command.CreateSeqsForCasesCommand.__doc__,
-    )
-    async def create_seqs_for_cases(
-        user: registered_user_dependency,  # type: ignore
-        case_seqs: list[model.CaseSeq],
-    ) -> list[model.Seq]:
-        return cast(
-            list[model.Seq],
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="a1b2c3d4",
-                input_handle_exception=handle_exception,
-                input_command=command.CreateSeqsForCasesCommand(
-                    user=user,
-                    case_seqs=case_seqs,
                 ),
             ),
         )
@@ -710,9 +639,9 @@ def create_case_endpoints(
     )
     async def retrieve__sequencing_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.SequencingProtocol]:
+    ) -> list[seqdb_model.SequencingProtocol]:
         return cast(
-            list[model.SequencingProtocol],
+            list[seqdb_model.SequencingProtocol],
             handle_command(
                 app=app,
                 user=user,
@@ -732,9 +661,9 @@ def create_case_endpoints(
     )
     async def retrieve__assembly_protocols(
         user: registered_user_dependency,  # type: ignore
-    ) -> list[model.AssemblyProtocol]:
+    ) -> list[seqdb_model.AssemblyProtocol]:
         return cast(
-            list[model.AssemblyProtocol],
+            list[seqdb_model.AssemblyProtocol],
             handle_command(
                 app=app,
                 user=user,
