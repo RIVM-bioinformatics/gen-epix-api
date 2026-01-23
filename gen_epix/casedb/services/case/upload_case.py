@@ -273,7 +273,9 @@ class CaseBatchUploader(BatchUploader):
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
-                case_content[case.read_sets[child_index].case_type_col_id] = str(seqdb_result.id)
+                case_content[case.read_sets[child_index].case_type_col_id] = str(
+                    seqdb_result.id
+                )
             # Map seqs back to cases
             for i, seqdb_result in enumerate(sample_result.seqs or []):
                 case_index, child_index = sample_case_index_map[
@@ -285,7 +287,9 @@ class CaseBatchUploader(BatchUploader):
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
-                case_content[case.seqs[child_index].case_type_col_id] = str(seqdb_result.id)
+                case_content[case.seqs[child_index].case_type_col_id] = str(
+                    seqdb_result.id
+                )
 
         return success
 

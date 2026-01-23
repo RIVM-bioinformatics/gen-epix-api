@@ -376,9 +376,9 @@ class BatchUploader:
         }
 
         # Verify external IDs for each parent
-        for parent, parent_result in self.parent_result_items(cmd, retval):
+        for parent_for_upload, parent_result in self.parent_result_items(cmd, retval):
             external_identifiers: list[model.ExternalIdentifier] = (
-                getattr(parent, self.external_identifiers_field_name) or []
+                getattr(parent_for_upload, self.external_identifiers_field_name) or []
             )
             external_identifier_results: list[UploadResult] = (
                 getattr(parent_result, self.external_identifiers_field_name) or []
@@ -401,21 +401,24 @@ class BatchUploader:
                 external_identifier_result.status = UploadStatus.SKIPPED
                 # Cross-validate with parent ID if given and not new ID, otherwise fill in parent ID
                 if (
-                    parent.id is not None
-                    and parent.id != NULL_ID
-                    and not parent.is_new_id
+                    parent_for_upload.id is not None
+                    and parent_for_upload.id != NULL_ID
+                    and not parent_for_upload.is_new_id
                 ):
                     # Parent already exists
-                    if existing_external_identifier.internal_id != parent.id:
+                    if existing_external_identifier.internal_id != parent_for_upload.id:
                         success = False
                         external_identifier_result.add_error(
                             "f8a9b0c1",
-                            f"External identifier {external_identifier.external_id} refers to {self.parent_class.NAME}.id={existing_external_identifier.internal_id}, which does not match uploaded {self.parent_class.NAME}.id={parent.id}",
+                            f"External identifier {external_identifier.external_id} refers to {self.parent_class.NAME}.id={existing_external_identifier.internal_id}, which does not match uploaded {self.parent_class.NAME}.id={parent_for_upload.id}",
                         )
                 else:
                     # Parent does not exist yet, fill in parent ID
-                    parent.id = existing_external_identifier.internal_id
-                    parent_result.id = parent.id
+                    parent_for_upload.id = existing_external_identifier.internal_id
+                    parent_result.id = parent_for_upload.id
+                    parent = parent_for_upload.get_parent()
+                    if parent is not None:
+                        parent.id = parent_for_upload.id
 
         return success
 
@@ -440,7 +443,6 @@ class BatchUploader:
         )
         parent_ids = [x[0] for x in parent_id_is_new_id_pairs]
         new_parent_ids = {x for x, is_new in parent_id_is_new_id_pairs if is_new}
-        has_existing_parents = False
         if parent_ids:
             # Some parent IDs are given, check existence
             # Check existence of given parent IDs
@@ -479,12 +481,19 @@ class BatchUploader:
                 # Parent ID given but not as new ID, and exists
                 if parent_id in existing_parent_ids:
                     parent_result.id = parent_id
-                    has_existing_parents = True
                     if cmd.on_exists == OnExistsUploadAction.ERROR:
-                        parent_result.status = UploadStatus.FAILED
+                        success = False
+                        parent_result.add_error(
+                            "d3f5b6a1",
+                            f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                        )
                     elif cmd.on_exists == OnExistsUploadAction.SKIP:
                         # Existing parent and on_exists=SKIP: do not update
                         parent_result.status = UploadStatus.SKIPPED
+                        parent_result.add_info(
+                            "a7c3f42e",
+                            f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                        )
                     continue
                 # Parent ID given but not as new ID, and does not exist
                 success = False
@@ -492,13 +501,6 @@ class BatchUploader:
                     "a9b7c4e2",
                     f"{self.parent_class.NAME}.id={parent.id} does not exist.",
                 )
-
-        if has_existing_parents and cmd.on_exists == OnExistsUploadAction.ERROR:
-            success = False
-            retval.add_error(
-                "d3f5b6a1",
-                f"Some {self.parent_class.NAME} already exist and on_exists=ERROR.",
-            )
         return success
 
     def verify_children(
@@ -513,7 +515,6 @@ class BatchUploader:
         success = True
 
         # Verify each child model for each parent
-        has_existing_data = False
         for model_class, children_field_name in self.children_field_name_map.items():
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
@@ -637,17 +638,19 @@ class BatchUploader:
                         )
                         continue  # Skip to next child since this one doesn't exist
                     # Child ID given but not as new ID, and exists
-                    has_existing_data = True
-                    if cmd.on_exists == OnExistsUploadAction.SKIP:
+                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                        success = False
+                        child_result.add_error(
+                            "c6e7f8a0",
+                            f"{child.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
                         # Existing child and on_exists=SKIP: do not update
                         child_result.status = UploadStatus.SKIPPED
-
-        if has_existing_data and cmd.on_exists == OnExistsUploadAction.ERROR:
-            success = False
-            retval.add_error(
-                "c6e7f8a0",
-                f"Some child instances already exist and on_exists=ERROR",
-            )
+                        child_result.add_info(
+                            "7a3f2c81",
+                            f"{child.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
         return success
 
     def verify_refdata(

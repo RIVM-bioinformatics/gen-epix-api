@@ -55,6 +55,13 @@ class DictRepository(BaseRepository):
         else:
             raise NotImplementedError(f"Unsupported file type: {file_type}")
 
+    @classmethod
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        No action needed for DictRepository.
+        """
+        return None
+
     @staticmethod
     def create_repository_from_pkl(
         repository_class: type[BaseRepository],

@@ -188,7 +188,7 @@ class CaseUploadSetup:
     "TC-BIO-04-01",
     "TC-RBAC-02-02",
     "TC-RBAC-02-04",
-    "TC-11-09-01"
+    "TC-11-09-01",
 )
 class TestCaseUpload(CaseUploadSetup):
     FILE_CASE_TYPE_COL_VALUE = "(FILE)"
@@ -213,11 +213,11 @@ class TestCaseUpload(CaseUploadSetup):
         if df is None:
             raise ValueError("Case CRUD commands DataFrame is not set.")
         df = df.loc[df["dm.is_active"] == True, :]
-        df = df.sort_values(by="index", axis=0).to_dict(orient="records")
+        rows = df.sort_values(by="index", axis=0).to_dict(orient="records")
 
         # Get unique users
         root_user = env.get_root_user()
-        uq_user_ids = {x["user.id"] for x in df if x["user.id"] is not None}
+        uq_user_ids = {x["user.id"] for x in rows if x["user.id"] is not None}
         uq_users_list = env.app.handle(
             command.UserCrudCommand(
                 user=root_user,
@@ -246,7 +246,7 @@ class TestCaseUpload(CaseUploadSetup):
         seq_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
 
         # Create and execute each command
-        for row in df:
+        for row in rows:
             index = row["index"]
             if command_idx_to_test is not None and index not in command_idx_to_test:
                 # For debugging, skip any commands not in the list
@@ -388,6 +388,9 @@ class TestCaseUpload(CaseUploadSetup):
                 content=validated_case_content.get(case_id, {}),
             )
             all_validated_cases.setdefault(case_id, validated_case)
+            all_validated_cases_for_upload.setdefault(
+                case_id, model.CaseForUpload(id=case_id, case=validated_case)
+            )
 
         # Parse validate case command data
         df = env.props["command.validate_cases"]
@@ -438,7 +441,7 @@ class TestCaseUpload(CaseUploadSetup):
 
         # Create and execute each command
         command_idx_to_test = None
-        # command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
+        # command_idx_to_test = {5}  # For debugging, set set of indices, otherwise None
         n_cases = 1
         for row in rows:
             index = float(row["index"])
@@ -502,9 +505,9 @@ class TestCaseUpload(CaseUploadSetup):
             ]
             for expected_validated_case in expected_validated_cases:
                 # Keep only writable case type cols in expected validated case
-                expected_validated_case.content = {
+                expected_validated_case.case.content = {
                     x: y
-                    for x, y in expected_validated_case.content.items()
+                    for x, y in expected_validated_case.case.content.items()
                     if x in write_case_type_col_ids
                 }
 
@@ -518,10 +521,10 @@ class TestCaseUpload(CaseUploadSetup):
             )
             # Execute command
             is_allowed = row["is_allowed"]
-            validation_report: model.CaseBatchUploadResult | None = None
+            upload_result: model.CaseBatchUploadResult | None = None
             try:
                 if is_allowed:
-                    validation_report = env.app.handle(cmd)
+                    upload_result = env.app.handle(cmd)
                 else:
                     with pytest.raises(exc.UnauthorizedAuthError):
                         env.app.handle(cmd)
@@ -535,12 +538,12 @@ class TestCaseUpload(CaseUploadSetup):
                 if env.verbose:
                     print(f"\t{msg}")
                 raise AssertionError(msg)
-            if validation_report is not None:
+            if upload_result is not None:
                 # Collect derived/conflict case_type_col_ids from validation report
                 # Both DERIVED and CONFLICT are acceptable differences since they represent
                 # values that were correctly transformed or overwritten
                 acceptable_difference_col_ids: set[UUID] = set()
-                for case_result in validation_report.cases:
+                for case_result in upload_result.cases:
                     for data_issue in case_result.data_issues:
                         if data_issue.data_issue_type in (
                             enum.DataIssueType.DERIVED,
@@ -558,10 +561,11 @@ class TestCaseUpload(CaseUploadSetup):
                 actual_validated_cases = [
                     model.Case(
                         id=x.id,
-                        created_in_data_collection=created_in_data_collection_id,
+                        case_type_id=case_type_id,
+                        created_in_data_collection_id=created_in_data_collection_id,
                         content=x.validated_content,
                     )
-                    for x in validation_report.cases
+                    for x in upload_result.cases
                 ]
                 case_differences: set[tuple[UUID, str | None, str | None]] = set()
                 acceptable_differences: set[tuple[UUID, str | None, str | None]] = set()
@@ -569,7 +573,7 @@ class TestCaseUpload(CaseUploadSetup):
                     actual_validated_cases, expected_validated_cases
                 ):
                     actual_content = actual_case.content
-                    expected_content = expected_case.content
+                    expected_content = expected_case.case.content
                     keys = set(actual_content.keys()).union(expected_content.keys())
                     for key in keys:
                         actual_value = actual_content.get(key)
@@ -687,7 +691,7 @@ class TestCaseUpload(CaseUploadSetup):
                     )
                 )
         # Create case or case for upload
-        case: model.Case = model.Case(
+        case = model.Case(
             id=row["case.id"],
             case_type_id=row["case.case_type_id"],
             created_in_data_collection_id=row["case.created_in_data_collection_id"],
@@ -696,12 +700,12 @@ class TestCaseUpload(CaseUploadSetup):
         )
         if for_upload:
             return model.CaseForUpload(
-                id=row["case.id"],
+                id=case.id,
                 external_identifiers=(
                     None if external_identifier is None else [external_identifier]
                 ),
+                case=case,
                 read_sets=read_sets,
                 seqs=seqs,
-                case=case,
             )
         return case

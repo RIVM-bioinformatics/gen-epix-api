@@ -290,6 +290,9 @@ def load_demo_data(
                 )
             continue
         start_time = datetime.datetime.now()
+        sa_repository_class.clear_repository_content(
+            entities=entities, connection_string=connection_string
+        )
         sa_sql_repository: SARepository = (
             sa_repository_class.create_repository(  # type:ignore[assignment]
                 entities=entities,
