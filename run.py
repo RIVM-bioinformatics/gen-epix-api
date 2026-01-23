@@ -89,8 +89,12 @@ class Run:
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
-        ssl_keyfile = Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
-        ssl_certfile = Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
+        ssl_keyfile = (
+            Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
+        )
+        ssl_certfile = (
+            Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
+        )
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -147,35 +151,42 @@ class Run:
 
     ## test
     def test_all(self) -> None:
-        import pytest
+        import subprocess
 
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "--cov=gen_epix",
-                "--cov-report=html:test/output/coverage.html",
-                "--cov-report=xml:test/output/coverage.xml",
-                "test/filter/unit",
-                "test/transform/unit",
-                "test/fastapp/unit",
-                "test/commondb/unit",
-                "test/commondb/integration",
-                "test/casedb/unit",
-                "test/casedb/integration",
-                "test/seqdb/unit",
-                "test/seqdb/integration",
-                "test/omopdb/unit",
-                "test/omopdb/integration",
-                "test/general/docs",
-                "test/end_to_end",
-                # Not normally included, uncomment if needed
-                # "test/casedb/performance",
-                # "test/seqdb/performance",
-                # "test/omopdb/performance",
-                # "test/commondb/performance",
-                # "test/fastapp/performance",
-                # "test/general/code",
-            ]
+        pytest_args = Run.DEFAULT_PYTEST_ARGS + [
+            "test/filter/unit",
+            "test/transform/unit",
+            "test/fastapp/unit",
+            "test/commondb/unit",
+            "test/commondb/integration",
+            "test/casedb/unit",
+            "test/casedb/integration",
+            "test/seqdb/unit",
+            "test/seqdb/integration",
+            "test/omopdb/unit",
+            "test/omopdb/integration",
+            "test/general/docs",
+            "test/end_to_end",
+            # Not normally included, uncomment if needed
+            # "test/casedb/performance",
+            # "test/seqdb/performance",
+            # "test/omopdb/performance",
+            # "test/commondb/performance",
+            # "test/fastapp/performance",
+            # "test/general/code",
+        ]
+
+        subprocess.run(
+            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            check=False,
+        )
+        # Generate HTML report
+        subprocess.run(
+            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+        )
+        # Generate XML report
+        subprocess.run(
+            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
         )
 
     def test_all_incl_performance(self) -> None:
@@ -262,7 +273,7 @@ class Run:
                 "test/fastapp/unit/auth/",
             ]
         )
-    
+
     def test_fastapp_unit_domain(self) -> None:
         import pytest
 
@@ -392,7 +403,7 @@ class Run:
                 "test/casedb/unit/",
             ]
         )
-    
+
     def test_casedb_unit_domain(self) -> None:
         import pytest
 
@@ -550,7 +561,6 @@ class Run:
                 "test/seqdb/unit",
             ]
         )
-
 
     def test_seqdb_unit_sample_upload(self) -> None:
         import pytest
