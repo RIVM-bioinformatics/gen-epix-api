@@ -262,14 +262,34 @@ class Run:
                 "test/fastapp/unit/auth/",
             ]
         )
-
-    def test_fastapp_unit_rbac(self) -> None:
+    
+    def test_fastapp_unit_domain(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/fastapp/unit/rbac/",
+                "test/fastapp/unit/domain",
+            ]
+        )
+
+    def test_fastapp_unit_services(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/services/",
+            ]
+        )
+
+    def test_fastapp_unit_services_rbac(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/services/rbac",
             ]
         )
 
@@ -333,6 +353,16 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_policies(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/policies/",
+            ]
+        )
+
     def test_commondb_integration(self) -> None:
         import pytest
 
@@ -362,6 +392,36 @@ class Run:
                 "test/casedb/unit/",
             ]
         )
+    
+    def test_casedb_unit_domain(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/domain",
+            ]
+        )
+
+    def test_casedb_unit_services(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/services",
+            ]
+        )
+
+    def test_casedb_unit_services_case(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/services/case",
+            ]
+        )
 
     def test_casedb_unit_case_type_col_order(self) -> None:
         import pytest
@@ -373,14 +433,12 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_seqdb_remote_app(self) -> None:
+    def test_unit_seqdb_remote_app(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/seqdb_remote_app",
-            ]
+            + ["test/seqdb/unit/services/test_seqdb_remote_app.py"]
         )
 
     def test_casedb_integration(self) -> None:
@@ -493,15 +551,6 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_models_for_upload(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/unit/models_for_upload",
-            ]
-        )
 
     def test_seqdb_unit_sample_upload(self) -> None:
         import pytest
@@ -510,6 +559,16 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/unit/sample_upload",
+            ]
+        )
+
+    def test_seqdb_unit_models_for_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/models_for_upload",
             ]
         )
 

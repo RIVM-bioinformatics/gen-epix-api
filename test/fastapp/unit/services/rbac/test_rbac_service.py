@@ -75,7 +75,7 @@ class RBACTestClient(ServiceTestClient):
             Model2_1CrudCommand,
             Model2_2CrudCommand,
         }
-        permission_map = {
+        permission_map: dict[Role, set] = {
             Role.READER: set.union(
                 *[f(x, PermissionTypeSet.R) for x in command_classes]
             ),
@@ -85,7 +85,7 @@ class RBACTestClient(ServiceTestClient):
             Role.ADMIN: set.union(
                 *[f(x, PermissionTypeSet.D) for x in command_classes]
             ),
-            Role.ROOT: self.app.domain.permissions,
+            Role.ROOT: set(self.app.domain.permissions),
         }
         permission_map[Role.WRITER].update(permission_map[Role.READER])
         permission_map[Role.ADMIN].update(permission_map[Role.WRITER])
@@ -96,7 +96,7 @@ class RBACTestClient(ServiceTestClient):
         self.rbac_service = rbac_service
         self.user_manager = UserManager(user_class=User)
         self.app.user_manager = self.user_manager
-        self.users_by_role = {role: [] for role in Role}
+        self.users_by_role: dict[Role, list[User]] = {role: [] for role in Role}
         # Create users
         for i, role in enumerate(Role):
             claims = self.get_user(i, {role}).model_dump()
@@ -182,6 +182,7 @@ def get_test_client() -> RBACTestClient:
     return RBACTestClient.get_test_client(DictRepository, domain=DOMAIN)
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-05")
 class TestRBAC:
 
     def test_get_user_roles(self, env: RBACTestClient) -> None:

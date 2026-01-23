@@ -13,6 +13,7 @@ import pytest
 from gen_epix.seqdb.domain import enum, exc, model
 
 
+@pytest.mark.scenario_ids("TC-11-09-02", "TC-11-10-01", "TC-11-11-01", "TC-11-12-01")
 class TestCreate:
     # CREATE tests
 

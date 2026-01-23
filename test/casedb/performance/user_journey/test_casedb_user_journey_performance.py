@@ -25,6 +25,7 @@ V2_USER_JOURNEY_FILE_PREFIX = "v2.user_journey"
 USER_JOURNEY_DIR = Path(__file__).parent
 
 
+@pytest.mark.scenario_ids("TC-PERF-09-01")
 class TestRead:
     USER_JOURNEYS = None
 

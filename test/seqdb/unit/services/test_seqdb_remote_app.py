@@ -17,6 +17,7 @@ from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.seqdb.services.remote_app import SeqdbRemoteApp
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-06")
 class TestSeqdbRemoteApp:
     """Test the SeqdbRemoteApp class with focus on create_retrieve_phylogenetic_tree_handler."""
 

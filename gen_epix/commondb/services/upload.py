@@ -58,7 +58,6 @@ class BatchUploader:
             self.parent_for_upload_class.PARENT_IDENTIFIER_TYPE
         )
         self.parent_class = self.parent_for_upload_class.PARENT_CLASS
-        self.parent_field_name = self.parent_for_upload_class.PARENT_FIELD_NAME
         self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
         self.external_identifier_for_upload_class = (
             self.parent_for_upload_class.EXTERNAL_IDENTIFIER_FOR_UPLOAD_CLASS
@@ -416,9 +415,10 @@ class BatchUploader:
                 else:
                     # Parent does not exist yet, fill in parent ID
                     parent_for_upload.id = existing_external_identifier.internal_id
-                    parent = getattr(parent_for_upload, self.parent_field_name)
-                    parent.id = parent_for_upload.id
                     parent_result.id = parent_for_upload.id
+                    parent = parent_for_upload.get_parent()
+                    if parent is not None:
+                        parent.id = parent_for_upload.id
 
         return success
 
@@ -485,6 +485,13 @@ class BatchUploader:
                         success = False
                         parent_result.add_error(
                             "d3f5b6a1",
+                            f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
+                        )
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                        # Existing parent and on_exists=SKIP: do not update
+                        parent_result.status = UploadStatus.SKIPPED
+                        parent_result.add_info(
+                            "a7c3f42e",
                             f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
                         )
                     continue
@@ -635,6 +642,13 @@ class BatchUploader:
                         success = False
                         child_result.add_error(
                             "c6e7f8a0",
+                            f"{child.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                        # Existing child and on_exists=SKIP: do not update
+                        child_result.status = UploadStatus.SKIPPED
+                        child_result.add_info(
+                            "7a3f2c81",
                             f"{child.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
         return success

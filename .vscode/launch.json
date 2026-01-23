@@ -383,12 +383,34 @@
             "justMyCode": true,
         },
         {
-            "name": "test.casedb.unit.seqdb_remote_app",
+            "name": "test.casedb.unit.domain",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_casedb_unit_seqdb_remote_app"
+                "test_casedb_unit_domain"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.casedb.unit.services",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit_services"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.casedb.unit.services.case",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_unit_services_case"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
@@ -515,6 +537,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.unit.seqdb_remote_app",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_unit_seqdb_remote_app"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.unit.models_for_upload",
             "type": "debugpy",
             "request": "launch",
@@ -525,7 +558,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
         },
-{
+        {
             "name": "test.seqdb.unit.sample_upload",
             "type": "debugpy",
             "request": "launch",
@@ -680,6 +713,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.commondb.unit.policies",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_unit_policies"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.commondb.integration",
             "type": "debugpy",
             "request": "launch",
@@ -746,12 +790,34 @@
             "justMyCode": true,
         },
         {
-            "name": "test.fastapp.unit.rbac",
+            "name": "test.fastapp.unit.domain",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_fastapp_unit_rbac"
+                "test_fastapp_unit_domain"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        }
+        {
+            "name": "test.fastapp.unit.services",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_services"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.fastapp.unit.services.rbac",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_fastapp_unit_services_rbac"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,

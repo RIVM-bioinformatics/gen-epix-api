@@ -116,6 +116,11 @@ def _verify_children_seqs(
                             "b4c5d6e7",
                             f"{seq.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                        seq_result.add_info(
+                            "7a9f4c2e",
+                            f"{seq.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
@@ -242,6 +247,11 @@ def _verify_children_allele_profiles(
                         success = False
                         allele_profile_result.add_error(
                             "d8a3b7f4",
+                            f"{allele_profile.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
+                        )
+                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                        allele_profile_result.add_info(
+                            "e4f2a1b3",
                             f"{allele_profile.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
                     break

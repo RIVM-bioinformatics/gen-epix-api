@@ -10,6 +10,8 @@ from unittest import TestCase
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
+import pytest
+
 from gen_epix.commondb.domain.enum import (
     OnExistsUploadAction,
     UploadStatus,
@@ -297,6 +299,7 @@ class BaseUploadTestCase(TestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-11-13-01")
 class TestVerifyBatchSeqs(BaseUploadTestCase):
     """Test the _verify_batch_seqs function."""
 
@@ -420,6 +423,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         self.assertTrue(retval.has_log_code("b4c5d6e7"))
 
 
+@pytest.mark.scenario_ids("TC-11-13-01")
 class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
     """Test the _verify_batch_allele_profiles function."""
 
@@ -805,6 +809,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-11-13-01")
 class TestVerifyReferenceData(BaseUploadTestCase):
     """Test the _verify_batch_sample_refdata function."""
 

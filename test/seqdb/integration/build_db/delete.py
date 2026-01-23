@@ -10,6 +10,7 @@ from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.seqdb.domain import exc, model
 
 
+@pytest.mark.scenario_ids("TC-11-09-03")
 class TestDelete:
 
     def test_delete_organization(self, env: Env) -> None:

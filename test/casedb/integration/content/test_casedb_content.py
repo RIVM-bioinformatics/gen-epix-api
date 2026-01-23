@@ -47,6 +47,16 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.mark.scenario_ids(
+    "TC-RBAC-04-07",
+    "TC-RBAC-04-20",
+    "TC-RBAC-04-10",
+    "TC-RBAC-04-12",
+    "TC-RBAC-04-06",
+    "TC-RBAC-04-06",
+    "TC-RBAC-04-08",
+    "TC-RBAC-04-09",
+)
 class TestContent:
     def test_content(self, env: Env) -> None:
 

@@ -4,8 +4,10 @@ from test.test_client import enum
 from test.test_client.util import get_test_name, get_test_output_dir
 
 import docs.erm_hash
+import pytest
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-08")
 class TestERM:
 
     TEST_DIR = get_test_output_dir(get_test_name(enum.TestType.DOCS_ERM))

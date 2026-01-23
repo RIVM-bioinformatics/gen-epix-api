@@ -22,6 +22,7 @@ from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpl
 from gen_epix.seqdb.domain import model
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelExternalIdentifier(TestCase):
 
     def test_valid_with_identifier_issuer_code(self) -> None:
@@ -77,6 +78,7 @@ class TestModelExternalIdentifier(TestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelAlleleForUpload(TestCase):
 
     def test_valid_with_locus_id(self) -> None:
@@ -112,6 +114,7 @@ class TestModelAlleleForUpload(TestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelBaseSeq(TestCase):
     """Test cases for BaseSeq model validation and functionality."""
 
@@ -233,6 +236,7 @@ class TestModelBaseSeq(TestCase):
             )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelSeq(TestCase):
     """Test cases for Seq model functionality and inheritance."""
 
@@ -340,6 +344,7 @@ class TestModelSeq(TestCase):
             self.assertIsInstance(contig, model.Contig)
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelSeqForUpload(TestCase):
     """Test cases for SeqForUpload model functionality and upload-specific features."""
 
@@ -541,6 +546,7 @@ class TestModelSeqForUpload(TestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-RBAC-04-11", "TC-SEC-31-01")
 class TestModelAlleleProfileForUpload(TestCase):
 
     def test_json_serialization(self) -> None:
@@ -754,6 +760,7 @@ class TestModelAlleleProfileForUpload(TestCase):
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelSampleForUpload(TestCase):
 
     @staticmethod
@@ -1125,6 +1132,7 @@ class TestModelSampleForUpload(TestCase):
             self.assertIsInstance(seq, model.SeqForUpload)
 
 
+@pytest.mark.scenario_ids("TC-SEC-31-01")
 class TestModelSampleBatchForUpload(TestCase):
 
     def setUp(self) -> None:

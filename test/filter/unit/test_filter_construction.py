@@ -17,6 +17,7 @@ class Util:
         )
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterConstruction:
 
     def test_exists_construction(self) -> None:

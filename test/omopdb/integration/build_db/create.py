@@ -5,7 +5,7 @@ import pytest
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.omopdb.domain import exc, model
 
-
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 class TestCreate:
     # CREATE tests
 

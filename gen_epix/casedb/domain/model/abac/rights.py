@@ -125,8 +125,7 @@ class CaseAbac(BaseModel):
             if case_type_id in retval:
                 # Merge with existing data collection IDs
                 data_collection_ids = retval[case_type_id].union(data_collection_ids)
-            else:
-                retval[case_type_id] = data_collection_ids
+            retval[case_type_id] = data_collection_ids
         return retval
 
     def get_case_types_with_any_rights(self) -> set[UUID]:
@@ -460,6 +459,7 @@ class CaseAbac(BaseModel):
                 ):
                     # Access right in this data collection
                     return True
+            return False
         else:
             raise exc.InvalidArgumentsError(f"Right {right.value} is invalid")
         # All checks passed

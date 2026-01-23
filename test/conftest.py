@@ -22,7 +22,8 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> 
         if isinstance(parent, pytest.Class):
             mark = parent.keywords.get("scenario_ids")
             if mark:
-                curr_scenarios.update(re.split(r"\s*,\s*", mark.args[0]))
+                for arg in mark.args:
+                    curr_scenarios.update(re.split(r"\s*,\s*",arg))
         # Add scenario IDs from test
         if isinstance(item, pytest.Function):
             mark = item.keywords.get("scenario_ids")
@@ -121,5 +122,6 @@ def generate_excel_report(
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     """custom pytest hook to perform actions at the end of the test session."""
-    if tests:
+    # only create report if there is data to report
+    if tests and scenario_ids and test_scenario_links:
         generate_excel_report(tests, "test/output/test_report.xlsx")

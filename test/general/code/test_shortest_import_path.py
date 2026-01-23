@@ -382,6 +382,7 @@ def analyze_imports(project_root: Path) -> ImportGraphAnalyzer:
     return analyzer
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-08")
 def test_shortest_import_path() -> None:
     """
     Test that all import statements use the shortest possible path without creating cycles.

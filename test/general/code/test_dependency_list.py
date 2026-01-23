@@ -40,6 +40,7 @@ def _read_pyproject_dependencies(pyproject_file_path: Path) -> set[str]:
     return dependencies
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-08")
 def test_dependency_list_matches() -> None:
     """Ensure requirements.txt and pyproject.toml dependencies are identical."""
     root_dir = get_package_root()

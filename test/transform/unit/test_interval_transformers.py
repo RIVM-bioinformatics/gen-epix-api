@@ -14,6 +14,7 @@ from gen_epix.transform.transformers.interval import (
 )
 
 
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
 class TestIntervalTransformer:
     """Test cases for IntervalTransformer."""
 
@@ -127,6 +128,7 @@ class TestIntervalTransformer:
         assert result.get("value") == "low"
 
 
+@pytest.mark.scenario_ids("TC-MAIN-12-01")
 class TestIntervalToIntervalTransformer:
     """Test cases for IntervalToIntervalTransformer."""
 

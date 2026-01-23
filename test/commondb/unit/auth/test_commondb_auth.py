@@ -21,6 +21,7 @@ def get_test_client() -> CommonAuthTestClient:
     )  # type:ignore[no-any-return,no-untyped_call]
 
 
+@pytest.mark.scenario_ids("TC-SEC-30-01")
 class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"

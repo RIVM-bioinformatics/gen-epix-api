@@ -67,10 +67,3 @@ class BaseSeqdbService(BaseService):
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
         raise NotImplementedError()
-
-    # @abc.abstractmethod
-    # def retrieve_allele_profile(
-    #     self,
-    #     cmd: command.RetrieveAlleleProfileCommand,
-    # ) -> model.SeqDbAlleleProfile | list[model.SeqDbAlleleProfile]:
-    #     raise NotImplementedError()
