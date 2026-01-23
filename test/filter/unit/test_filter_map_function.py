@@ -10,6 +10,7 @@ from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
 import pytest
 
+
 @pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterMapFunction:
 

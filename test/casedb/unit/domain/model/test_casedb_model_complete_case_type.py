@@ -24,7 +24,7 @@ class TestModelCompleteCaseType:
         case_type_dims: list[model.CaseTypeDim] = [
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[0].id,
+                dim_id=dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D",
                 rank=1,
@@ -32,7 +32,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[0].id,
+                dim_id=dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C",
                 rank=2,
@@ -40,7 +40,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[2].id,
+                dim_id=dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B",
                 rank=2,
@@ -48,7 +48,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[1].id,
+                dim_id=dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A",
                 rank=1,
@@ -61,7 +61,7 @@ class TestModelCompleteCaseType:
             model.CaseTypeCol(
                 id=uuid4(),
                 col_id=uuid4(),
-                case_type_dim_id=case_type_dims[0].id,
+                case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.B",
                 rank=2,
@@ -69,7 +69,7 @@ class TestModelCompleteCaseType:
             model.CaseTypeCol(
                 id=uuid4(),
                 col_id=uuid4(),
-                case_type_dim_id=case_type_dims[0].id,
+                case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.A",
                 rank=1,
@@ -77,7 +77,7 @@ class TestModelCompleteCaseType:
             model.CaseTypeCol(
                 id=uuid4(),
                 col_id=uuid4(),
-                case_type_dim_id=case_type_dims[1].id,
+                case_type_dim_id=case_type_dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C.A",
                 rank=1,
@@ -85,7 +85,7 @@ class TestModelCompleteCaseType:
             model.CaseTypeCol(
                 id=uuid4(),
                 col_id=uuid4(),
-                case_type_dim_id=case_type_dims[2].id,
+                case_type_dim_id=case_type_dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B.A",
                 rank=1,
@@ -93,7 +93,7 @@ class TestModelCompleteCaseType:
             model.CaseTypeCol(
                 id=uuid4(),
                 col_id=uuid4(),
-                case_type_dim_id=case_type_dims[3].id,
+                case_type_dim_id=case_type_dims[3].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A.A",
                 rank=1,
@@ -107,8 +107,8 @@ class TestModelCompleteCaseType:
             etiological_agents={},
             dims={},
             cols={},
-            case_type_dims={x.id: x for x in case_type_dims},
-            case_type_cols={x.id: x for x in case_type_cols},
+            case_type_dims={x.id: x for x in case_type_dims if x.id is not None},
+            case_type_cols={x.id: x for x in case_type_cols if x.id is not None},
             genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
@@ -124,9 +124,5 @@ class TestModelCompleteCaseType:
             ],
         )
 
-        assert (
-            complete_case_type.ordered_case_type_dim_ids == ordered_case_type_dim_ids,
-        )
-        assert (
-            complete_case_type.ordered_case_type_col_ids == ordered_case_type_col_ids,
-        )
+        assert ordered_case_type_dim_ids == complete_case_type.ordered_case_type_dim_ids
+        assert ordered_case_type_col_ids == complete_case_type.ordered_case_type_col_ids

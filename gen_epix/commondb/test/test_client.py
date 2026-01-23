@@ -23,7 +23,7 @@ BASE_MODEL_TYPE = TypeVar("BASE_MODEL_TYPE", bound=model.Model)
 
 class TestClient:
 
-    DEFAULT_ROUTE_PREFIX = "/v1"
+    DEFAULT_ROUTE_PREFIX_VALUE = "/v1"
 
     MODEL_KEY_MAP: dict[type[model.Model], str | tuple[str, ...]] = {
         model.User: "name",
@@ -57,7 +57,9 @@ class TestClient:
         self.test_dir = test_dir
         self.app_cfg = app_cfg
         self.app_composer = app_composer
-        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
+        self.default_route_prefix = (
+            default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
+        )
         self.log_level = log_level
         self.verbose = verbose
 
@@ -117,7 +119,9 @@ class TestClient:
         self.db: dict[type[model.Model], dict[Hashable, model.Model]] = {}
         self.props: dict = {}
         self.use_endpoints = use_endpoints
-        self.default_route_prefix = default_route_prefix or self.DEFAULT_ROUTE_PREFIX
+        self.default_route_prefix = (
+            default_route_prefix or self.DEFAULT_ROUTE_PREFIX_VALUE
+        )
         self.endpoint_test_client: EndpointTestClient | None = kwargs.pop(
             "endpoint_test_client"
         )
@@ -899,39 +903,74 @@ class TestClient:
         assert model_class.ENTITY
         id_field_name = model_class.ENTITY.id_field_name
         assert id_field_name
+        link_map = self._generate_link_map(model_class)
+        set_dummy_link, default_set_dummy_link = self._get_dummy_link_defaults(
+            set_dummy_link
+        )
+        # Set value fields and any links
+        for field_name, value in props.items():
+            if field_name in link_map:
+                field_name, value = self._get_resolved_link_value(
+                    set_dummy_link,
+                    model_class,
+                    id_field_name,
+                    link_map,
+                    default_set_dummy_link,
+                    field_name,
+                    value,
+                )
+            if exclude_none and value is None:
+                continue
+            setattr(obj, field_name, value)
+
+    def _generate_link_map(
+        self, model_class: type[model.Model]
+    ) -> dict[str, tuple[str, type[model.Model]]]:
         link_map: dict[str, tuple[str, type[model.Model]]] = {
             x.relationship_field_name: (
                 x.link_field_name,
                 x.link_model_class,
             )  # type:ignore[misc]
-            for x in model_class.ENTITY.links.values()
+            for x in model_class.ENTITY.links.values()  # type: ignore[union-attr]
             if x.relationship_field_name
         }
+
+        return link_map
+
+    def _get_dummy_link_defaults(
+        self, set_dummy_link: dict[str, bool] | bool
+    ) -> tuple[dict[str, bool], bool]:
         default_set_dummy_link = False
         if isinstance(set_dummy_link, bool):
             default_set_dummy_link = set_dummy_link
             set_dummy_link = {}
 
-        # Set value fields and any links
-        for field_name, value in props.items():
-            if field_name in link_map:
-                field_name, link_model_class = link_map[field_name]
-                if not value:
-                    if set_dummy_link.get(field_name, default_set_dummy_link):
-                        value = self.generate_id()
-                    else:
-                        value = None
-                else:
-                    if set_dummy_link.get(field_name, default_set_dummy_link):
-                        raise ValueError(
-                            f"{model_class.__name__} given and set dummy link True"
-                        )
-                    value = getattr(
-                        self._get_obj(link_model_class, value), id_field_name
-                    )
-            if exclude_none and value is None:
-                continue
-            setattr(obj, field_name, value)
+        return set_dummy_link, default_set_dummy_link
+
+    def _get_resolved_link_value(
+        self,
+        set_dummy_link: dict[str, bool],
+        model_class: type[model.Model],
+        id_field_name: str,
+        link_map: dict[str, tuple[str, type[model.Model]]],
+        default_set_dummy_link: bool,
+        field_name: str,
+        value: Any,
+    ) -> tuple[str, UUID | None]:
+        field_name, link_model_class = link_map[field_name]
+        if not value:
+            if set_dummy_link.get(field_name, default_set_dummy_link):
+                value = self.generate_id()
+            else:
+                value = None
+        else:
+            if set_dummy_link.get(field_name, default_set_dummy_link):
+                raise ValueError(
+                    f"{model_class.__name__} given and set dummy link True"
+                )
+            value = getattr(self._get_obj(link_model_class, value), id_field_name)
+
+        return field_name, value
 
     def _get_obj_key(
         self,

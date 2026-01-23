@@ -382,3 +382,15 @@ class FieldTypeSet(Enum):
             FieldType.DB_METADATA,
         ]
     )
+
+
+class ExceptionHandlingMode(Enum):
+    RAISE = "RAISE"
+    IGNORE = "IGNORE"
+    SKIP = "SKIP"
+
+
+class FileExtension(Enum):
+    PKL = ".pkl"
+    JSON = ".json"
+    ZIP = ".zip"

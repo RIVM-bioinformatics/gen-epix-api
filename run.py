@@ -14,7 +14,7 @@ from gen_epix.commondb.util import set_env_variables
 
 class Run:
 
-    APP_URI = {
+    APP_URI: dict[AppType, dict[str, str | int]] = {
         AppType.CASEDB: {
             "app": "gen_epix.casedb.app:FAST_API",
             "host": "0.0.0.0",
@@ -40,7 +40,7 @@ class Run:
     APP_SSL_KEYFILE = "./cert/key.pem"
     APP_SSL_CERTFILE = "./cert/cert.pem"
 
-    ETL_ENV = {
+    ETL_ENV: dict[AppType, dict[str, str | list[str]]] = {
         AppType.CASEDB: {
             "module_root": "gen_epix.casedb",
             "targets": [
@@ -89,8 +89,12 @@ class Run:
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
-        ssl_keyfile = Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
-        ssl_certfile = Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
+        ssl_keyfile = (
+            Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
+        )
+        ssl_certfile = (
+            Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
+        )
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -262,7 +266,7 @@ class Run:
                 "test/fastapp/unit/auth/",
             ]
         )
-    
+
     def test_fastapp_unit_domain(self) -> None:
         import pytest
 
@@ -392,7 +396,7 @@ class Run:
                 "test/casedb/unit/",
             ]
         )
-    
+
     def test_casedb_unit_domain(self) -> None:
         import pytest
 
@@ -550,7 +554,6 @@ class Run:
                 "test/seqdb/unit",
             ]
         )
-
 
     def test_seqdb_unit_sample_upload(self) -> None:
         import pytest

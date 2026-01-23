@@ -23,7 +23,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> 
             mark = parent.keywords.get("scenario_ids")
             if mark:
                 for arg in mark.args:
-                    curr_scenarios.update(re.split(r"\s*,\s*",arg))
+                    curr_scenarios.update(re.split(r"\s*,\s*", arg))
         # Add scenario IDs from test
         if isinstance(item, pytest.Function):
             mark = item.keywords.get("scenario_ids")

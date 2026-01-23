@@ -95,4 +95,4 @@ def _crud_case_set_data_collection_link_with_abac(
 
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
-    return self.crud(cmd)  # type:ignore[return-value]    
+    return self.crud(cmd)  # type:ignore[return-value]

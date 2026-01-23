@@ -158,12 +158,7 @@ def set_entity_repository_model_classes(
     sa_metadata_field_names = set(row_metadata_mixin_class.__annotations__.keys()) - {
         "id"
     }
-    sa_model_map = {}
-    for curr_sa_model_map in sa_models_by_service_type.values():
-        for model_class, sa_model_class in curr_sa_model_map.items():
-            if model_class in sa_model_map:
-                raise ValueError(f"Duplicate SA model for {model_class.__name__}")
-            sa_model_map[model_class] = sa_model_class
+    sa_model_map = _build_sa_model_map(sa_models_by_service_type)
     for entity in domain.get_dag_sorted_entities():
         if not entity.persistable:
             continue
@@ -175,31 +170,53 @@ def set_entity_repository_model_classes(
             )
         entity.set_db_model_class(sa_model_class)
         # Verify that the SA model has exactly the same fields as the model
-        field_names = set(entity.get_field_names())
-        relationship_field_names = set(entity.get_relationship_field_names())
-        curr_field_name_map = field_name_map.get(model_class)
-        if curr_field_name_map:
-            field_names = {curr_field_name_map.get(x, x) for x in field_names}
-        sa_field_names = (
-            set(sa_model_class.__table__.columns.keys())
-            - sa_metadata_field_names
-            - relationship_field_names
+        _validate_entity_fields(
+            field_name_map, sa_metadata_field_names, entity, model_class, sa_model_class
         )
-        extra_field_names = field_names - sa_field_names - relationship_field_names
-        extra_field_names = {
-            x for x in extra_field_names if f"{x}_id" not in field_names
-        }
-        if extra_field_names:
-            extra_field_names_str = ", ".join(extra_field_names)
-            raise ValueError(
-                f"Model {model_class.__name__} has fields {extra_field_names_str} that are not in SA model {sa_model_class.__name__}"
-            )
-        extra_sa_field_names = sa_field_names - field_names
-        if extra_sa_field_names:
-            extra_sa_field_names_str = ", ".join(extra_sa_field_names)
-            raise ValueError(
-                f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
-            )
+
+
+def _validate_entity_fields(
+    field_name_map: dict[type, dict[str, str]],
+    sa_metadata_field_names: set[str],
+    entity: Entity,
+    model_class: type,
+    sa_model_class: type,
+) -> None:
+    field_names = set(entity.get_field_names())
+    relationship_field_names = set(entity.get_relationship_field_names())
+    curr_field_name_map = field_name_map.get(model_class)
+    if curr_field_name_map:
+        field_names = {curr_field_name_map.get(x, x) for x in field_names}
+    sa_field_names: set[str] = (
+        set(sa_model_class.__table__.columns.keys())  # type: ignore[attr-defined]
+        - sa_metadata_field_names
+        - relationship_field_names
+    )
+    extra_field_names = field_names - sa_field_names - relationship_field_names
+    extra_field_names = {x for x in extra_field_names if f"{x}_id" not in field_names}
+    if extra_field_names:
+        extra_field_names_str = ", ".join(extra_field_names)
+        raise ValueError(
+            f"Model {model_class.__name__} has fields {extra_field_names_str} that are not in SA model {sa_model_class.__name__}"
+        )
+    extra_sa_field_names = sa_field_names - field_names
+    if extra_sa_field_names:
+        extra_sa_field_names_str = ", ".join(extra_sa_field_names)
+        raise ValueError(
+            f"SA model {sa_model_class.__name__} has fields {extra_sa_field_names_str} that are not in model {model_class.__name__}"
+        )
+
+
+def _build_sa_model_map(
+    sa_models_by_service_type: dict[Enum, dict[type[BaseModel], type]],
+) -> dict[type[BaseModel], type]:
+    sa_model_map: dict[type[BaseModel], type] = {}
+    for curr_sa_model_map in sa_models_by_service_type.values():
+        for model_class, sa_model_class in curr_sa_model_map.items():
+            if model_class in sa_model_map:
+                raise ValueError(f"Duplicate SA model for {model_class.__name__}")
+            sa_model_map[model_class] = sa_model_class
+    return sa_model_map
 
 
 def get_mixin_mapped_column(

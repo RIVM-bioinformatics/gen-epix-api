@@ -153,24 +153,42 @@ class BaseRbacService(BaseService):
                 )
                 for x in permissions_or_tuples
             }
-            if root_role and role == root_role:
-                missing_permissions = all_permissions - permissions
-                if missing_permissions:
-                    if on_missing_root_permissions == "raise":
-                        missing_permissions_str = ", ".join(
-                            [str(x) for x in missing_permissions]
-                        )
-                        raise exc.InitializationServiceError(
-                            f"Root role {root_role} is missing permissions: {missing_permissions_str}"
-                        )
-                    elif on_missing_root_permissions == "add":
-                        # Add all missing permissions
-                        permissions = all_permissions
-                    else:
-                        raise NotImplementedError(
-                            f"Unknown on_missing_root_permissions strategy: {on_missing_root_permissions}"
-                        )
-            self.register_role(role, permissions, **kwargs)
+            self._validate_and_register_role(
+                root_role,
+                on_missing_root_permissions,
+                kwargs,
+                all_permissions,
+                role,
+                permissions,
+            )
+
+    def _validate_and_register_role(
+        self,
+        root_role: Hashable | None,
+        on_missing_root_permissions: str,
+        kwargs: Any,
+        all_permissions: set[Permission],
+        role: Hashable,
+        permissions: set[Permission],
+    ) -> None:
+        if root_role and role == root_role:
+            missing_permissions = all_permissions - permissions
+            if missing_permissions:
+                if on_missing_root_permissions == "raise":
+                    missing_permissions_str = ", ".join(
+                        [str(x) for x in missing_permissions]
+                    )
+                    raise exc.InitializationServiceError(
+                        f"Root role {root_role} is missing permissions: {missing_permissions_str}"
+                    )
+                elif on_missing_root_permissions == "add":
+                    # Add all missing permissions
+                    permissions = all_permissions
+                else:
+                    raise NotImplementedError(
+                        f"Unknown on_missing_root_permissions strategy: {on_missing_root_permissions}"
+                    )
+        self.register_role(role, permissions, **kwargs)
 
     def unregister_role(self, role: Hashable) -> None:
         """
@@ -381,73 +399,91 @@ class BaseRbacService(BaseService):
         role has the same permission as one of its sub-roles. This can be help to
         ensure that the role hierarchy is indeed correctly defined.
         """
-
-        def _get_permissions(
-            role_permission_sets: set[tuple[type[Command], PermissionTypeSet]],
-        ) -> set[tuple[type[Command], PermissionType]]:
-            permissions = set()
-            for command_class, permission_type_set in role_permission_sets:
-                permissions.update(
-                    {(command_class, x) for x in permission_type_set.value}
-                )
-            return permissions
-
         role_permissions_map: dict[
             Hashable, set[tuple[type[Command], PermissionType]]
         ] = {}
         for role in role_hierarchy:
-            role_permissions_map[role] = _get_permissions(
+            role_permissions_map[role] = BaseRbacService._get_permissions(
                 role_permission_sets.get(role, set())
             )
             if verify_redundant_permissions:
                 orig_role_permissions = role_permissions_map[role].copy()
             else:
                 orig_role_permissions = set()
-            for sub_role in role_hierarchy.get(role, set()):
-                # Add the permissions of the sub-role to the role
-                sub_role_permissions = _get_permissions(
-                    role_permission_sets.get(sub_role, set())
-                )
-                role_permissions_map[role].update(sub_role_permissions)
-                if not verify_redundant_permissions:
-                    continue
+            BaseRbacService._compile_subrole_permissions(
+                role_hierarchy,
+                role_permission_sets,
+                verify_redundant_permissions,
+                role_permissions_map,
+                role,
+                orig_role_permissions,
+            )
+        return role_permissions_map
+
+    @staticmethod
+    def _compile_subrole_permissions(
+        role_hierarchy: dict[Hashable, set[Hashable]],
+        role_permission_sets: dict[
+            Hashable, set[tuple[type[Command], PermissionTypeSet]]
+        ],
+        verify_redundant_permissions: bool,
+        role_permissions_map: dict[Hashable, set[tuple[type[Command], PermissionType]]],
+        role: Hashable,
+        orig_role_permissions: set[tuple[type[Command], PermissionType]],
+    ) -> None:
+        for sub_role in role_hierarchy.get(role, set()):
+            # Add the permissions of the sub-role to the role
+            sub_role_permissions = BaseRbacService._get_permissions(
+                role_permission_sets.get(sub_role, set())
+            )
+            role_permissions_map[role].update(sub_role_permissions)
+            if not verify_redundant_permissions:
+                continue
                 # Check if any sub-role permissions are also in the role's unique
                 # permissions
-                redundant_permissions = sub_role_permissions.intersection(
-                    orig_role_permissions
-                )
-                if not redundant_permissions:
-                    continue
+            redundant_permissions = sub_role_permissions.intersection(
+                orig_role_permissions
+            )
+            if not redundant_permissions:
+                continue
                 # Some redundant permissions -> summarize them by command class and
                 # raise an error
-                command_classes = sorted(
-                    {x[0] for x in redundant_permissions},
-                    key=lambda x: x.__name__,
-                )
-                redundant_permission_sets = []
-                for command_class in command_classes:
-                    redundant_permission_sets.append(
-                        PermissionTypeSet(
-                            frozenset(
-                                {
-                                    x[1]
-                                    for x in redundant_permissions
-                                    if x[0] == command_class
-                                }
-                            )
+            command_classes = sorted(
+                {x[0] for x in redundant_permissions},
+                key=lambda x: x.__name__,
+            )
+            redundant_permission_sets = []
+            for command_class in command_classes:
+                redundant_permission_sets.append(
+                    PermissionTypeSet(
+                        frozenset(
+                            {
+                                x[1]
+                                for x in redundant_permissions
+                                if x[0] == command_class
+                            }
                         )
                     )
-                duplicate_permissions_str = ", ".join(
-                    [
-                        f"{x.__name__}.{y.name}"
-                        for x, y in zip(command_classes, redundant_permission_sets)
-                    ]
                 )
-                role_str = role.value if isinstance(role, Enum) else str(role)
-                sub_role_str = (
-                    sub_role.value if isinstance(sub_role, Enum) else str(sub_role)
-                )
-                raise exc.InitializationServiceError(
-                    f"Duplicate permissions in role hierarchy for role {role_str} and sub-role {sub_role_str}: {duplicate_permissions_str}"
-                )
-        return role_permissions_map
+            duplicate_permissions_str = ", ".join(
+                [
+                    f"{x.__name__}.{y.name}"
+                    for x, y in zip(command_classes, redundant_permission_sets)
+                ]
+            )
+            role_str = role.value if isinstance(role, Enum) else str(role)
+            sub_role_str = (
+                sub_role.value if isinstance(sub_role, Enum) else str(sub_role)
+            )
+            raise exc.InitializationServiceError(
+                f"Duplicate permissions in role hierarchy for role {role_str} and sub-role {sub_role_str}: {duplicate_permissions_str}"
+            )
+
+    @staticmethod
+    def _get_permissions(
+        role_permission_sets: set[tuple[type[Command], PermissionTypeSet]],
+    ) -> set[tuple[type[Command], PermissionType]]:
+        permissions: set[tuple[type[Command], PermissionType]] = set()
+        for command_class, permission_type_set in role_permission_sets:
+            permissions.update({(command_class, x) for x in permission_type_set.value})
+        return permissions
