@@ -12,7 +12,7 @@ scenario_ids: set[str] = set()
 test_scenario_links: list[dict[str, str]] = []
 
 
-def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> None: 
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> None:
     """custom pytest hook to parse the docstring of the test function."""
     if call.when == "call":
         curr_scenarios = set()
@@ -37,7 +37,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> 
                 "id": item.nodeid,
                 "outcome": "PASS" if call.excinfo is None else "FAIL",
                 "doc": item.function.__doc__,
-                "datetime": datetime.now(),
+                "datetime": datetime.now(timezone.utc),
                 "duration": call.duration,
             }
         )
@@ -60,6 +60,9 @@ def generate_excel_report(
     1. Individual test results
     2. Aggregated by scenario ID
     """
+    for test in tests:
+        _remove_timezone_from_datetime(test)
+
     test_df = pl.DataFrame(tests)
     scenario_df = pl.DataFrame([{"id": x} for x in sorted(scenario_ids)])
     test_scenario_link_df = pl.DataFrame(test_scenario_links)
@@ -118,6 +121,12 @@ def generate_excel_report(
     if verbose:
         print(f"Analysis complete. Results written to: {file_path}")
     return
+
+
+def _remove_timezone_from_datetime(test: list[dict[str, Any]]) -> None:
+    datetime_obj = test.get("datetime")  # type: ignore[attr-defined]
+    if isinstance(datetime_obj, datetime) and datetime_obj.tzinfo is not None:
+        test["datetime"] = datetime_obj.replace(tzinfo=None)  # type: ignore[call-overload]
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
