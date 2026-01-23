@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
 from test.fastapp.user_manager import MOCK_USER, MockUser
@@ -26,7 +26,7 @@ class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"
 
-    NOW = datetime.now()
+    NOW = datetime.now(timezone.utc)
     INVALID_CLAIMS = {
         "aud": "wrong_aud",  # client id
         "iss": "http://localhost:5003",  # authorization server

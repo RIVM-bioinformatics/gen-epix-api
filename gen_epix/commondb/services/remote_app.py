@@ -1,5 +1,5 @@
 import importlib
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from logging import Logger
 from typing import Any
@@ -119,7 +119,8 @@ class CommondbRemoteApp(RemoteApp):
             assert self._oauth_scope is not None
             # Check if cached token is still valid
             if self._oauth_header_cache and self._oauth_header_cache[0] > (
-                datetime.now().timestamp() - self._oauth_token_refresh_margin
+                datetime.now(timezone.utc).timestamp()
+                - self._oauth_token_refresh_margin
             ):
                 # Return cached header
                 return self._oauth_header_cache[1]

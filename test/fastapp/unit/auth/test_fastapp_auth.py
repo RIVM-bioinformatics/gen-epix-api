@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
 from typing import Any
@@ -25,7 +25,7 @@ class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"
 
-    NOW = datetime.now()
+    NOW = datetime.now(timezone.utc)
     INVALID_CLAIMS: dict[str, Any] = {
         "aud": "wrong_aud",  # client id
         "iss": "http://localhost:5003",  # authorization server

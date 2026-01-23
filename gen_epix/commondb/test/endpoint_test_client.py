@@ -1,7 +1,7 @@
 import json
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -239,7 +239,8 @@ class EndpointTestClient:
             "iss": iss or f"https://{uuid.uuid4()}.org",
             "sub": sub or str(uuid.uuid4()),
             "aud": aud or str(uuid.uuid4()),
-            "exp": exp or datetime.now() + timedelta(minutes=expire_default_minutes),
+            "exp": exp
+            or datetime.now(timezone.utc) + timedelta(minutes=expire_default_minutes),
         }
         encoded_jwt = jwt.encode(
             claims, self.SECRET_KEY, algorithm=self.ENCRYPTION_ALGORITHM
