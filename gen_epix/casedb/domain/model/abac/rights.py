@@ -622,9 +622,23 @@ class CaseAbac(BaseModel):
         remove_data_collection_ids = self.get_removable_data_collections_ids(
             is_case_set, data_collection_ids, access, is_own_private
         )
+
+        share: dict[UUID, CaseTypeShareAbac] = self.case_type_share_abacs.get(
+            case_type_id, {}
+        )
+        # Determine any other share rights aside from read/write
+        self._manage_any_other_share_rights(
+            is_case_set,
+            data_collection_ids,
+            add_data_collection_ids,
+            remove_data_collection_ids,
+            share,
+        )
+
         can_delete = set(data_collection_ids).issubset(set(remove_data_collection_ids))
 
         if is_case_set:
+            # Read/write rights
             read_case_set = any(x.read_case_set for x in access.values())
             write_case_set = any(x.write_case_set for x in access.values())
             return CaseSetRights(
@@ -640,6 +654,7 @@ class CaseAbac(BaseModel):
                 can_delete=can_delete,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
+        # Case type cols that can be read/written
         read_case_type_col_ids: set[UUID] = {
             col_id for x in access.values() for col_id in x.read_case_type_col_ids
         }
@@ -659,6 +674,36 @@ class CaseAbac(BaseModel):
             can_delete=can_delete,
             shared_in_data_collection_ids=shared_in_data_collection_ids,
         )
+
+    def _manage_any_other_share_rights(
+        self,
+        is_case_set: bool,
+        data_collection_ids: set[UUID],
+        add_data_collection_ids: set[UUID],
+        remove_data_collection_ids: set[UUID],
+        share: dict[UUID, CaseTypeShareAbac],
+    ) -> None:
+        for to_data_collection_id, case_type_share_abac in share.items():
+            add_from_data_collection_ids = (
+                case_type_share_abac.add_case_set_from_data_collection_ids
+                if is_case_set
+                else case_type_share_abac.add_case_from_data_collection_ids
+            )
+            if (
+                to_data_collection_id not in data_collection_ids
+                and add_from_data_collection_ids.intersection(data_collection_ids)
+            ):
+                add_data_collection_ids.add(to_data_collection_id)
+            remove_from_data_collection_ids = (
+                case_type_share_abac.remove_case_set_from_data_collection_ids
+                if is_case_set
+                else case_type_share_abac.remove_case_from_data_collection_ids
+            )
+            if (
+                to_data_collection_id in data_collection_ids
+                and remove_from_data_collection_ids.intersection(data_collection_ids)
+            ):
+                remove_data_collection_ids.add(to_data_collection_id)
 
     def get_removable_data_collections_ids(
         self,
