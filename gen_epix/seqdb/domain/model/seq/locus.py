@@ -95,7 +95,9 @@ class LocusSet(Model):
         description="The ordered IDs of the loci in the locus set."
     )
 
-    @computed_field(description="The number of loci in the locus set.")
+    @computed_field( # type:ignore[prop-decorator]
+        description="The number of loci in the locus set."
+    )
     @cached_property
     def n_loci(self) -> int:
         """"""

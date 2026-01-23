@@ -8,13 +8,14 @@ from gen_epix.filter import ExistsFilter, NumberRangeFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
+import pytest
 
-
+@pytest.mark.scenario_ids("TC-SEC-28-07")
 class TestFilterMapFunction:
 
     def test_exists_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
-            util._test_filter(
+            util.validate_filter_behavior(
                 filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
@@ -40,7 +41,7 @@ class TestFilterMapFunction:
 
     def test_number_range_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
-            util._test_filter(
+            util.validate_filter_behavior(
                 filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
@@ -66,7 +67,7 @@ class TestFilterMapFunction:
 
     def test_date_range_map_function(self) -> None:
         def _test(expected_results: list, na_values=None) -> None:
-            util._test_filter(
+            util.validate_filter_behavior(
                 filter, rows, expected_results, na_values=na_values, map_fn=map_fn
             )
 
@@ -137,7 +138,7 @@ class TestFilterMapFunction:
             filters=[sub_filter2, sub_filter1, sub_filter3],
             operator="AND",
         )
-        util._test_filter(
+        util.validate_filter_behavior(
             filter,
             rows,
             [False, False, False, False, False, False, False, True],
@@ -148,7 +149,7 @@ class TestFilterMapFunction:
             filters=[sub_filter2, sub_filter1, sub_filter3],
             operator="OR",
         )
-        util._test_filter(
+        util.validate_filter_behavior(
             filter,
             rows,
             [False, True, True, True, True, True, True, True, True],

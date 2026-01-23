@@ -188,6 +188,7 @@ def specimen_data(common_data, person_data):
 
 # Create Pydantic model instances
 @pytest.mark.skip(reason="Skipping creation test for now")
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 def test_create_instances(
     person_data,
     observation_data,
@@ -205,6 +206,7 @@ def test_create_instances(
 
 
 @pytest.mark.skip(reason="Skipping serialization test for now")
+@pytest.mark.scenario_ids("TC-SEC-31-02")
 def test_serialize_instances(
     person_data,
     observation_data,

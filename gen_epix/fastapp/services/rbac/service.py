@@ -102,13 +102,14 @@ class BaseRbacService(BaseService):
         if role in self._permissions_by_role:
             if not update_role:
                 raise exc.ServiceException(f"Role {role} is already registered")
-            removed_permissions = self._permissions_by_role[role] - permissions
-            for permission in removed_permissions:
+            # Remove role from all old permissions
+            for permission in self._permissions_by_role[role]:
                 self._roles_by_permission[permission].remove(role)
-            permissions = permissions - self._permissions_by_role[role]
+            # Update the role's permissions to the new set
+            self._permissions_by_role[role] = permissions
         else:
             self._permissions_by_role[role] = permissions
-        # Add to roles by permission
+        # Add role to all new permissions
         for permission in permissions:
             self._roles_by_permission[permission].add(role)
         # Remove from role hierarchy so that it can be recalculated
@@ -211,7 +212,7 @@ class BaseRbacService(BaseService):
         registered. This is useful to ensure that no such permission is forgotten to be
         associated with a role.
         """
-        missing_permissions = self.app.domain.permissions - {
+        missing_permissions = {
             x for x in self._roles_by_permission if not self._roles_by_permission[x]
         }
         if missing_permissions:

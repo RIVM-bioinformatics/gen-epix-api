@@ -6,6 +6,7 @@ from collections.abc import Hashable, Iterable
 from functools import cached_property
 from typing import Any, ClassVar, Self
 
+from pydantic import BaseModel
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import (
     Field,
@@ -63,7 +64,7 @@ class Permission(PydanticBaseModel, frozen=True):
     command_name: str
     permission_type: PermissionType
 
-    @computed_field(
+    @computed_field(  # type:ignore[prop-decorator]
         description="The name of the permission, combining command name and permission type."
     )
     @cached_property
@@ -71,7 +72,9 @@ class Permission(PydanticBaseModel, frozen=True):
         """"""
         return f"{self.command_name}{Permission._NAME_DELIMITER}{self.permission_type.value}"
 
-    @computed_field(description="A sort key for ordering permissions.")
+    @computed_field(  # type:ignore[prop-decorator]
+        description="A sort key for ordering permissions."
+    )
     @cached_property
     def sort_key(self) -> tuple[str, int]:
         """"""
@@ -316,3 +319,48 @@ class UpdateAssociationCommand(Command):
 class Role(PydanticBaseModel):
     name: str
     permissions: set[Permission]
+
+
+class ModelFieldProps(BaseModel):
+    """
+    Additional properties of a model field. The application of these properties needs
+    to be implemented in the services using the model. Subclass as needed for specific
+    additional properties.
+
+    Additional validation:
+    - is_mutable_always cannot be True if is_mutable_if_empty is False.
+    """
+
+    is_mutable_if_empty: bool = Field(
+        default=True,
+        description="Whether the field is mutable after creation if its initial value was empty (None, empty dict, empty list). If the field is always mutable, set to True as well.",
+    )
+    is_mutable_always: bool = Field(
+        default=False,
+        description="Whether the field is always mutable after creation. Cannot be True if is_mutable_if_empty is False. The default is conservatively set to False, so that immutability is assumed unless explicitly specified.",
+    )
+    is_sub_field_dict: bool = Field(
+        default=False,
+        description="Whether the field content is a dict with sub fields (key/value pairs) rather than a single value.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        if not self.is_mutable_if_empty and self.is_mutable_always:
+            raise ValueError(
+                "is_mutable_always cannot be True if is_mutable_if_empty is False."
+            )
+        return self
+
+    def is_mutable_value(self, stored_value: Any | None) -> bool:
+        """
+        Determine if a stored value for this field is mutable.
+        """
+        if self.is_mutable_always:
+            return True
+        if self.is_mutable_if_empty:
+            if self.is_sub_field_dict:
+                return stored_value is None or len(stored_value) == 0
+            if stored_value is None:
+                return True
+        return False

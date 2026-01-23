@@ -2,15 +2,12 @@ import tomllib
 import uuid
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
-from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import ulid
 from pydantic import BaseModel, Field
-
-from gen_epix.fastapp import Command, Domain, Model, exc
 
 
 def generate_ulid() -> uuid.UUID:
@@ -155,64 +152,67 @@ def copy_model_field(
     return Field(**field_kwargs)
 
 
-def register_domain_entities(
-    domain: Domain,
-    sorted_service_types: Iterable[Hashable],
-    sorted_models_by_service_type: dict[Hashable, list[type[Model]]],
-    commands_by_service_type: dict[Hashable, set[type[Command]]],
-    common_model_map: dict[type[Model], type[Model]] | None = None,
-    common_command_map: dict[type[Command], type[Command]] | None = None,
-    set_schema_to_service_type: bool = False,
-) -> None:
+def add_parent_class_docs(
+    cls: type | set[type],
+    exclude: Iterable[type] | None = (BaseModel,),
+) -> str | None:
     """
-    Register service types, models and commands with a domain. In case some
-    models or commands are subclassed from another domain and the provides
-    models and commands contain their parent classes, they can be substituted
-    in the input and subsequently be registered as the actual classes, by
-    providing a mapping.
-
-    If `set_schema_to_service_type` is enabled, the schema name of the model
-    will be set to the lower case service name for persistable entities, unless
-    the schema name is already set.
+    Append the documentation of any non-excluded parent classes to the given
+    class or classes' docstring. The object parent class is always excluded. If
+    set_docs is True, the combined docstring is set as the class' docstring.
     """
-    if not common_model_map:
-        common_model_map = {}
-    for service_type in sorted_service_types:
-        # Register the service type
-        domain.register_service_type(service_type)
-        schema_name = (
-            str(service_type.value).lower()
-            if isinstance(service_type, Enum)
-            else str(service_type)
-        )
-        # Register the models
-        for i, model_class in enumerate(
-            sorted_models_by_service_type.get(service_type, [])
-        ):
-            if model_class in common_model_map:
-                # Substitute the model class with its commondb implementation,
-                # also in the input
-                model_class = common_model_map[model_class]
-                sorted_models_by_service_type[service_type][i] = model_class
-            if model_class.ENTITY is None:
-                raise exc.InitializationServiceError(
-                    f"Entity for model class {model_class} is not initialized."
+    if exclude is None:
+        exclude = set()
+    elif not isinstance(exclude, set):
+        exclude = set(x for x in exclude)
+    exclude.add(object)
+    # Handle list of classes: collect all bases and create directed acyclic graph of
+    # inheritance. Then update docstrings in DAG order.
+    if isinstance(cls, set):
+        # Collect all parent classes
+        class_bases_map: dict[type, set[type]] = {}
+        for curr_class in cls:
+            classes_to_process = [curr_class]
+            while classes_to_process:
+                curr_class = classes_to_process.pop()
+                if curr_class in class_bases_map:
+                    continue
+                parent_classes = tuple(
+                    x for x in curr_class.__bases__ if x not in exclude
                 )
-            if (
-                set_schema_to_service_type
-                and model_class.ENTITY.persistable
-                and model_class.ENTITY.schema_name is None
-            ):
-                model_class.ENTITY.schema_name = schema_name
-            domain.register_entity(
-                model_class.ENTITY, model_class=model_class, service_type=service_type
-            )
-        # Register the commands
-        for command_class in commands_by_service_type.get(service_type, []):
-            if common_command_map and command_class in common_command_map:
-                # Substitute the command class with its commondb implementation,
-                # also in the input
-                commands_by_service_type[service_type].remove(command_class)
-                command_class = common_command_map[command_class]
-                commands_by_service_type[service_type].add(command_class)
-            domain.register_command(command_class, service_type=service_type)
+                class_bases_map[curr_class] = set(parent_classes)
+                classes_to_process.extend(parent_classes)
+        # Create DAG order
+        dag_order: list[type] = []
+        processed_classes: set[type] = set()
+        while len(processed_classes) < len(class_bases_map):
+            for curr_class, parents in class_bases_map.items():
+                if curr_class in processed_classes:
+                    continue
+                if all(x in processed_classes for x in parents):
+                    dag_order.append(curr_class)
+                    processed_classes.add(curr_class)
+        # Update docstrings in DAG order
+        for curr_class in dag_order:
+            if len(class_bases_map[curr_class]) == 0:
+                continue
+            add_parent_class_docs(curr_class, exclude=exclude)
+        return None
+    # Single class
+    doc = cls.__doc__
+    parent_classes = cls.__bases__
+    parent_classes = tuple(x for x in parent_classes if x not in exclude)
+    parent_docs = []
+    for parent_class in parent_classes:
+        parent_doc = parent_class.__doc__
+        if parent_doc is None or parent_doc.strip() == "":
+            continue
+        parent_docs.append(f"{parent_class.__name__}:\n{parent_doc}")
+    if parent_docs:
+        if doc is None:
+            doc = ""
+        else:
+            doc = doc.strip() + "\n\n\n\n"
+        doc = doc + "PARENT CLASS DOCUMENTATION\n\n\n" + "\n\n\n".join(parent_docs)
+        cls.__doc__ = doc
+    return doc

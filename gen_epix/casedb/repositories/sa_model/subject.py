@@ -29,8 +29,8 @@ class Subject(Base, RowMetadataMixin):
     data_collection_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Subject, "data_collection_id"
     )
-    external_ids: Mapped[dict[UUID, str] | None] = create_mapped_column(
-        DOMAIN, model.Subject, "external_ids"
+    external_identifiers: Mapped[dict[UUID, str] | None] = create_mapped_column(
+        DOMAIN, model.Subject, "external_identifiers"
     )
     content: Mapped[dict[str, Any]] = create_mapped_column(
         DOMAIN, model.Subject, "content"

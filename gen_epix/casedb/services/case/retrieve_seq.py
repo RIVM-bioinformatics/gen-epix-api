@@ -2,9 +2,11 @@ from collections.abc import Iterable
 from uuid import UUID
 
 import gen_epix.seqdb.domain.command as seqdb_command
+import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -233,11 +235,11 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
 def case_service_retrieve_sequencing_protocols(
     self: BaseCaseService,
     cmd: command.RetrieveSequencingProtocolsCommand,
-) -> list[model.SequencingProtocol]:
+) -> list[seqdb_model.SequencingProtocol]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
-    sequencing_protocols: list[model.SequencingProtocol] = self.app.handle(
+    sequencing_protocols: list[seqdb_model.SequencingProtocol] = self.app.handle(
         seqdb_command.SequencingProtocolCrudCommand(
             user=cmd.user,
             operation=CrudOperation.READ_ALL,
@@ -248,11 +250,11 @@ def case_service_retrieve_sequencing_protocols(
 
 def case_service_retrieve_assembly_protocols(
     self: BaseCaseService, cmd: command.RetrieveAssemblyProtocolsCommand
-) -> list[model.AssemblyProtocol]:
+) -> list[seqdb_model.AssemblyProtocol]:
     user, repository = self._get_user_and_repository(cmd)
     assert isinstance(user, model.User) and user.id is not None
 
-    assembly_protocols: list[model.AssemblyProtocol] = self.app.handle(
+    assembly_protocols: list[seqdb_model.AssemblyProtocol] = self.app.handle(
         seqdb_command.AssemblyProtocolCrudCommand(
             user=cmd.user,
             operation=CrudOperation.READ_ALL,
@@ -275,6 +277,7 @@ def _get_seq_ids_from_cases(
         user.id,  # type: ignore[arg-type]
         case_abac,
         enum.CaseRight.READ_CASE,
+        NULL_ID,
         case_ids=case_ids,
         filter_content=True,
     )

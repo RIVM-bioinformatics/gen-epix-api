@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Self
 
 import sqlalchemy as sa
-from sqlalchemy import Engine, delete, select
+from sqlalchemy import Engine, delete, inspect, select
 from sqlalchemy.orm import Session, sessionmaker
 
 import gen_epix.fastapp.exc as exc
@@ -45,21 +45,141 @@ class SARepository(BaseRepository):
     DEFAULT_MAX_INSERT_BATCH_SIZE = 2000
 
     @classmethod
-    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+    def _process_repository_params(
+        cls, kwargs: dict[str, Any]
+    ) -> tuple[list[Entity], str, dict[str, Any]]:
+        """Helper method to process common repository parameters and handle connection string/file logic."""
         entities = kwargs.pop("entities", [])
         connection_string = kwargs.pop("connection_string", None)
         file = kwargs.pop("file", None)
+
         if connection_string is None:
             if file is None:
                 raise exc.RepositoryInitializationServiceError(
                     "Either connection_string or file must be provided"
                 )
             connection_string = f"sqlite:///{Path(file).resolve().as_posix()}"
+
+        return entities, connection_string, kwargs
+
+    @classmethod
+    def create_repository(cls, **kwargs: Any) -> BaseRepository:
+        entities, connection_string, remaining_kwargs = cls._process_repository_params(
+            kwargs
+        )
         return cls.create_sa_repository(
             entities=entities,
             connection_string=connection_string,
-            **kwargs,
+            **remaining_kwargs,
         )
+
+    @classmethod
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        Delete all database objects associated with the repository.
+        """
+        entities, connection_string, remaining_kwargs = cls._process_repository_params(
+            kwargs
+        )
+        # Get engine
+        engine = EngineFactory.create_engine(connection_string, echo=False)
+
+        # Get all actual table names from the database using schema names
+        inspector = inspect(engine)
+        actual_tables = set()
+        schema_names = {x.schema_name for x in entities if x.persistable}
+        for schema_name in schema_names:
+            if not schema_name:
+                continue
+            try:
+                # Get all table names in this schema from the database
+                table_names = inspector.get_table_names(schema=schema_name)
+                for table_name in table_names:
+                    actual_tables.add((schema_name, table_name))
+            except Exception:  # pylint: disable=broad-except
+                # Schema might not exist, continue
+                continue
+
+        # Drop all foreign key constraints from actual tables
+        constraints = []
+        for schema_name, table_name in actual_tables:
+            try:
+                for foreign_key in inspector.get_foreign_keys(
+                    table_name, schema=schema_name
+                ):
+                    if foreign_key.get("name"):
+                        constraints.append(
+                            (schema_name, table_name, foreign_key["name"])
+                        )
+            except Exception:  # pylint: disable=broad-except
+                # Skip tables that can't be inspected
+                continue
+
+        # Drop all foreign key constraints using raw SQL
+        if constraints:
+            with engine.connect() as conn:
+                # Detect database dialect for proper syntax
+                dialect_name = conn.dialect.name.lower()
+                transaction = conn.begin()
+                try:
+                    for (
+                        schema_name,
+                        table_name,
+                        constraint_name,
+                    ) in constraints:
+                        try:
+                            # NOTE: Only tested with MS SQL Server
+                            if dialect_name == "mssql":
+                                # SQL Server syntax with square brackets
+                                sql = f"ALTER TABLE [{schema_name}].[{table_name}] DROP CONSTRAINT [{constraint_name}]"
+                            elif dialect_name in (
+                                "postgresql",
+                                "postgres",
+                                "redshift",
+                            ):
+                                # PostgreSQL/Redshift syntax with double quotes
+                                sql = f'ALTER TABLE "{schema_name}"."{table_name}" DROP CONSTRAINT "{constraint_name}"'
+                            elif dialect_name in ("mysql", "mariadb"):
+                                # MySQL/MariaDB syntax with backticks and DROP FOREIGN KEY
+                                sql = f"ALTER TABLE `{schema_name}`.`{table_name}` DROP FOREIGN KEY `{constraint_name}`"
+                            elif dialect_name in ("oracle", "db2"):
+                                # Oracle and DB2 syntax
+                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+                            else:
+                                # Generic SQL syntax (fallback for other databases)
+                                sql = f"ALTER TABLE {schema_name}.{table_name} DROP CONSTRAINT {constraint_name}"
+
+                            conn.execute(sa.text(sql))
+                        except Exception:  # pylint: disable=broad-except
+                            # Some constraints might not exist, continue with others
+                            continue
+                    transaction.commit()
+                except Exception:  # pylint: disable=broad-except
+                    transaction.rollback()
+                    raise
+
+        # Drop all actual tables
+        with engine.connect() as conn:
+            for schema_name, table_name in actual_tables:
+                try:
+                    conn.execute(sa.text(f"DROP TABLE [{schema_name}].[{table_name}]"))
+                except Exception:  # pylint: disable=broad-except
+                    # Table might already be dropped, continue
+                    continue
+            conn.commit()
+
+        # Drop schemas if they exist
+        for schema_name in schema_names:
+            if not schema_name:
+                continue
+            with engine.connect() as conn:
+                try:
+                    if conn.dialect.has_schema(conn, schema_name):
+                        conn.execute(sa.schema.DropSchema(schema_name))
+                        conn.commit()
+                except Exception:  # pylint: disable=broad-except
+                    # Schema might not exist or have other issues
+                    continue
 
     def __init__(self, engine: Engine, **kwargs: Any):
         register_mappers = kwargs.pop("register_mappers", True)

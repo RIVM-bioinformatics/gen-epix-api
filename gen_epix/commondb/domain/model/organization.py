@@ -440,12 +440,13 @@ class ExternalIdentifier(Model):
     )
 
 
-class ExternalIdentifierForUpload(BaseModel):
+class ExternalIdentifierForUpload(BaseModel, frozen=True):
     """
     An external identifier, defined as the combination of
     (identifier issuer, identifier), intended for an upload operation.
     The identifier issuer can be given either as its code or ID to facilitate the
     upload operation where applicable.
+    The model is immutable (frozen) to allow its use in sets and as dictionary keys.
     """
 
     identifier_issuer_id: UUID | None = Field(
@@ -457,7 +458,7 @@ class ExternalIdentifierForUpload(BaseModel):
         description="The code of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_id is not present.",
         max_length=255,
     )
-    identifier: str = Field(description="The external identifier", max_length=255)
+    external_id: str = Field(description="The external identifier", max_length=255)
 
     @model_validator(mode="after")
     def _validate_issuer_fields(self) -> Self:
@@ -468,4 +469,20 @@ class ExternalIdentifierForUpload(BaseModel):
             )
         return self
 
-    # TODO: add equals and hash methods
+    def __eq__(self, other: object) -> bool:
+        """
+        Check equality based on identifier_issuer_id, identifier_issuer_code, and identifier.
+        Only when all three match, the objects are considered equal.
+        """
+        if not isinstance(other, ExternalIdentifierForUpload):
+            return False
+        return (
+            self.identifier_issuer_id == other.identifier_issuer_id
+            and self.identifier_issuer_code == other.identifier_issuer_code
+            and self.external_id == other.external_id
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (self.identifier_issuer_id, self.identifier_issuer_code, self.external_id)
+        )

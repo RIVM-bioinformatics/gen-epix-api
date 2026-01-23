@@ -1,6 +1,6 @@
 import base64
 from collections.abc import Callable
-from typing import Annotated, Any, NoReturn, Self, cast
+from typing import Annotated, Any, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI, Form
@@ -29,54 +29,6 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
         description="The members of the case type col set."
     )
-
-
-class ValidateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.ValidateCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.ValidateCasesCommand, "created_in_data_collection_id"
-    )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.ValidateCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.ValidateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.ValidateCasesCommand, "cases"
-    )
-
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
-
-
-class CreateCasesRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(command.CreateCasesCommand, "case_type_id")
-    created_in_data_collection_id: UUID = copy_model_field(
-        command.CreateCasesCommand, "created_in_data_collection_id"
-    )
-    data_collection_ids: set[UUID] = copy_model_field(
-        command.CreateCasesCommand, "data_collection_ids"
-    )
-    is_update: bool = copy_model_field(command.CreateCasesCommand, "is_update")
-    cases: list[model.CaseForCreateUpdate] = copy_model_field(
-        command.CreateCasesCommand, "cases"
-    )
-
-    @model_validator(mode="after")
-    def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
-            raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
-            )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating")
-        return self
 
 
 class CreateCaseSetRequestBody(PydanticBaseModel):
@@ -155,16 +107,6 @@ class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
     )
 
 
-class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
-    genetic_sequence_case_type_col_id: UUID = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand,
-        "genetic_sequence_case_type_col_id",
-    )
-    case_ids: list[UUID] = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
-    )
-
-
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -183,7 +125,7 @@ class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
     )
 
 
-class CreateFileForForReadSetRequestBody(PydanticBaseModel):
+class CreateFileForReadSetRequestBody(PydanticBaseModel):
     file_content: str = Field(
         description="The content of the file to create as base64 encoded bytes."
     )
@@ -316,58 +258,24 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/validate/cases",
-        operation_id="validate__cases",
-        name="Validate cases",
-        description=command.ValidateCasesCommand.__doc__,
+        "/upload/cases",
+        operation_id="upload__cases",
+        name="Upload cases",
+        description=command.UploadCasesCommand.__doc__,
     )
-    async def validate__cases(
+    async def upload__cases(
         user: registered_user_dependency,  # type: ignore
-        request_body: ValidateCasesRequestBody,
-    ) -> model.CaseValidationReport:
+        cmd: command.UploadCasesCommand,
+    ) -> model.CaseBatchUploadResult:
+        cmd.user = user
         return cast(
-            model.CaseValidationReport,
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="9f8e7d6c",
-                input_handle_exception=handle_exception,
-                input_command=command.ValidateCasesCommand(
-                    user=user,
-                    case_type_id=request_body.case_type_id,
-                    created_in_data_collection_id=request_body.created_in_data_collection_id,
-                    is_update=request_body.is_update,
-                    cases=request_body.cases,
-                    data_collection_ids=request_body.data_collection_ids,
-                ),
-            ),
-        )
-
-    @router.post(
-        "/create/cases",
-        operation_id="create__cases",
-        name="Create cases",
-        description=command.CreateCasesCommand.__doc__,
-    )
-    async def create__cases(
-        user: registered_user_dependency,  # type: ignore
-        request_body: CreateCasesRequestBody,
-    ) -> list[model.Case]:
-        return cast(
-            list[model.Case],
+            model.CaseBatchUploadResult,
             handle_command(
                 app=app,
                 user=user,
                 exception_code="b413ab76",
                 input_handle_exception=handle_exception,
-                input_command=command.CreateCasesCommand(
-                    user=user,
-                    cases=request_body.cases,
-                    data_collection_ids=request_body.data_collection_ids,
-                    case_type_id=request_body.case_type_id,
-                    created_in_data_collection_id=request_body.created_in_data_collection_id,
-                    is_update=request_body.is_update,
-                ),
+                input_command=cmd,
             ),
         )
 
@@ -723,7 +631,7 @@ def create_case_endpoints(
         user: registered_user_dependency,  # type: ignore
         case_id: UUID,
         case_type_col_id: UUID,
-        request_body: CreateFileForForReadSetRequestBody,
+        request_body: CreateFileForReadSetRequestBody,
     ) -> UUID:
         return cast(
             UUID,

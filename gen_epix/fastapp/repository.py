@@ -29,6 +29,13 @@ class BaseRepository(abc.ABC):
     def create_repository(cls, **kwargs: Any) -> "BaseRepository":
         raise NotImplementedError()
 
+    @classmethod
+    def clear_repository_content(cls, **kwargs: Any) -> None:
+        """
+        Remove all contents of the repository.
+        """
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def crud(
         self,
@@ -376,6 +383,32 @@ class BaseRepository(abc.ABC):
             excluded_id_pairs,
         )
 
+    def _get_relevant_existing_objs(
+        self,
+        model_class: type[Model],
+        link_field_name1: str,
+        link_field_name2: str,
+        obj_id1: Hashable | None,
+        obj_id2: Hashable | None,
+        all_existing_objs: list[Model],
+    ) -> list[Model]:
+        if obj_id1 is not None:
+            relevant_existing_objs = [
+                x for x in all_existing_objs if getattr(x, link_field_name1) == obj_id1
+            ]
+        elif obj_id2 is not None:
+            relevant_existing_objs = [
+                x for x in all_existing_objs if getattr(x, link_field_name2) == obj_id2
+            ]
+        else:
+            # Neither obj_id1 nor obj_id2 specified
+            raise exc.InvalidArgumentsError(
+                f"Model {model_class.__name__}: update_association requires either "
+                f"obj_id1 ({link_field_name1}) or obj_id2 ({link_field_name2}) to be specified. "
+            )
+
+        return relevant_existing_objs
+
     @abc.abstractmethod
     def verify_valid_ids(
         self,
@@ -491,6 +524,8 @@ class BaseRepository(abc.ABC):
                 _verify_one_id()
             case CrudOperation.RESTORE_SOME:
                 _verify_some_ids()
+            case CrudOperation.RESTORE_ALL:
+                _verify_no_data()
             case CrudOperation.EXISTS_ONE:
                 _verify_one_id()
             case CrudOperation.EXISTS_SOME:

@@ -109,7 +109,7 @@ class SeqdbService(BaseSeqdbService):
         files: list[seqdb_model.File] = self._seqdb_app.handle(
             seqdb_command.FileCrudCommand(
                 user=cmd.user,
-                obj_ids=list(set(file_ids)),  # type: ignore[arg-type]
+                obj_ids=list(set(file_ids)),
                 operation=CrudOperation.READ_SOME,
             )
         )
@@ -138,6 +138,16 @@ class SeqdbService(BaseSeqdbService):
         fasta_iterator: Iterable[str] = self.seqdb_app.handle(seqdb_cmd)
         return fasta_iterator
 
+    def upload_samples(
+        self,
+        cmd: seqdb_command.UploadSamplesCommand,
+    ) -> seqdb_model.SampleBatchUploadResult:
+        user = cmd.user
+        cmd.user = self.seqdb_user
+        result: seqdb_model.SampleBatchUploadResult = self.seqdb_app.handle(cmd)
+        cmd.user = user
+        return result
+
     def crud(
         self, cmd: CrudCommand
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
@@ -150,3 +160,13 @@ class SeqdbService(BaseSeqdbService):
         result = self.seqdb_app.handle(cmd)
         cmd.user = casedb_user
         return result  # type: ignore[no-any-return]
+
+    def create_file(
+        self,
+        cmd: seqdb_command.CreateFileCommand,
+    ) -> UUID:
+        user = cmd.user
+        cmd.user = self.seqdb_user
+        file_id: UUID = self.seqdb_app.handle(cmd)
+        cmd.user = user
+        return file_id

@@ -142,6 +142,7 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         keys=create_keys(
             {
                 1: "code",
+                2: ("sample_id", "read_set_id", "read_set2_id", "assembly_protocol_id"),
             }
         ),
         links=create_links(

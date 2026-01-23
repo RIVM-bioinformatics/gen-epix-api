@@ -23,6 +23,9 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             command.UserCrudCommand,
             command.OrganizationAdminPolicyCrudCommand,
             command.UserInvitationCrudCommand,
+            command.OrganizationIdentifierIssuerLinkCrudCommand,
+            command.OrganizationSetOrganizationUpdateAssociationCommand,
+            command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand,
         }
         self.has_user_id_attr_command_classes: set[type[command.Command]] = set()
 
@@ -107,16 +110,12 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
         msg2: str,
     ) -> Any:
         users = self._get_users(cmd, is_read_all)
-        valid_user_ids = {
-            x.id for x in users if x.organization_id in organization_ids
-        }
+        valid_user_ids = {x.id for x in users if x.organization_id in organization_ids}
         if is_read_all:
             return [x for x in retval if x.user_id in valid_user_ids]
         if is_read_one and retval.user_id not in valid_user_ids:
             raise exc.UnauthorizedAuthError(msg1)
-        if not is_read_one and not {x.user_id for x in retval}.issubset(
-            valid_user_ids
-        ):
+        if not is_read_one and not {x.user_id for x in retval}.issubset(valid_user_ids):
             raise exc.UnauthorizedAuthError(msg2)
         raise NotImplementedError
 

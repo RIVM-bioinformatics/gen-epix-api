@@ -2,6 +2,7 @@ from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
+from gen_epix.casedb.domain.repository.case import BaseCaseRepository
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter import UuidSetFilter
@@ -14,15 +15,16 @@ def case_service_retrieve_complete_case_type(
     # TODO: many calls are inefficient,
     # retrieving first all objs and then filtering.
     # To be improved with e.g. CQS.
-    user, repository = self._get_user_and_repository(cmd)
-    assert user.id is not None
+    repository: BaseCaseRepository = self.repository
+    user = cmd.user
+    user_id: UUID | None = None if user is None else user.id
 
     with repository.uow() as uow:
         # Get case type
         case_type_id = cmd.case_type_id
         case_type: model.CaseType = self.repository.crud(  # type: ignore[assignment]
             uow,
-            user.id,
+            user_id,
             model.CaseType,
             None,
             case_type_id,
@@ -31,16 +33,21 @@ def case_service_retrieve_complete_case_type(
 
         # @ABAC
         # Get allowed case type columns with any CRUD permission
-        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-        assert case_abac is not None
-        case_type_access_abacs: dict[UUID, model.CaseTypeAccessAbac] = (
-            case_abac.case_type_access_abacs.get(case_type_id, {})
-        )
-        case_type_share_abacs: dict[UUID, model.CaseTypeShareAbac] = (
-            case_abac.case_type_share_abacs.get(case_type_id, {})
-        )
-
+        case_abac: model.CaseAbac | None
+        case_type_access_abacs: dict[UUID, model.CaseTypeAccessAbac]
+        case_type_share_abacs: dict[UUID, model.CaseTypeShareAbac]
         abac_case_type_col_ids: set[UUID]
+        abac_read_case_type_col_ids: set[UUID]
+        if cmd.user is None:
+            # Special case: no user -> treated as full access (actual ABAC still applies, which will require a valid user later)
+            case_abac = model.CaseAbac(
+                case_type_access_abacs={},
+                case_type_share_abacs={},
+                is_full_access=True,
+            )
+        else:
+            case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+            assert case_abac is not None
         if case_abac.is_full_access:
             # Special case: full access -> all rights for all data collections for
             # this case type
@@ -49,7 +56,7 @@ def case_service_retrieve_complete_case_type(
             # full access by using the CRUD methods
             abac_case_type_col_ids = repository.crud(  # type: ignore[assignment]
                 uow,
-                user.id,
+                user_id,
                 model.CaseTypeCol,
                 None,
                 None,
@@ -63,7 +70,7 @@ def case_service_retrieve_complete_case_type(
             abac_read_case_type_col_ids = abac_case_type_col_ids
             data_collection_ids: list[UUID] = self.app.handle(
                 command.DataCollectionCrudCommand(
-                    user=user,  # type: ignore[arg-type]
+                    user=user,
                     operation=CrudOperation.READ_ALL,
                     props={"return_id": True},
                 )
@@ -88,8 +95,14 @@ def case_service_retrieve_complete_case_type(
             # case_type_access_abacs
             case_type_share_abacs = {}
         else:
+            case_type_access_abacs = case_abac.case_type_access_abacs.get(
+                case_type_id, {}
+            )
+            case_type_share_abacs = case_abac.case_type_share_abacs.get(
+                case_type_id, {}
+            )
             abac_case_type_col_ids = set()
-            abac_read_case_type_col_ids: set[UUID] = set()
+            abac_read_case_type_col_ids = set()
             for x in case_type_access_abacs.values():
                 abac_read_case_type_col_ids.update(x.read_case_type_col_ids)
                 abac_case_type_col_ids.update(x.write_case_type_col_ids)
@@ -99,7 +112,7 @@ def case_service_retrieve_complete_case_type(
         if case_type.disease_id:
             etiologies = self.app.handle(
                 command.EtiologyCrudCommand(
-                    user=user,  # type: ignore[arg-type]
+                    user=user,
                     operation=CrudOperation.READ_ALL,
                 )
             )
@@ -116,7 +129,7 @@ def case_service_retrieve_complete_case_type(
             )
             etiological_agents = self.app.handle(
                 command.EtiologicalAgentCrudCommand(
-                    user=user,  # type: ignore[arg-type]
+                    user=user,
                     operation=CrudOperation.READ_SOME,
                     obj_ids=etiological_agent_ids,
                 )
@@ -129,7 +142,7 @@ def case_service_retrieve_complete_case_type(
         case_type_col_ids = list(abac_case_type_col_ids)
         case_type_cols: list[model.CaseTypeCol] = repository.crud(  # type: ignore[assignment]
             uow,
-            user.id,
+            user_id,
             model.CaseTypeCol,
             None,
             case_type_col_ids,
@@ -146,7 +159,7 @@ def case_service_retrieve_complete_case_type(
         )
         case_type_dims: list[model.CaseTypeDim] = repository.crud(  # type: ignore[assignment]
             uow,
-            user.id,
+            user_id,
             model.CaseTypeDim,
             None,
             case_type_dim_ids,
@@ -160,7 +173,7 @@ def case_service_retrieve_complete_case_type(
         col_ids = list({x.col_id for x in case_type_cols})
         cols: list[model.Col] = repository.crud(  # type: ignore[assignment]
             uow,
-            user.id,
+            user_id,
             model.Col,
             None,
             col_ids,
@@ -172,7 +185,7 @@ def case_service_retrieve_complete_case_type(
         dim_ids = list({x.dim_id for x in cols})
         dims: list[model.Dim] = repository.crud(  # type: ignore[assignment]
             uow,
-            user.id,
+            user_id,
             model.Dim,
             None,
             dim_ids,
@@ -183,7 +196,7 @@ def case_service_retrieve_complete_case_type(
         # Get genetic distance protocols
         genetic_distance_protocols = self.app.handle(
             command.GeneticDistanceProtocolCrudCommand(
-                user=user,  # type: ignore[arg-type]
+                user=user,
                 operation=CrudOperation.READ_SOME,
                 obj_ids=list(
                     {
@@ -203,7 +216,7 @@ def case_service_retrieve_complete_case_type(
         )
         tree_algorithms = self.app.handle(
             command.TreeAlgorithmCrudCommand(
-                user=user,  # type: ignore[arg-type]
+                user=user,
                 operation=CrudOperation.READ_ALL,
             )
         )

@@ -13,6 +13,7 @@ from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.seqdb.domain import exc, model
 
 
+@pytest.mark.scenario_ids("TC-11-09-05")
 class TestUpdate:
     # UPDATE tests
 
@@ -190,14 +191,14 @@ class TestUpdate:
 
     def test_update_data_collection(self, env: Env) -> None:
         env.create_data_collection("root1_1", "data_collection23")
-        for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS):
+        for i, user in enumerate(APP_ADMIN_OR_ABOVE_USERS, start=1):
             env.update_object(
                 user, model.DataCollection, "data_collection23", {"description": str(i)}
             )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_update_data_collection_raise(self, env: Env) -> None:
-        for i, user in enumerate(BELOW_APP_ADMIN_USERS):
+        for i, user in enumerate(BELOW_APP_ADMIN_USERS, start=1):
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.update_object(
                     user,

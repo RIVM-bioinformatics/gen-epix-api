@@ -23,6 +23,7 @@ def _is_iterable_type(field_type: Any) -> bool:
     return origin in {list, set, tuple, frozenset}
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-08")
 def test_model_field_properties() -> None:
     """test if domain and request body models have a max_length for all iterable properties."""
 

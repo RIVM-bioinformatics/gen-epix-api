@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from gen_epix.casedb.domain.model.case.persistable import CaseTypeColSet, CaseTypeSet
+from gen_epix.casedb.domain.model.case import CaseTypeColSet, CaseTypeSet
 from gen_epix.commondb.domain import model as common_model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 

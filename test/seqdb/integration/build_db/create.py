@@ -13,6 +13,7 @@ import pytest
 from gen_epix.seqdb.domain import enum, exc, model
 
 
+@pytest.mark.scenario_ids("TC-11-09-02", "TC-11-10-01", "TC-11-11-01", "TC-11-12-01")
 class TestCreate:
     # CREATE tests
 
@@ -192,8 +193,8 @@ class TestCreate:
 
     def test_create_sequencing_protocol(self, env: Env) -> None:
         # Create sequencing_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_sequencing_protocol(exec_user, f"sequencing_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_sequencing_protocol(exec_user, f"sequencing_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_sequencing_protocol_raise(self, env: Env) -> None:
@@ -203,8 +204,8 @@ class TestCreate:
 
     def test_create_assembly_protocol(self, env: Env) -> None:
         # Create assembly_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_assembly_protocol(exec_user, f"assembly_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_assembly_protocol(exec_user, f"assembly_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_assembly_protocol_raise(self, env: Env) -> None:
@@ -214,9 +215,9 @@ class TestCreate:
 
     def test_create_locus_detection_protocol(self, env: Env) -> None:
         # Create locus_detection_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
             env.create_locus_detection_protocol(
-                exec_user, f"locus_detection_protocol{i + 1}"
+                exec_user, f"locus_detection_protocol{i}"
             )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -229,8 +230,8 @@ class TestCreate:
 
     def test_create_pcr_protocol(self, env: Env) -> None:
         # Create pcr_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_pcr_protocol(exec_user, f"pcr_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_pcr_protocol(exec_user, f"pcr_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_pcr_protocol_raise(self, env: Env) -> None:
@@ -240,8 +241,8 @@ class TestCreate:
 
     def test_create_ast_protocol(self, env: Env) -> None:
         # Create ast_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_ast_protocol(exec_user, f"ast_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_ast_protocol(exec_user, f"ast_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_ast_protocol_raise(self, env: Env) -> None:
@@ -251,8 +252,8 @@ class TestCreate:
 
     def test_create_alignment_protocol(self, env: Env) -> None:
         # Create alignment_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_alignment_protocol(exec_user, f"alignment_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_alignment_protocol(exec_user, f"alignment_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_alignment_protocol_raise(self, env: Env) -> None:
@@ -262,8 +263,8 @@ class TestCreate:
 
     def test_create_taxonomy_protocol(self, env: Env) -> None:
         # Create taxonomy_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_taxonomy_protocol(exec_user, f"taxonomy_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_taxonomy_protocol(exec_user, f"taxonomy_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_taxonomy_protocol_raise(self, env: Env) -> None:
@@ -273,9 +274,9 @@ class TestCreate:
 
     def test_create_seq_classification_protocol(self, env: Env) -> None:
         # Create seq_classification_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
             env.create_seq_classification_protocol(
-                exec_user, f"seq_classification_protocol{i + 1}"
+                exec_user, f"seq_classification_protocol{i}"
             )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -288,8 +289,8 @@ class TestCreate:
 
     def test_create_seq_distance_protocol(self, env: Env) -> None:
         # Create seq_distance_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_seq_distance_protocol(exec_user, f"seq_distance_protocol{i + 1}")
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_seq_distance_protocol(exec_user, f"seq_distance_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_seq_distance_protocol_raise(self, env: Env) -> None:
@@ -299,10 +300,8 @@ class TestCreate:
 
     def test_create_snp_detection_protocol(self, env: Env) -> None:
         # Create snp_detection_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_snp_detection_protocol(
-                exec_user, f"snp_detection_protocol{i + 1}"
-            )
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_snp_detection_protocol(exec_user, f"snp_detection_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_snp_detection_protocol_raise(self, env: Env) -> None:
@@ -312,10 +311,8 @@ class TestCreate:
 
     def test_create_mlva_detection_protocol(self, env: Env) -> None:
         # Create mlva_detection_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_mlva_detection_protocol(
-                exec_user, f"mlva_detection_protocol{i + 1}"
-            )
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_mlva_detection_protocol(exec_user, f"mlva_detection_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_mlva_detection_protocol_raise(self, env: Env) -> None:
@@ -327,10 +324,8 @@ class TestCreate:
 
     def test_create_kmer_detection_protocol(self, env: Env) -> None:
         # Create kmer_detection_protocol as root, app_admin, refdata_admin
-        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS):
-            env.create_kmer_detection_protocol(
-                exec_user, f"kmer_detection_protocol{i + 1}"
-            )
+        for i, exec_user in enumerate(REFDATA_ADMIN_OR_ABOVE_USERS, start=1):
+            env.create_kmer_detection_protocol(exec_user, f"kmer_detection_protocol{i}")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_create_kmer_detection_protocol_raise(self, env: Env) -> None:
@@ -342,11 +337,11 @@ class TestCreate:
 
     def test_create_sample(self, env: Env) -> None:
         # Create Sample as root, app_admin, org_admin and org_user
-        for i, exec_user in enumerate(DATA_USERS):
+        for i, exec_user in enumerate(DATA_USERS, start=1):
             env.create_sample(
                 exec_user,
-                code=f"sample{i + 1}",
-                created_in_data_collection_or_str=f"data_collection{i+1}",
+                code=f"sample{i}",
+                created_in_data_collection_or_str=f"data_collection{i}",
             )
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
@@ -492,10 +487,10 @@ class TestCreate:
 
     def test_create_seq(self, env: Env) -> None:
         # Create Seq as root, app_admin, org_admin and org_user
-        for exec_user in DATA_USERS:
+        for i, exec_user in enumerate(DATA_USERS, start=1):
             env.create_seq(
                 exec_user,
-                sample_or_str="sample1",
+                sample_or_str=f"sample{i}",
                 assembly_protocol_or_str="assembly_protocol1",
             )
 
@@ -509,7 +504,7 @@ class TestCreate:
                 )
 
     def test_create_seq_with_file(self, env: Env) -> None:
-        for exec_user in DATA_USERS:
+        for i, exec_user in enumerate(DATA_USERS, start=1):
             file = env.create_file(
                 exec_user,
                 env.DUMMY_VALUES["fasta_gzip_bytes1"],
@@ -518,8 +513,8 @@ class TestCreate:
             )
             env.create_seq(
                 exec_user,
-                sample_or_str="sample1",
-                assembly_protocol_or_str="assembly_protocol1",
+                sample_or_str=f"sample{i}",
+                assembly_protocol_or_str="assembly_protocol2",
                 file_id=file.id,
                 file_format=enum.FileFormat.FASTA,
                 file_compression=enum.FileCompression.GZIP,

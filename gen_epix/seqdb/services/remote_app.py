@@ -72,6 +72,11 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             leaf_codes=cmd.leaf_names,
         )
 
+        print(f"DEBUG: Host is {self.host}")
+        print(f"DEBUG: Port is {self.port}")
+        print(f"DEBUG: Protocol is {self.protocol}")
+        print(f"DEBUG: Making request to {route} with ssl_context: {self.ssl_context}")
+
         with httpx.Client(verify=self.ssl_context) as client:
             response = client.post(
                 route,

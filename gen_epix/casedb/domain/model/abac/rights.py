@@ -124,7 +124,7 @@ class CaseAbac(BaseModel):
                 continue
             if case_type_id in retval:
                 # Merge with existing data collection IDs
-                data_collection_ids = retval[case_type_id].union(data_collection_ids)
+                retval[case_type_id].update(data_collection_ids)
             else:
                 retval[case_type_id] = data_collection_ids
         return retval
@@ -565,8 +565,8 @@ class CaseAbac(BaseModel):
         data_collection_ids: set[UUID],
     ) -> CaseRights | CaseSetRights:
         shared_in_data_collection_ids: set[UUID] = data_collection_ids - {
-                created_in_data_collection_id
-            }
+            created_in_data_collection_id
+        }
         if is_case_set:
             return CaseSetRights(
                 case_set_id=case_or_set_id,
@@ -661,9 +661,9 @@ class CaseAbac(BaseModel):
         )
 
     def get_removable_data_collections_ids(
-        self, 
-        is_case_set: bool, 
-        data_collection_ids: frozenset[UUID], 
+        self,
+        is_case_set: bool,
+        data_collection_ids: frozenset[UUID],
         access: dict[UUID, CaseTypeAccessAbac],
         is_own_private: bool,
     ) -> set[UUID]:
@@ -681,9 +681,9 @@ class CaseAbac(BaseModel):
         return remove_data_collection_ids
 
     def get_addable_data_collections_ids(
-        self, 
-        is_case_set: bool, 
-        data_collection_ids: frozenset[UUID], 
+        self,
+        is_case_set: bool,
+        data_collection_ids: frozenset[UUID],
         access: dict[UUID, CaseTypeAccessAbac],
         is_own_private: bool,
     ) -> set[UUID]:

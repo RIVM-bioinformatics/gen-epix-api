@@ -12,6 +12,9 @@ from gen_epix.fastapp.services.auth.token_introspection_manager import (
 )
 
 
+@pytest.mark.scenario_ids(
+    "TC-SEC-25-01", "TC-SEC-25-02", "TC-SEC-28-01", "TC-OWA-07-07"
+)
 class TestOauthIdpClientIntrospection:
 
     CLIENT: OauthIdpClient

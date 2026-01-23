@@ -113,7 +113,7 @@ def _crud_case_type_set_with_abac(
     valid_case_type_set_ids = empty_case_type_set_ids | {
         x.case_type_set_id
         for x in all_case_type_set_members
-        if x.case_type_set_id in valid_case_type_ids
+        if x.case_type_id in valid_case_type_ids
     }
 
     # Read data with access filter

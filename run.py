@@ -89,8 +89,8 @@ class Run:
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
-        ssl_keyfile = Run.APP_SSL_KEYFILE
-        ssl_certfile = Run.APP_SSL_CERTFILE
+        ssl_keyfile = Run.APP_SSL_KEYFILE if Path(Run.APP_SSL_KEYFILE).exists() else None
+        ssl_certfile = Run.APP_SSL_CERTFILE if Path(Run.APP_SSL_CERTFILE).exists() else None
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
         uvicorn.run(
@@ -262,14 +262,34 @@ class Run:
                 "test/fastapp/unit/auth/",
             ]
         )
-
-    def test_fastapp_unit_rbac(self) -> None:
+    
+    def test_fastapp_unit_domain(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/fastapp/unit/rbac/",
+                "test/fastapp/unit/domain",
+            ]
+        )
+
+    def test_fastapp_unit_services(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/services/",
+            ]
+        )
+
+    def test_fastapp_unit_services_rbac(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/fastapp/unit/services/rbac",
             ]
         )
 
@@ -323,6 +343,26 @@ class Run:
             ]
         )
 
+    def test_commondb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/upload/",
+            ]
+        )
+
+    def test_commondb_unit_policies(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/commondb/unit/policies/",
+            ]
+        )
+
     def test_commondb_integration(self) -> None:
         import pytest
 
@@ -352,6 +392,36 @@ class Run:
                 "test/casedb/unit/",
             ]
         )
+    
+    def test_casedb_unit_domain(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/domain",
+            ]
+        )
+
+    def test_casedb_unit_services(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/services",
+            ]
+        )
+
+    def test_casedb_unit_services_case(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/unit/services/case",
+            ]
+        )
 
     def test_casedb_unit_case_type_col_order(self) -> None:
         import pytest
@@ -363,14 +433,12 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_seqdb_remote_app(self) -> None:
+    def test_unit_seqdb_remote_app(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/casedb/unit/seqdb_remote_app",
-            ]
+            + ["test/seqdb/unit/services/test_seqdb_remote_app.py"]
         )
 
     def test_casedb_integration(self) -> None:
@@ -403,13 +471,13 @@ class Run:
             ]
         )
 
-    def test_casedb_integration_case_validation(self) -> None:
+    def test_casedb_integration_case_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/integration/case_validation",
+                "test/casedb/integration/case_upload",
             ]
         )
 
@@ -480,6 +548,27 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/unit",
+            ]
+        )
+
+
+    def test_seqdb_unit_sample_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/sample_upload",
+            ]
+        )
+
+    def test_seqdb_unit_models_for_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/unit/models_for_upload",
             ]
         )
 

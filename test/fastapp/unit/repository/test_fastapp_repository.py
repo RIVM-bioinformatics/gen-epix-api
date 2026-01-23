@@ -31,6 +31,7 @@ def get_test_clients() -> list[Env]:
     return envs
 
 
+@pytest.mark.scenario_ids("TC-SEC-28-04")
 @pytest.mark.parametrize(
     "env",
     get_test_clients(),

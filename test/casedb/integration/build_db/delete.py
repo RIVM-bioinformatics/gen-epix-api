@@ -17,6 +17,26 @@ import pytest
 from gen_epix.casedb.domain import exc, model
 
 
+@pytest.mark.scenario_ids(
+    "TC-RBAC-01-18",
+    "TC-RBAC-01-19",
+    "TC-RBAC-01-03",
+    "TC-RBAC-02-09",
+    "TC-RBAC-02-10",
+    "TC-RBAC-02-11",
+    "TC-RBAC-02-12",
+    "TC-RBAC-02-05",
+    "TC-RBAC-02-06",
+    "TC-RBAC-02-07",
+    "TC-BIO-01-01",
+    "TC-BIO-01-02",
+    "TC-BIO-02-01",
+    "TC-BIO-02-02",
+    "TC-BIO-03-01",
+    "TC-BIO-03-02",
+    "TC-BIO-04-01",
+    "TC-BIO-04-02",
+)
 class TestDelete:
 
     def test_delete_organization(self, env: Env) -> None:

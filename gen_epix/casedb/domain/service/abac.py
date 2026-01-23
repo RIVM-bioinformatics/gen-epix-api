@@ -66,7 +66,7 @@ class BaseAbacService(CommonAbacService):
         command.CreateSeqsForCasesCommand,
         # command.CaseDataCollectionUpdateAssociationCommand,
         command.CreateCaseSetCommand,
-        command.CreateCasesCommand,
+        command.UploadCasesCommand,
         command.CaseSetCrudCommand,
         # command.CaseSetCaseUpdateAssociationCommand,
         # command.CaseSetDataCollectionUpdateAssociationCommand,
@@ -76,7 +76,8 @@ class BaseAbacService(CommonAbacService):
         command.RetrievePhylogeneticTreeByCasesCommand,
         command.RetrieveGeneticSequenceByCaseCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
-        command.ValidateCasesCommand,
+        command.RetrieveCaseSetStatsCommand,
+        command.RetrieveCaseTypeStatsCommand,
     }
 
     @abc.abstractmethod

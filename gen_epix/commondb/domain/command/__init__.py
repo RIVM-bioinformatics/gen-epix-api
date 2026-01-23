@@ -12,6 +12,9 @@ from gen_epix.commondb.domain.command.base import CrudCommand as CrudCommand
 from gen_epix.commondb.domain.command.base import (
     UpdateAssociationCommand as UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.command.base import (
+    UploadBatchCommandMixin as UploadBatchCommandMixin,
+)
 from gen_epix.commondb.domain.command.organization import (
     ContactCrudCommand as ContactCrudCommand,
 )

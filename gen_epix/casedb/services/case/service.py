@@ -1,0 +1,1158 @@
+import datetime
+from collections.abc import Callable, Iterable
+from uuid import UUID
+
+from gen_epix.casedb.domain import command, enum, exc, model
+from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
+from gen_epix.casedb.services.case.base import BaseCaseService
+from gen_epix.casedb.services.case.case_date import (
+    case_service_calculate_case_date,
+    case_service_get_case_date_case_type_col_mappers,
+)
+from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
+from gen_epix.casedb.services.case.create_seq import (
+    case_service_create_file_for_read_set_or_seq,
+    case_service_create_read_sets_or_seqs_for_cases,
+)
+from gen_epix.casedb.services.case.crud_case import case_service_crud_case
+from gen_epix.casedb.services.case.crud_case_data_collection_link import (
+    case_service_crud_case_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set_category import (
+    case_service_crud_case_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_set_data_collection_link import (
+    case_service_crud_case_set_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set_member import (
+    case_service_crud_case_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_set_status import (
+    case_service_crud_case_set_status,
+)
+from gen_epix.casedb.services.case.crud_case_type import case_service_crud_case_type
+from gen_epix.casedb.services.case.crud_case_type_col import (
+    case_service_crud_case_type_col,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set import (
+    case_service_crud_case_type_col_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set_member import (
+    case_service_crud_case_type_col_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_type_dim import (
+    case_service_crud_case_type_dim,
+)
+from gen_epix.casedb.services.case.crud_case_type_set import (
+    case_service_crud_case_type_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_category import (
+    case_service_crud_case_type_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_member import (
+    case_service_crud_case_type_set_member,
+)
+from gen_epix.casedb.services.case.crud_col import case_service_crud_col
+from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
+from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
+    case_service_crud_genetic_distance_protocol,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm import (
+    case_service_crud_tree_algorithm,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm_class import (
+    case_service_crud_tree_algorithm_class,
+)
+from gen_epix.casedb.services.case.read_association_with_valid_ids import (
+    case_service_read_association_with_valid_ids,
+)
+from gen_epix.casedb.services.case.retrieve_case import (
+    case_service_retrieve_cases_by_id,
+    case_service_retrieve_cases_by_query,
+)
+from gen_epix.casedb.services.case.retrieve_complete_case_type import (
+    case_service_retrieve_complete_case_type,
+)
+from gen_epix.casedb.services.case.retrieve_seq import (
+    case_service_retrieve_assembly_protocols,
+    case_service_retrieve_genetic_sequence_by_case,
+    case_service_retrieve_genetic_sequence_fasta_by_case,
+    case_service_retrieve_phylogenetic_tree,
+    case_service_retrieve_sequencing_protocols,
+)
+from gen_epix.casedb.services.case.retrieve_stats import (
+    case_service_retrieve_case_set_stats,
+    case_service_retrieve_case_type_stats,
+)
+from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
+from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
+from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
+from gen_epix.filter.composite import CompositeFilter
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
+from gen_epix.filter.enum import LogicalOperator
+from gen_epix.filter.equals_uuid import EqualsUuidFilter
+from gen_epix.seqdb.domain import model as seqdb_model
+from gen_epix.util import map_paired_elements
+
+
+class CaseService(BaseCaseService):
+
+    def upload_cases(
+        self, cmd: command.UploadCasesCommand
+    ) -> model.CaseBatchUploadResult:
+        return case_service_upload_cases(self, cmd)
+
+    def create_case_set(
+        self, cmd: command.CreateCaseSetCommand
+    ) -> model.CaseSet | None:
+        return case_service_create_case_set(self, cmd)
+
+    def create_reads_sets_for_cases(
+        self, cmd: command.CreateReadSetsForCasesCommand
+    ) -> list[seqdb_model.ReadSet]:
+        retval: list[seqdb_model.ReadSet] = (
+            case_service_create_read_sets_or_seqs_for_cases(self, cmd)  # type: ignore[assignment]
+        )
+        return retval
+
+    def create_seqs_for_cases(
+        self, cmd: command.CreateSeqsForCasesCommand
+    ) -> list[seqdb_model.Seq]:
+        retval: list[seqdb_model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
+            self, cmd
+        )  # type: ignore[assignment]
+        return retval
+
+    def create_file_for_read_set(
+        self, cmd: command.CreateFileForReadSetCommand
+    ) -> UUID:
+        return case_service_create_file_for_read_set_or_seq(self, cmd)
+
+    def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID:
+        return case_service_create_file_for_read_set_or_seq(self, cmd)
+
+    def retrieve_complete_case_type(
+        self,
+        cmd: command.RetrieveCompleteCaseTypeCommand,
+    ) -> model.CompleteCaseType:
+        return case_service_retrieve_complete_case_type(self, cmd)
+
+    def retrieve_case_type_stats(
+        self,
+        cmd: command.RetrieveCaseTypeStatsCommand,
+    ) -> list[model.CaseTypeStat]:
+        return case_service_retrieve_case_type_stats(self, cmd)
+
+    def retrieve_case_set_stats(
+        self,
+        cmd: command.RetrieveCaseSetStatsCommand,
+    ) -> list[model.CaseSetStat]:
+        return case_service_retrieve_case_set_stats(self, cmd)
+
+    def retrieve_cases_by_query(
+        self, cmd: command.RetrieveCasesByQueryCommand
+    ) -> model.CaseQueryResult:
+        return case_service_retrieve_cases_by_query(self, cmd)
+
+    def retrieve_cases_by_id(
+        self, cmd: command.RetrieveCasesByIdCommand
+    ) -> list[model.Case]:
+        return case_service_retrieve_cases_by_id(self, cmd)
+
+    def retrieve_case_or_set_rights(
+        self,
+        cmd: command.RetrieveCaseRightsCommand | command.RetrieveCaseSetRightsCommand,
+    ) -> list[model.CaseRights] | list[model.CaseSetRights]:
+        is_case_set = isinstance(cmd, command.RetrieveCaseSetRightsCommand)
+        case_or_set_ids = cmd.case_set_ids if is_case_set else cmd.case_ids  # type: ignore[union-attr]
+        user, repository = self._get_user_and_repository(cmd)
+
+        # Special case: zero case_ids
+        if not case_or_set_ids:
+            return []
+
+        # @ABAC: get case abac
+        case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
+        assert case_abac is not None
+
+        # Retrieve all cases and case data collection links
+        with repository.uow() as uow:
+            # Retrieve cases/sets
+            cases_or_sets: list[model.CaseSet] | list[model.Case] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.CaseSet if is_case_set else model.Case,
+                None,
+                case_or_set_ids,
+                CrudOperation.READ_SOME,
+            )
+            # Retrieve case/set data collection links
+            key = "case_set_id" if is_case_set else "case_id"
+            case_or_set_data_collection_links: list[model.CaseDataCollectionLink] | list[model.CaseSetDataCollectionLink] = self.repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                (
+                    model.CaseSetDataCollectionLink
+                    if is_case_set
+                    else model.CaseDataCollectionLink
+                ),
+                None,
+                None,
+                CrudOperation.READ_ALL,
+                filter=UuidSetFilter(
+                    key=key,
+                    members=frozenset(case_or_set_ids),
+                ),
+            )
+
+        # Determine case/set rights
+        case_or_set_data_collections: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
+            (
+                (x.case_set_id if is_case_set else x.case_id, x.data_collection_id)  # type: ignore[union-attr]
+                for x in case_or_set_data_collection_links
+            ),
+            as_set=True,
+        )
+
+        # Generate return value
+        retval: list[model.CaseSetRights] | list[model.CaseRights] = []
+        for case_or_set in cases_or_sets:
+            assert case_or_set.id is not None
+            data_collection_ids = case_or_set_data_collections.get(
+                case_or_set.id, set()
+            )
+            data_collection_ids.add(case_or_set.created_in_data_collection_id)
+            args: tuple = (
+                case_or_set.id,
+                case_or_set.case_type_id,
+                case_or_set.created_in_data_collection_id,
+                case_or_set_data_collections.get(case_or_set.id, set()),
+            )
+            retval.append(case_abac.get_case_set_rights(*args) if is_case_set else case_abac.get_case_rights(*args))  # type: ignore[arg-type]
+
+        return retval
+
+    def retrieve_phylogenetic_tree(
+        self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
+    ) -> model.PhylogeneticTree:
+        return case_service_retrieve_phylogenetic_tree(self, cmd)
+
+    def retrieve_genetic_sequence_by_case(
+        self,
+        cmd: command.RetrieveGeneticSequenceByCaseCommand,
+    ) -> list[model.GeneticSequence]:
+        return case_service_retrieve_genetic_sequence_by_case(self, cmd)
+
+    def retrieve_genetic_sequence_fasta_by_case(
+        self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
+    ) -> Iterable[str]:
+        """
+        Return a streaming iterable of FASTA formatted lines.
+        Path:
+        HTTP client
+        -> casedb endpoint
+        -> casedb service calls casedb seqdb command
+        -> seqdb command (inside casedb) calls ext_app with RetrieveSeqFastaCommand
+        -> seqdb service calls correct repository (dict or SA implementation) to stream Seq rows
+        -> seqdb service converts rows to FASTA lines on the fly
+        -> returns an iterator
+        -> casedb forwards that iterator
+        -> FastAPI wraps it in a StreamingResponse.
+        """
+        return case_service_retrieve_genetic_sequence_fasta_by_case(self, cmd)
+
+    def retrieve_sequencing_protocols(
+        self,
+        cmd: command.RetrieveSequencingProtocolsCommand,
+    ) -> list[seqdb_model.SequencingProtocol]:
+        return case_service_retrieve_sequencing_protocols(self, cmd)
+
+    def retrieve_assembly_protocols(
+        self, cmd: command.RetrieveAssemblyProtocolsCommand
+    ) -> list[seqdb_model.AssemblyProtocol]:
+        return case_service_retrieve_assembly_protocols(self, cmd)
+
+    def _read_association_with_valid_ids(
+        self,
+        command_class: type[command.CrudCommand],
+        field_name1: str,
+        field_name2: str,
+        valid_ids1: set[UUID] | frozenset[UUID] | None = None,
+        valid_ids2: set[UUID] | frozenset[UUID] | None = None,
+        match_all1: bool = False,
+        match_all2: bool = False,
+        return_type: str = "objects",
+        uow: BaseUnitOfWork | None = None,
+        user: model.User | None = None,
+    ) -> list[model.Model] | list[UUID] | dict[UUID, set[UUID]]:
+        return case_service_read_association_with_valid_ids(
+            self,
+            command_class,
+            field_name1,
+            field_name2,
+            valid_ids1=valid_ids1,
+            valid_ids2=valid_ids2,
+            match_all1=match_all1,
+            match_all2=match_all2,
+            return_type=return_type,
+            uow=uow,
+            user=user,
+        )
+
+    def _retrieve_case_sets_with_content_right(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_abac: model.CaseAbac,
+        right: enum.CaseRight,
+        case_type_id: UUID | None = None,
+        case_set_ids: list[UUID] | None = None,
+        filter: Filter | None = None,
+        on_invalid_case_set_id: str = "raise",
+    ) -> list[model.CaseSet]:
+        # TODO: This is a temporary implementation, to be replaced by optimized query
+        self.validate_case_right(right, on_invalid_case_set_id)
+        case_sets: list[model.CaseSet] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.CaseSet,
+                None,
+                case_set_ids if case_set_ids else None,
+                CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
+                filter=None if case_set_ids else filter,
+            )
+        )
+
+        # Filter on case_type_id if any or verify that all case sets have the valid
+        # case_type_id if case_set_ids is given
+        # TODO: add more efficient implementation by adding this as a filter in the
+        # call to the repository
+        if case_type_id is not None:
+            case_sets = self._filter_case_sets_by_same_case_type_id(
+                case_type_id, case_set_ids, on_invalid_case_set_id, case_sets
+            )
+        if case_abac.is_full_access:
+            return case_sets
+        case_set_data_collections = self._retrieve_case_set_data_collections_map(
+            uow, user_id
+        )
+        has_access = case_abac.get_combinations_with_access_right(right)
+        filtered_case_sets: list[model.CaseSet] = []
+        for case_set in case_sets:
+            self._validate_case_set_access(
+                case_set,
+                user_id,
+                case_set_ids,
+                on_invalid_case_set_id,
+                case_set_data_collections,
+                has_access,
+            )
+            filtered_case_sets.append(case_set)
+        return filtered_case_sets
+
+    def _validate_case_set_access(
+        self,
+        case_set: model.CaseSet,
+        user_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_set_data_collections: dict[UUID, set[UUID]],
+        has_access: dict[UUID, set[UUID]],
+    ) -> None:
+        if case_set.case_type_id not in has_access and case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested cases"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
+                )
+        # Check if user has access to any of the data collections of the case set
+        data_collection_ids = set(case_set_data_collections.get(case_set.id, ()))
+        data_collection_ids.add(case_set.created_in_data_collection_id)
+
+        if (
+            not data_collection_ids & has_access.get(case_set.case_type_id, set())
+            and case_set_ids
+        ):
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested case sets"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+    def _filter_case_sets_by_same_case_type_id(
+        self,
+        case_type_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_sets: list[model.CaseSet],
+    ) -> list[model.CaseSet]:
+        if case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                if not all(x.case_type_id == case_type_id for x in case_sets):
+                    raise exc.InvalidArgumentsError(
+                        f"Some case sets have invalid case type ids: {case_set_ids}"
+                    )
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+        return [x for x in case_sets if x.case_type_id == case_type_id]
+
+    def validate_case_right(
+        self, right: enum.CaseRight, on_invalid_case_set_id: str
+    ) -> None:
+        if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
+            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+        if on_invalid_case_set_id not in {"raise", "ignore"}:
+            raise exc.InvalidArgumentsError(
+                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+            )
+
+    def _retrieve_cases_with_content_right(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_abac: model.CaseAbac,
+        right: enum.CaseRight,
+        case_type_id: UUID,
+        case_ids: list[UUID] | None = None,
+        datetime_range_filter: DatetimeRangeFilter | None = None,
+        on_invalid_case_id: str = "raise",
+        filter_content: bool = True,
+        calculate_case_date: bool = False,
+        extra_access_case_type_col_ids: set[UUID] | None = None,
+        apply_max_n_cases: bool = True,
+    ) -> list[model.Case]:
+        # TODO: This is a temporary implementation, to be replaced by optimized query
+        self._validate_case_access_args(
+            right, on_invalid_case_id, filter_content, calculate_case_date
+        )
+        access_data_collections, data_collection_col_access = (
+            self._resolve_case_type_access(user_id, case_abac, right, case_type_id)
+        )
+        case_type = self._load_case_type(uow, user_id, case_type_id)
+
+        # Verify max number of cases
+        case_date_case_type_col_mappers, max_n_cases = (
+            self._resolve_case_date_mappers_and_limits(
+                uow,
+                user_id,
+                right,
+                case_type_id,
+                apply_max_n_cases,
+                case_type,
+                case_abac.is_full_access,
+            )
+        )
+
+        if case_ids and len(case_ids) > max_n_cases:
+            raise exc.RequestLimitExceededAuthError(
+                f"Number of requested cases {len(case_ids)} exceeds maximum allowed {max_n_cases}"
+            )
+
+        # Retrieve all cases, potentially filtered by datetime range
+        if datetime_range_filter:
+            if datetime_range_filter.key and datetime_range_filter.key != "case_date":
+                raise exc.InvalidArgumentsError(
+                    f"Invalid datetime range filter key: {datetime_range_filter.key}"
+                )
+            datetime_range_filter.key = "case_date"
+        cases = self._retrieve_cases_by_ids_or_case_type_filter(
+            uow, user_id, case_type_id, case_ids, datetime_range_filter
+        )
+
+        if case_abac.is_full_access:
+            return cases
+
+        # @ABAC: filter cases to which the user has access, and optionally also
+        # the content (case type cols)
+        filtered_cases = self._filter_cases_by_access_and_content(
+            uow,
+            user_id,
+            right,
+            case_ids,
+            on_invalid_case_id,
+            filter_content,
+            extra_access_case_type_col_ids,
+            access_data_collections,
+            data_collection_col_access,
+            max_n_cases,
+            cases,
+        )
+
+        # Calculate case date if necessary
+        if calculate_case_date and case_date_case_type_col_mappers:
+            case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
+
+        return filtered_cases
+
+    def _filter_cases_by_access_and_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        right: enum.CaseRight,
+        case_ids: list[UUID] | None,
+        on_invalid_case_id: str,
+        filter_content: bool,
+        extra_access_case_type_col_ids: set[UUID] | None,
+        access_data_collections: set[UUID],
+        data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
+        max_n_cases: float,
+        cases: list[model.Case],
+    ) -> list[model.Case]:
+        case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
+        filtered_cases: list[model.Case] = []
+        count = 0
+        for case in cases:
+            data_collection_ids = self._authorize_case(
+                case,
+                case_ids,
+                on_invalid_case_id,
+                user_id,
+                case_data_collections,
+                access_data_collections,
+            )
+            if data_collection_ids is None:
+                # No access to case
+                continue
+            count += case.count if case.count is not None else 1
+            if count > max_n_cases:
+                break
+            # Keep case
+            filtered_cases.append(case)
+
+            # Continue to next case if case content need not be filtered
+            if filter_content:
+                self._filter_case_content(
+                    case,
+                    data_collection_ids,
+                    data_collection_col_access,
+                    extra_access_case_type_col_ids,
+                    right,
+                    user_id,
+                )
+
+        return filtered_cases
+
+    def _filter_case_content(
+        self,
+        case: model.Case,
+        data_collection_ids: set[UUID],
+        data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
+        extra_access_case_type_col_ids: set[UUID] | None,
+        right: enum.CaseRight,
+        user_id: UUID,
+    ) -> None:
+        case_type_col_ids: set[UUID] = set()
+        for dc_id in data_collection_ids:
+            abac = data_collection_col_access.get(dc_id)
+            if abac:
+                case_type_col_ids.update(abac.read_case_type_col_ids)
+        if extra_access_case_type_col_ids:
+            case_type_col_ids.update(extra_access_case_type_col_ids)
+
+        if not case_type_col_ids:
+            raise AssertionError(
+                f"User {user_id} has zero columns with {right.value} access to case {case.id}"
+            )
+
+        case.content = {x: y for x, y in case.content.items() if x in case_type_col_ids}
+
+    def _authorize_case(
+        self,
+        case: model.Case,
+        case_ids: list[UUID] | None,
+        on_invalid_case_id: str,
+        user_id: UUID,
+        case_data_collections: dict[UUID, set[UUID]],
+        access_data_collections: set[UUID],
+    ) -> set[UUID] | None:
+        case_id = case.id
+        if case_id is None:
+            return None
+        data_collection_ids = case_data_collections.get(case_id, set()) | {
+            case.created_in_data_collection_id
+        }
+        if not bool(data_collection_ids & access_data_collections):
+            if case_ids and on_invalid_case_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested cases"
+                )
+            return None
+
+        return data_collection_ids
+
+    def _retrieve_cases_by_ids_or_case_type_filter(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_type_id: UUID,
+        case_ids: list[UUID] | None = None,
+        datetime_range_filter: DatetimeRangeFilter | None = None,
+    ) -> list[model.Case]:
+        cases: list[model.Case]
+        if case_ids:
+            if datetime_range_filter:
+                raise exc.InvalidArgumentsError(
+                    "Cannot use datetime range filter with case ids"
+                )
+            cases = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.Case,
+                None,
+                case_ids,
+                CrudOperation.READ_SOME,
+            )
+            if not all(x.case_type_id == case_type_id for x in cases):
+                raise exc.InvalidArgumentsError(
+                    f"Some cases have invalid case type ids: {case_ids}"
+                )
+        else:
+            case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
+            if datetime_range_filter:
+                case_filter = CompositeFilter(
+                    operator=LogicalOperator.AND,
+                    filters=[case_type_filter, datetime_range_filter],
+                )
+            else:
+                case_filter = case_type_filter
+            cases = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.Case,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+                filter=case_filter,
+            )
+
+        return cases
+
+    def _resolve_case_date_mappers_and_limits(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        right: enum.CaseRight,
+        case_type_id: UUID,
+        apply_max_n_cases: bool,
+        case_type: model.CaseType,
+        is_full_access: bool,
+    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, float]:
+        case_date_case_type_col_mappers: (
+            dict[UUID, Callable[[str], datetime.datetime]] | None
+        ) = {}
+        max_n_cases: float = float("inf")
+        if apply_max_n_cases and not is_full_access:
+            if right == enum.CaseRight.READ_CASE:
+                max_n_cases = case_type.read_max_n_cases
+            elif right == enum.CaseRight.WRITE_CASE:
+                max_n_cases = case_type.update_max_n_cases
+            else:
+                raise NotImplementedError(f"Unsupported case right: {right}")
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers(
+                    self, uow, user_id, case_type_id
+                )
+            )
+
+        return case_date_case_type_col_mappers, max_n_cases
+
+    def _load_case_type(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_type_id: UUID,
+    ) -> model.CaseType:
+        case_types: list[model.CaseType] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.CaseType,
+                None,
+                [case_type_id],
+                CrudOperation.READ_SOME,
+            )
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Case type not found: {case_type_id}")
+        case_type = case_types[0]
+        return case_type
+
+    def _resolve_case_type_access(
+        self,
+        user_id: UUID,
+        case_abac: model.CaseAbac,
+        right: enum.CaseRight,
+        case_type_id: UUID,
+    ) -> tuple[set[UUID], dict[UUID, model.CaseTypeAccessAbac]]:
+        access_data_collections = case_abac.get_combinations_with_access_right(
+            right
+        ).get(case_type_id, set())
+        data_collection_col_access = case_abac.case_type_access_abacs.get(
+            case_type_id, {}
+        )
+        if not access_data_collections and not case_abac.is_full_access:
+            raise exc.UnauthorizedAuthError(
+                f"User {user_id} has no access to case type {case_type_id}"
+            )
+
+        return access_data_collections, data_collection_col_access
+
+    def _validate_case_access_args(
+        self,
+        right: enum.CaseRight,
+        on_invalid_case_id: str,
+        filter_content: bool,
+        calculate_case_date: bool,
+    ) -> None:
+        if right not in enum.CaseRightSet.CASE_CONTENT.value:
+            raise ValueError(f"Invalid case abac right: {right.value}")
+        if on_invalid_case_id not in {"raise", "ignore"}:
+            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
+        if not filter_content and calculate_case_date:
+            raise ValueError("Cannot calculate case date when filter_content is False")
+
+    def _retrieve_case_data_collections_map(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
+    ) -> dict[UUID, set[UUID]]:
+        return self._retrieve_association_map(
+            uow,
+            user_id,
+            model.CaseDataCollectionLink,
+            "case_id",
+            "data_collection_id",
+            obj_ids1=frozenset(case_ids) if case_ids else None,
+            obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
+        )
+
+    def _retrieve_case_set_data_collections_map(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_set_ids: Iterable[UUID] | None = None,
+        data_collection_ids: Iterable[UUID] | None = None,
+    ) -> dict[UUID, set[UUID]]:
+        return self._retrieve_association_map(
+            uow,
+            user_id,
+            model.CaseSetDataCollectionLink,
+            "case_set_id",
+            "data_collection_id",
+            obj_ids1=frozenset(case_set_ids) if case_set_ids else None,
+            obj_ids2=frozenset(data_collection_ids) if data_collection_ids else None,
+        )
+
+    def _retrieve_case_case_sets_map(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_ids: Iterable[UUID] | None = None,
+        case_set_ids: Iterable[UUID] | None = None,
+    ) -> dict[UUID, set[UUID]]:
+        return self._retrieve_association_map(
+            uow,
+            user_id,
+            model.CaseSetMember,
+            "case_id",
+            "case_set_id",
+            obj_ids1=frozenset(case_ids) if case_ids else None,
+            obj_ids2=frozenset(case_set_ids) if case_set_ids else None,
+        )
+
+    def _retrieve_association_map(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID | None,
+        association_class: type[model.Model],
+        link_field_name1: str,
+        link_field_name2: str,
+        obj_ids1: frozenset[UUID] | None = None,
+        obj_ids2: frozenset[UUID] | None = None,
+    ) -> dict[UUID, set[UUID]]:
+        """
+        Get a dict[obj_id1, set[obj_ids]] based on the association stored in the association_class objs.
+        """
+        # Create a filter to restrict the association objs if necessary
+        filter: Filter | None
+        if obj_ids1:
+            filter1 = UuidSetFilter(key=link_field_name1, members=obj_ids1)
+        else:
+            filter1 = None
+        if obj_ids2:
+            filter2 = UuidSetFilter(key=link_field_name2, members=obj_ids2)
+        else:
+            filter2 = None
+        if filter1 and filter2:
+            filter = CompositeFilter(
+                filters=[filter1, filter2], operator=LogicalOperator.AND
+            )
+        elif filter1:
+            filter = filter1
+        elif filter2:
+            filter = filter2
+        else:
+            filter = None
+        # Retrieve association objs and convert to map
+        value_pairs_iterable: Iterable[tuple[UUID, UUID]] = self.repository.read_fields(
+            uow=uow,
+            user_id=user_id,
+            model_class=association_class,
+            field_names=[link_field_name1, link_field_name2],
+            filter=filter,
+        )
+        association_map: dict[UUID, set[UUID]] = map_paired_elements(value_pairs_iterable, as_set=True)  # type: ignore[assignment]
+
+        return association_map
+
+    def _retrieve_sequence_column_data(
+        self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
+    ) -> tuple[model.CaseTypeCol, model.Col]:
+        repository = self.repository
+        seq_case_type_col: model.CaseTypeCol = repository.crud(  # type: ignore[assignment]
+            uow,
+            user.id,
+            model.CaseTypeCol,
+            None,
+            seq_case_type_col_id,
+            CrudOperation.READ_ONE,
+        )
+        seq_col: model.Col = repository.crud(  # type: ignore[assignment]
+            uow,
+            user.id,
+            model.Col,
+            None,
+            seq_case_type_col.col_id,
+            CrudOperation.READ_ONE,
+        )
+        if seq_col.col_type != enum.ColType.GENETIC_SEQUENCE:
+            raise exc.InvalidArgumentsError(
+                f"Case type column {seq_col.id} is not of type {enum.ColType.GENETIC_SEQUENCE.value}"
+            )
+        return seq_case_type_col, seq_col
+
+    def _verify_case_set_member_case_type(
+        self, user: model.User, case_set_members: list[model.CaseSetMember]
+    ) -> None:
+        with self.repository.uow() as uow:
+            case_set_ids = {x.case_set_id for x in case_set_members}
+            case_ids = {x.case_id for x in case_set_members}
+            case_sets_: list[model.CaseSet] = (
+                self.repository.crud(  # type:ignore[assignment]
+                    uow,
+                    user.id if user else None,
+                    model.CaseSet,
+                    None,
+                    list(case_set_ids),
+                    CrudOperation.READ_SOME,
+                )
+            )
+            case_sets = {x.id: x for x in case_sets_}
+            cases_: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user.id if user else None,
+                model.Case,
+                None,
+                list(case_ids),
+                CrudOperation.READ_SOME,
+            )
+            cases = {x.id: x for x in cases_}
+        invalid_case_set_member_ids = [
+            x.id
+            for x in case_set_members
+            if case_sets[x.case_set_id].case_type_id != cases[x.case_id].case_type_id
+        ]
+        if invalid_case_set_member_ids:
+            invalid_case_set_member_ids_str = ", ".join(
+                [str(x) for x in invalid_case_set_member_ids]
+            )
+            raise exc.InvalidArgumentsError(
+                f"Case set members invalid, case set and case must have the same case type: {invalid_case_set_member_ids_str}"
+            )
+
+    # CRUD method implementations
+    def crud_case(
+        self, cmd: command.CaseCrudCommand
+    ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Case entities."""
+        return case_service_crud_case(self, cmd)
+
+    def crud_case_data_collection_link(
+        self, cmd: command.CaseDataCollectionLinkCrudCommand
+    ) -> (
+        list[model.CaseDataCollectionLink]
+        | model.CaseDataCollectionLink
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseDataCollectionLink entities."""
+        return case_service_crud_case_data_collection_link(self, cmd)
+
+    def crud_case_set_category(
+        self, cmd: command.CaseSetCategoryCrudCommand
+    ) -> (
+        list[model.CaseSetCategory]
+        | model.CaseSetCategory
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetCategory entities."""
+        return case_service_crud_case_set_category(self, cmd)
+
+    def crud_case_set(
+        self, cmd: command.CaseSetCrudCommand
+    ) -> (
+        list[model.CaseSet]
+        | model.CaseSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSet entities."""
+        return case_service_crud_case_set(self, cmd)
+
+    def crud_case_set_data_collection_link(
+        self, cmd: command.CaseSetDataCollectionLinkCrudCommand
+    ) -> (
+        list[model.CaseSetDataCollectionLink]
+        | model.CaseSetDataCollectionLink
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetDataCollectionLink entities."""
+        return case_service_crud_case_set_data_collection_link(self, cmd)
+
+    def crud_case_set_member(
+        self, cmd: command.CaseSetMemberCrudCommand
+    ) -> (
+        list[model.CaseSetMember]
+        | model.CaseSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetMember entities."""
+        return case_service_crud_case_set_member(self, cmd)
+
+    def crud_case_set_status(
+        self, cmd: command.CaseSetStatusCrudCommand
+    ) -> (
+        list[model.CaseSetStatus]
+        | model.CaseSetStatus
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseSetStatus entities."""
+        return case_service_crud_case_set_status(self, cmd)
+
+    def crud_case_type_col(
+        self, cmd: command.CaseTypeColCrudCommand
+    ) -> (
+        list[model.CaseTypeCol]
+        | model.CaseTypeCol
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeCol entities."""
+        return case_service_crud_case_type_col(self, cmd)
+
+    def crud_case_type_col_set(
+        self, cmd: command.CaseTypeColSetCrudCommand
+    ) -> (
+        list[model.CaseTypeColSet]
+        | model.CaseTypeColSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeColSet entities."""
+        return case_service_crud_case_type_col_set(self, cmd)
+
+    def crud_case_type_col_set_member(
+        self, cmd: command.CaseTypeColSetMemberCrudCommand
+    ) -> (
+        list[model.CaseTypeColSetMember]
+        | model.CaseTypeColSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeColSetMember entities."""
+        return case_service_crud_case_type_col_set_member(self, cmd)
+
+    def crud_case_type(
+        self, cmd: command.CaseTypeCrudCommand
+    ) -> (
+        list[model.CaseType]
+        | model.CaseType
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseType entities."""
+        return case_service_crud_case_type(self, cmd)
+
+    def crud_case_type_set_category(
+        self, cmd: command.CaseTypeSetCategoryCrudCommand
+    ) -> (
+        list[model.CaseTypeSetCategory]
+        | model.CaseTypeSetCategory
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSetCategory entities."""
+        return case_service_crud_case_type_set_category(self, cmd)
+
+    def crud_case_type_set(
+        self, cmd: command.CaseTypeSetCrudCommand
+    ) -> (
+        list[model.CaseTypeSet]
+        | model.CaseTypeSet
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSet entities."""
+        return case_service_crud_case_type_set(self, cmd)
+
+    def crud_case_type_set_member(
+        self, cmd: command.CaseTypeSetMemberCrudCommand
+    ) -> (
+        list[model.CaseTypeSetMember]
+        | model.CaseTypeSetMember
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeSetMember entities."""
+        return case_service_crud_case_type_set_member(self, cmd)
+
+    def crud_case_type_dim(
+        self, cmd: command.CaseTypeDimCrudCommand
+    ) -> (
+        list[model.CaseTypeDim]
+        | model.CaseTypeDim
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for CaseTypeDim entities."""
+        return case_service_crud_case_type_dim(self, cmd)
+
+    def crud_col(
+        self, cmd: command.ColCrudCommand
+    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Col entities."""
+        return case_service_crud_col(self, cmd)
+
+    def crud_dim(
+        self, cmd: command.DimCrudCommand
+    ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
+        """Handle CRUD operations for Dim entities."""
+        return case_service_crud_dim(self, cmd)
+
+    def crud_genetic_distance_protocol(
+        self, cmd: command.GeneticDistanceProtocolCrudCommand
+    ) -> (
+        list[model.GeneticDistanceProtocol]
+        | model.GeneticDistanceProtocol
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for GeneticDistanceProtocol entities."""
+        return case_service_crud_genetic_distance_protocol(self, cmd)
+
+    def crud_tree_algorithm_class(
+        self, cmd: command.TreeAlgorithmClassCrudCommand
+    ) -> (
+        list[model.TreeAlgorithmClass]
+        | model.TreeAlgorithmClass
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for TreeAlgorithmClass entities."""
+        return case_service_crud_tree_algorithm_class(self, cmd)
+
+    def crud_tree_algorithm(
+        self, cmd: command.TreeAlgorithmCrudCommand
+    ) -> (
+        list[model.TreeAlgorithm]
+        | model.TreeAlgorithm
+        | list[UUID]
+        | UUID
+        | list[bool]
+        | bool
+        | None
+    ):
+        """Handle CRUD operations for TreeAlgorithm entities."""
+        return case_service_crud_tree_algorithm(self, cmd)
+
+    @staticmethod
+    def _compose_id_filter(*key_and_ids: tuple[str, set[UUID]]) -> Filter:
+        if len(key_and_ids) == 1:
+            key, ids = key_and_ids[0]
+            return UuidSetFilter(key=key, members=ids)  # type: ignore[arg-type]
+        return CompositeFilter(
+            filters=[
+                UuidSetFilter(key=key, members=ids)  # type: ignore[arg-type]
+                for key, ids in key_and_ids
+            ],
+            operator=LogicalOperator.AND,
+        )

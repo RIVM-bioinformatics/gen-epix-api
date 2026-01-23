@@ -707,7 +707,7 @@ class AuthService(BaseAuthService):
                 self._logger.warning(
                     self.create_log_message(
                         "e2c6f4a5",
-                        f"IDP {idp_cfg.get("name")} could not be initialized",
+                        f"IDP {idp_cfg.get('name')} could not be initialized",
                         exception=exception,
                     )
                 )

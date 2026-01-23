@@ -30,12 +30,15 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
+from gen_epix.commondb.domain.model import UploadResult as UploadResult
 from gen_epix.commondb.domain.model import User as User
 from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
 from gen_epix.commondb.domain.model import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.seqdb.domain import enum
@@ -84,18 +87,23 @@ from gen_epix.seqdb.domain.model.seq import PhylogeneticTree as PhylogeneticTree
 from gen_epix.seqdb.domain.model.seq import ProtocolMixin as ProtocolMixin
 from gen_epix.seqdb.domain.model.seq import QualityMixin as QualityMixin
 from gen_epix.seqdb.domain.model.seq import ReadSet as ReadSet
+from gen_epix.seqdb.domain.model.seq import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq import RefAllele as RefAllele
 from gen_epix.seqdb.domain.model.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq import RefSnp as RefSnp
 from gen_epix.seqdb.domain.model.seq import RefSnpSet as RefSnpSet
 from gen_epix.seqdb.domain.model.seq import RefSnpSetMember as RefSnpSetMember
 from gen_epix.seqdb.domain.model.seq import Sample as Sample
+from gen_epix.seqdb.domain.model.seq import SampleBatchForUpload as SampleBatchForUpload
+from gen_epix.seqdb.domain.model.seq import (
+    SampleBatchUploadResult as SampleBatchUploadResult,
+)
 from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
 from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
-from gen_epix.seqdb.domain.model.seq import SampleSetForUpload as SampleSetForUpload
+from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
 from gen_epix.seqdb.domain.model.seq import Seq as Seq
 from gen_epix.seqdb.domain.model.seq import SeqAlignment as SeqAlignment
 from gen_epix.seqdb.domain.model.seq import SeqCategory as SeqCategory
@@ -117,6 +125,7 @@ from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
 from gen_epix.seqdb.domain.model.seq import TaxonSetMember as TaxonSetMember
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithm as TreeAlgorithm
 from gen_epix.seqdb.domain.model.seq import TreeAlgorithmClass as TreeAlgorithmClass
+from gen_epix.util import add_parent_class_docs
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
@@ -191,10 +200,14 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqTaxonomy,
             MultipleAlignment,
             PhylogeneticTree,
+            ReadSetForUpload,
+            SeqForUpload,
             AlleleForUpload,
             AlleleProfileForUpload,
-            SeqForUpload,
             SampleForUpload,
+            SampleBatchForUpload,
+            SampleUploadResult,
+            SampleBatchUploadResult,
             CompleteContig,
             CompleteSnpProfile,
         ],
@@ -210,3 +223,43 @@ COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {
     common_model.UserInvitationConstraints: UserInvitationConstraints,
     common_model.OrganizationAdminPolicy: OrganizationAdminPolicy,
 }
+
+# Additional field properties for models that have already been stored (persisted)
+STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {
+    Sample: {"props": ModelFieldProps(is_mutable_always=True, is_sub_field_dict=True)},
+    ReadSet: {
+        "fwd_uri": ModelFieldProps(is_mutable_always=True),
+        "rev_uri": ModelFieldProps(is_mutable_always=True),
+        "fwd_file_id": ModelFieldProps(is_mutable_always=True),
+        "rev_file_id": ModelFieldProps(is_mutable_always=True),
+        "file_format": ModelFieldProps(is_mutable_always=True),
+        "file_compression": ModelFieldProps(is_mutable_always=True),
+        "sequencing_run_code": ModelFieldProps(is_mutable_always=True),
+    },
+    Seq: {
+        "uri": ModelFieldProps(is_mutable_always=True),
+        "file_id": ModelFieldProps(is_mutable_always=True),
+        "file_format": ModelFieldProps(is_mutable_always=True),
+        "file_compression": ModelFieldProps(is_mutable_always=True),
+        "read_set_id": ModelFieldProps(is_mutable_if_empty=True),
+    },
+}
+complete_stored_model_field_props(
+    STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE
+)
+add_parent_class_docs(
+    set.union(
+        *[
+            set(y)  # type: ignore[arg-type]
+            for x, y in SORTED_MODELS_BY_SERVICE_TYPE.items()
+            if x
+            not in {
+                enum.ServiceType.AUTH,
+                enum.ServiceType.SYSTEM,
+                enum.ServiceType.RBAC,
+                enum.ServiceType.ORGANIZATION,
+            }
+        ]
+    ),
+    exclude=(Model,),
+)

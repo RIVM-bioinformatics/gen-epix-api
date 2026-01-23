@@ -32,6 +32,9 @@ from gen_epix.commondb.domain.model import (
     UserInvitationConstraints as UserInvitationConstraints,
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
+from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
+from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.omopdb.domain import enum
@@ -75,7 +78,28 @@ from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
-from gen_epix.omopdb.domain.model.omop.non_persistable import Subject as Subject
+from gen_epix.omopdb.domain.model.omop.upload import (
+    MeasurementForUpload as MeasurementForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    ObservationForUpload as ObservationForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonBatchForUpload as PersonBatchForUpload,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonBatchUploadResult as PersonBatchUploadResult,
+)
+from gen_epix.omopdb.domain.model.omop.upload import PersonForUpload as PersonForUpload
+from gen_epix.omopdb.domain.model.omop.upload import (
+    PersonUploadResult as PersonUploadResult,
+)
+from gen_epix.omopdb.domain.model.omop.upload import (
+    SpecimenForUpload as SpecimenForUpload,
+)
+from gen_epix.util import add_parent_class_docs
+
+# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
 
 # List up model classes per service and sorted according to links topology
 SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]] = (
@@ -149,6 +173,16 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             # General relationships
             FactRelationship,
             MeasurementRelation,
+            # Upload
+            SpecimenForUpload,
+            MeasurementForUpload,
+            ObservationForUpload,
+            PersonForUpload,
+            PersonUploadResult,
+            PersonBatchForUpload,
+            PersonBatchUploadResult,
+            # Download
+            # Subject,
         ],
     }
 )
@@ -156,3 +190,25 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+# Additional field properties for models that have already been stored (persisted)
+STORED_MODEL_FIELD_PROPS: dict[type[fastapp.Model], dict[str, ModelFieldProps]] = {}
+complete_stored_model_field_props(
+    STORED_MODEL_FIELD_PROPS, SORTED_MODELS_BY_SERVICE_TYPE
+)
+add_parent_class_docs(
+    set.union(
+        *[
+            set(y)  # type: ignore[arg-type]
+            for x, y in SORTED_MODELS_BY_SERVICE_TYPE.items()
+            if x
+            not in {
+                enum.ServiceType.AUTH,
+                enum.ServiceType.SYSTEM,
+                enum.ServiceType.RBAC,
+                enum.ServiceType.ORGANIZATION,
+            }
+        ]
+    ),
+    exclude=(Model,),
+)

@@ -255,6 +255,27 @@ class LogLevel(Enum):
     TRACE = "TRACE"
 
 
+class LogLevelSet(Enum):
+    ERROR_OR_WORSE = frozenset({LogLevel.ERROR, LogLevel.FATAL})
+    WARN_OR_WORSE = frozenset({LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL})
+    INFO_OR_WORSE = frozenset(
+        {LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL}
+    )
+    DEBUG_OR_WORSE = frozenset(
+        {LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR, LogLevel.FATAL}
+    )
+    TRACE_OR_WORSE = frozenset(
+        {
+            LogLevel.TRACE,
+            LogLevel.DEBUG,
+            LogLevel.INFO,
+            LogLevel.WARN,
+            LogLevel.ERROR,
+            LogLevel.FATAL,
+        }
+    )
+
+
 class EventTiming(Enum):
     BEFORE = "BEFORE"
     DURING = "DURING"

@@ -25,7 +25,7 @@ class CasedbEndpointTestClient(EndpointTestClient):
         self.register_handler(
             command.RetrieveCasesByIdCommand, self.handle_retrieve_cases_by_id
         )
-        self.register_handler(command.CreateCasesCommand, self.handle_cases_create)
+        self.register_handler(command.UploadCasesCommand, self.handle_cases_create)
         self.register_handler(command.CreateCaseSetCommand, self.handle_case_set_create)
 
     def handle_update_user_own_organization(
@@ -65,15 +65,15 @@ class CasedbEndpointTestClient(EndpointTestClient):
 
     def handle_cases_create(
         self,
-        cmd: command.CreateCasesCommand,
+        cmd: command.UploadCasesCommand,
         route_prefix: str,
         headers: dict[str, str] | None,
     ) -> tuple[Any, Response]:
         # Import the request body model here so that the APP_COMPOSER is not created
         # before the cfg is updated, since the APP_COMPOSER is imported in the routers
-        from gen_epix.casedb.api import CreateCasesRequestBody
+        from gen_epix.casedb.api import UploadCasesRequestBody
 
-        request_body = CreateCasesRequestBody(
+        request_body = UploadCasesRequestBody(
             cases=cmd.cases,
             data_collection_ids=cmd.data_collection_ids,
         )

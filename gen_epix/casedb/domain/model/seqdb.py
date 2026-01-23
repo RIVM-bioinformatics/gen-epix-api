@@ -6,21 +6,14 @@ from uuid import UUID
 from pydantic import Field, field_serializer
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.persistable import (
+from gen_epix.casedb.domain.model.case.reference_data import (
     GeneticDistanceProtocol,
     TreeAlgorithm,
 )
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
-from gen_epix.fastapp.domain.util import create_keys, create_links
-from gen_epix.seqdb.domain.model import AssemblyProtocol as SeqdbAssemblyProtocol
 from gen_epix.seqdb.domain.model import File as SeqdbFile
-from gen_epix.seqdb.domain.model import ReadSet as SeqdbReadSet
-from gen_epix.seqdb.domain.model import Sample as SeqdbSample
-from gen_epix.seqdb.domain.model import Seq as SeqdbSeq
-from gen_epix.seqdb.domain.model import SequencingProtocol as SeqdbSequencingProtocol
-from gen_epix.util import copy_model_field
 
 
 class GeneticSequence(Model):
@@ -45,18 +38,6 @@ class GeneticSequence(Model):
         return None if value is None else {str(x): y for x, y in value.items()}
 
 
-class AlleleProfile(Model):
-    """
-    An allele profile. Temporary implementation.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="allele_profiles",
-    )
-    # TODO: add link to sequence and gene set
-    allele_profile: str | None = Field(default=None, description="The allele profile")
-
-
 class PhylogeneticTree(Model):
     """
     A phylogenetic tree, including a description of the leaves and how it was
@@ -70,7 +51,7 @@ class PhylogeneticTree(Model):
     tree_algorithm_id: UUID | None = Field(
         default=None, description="The ID of the tree algorithm. FOREIGN KEY"
     )
-    tree_algorithm: TreeAlgorithm = Field(
+    tree_algorithm: TreeAlgorithm | None = Field(
         default=None, description="The tree algorithm"
     )
     tree_algorithm_code: enum.TreeAlgorithmType = Field(
@@ -79,7 +60,7 @@ class PhylogeneticTree(Model):
     genetic_distance_protocol_id: UUID | None = Field(
         default=None, description="The ID of the genetic distance protocol. FOREIGN KEY"
     )
-    genetic_distance_protocol: GeneticDistanceProtocol = Field(
+    genetic_distance_protocol: GeneticDistanceProtocol | None = Field(
         default=None, description="The genetic distance protocol"
     )
     leaf_ids: list[UUID] | None = Field(
@@ -95,94 +76,8 @@ class PhylogeneticTree(Model):
     )
 
 
-class SequencingProtocol(SeqdbSequencingProtocol):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="sequencing_protocols",
-        persistable=False,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
-class AssemblyProtocol(SeqdbAssemblyProtocol):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="assembly_protocols",
-        persistable=False,
-        keys=create_keys({1: "code", 2: ("name", "version")}),
-    )
-
-
 class File(SeqdbFile):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="files",
         persistable=False,
-    )
-
-
-class Sample(SeqdbSample):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="samples",
-        persistable=False,
-        keys=create_keys({1: "code"}),
-    )
-
-
-class ReadSet(SeqdbReadSet):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="read_sets",
-        table_name="read_set",
-        persistable=False,
-        keys=create_keys({1: "code"}),
-        links=create_links(
-            {
-                1: ("sample_id", Sample, "sample"),
-                2: (
-                    "sequencing_protocol_id",
-                    SequencingProtocol,
-                    "sequencing_protocol",
-                ),
-                3: (
-                    "fwd_file_id",
-                    File,
-                    "fwd_file",
-                ),
-                4: (
-                    "rev_file_id",
-                    File,
-                    "rev_file",
-                ),
-            }
-        ),
-    )
-    sequencing_protocol: SequencingProtocol | None = copy_model_field(  # type:ignore
-        SeqdbReadSet, "sequencing_protocol"
-    )
-    sample: Sample | None = copy_model_field(  # type:ignore
-        SeqdbReadSet, "sample"
-    )
-
-
-class Seq(SeqdbSeq):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="seqs",
-        table_name="seq",
-        persistable=False,
-        keys=create_keys(
-            {
-                1: "code",
-            }
-        ),
-        links=create_links(
-            {
-                1: ("sample_id", Sample, "sample"),
-                2: ("read_set_id", ReadSet, "read_set"),
-                3: ("read_set2_id", ReadSet, "read_set2"),
-                4: ("assembly_protocol_id", AssemblyProtocol, "assembly_protocol"),
-            }
-        ),
-    )
-    sample: Sample | None = copy_model_field(SeqdbSeq, "sample")
-    read_set: ReadSet | None = copy_model_field(SeqdbSeq, "read_set")
-    read_set2: ReadSet | None = copy_model_field(SeqdbSeq, "read_set2")
-    assembly_protocol: AssemblyProtocol | None = copy_model_field(
-        SeqdbSeq, "assembly_protocol"
     )

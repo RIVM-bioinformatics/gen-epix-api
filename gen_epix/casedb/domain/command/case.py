@@ -11,9 +11,10 @@ from gen_epix.commondb.domain.command import (
     CrudCommand,
     UpdateAssociationCommand,
 )
+from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
-from gen_epix.util import copy_model_field
 
 # Non-CRUD
 
@@ -59,42 +60,45 @@ class CreateCaseSetCommand(Command):
         return self
 
 
-class ValidateCasesCommand(Command):
+class UploadCasesCommand(Command, UploadBatchCommandMixin):
     """
-    Validate case data and return a validation report.
+    Upload a batch of cases along with their associated data and return an upload
+    result. The upload can be stopped after the verification step by setting the
+    'verify_only' property to True, so that the returned upload result only contains
+    the verification results.
+
+    The data are uploaded as a single atomic unit of work, so that
+    either all data are successfully uploaded or none are.
     """
 
-    case_type_id: UUID = Field(description="The case type ID that the cases belong to.")
-    created_in_data_collection_id: UUID = copy_model_field(
-        model.CaseValidationReport, "created_in_data_collection_id"
+    BATCH_FOR_UPLOAD_CLASS: ClassVar = model.CaseBatchForUpload
+    BATCH_FOR_UPLOAD_FIELD_NAME: ClassVar = "case_batch"
+    BATCH_UPLOAD_RESULT_CLASS: ClassVar = model.CaseBatchUploadResult
+
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to. All cases in the case set must have this case type ID."
     )
-    data_collection_ids: set[UUID] = copy_model_field(
-        model.CaseValidationReport, "data_collection_ids"
+    created_in_data_collection_id: UUID = Field(
+        description="The created in data collection ID that all the cases must belong to. All cases in the case set must have this created in data collection ID."
     )
-    is_update: bool = Field(description="Whether this is an update operation.")
-    cases: list[model.CaseForCreateUpdate] = Field(description="The cases to validate.")
+    case_batch: model.CaseBatchForUpload = Field(
+        description="The unique cases to validate."
+    )
 
     @model_validator(mode="after")
     def _validate_cases(self) -> Self:
-        if self.created_in_data_collection_id in self.data_collection_ids:
+        cases_for_upload = self.case_batch.cases
+        cases = [x.case for x in cases_for_upload if x.case is not None]
+        if any(x.case_type_id != self.case_type_id for x in cases):
+            raise ValueError("All cases must belong to the given case type ID.")
+        if any(
+            x.created_in_data_collection_id != self.created_in_data_collection_id
+            for x in cases
+        ):
             raise ValueError(
-                "The created in data collection ID may not be in the additional data collection IDs."
+                "All cases must belong to the given created_in_data_collection_id."
             )
-        if self.is_update and any(x.id is None for x in self.cases):
-            raise ValueError("All cases must have an ID when updating cases")
-        if not self.is_update and any(x.case_date is None for x in self.cases):
-            raise ValueError("All cases must have a case date when creating cases")
         return self
-
-
-class CreateCasesCommand(ValidateCasesCommand):
-    """
-    Create the corresponding cases and return them.
-    """
-
-    NAME = "CreateCasesCommand"
-
-    pass
 
 
 class RetrieveCaseSetStatsCommand(Command):
@@ -269,31 +273,57 @@ class CreateReadSetsForCasesCommand(Command):
     Create read sets for a set of cases based on a read set case type column.
     """
 
-    case_read_sets: list[model.CaseReadSet] = Field(
-        description="The CaseReadSets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The CaseReadSet case_ids must be unique, the read_set_id must be None and the read_set may not be None.",
+    read_sets: list[model.ReadSetForUpload] = Field(
+        description="The read sets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The case_ids must be unique and the ids must be None.",
     )
 
-    @field_validator("case_read_sets", mode="after")
-    def _validate_case_read_sets(
-        cls, case_read_sets: list[model.CaseReadSet]
-    ) -> list[model.CaseReadSet]:
-        case_ids = [x.case_id for x in case_read_sets]
-        read_set_ids = [
-            x.read_set_id for x in case_read_sets if x.read_set_id is not None
-        ]
-        if read_set_ids and len(set(read_set_ids)) < len(read_set_ids):
-            raise exc.InvalidArgumentsError("CaseReadSets may not contain read_set_id")
-        if any(x.read_set is None for x in case_read_sets):
-            raise exc.InvalidArgumentsError(
-                "CaseReadSets may not have None for read_set "
-            )
+    @field_validator("read_sets", mode="after")
+    def _validate_read_sets(
+        cls,
+        read_sets: list[model.ReadSetForUpload],
+    ) -> list[model.ReadSetForUpload]:
+        case_ids = [x.case_id for x in read_sets]
+        if any(x == NULL_ID for x in case_ids):
+            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
         duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
         if duplicate_case_ids:
             duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
             raise exc.InvalidArgumentsError(
-                f"Some CaseReadSets have identical case_id: {duplicates_str}"
+                f"Some read sets have identical case_id: {duplicates_str}"
             )
-        return case_read_sets
+        read_set_ids = [x.id for x in read_sets if x.id is not None and x.id != NULL_ID]
+        if read_set_ids:
+            raise exc.InvalidArgumentsError("read_sets may not have id filled in")
+        return read_sets
+
+
+class CreateSeqsForCasesCommand(Command):
+    """
+    Create sequences for a set of cases based on a genetic sequence case type column.
+    """
+
+    seqs: list[model.SeqForUpload] = Field(
+        description="The sequences describing for which (case_id, case_type_col_id) a Seq (genetic sequence) is to be created. The case_ids must be unique and the ids must be None."
+    )
+
+    @field_validator("seqs", mode="after")
+    def _validate_seqs(
+        cls,
+        seqs: list[model.SeqForUpload],
+    ) -> list[model.SeqForUpload]:
+        case_ids = [x.case_id for x in seqs]
+        if any(x == NULL_ID for x in case_ids):
+            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
+        duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
+        if duplicate_case_ids:
+            duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
+            raise exc.InvalidArgumentsError(
+                f"Some read sets have identical case_id: {duplicates_str}"
+            )
+        seq_ids = [x.id for x in seqs if x.id is not None and x.id != NULL_ID]
+        if seq_ids:
+            raise exc.InvalidArgumentsError("seqs may not have id filled in")
+        return seqs
 
 
 class CreateFileForReadSetCommand(Command):
@@ -336,16 +366,6 @@ class CreateFileForSeqCommand(Command):
     file_compression: seqdb_enum.FileCompression = Field(
         default=seqdb_enum.FileCompression.NONE,
         description="The compression of the sequence file.",
-    )
-
-
-class CreateSeqsForCasesCommand(Command):
-    """
-    Create sequences for a set of cases based on a genetic sequence case type column.
-    """
-
-    case_seqs: list[model.CaseSeq] = Field(
-        description="The CaseSequences describing for which (case_id, case_type_col_id) a genetic sequence is to be created."
     )
 
 
