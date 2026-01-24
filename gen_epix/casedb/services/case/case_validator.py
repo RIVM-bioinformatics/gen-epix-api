@@ -233,7 +233,7 @@ class CaseValidator:
             if col.col_type == ColType.REGULAR_LANGUAGE:
                 pattern = self.regex_patterns[
                     col.concept_set_id
-                ]  # type:ignore[arg-type]
+                ]  # type: ignore[arg-type]
                 transform_fn = lambda x: (
                     x if x is None or pattern.match(x) else NoReturn
                 )
@@ -676,11 +676,11 @@ class CaseValidator:
             interval_to_interval_transformer = IntervalToIntervalTransformer(
                 src_field="interval_value",
                 src_interval_names=src_transformer._interval_names,
-                src_lower_bounds=src_transformer._lower_bounds,  # type:ignore[arg-type]
-                src_upper_bounds=src_transformer._upper_bounds,  # type:ignore[arg-type]
+                src_lower_bounds=src_transformer._lower_bounds,  # type: ignore[arg-type]
+                src_upper_bounds=src_transformer._upper_bounds,  # type: ignore[arg-type]
                 tgt_interval_names=tgt_transformer._interval_names,
-                tgt_lower_bounds=tgt_transformer._lower_bounds,  # type:ignore[arg-type]
-                tgt_upper_bounds=tgt_transformer._upper_bounds,  # type:ignore[arg-type]
+                tgt_lower_bounds=tgt_transformer._lower_bounds,  # type: ignore[arg-type]
+                tgt_upper_bounds=tgt_transformer._upper_bounds,  # type: ignore[arg-type]
                 src_lower_bound_is_inclusive=src_transformer._lower_bound_is_inclusive,
                 src_upper_bound_is_inclusive=src_transformer._upper_bound_is_inclusive,
                 tgt_lower_bound_is_inclusive=tgt_transformer._lower_bound_is_inclusive,
@@ -875,10 +875,10 @@ class CaseValidator:
         # Fill in region value maps
         for region_set_id in self.region_set_ids:
             curr_regions = [regions[x] for x in region_set_regions_map[region_set_id]]
-            self.region_value_maps[region_set_id] = (  # type:ignore[arg-type]
+            self.region_value_maps[region_set_id] = (  # type: ignore[arg-type]
                 {
                     str(x.id).lower(): str(x.id) for x in curr_regions
-                }  # type:ignore[assignment]
+                }  # type: ignore[assignment]
                 | {x.code.lower(): str(x.id) for x in curr_regions if x.code}
                 | {x.name.lower(): str(x.id) for x in curr_regions if x.name}
             )
@@ -947,7 +947,7 @@ class CaseValidator:
         }
         # Map concepts to sets
         concept_set_concepts_map: dict[UUID, set[UUID]] = (
-            map_paired_elements(  # type:ignore[assignment]
+            map_paired_elements(  # type: ignore[assignment]
                 [(x.concept_set_id, x.id) for x in concepts.values()],
                 as_set=True,
             )
@@ -1010,7 +1010,7 @@ class CaseValidator:
         }
         # Map regions to sets
         region_set_regions_map: dict[UUID, set[UUID]] = (
-            map_paired_elements(  # type:ignore[assignment]
+            map_paired_elements(  # type: ignore[assignment]
                 [(x.region_set_id, x.id) for x in regions.values()],
                 as_set=True,
             )

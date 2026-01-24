@@ -79,7 +79,7 @@ def _crud_case_type_col_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if not case_abac:
         # No policy: allows for internal commands to retrieve all
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialize some
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
@@ -109,7 +109,7 @@ def _validate_case_type_cols(
         # Get case type dims
         case_type_dim_ids = list({x.case_type_dim_id for x in case_type_cols})
         case_type_dims: list[model.CaseTypeDim] = (
-            self.repository.crud(  # type:ignore[assignment]
+            self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id,
                 model.CaseTypeDim,
@@ -118,13 +118,13 @@ def _validate_case_type_cols(
                 CrudOperation.READ_SOME,
             )
         )
-        case_type_dim_map: dict[UUID, model.CaseTypeDim] = {  # type:ignore[assignment]
+        case_type_dim_map: dict[UUID, model.CaseTypeDim] = {  # type: ignore[assignment]
             x.id: x for x in case_type_dims
         }
 
         # Get cols
         col_ids: list[UUID] = list({x.col_id for x in case_type_cols})
-        cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+        cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.Col,
@@ -134,7 +134,7 @@ def _validate_case_type_cols(
         )
         col_map: dict[UUID, model.Col] = {
             x.id: x for x in cols
-        }  # type:ignore[assignment]
+        }  # type: ignore[assignment]
 
         # Verify each case_type_col
         for case_type_col in case_type_cols:
@@ -149,4 +149,4 @@ def _validate_case_type_cols(
                 raise exc.InvalidArgumentsError(
                     "col.dim_id must match dim_id of CaseTypeDim",
                     ids=[case_type_col.col_id],
-                )  # type:ignore[return-value]
+                )  # type: ignore[return-value]

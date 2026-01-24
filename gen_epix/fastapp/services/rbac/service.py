@@ -140,7 +140,7 @@ class BaseRbacService(BaseService):
                 f"Invalid value for on_missing_root_permissions: {on_missing_root_permissions}"
             )
         all_permissions: set[Permission] = (
-            self.app.domain.permissions  # type:ignore[assignment]
+            self.app.domain.permissions  # type: ignore[assignment]
         )
         if root_role and root_role not in role_permissions:
             self.register_role(root_role, all_permissions, **kwargs)

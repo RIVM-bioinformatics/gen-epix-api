@@ -323,7 +323,7 @@ class BatchUploader:
 
         # Retrieve and verify external IDs
         external_identifier_tuples: list[tuple[UUID, str]] = (
-            list(  # type:ignore[assignment]
+            list(  # type: ignore[assignment]
                 {
                     (y.identifier_issuer_id, y.external_id)
                     for x in self.get_parents_for_upload(cmd)
@@ -346,7 +346,7 @@ class BatchUploader:
                     operation=CrudOperation.READ_ALL,
                     query_filter=CompositeFilter(
                         operator=LogicalOperator.AND,
-                        filters=[  # type:ignore[arg-type]
+                        filters=[  # type: ignore[arg-type]
                             EqualsNumberFilter(
                                 key="identifier_type",
                                 value=self.parent_identifier_type.value,
@@ -447,7 +447,7 @@ class BatchUploader:
             # Some parent IDs are given, check existence
             # Check existence of given parent IDs
             parents_exist: list[bool] = (
-                self.service.repository.crud(  # type:ignore[assignment]
+                self.service.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id,
                     self.parent_class,
@@ -537,7 +537,7 @@ class BatchUploader:
             if child_ids:
                 # Some child IDs are given, check existence
                 children_exist: list[bool] = (
-                    self.service.repository.crud(  # type:ignore[assignment]
+                    self.service.repository.crud(  # type: ignore[assignment]
                         uow,
                         user_id,
                         model_class,
@@ -863,7 +863,7 @@ class BatchUploader:
         # Determine which parents need to be created
         to_create_parent_result_tuples: list[
             tuple[model.ParentForUpload, model.Model, model.UploadResult]
-        ] = [  # type:ignore[assignment]
+        ] = [  # type: ignore[assignment]
             (x, x.get_parent(), y)
             for x, y in self.parent_result_items(cmd, retval)
             if (x.id is None or x.id == NULL_ID or x.is_new_id)
@@ -905,7 +905,7 @@ class BatchUploader:
         to_update_parent_result_tuples: list[
             tuple[model.ParentForUpload, model.Model, model.UploadResult]
         ] = [
-            (x, x.get_parent(), y)  # type:ignore[arg-type]
+            (x, x.get_parent(), y)  # type: ignore[arg-type]
             for x, y in self.parent_result_items(cmd, retval)
             if x.id is not None
             and x.id != NULL_ID
@@ -1139,7 +1139,7 @@ class BatchUploader:
                 obj.id = self.service.generate_id()  # type: ignore[assignment]
         to_create_obj_results = [x for _, x in to_create_obj_result_pairs]
         created_obj_ids: list[UUID] = (
-            self.service.repository.crud(  # type:ignore[assignment]
+            self.service.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model_class,
@@ -1181,7 +1181,7 @@ class BatchUploader:
 
         # Retrieve existing objects
         existing_objs: list[model.Model] = (
-            self.service.repository.crud(  # type:ignore[assignment]
+            self.service.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model_class,
@@ -1242,7 +1242,7 @@ class BatchUploader:
         # Update the objects whose data are different
         if not to_update_objs:
             return success
-        _: list[UUID] = self.service.repository.crud(  # type:ignore[assignment]
+        _: list[UUID] = self.service.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model_class,

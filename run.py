@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import fire
@@ -773,7 +773,7 @@ class Run:
         filter_on_codes = None
 
         file = Path(__file__).parent / "test" / "output" / "linter.pylint.txt"
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         file2 = (
             Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
@@ -802,7 +802,7 @@ class Run:
         # filter_on_codes = None
 
         file = Path(__file__).parent / "test" / "output" / "linter.mypy.txt"
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)

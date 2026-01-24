@@ -4,10 +4,10 @@ from typing import Any, Dict, Optional, Type
 import httpx
 import pytest
 
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.fastapp.services.auth.token_introspection_manager import (
     TokenIntrospectionManager,
 )
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 class DummyResponse:

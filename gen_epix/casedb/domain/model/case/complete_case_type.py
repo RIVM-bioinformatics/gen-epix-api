@@ -115,7 +115,7 @@ class CompleteCaseType(CaseType):
                 for x in self.case_type_cols.values()
                 if x.case_type_dim_id == case_type_dim_id
             ]
-            ordered_dim_case_type_cols: list[UUID] = [  # type:ignore[assignment]
+            ordered_dim_case_type_cols: list[UUID] = [  # type: ignore[assignment]
                 y.id
                 for y in sorted(
                     dim_case_type_cols,

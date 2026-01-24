@@ -169,7 +169,7 @@ class CaseBatchUploader(BatchUploader):
                 x.id for x in cases_for_validation  # type: ignore[misc]
             ]
             existing_content_tuples: list[dict[UUID, str | None] | None] = (
-                self.service.repository.read_fields(  # type:ignore[assignment]
+                self.service.repository.read_fields(  # type: ignore[assignment]
                     uow,
                     None if cmd.user is None else cmd.user.id,
                     model.Case,
@@ -368,7 +368,7 @@ class CaseBatchUploader(BatchUploader):
     ) -> bool:
         success = True
         external_identifier_ids: list[UUID] = [
-            y.id  # type:ignore[misc]
+            y.id  # type: ignore[misc]
             for x in retval.cases
             for y in x.external_identifiers or []
             if y.status == UploadStatus.CREATED

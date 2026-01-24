@@ -1,5 +1,6 @@
 from unittest import TestCase
 from uuid import UUID, uuid4
+
 import pytest
 
 from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet

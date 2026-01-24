@@ -9,7 +9,7 @@ from gen_epix.util import generate_ulid
 
 def get_test_name(test_type: Enum | str) -> str:
     return (
-        datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
         + "_"
         + (test_type if isinstance(test_type, str) else test_type.value)
     )

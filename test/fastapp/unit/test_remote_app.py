@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import httpx
+import pytest
 from pydantic import Field
 
 from gen_epix.fastapp.domain.domain import Domain
@@ -16,7 +17,6 @@ from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, Stri
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.remote_app import RemoteApp
-import pytest
 
 # Helpers and dummies for testing
 

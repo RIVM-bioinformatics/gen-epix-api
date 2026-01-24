@@ -290,7 +290,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
                     continue
                 for child in children:
                     external_sample_id: ExternalIdentifierForUpload | None = (
-                        child.external_sample_id  # type:ignore[attr-defined]
+                        child.external_sample_id  # type: ignore[attr-defined]
                     )
                     if external_sample_id is None:
                         continue
@@ -301,13 +301,13 @@ class CaseBatchForUpload(BaseBatchForUpload):
                     external_identifier_map[external_sample_id] = i
         return self
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_read_sets(self) -> bool:
         """Indicates whether there are any read sets in the cases."""
         return any(len(x.read_sets or []) > 0 for x in self.cases)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_seqs(self) -> bool:
         """Indicates whether there are any sequences in the cases."""

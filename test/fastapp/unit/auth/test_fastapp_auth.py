@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
 from typing import Any
@@ -17,7 +17,7 @@ from gen_epix.fastapp.services.auth import OauthIdpClient
 def get_test_client() -> AuthTestClient:
     return (
         AuthTestClient.get_test_client()
-    )  # type:ignore[no-any-return,no-untyped-call]
+    )  # type: ignore[no-any-return,no-untyped-call]
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-01")
@@ -25,7 +25,7 @@ class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"
 
-    NOW = datetime.now()
+    NOW = datetime.now(timezone.utc)
     INVALID_CLAIMS: dict[str, Any] = {
         "aud": "wrong_aud",  # client id
         "iss": "http://localhost:5003",  # authorization server

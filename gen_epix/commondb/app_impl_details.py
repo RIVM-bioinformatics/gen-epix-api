@@ -73,7 +73,7 @@ class AppImplDetails(BaseModel):
         description="Mapping of roles as strings to (command, permission type) tuples",
     )
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="Reverse mapping of role strings to their corresponding roles."
     )
     @cached_property
@@ -81,7 +81,7 @@ class AppImplDetails(BaseModel):
         """"""
         return {x: y for y, x in self.role_map.items()}
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="Dependency that provides the currently registered user."
     )
     @cached_property
@@ -91,7 +91,7 @@ class AppImplDetails(BaseModel):
             raise ValueError("registered_user_dependency is not set")
         return self.registered_user_dependency_or_none
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="Dependency that provides a new user."
     )
     @cached_property
@@ -101,7 +101,7 @@ class AppImplDetails(BaseModel):
             raise ValueError("new_user_dependency is not set")
         return self.new_user_dependency_or_none
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="Dependency that provides a user known by the identity provider but not registered in the application."
     )
     @cached_property

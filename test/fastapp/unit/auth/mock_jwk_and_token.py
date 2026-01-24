@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import floor
 
 import jwt
@@ -50,7 +50,7 @@ class MockJWKAndToken:
         }
 
         # Create a payload for the JWT
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         self.payload = {
             "aud": "POv1bEMlzAunu6LD0BcmV4pvxInkNRXY",  # client id
             "iss": "https://idp1.org/issuer",  # authorization server

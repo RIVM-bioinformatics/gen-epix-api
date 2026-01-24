@@ -25,7 +25,7 @@ class FileService(BaseFileService):
             raise exc.InvalidArgumentsError(f"Unsupported file format: {cmd.format}")
         # Add file identifier
         file = cmd.file
-        file.id: UUID = self.generate_id()  # type:ignore[assignment]
+        file.id: UUID = self.generate_id()  # type: ignore[assignment]
         # Store the file
         assert cmd.user is not None and cmd.user.id is not None
         with self.repository.uow() as uow:

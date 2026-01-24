@@ -1,7 +1,7 @@
 import base64
+import datetime
 import logging
 import ssl
-import time
 import urllib.parse
 from typing import Any, TypedDict
 
@@ -82,7 +82,7 @@ class TokenIntrospectionManager:
             raise ValueError("discovery_url cannot be empty for token introspection")
 
     def _now(self) -> int:
-        return int(time.time())
+        return int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
     def _fetch_introspection_endpoint(self) -> str:
 
