@@ -424,67 +424,67 @@ class SampleBatchForUpload(BaseBatchForUpload):
     )
 
     # Computed fields
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_read_sets(self) -> bool:
         """Indicates whether there are any read sets in the sample set."""
         return any(len(x.read_sets or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_seqs(self) -> bool:
         """Indicates whether there are any sequences in the sample set."""
         return any(len(x.seqs or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_seq_taxonomies(self) -> bool:
         """Indicates whether there are any seq taxonomies in the sample set."""
         return any(len(x.seq_taxonomies or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_seq_classifications(self) -> bool:
         """Indicates whether there are any seq classifications in the sample set."""
         return any(len(x.seq_classifications or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_locus_profiles(self) -> bool:
         """Indicates whether there are any locus profiles in the sample set."""
         return any(len(x.locus_profiles or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_allele_profiles(self) -> bool:
         """Indicates whether there are any allele profiles in the sample set."""
         return any(len(x.allele_profiles or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_snp_profiles(self) -> bool:
         """Indicates whether there are any SNP profiles in the sample set."""
         return any(len(x.snp_profiles or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_mlva_profiles(self) -> bool:
         """Indicates whether there are any MLVA profiles in the sample set."""
         return any(len(x.mlva_profiles or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_kmer_profiles(self) -> bool:
         """Indicates whether there are any k-mer profiles in the sample set."""
         return any(len(x.kmer_profiles or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_pcr_measurements(self) -> bool:
         """Indicates whether there are any PCR measurements in the sample set."""
         return any(len(x.pcr_measurements or []) > 0 for x in self.samples)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_ast_measurements(self) -> bool:
         """Indicates whether there are any AST measurements in the sample set."""

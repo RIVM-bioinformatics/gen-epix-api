@@ -104,7 +104,7 @@ def _apply_max_results_limit(
     uow: BaseUnitOfWork,
     cases: list[model.Case],
 ) -> tuple[list[model.Case], bool]:
-    case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+    case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
         uow,
         user.id,
         model.CaseType,
@@ -198,7 +198,7 @@ def case_service_retrieve_cases_by_id(
         if not cases:
             return []
 
-        case_types: list[model.CaseType] = self.repository.crud(  # type:ignore
+        case_types: list[model.CaseType] = self.repository.crud(  # type: ignore
             uow,
             user.id,
             model.CaseType,
@@ -368,7 +368,7 @@ def _verify_case_filter(
     # Retrieve case type cols corresponding to filter keys
     filter_case_type_col_ids = composite_filter.get_keys()
     filter_case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.CaseTypeCol,
@@ -378,7 +378,7 @@ def _verify_case_filter(
         )
     )
     # Retrieve cols for case type cols
-    cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user.id,
         model.Col,
@@ -393,7 +393,7 @@ def _verify_case_filter(
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for case_type_col, col, composite_filter in zip(  # type:ignore[assignment]
+    for case_type_col, col, composite_filter in zip(  # type: ignore[assignment]
         filter_case_type_cols, cols, composite_filter.filters
     ):
         if col.concept_set_id or col.region_set_id:

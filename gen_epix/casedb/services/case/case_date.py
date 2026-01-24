@@ -70,7 +70,7 @@ def case_service_get_case_date_case_type_col_mappers(
     the future.
     """
     case_type_dims: list[model.CaseTypeDim] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.CaseTypeDim,
@@ -91,7 +91,7 @@ def case_service_get_case_date_case_type_col_mappers(
         return {}
     case_type_dim: model.CaseTypeDim = case_type_dims[0]
 
-    dim: model.Dim = self.repository.crud(  # type:ignore[assignment]
+    dim: model.Dim = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.Dim,
@@ -105,7 +105,7 @@ def case_service_get_case_date_case_type_col_mappers(
         )
 
     case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.CaseTypeCol,
@@ -114,7 +114,7 @@ def case_service_get_case_date_case_type_col_mappers(
             CrudOperation.READ_ALL,
             filter=EqualsUuidFilter(
                 key="case_type_dim_id", value=case_type_dim.id
-            ),  # type:ignore[arg-type]
+            ),  # type: ignore[arg-type]
         )
     )
     if not case_type_cols:
@@ -123,7 +123,7 @@ def case_service_get_case_date_case_type_col_mappers(
 
     # Verify case_type_cols are of time col_type
     col_ids = list({x.col_id for x in case_type_cols})
-    cols: list[model.Col] = self.repository.crud(  # type:ignore[assignment]
+    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.Col,

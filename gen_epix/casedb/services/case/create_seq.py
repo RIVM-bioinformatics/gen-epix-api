@@ -127,7 +127,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
 ) -> list[model.Case]:
     # Get CaseTypeCol and col data
     case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
             model.CaseTypeCol,
@@ -175,7 +175,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         )
 
     # Get Case data
-    cases: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+    cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.Case,

@@ -64,7 +64,7 @@ class Permission(PydanticBaseModel, frozen=True):
     command_name: str
     permission_type: PermissionType
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="The name of the permission, combining command name and permission type."
     )
     @cached_property
@@ -72,7 +72,7 @@ class Permission(PydanticBaseModel, frozen=True):
         """"""
         return f"{self.command_name}{Permission._NAME_DELIMITER}{self.permission_type.value}"
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="A sort key for ordering permissions."
     )
     @cached_property

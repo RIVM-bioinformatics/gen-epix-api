@@ -31,7 +31,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
     ) -> model.User | list[model.User]:
         if self._check_invalid_filter_input(cmd):
             return retval
-        user: model.User = cmd.user  # type:ignore[assignment]
+        user: model.User = cmd.user  # type: ignore[assignment]
         if self._is_no_abac_user(user):
             return retval
         organization_ids, is_org_admin, user_ids = self._get_org_and_user_ids(user)
@@ -39,7 +39,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
         result_list: list[model.User]
         if cmd.operation == CrudOperation.READ_ALL:  # type: ignore[attr-defined]
             # Open-ended results: filter
-            result_list = retval  # type:ignore[assignment]
+            result_list = retval  # type: ignore[assignment]
             return [
                 x
                 for x in result_list
@@ -48,7 +48,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
             ]
         if cmd.operation == CrudOperation.READ_SOME:  # type: ignore[attr-defined]
             # Specific users requested: check results
-            result_list = retval  # type:ignore[assignment]
+            result_list = retval  # type: ignore[assignment]
             return self._filter_read_some(
                 result_list,
                 organization_ids,
@@ -58,7 +58,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
             )
         if cmd.operation == CrudOperation.READ_ONE:  # type: ignore[attr-defined]
             # Specific user requested: check results
-            result: model.User = retval  # type:ignore[assignment]
+            result: model.User = retval  # type: ignore[assignment]
             return self._filter_read_one(
                 result,
                 organization_ids,

@@ -52,7 +52,7 @@ def _crud_case_type_col_set_member_without_abac(
     | None
 ):
     """CaseTypeColSetMember admin command handling, no ABAC applied."""
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]
 
 
 def _crud_case_type_col_set_member_with_abac(
@@ -72,7 +72,7 @@ def _crud_case_type_col_set_member_with_abac(
     case_abac = get_case_abac_from_command(cmd)
 
     if not case_abac:
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
 

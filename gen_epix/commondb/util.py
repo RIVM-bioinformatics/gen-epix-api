@@ -210,7 +210,7 @@ def load_demo_data(
         zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
         start_time = datetime.datetime.now(datetime.timezone.utc)
         dict_repository: DictRepository = (
-            dict_repository_class.create_repository(  # type:ignore[assignment]
+            dict_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities, file=zip_file
             )
         )
@@ -249,7 +249,7 @@ def load_demo_data(
         )
         # Full repository
         sa_sqlite_repository: SARepository = (
-            sa_repository_class.create_repository(  # type:ignore[assignment]
+            sa_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities,
                 file=demo_sa_sqlite_file,
                 name=service_type.value,
@@ -294,7 +294,7 @@ def load_demo_data(
             entities=entities, connection_string=connection_string
         )
         sa_sql_repository: SARepository = (
-            sa_repository_class.create_repository(  # type:ignore[assignment]
+            sa_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities,
                 connection_string=connection_string,
                 name=service_type.value,

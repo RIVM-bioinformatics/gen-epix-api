@@ -108,4 +108,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
         @self.app.get("/health")
         async def health() -> dict[str, str]:
             """Health check endpoint."""
-            return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+            return {
+                "status": "healthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }

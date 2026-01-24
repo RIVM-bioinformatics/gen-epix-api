@@ -17,7 +17,7 @@ from gen_epix.fastapp.services.auth import OauthIdpClient
 def get_test_client() -> AuthTestClient:
     return (
         AuthTestClient.get_test_client()
-    )  # type:ignore[no-any-return,no-untyped-call]
+    )  # type: ignore[no-any-return,no-untyped-call]
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-01")

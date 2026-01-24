@@ -42,7 +42,7 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
 
     def retrieve_user_by_key(self, uow: BaseUnitOfWork, user_key: str) -> model.User:
         # TODO: add filter to crud method instead of retrieving all users
-        users: list[model.User] = self.crud(  # type:ignore[assignment]
+        users: list[model.User] = self.crud(  # type: ignore[assignment]
             uow,
             None,
             self.user_class,

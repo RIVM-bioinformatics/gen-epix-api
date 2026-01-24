@@ -18,7 +18,7 @@ class CommonAuthTestClient(AuthTestClient):
 def get_test_client() -> CommonAuthTestClient:
     return (
         CommonAuthTestClient.get_test_client()
-    )  # type:ignore[no-any-return,no-untyped_call]
+    )  # type: ignore[no-any-return,no-untyped_call]
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-01")

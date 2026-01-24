@@ -16,7 +16,6 @@ from gen_epix.fastapp.model import Permission
 from gen_epix.util import copy_model_field
 from gen_epix.commondb.api.exc import handle_command
 
-
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
 

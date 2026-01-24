@@ -562,7 +562,7 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(  # type:ignore[call-arg]
+            handle_exception(  # type: ignore[call-arg]
                 "d4c2e1b1",
                 user,
                 exception,

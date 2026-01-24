@@ -59,4 +59,4 @@ def get_type_from_annotation(
         # Optional unions are allowed
         use_type = bases[0] if bases[0] is not NoneType else bases[1]
         return get_type_from_annotation(use_type)
-    return origin  # type:ignore[no-any-return]
+    return origin  # type: ignore[no-any-return]

@@ -54,7 +54,7 @@ def _crud_case_set_data_collection_link_without_abac(
 ):
     """CaseSetDataCollectionLink admin command handling."""
     _crud_cascade_delete(self, uow, cmd)
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]
 
 
 def _crud_case_set_data_collection_link_with_abac(
@@ -74,7 +74,7 @@ def _crud_case_set_data_collection_link_with_abac(
     case_abac = get_case_abac_from_command(cmd)
 
     if case_abac is None:
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialize some
     is_read_all = cmd.operation == CrudOperation.READ_ALL
@@ -95,4 +95,4 @@ def _crud_case_set_data_collection_link_with_abac(
 
     # return _crud_data_by_non_admin(self, uow, cmd)  # type: ignore[return-value]
     # !FIXME: Temporary workaround until the complex ABAC logic is implemented
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]

@@ -45,7 +45,7 @@ class UserManager(BaseUserManager):
 
         # Generate root organization and user objects
         self._root_organization = model.Organization(
-            **root_cfg["organization"]  # type:ignore[arg-type]
+            **root_cfg["organization"]  # type: ignore[arg-type]
         )
         if self._root_organization.id is None:
             raise exc.InitializationServiceError(
@@ -55,7 +55,7 @@ class UserManager(BaseUserManager):
             is_active=True,
             organization_id=self._root_organization.id,
             roles={self._rbac_service.root_role},
-            **root_cfg["user"],  # type:ignore[arg-type]
+            **root_cfg["user"],  # type: ignore[arg-type]
         )
 
         # Get automatic new user data
@@ -79,7 +79,7 @@ class UserManager(BaseUserManager):
             # fmt:on
 
     def generate_id(self) -> UUID:
-        return self._organization_service.generate_id()  # type:ignore[return-value]
+        return self._organization_service.generate_id()  # type: ignore[return-value]
 
     def get_user_key_from_claims(self, claims: dict[str, Any]) -> str | None:
         return claims.get(self._key_claim)
@@ -119,7 +119,7 @@ class UserManager(BaseUserManager):
     def is_root_user_claims(self, claims: dict[str, Any]) -> bool:
         return self._root_user.key == claims.get(self._key_claim)
 
-    def is_root_user(self, user: model.User) -> bool:  # type:ignore[override]
+    def is_root_user(self, user: model.User) -> bool:  # type: ignore[override]
         return self._rbac_service.root_role in user.roles
 
     def create_root_user_from_claims(self, claims: dict[str, Any]) -> model.User:
@@ -161,11 +161,11 @@ class UserManager(BaseUserManager):
             root_user = self._root_user.model_copy()
             root_user.id = (
                 self._organization_service.generate_id()
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             root_user.email = get_email_from_claims(claims)
             root_user.name = self.get_user_name_from_claims(claims)
             user: model.User = (
-                self._organization_service.repository.crud(  # type:ignore[assignment]
+                self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     root_user.id,
                     self._user_class,
@@ -215,7 +215,7 @@ class UserManager(BaseUserManager):
                 )
             claims_user.id = self.generate_id()
             user: model.User = (
-                self._organization_service.repository.crud(  # type:ignore[assignment]
+                self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     claims_user.id,
                     self._user_class,
@@ -239,7 +239,7 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_new_user_from_token(  # type:ignore[override]
+    def create_new_user_from_token(  # type: ignore[override]
         self, user: model.User, token: str, **kwargs: Any
     ) -> model.User:
         assert self._organization_service.repository
@@ -305,7 +305,7 @@ class UserManager(BaseUserManager):
 
             try:
                 created_user: model.User = (
-                    self._organization_service.repository.crud(  # type:ignore[assignment]
+                    self._organization_service.repository.crud(  # type: ignore[assignment]
                         uow,
                         created_by_user_id,
                         self._user_class,
@@ -331,10 +331,10 @@ class UserManager(BaseUserManager):
     def retrieve_user_by_key(self, user_key: str) -> model.User:
         return self._organization_service.retrieve_user_by_key(user_key)
 
-    def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type:ignore[override]
+    def retrieve_user_by_id(self, user_id: UUID) -> model.User:  # type: ignore[override]
         with self._organization_service.repository.uow() as uow:
             user: model.User = (
-                self._organization_service.repository.crud(  # type:ignore[assignment]
+                self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id,
                     self._user_class,
@@ -345,7 +345,7 @@ class UserManager(BaseUserManager):
             )
         return user
 
-    def update_user_name(  # type:ignore[override]
+    def update_user_name(  # type: ignore[override]
         self, user: model.User, new_name: str
     ) -> model.User | None:
         if user.name == new_name:
@@ -353,7 +353,7 @@ class UserManager(BaseUserManager):
         user.name = new_name
         with self._organization_service.repository.uow() as uow:
             updated_user: model.User = (
-                self._organization_service.repository.crud(  # type:ignore[assignment]
+                self._organization_service.repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id,
                     self._user_class,
@@ -364,7 +364,7 @@ class UserManager(BaseUserManager):
             )
         return updated_user
 
-    def retrieve_user_permissions(  # type:ignore[override]
+    def retrieve_user_permissions(  # type: ignore[override]
         self, user: model.User
     ) -> set[Permission]:
         return self._rbac_service.retrieve_user_permissions(user)

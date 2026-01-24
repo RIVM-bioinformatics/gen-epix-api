@@ -270,7 +270,7 @@ class TestClient:
         )
         if any(x.key == tgt_user.key for x in remaining_invitations):
             raise ValueError(f"Some user invitations remaining for key {tgt_user.key}")
-        retval: model.User = self._set_obj(tgt_user)  # type:ignore[assignment]
+        retval: model.User = self._set_obj(tgt_user)  # type: ignore[assignment]
         return retval
 
     def create_data_collection(
@@ -280,7 +280,7 @@ class TestClient:
     ) -> model.DataCollection:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         data_collection = self.handle(
             command.DataCollectionCrudCommand(
                 user=user,
@@ -290,7 +290,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(data_collection)  # type:ignore[return-value]
+        return self._set_obj(data_collection)  # type: ignore[return-value]
 
     def create_org_admin_policy(
         self,
@@ -302,10 +302,10 @@ class TestClient:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         tgt_user: model.User = self._get_obj(
             self.user_class, tgt_user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         organization: model.Organization = self._get_obj(
             model.Organization, organization_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         assert organization.id is not None
         organization_admin_policy: model.OrganizationAdminPolicy = self.app.handle(
             self.organization_admin_policy_crud_command_class(
@@ -318,7 +318,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(organization_admin_policy)  # type:ignore[return-value]
+        return self._set_obj(organization_admin_policy)  # type: ignore[return-value]
 
     def create_identifier_issuer(
         self,
@@ -329,7 +329,7 @@ class TestClient:
     ) -> model.IdentifierIssuer:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         identifier_issuer = self.handle(
             command.IdentifierIssuerCrudCommand(
                 user=user,
@@ -341,7 +341,7 @@ class TestClient:
                 ),
             )
         )
-        return self._set_obj(identifier_issuer)  # type:ignore[return-value]
+        return self._set_obj(identifier_issuer)  # type: ignore[return-value]
 
     def create_organization_identifier_issuer_link(
         self,
@@ -351,13 +351,13 @@ class TestClient:
     ) -> model.OrganizationIdentifierIssuerLink:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         organization: model.Organization = self._get_obj(
             model.Organization, organization_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         identifier_issuer: model.IdentifierIssuer = self._get_obj(
             model.IdentifierIssuer, identifier_issuer_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         assert organization.id is not None
         assert identifier_issuer.id is not None
         organization_identifier_issuer_link: model.OrganizationIdentifierIssuerLink = (
@@ -374,14 +374,14 @@ class TestClient:
         )
         return self._set_obj(
             organization_identifier_issuer_link
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def read_all_user_invitations(
         self, user_or_str: str | model.User
     ) -> list[model.UserInvitation]:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         invitations: list[model.UserInvitation] = self.handle(
             self.user_invitation_crud_command_class(
                 user=user,
@@ -395,7 +395,7 @@ class TestClient:
     ) -> list[model.UserNameEmail]:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         user_name_emails: list[model.UserNameEmail] = self.app.handle(
             self.retrieve_organization_admin_name_emails_command_class(user=user)
         )
@@ -426,10 +426,10 @@ class TestClient:
     ) -> model.User:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         tgt_user: model.User = self._get_obj(
             self.user_class, tgt_user_or_str, copy=True
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         if not organization_or_str:
             if set_dummy_organization:
                 organization_id = self.generate_id()
@@ -440,7 +440,7 @@ class TestClient:
                 raise ValueError("Organization given and set_dummy_organization True")
             organization: model.Organization = self._get_obj(
                 model.Organization, organization_or_str
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             organization_id = organization.id
         has_updates = False
         if is_active is not None and tgt_user.is_active != is_active:
@@ -467,7 +467,7 @@ class TestClient:
         TestClient._verify_updated_obj(
             tgt_user, updated_tgt_user, user.id, verify_modified=has_updates
         )
-        return self._set_obj(updated_tgt_user, update=True)  # type:ignore[return-value]
+        return self._set_obj(updated_tgt_user, update=True)  # type: ignore[return-value]
 
     def get_root_user(self, user_key: str | None = None) -> model.User:
         if user_key is None:
@@ -538,7 +538,7 @@ class TestClient:
     ) -> list[model.User]:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         org_admin_policies: list[model.OrganizationAdminPolicy] = (
-            [  # type:ignore[assignment]
+            [  # type: ignore[assignment]
                 x
                 for x in self.db[self.organization_admin_policy_class].values()
                 if x.user_id == user.id and x.is_active
@@ -553,7 +553,7 @@ class TestClient:
         user_ids = {user.id} if include_self else set()
         if include_other_org_admins:
             other_org_admin_policies: list[model.OrganizationAdminPolicy] = (
-                [  # type:ignore[assignment]
+                [  # type: ignore[assignment]
                     x
                     for x in self.db[self.organization_admin_policy_class].values()
                     if x.organization_id in organization_ids and x.is_active
@@ -617,7 +617,7 @@ class TestClient:
                 obj_ids=(
                     list(obj_ids)
                     if isinstance(obj_ids, set)
-                    else obj_ids  # type:ignore[arg-type]
+                    else obj_ids  # type: ignore[arg-type]
                 ),
                 props={"cascade_read": cascade},
             ),
@@ -665,7 +665,7 @@ class TestClient:
         user: model.User = self._get_obj(self.user_class, user_or_key)  # type: ignore[assignment]
         obj: model.Model = self._get_obj(
             model_class, obj_or_key, copy=True
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         self._update_object_properties(
             obj, props, set_dummy_link, exclude_none=exclude_none
         )
@@ -711,7 +711,7 @@ class TestClient:
             else:
                 delete_user = self._get_obj(
                     self.user_class, delete_user_or_str
-                )  # type:ignore[assignment]
+                )  # type: ignore[assignment]
 
             is_existing_obj = self.app.handle(
                 self.app.domain.get_crud_command_for_model(model_class)(
@@ -745,13 +745,13 @@ class TestClient:
             missing_ids = expected_ids - actual_ids
             extra_names = [
                 self._get_key_for_obj(
-                    self._get_obj(model_class, x)  # type:ignore[arg-type]
+                    self._get_obj(model_class, x)  # type: ignore[arg-type]
                 )
                 for x in extra_ids
             ]
             missing_names = [
                 self._get_key_for_obj(
-                    self._get_obj(model_class, x)  # type:ignore[arg-type]
+                    self._get_obj(model_class, x)  # type: ignore[arg-type]
                 )
                 for x in missing_ids
             ]
@@ -764,7 +764,7 @@ class TestClient:
     ) -> bool:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         roles = user.roles
         if exclusive:
             return role in roles and len(roles) == 1
@@ -777,7 +777,7 @@ class TestClient:
     def print_organizations(self) -> None:
         organizations: list[model.Organization] = self.read_all(
             self.get_root_user(), model.Organization, cascade=True
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         print("\nOrganizations:")
         for x in sorted(organizations, key=lambda x: x.name):
             print(f"{x.name} ({x.id})")
@@ -785,7 +785,7 @@ class TestClient:
     def print_data_collections(self) -> None:
         data_collections: list[model.DataCollection] = self.read_all(
             self.get_root_user(), model.DataCollection, cascade=True
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         print("\nDataCollections:")
         for x in sorted(data_collections, key=lambda x: x.name):
             print(f"{x.name} ({x.id})")
@@ -794,9 +794,9 @@ class TestClient:
         root_user: model.User = self.get_root_user()
         users: list[model.User] = self.read_all(
             root_user, self.user_class
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         organizations: dict[UUID, model.Organization] = {
-            x.id: x  # type:ignore[misc]
+            x.id: x  # type: ignore[misc]
             for x in self.read_all(root_user, model.Organization)
         }
         print("\nUsers:")
@@ -830,10 +830,10 @@ class TestClient:
         print("\nOrganizationAdminPolicies:")
         for x in sorted(
             org_admin_policies,
-            key=lambda x: (x.organization.name, x.user.name),  # type:ignore[union-attr]
+            key=lambda x: (x.organization.name, x.user.name),  # type: ignore[union-attr]
         ):
             print(
-                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type:ignore[union-attr]
+                f"{x.organization.name}: user={x.user.name} (is_active={x.is_active}) ({x.id})"  # type: ignore[union-attr]
             )
 
     def print_identifier_issuers(self) -> None:
@@ -857,11 +857,11 @@ class TestClient:
             x.identifier_issuer_id for x in organization_identifier_issuer_links
         )
         organizations: dict[UUID, model.Organization] = {
-            x.id: x  # type:ignore[misc]
+            x.id: x  # type: ignore[misc]
             for x in self.read_some("root1_1", model.Organization, organization_ids)
         }
         identifier_issuers: dict[UUID, model.IdentifierIssuer] = {
-            x.id: x  # type:ignore[misc]
+            x.id: x  # type: ignore[misc]
             for x in self.read_some(
                 "root1_1", model.IdentifierIssuer, identifier_issuer_ids
             )
@@ -872,10 +872,10 @@ class TestClient:
             key=lambda x: (
                 organizations[x.organization_id].name,
                 identifier_issuers[x.identifier_issuer_id].code,
-            ),  # type:ignore[union-attr]
+            ),  # type: ignore[union-attr]
         ):
             print(
-                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"  # type:ignore[union-attr]
+                f"{organizations[x.organization_id].name} -> {identifier_issuers[x.identifier_issuer_id].code} ({x.id})"  # type: ignore[union-attr]
             )
 
     def _get_key_for_obj(self, obj: model.Model) -> Any:
@@ -930,7 +930,7 @@ class TestClient:
             x.relationship_field_name: (
                 x.link_field_name,
                 x.link_model_class,
-            )  # type:ignore[misc]
+            )  # type: ignore[misc]
             for x in model_class.ENTITY.links.values()  # type: ignore[union-attr]
             if x.relationship_field_name
         }
@@ -995,7 +995,7 @@ class TestClient:
         elif isinstance(obj, UUID):
             key = [
                 x for x, y in table.items() if get_obj_id(y) == obj
-            ]  # type:ignore[assignment]
+            ]  # type: ignore[assignment]
             if key:
                 pass
             elif on_missing == "raise":
@@ -1007,11 +1007,11 @@ class TestClient:
         elif isinstance(obj, model.Model):
             key = tuple(getattr(obj, x) for x in key_fields)
         elif isinstance(obj, tuple):
-            key = obj  # type:ignore[assignment]
+            key = obj  # type: ignore[assignment]
         else:
             raise ValueError(f"Invalid object: {obj}")
-        key = key if len(key) > 1 else key[0]  # type:ignore[assignment]
-        return key  # type:ignore[return-value]
+        key = key if len(key) > 1 else key[0]  # type: ignore[assignment]
+        return key  # type: ignore[return-value]
 
     def _get_obj(
         self,
@@ -1069,13 +1069,13 @@ class TestClient:
         table = self.db[model_class]
         key = [x for x, y in table.items() if y.id == obj_id]
         if key:
-            key = key[0]  # type:ignore[assignment]
+            key = key[0]  # type: ignore[assignment]
         else:
             raise ValueError(f"{model_class} {obj_id} not found")
-        if key not in table:  # type:ignore[comparison-overlap]
+        if key not in table:  # type: ignore[comparison-overlap]
             raise ValueError(f"{model_class} {obj_id} not found")
-        obj = table[key]  # type:ignore[index]
-        del table[key]  # type:ignore[arg-type]
+        obj = table[key]  # type: ignore[index]
+        del table[key]  # type: ignore[arg-type]
         return obj
 
     @staticmethod
