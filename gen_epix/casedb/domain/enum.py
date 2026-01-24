@@ -318,6 +318,26 @@ class ColTypeSet(Enum):
     )
     HAS_REGION_SET = frozenset({ColType.GEO_REGION})
     HAS_GENETIC_DISTANCE_PROTOCOL = frozenset({ColType.GENETIC_DISTANCE})
+    COL_TYPES_STR_LIKE = frozenset(
+        {
+            ColType.TIME_WEEK,
+            ColType.TIME_MONTH,
+            ColType.TIME_QUARTER,
+            ColType.TIME_YEAR,
+            ColType.GEO_REGION,
+            ColType.NOMINAL,
+            ColType.ORDINAL,
+            ColType.INTERVAL,
+            ColType.TEXT,
+            ColType.ID_PERSON,
+            ColType.ID_SAMPLE,
+            ColType.ID_CASE,
+            ColType.ID_EVENT,
+            ColType.ID_GENETIC_SEQUENCE,
+            ColType.ORGANIZATION,
+            ColType.OTHER,
+        }
+    )
 
 
 # !FIXME: make sure the data reflects these definitions or these definitions are changed accordingly

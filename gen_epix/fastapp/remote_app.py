@@ -223,20 +223,30 @@ class RemoteApp(App):
         entity = model_class.ENTITY
         assert entity is not None
 
-        def handler(
-            base_route: str,
-            batch_route_suffix: str,
-            query_route_suffix: str,
-            ids_route_suffix: str,
-            cmd: CrudCommand,
-        ) -> Any:
+        return partial(
+            self._execute_crud_operation,
+            base_route,
+            batch_route_suffix,
+            query_route_suffix,
+            ids_route_suffix,
+        )
 
-            headers = self.get_headers(cmd)
-            model_class = cmd.MODEL_CLASS
-            return_model_class: type = model_class
-            is_list = False
-            with httpx.Client(verify=self.ssl_context) as client:
-                if cmd.operation == CrudOperation.READ_ALL:
+    def _execute_crud_operation(
+        self,
+        base_route: str,
+        batch_route_suffix: str,
+        query_route_suffix: str,
+        ids_route_suffix: str,
+        cmd: CrudCommand,
+    ) -> Any:
+
+        headers = self.get_headers(cmd)
+        model_class = cmd.MODEL_CLASS
+        return_model_class: type = model_class
+        is_list = False
+        with httpx.Client(verify=self.ssl_context) as client:
+            match cmd.operation:
+                case CrudOperation.READ_ALL:
                     if cmd.query_filter:
                         if cmd.props.get("return_id", False):
                             query_suffix = query_route_suffix.rstrip("/")
@@ -256,7 +266,7 @@ class RemoteApp(App):
                     else:
                         response = client.get(base_route, headers=headers)
                     is_list = True
-                elif cmd.operation == CrudOperation.READ_SOME:
+                case CrudOperation.READ_SOME:
                     assert isinstance(cmd.obj_ids, list)
                     ids = json.dumps([str(x) for x in cmd.obj_ids])
                     response = client.get(
@@ -265,19 +275,19 @@ class RemoteApp(App):
                         params={"ids": ids},
                     )
                     is_list = True
-                elif cmd.operation == CrudOperation.READ_ONE:
+                case CrudOperation.READ_ONE:
                     response = client.get(
                         f"{base_route}/{cmd.obj_ids}",
                         headers=headers,
                     )
-                elif cmd.operation == CrudOperation.CREATE_ONE:
+                case CrudOperation.CREATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.post(
                         f"{base_route}",
                         json=json.loads(cmd.objs.model_dump_json()),
                         headers=headers,
                     )
-                elif cmd.operation == CrudOperation.CREATE_SOME:
+                case CrudOperation.CREATE_SOME:
                     assert isinstance(cmd.objs, list)
                     response = client.post(
                         base_route + batch_route_suffix,
@@ -285,14 +295,14 @@ class RemoteApp(App):
                         headers=headers,
                     )
                     is_list = True
-                elif cmd.operation == CrudOperation.UPDATE_ONE:
+                case CrudOperation.UPDATE_ONE:
                     assert isinstance(cmd.objs, model.Model)
                     response = client.put(
                         f"{base_route}/{cmd.objs.id}",  # type: ignore[attr-defined]
                         json=json.loads(cmd.objs.model_dump_json()),
                         headers=headers,
                     )
-                elif cmd.operation == CrudOperation.UPDATE_SOME:
+                case CrudOperation.UPDATE_SOME:
                     assert isinstance(cmd.objs, list)
                     response = client.put(
                         f"{base_route}",
@@ -300,13 +310,13 @@ class RemoteApp(App):
                         headers=headers,
                     )
                     is_list = True
-                elif cmd.operation == CrudOperation.DELETE_ONE:
+                case CrudOperation.DELETE_ONE:
                     assert isinstance(cmd.obj_ids, UUID)
                     response = client.delete(
                         f"{base_route}/{cmd.obj_ids}", headers=headers
                     )
                     return_model_class = UUID
-                elif cmd.operation == CrudOperation.DELETE_SOME:
+                case CrudOperation.DELETE_SOME:
                     assert isinstance(cmd.obj_ids, list)
                     ids = json.dumps([str(x) for x in cmd.obj_ids])
                     response = client.delete(
@@ -316,19 +326,11 @@ class RemoteApp(App):
                     )
                     return_model_class = UUID
                     is_list = True
-                else:
+                case _:
                     raise NotImplementedError(f"Unsupported operation: {cmd.operation}")
-                response.raise_for_status()
-            retval = self._content_to_obj(response, return_model_class, is_list=is_list)
-            return retval
-
-        return partial(
-            handler,
-            base_route,
-            batch_route_suffix,
-            query_route_suffix,
-            ids_route_suffix,
-        )
+            response.raise_for_status()
+        retval = self._content_to_obj(response, return_model_class, is_list=is_list)
+        return retval
 
     @staticmethod
     def _content_to_obj(

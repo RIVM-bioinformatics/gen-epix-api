@@ -310,64 +310,34 @@ class App:
         self._command_stack.append(cmd)
         is_initial_command = len(self._command_stack) == 1
         if self._logger:
-            if self._logger.level <= logging.DEBUG:
-                self._logger.debug(
-                    self.create_log_message("e94cad9b", "STARTED_COMMAND", cmd=cmd)
-                )
-            elif is_initial_command:
-                self._logger.info(
-                    self.create_log_message(
-                        "e94cad9b",
-                        "STARTED_COMMAND",
-                        add_debug_info=False,
-                        cmd=cmd,
-                    )
-                )
+            self._log_command_start(cmd, is_initial_command)
         # Policy Enforcement Point 1: apply policies from PDP, resulting in
         # unauthorized error. Only applied to the initial command: subsequent commands
         # issued by this command are trusted since requested by a service rather than
         # a user.
         if is_initial_command:
-            try:
-                self.pdp.apply(cmd, EventTiming.BEFORE)
-            except exc.UnauthorizedAuthError as exception:
-                # Not authorized
-                if self._logger:
-                    self._logger.info(
-                        self.create_log_message(
-                            "fd923dbf", "NOT_AUTHORIZED", add_debug_info=False, cmd=cmd
-                        )
-                    )
-                self._command_stack.pop()
-                raise exception
-            except Exception as exception:
-                # Any other error: add stack trace
-                if self._logger:
-                    self._logger.error(
-                        self.create_log_message(
-                            "abd561ff", "ERROR", cmd=cmd, exception=exception
-                        ),
-                        exc_info=True,
-                        stack_info=True,
-                    )
-                self._command_stack.pop()
-                raise exception
+            self._handle_initial_command(cmd)
         # Get handler
-        try:
-            handler = self.get_handler(type(cmd))
-        except Exception as exception:
-            if self._logger:
-                self._logger.error(
-                    self.create_log_message(
-                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
-                    ),
-                    exc_info=True,
-                    stack_info=True,
-                )
-            self._command_stack.pop()
-            raise exception
-
+        handler: Callable = self._get_command_handler(cmd)
         # Execute command
+        retval = self._execute_command(cmd, is_initial_command, handler)
+        if self._logger:
+            self._log_command_finish(cmd, is_initial_command)
+        self._command_stack.pop()
+        return retval
+
+    def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
+        msg = self.create_log_message(
+            "5ab6c248", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
+        )
+        if self._logger.level <= logging.DEBUG:
+            self._logger.debug(msg)
+        elif is_initial_command:
+            self._logger.info(msg)
+
+    def _execute_command(
+        self, cmd: Command, is_initial_command: bool, handler: Callable
+    ) -> Any:
         try:
             # Apply BEFORE listeners
             for listener in self._command_listeners[EventTiming.BEFORE].get(
@@ -415,17 +385,64 @@ class App:
                 )
             self._command_stack.pop()
             raise exception
-
-        if self._logger:
-            msg = self.create_log_message(
-                "5ab6c248", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
-            )
-            if self._logger.level <= logging.DEBUG:
-                self._logger.debug(msg)
-            elif is_initial_command:
-                self._logger.info(msg)
-        self._command_stack.pop()
         return retval
+
+    def _get_command_handler(self, cmd: Command) -> Callable:
+        try:
+            handler = self.get_handler(type(cmd))
+        except Exception as exception:
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "ad536c0b", "ERROR", cmd=cmd, exception=exception
+                    ),
+                    exc_info=True,
+                    stack_info=True,
+                )
+            self._command_stack.pop()
+            raise exception
+        return handler
+
+    def _handle_initial_command(self, cmd: Command) -> None:
+        try:
+            self.pdp.apply(cmd, EventTiming.BEFORE)
+        except exc.UnauthorizedAuthError as exception:
+            # Not authorized
+            if self._logger:
+                self._logger.info(
+                    self.create_log_message(
+                        "fd923dbf", "NOT_AUTHORIZED", add_debug_info=False, cmd=cmd
+                    )
+                )
+            self._command_stack.pop()
+            raise exception
+        except Exception as exception:
+            # Any other error: add stack trace
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "abd561ff", "ERROR", cmd=cmd, exception=exception
+                    ),
+                    exc_info=True,
+                    stack_info=True,
+                )
+            self._command_stack.pop()
+            raise exception
+
+    def _log_command_start(self, cmd: Command, is_initial_command: bool) -> None:
+        if self._logger.level <= logging.DEBUG:
+            self._logger.debug(
+                self.create_log_message("e94cad9b", "STARTED_COMMAND", cmd=cmd)
+            )
+        elif is_initial_command:
+            self._logger.info(
+                self.create_log_message(
+                    "e94cad9b",
+                    "STARTED_COMMAND",
+                    add_debug_info=False,
+                    cmd=cmd,
+                )
+            )
 
     def apply_handler(self, cmd: Command, handler: Callable) -> Any:
         retval = cast(Any, handler(cmd))

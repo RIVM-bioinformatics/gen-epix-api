@@ -2,9 +2,9 @@ import logging
 import uuid
 from typing import Any
 
+import jwt
 from fastapi import Request
 from fastapi.security.utils import get_authorization_scheme_param
-import jwt
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.log import BaseLogItem, LogItem

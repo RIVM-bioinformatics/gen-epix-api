@@ -316,7 +316,7 @@ class UserManager(BaseUserManager):
                         CrudOperation.CREATE_ONE,
                     )
                 )
-            except:
+            except Exception:
                 raise exc.UnauthorizedAuthError("Unable to create user")
 
             return created_user

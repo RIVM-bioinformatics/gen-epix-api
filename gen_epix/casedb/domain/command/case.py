@@ -1,18 +1,16 @@
-from collections import Counter
 from typing import ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
-from gen_epix.casedb.domain import enum, exc
+from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import (
     Command,
     CrudCommand,
     UpdateAssociationCommand,
 )
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
@@ -266,64 +264,6 @@ class RetrieveAlleleProfileCommand(Command):
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to retrieve allele profiles for."
     )
-
-
-class CreateReadSetsForCasesCommand(Command):
-    """
-    Create read sets for a set of cases based on a read set case type column.
-    """
-
-    read_sets: list[model.ReadSetForUpload] = Field(
-        description="The read sets describing for which (case_id, case_type_col_id) a ReadSet is to be created. The case_ids must be unique and the ids must be None.",
-    )
-
-    @field_validator("read_sets", mode="after")
-    def _validate_read_sets(
-        cls,
-        read_sets: list[model.ReadSetForUpload],
-    ) -> list[model.ReadSetForUpload]:
-        case_ids = [x.case_id for x in read_sets]
-        if any(x == NULL_ID for x in case_ids):
-            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
-        duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
-        if duplicate_case_ids:
-            duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
-            raise exc.InvalidArgumentsError(
-                f"Some read sets have identical case_id: {duplicates_str}"
-            )
-        read_set_ids = [x.id for x in read_sets if x.id is not None and x.id != NULL_ID]
-        if read_set_ids:
-            raise exc.InvalidArgumentsError("read_sets may not have id filled in")
-        return read_sets
-
-
-class CreateSeqsForCasesCommand(Command):
-    """
-    Create sequences for a set of cases based on a genetic sequence case type column.
-    """
-
-    seqs: list[model.SeqForUpload] = Field(
-        description="The sequences describing for which (case_id, case_type_col_id) a Seq (genetic sequence) is to be created. The case_ids must be unique and the ids must be None."
-    )
-
-    @field_validator("seqs", mode="after")
-    def _validate_seqs(
-        cls,
-        seqs: list[model.SeqForUpload],
-    ) -> list[model.SeqForUpload]:
-        case_ids = [x.case_id for x in seqs]
-        if any(x == NULL_ID for x in case_ids):
-            raise exc.InvalidArgumentsError(f"Some read sets have null case_id")
-        duplicate_case_ids = [x for x, y in Counter(case_ids).items() if y > 1]
-        if duplicate_case_ids:
-            duplicates_str = ", ".join(str(x) for x in duplicate_case_ids)
-            raise exc.InvalidArgumentsError(
-                f"Some read sets have identical case_id: {duplicates_str}"
-            )
-        seq_ids = [x.id for x in seqs if x.id is not None and x.id != NULL_ID]
-        if seq_ids:
-            raise exc.InvalidArgumentsError("seqs may not have id filled in")
-        return seqs
 
 
 class CreateFileForReadSetCommand(Command):

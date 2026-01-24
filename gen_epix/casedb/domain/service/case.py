@@ -182,9 +182,7 @@ class BaseCaseService(BaseService):
             command.RetrieveGeneticSequenceFastaByCaseCommand,
             self.retrieve_genetic_sequence_fasta_by_case,
         )
-        f(command.CreateReadSetsForCasesCommand, self.create_reads_sets_for_cases)
         f(command.CreateFileForReadSetCommand, self.create_file_for_read_set)
-        f(command.CreateSeqsForCasesCommand, self.create_seqs_for_cases)
         f(command.CreateFileForSeqCommand, self.create_file_for_seq)
         f(
             command.RetrieveSequencingProtocolsCommand,
@@ -545,24 +543,10 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_reads_sets_for_cases(
-        self,
-        cmd: command.CreateReadSetsForCasesCommand,
-    ) -> list[seqdb_model.ReadSet]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def create_file_for_read_set(
         self,
         cmd: command.CreateFileForReadSetCommand,
     ) -> UUID:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def create_seqs_for_cases(
-        self,
-        cmd: command.CreateSeqsForCasesCommand,
-    ) -> list[seqdb_model.Seq]:
         raise NotImplementedError()
 
     @abc.abstractmethod

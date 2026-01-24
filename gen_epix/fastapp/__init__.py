@@ -9,6 +9,7 @@ from gen_epix.fastapp.enum import CrudEndpointType as CrudEndpointType
 from gen_epix.fastapp.enum import CrudOperation as CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet as CrudOperationSet
 from gen_epix.fastapp.enum import EventTiming as EventTiming
+from gen_epix.fastapp.enum import ExceptionHandlingMode as ExceptionHandlingMode
 from gen_epix.fastapp.enum import FieldType as FieldType
 from gen_epix.fastapp.enum import FieldTypeSet as FieldTypeSet
 from gen_epix.fastapp.enum import HttpMethod as HttpMethod

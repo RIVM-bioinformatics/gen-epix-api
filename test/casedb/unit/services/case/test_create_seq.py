@@ -14,9 +14,8 @@ import gen_epix.seqdb.domain.enum as seqdb_enum
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.create_seq import (
-    _get_cases_for_create_read_sets_or_seqs,
+    _get_cases_for_create_file_for_read_sets_or_seqs,
     case_service_create_file_for_read_set_or_seq,
-    case_service_create_read_sets_or_seqs_for_cases,
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
@@ -28,9 +27,8 @@ class TestCasedbCaseCreateSeq:
     Comprehensive test suite for the create_seq.py module in gen_epix.casedb.services.case.
 
     This test suite covers the following key functions:
-    1. case_service_create_read_sets_or_seqs_for_cases - Creates ReadSets or Seqs for cases
-    2. case_service_create_file_for_read_set_or_seq - Creates files for ReadSets or Seqs
-    3. _get_cases_for_create_read_sets_or_seqs - Helper function for validation and ABAC
+    1. case_service_create_file_for_read_set_or_seq - Creates files for ReadSets or Seqs
+    2. _get_cases_for_create_file_for_read_sets_or_seqs - Helper function for validation and ABAC
 
     Test Categories:
     - Success scenarios for creating ReadSets and Seqs
@@ -109,226 +107,6 @@ class TestCasedbCaseCreateSeq:
 
         return [case_seq]
 
-    class TestCaseServiceCreateReadSetsOrSeqsForCases:
-        """Test case_service_create_read_sets_or_seqs_for_cases function."""
-
-        def test_create_read_sets_success(
-            self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: list[Mock]
-        ) -> None:
-            """Test successful creation of ReadSets for cases."""
-            # Setup command
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
-            cmd.user = mock_user
-            cmd.read_sets = sample_case_read_sets
-
-            # Setup mocks
-            mock_case = Mock(spec=model.Case)
-            mock_case.content = {}
-
-            created_read_set = Mock(spec=model.ReadSetForUpload)
-            created_read_set.id = uuid4()
-
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ) as mock_get_abac:
-                mock_abac = Mock()
-                mock_get_abac.return_value = mock_abac
-
-                with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
-                ) as mock_get_cases:
-                    mock_get_cases.return_value = [mock_case]
-                    mock_service.app.handle.return_value = [created_read_set]
-
-                    # Mock the super() call to avoid base service issues
-                    with patch(
-                        "gen_epix.casedb.services.case.create_seq.super"
-                    ) as mock_super:
-                        mock_super.return_value.crud.return_value = None
-
-                        # Execute function
-                        result = case_service_create_read_sets_or_seqs_for_cases(
-                            mock_service, cmd
-                        )
-
-                        # Verify results
-                        assert result == [created_read_set]
-                        assert str(created_read_set.id) in mock_case.content.values()
-                        mock_service.app.handle.assert_called()
-
-        def test_create_seqs_success(
-            self, mock_service: Mock, mock_user: Mock, sample_case_seqs: list[Mock]
-        ) -> None:
-            """Test successful creation of Seqs for cases."""
-            # Setup command
-            cmd = Mock(spec=command.CreateSeqsForCasesCommand)
-            cmd.user = mock_user
-            cmd.seqs = sample_case_seqs
-
-            # Setup mocks
-            mock_case = Mock(spec=model.Case)
-            mock_case.content = {}
-
-            created_seq = Mock(spec=model.SeqForUpload)
-            created_seq.id = uuid4()
-
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ) as mock_get_abac:
-                mock_abac = Mock()
-                mock_get_abac.return_value = mock_abac
-
-                with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
-                ) as mock_get_cases:
-                    mock_get_cases.return_value = [mock_case]
-                    mock_service.app.handle.return_value = [created_seq]
-
-                    # Mock the super() call to avoid base service issues
-                    with patch(
-                        "gen_epix.casedb.services.case.create_seq.super"
-                    ) as mock_super:
-                        mock_super.return_value.crud.return_value = None
-
-                        # Execute function
-                        result = case_service_create_read_sets_or_seqs_for_cases(
-                            mock_service, cmd
-                        )
-
-                        # Verify results
-                        assert result == [created_seq]
-                        assert str(created_seq.id) in mock_case.content.values()
-
-        def test_empty_read_sets_returns_empty_list(
-            self, mock_service: Mock, mock_user: Mock
-        ) -> None:
-            """Test that empty read_sets list returns empty list."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
-            cmd.user = mock_user
-            cmd.read_sets = []
-
-            result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
-
-            assert result == []
-
-        def test_empty_seqs_returns_empty_list(
-            self, mock_service: Mock, mock_user: Mock
-        ) -> None:
-            """Test that empty seqs list returns empty list."""
-            cmd = Mock(spec=command.CreateSeqsForCasesCommand)
-            cmd.user = mock_user
-            cmd.seqs = []
-
-            result = case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
-
-            assert result == []
-
-        def test_invalid_command_type_raises_error(self, mock_service: Mock) -> None:
-            """Test that invalid command type raises InvalidArgumentsError."""
-            cmd = Mock()  # Not a valid command type
-
-            with pytest.raises(exc.InvalidArgumentsError, match="Invalid command type"):
-                case_service_create_read_sets_or_seqs_for_cases(mock_service, cmd)
-
-        def test_create_file_for_read_set_reverse_file(
-            self, mock_service: Mock, mock_user: Mock
-        ) -> None:
-            """Test successful creation of reverse file for ReadSet."""
-            # Setup command
-            cmd = Mock(spec=command.CreateFileForReadSetCommand)
-            cmd.user = mock_user
-            cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
-            cmd.file_content = b"test content"
-            cmd.is_fwd = False  # Test reverse file
-            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-            cmd.file_compression = seqdb_enum.FileCompression.NONE
-            cmd._policies = []
-
-            expected_rev_reads_hash = UUID(
-                hashlib.sha256(cmd.file_content).digest()[:16].hex()
-            )
-
-            # Setup mocks
-            mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
-
-            mock_read_set = Mock(spec=model.ReadSetForUpload)
-            mock_read_set.fwd_file_id = None
-            mock_read_set.rev_file_id = None
-
-            created_file = Mock(spec=model.File)
-            created_file.id = uuid4()
-
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ) as mock_get_abac:
-                mock_abac = Mock()
-                mock_get_abac.return_value = mock_abac
-
-                with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
-                ) as mock_get_cases:
-                    mock_get_cases.return_value = [mock_case]
-
-                    # Configure app.handle to return different objects based on call
-                    def handle_side_effect(*args: Any, **kwargs: Any) -> Any:
-                        cmd_arg = args[0]
-                        if isinstance(cmd_arg, seqdb_command.ReadSetCrudCommand):
-                            if cmd_arg.operation == CrudOperation.READ_ONE:
-                                return mock_read_set
-                            else:  # UPDATE_ONE
-                                return mock_read_set
-                        elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                            return created_file
-                        return Mock()
-
-                    mock_service.app.handle.side_effect = handle_side_effect
-
-                    # Execute function
-                    result = case_service_create_file_for_read_set_or_seq(
-                        mock_service, cmd
-                    )
-
-                    # Verify results
-                    assert result.id == created_file.id    # type: ignore[attr-defined]
-                    assert mock_read_set.rev_file_id.id == created_file.id  # type: ignore[attr-defined]
-                    assert mock_read_set.rev_reads_hash == expected_rev_reads_hash
-
-        def test_read_set_already_has_reverse_file(
-            self, mock_service: Mock, mock_user: Mock
-        ) -> None:
-            """Test error when ReadSet already has reverse file."""
-            cmd = Mock(spec=command.CreateFileForReadSetCommand)
-            cmd.user = mock_user
-            cmd.case_id = uuid4()
-            cmd.case_type_col_id = uuid4()
-            cmd.is_fwd = False
-            cmd.file_format = seqdb_enum.ReadsFileFormat.FASTQ
-            cmd.file_compression = seqdb_enum.FileCompression.NONE
-            cmd._policies = []
-
-            mock_case = Mock(spec=model.Case)
-            mock_case.content = {cmd.case_type_col_id: str(uuid4())}
-
-            mock_read_set = Mock(spec=model.ReadSetForUpload)
-            mock_read_set.rev_file_id = uuid4()  # Already has reverse file
-
-            with patch(
-                "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
-            ):
-                with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
-                ) as mock_get_cases:
-                    mock_get_cases.return_value = [mock_case]
-                    mock_service.app.handle.return_value = mock_read_set
-
-                    with pytest.raises(
-                        exc.InvalidArgumentsError,
-                        match="already has a reverse file linked",
-                    ):
-                        case_service_create_file_for_read_set_or_seq(mock_service, cmd)
-
     class TestCaseServiceCreateFileForReadSetOrSeq:
         """Test case_service_create_file_for_read_set_or_seq function."""
 
@@ -369,7 +147,7 @@ class TestCasedbCaseCreateSeq:
                 mock_get_abac.return_value = mock_abac
 
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
 
@@ -434,7 +212,7 @@ class TestCasedbCaseCreateSeq:
                 mock_get_abac.return_value = mock_abac
 
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
 
@@ -458,7 +236,7 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert result.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
 
@@ -497,7 +275,7 @@ class TestCasedbCaseCreateSeq:
                 mock_get_abac.return_value = mock_abac
 
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
 
@@ -521,7 +299,7 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert result.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
@@ -560,7 +338,7 @@ class TestCasedbCaseCreateSeq:
                 mock_get_abac.return_value = mock_abac
 
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
 
@@ -584,7 +362,7 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id    # type: ignore[attr-defined]
+                    assert result.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
@@ -607,12 +385,13 @@ class TestCasedbCaseCreateSeq:
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
             ):
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
 
                     with pytest.raises(
-                        exc.InvalidArgumentsError, match="No ReadSet linked to case"
+                        exc.InvalidArgumentsError,
+                        match="No ReadSet or Seq linked to case for the given case type column",
                     ):
                         case_service_create_file_for_read_set_or_seq(mock_service, cmd)
 
@@ -639,7 +418,7 @@ class TestCasedbCaseCreateSeq:
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
             ):
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
                     mock_service.app.handle.return_value = mock_read_set
@@ -672,7 +451,7 @@ class TestCasedbCaseCreateSeq:
                 "gen_epix.casedb.services.case.create_seq.BaseCaseAbacPolicy.get_case_abac_from_command"
             ):
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = [mock_case]
                     mock_service.app.handle.return_value = mock_seq
@@ -690,7 +469,7 @@ class TestCasedbCaseCreateSeq:
                 case_service_create_file_for_read_set_or_seq(mock_service, cmd)
 
     class TestGetCasesForCreateReadSetsOrSeqs:
-        """Test _get_cases_for_create_read_sets_or_seqs function."""
+        """Test _get_cases_for_create_file_for_read_sets_or_seqs function."""
 
         @pytest.fixture
         def mock_uow(self) -> Mock:
@@ -742,7 +521,7 @@ class TestCasedbCaseCreateSeq:
             sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for ReadSets creation."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
             case_type_cols, col_id = sample_case_type_cols
             case_type_cols[0].col_id = col_id
             sample_cols_genetic_reads[0].id = col_id
@@ -761,7 +540,7 @@ class TestCasedbCaseCreateSeq:
 
             mock_service.repository.crud.side_effect = crud_side_effect
 
-            result = _get_cases_for_create_read_sets_or_seqs(
+            result = _get_cases_for_create_file_for_read_sets_or_seqs(
                 mock_service,
                 cmd,
                 mock_case_abac,
@@ -783,7 +562,7 @@ class TestCasedbCaseCreateSeq:
             sample_cases: list[Mock],
         ) -> None:
             """Test successful retrieval of cases for Seqs creation."""
-            cmd = Mock(spec=command.CreateSeqsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForSeqCommand)
             case_type_cols, col_id = sample_case_type_cols
             case_type_cols[0].col_id = col_id
             sample_cols_genetic_sequence[0].id = col_id
@@ -802,7 +581,7 @@ class TestCasedbCaseCreateSeq:
 
             mock_service.repository.crud.side_effect = crud_side_effect
 
-            result = _get_cases_for_create_read_sets_or_seqs(
+            result = _get_cases_for_create_file_for_read_sets_or_seqs(
                 mock_service,
                 cmd,
                 mock_case_abac,
@@ -818,7 +597,7 @@ class TestCasedbCaseCreateSeq:
             self, mock_service: Mock, mock_case_abac: Mock, mock_uow: Mock
         ) -> None:
             """Test that invalid column type for ReadSets raises InvalidArgumentsError."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
 
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
@@ -842,7 +621,7 @@ class TestCasedbCaseCreateSeq:
                 exc.InvalidArgumentsError,
                 match="Some columns are not of type GENETIC_READS",
             ):
-                _get_cases_for_create_read_sets_or_seqs(
+                _get_cases_for_create_file_for_read_sets_or_seqs(
                     mock_service,
                     cmd,
                     mock_case_abac,
@@ -856,7 +635,7 @@ class TestCasedbCaseCreateSeq:
             self, mock_service: Mock, mock_case_abac: Mock, mock_uow: Mock
         ) -> None:
             """Test that mismatched case types raise InvalidArgumentsError."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
 
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
@@ -884,7 +663,7 @@ class TestCasedbCaseCreateSeq:
             mock_service.repository.crud.side_effect = crud_side_effect
 
             with pytest.raises(exc.InvalidArgumentsError, match="different case type"):
-                _get_cases_for_create_read_sets_or_seqs(
+                _get_cases_for_create_file_for_read_sets_or_seqs(
                     mock_service,
                     cmd,
                     mock_case_abac,
@@ -898,7 +677,7 @@ class TestCasedbCaseCreateSeq:
             self, mock_service: Mock, mock_uow: Mock
         ) -> None:
             """Test that ABAC authorization failure raises UnauthorizedAuthError."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
 
             # Setup non-full access ABAC
             case_abac = Mock(spec=model.CaseAbac)
@@ -937,7 +716,7 @@ class TestCasedbCaseCreateSeq:
             }
 
             with pytest.raises(exc.UnauthorizedAuthError, match="no WRITE_CASE access"):
-                _get_cases_for_create_read_sets_or_seqs(
+                _get_cases_for_create_file_for_read_sets_or_seqs(
                     mock_service,
                     cmd,
                     case_abac,
@@ -957,7 +736,7 @@ class TestCasedbCaseCreateSeq:
             mock_service.repository.crud.return_value = []
 
             with pytest.raises(exc.InvalidArgumentsError, match="Invalid command type"):
-                _get_cases_for_create_read_sets_or_seqs(
+                _get_cases_for_create_file_for_read_sets_or_seqs(
                     mock_service, cmd, mock_case_abac, mock_uow, uuid4(), [], []
                 )
 
@@ -968,7 +747,7 @@ class TestCasedbCaseCreateSeq:
             self, mock_service: Mock, mock_user: Mock, sample_case_read_sets: list[Mock]
         ) -> None:
             """Test the complete workflow with full ABAC access."""
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.read_sets = sample_case_read_sets
 
@@ -999,7 +778,7 @@ class TestCasedbCaseCreateSeq:
             ) as mock_get_abac:
                 mock_get_abac.return_value = case_abac
 
-                # Mock repository calls in _get_cases_for_create_read_sets_or_seqs
+                # Mock repository calls in _get_cases_for_create_file_for_read_sets_or_seqs
                 def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                     model_class = args[2]
                     if model_class == model.CaseTypeCol:
@@ -1018,7 +797,7 @@ class TestCasedbCaseCreateSeq:
                 ) as mock_super:
                     mock_super.return_value.crud.return_value = None
 
-                    result = case_service_create_read_sets_or_seqs_for_cases(
+                    result = case_service_create_file_for_read_set_or_seq(
                         mock_service, cmd
                     )
 
@@ -1045,7 +824,7 @@ class TestCasedbCaseCreateSeq:
                 case_read_set.read_set = read_set
                 case_read_sets.append(case_read_set)
 
-            cmd = Mock(spec=command.CreateReadSetsForCasesCommand)
+            cmd = Mock(spec=command.CreateFileForReadSetCommand)
             cmd.user = mock_user
             cmd.read_sets = case_read_sets
 
@@ -1068,7 +847,7 @@ class TestCasedbCaseCreateSeq:
                 mock_get_abac.return_value = mock_abac
 
                 with patch(
-                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_read_sets_or_seqs"
+                    "gen_epix.casedb.services.case.create_seq._get_cases_for_create_file_for_read_sets_or_seqs"
                 ) as mock_get_cases:
                     mock_get_cases.return_value = mock_cases
                     mock_service.app.handle.return_value = created_read_sets
@@ -1078,7 +857,7 @@ class TestCasedbCaseCreateSeq:
                     ) as mock_super:
                         mock_super.return_value.crud.return_value = None
 
-                        result = case_service_create_read_sets_or_seqs_for_cases(
+                        result = case_service_create_file_for_read_set_or_seq(
                             mock_service, cmd
                         )
 

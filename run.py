@@ -14,7 +14,7 @@ from gen_epix.commondb.util import set_env_variables
 
 class Run:
 
-    APP_URI = {
+    APP_URI: dict[AppType, dict[str, str | int]] = {
         AppType.CASEDB: {
             "app": "gen_epix.casedb.app:FAST_API",
             "host": "0.0.0.0",
@@ -40,7 +40,7 @@ class Run:
     APP_SSL_KEYFILE = "./cert/key.pem"
     APP_SSL_CERTFILE = "./cert/cert.pem"
 
-    ETL_ENV = {
+    ETL_ENV: dict[AppType, dict[str, str | list[str]]] = {
         AppType.CASEDB: {
             "module_root": "gen_epix.casedb",
             "targets": [
@@ -151,35 +151,42 @@ class Run:
 
     ## test
     def test_all(self) -> None:
-        import pytest
+        import subprocess
 
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "--cov=gen_epix",
-                "--cov-report=html:test/output/coverage.html",
-                "--cov-report=xml:test/output/coverage.xml",
-                "test/filter/unit",
-                "test/transform/unit",
-                "test/fastapp/unit",
-                "test/commondb/unit",
-                "test/commondb/integration",
-                "test/casedb/unit",
-                "test/casedb/integration",
-                "test/seqdb/unit",
-                "test/seqdb/integration",
-                "test/omopdb/unit",
-                "test/omopdb/integration",
-                "test/general/docs",
-                "test/end_to_end",
-                # Not normally included, uncomment if needed
-                # "test/casedb/performance",
-                # "test/seqdb/performance",
-                # "test/omopdb/performance",
-                # "test/commondb/performance",
-                # "test/fastapp/performance",
-                # "test/general/code",
-            ]
+        pytest_args = Run.DEFAULT_PYTEST_ARGS + [
+            "test/filter/unit",
+            "test/transform/unit",
+            "test/fastapp/unit",
+            "test/commondb/unit",
+            "test/commondb/integration",
+            "test/casedb/unit",
+            "test/casedb/integration",
+            "test/seqdb/unit",
+            "test/seqdb/integration",
+            "test/omopdb/unit",
+            "test/omopdb/integration",
+            "test/general/docs",
+            "test/end_to_end",
+            # Not normally included, uncomment if needed
+            # "test/casedb/performance",
+            # "test/seqdb/performance",
+            # "test/omopdb/performance",
+            # "test/commondb/performance",
+            # "test/fastapp/performance",
+            # "test/general/code",
+        ]
+
+        subprocess.run(
+            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            check=False,
+        )
+        # Generate HTML report
+        subprocess.run(
+            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+        )
+        # Generate XML report
+        subprocess.run(
+            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
         )
 
     def test_all_incl_performance(self) -> None:

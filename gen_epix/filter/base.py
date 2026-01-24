@@ -128,23 +128,10 @@ class Filter(BaseModel):
             bool: True if the row matches the filter, False otherwise.
         """
         # Match if both key exists, value not null and value matches
-        if self.key is None:
-            raise ValueError("Key must be set to apply filter to a row.")
-        if not map_fn:
-            map_fn = lambda x: x
-        key = self.key
+        map_fn, key = self._initialize_mapping(map_fn)
         if na_values is None:
-            return (
-                (is_model or key in row)
-                and self._get_row_value(row, key, is_model) is not None
-                and self._match(map_fn(self._get_row_value(row, key, is_model)))
-            ) ^ self.invert
-        else:
-            return (
-                (is_model or key in row)
-                and self._get_row_value(row, key, is_model) not in na_values
-                and self._match(map_fn(self._get_row_value(row, key, is_model)))
-            ) ^ self.invert
+            return self._is_row_match_without_na_values(row, is_model, map_fn, key)
+        return self._is_row_match_with_na_values(row, is_model, map_fn, key, na_values)
 
     def match_rows(
         self,
@@ -164,26 +151,14 @@ class Filter(BaseModel):
         Yields:
             bool: True if the row matches the filter, False otherwise.
         """
-        # Match if both key exists, value not null and value matches
-        if self.key is None:
-            raise ValueError("Key must be set to apply filter to a row.")
-        if not map_fn:
-            map_fn = lambda x: x
-        key = self.key
-        if na_values is None:
-            for row in rows:
-                yield (
-                    (is_model or key in row)
-                    and self._get_row_value(row, key, is_model) is not None
-                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
-                ) ^ self.invert
-        else:
-            for row in rows:
-                yield (
-                    (is_model or key in row)
-                    and self._get_row_value(row, key, is_model) not in na_values
-                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
-                ) ^ self.invert
+        map_fn, key = self._initialize_mapping(map_fn)
+        for row in rows:
+            if na_values is None:
+                yield self._is_row_match_without_na_values(row, is_model, map_fn, key)
+            else:
+                yield self._is_row_match_with_na_values(
+                    row, is_model, map_fn, key, na_values
+                )
 
     def filter_rows(
         self,
@@ -195,28 +170,57 @@ class Filter(BaseModel):
         """
         Analogous to match_rows, but yields the rows that match the filter instead of a bool.
         """
-        # Match if both key exists, value not null and value matches
+        map_fn, key = self._initialize_mapping(map_fn)
+        for row in rows:
+            if na_values is None:
+                if self._is_row_match_without_na_values(row, is_model, map_fn, key):
+                    yield row
+            else:
+                if self._is_row_match_with_na_values(
+                    row, is_model, map_fn, key, na_values
+                ):
+                    yield row
+
+    def _is_row_match_without_na_values(
+        self,
+        row: dict[Hashable, Any | None] | BaseModel,
+        is_model: bool,
+        map_fn: Callable[[Any], Any],
+        key: Hashable,
+    ) -> bool:
+        if (
+            (is_model or key in row)
+            and self._get_row_value(row, key, is_model) is not None
+            and self._match(map_fn(self._get_row_value(row, key, is_model)))
+        ) ^ self.invert:
+            return True
+        return False
+
+    def _is_row_match_with_na_values(
+        self,
+        row: dict[Hashable, Any | None] | BaseModel,
+        is_model: bool,
+        map_fn: Callable[[Any], Any],
+        key: Hashable,
+        na_values: set[Any],
+    ) -> bool:
+        if (
+            (is_model or key in row)
+            and self._get_row_value(row, key, is_model) not in na_values
+            and self._match(map_fn(self._get_row_value(row, key, is_model)))
+        ) ^ self.invert:
+            return True
+        return False
+
+    def _initialize_mapping(
+        self, map_fn: Callable[[Any], Any] | None
+    ) -> tuple[Callable[[Any], Any], Hashable]:
         if self.key is None:
             raise ValueError("Key must be set to apply filter to a row.")
         if not map_fn:
             map_fn = lambda x: x
         key = self.key
-        if na_values is None:
-            for row in rows:
-                if (
-                    (is_model or key in row)
-                    and self._get_row_value(row, key, is_model) is not None
-                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
-                ) ^ self.invert:
-                    yield row
-        else:
-            for row in rows:
-                if (
-                    (is_model or key in row)
-                    and self._get_row_value(row, key, is_model) not in na_values
-                    and self._match(map_fn(self._get_row_value(row, key, is_model)))
-                ) ^ self.invert:
-                    yield row
+        return map_fn, key
 
     @abc.abstractmethod
     def _match(self, value: Any) -> bool:

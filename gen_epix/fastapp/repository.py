@@ -119,65 +119,86 @@ class BaseRepository(abc.ABC):
             return (getattr(obj, link_field_name1), getattr(obj, link_field_name2))
 
         # Parse input and create some general functions and values
-        association_objs = list(association_objs)
-        assert model_class.ENTITY is not None
-        id_field_name = model_class.ENTITY.id_field_name
-        if not isinstance(id_field_name, str):
-            raise exc.RepositoryServiceError(
-                f"Model {model_class.__name__}: id_field_name other than string not implemented"
-            )
-        get_association_id: Callable[[Model], Hashable] = lambda x: getattr(
-            x, id_field_name
+        (
+            association_objs,
+            id_field_name,
+            get_association_id,
+            excluded_obj_ids,
+            excluded_id_pairs,
+        ) = self._parse_update_association_parameters(
+            model_class, association_objs, excluded_association_objs, get_id_pair
         )
-        excluded_obj_ids = {get_association_id(x) for x in excluded_association_objs}
-        excluded_id_pairs = {get_id_pair(x) for x in excluded_association_objs}
-
         # Special case: no association objects, i.e. delete all associations of either obj1 or obj2
         if not association_objs:
             # Go over obj_id1 and obj_id2, only one of both should be provided
-            for obj_id, link_field_name in zip(
-                [obj_id1, obj_id2], [link_field_name1, link_field_name2]
-            ):
-                if obj_id is None:
-                    continue
-                to_delete_obj_ids = [
-                    get_association_id(x)  # type: ignore
-                    for x in self.crud(  # type: ignore
-                        uow,
-                        user_id,
-                        model_class,
-                        None,
-                        None,
-                        CrudOperation.READ_ALL,
-                    )
-                    if getattr(x, link_field_name) == obj_id
-                    and get_association_id(x) not in excluded_obj_ids  # type: ignore
-                ]
-                self.crud(
-                    uow,
-                    user_id,
-                    model_class,
-                    None,
-                    to_delete_obj_ids,
-                    CrudOperation.DELETE_SOME,
-                )
+            self._delete_without_associations(
+                uow,
+                user_id,
+                model_class,
+                link_field_name1,
+                link_field_name2,
+                obj_id1,
+                obj_id2,
+                get_association_id,
+                excluded_obj_ids,
+            )
             return []
-
         # Get obj_id_pairs and verify uniqueness
-        obj_id_pairs = [get_id_pair(x) for x in association_objs]
-        obj_dict = dict(zip(obj_id_pairs, association_objs))
-        if len(obj_id_pairs) != len(frozenset(obj_id_pairs)):
-            invalid_ids = list(
-                chain.from_iterable(
-                    [x for x in obj_id_pairs if obj_id_pairs.count(x) > 1]
-                )
-            )
-            raise exc.DuplicateIdsError(
-                f"Model {model_class.__name__}: object id pairs are not unique",
-                ids=invalid_ids,
-            )
-
+        obj_id_pairs, obj_dict = self._get_obj_id_pairs(
+            model_class, association_objs, get_id_pair
+        )
         # Verify if any excluded ids or id pairs are present
+        self._verify_any_excluded_ids_or_pairs(
+            model_class,
+            association_objs,
+            get_association_id,
+            excluded_obj_ids,
+            excluded_id_pairs,
+            obj_id_pairs,
+        )
+
+        # Retrieve non-excluded existing objects
+        # TODO: replace retrieval of existing objects with a more efficient method
+        existing_objs: list[Model] = [
+            x  # type: ignore
+            for x in self.crud(  # type: ignore
+                uow, user_id, model_class, None, None, CrudOperation.READ_ALL
+            )
+            if get_id_pair(x) in obj_dict  # type: ignore
+        ]
+        existing_obj_dict: dict[Hashable, Model] = {
+            get_id_pair(x): x
+            for x in existing_objs
+            if get_id_pair(x) not in excluded_id_pairs
+        }
+
+        # Determine association objects to create, update or delete
+        self._handle_association_transactions(
+            uow,
+            user_id,
+            model_class,
+            get_id_pair,
+            id_field_name,
+            get_association_id,
+            obj_dict,
+            existing_obj_dict,
+        )
+
+        return (
+            [get_association_id(x) for x in association_objs]
+            if return_id
+            else association_objs
+        )
+
+    def _verify_any_excluded_ids_or_pairs(
+        self,
+        model_class: type[Model],
+        association_objs: Iterable[Model],
+        get_association_id: Callable[[Model], Hashable],
+        excluded_obj_ids: set[Hashable],
+        excluded_id_pairs: set[tuple[Hashable, Hashable]],
+        obj_id_pairs: list[tuple[Hashable, Hashable]],
+    ) -> None:
         if excluded_obj_ids:
             invalid_association_obj_ids = [
                 get_association_id(x)
@@ -196,27 +217,45 @@ class BaseRepository(abc.ABC):
                     f"Model {model_class.__name__}: association object id pairs contains some excluded pairs",
                 )
 
-        # Retrieve non-excluded existing objects
-        # TODO: replace retrieval of existing objects with a more efficient method
-        all_existing_objs: list[Model] = list(
-            self.crud(uow, user_id, model_class, None, None, CrudOperation.READ_ALL)  # type: ignore
+    def _get_obj_id_pairs(
+        self,
+        model_class: type[Model],
+        association_objs: Iterable[Model],
+        get_id_pair: Callable[[Model], tuple[Hashable, Hashable]],
+    ) -> tuple[list[tuple[Hashable, Hashable]], dict[tuple[Hashable, Hashable], Model]]:
+        obj_id_pairs = [get_id_pair(x) for x in association_objs]
+        obj_dict: dict[tuple[Hashable, Hashable], Model] = dict(
+            zip(obj_id_pairs, association_objs)
         )
-        # Filter to get only associations for the specified relationship (obj_id1 or obj_id2)
-        relevant_existing_objs = self._get_relevant_existing_objs(
-            model_class,
-            link_field_name1,
-            link_field_name2,
-            obj_id1,
-            obj_id2,
-            all_existing_objs,
-        )
-        existing_obj_dict: dict[Hashable, Model] = {
-            get_id_pair(x): x
-            for x in relevant_existing_objs
-            if get_id_pair(x) not in excluded_id_pairs
-        }
+        self._verify_obj_id_pairs_uniqueness(model_class, obj_id_pairs)
 
-        # Determine association objects to create, update or delete
+        return obj_id_pairs, obj_dict
+
+    def _verify_obj_id_pairs_uniqueness(
+        self, model_class: type[Model], obj_id_pairs: list[tuple[Hashable, Hashable]]
+    ) -> None:
+        if len(obj_id_pairs) != len(frozenset(obj_id_pairs)):
+            invalid_ids = list(
+                chain.from_iterable(
+                    [x for x in obj_id_pairs if obj_id_pairs.count(x) > 1]
+                )
+            )
+            raise exc.DuplicateIdsError(
+                f"Model {model_class.__name__}: object id pairs are not unique",
+                ids=invalid_ids,
+            )
+
+    def _handle_association_transactions(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: type[Model],
+        get_id_pair: Callable[[Model], tuple[Hashable, Hashable]],
+        id_field_name: str,
+        get_association_id: Callable[[Model], Hashable],
+        obj_dict: dict[tuple[Hashable, Hashable], Model],
+        existing_obj_dict: dict[Hashable, Model],
+    ) -> None:
         to_create_objs = [y for x, y in obj_dict.items() if x not in existing_obj_dict]
         to_update_objs = [y for x, y in obj_dict.items() if x in existing_obj_dict]
         to_delete_objs = [y for x, y in existing_obj_dict.items() if x not in obj_dict]
@@ -272,10 +311,76 @@ class BaseRepository(abc.ABC):
                 CrudOperation.DELETE_SOME,
             )
 
+    def _delete_without_associations(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: Hashable | None,
+        model_class: type[Model],
+        link_field_name1: str,
+        link_field_name2: str,
+        obj_id1: Hashable | None,
+        obj_id2: Hashable | None,
+        get_association_id: Callable[[Model], Hashable],
+        excluded_obj_ids: set[Hashable],
+    ) -> None:
+        for obj_id, link_field_name in zip(
+            [obj_id1, obj_id2], [link_field_name1, link_field_name2]
+        ):
+            if obj_id is None:
+                continue
+            to_delete_obj_ids = [
+                get_association_id(x)  # type: ignore
+                for x in self.crud(  # type: ignore
+                    uow,
+                    user_id,
+                    model_class,
+                    None,
+                    None,
+                    CrudOperation.READ_ALL,
+                )
+                if getattr(x, link_field_name) == obj_id
+                and get_association_id(x) not in excluded_obj_ids  # type: ignore
+            ]
+            self.crud(
+                uow,
+                user_id,
+                model_class,
+                None,
+                to_delete_obj_ids,
+                CrudOperation.DELETE_SOME,
+            )
+
+    def _parse_update_association_parameters(
+        self,
+        model_class: type[Model],
+        association_objs: Iterable[Model],
+        excluded_association_objs: Iterable[Model],
+        get_id_pair: Callable[[Model], tuple[Hashable, Hashable]],
+    ) -> tuple[
+        Iterable[Model],
+        str,
+        Callable[[Model], Hashable],
+        set[Hashable],
+        set[tuple[Hashable, Hashable]],
+    ]:
+        association_objs = list(association_objs)
+        assert model_class.ENTITY is not None
+        id_field_name = model_class.ENTITY.id_field_name
+        if not isinstance(id_field_name, str):
+            raise exc.RepositoryServiceError(
+                f"Model {model_class.__name__}: id_field_name other than string not implemented"
+            )
+        get_association_id: Callable[[Model], Hashable] = lambda x: getattr(
+            x, id_field_name
+        )
+        excluded_obj_ids = {get_association_id(x) for x in excluded_association_objs}
+        excluded_id_pairs = {get_id_pair(x) for x in excluded_association_objs}
         return (
-            [get_association_id(x) for x in association_objs]
-            if return_id
-            else association_objs
+            association_objs,
+            id_field_name,
+            get_association_id,
+            excluded_obj_ids,
+            excluded_id_pairs,
         )
 
     def _get_relevant_existing_objs(
