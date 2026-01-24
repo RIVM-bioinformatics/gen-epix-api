@@ -9,7 +9,7 @@ urllib3==2.6.3
 pyjwt==2.10.1
 
 #database handling
-sqlalchemy==2.0.45
+sqlalchemy==2.0.46
 sqlalchemy_utils==0.42.1
 
 # Data models/handling
