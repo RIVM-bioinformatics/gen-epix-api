@@ -24,7 +24,7 @@ types-setuptools==80.9.*
 python-multipart==0.0.21
 
 # calculation
-scipy==1.16.3
+scipy==1.17.0
 numpy==2.4.1
 biopython==1.86
 
