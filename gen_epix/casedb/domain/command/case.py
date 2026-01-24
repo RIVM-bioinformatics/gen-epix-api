@@ -163,6 +163,9 @@ class RetrieveCaseRightsCommand(Command):
     Retrieve access rights for a set of cases.
     """
 
+    case_type_id: UUID = Field(
+        description="The case type id to retrieve case access for."
+    )
     case_ids: list[UUID] = Field(
         description="The case ids to retrieve access for. UNIQUE"
     )
@@ -213,6 +216,9 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     a genetic distance case type column.
     """
 
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to."
+    )
     tree_algorithm: enum.TreeAlgorithmType = Field(
         description="The algorithm to use for constructing the phylogenetic tree."
     )
@@ -230,6 +236,9 @@ class RetrieveGeneticSequenceByCaseCommand(Command):
     sequence case type column.
     """
 
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to."
+    )
     genetic_sequence_case_type_col_id: UUID = Field(
         description="The ID of the genetic sequence case type column to use."
     )
@@ -244,25 +253,14 @@ class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     sequence case type column. An iterator is returned that yields the FASTA lines.
     """
 
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to."
+    )
     genetic_sequence_case_type_col_id: UUID = Field(
         description="The ID of the genetic sequence case type column to use."
     )
     case_ids: list[UUID] = Field(
         description="The IDs of the cases to retrieve genetic sequences for."
-    )
-
-
-class RetrieveAlleleProfileCommand(Command):
-    """
-    Retrieve a set of allele profiles based on a set of case IDs and a genetic distance
-    case type column.
-    """
-
-    genetic_distance_case_type_col_id: UUID = Field(
-        description="The ID of the genetic distance case type column to use."
-    )
-    case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve allele profiles for."
     )
 
 

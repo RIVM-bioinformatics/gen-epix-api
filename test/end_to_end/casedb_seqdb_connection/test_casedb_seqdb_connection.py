@@ -200,6 +200,7 @@ def test_casedb_seqdb_connection(
                 phylogenetic_tree = casedb_app.handle(
                     command.RetrievePhylogeneticTreeByCasesCommand(
                         user=root_user,
+                        case_type_id=case_type_col.case_type_id,
                         genetic_distance_case_type_col_id=case_type_col.id,
                         tree_algorithm=tree_algorithm_code,
                         case_ids=case_ids,

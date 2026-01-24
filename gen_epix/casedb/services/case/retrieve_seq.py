@@ -6,7 +6,6 @@ import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
@@ -14,6 +13,7 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 def case_service_retrieve_phylogenetic_tree(
     self: BaseCaseService, cmd: command.RetrievePhylogeneticTreeByCasesCommand
 ) -> model.PhylogeneticTree:
+    case_type_id = cmd.case_type_id
     dist_case_type_col_id = cmd.genetic_distance_case_type_col_id
     tree_algorithm_code = cmd.tree_algorithm
     case_ids = cmd.case_ids
@@ -33,7 +33,10 @@ def case_service_retrieve_phylogenetic_tree(
             dist_case_type_col_id,
             CrudOperation.READ_ONE,
         )
-        case_type_id = dist_case_type_col.case_type_id
+        if dist_case_type_col.case_type_id != case_type_id:
+            raise exc.InvalidArgumentsError(
+                f"Case type column {dist_case_type_col_id} does not belong to case type {case_type_id}"
+            )
         dist_col: model.Col = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
@@ -115,8 +118,8 @@ def case_service_retrieve_phylogenetic_tree(
             user.id,
             temp_case_abac,
             enum.CaseRight.READ_CASE,
+            case_type_id,
             case_ids=case_ids,
-            case_type_id=case_type_id,
             filter_content=True,
         )
 
@@ -151,6 +154,7 @@ def case_service_retrieve_genetic_sequence_by_case(
     self: BaseCaseService,
     cmd: command.RetrieveGeneticSequenceByCaseCommand,
 ) -> list[model.GeneticSequence]:
+    case_type_id = cmd.case_type_id
     seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
     case_ids = cmd.case_ids
     user, repository = self._get_user_and_repository(cmd)
@@ -167,6 +171,7 @@ def case_service_retrieve_genetic_sequence_by_case(
             uow,
             user,
             case_abac,
+            case_type_id,
             case_ids,
             seq_case_type_col_id,
         )
@@ -201,6 +206,7 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
     -> casedb forwards that iterator
     -> FastAPI wraps it in a StreamingResponse.
     """
+    case_type_id = cmd.case_type_id
     seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
     case_ids = cmd.case_ids
     user, repository = self._get_user_and_repository(cmd)
@@ -219,6 +225,7 @@ def case_service_retrieve_genetic_sequence_fasta_by_case(
             uow,
             user,
             case_abac,
+            case_type_id,
             case_ids,
             seq_case_type_col_id,
         )
@@ -268,6 +275,7 @@ def _get_seq_ids_from_cases(
     uow: BaseUnitOfWork,
     user: model.User,
     case_abac: model.CaseAbac,
+    case_type_id: UUID,
     case_ids: list[UUID],
     seq_case_type_col_id: UUID,
 ) -> list[UUID | None]:
@@ -277,7 +285,7 @@ def _get_seq_ids_from_cases(
         user.id,  # type: ignore[arg-type]
         case_abac,
         enum.CaseRight.READ_CASE,
-        NULL_ID,
+        case_type_id,
         case_ids=case_ids,
         filter_content=True,
     )

@@ -1,6 +1,7 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from typing import Iterable
 
 import pytest
 
@@ -14,6 +15,7 @@ from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
@@ -165,19 +167,19 @@ class TestContent:
         )
 
         # Get some refdata as org user
-        case_types = app.handle(
+        case_types: list[model.CaseType] = app.handle(
             command.CaseTypeCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        case_sets = app.handle(
+        case_sets: list[model.CaseSet] = app.handle(
             command.CaseSetCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        concept_sets = app.handle(
+        concept_sets: list[model.ConceptSet] = app.handle(
             command.ConceptSetCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
@@ -207,9 +209,10 @@ class TestContent:
             x.case_type_id for x in case_type_stats if x.n_cases > 0
         }
         for case_type in case_types:
+            assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
-            complete_case_type: model.CompleteCaseType = app.handle(  # type: ignore
+            complete_case_type: model.CompleteCaseType = app.handle(
                 command.RetrieveCompleteCaseTypeCommand(
                     user=org_user,
                     case_type_id=case_type.id,
@@ -221,7 +224,7 @@ class TestContent:
 
             # Retrieve cases based on a filter
             # print(f"Retrieving cases for case type {complete_case_type.name}")
-            filters = []
+            filters: list = []
             for case_type_col in complete_case_type.case_type_cols.values():
                 col = complete_case_type.cols[case_type_col.col_id]
                 if col.concept_set_id:
@@ -278,10 +281,14 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 assert dist_case_type_col is not None
-                for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
+                assert dist_case_type_col.id is not None
+                for tree_algorithm_code in (
+                    dist_case_type_col.tree_algorithm_codes or []
+                ):
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
+                            case_type_id=complete_case_type.id,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
                             tree_algorithm=tree_algorithm_code,
                             case_ids=case_ids,
@@ -326,25 +333,26 @@ class TestContent:
                 #         raise ValueError(
                 #             "Genetic sequence should have nucleotide_sequence attribute"
                 #         )
-                # TODO: enable once seqdb service retrieval of FASTA is implemented properly
-                # # Retrieve genetic sequences in FASTA format
-                # fasta_iterator: Iterable[str] = app.handle(
-                #     command.RetrieveGeneticSequenceFastaByCaseCommand(
-                #         user=org_user,
-                #         case_ids=has_seq_case_ids[0:1],
-                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
-                #     )
-                # )
-                # if not fasta_iterator:
-                #     raise ValueError("generator should not be empty")
-                # # convert generator to string
-                # fasta_str = "\n".join(fasta_iterator)
-                # if not fasta_str.startswith(">"):
-                #     raise ValueError("FASTA string should start with '>'")
-                # if "\n" not in fasta_str:
-                #     raise ValueError("FASTA string should contain new lines")
+
+                # Retrieve genetic sequences in FASTA format
+                fasta_iterator: Iterable[str] = app.handle(
+                    command.RetrieveGeneticSequenceFastaByCaseCommand(
+                        user=org_user,
+                        case_type_id=complete_case_type.id,
+                        case_ids=has_seq_case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
+                    )
+                )
+                if not fasta_iterator:
+                    raise ValueError("generator should not be empty")
+                # convert generator to string
+                fasta_str = "\n".join(fasta_iterator)
+                if not fasta_str.startswith(">"):
+                    raise ValueError("FASTA string should start with '>'")
+                if "\n" not in fasta_str:
+                    raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
-                sequencing_protocols: list[model.SequencingProtocol] = app.handle(
+                sequencing_protocols: list[seqdb_model.SequencingProtocol] = app.handle(
                     command.RetrieveSequencingProtocolsCommand(
                         user=org_user,
                     )
@@ -355,7 +363,7 @@ class TestContent:
                     if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
-                assembly_protocols: list[model.AssemblyProtocol] = app.handle(
+                assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
                     command.RetrieveAssemblyProtocolsCommand(
                         user=org_user,
                     )
@@ -368,14 +376,15 @@ class TestContent:
 
         # Go over all case sets
         for case_set in case_sets:
-            case_ids: model.CaseQueryResult = app.handle(
+            case_query_result = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(
                         case_type_id=case_set.case_type_id,
                     ),
                 )
-            ).case_ids
+            )
+            case_ids = case_query_result.case_ids
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
@@ -386,7 +395,7 @@ class TestContent:
 
         # Read all for all models with read permission
         for model_class, command_class in app._model_crud_command_map.items():
-            permissions: frozenset[fastapp.Permission] = (
+            permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
                 app.domain.get_permissions_for_command(command_class)
             )
             if PermissionType.READ not in {x.permission_type for x in permissions}:
