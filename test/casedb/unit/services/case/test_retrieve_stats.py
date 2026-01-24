@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, cast
 from unittest import TestCase
 from unittest.mock import Mock, patch
@@ -72,7 +72,7 @@ class BaseRetrieveStatsTestCase(TestCase):
             subject_id=None,
             created_in_data_collection_id=created_in_data_collection_id,
             count=count,
-            case_date=case_date or datetime.now(),
+            case_date=case_date or datetime.now(timezone.utc),
             content={},
         )
 
@@ -136,8 +136,8 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
     def test_no_case_type_ids_full_access_reads_all(self) -> None:
         dt_filter = TypedDatetimeRangeFilter(
             type=FilterType.DATETIME_RANGE.value,
-            lower_bound=datetime.now() - timedelta(days=7),
-            upper_bound=datetime.now(),
+            lower_bound=datetime.now(timezone.utc) - timedelta(days=7),
+            upper_bound=datetime.now(timezone.utc),
         )
         case_ids: list[UUID] = [self.case_type_id1, self.case_type_id2]
 

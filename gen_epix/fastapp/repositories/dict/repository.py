@@ -433,7 +433,7 @@ class DictRepository(BaseRepository):
             if not allow_duplicate_ids:
                 DictRepository._verify_duplicate_ids(model_class, obj_ids)
         else:
-            objs = [df.get(x) for x in obj_ids]  # type:ignore[assignment]
+            objs = [df.get(x) for x in obj_ids]  # type: ignore[assignment]
             # Verify input
             DictRepository._verify_valid_ids(model_class, obj_ids, objs)  # type: ignore[arg-type]
             if not allow_duplicate_ids:

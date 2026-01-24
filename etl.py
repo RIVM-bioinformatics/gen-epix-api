@@ -89,9 +89,9 @@ for service_type in enum.ServiceType:
     demo_dict_file = Path(dict_repository_cfg["props"]["file"]).resolve()
     empty_dict_file = Path(str(demo_dict_file).replace(".full.", ".empty.")).resolve()
     zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
-    start_time = datetime.datetime.now()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
     dict_repository: DictRepository = (
-        dict_repository_class.create_repository(  # type:ignore[assignment]
+        dict_repository_class.create_repository(  # type: ignore[assignment]
             entities=entities, file=zip_file
         )
     )
@@ -127,12 +127,12 @@ for service_type in enum.ServiceType:
         )
         continue
 
-    start_time = datetime.datetime.now()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
     sa_repository_class.clear_repository_content(
         entities=entities, connection_string=connection_string
     )
     sa_sql_repository: SARepository = (
-        sa_repository_class.create_repository(  # type:ignore[assignment]
+        sa_repository_class.create_repository(  # type: ignore[assignment]
             entities=entities,
             connection_string=connection_string,
             name=service_type.value,
@@ -142,7 +142,7 @@ for service_type in enum.ServiceType:
     create_demo_data_from_repository(
         user_id, entities, dict_repository, sa_sql_repository, MODULE_ROOT
     )
-    end_time = datetime.datetime.now()
+    end_time = datetime.datetime.now(datetime.timezone.utc)
     print(
         f"App {APP_TYPE.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"
     )

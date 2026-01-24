@@ -653,10 +653,10 @@ class TestCreate:
         # Create case_type_col as root, app_admin, refdata_admin
         cols: list[model.Col] = env.read_all(
             "root1_1", model.Col
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         case_type_dims: list[model.CaseTypeDim] = env.read_all(
             "root1_1", model.CaseTypeDim
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
             enum.ColType
         )
@@ -703,7 +703,7 @@ class TestCreate:
     def test_create_case_type_col_raise(self, env: Env) -> None:
         case_type_dims: list[model.CaseTypeDim] = env.read_all(
             "root1_1", model.CaseTypeDim
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         case_type_dim = case_type_dims[0]
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             code = case_type_dim.code.replace("case_type_dim", "case_type_col")

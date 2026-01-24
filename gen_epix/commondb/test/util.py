@@ -25,7 +25,7 @@ def get_existing_root_user(cfg: dict, app: App) -> User:
     if user_manager is None:
         raise ValueError("User generator not found")
     root_user_cfg: dict = cfg["service"]["auth"]["props"]["root"]["user"]
-    user: User = user_manager.retrieve_user_by_key(  # type:ignore[assignment]
+    user: User = user_manager.retrieve_user_by_key(  # type: ignore[assignment]
         root_user_cfg["key"]
     )
     return user
@@ -36,7 +36,7 @@ def create_root_user_from_claims(cfg: dict, app: App) -> User:
     if user_manager is None:
         raise ValueError("User generator not found")
     root_user_cfg: dict = cfg["service"]["auth"]["props"]["root"]["user"]
-    user: User = user_manager.create_root_user_from_claims(  # type:ignore[assignment]
+    user: User = user_manager.create_root_user_from_claims(  # type: ignore[assignment]
         {
             "__key__": root_user_cfg["key"],
             "email": root_user_cfg.get("email"),

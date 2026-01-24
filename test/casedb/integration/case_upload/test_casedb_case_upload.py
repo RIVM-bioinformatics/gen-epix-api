@@ -306,7 +306,7 @@ class TestCaseUpload(CaseUploadSetup):
                                 read_set_case_type_col_ids=read_set_case_type_col_ids,
                                 seq_case_type_col_ids=seq_case_type_col_ids,
                             )
-                        ]  # type:ignore[arg-type]
+                        ]  # type: ignore[arg-type]
                     ),
                     props={"id_present": "keep"},
                 )

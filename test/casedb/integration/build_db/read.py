@@ -40,8 +40,8 @@ class TestRead:
         # Read all users as root, app_admin
         all_users: list[model.User] = list(
             env.db[model.User].values()
-        )  # type:ignore[assignment]
-        all_user_ids: set[UUID] = {x.id for x in all_users}  # type:ignore[assignment]
+        )  # type: ignore[assignment]
+        all_user_ids: set[UUID] = {x.id for x in all_users}  # type: ignore[assignment]
         env.verify_read_all("root1_1", model.User, all_user_ids)
         env.verify_read_all("root2_1", model.User, all_user_ids)
         env.verify_read_all("app_admin1_1", model.User, all_user_ids)
@@ -55,13 +55,13 @@ class TestRead:
                 # some of their organizations
                 org_admin_user: model.User = env._get_obj(
                     model.User, f"org_admin{i}_{j}"
-                )  # type:ignore[assignment]
+                )  # type: ignore[assignment]
                 expected_users = env.get_users_for_org_admin(
                     org_admin_user, include_self=True, include_other_org_admins=True
                 )
                 expected_user_ids: set[UUID] = {
                     x.id for x in expected_users
-                }  # type:ignore[assignment]
+                }  # type: ignore[assignment]
                 env.verify_read_all(
                     org_admin_user,
                     model.User,
@@ -69,7 +69,7 @@ class TestRead:
                 )
                 # Organization and refdata admin users can only read themselves and organization admins of their organization
                 for user_type in ["org_user", "refdata_admin"]:
-                    user: model.User | None = env._get_obj(  # type:ignore[assignment]
+                    user: model.User | None = env._get_obj(  # type: ignore[assignment]
                         model.User, f"{user_type}{i}_{j}", on_missing="return_none"
                     )
                     if user is None:
@@ -79,7 +79,7 @@ class TestRead:
                     )
                     expected_user_ids: set[UUID] = {
                         x.id for x in expected_users
-                    }  # type:ignore[assignment]
+                    }  # type: ignore[assignment]
                     env.verify_read_all(
                         user,
                         model.User,
@@ -96,11 +96,11 @@ class TestRead:
         # Read all organization admin emails
         all_users: list[model.User] = env.read_all(
             ROOT, model.User
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_user_map = {x.id: x for x in all_users}
         all_org_admin_policies: list[model.OrganizationAdminPolicy] = env.read_all(
             ROOT, model.OrganizationAdminPolicy
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         org_admin_users_by_org: dict[UUID, set[UUID]] = {}
         for policy in all_org_admin_policies:
             org_admin_users_by_org.setdefault(policy.organization_id, set()).add(
@@ -109,7 +109,7 @@ class TestRead:
         for user_or_str in DATA_USERS:
             user: model.User = env._get_obj(
                 model.User, user_or_str
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             user_name_emails = sorted(
                 env.read_organization_admin_name_emails(user),
                 key=lambda x: (x.name, x.email),
@@ -143,10 +143,10 @@ class TestRead:
                 model.OrganizationAccessCasePolicy | model.OrganizationShareCasePolicy
             ] = env.read_all(
                 ROOT, policy_class
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             all_org_policy_ids: set[UUID] = {
                 x.id for x in all_org_policies
-            }  # type:ignore[assignment]
+            }  # type: ignore[assignment]
             env.verify_read_all("root1_1", policy_class, all_org_policy_ids)
             env.verify_read_all("root2_1", policy_class, all_org_policy_ids)
             env.verify_read_all("app_admin1_1", policy_class, all_org_policy_ids)
@@ -155,7 +155,7 @@ class TestRead:
                 for j in range(0, 1):
                     j += 1
                     org_ids = env.get_org_ids_for_org_admin(f"org_admin{i}_{j}")
-                    expected_org_policy_ids: set[UUID] = {  # type:ignore[assignment]
+                    expected_org_policy_ids: set[UUID] = {  # type: ignore[assignment]
                         x.id for x in all_org_policies if x.organization_id in org_ids
                     }
                     env.verify_read_all(
@@ -164,11 +164,11 @@ class TestRead:
                     try:
                         user: model.User = env._get_obj(
                             model.User, f"org_user{i}_{j}"
-                        )  # type:ignore[assignment]
+                        )  # type: ignore[assignment]
                     except:
                         continue
                     expected_own_org_policy_ids: set[UUID] = (
-                        {  # type:ignore[assignment]
+                        {  # type: ignore[assignment]
                             x.id
                             for x in all_org_policies
                             if x.organization_id == user.organization_id
@@ -200,13 +200,13 @@ class TestRead:
                 model.UserAccessCasePolicy | model.UserShareCasePolicy
             ] = env.read_all(
                 ROOT, policy_class
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             all_user_policy_ids: set[UUID] = {
                 x.id for x in all_user_policies
-            }  # type:ignore[assignment]
+            }  # type: ignore[assignment]
             all_users: list[model.User] = env.read_all(
                 ROOT, model.User
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             all_user_org_ids = {x.id: x.organization_id for x in all_users}
             env.verify_read_all("root1_1", policy_class, all_user_policy_ids)
             env.verify_read_all("root2_1", policy_class, all_user_policy_ids)
@@ -216,8 +216,8 @@ class TestRead:
                 for j in range(0, 1):
                     j += 1
                     org_ids = env.get_org_ids_for_org_admin(f"org_admin{i}_{j}")
-                    expected_user_policy_ids: set[UUID] = {  # type:ignore[assignment]
-                        x.id  # type:ignore[misc]
+                    expected_user_policy_ids: set[UUID] = {  # type: ignore[assignment]
+                        x.id  # type: ignore[misc]
                         for x in all_user_policies
                         if all_user_org_ids[x.user_id] in org_ids
                     }
@@ -227,11 +227,11 @@ class TestRead:
                     try:
                         user: model.User = env._get_obj(
                             model.User, f"org_user{i}_{j}"
-                        )  # type:ignore[assignment]
+                        )  # type: ignore[assignment]
                     except:
                         continue
                     expected_own_user_policy_ids: set[UUID] = (
-                        {  # type:ignore[assignment]
+                        {  # type: ignore[assignment]
                             x.id for x in all_user_policies if x.user_id == user.id
                         }
                     )
@@ -262,14 +262,12 @@ class TestRead:
                 env.read_all(user, model.CaseType)
 
     def test_read_case_type_set_member(self, env: Env) -> None:
-        all_case_type_set_members: list[model.CaseTypeSetMember] = (
-            env.read_all(  # type:ignore[assignment]
-                ROOT, model.CaseTypeSetMember
-            )
-        )
+        all_case_type_set_members: list[model.CaseTypeSetMember] = env.read_all(
+            ROOT, model.CaseTypeSetMember
+        )  # type: ignore[assignment]
         for user in NON_GUEST_USERS:
             expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            expected_case_type_set_member_ids: set[UUID] = {  # type:ignore[assignment]
+            expected_case_type_set_member_ids: set[UUID] = {  # type: ignore[assignment]
                 x.id
                 for x in all_case_type_set_members
                 if x.case_type_id in expected_case_type_ids
@@ -296,17 +294,13 @@ class TestRead:
                 env.read_all(user, model.CaseTypeCol)
 
     def test_read_case_type_col_set(self, env: Env) -> None:
-        all_case_type_col_sets: list[model.CaseTypeColSet] = (
-            env.read_all(  # type:ignore[assignment]
-                ROOT, model.CaseTypeColSet
-            )
-        )
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = (
-            env.read_all(  # type:ignore[assignment]
-                ROOT, model.CaseTypeColSetMember
-            )
-        )
-        empty_case_type_col_set_ids: set[UUID] = {  # type:ignore[assignment]
+        all_case_type_col_sets: list[model.CaseTypeColSet] = env.read_all(
+            ROOT, model.CaseTypeColSet
+        )  # type: ignore[assignment]
+        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
+            ROOT, model.CaseTypeColSetMember
+        )  # type: ignore[assignment]
+        empty_case_type_col_set_ids: set[UUID] = {  # type: ignore[assignment]
             x.id
             for x in all_case_type_col_sets
             if not any(
@@ -333,17 +327,15 @@ class TestRead:
                 env.read_all(user, model.CaseTypeColSet)
 
     def test_read_case_type_col_set_member(self, env: Env) -> None:
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = (
-            env.read_all(  # type:ignore[assignment]
-                ROOT, model.CaseTypeColSetMember
-            )
-        )
+        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
+            ROOT, model.CaseTypeColSetMember
+        )  # type: ignore[assignment]
         for user in NON_GUEST_USERS:
             expected_case_type_col_ids: set[UUID] = (
                 env.read_case_type_cols_with_any_right(user)
             )
             expected_case_type_col_set_member_ids: set[UUID] = (
-                {  # type:ignore[assignment]
+                {  # type: ignore[assignment]
                     x.id
                     for x in all_case_type_col_set_members
                     if x.case_type_col_id in expected_case_type_col_ids
@@ -365,10 +357,10 @@ class TestRead:
     def test_read_case_set(self, env: Env) -> None:
         all_case_sets: list[model.CaseSet] = env.read_all(
             ROOT, model.CaseSet
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         for user in DATA_USERS:
             expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            expected_case_set_ids: set[UUID] = {  # type:ignore[assignment]
+            expected_case_set_ids: set[UUID] = {  # type: ignore[assignment]
                 x.id for x in all_case_sets if x.case_type_id in expected_case_type_ids
             }
             env.verify_read_all(
@@ -387,10 +379,10 @@ class TestRead:
     def test_read_organization_contact_by_contact_ids(self, env: Env) -> None:
         root_user: model.User = env._get_obj(
             model.User, ROOT
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_contacts: list[model.Contact] = env.read_all(
             root_user, model.Contact
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         selected_contacts: list[model.Contact] = all_contacts[:3]
         selected_contact_ids: list[UUID] = [x.id for x in selected_contacts if x.id]
 
@@ -410,21 +402,21 @@ class TestRead:
     def test_read_organization_contact_by_site_ids(self, env: Env) -> None:
         root_user: model.User = env._get_obj(
             model.User, ROOT
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_contacts: list[model.Contact] = env.read_all(
             root_user, model.Contact
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_sites: list[model.Site] = env.read_all(
             root_user, model.Site
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
 
         contacts_by_site: dict[UUID, set[UUID]] = {}
         site_ids_with_contacts: list[UUID] = []
         for site in all_sites:
             site_contact_ids = {x.id for x in all_contacts if x.site_id == site.id}
             if site_contact_ids:
-                contacts_by_site[site.id] = site_contact_ids  # type:ignore
-                site_ids_with_contacts.append(site.id)  # type:ignore
+                contacts_by_site[site.id] = site_contact_ids  # type: ignore
+                site_ids_with_contacts.append(site.id)  # type: ignore
 
         selected_site_ids: list[UUID] = site_ids_with_contacts[:2]
         expected_contact_ids: set[UUID] = set().union(
@@ -448,13 +440,13 @@ class TestRead:
     def test_read_organization_contact_by_organization_ids(self, env: Env) -> None:
         root_user: model.User = env._get_obj(
             model.User, ROOT
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_contacts: list[model.Contact] = env.read_all(
             root_user, model.Contact
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         all_sites: list[model.Site] = env.read_all(
             root_user, model.Site
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
 
         sites_by_id: dict[UUID, model.Site] = {x.id: x for x in all_sites if x.id}
         contacts_by_org: dict[UUID, set[UUID]] = {}

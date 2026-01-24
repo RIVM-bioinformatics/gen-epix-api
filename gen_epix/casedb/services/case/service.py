@@ -297,7 +297,7 @@ class CaseService(BaseCaseService):
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self.validate_case_right(right, on_invalid_case_set_id)
         case_sets: list[model.CaseSet] = (
-            self.repository.crud(  # type:ignore[assignment]
+            self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.CaseSet,
@@ -592,7 +592,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "Cannot use datetime range filter with case ids"
                 )
-            cases = self.repository.crud(  # type:ignore[assignment]
+            cases = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.Case,
@@ -613,7 +613,7 @@ class CaseService(BaseCaseService):
                 )
             else:
                 case_filter = case_type_filter
-            cases = self.repository.crud(  # type:ignore[assignment]
+            cases = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.Case,
@@ -661,7 +661,7 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
     ) -> model.CaseType:
         case_types: list[model.CaseType] = (
-            self.repository.crud(  # type:ignore[assignment]
+            self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.CaseType,
@@ -838,7 +838,7 @@ class CaseService(BaseCaseService):
             case_set_ids = {x.case_set_id for x in case_set_members}
             case_ids = {x.case_id for x in case_set_members}
             case_sets_: list[model.CaseSet] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id if user else None,
                     model.CaseSet,
@@ -848,7 +848,7 @@ class CaseService(BaseCaseService):
                 )
             )
             case_sets = {x.id: x for x in case_sets_}
-            cases_: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+            cases_: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id if user else None,
                 model.Case,

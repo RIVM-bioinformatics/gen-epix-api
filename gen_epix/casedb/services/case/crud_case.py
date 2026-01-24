@@ -38,7 +38,7 @@ def _crud_case_without_abac(
     cmd: command.CaseCrudCommand,
 ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
     """Case admin command handling, no ABAC applied."""
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]
 
 
 def _crud_case_with_abac(
@@ -53,7 +53,7 @@ def _crud_case_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if case_abac is None:
         # No policy: allows for internal commands to retrieve all
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialise some
     is_create = cmd.operation in CrudOperationSet.CREATE.value
@@ -77,7 +77,7 @@ def _crud_case_with_abac(
             )
         # Get all cases and data collection links
         assert case_ids is not None
-        cases = self.repository.crud(  # type:ignore[assignment]
+        cases = self.repository.crud(  # type: ignore[assignment]
             uow,
             cmd.user.id,
             model.Case,
@@ -94,7 +94,7 @@ def _crud_case_with_abac(
         # cases
         for case in cases:
             data_collection_ids = case_data_collection_map.get(
-                case.id, set()  # type:ignore[arg-type]
+                case.id, set()  # type: ignore[arg-type]
             )
             is_allowed = case_abac.is_allowed(
                 case.case_type_id,
@@ -109,6 +109,6 @@ def _crud_case_with_abac(
                 )
         # Delete with cascade
         _crud_cascade_delete(self, uow, cmd)
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
     else:
         raise AssertionError("Unexpected operation")

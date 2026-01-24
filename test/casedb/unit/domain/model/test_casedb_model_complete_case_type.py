@@ -1,7 +1,8 @@
 from uuid import uuid4
 
-from gen_epix.casedb.domain import enum, model
 import pytest
+
+from gen_epix.casedb.domain import enum, model
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-01")

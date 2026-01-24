@@ -6,7 +6,7 @@ import ulid
 
 
 class TimestampFactory(Enum):
-    DATETIME_NOW = lambda: datetime.datetime.now()
+    DATETIME_NOW = lambda: datetime.datetime.now(datetime.timezone.utc)
 
 
 class IdFactory(Enum):

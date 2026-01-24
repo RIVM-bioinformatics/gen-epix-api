@@ -54,7 +54,7 @@ def _crud_case_type_set_without_abac(
 ):
     """CaseTypeSet admin command handling, no ABAC applied."""
     retval = self.crud(cmd)
-    return retval  # type:ignore[return-value]
+    return retval  # type: ignore[return-value]
 
 
 def _crud_case_type_set_with_abac(
@@ -74,7 +74,7 @@ def _crud_case_type_set_with_abac(
     case_abac = get_case_abac_from_command(cmd)
 
     if not case_abac:
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
     if not is_read:
@@ -83,7 +83,7 @@ def _crud_case_type_set_with_abac(
     # Get all case type sets and members
     user = cmd.user
     assert user is not None and user.id is not None
-    all_case_type_set_ids: list[UUID] = self.repository.crud(  # type:ignore[assignment]
+    all_case_type_set_ids: list[UUID] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user.id,
         model.CaseTypeSet,
@@ -93,7 +93,7 @@ def _crud_case_type_set_with_abac(
         return_id=True,
     )
     all_case_type_set_members: list[model.CaseTypeSetMember] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.CaseTypeSetMember,

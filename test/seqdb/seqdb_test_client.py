@@ -195,7 +195,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_assembly_protocol(
         self,
@@ -210,7 +210,7 @@ class SeqdbTestClient(TestClient):
             code,
             name,
             has_manual_curation=has_manual_curation,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_locus_detection_protocol(
         self,
@@ -223,7 +223,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_pcr_protocol(
         self,
@@ -238,7 +238,7 @@ class SeqdbTestClient(TestClient):
             code,
             name,
             target_names=target_names,  # Required field
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_ast_protocol(
         self,
@@ -255,7 +255,7 @@ class SeqdbTestClient(TestClient):
             name,
             is_predicted=is_predicted,  # Required field
             antimicrobial_names=antimicrobial_names,  # Required field
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_alignment_protocol(
         self,
@@ -270,7 +270,7 @@ class SeqdbTestClient(TestClient):
             code,
             name,
             is_multiple=is_multiple,  # Required field
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_taxonomy_protocol(
         self,
@@ -283,7 +283,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_seq_classification_protocol(
         self,
@@ -298,7 +298,7 @@ class SeqdbTestClient(TestClient):
             code,
             name,
             is_taxonomic=is_taxonomic,  # Required field
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_seq_distance_protocol(
         self,
@@ -317,7 +317,7 @@ class SeqdbTestClient(TestClient):
             is_integer_distance=is_integer_distance,  # Required field
             seq_distance_protocol_type=seq_distance_protocol_type,  # Required field - using OTHER to avoid locus_set_id requirement
             max_stored_distance=max_stored_distance,  # Required field
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_snp_detection_protocol(
         self,
@@ -330,7 +330,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_mlva_detection_protocol(
         self,
@@ -343,7 +343,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_kmer_detection_protocol(
         self,
@@ -356,7 +356,7 @@ class SeqdbTestClient(TestClient):
             user_or_str,
             code,
             name,
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_sample(
         self,
@@ -368,7 +368,7 @@ class SeqdbTestClient(TestClient):
     ) -> model.Sample:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         created_in_data_collection_id = self._get_obj_id(
             model.DataCollection,
             created_in_data_collection_or_str,
@@ -396,7 +396,7 @@ class SeqdbTestClient(TestClient):
     ) -> model.File:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         content: bytes
         if isinstance(content_or_str, str):
             content = content_or_str.encode()
@@ -415,7 +415,7 @@ class SeqdbTestClient(TestClient):
 
         return self._set_obj(
             model.File(id=file_id, content=content)
-        )  # type:ignore[return-value]
+        )  # type: ignore[return-value]
 
     def create_read_set(
         self,
@@ -436,7 +436,7 @@ class SeqdbTestClient(TestClient):
     ) -> model.ReadSet:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         sequencing_protocol_id = self._get_obj_id(
             model.SequencingProtocol,
@@ -497,7 +497,7 @@ class SeqdbTestClient(TestClient):
     ) -> model.Seq:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         assembly_protocol_id = self._get_obj_id(
             model.AssemblyProtocol,
@@ -524,7 +524,7 @@ class SeqdbTestClient(TestClient):
             )
         )
         assert seq.assembly_protocol_id == assembly_protocol_id
-        return self._set_obj(seq)  # type:ignore[return-value]
+        return self._set_obj(seq)  # type: ignore[return-value]
 
     def _create_protocol(
         self,
@@ -536,10 +536,10 @@ class SeqdbTestClient(TestClient):
     ) -> model.Model:
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         user: model.User = self._get_obj(
             self.user_class, user_or_str
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         crud_command_class = self.app.domain.get_crud_command_for_model(protocol_class)
         protocol = self.app.handle(
             crud_command_class(
@@ -547,10 +547,10 @@ class SeqdbTestClient(TestClient):
                 user=user,
                 objs=protocol_class(
                     code=code, name=name if name else code, **kwargs
-                ),  # type:ignore
+                ),  # type: ignore
             )
         )
-        return self._set_obj(protocol)  # type:ignore[return-value]
+        return self._set_obj(protocol)  # type: ignore[return-value]
 
     def _get_obj_id(
         self,
@@ -568,9 +568,7 @@ class SeqdbTestClient(TestClient):
                 raise ValueError(
                     "obj_or_str must be provided when create_dummy_id is False"
                 )
-            obj_id = (  # type:ignore[union-attr]
-                self._get_obj(  # type:ignore[assignment]
-                    model_class, obj_or_str
-                )
-            ).id  # type:ignore[assignment]
+            obj_id = (  # type: ignore[union-attr]
+                self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
+            ).id  # type: ignore[assignment]
         return obj_id

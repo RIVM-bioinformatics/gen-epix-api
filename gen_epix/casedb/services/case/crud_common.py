@@ -78,7 +78,7 @@ def crud_with_access_filter(
         _crud_cascade_delete(self, uow, cmd)
     retval = self.crud(cmd)
     cmd.access_filter = orig_access_filter
-    return retval  # type:ignore[return-value]
+    return retval  # type: ignore[return-value]
 
 
 def _crud_cascade_delete(
@@ -118,7 +118,7 @@ def _crud_cascade_delete(
 
     # Go over each link_model_class and delete all instances that are linked to
     # the instances in cmd
-    obj_ids: set[UUID] | None = cmd.get_obj_ids(as_set=True)  # type:ignore[assignment]
+    obj_ids: set[UUID] | None = cmd.get_obj_ids(as_set=True)  # type: ignore[assignment]
     assert cmd.user is not None and cmd.user.id is not None
     _cascade_delete_linked_models(
         self, uow, cmd, model_class, link_model_classes, obj_ids

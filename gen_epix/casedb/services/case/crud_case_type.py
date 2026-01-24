@@ -41,7 +41,7 @@ def _crud_case_type_without_abac(
     list[model.CaseType] | model.CaseType | list[UUID] | UUID | list[bool] | bool | None
 ):
     """CaseType admin command handling, no ABAC applied."""
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]
 
 
 def _crud_case_type_with_abac(
@@ -58,7 +58,7 @@ def _crud_case_type_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if not case_abac:
         # No policy: allows for internal commands to retrieve all
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialize some
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value

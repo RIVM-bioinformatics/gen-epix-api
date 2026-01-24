@@ -346,7 +346,7 @@ class BaseUploadTestCase(TestCase):
         return ExternalIdentifier(
             id=id or uuid4(),
             identifier_issuer_id=identifier_issuer_id
-            or external_identifier_for_upload.identifier_issuer_id,  # type:ignore[arg-type]
+            or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
             internal_id=internal_id,
             identifier_type=IdentifierType.PERSON,

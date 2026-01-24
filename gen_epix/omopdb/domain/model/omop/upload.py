@@ -347,19 +347,19 @@ class PersonBatchForUpload(BaseBatchForUpload):
 
     # New reference data required to enable storage of the person data
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_measurements(self) -> bool:
         """Indicates whether there are any measurements in the person set."""
         return any(len(x.measurements or []) > 0 for x in self.persons)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_observations(self) -> bool:
         """Indicates whether there are any observations in the person set."""
         return any(len(x.observations or []) > 0 for x in self.persons)
 
-    @computed_field  # type:ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_specimens(self) -> bool:
         """Indicates whether there are any specimens in the person set."""

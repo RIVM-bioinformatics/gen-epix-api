@@ -10,7 +10,7 @@ Note:
 import re
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from test.test_client.util import get_test_root_output_dir
 
@@ -239,7 +239,7 @@ class Linter:
             indicating that it found some issues with the code.
         """
         outputs = []
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         if file_basename and isinstance(file_basename, str):
             file_basename = Path(file_basename)
         for value in self.PRESETS.values():
@@ -263,7 +263,7 @@ class Linter:
 
     def analyse_pylint_code_impact(self, verbose: bool = True) -> None:
         output_dir = get_test_root_output_dir()
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         base_report_file = output_dir / f"pylint.rule_impact.{now_str}.base_report.txt"
         result_file = output_dir / f"pylint.rule_impact.{now_str}.result.xlsx"
         temp_report_file_template = f"pylint.rule_impact.{now_str}.disable_{{code}}.txt"
@@ -271,10 +271,10 @@ class Linter:
         # Get baseline score and issues
         if verbose:
             print(f"Getting baseline")
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         base_report = self.run_pylint(file=base_report_file)
         # base_report = base_report_file.read_text()
-        end_time = datetime.now()
+        end_time = datetime.now(timezone.utc)
         if verbose:
             print(f"Baseline completed in {(end_time - start_time).seconds}s")
         base_score = Linter.parse_pylint_score(base_report)

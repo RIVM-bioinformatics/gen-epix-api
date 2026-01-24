@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from gen_epix.fastapp.model import Command
 from gen_epix.omopdb.domain.service import BaseAbacService
 
