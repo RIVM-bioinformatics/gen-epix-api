@@ -11,7 +11,7 @@ from uuid import UUID
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet
+from gen_epix.fastapp.enum import CrudOperation, FieldTypeSet, FileExtension
 from gen_epix.fastapp.model import Model
 from gen_epix.fastapp.repositories.dict.unit_of_work import DictUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
@@ -31,29 +31,29 @@ class DictRepository(BaseRepository):
         if file_type is None:
             path = Path(file)
             suffixes = [x.lower() for x in path.suffixes]
-            if ".pkl" in suffixes:
-                file_type = "pkl"
-            elif ".json" in suffixes:
-                file_type = "json"
-            elif ".zip" in suffixes:
-                file_type = "zip"
-        file_type = file_type.lower()
-        if file_type == "pkl":
+            if FileExtension.PKL.value in suffixes:
+                file_type = FileExtension.PKL.value.lstrip(".")
+            elif FileExtension.JSON.value in suffixes:
+                file_type = FileExtension.JSON.value.lstrip(".")
+            elif FileExtension.ZIP.value in suffixes:
+                file_type = FileExtension.ZIP.value.lstrip(".")
+        else:
+            file_type = file_type.lower()
+        if file_type == FileExtension.PKL.value.lstrip("."):
             return DictRepository.create_repository_from_pkl(
                 repository_class=cls,
                 entities=entities,
                 pkl_file=file,
                 **kwargs,
             )
-        elif file_type == "zip":
+        if file_type == FileExtension.ZIP.value.lstrip("."):
             return DictRepository.create_repository_from_json(
                 repository_class=cls,
                 entities=entities,
                 zip_file=file,
                 **kwargs,
             )
-        else:
-            raise NotImplementedError(f"Unsupported file type: {file_type}")
+        raise NotImplementedError(f"Unsupported file type: {file_type}")
 
     @classmethod
     def clear_repository_content(cls, **kwargs: Any) -> None:
@@ -96,9 +96,9 @@ class DictRepository(BaseRepository):
             for entity in entities:
                 if not entity.persistable:
                     continue
-                json_file = entity.name + ".json"
+                json_file = entity.name + FileExtension.JSON.value
                 if json_file not in files and entity.table_name:
-                    json_file = entity.table_name + ".json"
+                    json_file = entity.table_name + FileExtension.JSON.value
                 if json_file not in files:
                     raise exc.RepositoryServiceError(
                         f"Missing file for entity {entity.name} in archive {zip_file}"
@@ -186,26 +186,35 @@ class DictRepository(BaseRepository):
     def _verify_extra_models_and_extract_reverse_links(self, extra_data: str) -> None:
         # Verify extra Models in db and extract reverse links
         for model_class, links in self._links.items():
-            to_pop = []
-            for i, link in enumerate(links):
-                link_field_name, link_model_class, _, _, _ = link
-                if link_model_class not in self._links:
-                    if extra_data == "ignore":
-                        continue
-                    if extra_data == "drop":
-                        to_pop.append(i)
-                        continue
-                    if extra_data == "raise":
-                        raise ValueError(
-                            f"Model {model_class.__name__} links to "
-                            f"additional linked model {link_model_class.__name__}"
-                        )
-                    raise NotImplementedError
-                self._back_links[link_model_class].append(
-                    (model_class, link_field_name)
-                )
+            to_pop: list[int] = []
+            self.validate_links_and_manage_extras(
+                extra_data, model_class, links, to_pop
+            )
             for i in reversed(to_pop):
                 links.pop(i)
+
+    def validate_links_and_manage_extras(
+        self,
+        extra_data: str,
+        model_class: type[Model],
+        links: list[tuple[str, type[Model], str, int, dict[Hashable, Model] | None]],
+        to_pop: list[int],
+    ) -> None:
+        for i, link in enumerate(links):
+            link_field_name, link_model_class, _, _, _ = link
+            if link_model_class not in self._links:
+                if extra_data == "ignore":
+                    continue
+                if extra_data == "drop":
+                    to_pop.append(i)
+                    continue
+                if extra_data == "raise":
+                    raise ValueError(
+                        f"Model {model_class.__name__} links to "
+                        f"additional linked model {link_model_class.__name__}"
+                    )
+                raise NotImplementedError
+            self._back_links[link_model_class].append((model_class, link_field_name))
 
     def crud(
         self,
@@ -456,6 +465,118 @@ class DictRepository(BaseRepository):
         obj_ids: list[Hashable] = [get_id(x) for x in objs]
         df_objs: list[Model | None] = [df.get(x) for x in obj_ids]
         # Verify input
+        self._validate_upsert_objects(
+            model_class,
+            objs,
+            raise_on_present,
+            raise_on_missing,
+            df,
+            get_id,
+            obj_ids,
+            df_objs,
+        )
+
+        # Upsert objects
+        value_field_names = self._value_field_names[model_class]
+        links = [tuple([x[0], x[2], x[4]]) for x in self._links[model_class]]
+        self.upsert_model_objects(
+            model_class, objs, df, get_id, df_objs, value_field_names, links
+        )
+        if return_id:
+            return obj_ids if is_iterable else obj_ids[0]
+        if return_copy:
+            return (
+                [x.model_copy() for x in df_objs if x is not None]
+                if is_iterable
+                else df_objs[0].model_copy() if df_objs[0] is not None else None
+            )
+        return df_objs if is_iterable else df_objs[0]
+
+    def upsert_model_objects(
+        self,
+        model_class: type[Model],
+        objs: Iterable[Model],
+        df: dict[Hashable, Model],
+        get_id: Callable[[Model], Hashable],
+        df_objs: list[Model | None],
+        value_field_names: list[str],
+        links: list[tuple[str, str, dict[Hashable, Model] | None]],
+    ) -> None:
+        for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
+            if df_obj:
+                # Already existing -> update df_obj with obj data
+                self._apply_value_updates(value_field_names, obj, df_obj)
+                self._apply_link_updates(model_class, get_id, links, obj, df_obj)
+            else:
+                # New -> insert copy of obj
+                df_objs[i] = self._insert_new(df, get_id, obj)
+
+    def _insert_new(
+        self,
+        df: dict[Hashable, Model],
+        get_id: Callable[[Model], Hashable],
+        obj: Model,
+    ) -> Model:
+        new_df_obj: Model = obj.model_copy()
+        df[get_id(new_df_obj)] = new_df_obj
+        return new_df_obj
+
+    def _apply_link_updates(
+        self,
+        model_class: type[Model],
+        get_id: Callable[[Model], Hashable],
+        links: list[tuple[str, str, dict[Hashable, Model] | None]],
+        obj: Model,
+        df_obj: Model,
+    ) -> None:
+        for link_field_name, relationship_field_name, linked_df in links:
+            # Verify and update link
+            linked_obj_id = getattr(obj, link_field_name)  # type: ignore[arg-type]
+            if not linked_obj_id:
+                setattr(df_obj, link_field_name, None)  # type: ignore[arg-type]
+                setattr(df_obj, relationship_field_name, None)  # type: ignore[arg-type]
+                continue
+            if linked_df is not None and linked_obj_id not in linked_df:
+                raise exc.InvalidIdsError(
+                    (
+                        f"Model {model_class.__name__}: obj {get_id(obj)} has invalid id"
+                        f' in {link_field_name}: "{linked_obj_id}"'
+                    ),
+                    ids=[linked_obj_id],
+                )
+            setattr(df_obj, link_field_name, linked_obj_id)  # type: ignore[arg-type]
+            linked_obj = getattr(obj, relationship_field_name)  # type: ignore[arg-type]
+            if not linked_obj:
+                continue
+            get_link_id = self._get_id[linked_obj.__class__]
+            if get_link_id(linked_obj) != linked_obj_id:
+                raise exc.InvalidLinkIdsError(
+                    (
+                        f"Model {model_class.__name__}: obj {get_link_id(obj)} has different id "
+                        f'in {link_field_name} ("{linked_obj_id}") versus '
+                        f'{relationship_field_name} ("{get_link_id(linked_obj)}")'
+                    ),
+                    ids=[linked_obj_id, get_link_id(linked_obj)],
+                )
+
+    def _apply_value_updates(
+        self, value_field_names: list[str], obj: Model, df_obj: Model
+    ) -> None:
+        for field_name in value_field_names:
+            # Update value field
+            setattr(df_obj, field_name, getattr(obj, field_name))
+
+    def _validate_upsert_objects(
+        self,
+        model_class: type[Model],
+        objs: Iterable[Model],
+        raise_on_present: bool,
+        raise_on_missing: bool,
+        df: dict[Hashable, Model],
+        get_id: Callable[[Model], Hashable],
+        obj_ids: list[Hashable],
+        df_objs: list[Model | None],
+    ) -> None:
         DictRepository._verify_duplicate_ids(model_class, obj_ids)
         invalid_type_ids = [get_id(x) for x in objs if not isinstance(x, model_class)]
         self._verify_upsert_objects(
@@ -468,61 +589,7 @@ class DictRepository(BaseRepository):
         )
         DictRepository._verify_duplicate_keys(
             get_id, self._keys_generators[model_class], model_class, objs, df.values()  # type: ignore[arg-type]
-        )
-
-        # Upsert objects
-        value_field_names = self._value_field_names[model_class]
-        links = [tuple([x[0], x[2], x[4]]) for x in self._links[model_class]]
-        current_time = self._timestamp_factory()
-        for i, obj, df_obj in zip(range(len(df_objs)), objs, df_objs):
-            if df_obj:
-                # Already existing -> update df_obj with obj data
-                for field_name in value_field_names:
-                    # Update value field
-                    setattr(df_obj, field_name, getattr(obj, field_name))
-                for link_field_name, relationship_field_name, linked_df in links:
-                    # Verify and update link
-                    linked_obj_id = getattr(obj, link_field_name)  # type: ignore[arg-type]
-                    if not linked_obj_id:
-                        setattr(df_obj, link_field_name, None)  # type: ignore[arg-type]
-                        setattr(df_obj, relationship_field_name, None)  # type: ignore[arg-type]
-                        continue
-                    if linked_df is not None and linked_obj_id not in linked_df:
-                        raise exc.InvalidIdsError(
-                            (
-                                f"Model {model_class.__name__}: obj {get_id(obj)} has invalid id"
-                                f' in {link_field_name}: "{linked_obj_id}"'
-                            ),
-                            ids=[linked_obj_id],
-                        )
-                    setattr(df_obj, link_field_name, linked_obj_id)  # type: ignore[arg-type]
-                    linked_obj = getattr(obj, relationship_field_name)  # type: ignore[arg-type]
-                    if not linked_obj:
-                        continue
-                    get_link_id = self._get_id[linked_obj.__class__]
-                    if get_link_id(linked_obj) != linked_obj_id:
-                        raise exc.InvalidLinkIdsError(
-                            (
-                                f"Model {model_class.__name__}: obj {get_link_id(obj)} has different id "
-                                f'in {link_field_name} ("{linked_obj_id}") versus '
-                                f'{relationship_field_name} ("{get_link_id(linked_obj)}")'
-                            ),
-                            ids=[linked_obj_id, get_link_id(linked_obj)],
-                        )
-            else:
-                # New -> insert copy of obj
-                new_df_obj: Model = obj.model_copy()
-                df[get_id(new_df_obj)] = new_df_obj
-                df_objs[i] = new_df_obj
-        if return_id:
-            return obj_ids if is_iterable else obj_ids[0]
-        if return_copy:
-            return (
-                [x.model_copy() for x in df_objs if x is not None]
-                if is_iterable
-                else df_objs[0].model_copy() if df_objs[0] is not None else None
-            )
-        return df_objs if is_iterable else df_objs[0]  # type: ignore[return-value]
+        )  # type: ignore[return-value]
 
     def delete_some(
         self,
@@ -613,7 +680,9 @@ class DictRepository(BaseRepository):
         self, entity: Entity
     ) -> list[tuple[str, type[Model], str, int, dict[Hashable, Model] | None]]:
         # Return list[tuple[link_field_name, LinkModel, relationship_field_name, link_type_id, linked_df|None]]
-        links = []
+        links: list[tuple[str, type[Model], str, int, dict[Hashable, Model] | None]] = (
+            []
+        )
         for link_field_name in entity.get_link_field_names():
             (
                 link_type_id,
@@ -629,7 +698,7 @@ class DictRepository(BaseRepository):
                     self._db.get(link_model_class),  # type: ignore[arg-type]
                 )
             )
-        return links  # type: ignore[return-value]
+        return links
 
     def _cascade_read(
         self,
@@ -716,7 +785,7 @@ class DictRepository(BaseRepository):
     def _verify_duplicate_ids(
         model_class: type[Model], obj_ids: Iterable[Hashable]
     ) -> None:
-        set_ = set()
+        set_: set[Hashable] = set()
         duplicate_ids = [x for x in obj_ids if x in set_ or set_.add(x)]  # type: ignore[func-returns-value]
         if duplicate_ids:
             DictRepository._raise_duplicate_ids(model_class, duplicate_ids)
@@ -734,7 +803,7 @@ class DictRepository(BaseRepository):
     @staticmethod
     def _verify_duplicate_keys(
         get_id: Callable[[Model], Hashable],
-        keys_generator: Callable,
+        keys_generator: Callable[[Model], dict[int, str]],
         model_class: type[Model],
         objs: list[Model],
         df_objs: list[Model] | None,
@@ -755,15 +824,15 @@ class DictRepository(BaseRepository):
         # Check for duplicate keys among objs
         obj_keys_list = [get_keys(x) for x in objs]
         n_keys = len(keys)
-        duplicate_objs = []
+        duplicate_objs: list[Model] = []
         for i in range(n_keys):
             curr_obj_keys_list = [x[i] for x in obj_keys_list]
             curr_obj_keys = set(curr_obj_keys_list)
             if len(curr_obj_keys) < len(curr_obj_keys_list):
-                seen = set()
-                uq_obj_keys = set(
+                seen: set[str] = set()
+                uq_obj_keys = {
                     x for x in curr_obj_keys_list if x not in seen and not seen.add(x)  # type: ignore[func-returns-value]
-                )
+                }
                 duplicate_obj_keys = curr_obj_keys - uq_obj_keys
                 duplicate_objs += [
                     x
@@ -779,11 +848,11 @@ class DictRepository(BaseRepository):
         #  that have the same id as an obj
         if not df_objs:
             return
-        obj_ids = set([get_id(x) for x in objs])
+        obj_ids = {get_id(x) for x in objs}
         df_obj_keys = [get_keys(x) for x in df_objs if get_id(x) not in obj_ids]
         duplicate_objs = []
         for i in range(n_keys):
-            curr_df_obj_keys = set(x[i] for x in df_obj_keys)
+            curr_df_obj_keys = {x[i] for x in df_obj_keys}
             curr_obj_keys_list = [x[i] for x in obj_keys_list]
             curr_obj_keys = set(curr_obj_keys_list)
             duplicate_obj_keys = curr_obj_keys & curr_df_obj_keys
@@ -796,7 +865,7 @@ class DictRepository(BaseRepository):
         if duplicate_objs:
             raise exc.UniqueConstraintViolationError(
                 f"Model {model_class.__name__}: object keys are not unique",
-                duplicate_key_ids=list(set([get_id(x) for x in duplicate_objs])),
+                duplicate_key_ids=list({get_id(x) for x in duplicate_objs}),
             )
 
     @staticmethod
@@ -817,5 +886,5 @@ class DictRepository(BaseRepository):
             if issubclass(type(list_obj[0]), Model):
                 return False, list_obj
             return False, [obj]
-        except:
+        except Exception:
             return False, [obj]

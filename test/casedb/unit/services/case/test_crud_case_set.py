@@ -426,7 +426,9 @@ class TestUserAssertions(BaseCrudCaseSetTestCase):
 
     def test_user_none_raises_assertion(self) -> None:
         # 1. Input
-        cmd: Mock = self.create_command(operation=CrudOperation.READ_SOME, set_user_none=True)
+        cmd: Mock = self.create_command(
+            operation=CrudOperation.READ_SOME, set_user_none=True
+        )
 
         # 2. Mocks
         with (

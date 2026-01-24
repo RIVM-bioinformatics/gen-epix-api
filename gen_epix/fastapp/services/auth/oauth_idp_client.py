@@ -92,7 +92,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         )
 
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manger: TokenIntrospectionManager = (
+            self.token_introspection_manager: TokenIntrospectionManager = (
                 TokenIntrospectionManager(
                     server_cfg=self.server_cfg,
                     discovery_url=discovery_url or self.server_cfg.discovery_url or "",
@@ -199,8 +199,70 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             raise exc.InitializationServiceError(msg) from exception
 
     async def get_jwk_from_jwt(self, jwt_token: str) -> jwt.PyJWK:
+        key_id: str = self._validate_key_id(jwt_token, self._parse_kid(jwt_token))
+
+        # Verify that the signing key in this session is outdated, fetch new one if so
+        # TODO: verify if fetching new signing keys is ok
+
+        key: jwt.PyJWK | None = self._signing_keys.get(key_id)
+        if not key:
+            self._refresh_signing_keys()
+            key = self._signing_keys.get(key_id)
+            if not key:
+                self._log_keys_fetch_failure(key_id)
+                raise exc.UnauthorizedAuthError()
+            self._log_keys_fetch_success()
+        return key
+
+    def _log_keys_fetch_success(self) -> None:
+        if self.logger and self.logger.level <= logging.DEBUG:
+            self.logger.debug(
+                self._log_item_class(
+                    code="c448ead5",
+                    msg="Key ID found among newly fetched signing keys",
+                    scheme_name=self.scheme_name,
+                ).dumps()
+            )
+
+    def _log_keys_fetch_failure(self, key_id: str) -> None:
+        if self.logger:
+            self.logger.warning(
+                self._log_item_class(
+                    code="2a5975ff",
+                    msg="Key ID not found amoung newly fetched signing keys",
+                    scheme_name=self.scheme_name,
+                    key_id=key_id,
+                ).dumps()
+            )
+
+    def _refresh_signing_keys(self) -> None:
+        if self.logger and self.logger.level <= logging.DEBUG:
+            self.logger.debug(
+                self._log_item_class(
+                    code="e90dd1aa",
+                    msg="Key ID not found among signing keys, fetching new ones",
+                    scheme_name=self.scheme_name,
+                ).dumps()
+            )
+        self._load_keys()
+
+    def _validate_key_id(self, jwt_token: str, key_id: str | None) -> str:
+        if not key_id:
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="0184bc35",
+                        msg="No key ID found in token header",
+                        scheme_name=self.scheme_name,
+                        jwt=jwt_token,
+                    ).dumps()
+                )
+            raise exc.UnauthorizedAuthError()
+        return key_id
+
+    def _parse_kid(self, jwt_token: str) -> str | None:
         try:
-            header = jwt.get_unverified_header(jwt_token)
+            return jwt.get_unverified_header(jwt_token).get("kid")
         except jwt.PyJWTError as e:
             if self.logger:
                 self.logger.warning(
@@ -214,119 +276,42 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 )
             raise exc.UnauthorizedAuthError() from e
 
-        key_id = header.get("kid")
-        if not key_id:
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="0184bc35",
-                        msg="No key ID found in token header",
-                        scheme_name=self.scheme_name,
-                        jwt=jwt_token,
-                    ).dumps()
-                )
-            raise exc.UnauthorizedAuthError()
-
-        # Verify that the signing key in this session is outdated, fetch new one if so
-        # TODO: verify if fetching new signing keys is ok
-        key = self._signing_keys.get(key_id)
-        if not key:
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="e90dd1aa",
-                        msg="Key ID not found among signing keys, fetching new ones",
-                        scheme_name=self.scheme_name,
-                    ).dumps()
-                )
-            self._load_keys()
-            key = self._signing_keys.get(key_id)
-            if not key:
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="2a5975ff",
-                            msg="Key ID not found amoung newly fetched signing keys",
-                            scheme_name=self.scheme_name,
-                            key_id=key_id,
-                        ).dumps()
-                    )
-                raise exc.UnauthorizedAuthError()
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="c448ead5",
-                        msg="Key ID found among newly fetched signing keys",
-                        scheme_name=self.scheme_name,
-                    ).dumps()
-                )
-        return key
-
-    async def get_claims_from_jwt(
-        self, jwt_token: str
-    ) -> dict[str, str | int | bool | list[str]] | None:
-        # Decode token without verifying signature to make sure this token is generated
-        # by this OIDC server
-        claims = jwt.decode(jwt_token, options={"verify_signature": False})
-        server_cfg = self.server_cfg
-
-        if claims["iss"] != server_cfg.issuer:
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="7e2a1c4d",
-                        msg="JWT issuer does not match OIDC server configuration",
-                        scheme_name=self.scheme_name,
-                        token_issuer=claims["iss"],
-                        token_subject=claims.get("sub"),
-                        expected_issuer=server_cfg.issuer,
-                    ).dumps()
-                )
+    async def get_claims_from_jwt(self, jwt_token: str) -> dict[str, Any] | None:
+        claims = self._decode_jwt_unverified(jwt_token)
+        if not self._validate_issuer(claims):
             return None
-
-        # Get key to verify signature and decode again
         key = await self.get_jwk_from_jwt(jwt_token)
-        try:
-            claims = jwt.decode(
-                jwt_token,
-                key=key,
-                algorithms=self._allowed_signing_algorithms,
-                audience=self.audience,
-                issuer=server_cfg.issuer,
-                options={
-                    "require_iat": True,
-                    "verify_iat": True,
-                    "require_exp": True,
-                    "verify_exp": True,
-                },
-            )
-        except Exception as exception:
-            msg = "Unable to decode JWT: "
 
-            if isinstance(exception, jwt.ExpiredSignatureError):
-                msg += "signature has expired"
-            elif isinstance(exception, jwt.PyJWTError):
-                msg += "signature is invalid"
-            else:
-                msg += "unknown issue"
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="f4b73564",
-                        msg=msg,
-                        scheme_name=self.scheme_name,
-                        exception=exception,
-                    ).dumps()
-                )
-            raise exc.CredentialsAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exception
+        claims = self._verify_token(jwt_token, key)
+        self._check_required_claims(claims)
 
         # optionally apply token introspection
         if self.server_cfg.enable_introspection:
-            self.token_introspection_manger.introspect_token(jwt_token, claims)
+            self.token_introspection_manager.introspect_token(jwt_token, claims)
 
-        # Get issuer and sub
+        if self.logger and self.logger.level <= logging.DEBUG:
+            self.logger.debug(
+                self._log_item_class(
+                    code="8a7c4e92",
+                    msg="JWT is valid",
+                    scheme_name=self.scheme_name,
+                    token_issuer=claims["iss"],
+                ).dumps()
+            )
+
+        return self._map_claims(claims)
+
+    def _map_claims(self, claims: dict[str, Any]) -> dict[str, Any]:
+        for new_claim_name, orig_claim_names in self.server_cfg.claim_map.items():
+            for orig_claim_name in orig_claim_names:
+                value = claims.get(orig_claim_name)
+                if value is not None:
+                    claims[new_claim_name] = value
+                    break
+
+        return claims
+
+    def _check_required_claims(self, claims: dict[str, Any]) -> None:
         issuer = claims["iss"]
         sub = claims.get("sub")
         if not issuer or not sub:
@@ -348,70 +333,62 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
             )
 
-        # Log for debugging
-        if self.logger and self.logger.level <= logging.DEBUG:
-            self.logger.debug(
-                self._log_item_class(
-                    code="8a7c4e92",
-                    msg="JWT is valid",
-                    scheme_name=self.scheme_name,
-                    token_issuer=claims["iss"],
-                ).dumps()
+    def _verify_token(self, jwt_token: str, key: jwt.PyJWK) -> dict[str, Any]:
+        try:
+            claims: dict[str, Any] = jwt.decode(
+                jwt_token,
+                key=key,
+                algorithms=self._allowed_signing_algorithms,
+                audience=self.audience,
+                issuer=self.server_cfg.issuer,
+                options={
+                    "require_iat": True,
+                    "verify_iat": True,
+                    "require_exp": True,
+                    "verify_exp": True,
+                },
             )
-
-        # Map claims according to claim_map, allowing e.g. to standardize claim names across IDPs
-        for new_claim_name, orig_claim_names in server_cfg.claim_map.items():
-            for orig_claim_name in orig_claim_names:
-                claims[new_claim_name] = claims.get(orig_claim_name)
-                if claims[new_claim_name] is not None:
-                    break
-
-        return claims  # type: ignore[no-any-return]
-
-    def introspect_token(self, jwt_token: str, claims: dict[str, Any]) -> None:
-        now = self._now()
-        self._prune_expired_introspection_cache(now)
-        if self._is_cached_introspection_token_inactive(jwt_token):
+        except Exception as exception:
+            msg = "Unable to decode JWT: "
+            if isinstance(exception, jwt.ExpiredSignatureError):
+                msg += "signature has expired"
+            elif isinstance(exception, jwt.PyJWTError):
+                msg += "signature is invalid"
+            else:
+                msg += "unknown issue"
             if self.logger:
                 self.logger.warning(
                     self._log_item_class(
-                        code="0ce44f1a",
-                        msg="Token previously marked inactive by introspection; denying",
+                        code="f4b73564",
+                        msg=msg,
+                        scheme_name=self.scheme_name,
+                        exception=exception,
                     ).dumps()
                 )
             raise exc.CredentialsAuthError(
                 http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            )
-        if self._is_recheck_introspection(jwt_token, now):
-            if self.logger:
-                self.logger.info(
+            ) from exception
+
+        return claims
+
+    def _validate_issuer(self, claims: dict[str, Any]) -> bool:
+        if claims["iss"] != self.server_cfg.issuer:
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
                     self._log_item_class(
-                        code="9deaa6b2",
-                        msg="Performing token introspection re-check",
+                        code="7e2a1c4d",
+                        msg="JWT issuer does not match OIDC server configuration",
+                        scheme_name=self.scheme_name,
+                        token_issuer=claims["iss"],
+                        token_subject=claims.get("sub"),
+                        expected_issuer=self.server_cfg,
                     ).dumps()
                 )
-            is_active = self._introspect_token_with_server(jwt_token)
-            if is_active is None:
-                # network or parse error
-                raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
-            exp_val = int(claims.get("exp", now))
-            if is_active:
-                self._update_introspection_cache(jwt_token, True, exp_val, now)
-            else:
-                if is_active is False:
-                    self._update_introspection_cache(jwt_token, False, exp_val, now)
-                    if self.logger:
-                        self.logger.warning(
-                            self._log_item_class(
-                                code="b1c2d3e4",
-                                msg="Token marked inactive by introspection; denying",
-                            ).dumps()
-                        )
-                raise exc.CredentialsAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
+            return False
+        return True
+
+    def _decode_jwt_unverified(self, jwt_token: str) -> dict[str, Any]:
+        return jwt.decode(jwt_token, options={"verify_signature": False})  # type: ignore[no-any-return]
 
     def retrieve_jwt_with_client_credentials_flow(
         self,
@@ -427,41 +404,25 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
         headers = dict(headers or self._client_credential_flow_request_headers)
         max_retries = max_retries or self._client_credential_flow_max_retries
         base_delay = base_delay or self._client_credential_flow_base_delay
-
         # Add basic auth header
-        headers["Authorization"] = (
-            "Basic "
-            + base64.b64encode(
-                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-            ).decode()
-        )
-
+        self._set_authorization_header(headers)
         # Get token endpoint URL
-        url = self.server_cfg.token_endpoint
-        if not isinstance(url, str):
-            # Try to get from discovery document
-            if self.logger and self.logger.level <= logging.DEBUG:
-                self.logger.debug(
-                    self._log_item_class(
-                        code="8f3a2b1c",
-                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
-                        scheme_name=self.scheme_name,
-                    ).dumps()
-                )
-            self.update_server_config_from_discovery()
-            url = self.server_cfg.token_endpoint
-        if not isinstance(url, str):
-            raise exc.ServiceUnavailableError("Token endpoint URL is not set")
-
+        url = self._get_token_endpoint()
         # Create request body
-        token_data: str = "&".join(
-            (
-                f"grant_type=client_credentials",
-                f"scope={urllib.parse.quote(scope)}",
-            )
+        token_data = self._generate_token_data(scope)
+        # Call server with retries
+        return self._request_token_with_retries(
+            headers, max_retries, base_delay, url, token_data
         )
 
-        # Call server with retries
+    def _request_token_with_retries(
+        self,
+        headers: dict[str, str],
+        max_retries: int,
+        base_delay: float,
+        url: str,
+        token_data: str,
+    ) -> str:
         last_exception: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
@@ -486,11 +447,15 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                             exception=exception,
                         ).dumps()
                     )
-            # Wait before next retry (but not after the last attempt)
             if attempt < max_retries:
                 time.sleep(base_delay)
 
-        # All retries failed
+        self._log_failed_token_retrieval_attempts(max_retries)
+        raise exc.ServiceUnavailableError(
+            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}"
+        )
+
+    def _log_failed_token_retrieval_attempts(self, max_retries: int) -> None:
         if self.logger:
             self.logger.error(
                 self._log_item_class(
@@ -499,13 +464,45 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     scheme_name=self.scheme_name,
                 ).dumps()
             )
-        raise exc.ServiceUnavailableError(
-            f"Token retrieval failed for server {self.server_cfg.name}: {last_exception}"
+
+    def _generate_token_data(self, scope: str) -> str:
+        """helper method to build token data / request body for client credentials flow"""
+        token_data: str = "&".join(
+            (
+                "grant_type=client_credentials",
+                f"scope={urllib.parse.quote(scope)}",
+            )
         )
 
-    def get_claims_from_userinfo(
-        self, access_token: str
-    ) -> dict[str, str | int | bool | list[str]]:
+        return token_data
+
+    def _set_authorization_header(self, headers: dict[str, str]) -> None:
+        headers["Authorization"] = (
+            "Basic "
+            + base64.b64encode(
+                f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
+            ).decode()
+        )
+
+    def _get_token_endpoint(self) -> str:
+        url = self.server_cfg.token_endpoint
+        if not isinstance(url, str):
+            # Try to get from discovery document
+            if self.logger and self.logger.level <= logging.DEBUG:
+                self.logger.debug(
+                    self._log_item_class(
+                        code="8f3a2b1c",
+                        msg=f"Token endpoint URL is not set in OIDC server configuration for server {self.server_cfg.name}, trying to update from discovery URL",
+                        scheme_name=self.scheme_name,
+                    ).dumps()
+                )
+            self.update_server_config_from_discovery()
+            url = self.server_cfg.token_endpoint
+        if not isinstance(url, str):
+            raise exc.ServiceUnavailableError("Token endpoint URL is not set")
+        return url
+
+    def get_claims_from_userinfo(self, access_token: str) -> dict[str, Any]:
         userinfo_endpoint = self.server_cfg.userinfo_endpoint
         assert userinfo_endpoint is not None
         try:
@@ -514,20 +511,7 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     userinfo_endpoint,
                     headers={"Authorization": f"Bearer {access_token}"},
                 )
-                claims = json.loads(response.content)
-                if not isinstance(claims, dict) or "error" in claims:
-                    # Currently e.g. "InvalidAuthenticationToken"
-                    if self.logger:
-                        self.logger.warning(
-                            self._log_item_class(
-                                code="ce05d050",
-                                msg=f"Unable to get claims from {userinfo_endpoint}: claims contain error",
-                                scheme_name=self.scheme_name,
-                                claims=claims,
-                            ).dumps()
-                        )
-                    raise exc.ServiceUnavailableError()
-                return claims
+                return self._validate_claims_from_userinfo(userinfo_endpoint, response)
         except Exception as exception:
             if self.logger:
                 self.logger.warning(
@@ -539,6 +523,26 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     ).dumps()
                 )
             return {}
+
+    def _validate_claims_from_userinfo(
+        self, userinfo_endpoint: str, response: httpx.Response
+    ) -> dict[str, Any]:
+        claims: dict[str, Any] = json.loads(response.content)
+        if (
+            not isinstance(claims, dict) or "error" in claims  # type: ignore[unreachable]
+        ):
+            # Currently e.g. "InvalidAuthenticationToken"
+            if self.logger:
+                self.logger.warning(
+                    self._log_item_class(
+                        code="ce05d050",
+                        msg=f"Unable to get claims from {userinfo_endpoint}: claims contain error",
+                        scheme_name=self.scheme_name,
+                        claims=claims,
+                    ).dumps()
+                )
+            raise exc.ServiceUnavailableError()
+        return claims
 
     def get_identity_provider(self) -> IdentityProvider:
         issuer = self.server_cfg.issuer
@@ -555,148 +559,6 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             scope=self.server_cfg.scope,
             public=self.server_cfg.public,
         )
-
-    def _get_introspection_endpoint(self) -> str:
-        if self.server_cfg.introspection_endpoint:
-            return self.server_cfg.introspection_endpoint
-        # dynamically determine from discovery document
-        try:
-            url: str | None = self.server_cfg.discovery_url
-            if not url:
-                raise exc.AuthException(
-                    "Token introspection was enabled but endpoint URL is not set and could also not be determined from discovery URL"
-                )
-            with httpx.Client(verify=self.ssl_context) as client:
-                response = client.get(url)
-                response.raise_for_status()
-                discovery_doc = response.json()
-            introspection_endpoint: str = discovery_doc.get("introspection_endpoint")
-            return introspection_endpoint
-        except Exception as exception:
-            if self.logger:
-                self.logger.error(
-                    self._log_item_class(
-                        code="d1234abc",
-                        msg="Error accessing discovery URL to determine introspection endpoint",
-                        scheme_name=self.scheme_name,
-                        exception=exception,
-                    ).dumps()
-                )
-            raise exc.UnauthorizedAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exception
-
-    def _introspect_token_with_server(self, jwt_token: str) -> bool | None:
-        if not self.introspection_endpoint:
-            return None
-        timeout_seconds = self.server_cfg.introspection_timeout_seconds
-        # Prepare headers and body
-        headers = self._introspection_request_headers
-        data: str = "&".join(
-            (
-                f"token={urllib.parse.quote(jwt_token)}",
-                f"token_type_hint=access_token",
-            )
-        )
-        method = (
-            self.server_cfg.introspection_auth_method
-            or self.DEFAULT_INTROSPECTION_AUTH_METHOD
-        ).lower()
-        if method not in {"client_secret_basic", "client_secret_post", "none"}:
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="6f4a8e22",
-                        msg=(
-                            "Unknown introspection auth method; defaulting to client_secret_basic"
-                        ),
-                        method=method,
-                    ).dumps()
-                )
-            method = "client_secret_basic"
-        if method == "client_secret_basic":
-            # Add Basic auth
-            headers["Authorization"] = (
-                "Basic "
-                + base64.b64encode(
-                    f"{self.server_cfg.client_id}:{self.server_cfg.client_secret}".encode()
-                ).decode()
-            )
-        try:
-            # TODO: Fix introspection unauthorized error (currently introspection disabled by default)
-            with httpx.Client(
-                verify=self.ssl_context, timeout=timeout_seconds
-            ) as client:
-                response = client.post(
-                    self.introspection_endpoint, data=data, headers=headers
-                )
-            if response.status_code != 200:
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="7a3e6d1f",
-                            msg=("Token introspection returned non-200 status"),
-                            status=response.status_code,
-                        ).dumps()
-                    )
-                raise exc.UnauthorizedAuthError(
-                    http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-                )
-            payload = response.json()
-            active = payload.get("active")
-            if isinstance(active, bool):
-                return active
-            # Unexpected payload shape
-            return None
-        except Exception as exc_:  # broad: treat any failure as unknown
-            if self.logger:
-                self.logger.warning(
-                    self._log_item_class(
-                        code="f2b3c9aa",
-                        msg=("Token introspection failed (timeout/network/parse)"),
-                        exception=exc_,
-                    ).dumps()
-                )
-            raise exc.UnauthorizedAuthError(
-                http_props={"headers": {"WWW-Authenticate": "Bearer"}}
-            ) from exc_
-
-    def _now(self) -> int:
-        return int(time.time())
-
-    def _prune_expired_introspection_cache(self, now: int | None = None) -> None:
-        time_stamp = now or self._now()
-        expired_keys = [
-            x for x, y in self._introspection_cache.items() if y["exp"] <= time_stamp
-        ]
-        for x in expired_keys:
-            self._introspection_cache.pop(x, None)
-
-    def _is_cached_introspection_token_inactive(self, jwt_token: str) -> bool:
-        introspection_token = self._introspection_cache.get(jwt_token)
-        return bool(introspection_token and introspection_token.get("active") is False)
-
-    def _is_recheck_introspection(self, jwt_token: str, now: int | None = None) -> bool:
-        introspection_token = self._introspection_cache.get(jwt_token)
-        if not introspection_token:
-            return True
-        interval = self.server_cfg.introspection_interval_seconds
-        last = int(introspection_token.get("last_checked", 0))
-        time_stamp = now or self._now()
-        return (time_stamp - last) >= interval
-
-    def _update_introspection_cache(
-        self,
-        jwt_token: str,
-        active: bool | None,
-        exp: int,
-        now: int | None = None,
-    ) -> None:
-        self._introspection_cache[jwt_token] = {
-            "active": active,
-            "last_checked": now or self._now(),
-            "exp": exp,
-        }
 
     def _load_keys(self) -> None:
         jwks_uri = self.server_cfg.jwks_uri
@@ -725,44 +587,28 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
             if key_data.get("use") in ["sig"] and key_data.get("kty") == "RSA":
                 self._signing_keys[key_data["kid"]] = jwt.PyJWK.from_dict(key_data)
 
-    async def __call__(self, request: Request) -> Claims | None:  # type: ignore
-        """
-        Retrieve verified claims for the user based on the request.
-        """
-        if authorization := request.headers.get("authorization"):
-            scheme, token = get_authorization_scheme_param(authorization)
-            if scheme.upper() == "BEARER":
-                # TODO: check if this is a security risk
-                # or whether it should return an error
-                try:
-                    claims = await self.get_claims_from_jwt(token)
-                    if not claims:
-                        return None
-                    return Claims(
-                        claims=claims, scheme=scheme, token=token, idp_client_id=self.id
-                    )
-                except exc.AuthException as exception:
-                    if self.logger:
-                        self.logger.warning(
-                            self._log_item_class(
-                                code="ac521d94",
-                                msg="Error retrieving claims from JWT",
-                                scheme_name=self.scheme_name,
-                                exception=exception,
-                            ).dumps()
-                        )
-                    return None
-            else:
-                # Authorization scheme not implemented
-                if self.logger:
-                    self.logger.warning(
-                        self._log_item_class(
-                            code="ecb88df4",
-                            msg=f"Authorization scheme {scheme} not implemented",
-                            scheme_name=self.scheme_name,
-                        ).dumps()
-                    )
-                return None
+    def _log_auth_error(self, exception: exc.AuthException) -> None:
+        if self.logger:
+            self.logger.warning(
+                self._log_item_class(
+                    code="ac521d94",
+                    msg="Error retrieving claims from JWT",
+                    scheme_name=self.scheme_name,
+                    exception=exception,
+                ).dumps()
+            )
+
+    def _log_unsupported_authorization_scheme(self, scheme: str) -> None:
+        if self.logger:
+            self.logger.warning(
+                self._log_item_class(
+                    code="ecb88df4",
+                    msg=f"Authorization scheme {scheme} not implemented",
+                    scheme_name=self.scheme_name,
+                ).dumps()
+            )
+
+    def _log_missing_authorization_header(self) -> None:
         if self.logger:
             self.logger.warning(
                 self._log_item_class(
@@ -771,4 +617,32 @@ class OauthIdpClient(IdpClient, OpenIdConnect):
                     scheme_name=self.scheme_name,
                 ).dumps()
             )
+
+    def _parse_authorization_header(self, request: Request) -> tuple[str, str] | None:
+        if authorization := request.headers.get("authorization"):
+            scheme, token = get_authorization_scheme_param(authorization)
+            return (scheme, token)
         return None
+
+    async def __call__(self, request: Request) -> Claims | None:  # type: ignore
+        """
+        Retrieve verified claims for the user based on the request.
+        """
+        authorization_header = self._parse_authorization_header(request)
+        if not authorization_header:
+            self._log_missing_authorization_header()
+            return None
+        scheme, token = authorization_header
+        if scheme.upper() != "BEARER":
+            self._log_unsupported_authorization_scheme(scheme)
+            return None
+        try:
+            claims = await self.get_claims_from_jwt(token)
+            return (
+                Claims(claims=claims, scheme=scheme, token=token, idp_client_id=self.id)
+                if claims
+                else None
+            )
+        except exc.AuthException as exception:
+            self._log_auth_error(exception)
+            return None

@@ -19,6 +19,7 @@ from gen_epix.fastapp.services.auth.model import (
     OidcServerCfg,
 )
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.user_manager import BaseUserManager
 
 
 class AuthService(BaseAuthService):
@@ -86,53 +87,7 @@ class AuthService(BaseAuthService):
 
         if not self._idp_clients:
             # No authentication -> create/retrieve root user
-            user_manager = self.app.user_manager
-            if not user_manager:
-                raise exc.InitializationServiceError(
-                    "No authentication services configured and no user generator provided"
-                )
-            self._no_auth_user = user_manager.create_root_user_from_claims({})
-
-            async def dummy_get_existing_user(
-                request: Request, _security_scopes: SecurityScopes
-            ) -> model.User:
-                claims = await self._no_auth_idp_client(request)
-                if claims:
-                    user = await self.get_existing_user_from_claims(
-                        claims, request_userinfo=False
-                    )
-                    if user:
-                        return user
-                return self._no_auth_user
-
-            async def dummy_get_new_user(
-                request: Request, _security_scopes: SecurityScopes
-            ) -> model.User:
-                claims = await self._no_auth_idp_client(request)
-                if claims:
-                    user = await self.get_new_user_from_claims(
-                        claims, request_userinfo=False
-                    )
-                    if user:
-                        return user
-                raise exc.UnauthorizedAuthError(
-                    "Unable to create user due to missing header or claims"
-                )
-
-            registered_user_dependency: model.User = Annotated[  # type: ignore
-                model.User,
-                Security(dummy_get_existing_user, scopes=["openid", "profile"]),
-            ]
-            new_user_dependency: model.User = Annotated[  # type: ignore
-                model.User,
-                Security(dummy_get_new_user, scopes=["openid", "profile"]),
-            ]
-            idp_user_dependency: IDPUser = Annotated[  # type: ignore
-                IDPUser,
-                Security(dummy_get_new_user, scopes=["openid", "profile"]),
-            ]
-
-            return registered_user_dependency, new_user_dependency, idp_user_dependency
+            return self._create_no_auth_dependencies()
 
         # Init get_current_user function definition and environment
         # TODO: generate get_current_user and get_new_user functions
@@ -146,16 +101,6 @@ class AuthService(BaseAuthService):
                 )
             )
 
-        def _warn(request: Request) -> None:
-            if self._logger:
-                self._logger.warning(
-                    self.create_log_message(
-                        "f8853e9e",
-                        "Unable to verify provided user",
-                        request=request,
-                    )
-                )
-
         idp_client_list = self._idp_clients + ([None] * (5 - len(self._idp_clients)))
 
         async def get_current_user1(
@@ -165,7 +110,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_existing_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user1(
@@ -175,7 +120,7 @@ class AuthService(BaseAuthService):
         ) -> model.User:
             if claims_0:
                 return await self.get_new_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user1(
@@ -185,7 +130,7 @@ class AuthService(BaseAuthService):
         ) -> IDPUser:
             if claims_0:
                 return await self.get_idp_user_from_claims(claims_0)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user2(
@@ -198,7 +143,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_existing_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user2(
@@ -211,7 +156,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_new_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user2(
@@ -224,7 +169,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_0)
             if claims_1:
                 return await self.get_idp_user_from_claims(claims_1)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user3(
@@ -240,7 +185,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_existing_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user3(
@@ -256,7 +201,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_new_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user3(
@@ -272,7 +217,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_1)
             if claims_2:
                 return await self.get_idp_user_from_claims(claims_2)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user4(
@@ -291,7 +236,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_existing_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user4(
@@ -310,7 +255,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_new_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user4(
@@ -329,7 +274,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_2)
             if claims_3:
                 return await self.get_idp_user_from_claims(claims_3)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_current_user5(
@@ -351,7 +296,7 @@ class AuthService(BaseAuthService):
                 return await self.get_existing_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_existing_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_new_user5(
@@ -373,7 +318,7 @@ class AuthService(BaseAuthService):
                 return await self.get_new_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_new_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         async def get_idp_user5(
@@ -395,7 +340,7 @@ class AuthService(BaseAuthService):
                 return await self.get_idp_user_from_claims(claims_3)
             if claims_4:
                 return await self.get_idp_user_from_claims(claims_4)
-            _warn(request)
+            self._warn(request)
             raise exc.UnauthorizedAuthError()
 
         get_idp_user_functions = [
@@ -421,6 +366,79 @@ class AuthService(BaseAuthService):
         ]
 
         # Create CurrentUser/NewUser, injecting get_current_user/get_new_user
+        return self._create_or_inject_current_or_new_user(
+            n_security_bases,
+            get_idp_user_functions,
+            get_current_user_functions,
+            get_new_user_functions,
+        )
+
+    def _create_no_auth_dependencies(self) -> tuple[model.User, model.User, IDPUser]:
+        user_manager = self.app.user_manager
+        if not user_manager:
+            raise exc.InitializationServiceError(
+                "No authentication services configured and no user generator provided"
+            )
+        self._no_auth_user = user_manager.create_root_user_from_claims({})
+
+        async def dummy_get_existing_user(
+            request: Request, _security_scopes: SecurityScopes
+        ) -> model.User:
+            claims = await self._no_auth_idp_client(request)
+            if claims:
+                user = await self.get_existing_user_from_claims(
+                    claims, request_userinfo=False
+                )
+                if user:
+                    return user
+            return self._no_auth_user
+
+        async def dummy_get_new_user(
+            request: Request, _security_scopes: SecurityScopes
+        ) -> model.User:
+            claims = await self._no_auth_idp_client(request)
+            if claims:
+                user = await self.get_new_user_from_claims(
+                    claims, request_userinfo=False
+                )
+                if user:
+                    return user
+            raise exc.UnauthorizedAuthError(
+                "Unable to create user due to missing header or claims"
+            )
+
+        registered_user_dependency: model.User = Annotated[  # type: ignore
+            model.User,
+            Security(dummy_get_existing_user, scopes=["openid", "profile"]),
+        ]
+        new_user_dependency: model.User = Annotated[  # type: ignore
+            model.User,
+            Security(dummy_get_new_user, scopes=["openid", "profile"]),
+        ]
+        idp_user_dependency: IDPUser = Annotated[  # type: ignore
+            IDPUser,
+            Security(dummy_get_new_user, scopes=["openid", "profile"]),
+        ]
+
+        return registered_user_dependency, new_user_dependency, idp_user_dependency
+
+    def _warn(self, request: Request) -> None:
+        if self._logger:
+            self._logger.warning(
+                self.create_log_message(
+                    "f8853e9e",
+                    "Unable to verify provided user",
+                    request=request,
+                )
+            )
+
+    def _create_or_inject_current_or_new_user(
+        self,
+        n_security_bases: int,
+        get_idp_user_functions: list[Any],
+        get_current_user_functions: list[Any],
+        get_new_user_functions: list[Any],
+    ) -> tuple[model.User, model.User, IDPUser]:
         if n_security_bases > len(get_current_user_functions):
             msg = (
                 f"More than {len(get_current_user_functions)} "
@@ -450,6 +468,7 @@ class AuthService(BaseAuthService):
                 scopes=["openid", "profile"],
             ),
         ]
+
         return registered_user_dependency, new_user_dependency, idp_user_dependency
 
     def get_identity_providers(
@@ -515,31 +534,10 @@ class AuthService(BaseAuthService):
     ) -> model.User:
         issuer: str = claims.claims["iss"]  # type: ignore
         sub: str = claims.claims["sub"]  # type: ignore
-        user_manager = self.app.user_manager
-        if not user_manager:
-            # No user generator configured
-            raise exc.UnauthorizedAuthError()
-
-        user_key = user_manager.get_user_key_from_claims(claims.claims)
-        if not user_key and request_userinfo:
-            claims.claims.update(
-                self._idp_client_by_id[claims.idp_client_id].get_claims_from_userinfo(
-                    claims.token
-                )
-            )
-            user_key = user_manager.get_user_key_from_claims(claims.claims)
-        if not user_key:
-            if self._logger:
-                self._logger.warning(
-                    self.create_log_message(
-                        "d3b7e9f1",
-                        "No user key found in claims",
-                        sub=sub,
-                        user_key=user_key,
-                    )
-                )
-            raise exc.UnauthorizedAuthError()
-
+        user_manager: BaseUserManager = self.app.user_manager
+        user_key = self._generate_user_key_from_claims(
+            claims, request_userinfo, sub, user_manager
+        )
         try:
             # Retrieve existing user
             user = user_manager.retrieve_user_by_key(user_key)
@@ -592,35 +590,79 @@ class AuthService(BaseAuthService):
                 return user_manager.create_root_user_from_claims(claims.claims)
 
             # Automatically create the user if configured
-            try:
-                user_or_none = user_manager.create_user_from_claims(claims.claims)
-                if not user_or_none:
-                    raise exc.UnauthorizedAuthError()
-                user = user_or_none
-                if self._logger:
-                    self._logger.info(
-                        self.create_log_message(
-                            "fe8bfbd0",
-                            "Automatically created user",
-                            issuer=issuer,
-                            sub=sub,
-                            user_key=user_key,
-                        )
-                    )
-                return user
-            except Exception as exception:
-                if self._logger:
-                    self._logger.error(
-                        self.create_log_message(
-                            "08e3c18b",
-                            "Could not automatically create user",
-                            issuer=issuer,
-                            sub=sub,
-                            user_key=user_key,
-                            exception=exception,
-                        )
-                    )
+            return self._create_user_from_claims(
+                claims, issuer, sub, user_manager, user_key
+            )
+
+    def _create_user_from_claims(
+        self,
+        claims: Claims,
+        issuer: str,
+        sub: str,
+        user_manager: BaseUserManager,
+        user_key: str,
+    ) -> model.User:
+        try:
+            user_or_none = user_manager.create_user_from_claims(claims.claims)
+            if not user_or_none:
                 raise exc.UnauthorizedAuthError()
+            user = user_or_none
+            if self._logger:
+                self._logger.info(
+                    self.create_log_message(
+                        "fe8bfbd0",
+                        "Automatically created user",
+                        issuer=issuer,
+                        sub=sub,
+                        user_key=user_key,
+                    )
+                )
+            return user
+        except Exception as exception:
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "08e3c18b",
+                        "Could not automatically create user",
+                        issuer=issuer,
+                        sub=sub,
+                        user_key=user_key,
+                        exception=exception,
+                    )
+                )
+            raise exc.UnauthorizedAuthError()
+
+    def _generate_user_key_from_claims(
+        self,
+        claims: Claims,
+        request_userinfo: bool,
+        sub: str,
+        user_manager: BaseUserManager | None,
+    ) -> str:
+        if not user_manager:
+            # No user generator configured
+            raise exc.UnauthorizedAuthError()
+
+        user_key = user_manager.get_user_key_from_claims(claims.claims)
+        if not user_key and request_userinfo:
+            claims.claims.update(
+                self._idp_client_by_id[claims.idp_client_id].get_claims_from_userinfo(
+                    claims.token
+                )
+            )
+            user_key = user_manager.get_user_key_from_claims(claims.claims)
+        if not user_key:
+            if self._logger:
+                self._logger.warning(
+                    self.create_log_message(
+                        "d3b7e9f1",
+                        "No user key found in claims",
+                        sub=sub,
+                        user_key=user_key,
+                    )
+                )
+            raise exc.UnauthorizedAuthError()
+        return user_key
 
     def _init_idp_client(
         self, idp_cfg: dict[str, str | list], ssl_context: ssl.SSLContext | bool = True

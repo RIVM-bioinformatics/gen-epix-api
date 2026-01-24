@@ -3,13 +3,13 @@
 # application server
 fastapi[standard]==0.128.0
 gunicorn==23.0.*
-starlette==0.50.0
+starlette==0.52.1
 httpx==0.28.1
 urllib3==2.6.3
 pyjwt==2.10.1
 
 #database handling
-sqlalchemy==2.0.45
+sqlalchemy==2.0.46
 sqlalchemy_utils==0.42.1
 
 # Data models/handling
@@ -24,8 +24,8 @@ types-setuptools==80.9.*
 python-multipart==0.0.21
 
 # calculation
-scipy==1.16.3
-numpy==2.4.0
+scipy==1.17.0
+numpy==2.4.1
 biopython==1.86
 
 # other

@@ -79,17 +79,17 @@ def _make_mapper(
     generate_service: Callable[[Model, Hashable], dict[str, Any]] | None = None,
 ) -> tuple[SAMapper, type[_RowBase]]:
     entity = _make_entity()
-    model_cls = type("MyModel", (_Model,), {"ENTITY": entity})
-    row_cls = _make_row_class(columns=row_columns, schema=schema)
+    model_class = type("MyModel", (_Model,), {"ENTITY": entity})
+    row_class = _make_row_class(columns=row_columns, schema=schema)
     mapper = SAMapper(
-        model_class=model_cls,
-        row_class=row_cls,
+        model_class=model_class,
+        row_class=row_class,
         field_name_map=field_name_map,
         service_metadata_field_names=service_metadata,
         db_metadata_field_names=db_metadata,
         generate_service_metadata=generate_service,
     )
-    return mapper, row_cls
+    return mapper, row_class
 
 
 class BaseMapperTestCase(TestCase):
@@ -97,7 +97,7 @@ class BaseMapperTestCase(TestCase):
 
     def setUp(self) -> None:
         self.entity: Entity = _make_entity()
-        self.model_cls: type[_Model] = type(
+        self.model_class: type[_Model] = type(
             "TModel", (_Model,), {"ENTITY": self.entity}
         )
 
@@ -179,28 +179,28 @@ class _DummyMapper(BaseSAMapper):
 class TestBaseSAMapper(BaseMapperTestCase):
     def test_init_requires_entity(self) -> None:
         # 1. Input
-        row_cls: type[_RowBase] = self.create_row(["id_col", "link_col", "value_col"])
-        model_cls: type[Model] = type("NoEntityModel", (Model,), {"ENTITY": None})
+        row_class: type[_RowBase] = self.create_row(["id_col", "link_col", "value_col"])
+        model_class: type[Model] = type("NoEntityModel", (Model,), {"ENTITY": None})
 
         # 2. Mocks (none)
 
         # 3. Execute
         with pytest.raises(RepositoryServiceError):
-            _DummyMapper(model_cls, row_cls)
+            _DummyMapper(model_class, row_class)
 
         # 4. Verify
 
     def test_field_name_map_and_mapped_name(self) -> None:
         # 1. Input
-        row_cls: type[_RowBase] = self.create_row(
+        row_class: type[_RowBase] = self.create_row(
             ["id_col", "link_col", "value_col", "relation_col"]
         )  # relation present
-        model_cls: type[_Model] = self.model_cls
+        model_class: type[_Model] = self.model_class
 
         # 2. Mocks (none)
 
         # 3. Execute
-        mapper = _DummyMapper(model_cls, row_cls)
+        mapper = _DummyMapper(model_class, row_class)
         forward: dict[str, str] = mapper.get_field_name_map()
         reverse: dict[str, str] = mapper.get_field_name_map(reverse=True)
 
@@ -228,8 +228,8 @@ class TestBaseSAMapper(BaseMapperTestCase):
 
         # 3. Execute
         mapper_with, mapper_without = _DummyMapper(
-            self.model_cls, row_with_schema
-        ), _DummyMapper(self.model_cls, row_without_schema)
+            self.model_class, row_with_schema
+        ), _DummyMapper(self.model_class, row_without_schema)
 
         # 4. Verify
         assert mapper_with.schema_name == "myschema"
@@ -249,7 +249,7 @@ class TestSAMapper(BaseMapperTestCase):
         # 2. Mocks (none)
 
         # 3. Execute
-        mapper, row_cls = _make_mapper(
+        mapper, row_class = _make_mapper(
             row_columns=columns,
             service_metadata=tuple(),  # explicitly service meta empty
             db_metadata=(
@@ -259,7 +259,7 @@ class TestSAMapper(BaseMapperTestCase):
             generate_service=gen_meta,
         )
 
-        model_obj: _Model = self.model_cls(id=1, link=2, value="v", relation=["x"])
+        model_obj: _Model = self.model_class(id=1, link=2, value="v", relation=["x"])
         row_obj = mapper.dump(user_id=uuid4(), obj=model_obj, extra=3)
         loaded_obj = mapper.load(row_obj, extra_loaded=True)
 
@@ -306,17 +306,19 @@ class TestSAMapper(BaseMapperTestCase):
         # 2. Mocks (none)
 
         # 3. Execute
-        mapper, row_cls = _make_mapper(
+        mapper, row_class = _make_mapper(
             row_columns=columns,
             field_name_map=field_map,
             service_metadata=("svc1",),
             db_metadata=("db1",),
         )
 
-        model_obj: _Model = self.model_cls(id=10, link=None, value="keep", relation=None)
+        model_obj: _Model = self.model_class(
+            id=10, link=None, value="keep", relation=None
+        )
         row_obj = mapper.dump(user_id=None, obj=model_obj)
         # For load(), construct a row that has all mapped attributes present
-        row_obj_for_load = row_cls(id_col=10, link_col=None, value_col="keep")
+        row_obj_for_load = row_class(id_col=10, link_col=None, value_col="keep")
         loaded_obj = mapper.load(row_obj_for_load)  # type: ignore[arg-type]
 
         # 4. Verify
@@ -435,19 +437,19 @@ class TestSAMapper(BaseMapperTestCase):
             "value": "value_col",
         }
         columns: list[str] = ["id_col", "link_col", "value_col"]
-        mapper, row_cls = _make_mapper(row_columns=columns, field_name_map=field_map)
+        mapper, row_class = _make_mapper(row_columns=columns, field_name_map=field_map)
         setattr(
-            row_cls, "id_col", "CLASS_ID_COL"
+            row_class, "id_col", "CLASS_ID_COL"
         )  # class-level attr for class retrieval
-        model_obj: _Model = self.model_cls(id=123, link=0, value=None)
-        row_obj = row_cls(id_col=123, link_col=0, value_col=None)
+        model_obj: _Model = self.model_class(id=123, link=0, value=None)
+        row_obj = row_class(id_col=123, link_col=0, value_col=None)
 
         # 2. Mocks (none)
 
         # 3. Execute
         model_id = mapper.get_id(model_obj)
         row_id_instance = mapper.get_row_id(row_obj)
-        row_id_class = mapper.get_row_id(row_cls)
+        row_id_class = mapper.get_row_id(row_class)
 
         # 4. Verify
         assert model_id == 123
@@ -470,7 +472,7 @@ class TestSAMapper(BaseMapperTestCase):
         # 2. Mocks (none)
 
         # 3. Execute
-        mapper, row_cls = _make_mapper(
+        mapper, row_class = _make_mapper(
             row_columns=columns,
             field_name_map=field_map,
             service_metadata=("svc1",),
@@ -478,7 +480,7 @@ class TestSAMapper(BaseMapperTestCase):
             generate_service=gen_meta,
         )
 
-        model_obj: _Model = self.model_cls(id=1, link=2, value="v")
+        model_obj: _Model = self.model_class(id=1, link=2, value="v")
         row_obj = mapper.dump(user_id=uuid4(), obj=model_obj, override="kwarg")
 
         # 4. Verify

@@ -184,14 +184,14 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
-            model_cls = args[2]
-            if op == CrudOperation.READ_ALL and model_cls == model.CaseTypeDim:
+            model_class = args[2]
+            if op == CrudOperation.READ_ALL and model_class == model.CaseTypeDim:
                 # First READ_ALL: existing dims with same key -> [existing_same_key]
                 # Second READ_ALL: other dims for same case_type -> [other_for_same_case_type]
                 # Use call count to branch
                 count = self.service.repository.crud.call_count
                 return [existing_same_key] if count <= 1 else [other_for_same_case_type]
-            if op == CrudOperation.READ_SOME and model_cls == model.Dim:
+            if op == CrudOperation.READ_SOME and model_class == model.Dim:
                 return [dim_obj]
             return []
 
@@ -375,10 +375,10 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
-            model_cls = args[2]
-            if op == CrudOperation.READ_SOME and model_cls == model.CaseTypeDim:
+            model_class = args[2]
+            if op == CrudOperation.READ_SOME and model_class == model.CaseTypeDim:
                 return [stored]
-            if op == CrudOperation.READ_ALL and model_cls == model.CaseTypeDim:
+            if op == CrudOperation.READ_ALL and model_class == model.CaseTypeDim:
                 return [other_time_true]
             return []
 
@@ -437,10 +437,10 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
-            model_cls = args[2]
-            if op == CrudOperation.READ_SOME and model_cls == model.CaseTypeDim:
+            model_class = args[2]
+            if op == CrudOperation.READ_SOME and model_class == model.CaseTypeDim:
                 return [stored]
-            if op == CrudOperation.READ_ALL and model_cls == model.CaseTypeDim:
+            if op == CrudOperation.READ_ALL and model_class == model.CaseTypeDim:
                 return [other_geo_true]
             return []
 

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from typing import Any
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, patch
@@ -13,6 +14,9 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
+from gen_epix.fastapp.services.auth.token_introspection_manager import (
+    TokenIntrospectionManager,
+)
 
 
 class BaseOauthIdpClientTestCase(TestCase):
@@ -63,11 +67,14 @@ class BaseOauthIdpClientTestCase(TestCase):
         """Create client with provided overrides."""
         cfg_copy: OidcServerCfg = (cfg or self.server_cfg).model_copy()
         cfg_copy.enable_introspection = enable_introspection
+        doc_to_apply: dict[str, Any] | None = discovery_doc or self.discovery_doc
+
+        # COMMENTED OUT: SEEMS NO LONGER NEEDED AND OTHERWISE BREAKS TESTS
         # If a discovery document is supplied but no explicit discovery_url override,
         # clear the cfg discovery_url to avoid unintended network calls during tests.
-        doc_to_apply: dict[str, Any] | None = discovery_doc or self.discovery_doc
-        if doc_to_apply is not None and discovery_url is None:
-            cfg_copy.discovery_url = None
+        # if doc_to_apply is not None and discovery_url is None:
+        #     cfg_copy.discovery_url = None
+
         # During client construction, patch update_server_config_from_discovery so
         # __init__ doesn't perform network discovery. After construction, manually
         # apply the discovery doc to the client's config if provided. Explicit
@@ -96,6 +103,9 @@ class BaseOauthIdpClientTestCase(TestCase):
             return_value=client_cm_mock,
         )
         return p, client_mock
+
+    def now(self) -> int:
+        return int(time.time())
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")
@@ -548,61 +558,71 @@ class TestClaimsFromJwt(BaseOauthIdpClientTestCase):
 class TestTokenIntrospection(BaseOauthIdpClientTestCase):
     def test_introspect_token_skips_when_cached_recent_and_active(self) -> None:
         # 1. Input
-        client: OauthIdpClient = self.create_client()
+        client: OauthIdpClient = self.create_client(enable_introspection=True)
         # Prepare cache
-        client._introspection_cache = {  # type: ignore[attr-defined]
+        client.token_introspection_manager._introspection_cache = {  # type: ignore[attr-defined]
             "tok": {
                 "active": True,
-                "last_checked": client._now(),
-                "exp": client._now() + 60,
+                "last_checked": self.now(),
+                "exp": self.now() + 60,
             }
         }
 
         # 2. Mocks
         with patch.object(
-            OauthIdpClient, "_introspect_token_with_server"
+            TokenIntrospectionManager, "_introspect_token_with_server"
         ) as introspect:
             introspect.return_value = True
 
             # 3. Execute
-            client.introspect_token("tok", {"exp": client._now() + 60})
+            client.token_introspection_manager.introspect_token(
+                "tok", {"exp": self.now() + 60}
+            )
 
         # 4. Verify
         introspect.assert_not_called()
 
     def test_introspect_token_cached_inactive_denies(self) -> None:
         # 1. Input
-        client: OauthIdpClient = self.create_client()
-        client._introspection_cache = {  # type: ignore[attr-defined]
-            "tok": {"active": False, "last_checked": 0, "exp": client._now() + 60}
+        client: OauthIdpClient = self.create_client(enable_introspection=True)
+        client.token_introspection_manager._introspection_cache = {  # type: ignore[attr-defined]
+            "tok": {"active": False, "last_checked": 0, "exp": self.now() + 60}
         }
 
         # 2. Execute / 3. Verify
         with pytest.raises(exc.CredentialsAuthError):
-            client.introspect_token("tok", {"exp": client._now() + 60})
+            client.token_introspection_manager.introspect_token(
+                "tok", {"exp": self.now() + 60}
+            )
 
     def test_introspect_token_recheck_paths(self) -> None:
         # 1. Input
-        client: OauthIdpClient = self.create_client()
-        client._introspection_cache = {}  # type: ignore[attr-defined]
+        client: OauthIdpClient = self.create_client(enable_introspection=True)
+        client.token_introspection_manager._introspection_cache = {}  # type: ignore[attr-defined]
 
         # 2. Mocks: exercise None, True, False branches
         with patch.object(
-            OauthIdpClient, "_introspect_token_with_server"
+            TokenIntrospectionManager, "_introspect_token_with_server"
         ) as introspect:
             # (a) None -> raises
             introspect.return_value = None
             with pytest.raises(exc.CredentialsAuthError):
-                client.introspect_token("A", {"exp": client._now() + 60})
+                client.token_introspection_manager.introspect_token(
+                    "A", {"exp": self.now() + 60}
+                )
 
             # (b) True -> ok
             introspect.return_value = True
-            client.introspect_token("B", {"exp": client._now() + 60})
+            client.token_introspection_manager.introspect_token(
+                "B", {"exp": self.now() + 60}
+            )
 
             # (c) False -> raises
             introspect.return_value = False
             with pytest.raises(exc.CredentialsAuthError):
-                client.introspect_token("C", {"exp": client._now() + 60})
+                client.token_introspection_manager.introspect_token(
+                    "C", {"exp": self.now() + 60}
+                )
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-05")

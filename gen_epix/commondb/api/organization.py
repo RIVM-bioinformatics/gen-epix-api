@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 from uuid import UUID
 
 from fastapi import APIRouter, FastAPI
@@ -14,6 +14,8 @@ from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.util import copy_model_field
+from gen_epix.commondb.api.exc import handle_command
+
 
 CommandName = Enum("CommandName", {x: x for x in DOMAIN.command_names})  # type: ignore[misc] # Dynamic Enum required
 
@@ -90,6 +92,8 @@ def create_organization_endpoints(
     update_user_command_class: type[command.UpdateUserCommand] = (
         app_impl.get_mapped_class(command.UpdateUserCommand)
     )
+    # TODO: If dynamic typing isn't used or required anymore,
+    # refator endpoints below using handle_command method (return cast(..., handle_command()))
     registered_user_dependency = app_impl.registered_user_dependency
     new_user_dependency = app_impl.new_user_dependency
 
@@ -124,13 +128,16 @@ def create_organization_endpoints(
     async def invite_user__constraints(
         user: registered_user_dependency,
     ) -> model.UserInvitationConstraints:
-        try:
-            retval: model.UserInvitationConstraints = app.handle(  # type: ignore[valid-type]
-                retrieve_invite_user_constraints_command_class(user=user)
-            )
-        except Exception as exception:
-            handle_exception("cad2509e", None, exception)
-        return retval
+        return cast(
+            model.UserInvitationConstraints,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="cad2509e",
+                input_handle_exception=handle_exception,
+                input_command=retrieve_invite_user_constraints_command_class(user=user),
+            ),
+        )
 
     @router.post(
         "/user_registrations/{token}",
@@ -162,17 +169,21 @@ def create_organization_endpoints(
         organization_set_id: UUID,
         request_body: UpdateOrganizationSetOrganizationRequestBody,
     ) -> list[model.OrganizationSetMember]:
-        try:
-            cmd = command.OrganizationSetOrganizationUpdateAssociationCommand(
+        return cast(
+            list[model.OrganizationSetMember],
+            handle_command(
+                app=app,
                 user=user,
-                obj_id1=organization_set_id,
-                association_objs=request_body.organization_set_members,
-                props={"return_id": False},
-            )
-            retval: list[model.OrganizationSetMember] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("c026628e", user, exception)
-        return retval
+                exception_code="c026628e",
+                input_handle_exception=handle_exception,
+                input_command=command.OrganizationSetOrganizationUpdateAssociationCommand(
+                    user=user,
+                    obj_id1=organization_set_id,
+                    association_objs=request_body.organization_set_members,
+                    props={"return_id": False},
+                ),
+            ),
+        )
 
     @router.put(
         "/data_collection_sets/{data_collection_set_id}/data_collections",
@@ -185,17 +196,21 @@ def create_organization_endpoints(
         data_collection_set_id: UUID,
         request_body: UpdateDataCollectionSetDataCollectionRequestBody,
     ) -> list[model.DataCollectionSetMember]:
-        try:
-            cmd = command.DataCollectionSetDataCollectionUpdateAssociationCommand(
+        return cast(
+            list[model.DataCollectionSetMember],
+            handle_command(
+                app=app,
                 user=user,
-                obj_id1=data_collection_set_id,
-                association_objs=request_body.data_collection_set_members,
-                props={"return_id": False},
-            )
-            retval: list[model.DataCollectionSetMember] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("cf892de0", user, exception)
-        return retval
+                exception_code="cf892de0",
+                input_handle_exception=handle_exception,
+                input_command=command.DataCollectionSetDataCollectionUpdateAssociationCommand(
+                    user=user,
+                    obj_id1=data_collection_set_id,
+                    association_objs=request_body.data_collection_set_members,
+                    props={"return_id": False},
+                ),
+            ),
+        )
 
     @router.get(
         "/user_me",
@@ -277,17 +292,21 @@ def create_organization_endpoints(
         organization_id: UUID,
         request_body: UpdateOrganizationIdentifierIssuerLinksRequestBody,
     ) -> list[model.OrganizationIdentifierIssuerLink]:
-        try:
-            cmd = command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+        return cast(
+            list[model.OrganizationIdentifierIssuerLink],
+            handle_command(
+                app=app,
                 user=user,
-                obj_id1=organization_id,
-                association_objs=request_body.organization_identifier_issuer_links,
-                props={"return_id": False},
-            )
-            retval: list[model.OrganizationIdentifierIssuerLink] = app.handle(cmd)
-        except Exception as exception:
-            handle_exception("a3c7f9d2", user, exception)
-        return retval
+                exception_code="a3c7f9d2",
+                input_handle_exception=handle_exception,
+                input_command=command.OrganizationIdentifierIssuerLinkUpdateAssociationCommand(
+                    user=user,
+                    obj_id1=organization_id,
+                    association_objs=request_body.organization_identifier_issuer_links,
+                    props={"return_id": False},
+                ),
+            ),
+        )
 
     # CRUD
     crud_endpoint_sets = CrudEndpointGenerator.create_crud_endpoint_set_for_domain(

@@ -5,11 +5,11 @@ from typing import Any
 import pytest
 
 from gen_epix.fastapp import exc
+from gen_epix.fastapp.services.auth.model import OidcServerCfg
+from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.fastapp.services.auth.token_introspection_manager import (
     TokenIntrospectionManager,
 )
-from gen_epix.fastapp.services.auth.model import OidcServerCfg
-from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 
 
 @pytest.mark.scenario_ids(
@@ -39,7 +39,7 @@ class TestOauthIdpClientIntrospection:
         if not hasattr(cls.CLIENT, "token_introspection_manger") or (
             getattr(cls.CLIENT, "token_introspection_manger") is None
         ):
-            cls.CLIENT.token_introspection_manger = TokenIntrospectionManager(
+            cls.CLIENT.token_introspection_manager = TokenIntrospectionManager(
                 server_cfg=cls.CLIENT.server_cfg,
                 # Provide a non-empty discovery URL so the manager validates.
                 discovery_url=(
@@ -56,16 +56,16 @@ class TestOauthIdpClientIntrospection:
             )
             # Patch retrieval so tests use a deterministic introspection endpoint
             setattr(
-                cls.CLIENT.token_introspection_manger,
+                cls.CLIENT.token_introspection_manager,
                 "_get_cached_introspection_endpoint",
                 lambda: "https://introspect.local/token",
             )
 
     def _cache(self) -> dict[str, dict[str, Any]]:
-        return getattr(self.CLIENT.token_introspection_manger, "_introspection_cache")
+        return getattr(self.CLIENT.token_introspection_manager, "_introspection_cache")
 
     def _now(self) -> int:
-        return getattr(self.CLIENT.token_introspection_manger, "_now")()
+        return getattr(self.CLIENT.token_introspection_manager, "_now")()
 
     def test_introspection_populates_cache(self) -> None:
         counter: dict[str, int] = {"n": 0}
@@ -75,7 +75,7 @@ class TestOauthIdpClientIntrospection:
             return True
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             fake_introspect,
         )
@@ -102,7 +102,7 @@ class TestOauthIdpClientIntrospection:
     def test_recheck_to_inactive_then_denies(self) -> None:
         now = self._now()
         interval = (
-            self.CLIENT.token_introspection_manger._introspection_interval_seconds
+            self.CLIENT.token_introspection_manager._introspection_interval_seconds
         )
         self._cache()[self.TOKEN] = {
             "active": True,
@@ -111,7 +111,7 @@ class TestOauthIdpClientIntrospection:
         }
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             lambda _: False,
         )
@@ -129,7 +129,7 @@ class TestOauthIdpClientIntrospection:
             return None
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             fake_introspect,
         )
@@ -153,7 +153,7 @@ class TestOauthIdpClientIntrospection:
             return True
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             fake_introspect,
         )
@@ -178,7 +178,7 @@ class TestOauthIdpClientIntrospection:
             raise AssertionError("introspection should not be called within interval")
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             fail_if_called,
         )
@@ -189,7 +189,7 @@ class TestOauthIdpClientIntrospection:
     def test_interval_elapsed_triggers_single_recheck(self) -> None:
         now = self._now()
         interval = (
-            self.CLIENT.token_introspection_manger._introspection_interval_seconds
+            self.CLIENT.token_introspection_manager._introspection_interval_seconds
         )
         self._cache()[self.TOKEN] = {
             "active": True,
@@ -204,7 +204,7 @@ class TestOauthIdpClientIntrospection:
             return True
 
         setattr(
-            self.CLIENT.token_introspection_manger,
+            self.CLIENT.token_introspection_manager,
             "_introspect_token_with_server",
             fake_introspect,
         )

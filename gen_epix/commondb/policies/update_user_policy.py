@@ -2,6 +2,7 @@ from typing import Any
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain.model import User
 from gen_epix.commondb.domain.policy import BaseUpdateUserPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import Command
@@ -23,28 +24,11 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
         roles = user.roles
         is_root = len(roles.intersection(self.role_set_map[enum.RoleSet.ROOT])) > 0
 
-        tgt_user: model.User
-        if isinstance(cmd, command.InviteUserCommand):
-            if user.key == cmd.key:
-                # User cannot invite themselves
-                return False
-            tgt_user = self.user_class(**cmd.model_dump())
-            tgt_roles_union = set(tgt_user.roles)
-            is_organization_update = False
-        elif isinstance(cmd, command.UpdateUserCommand):
-            tgt_user = self.abac_service.app.user_manager.retrieve_user_by_id(
-                cmd.tgt_user_id
-            )  # type: ignore[assignment]
-            tgt_roles_union = set(tgt_user.roles)
-            if cmd.roles is not None:
-                tgt_roles_union.update(cmd.roles)
-            is_organization_update = (
-                cmd.organization_id is not None
-                and cmd.organization_id != tgt_user.organization_id
-            )
-        else:
-            raise NotImplementedError
-
+        is_organization_update, tgt_roles_union, tgt_user, early_exit = (
+            self._get_target_user_info(cmd, user)
+        )
+        if early_exit:
+            return False
         # Handle ROOT, >=APP_ADMIN, <ORG_ADMIN
         if is_root:
             # Root user can invite/update anyone with any permissions
@@ -78,6 +62,33 @@ class UpdateUserPolicy(BaseUpdateUserPolicy):
             # User is not admin of the organization(s) the target user is part of
             return False
         return self._has_more_permissions(user, tgt_user)
+
+    def _get_target_user_info(
+        self, cmd: Command, user: User
+    ) -> tuple[bool, set[str], model.User, bool]:
+        tgt_user: model.User
+        early_exit = False
+        if isinstance(cmd, command.InviteUserCommand):
+            if user.key == cmd.key:
+                # User cannot invite themselves
+                early_exit = True
+            tgt_user = self.user_class(**cmd.model_dump())
+            tgt_roles_union = set(tgt_user.roles)
+            is_organization_update = False
+        elif isinstance(cmd, command.UpdateUserCommand):
+            tgt_user = self.abac_service.app.user_manager.retrieve_user_by_id(
+                cmd.tgt_user_id
+            )  # type: ignore[assignment]
+            tgt_roles_union = set(tgt_user.roles)
+            if cmd.roles is not None:
+                tgt_roles_union.update(cmd.roles)
+            is_organization_update = (
+                cmd.organization_id is not None
+                and cmd.organization_id != tgt_user.organization_id
+            )
+        else:
+            raise NotImplementedError
+        return is_organization_update, tgt_roles_union, tgt_user, early_exit
 
     def _has_more_permissions(self, user: model.User, tgt_user: model.User) -> bool:
         permissions = self.abac_service.app.user_manager.retrieve_user_permissions(user)

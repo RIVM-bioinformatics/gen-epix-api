@@ -12,7 +12,6 @@ from gen_epix.casedb.services.case.case_date import (
 from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
 from gen_epix.casedb.services.case.create_seq import (
     case_service_create_file_for_read_set_or_seq,
-    case_service_create_read_sets_or_seqs_for_cases,
 )
 from gen_epix.casedb.services.case.crud_case import case_service_crud_case
 from gen_epix.casedb.services.case.crud_case_data_collection_link import (
@@ -86,7 +85,6 @@ from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_type_stats,
 )
 from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
-from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
@@ -108,22 +106,6 @@ class CaseService(BaseCaseService):
         self, cmd: command.CreateCaseSetCommand
     ) -> model.CaseSet | None:
         return case_service_create_case_set(self, cmd)
-
-    def create_reads_sets_for_cases(
-        self, cmd: command.CreateReadSetsForCasesCommand
-    ) -> list[seqdb_model.ReadSet]:
-        retval: list[seqdb_model.ReadSet] = (
-            case_service_create_read_sets_or_seqs_for_cases(self, cmd)  # type: ignore[assignment]
-        )
-        return retval
-
-    def create_seqs_for_cases(
-        self, cmd: command.CreateSeqsForCasesCommand
-    ) -> list[seqdb_model.Seq]:
-        retval: list[seqdb_model.Seq] = case_service_create_read_sets_or_seqs_for_cases(
-            self, cmd
-        )  # type: ignore[assignment]
-        return retval
 
     def create_file_for_read_set(
         self, cmd: command.CreateFileForReadSetCommand
@@ -313,105 +295,114 @@ class CaseService(BaseCaseService):
         on_invalid_case_set_id: str = "raise",
     ) -> list[model.CaseSet]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
-        if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
-            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
-        if on_invalid_case_set_id not in {"raise", "ignore"}:
-            raise exc.InvalidArgumentsError(
-                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-            )
-
-        # Retrieve all case sets, potentially filtered
-        case_sets: list[model.CaseSet]
-        if case_set_ids:
-            if filter:
-                raise exc.InvalidArgumentsError(
-                    "Cannot use datetime range filter with case set ids"
-                )
-            case_sets = self.repository.crud(  # type:ignore[assignment]
+        self.validate_case_right(right, on_invalid_case_set_id)
+        case_sets: list[model.CaseSet] = (
+            self.repository.crud(  # type:ignore[assignment]
                 uow,
                 user_id,
                 model.CaseSet,
                 None,
-                case_set_ids,
-                CrudOperation.READ_SOME,
+                case_set_ids if case_set_ids else None,
+                CrudOperation.READ_SOME if case_set_ids else CrudOperation.READ_ALL,
+                filter=None if case_set_ids else filter,
             )
-        else:
-            case_sets = self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user_id,
-                model.CaseSet,
-                None,
-                None,
-                CrudOperation.READ_ALL,
-                filter=filter,
-            )
+        )
 
         # Filter on case_type_id if any or verify that all case sets have the valid
         # case_type_id if case_set_ids is given
         # TODO: add more efficient implementation by adding this as a filter in the
         # call to the repository
         if case_type_id is not None:
-            if case_set_ids:
-                if on_invalid_case_set_id == "raise":
-                    if not all(x.case_type_id == case_type_id for x in case_sets):
-                        raise exc.InvalidArgumentsError(
-                            f"Some case sets have invalid case type ids: {case_set_ids}"
-                        )
-                elif on_invalid_case_set_id == "ignore":
-                    pass
-                else:
-                    raise AssertionError(
-                        f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                    )
-            case_sets = [x for x in case_sets if x.case_type_id == case_type_id]
-
-        # Special case: full_access
+            case_sets = self._filter_case_sets_by_same_case_type_id(
+                case_type_id, case_set_ids, on_invalid_case_set_id, case_sets
+            )
         if case_abac.is_full_access:
             return case_sets
-
-        # @ABAC: filter case sets to which the user has read access
         case_set_data_collections = self._retrieve_case_set_data_collections_map(
             uow, user_id
         )
         has_access = case_abac.get_combinations_with_access_right(right)
-        filtered_case_sets = []
+        filtered_case_sets: list[model.CaseSet] = []
         for case_set in case_sets:
-            # Check if user has any access to case
-            case_type_id = case_set.case_type_id
-            if case_type_id not in has_access:
-                if case_set_ids:
-                    if on_invalid_case_set_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested cases"
-                        )
-                    elif on_invalid_case_set_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
-                        )
-                continue
-            # Check if user has access to any of the data collections of the case set
-            data_collection_ids = case_set_data_collections.get(
-                case_set.id, set()  # type:ignore[arg-type]
+            self._validate_case_set_access(
+                case_set,
+                user_id,
+                case_set_ids,
+                on_invalid_case_set_id,
+                case_set_data_collections,
+                has_access,
             )
-            data_collection_ids.add(case_set.created_in_data_collection_id)
-            if not data_collection_ids.intersection(has_access[case_type_id]):
-                if case_set_ids:
-                    if on_invalid_case_set_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested case sets"
-                        )
-                    elif on_invalid_case_set_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
-                        )
-                continue
-            # Keep case
             filtered_case_sets.append(case_set)
         return filtered_case_sets
+
+    def _validate_case_set_access(
+        self,
+        case_set: model.CaseSet,
+        user_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_set_data_collections: dict[UUID, set[UUID]],
+        has_access: dict[UUID, set[UUID]],
+    ) -> None:
+        if case_set.case_type_id not in has_access and case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested cases"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
+                )
+        # Check if user has access to any of the data collections of the case set
+        data_collection_ids = set(case_set_data_collections.get(case_set.id, ()))
+        data_collection_ids.add(case_set.created_in_data_collection_id)
+
+        if (
+            not data_collection_ids & has_access.get(case_set.case_type_id, set())
+            and case_set_ids
+        ):
+            if on_invalid_case_set_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested case sets"
+                )
+            elif on_invalid_case_set_id == "ignore":
+                pass
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+    def _filter_case_sets_by_same_case_type_id(
+        self,
+        case_type_id: UUID,
+        case_set_ids: list[UUID] | None,
+        on_invalid_case_set_id: str,
+        case_sets: list[model.CaseSet],
+    ) -> list[model.CaseSet]:
+        if case_set_ids:
+            if on_invalid_case_set_id == "raise":
+                if not all(x.case_type_id == case_type_id for x in case_sets):
+                    raise exc.InvalidArgumentsError(
+                        f"Some case sets have invalid case type ids: {case_set_ids}"
+                    )
+            else:
+                raise AssertionError(
+                    f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+                )
+
+        return [x for x in case_sets if x.case_type_id == case_type_id]
+
+    def validate_case_right(
+        self, right: enum.CaseRight, on_invalid_case_set_id: str
+    ) -> None:
+        if right not in enum.CaseRightSet.CASE_SET_CONTENT.value:
+            raise exc.InvalidArgumentsError(f"Invalid case abac right: {right.value}")
+        if on_invalid_case_set_id not in {"raise", "ignore"}:
+            raise exc.InvalidArgumentsError(
+                f"Invalid on_invalid_case_set_id: {on_invalid_case_set_id}"
+            )
 
     def _retrieve_cases_with_content_right(
         self,
@@ -429,74 +420,26 @@ class CaseService(BaseCaseService):
         apply_max_n_cases: bool = True,
     ) -> list[model.Case]:
         # TODO: This is a temporary implementation, to be replaced by optimized query
-        if right not in enum.CaseRightSet.CASE_CONTENT.value:
-            raise ValueError(f"Invalid case abac right: {right.value}")
-        if on_invalid_case_id not in {"raise", "ignore"}:
-            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
-        if not filter_content and calculate_case_date:
-            raise ValueError("Cannot calculate case date when filter_content is False")
-
-        # Special case: case_type_id is NULL_ID -> take case type of first case
-        if case_type_id == NULL_ID:
-            if not case_ids:
-                raise exc.InvalidArgumentsError(
-                    "case_ids must be provided if case_type_id is not"
-                )
-            case_type_ids: list[UUID] = (
-                self.repository.read_fields(  # type:ignore[assignment]
-                    uow,
-                    user_id,
-                    model.Case,
-                    ["case_type_id"],
-                    filter=EqualsUuidFilter(key="id", value=case_ids[0]),
-                )
-            )
-            case_type_id = case_type_ids[0]
-
-        # @ABAC: verify access to case type
-        access_data_collections = case_abac.get_combinations_with_access_right(
-            right
-        ).get(case_type_id, set())
-        is_full_access = case_abac.is_full_access
-        data_collection_col_access = case_abac.case_type_access_abacs.get(
-            case_type_id, {}
+        self._validate_case_access_args(
+            right, on_invalid_case_id, filter_content, calculate_case_date
         )
-        if not access_data_collections and not is_full_access:
-            raise exc.UnauthorizedAuthError(
-                f"User {user_id} has no access to case type {case_type_id}"
-            )
-        case_types: list[model.CaseType] = (
-            self.repository.crud(  # type:ignore[assignment]
-                uow,
-                user_id,
-                model.CaseType,
-                None,
-                None,
-                CrudOperation.READ_ALL,
-                filter=EqualsUuidFilter(key="id", value=case_type_id),
-            )
+        access_data_collections, data_collection_col_access = (
+            self._resolve_case_type_access(user_id, case_abac, right, case_type_id)
         )
-        if not case_types:
-            raise exc.InvalidArgumentsError(f"Case type not found: {case_type_id}")
-        case_type = case_types[0]
+        case_type = self._load_case_type(uow, user_id, case_type_id)
 
         # Verify max number of cases
-        case_date_case_type_col_mappers: (
-            dict[UUID, Callable[[str], datetime.datetime]] | None
-        ) = {}
-        max_n_cases: float = float("inf")
-        if apply_max_n_cases and not is_full_access:
-            if right == enum.CaseRight.READ_CASE:
-                max_n_cases = case_type.read_max_n_cases
-            elif right == enum.CaseRight.WRITE_CASE:
-                max_n_cases = case_type.update_max_n_cases
-            else:
-                raise NotImplementedError(f"Unsupported case right: {right}")
-            case_date_case_type_col_mappers = (
-                case_service_get_case_date_case_type_col_mappers(
-                    self, uow, user_id, case_type_id
-                )
+        case_date_case_type_col_mappers, max_n_cases = (
+            self._resolve_case_date_mappers_and_limits(
+                uow,
+                user_id,
+                right,
+                case_type_id,
+                apply_max_n_cases,
+                case_type,
+                case_abac.is_full_access,
             )
+        )
 
         if case_ids and len(case_ids) > max_n_cases:
             raise exc.RequestLimitExceededAuthError(
@@ -510,6 +453,139 @@ class CaseService(BaseCaseService):
                     f"Invalid datetime range filter key: {datetime_range_filter.key}"
                 )
             datetime_range_filter.key = "case_date"
+        cases = self._retrieve_cases_by_ids_or_case_type_filter(
+            uow, user_id, case_type_id, case_ids, datetime_range_filter
+        )
+
+        if case_abac.is_full_access:
+            return cases
+
+        # @ABAC: filter cases to which the user has access, and optionally also
+        # the content (case type cols)
+        filtered_cases = self._filter_cases_by_access_and_content(
+            uow,
+            user_id,
+            right,
+            case_ids,
+            on_invalid_case_id,
+            filter_content,
+            extra_access_case_type_col_ids,
+            access_data_collections,
+            data_collection_col_access,
+            max_n_cases,
+            cases,
+        )
+
+        # Calculate case date if necessary
+        if calculate_case_date and case_date_case_type_col_mappers:
+            case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
+
+        return filtered_cases
+
+    def _filter_cases_by_access_and_content(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        right: enum.CaseRight,
+        case_ids: list[UUID] | None,
+        on_invalid_case_id: str,
+        filter_content: bool,
+        extra_access_case_type_col_ids: set[UUID] | None,
+        access_data_collections: set[UUID],
+        data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
+        max_n_cases: float,
+        cases: list[model.Case],
+    ) -> list[model.Case]:
+        case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
+        filtered_cases: list[model.Case] = []
+        count = 0
+        for case in cases:
+            data_collection_ids = self._authorize_case(
+                case,
+                case_ids,
+                on_invalid_case_id,
+                user_id,
+                case_data_collections,
+                access_data_collections,
+            )
+            if data_collection_ids is None:
+                # No access to case
+                continue
+            count += case.count if case.count is not None else 1
+            if count > max_n_cases:
+                break
+            # Keep case
+            filtered_cases.append(case)
+
+            # Continue to next case if case content need not be filtered
+            if filter_content:
+                self._filter_case_content(
+                    case,
+                    data_collection_ids,
+                    data_collection_col_access,
+                    extra_access_case_type_col_ids,
+                    right,
+                    user_id,
+                )
+
+        return filtered_cases
+
+    def _filter_case_content(
+        self,
+        case: model.Case,
+        data_collection_ids: set[UUID],
+        data_collection_col_access: dict[UUID, model.CaseTypeAccessAbac],
+        extra_access_case_type_col_ids: set[UUID] | None,
+        right: enum.CaseRight,
+        user_id: UUID,
+    ) -> None:
+        case_type_col_ids: set[UUID] = set()
+        for dc_id in data_collection_ids:
+            abac = data_collection_col_access.get(dc_id)
+            if abac:
+                case_type_col_ids.update(abac.read_case_type_col_ids)
+        if extra_access_case_type_col_ids:
+            case_type_col_ids.update(extra_access_case_type_col_ids)
+
+        if not case_type_col_ids:
+            raise AssertionError(
+                f"User {user_id} has zero columns with {right.value} access to case {case.id}"
+            )
+
+        case.content = {x: y for x, y in case.content.items() if x in case_type_col_ids}
+
+    def _authorize_case(
+        self,
+        case: model.Case,
+        case_ids: list[UUID] | None,
+        on_invalid_case_id: str,
+        user_id: UUID,
+        case_data_collections: dict[UUID, set[UUID]],
+        access_data_collections: set[UUID],
+    ) -> set[UUID] | None:
+        case_id = case.id
+        if case_id is None:
+            return None
+        data_collection_ids = case_data_collections.get(case_id, set()) | {
+            case.created_in_data_collection_id
+        }
+        if not bool(data_collection_ids & access_data_collections):
+            if case_ids and on_invalid_case_id == "raise":
+                raise exc.UnauthorizedAuthError(
+                    f"User {user_id} has no access to some requested cases"
+                )
+            return None
+
+        return data_collection_ids
+
+    def _retrieve_cases_by_ids_or_case_type_filter(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_type_id: UUID,
+        case_ids: list[UUID] | None = None,
+        datetime_range_filter: DatetimeRangeFilter | None = None,
+    ) -> list[model.Case]:
         cases: list[model.Case]
         if case_ids:
             if datetime_range_filter:
@@ -547,81 +623,91 @@ class CaseService(BaseCaseService):
                 filter=case_filter,
             )
 
-        # Special case: full_access -> nothing left to filter
-        if case_abac.is_full_access:
-            return cases
+        return cases
 
-        # @ABAC: filter cases to which the user has access, and optionally also
-        # the content (case type cols)
-        case_data_collections = self._retrieve_case_data_collections_map(uow, user_id)
-        filtered_cases = []
-        count = 0
-        for case in cases:
-            # Check if user has access to any data collection of the case
-            is_unauthorized_case = False
-            if case.id not in case_data_collections:
-                is_unauthorized_case = True
+    def _resolve_case_date_mappers_and_limits(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        right: enum.CaseRight,
+        case_type_id: UUID,
+        apply_max_n_cases: bool,
+        case_type: model.CaseType,
+        is_full_access: bool,
+    ) -> tuple[dict[UUID, Callable[[str], datetime.datetime]] | None, float]:
+        case_date_case_type_col_mappers: (
+            dict[UUID, Callable[[str], datetime.datetime]] | None
+        ) = {}
+        max_n_cases: float = float("inf")
+        if apply_max_n_cases and not is_full_access:
+            if right == enum.CaseRight.READ_CASE:
+                max_n_cases = case_type.read_max_n_cases
+            elif right == enum.CaseRight.WRITE_CASE:
+                max_n_cases = case_type.update_max_n_cases
             else:
-                assert case.id is not None
-                data_collection_ids: set[UUID] = case_data_collections.get(
-                    case.id, set()
+                raise NotImplementedError(f"Unsupported case right: {right}")
+            case_date_case_type_col_mappers = (
+                case_service_get_case_date_case_type_col_mappers(
+                    self, uow, user_id, case_type_id
                 )
-                data_collection_ids.add(case.created_in_data_collection_id)
-                if not data_collection_ids.intersection(access_data_collections):
-                    is_unauthorized_case = True
-            if is_unauthorized_case:
-                if case_ids:
-                    if on_invalid_case_id == "raise":
-                        raise exc.UnauthorizedAuthError(
-                            f"User {user_id} has no access to some requested cases"
-                        )
-                    elif on_invalid_case_id == "ignore":
-                        pass
-                    else:
-                        raise AssertionError(
-                            f"Invalid on_invalid_case_id: {on_invalid_case_id}"
-                        )
-                continue
-            # Stop if maximum number of cases reached
-            count += case.count if case.count is not None else 1
-            if count > max_n_cases:
-                break
-            # Keep case
-            filtered_cases.append(case)
-            # Continue to next case if case content need not be filtered
-            if not filter_content:
-                continue
-            # Determine which case type cols the user has access to
-            case_type_col_ids = set()
-            for data_collection_id in data_collection_ids:
-                # Add case type cols with access to the case for this data
-                # collection
-                case_type_access_abac = data_collection_col_access.get(
-                    data_collection_id
-                )
-                if case_type_access_abac is not None:
-                    case_type_col_ids.update(
-                        case_type_access_abac.read_case_type_col_ids
-                    )
-            if extra_access_case_type_col_ids is not None:
-                case_type_col_ids.update(extra_access_case_type_col_ids)
-            if not case_type_col_ids:
-                data_collection_ids_str = ", ".join(
-                    [str(x) for x in data_collection_ids]
-                )
-                raise AssertionError(
-                    f"User {user_id} has zero columns with {right.value} access to case {case.id}, data collections ({data_collection_ids_str}) even though the case has some {right.value} access"
-                )
-            # Filter case content
-            case.content = {
-                x: y for x, y in case.content.items() if x in case_type_col_ids
-            }
+            )
 
-        # Calculate case date if necessary
-        if calculate_case_date and case_date_case_type_col_mappers:
-            case_service_calculate_case_date(cases, case_date_case_type_col_mappers)
+        return case_date_case_type_col_mappers, max_n_cases
 
-        return filtered_cases
+    def _load_case_type(
+        self,
+        uow: BaseUnitOfWork,
+        user_id: UUID,
+        case_type_id: UUID,
+    ) -> model.CaseType:
+        case_types: list[model.CaseType] = (
+            self.repository.crud(  # type:ignore[assignment]
+                uow,
+                user_id,
+                model.CaseType,
+                None,
+                [case_type_id],
+                CrudOperation.READ_SOME,
+            )
+        )
+        if not case_types:
+            raise exc.InvalidArgumentsError(f"Case type not found: {case_type_id}")
+        case_type = case_types[0]
+        return case_type
+
+    def _resolve_case_type_access(
+        self,
+        user_id: UUID,
+        case_abac: model.CaseAbac,
+        right: enum.CaseRight,
+        case_type_id: UUID,
+    ) -> tuple[set[UUID], dict[UUID, model.CaseTypeAccessAbac]]:
+        access_data_collections = case_abac.get_combinations_with_access_right(
+            right
+        ).get(case_type_id, set())
+        data_collection_col_access = case_abac.case_type_access_abacs.get(
+            case_type_id, {}
+        )
+        if not access_data_collections and not case_abac.is_full_access:
+            raise exc.UnauthorizedAuthError(
+                f"User {user_id} has no access to case type {case_type_id}"
+            )
+
+        return access_data_collections, data_collection_col_access
+
+    def _validate_case_access_args(
+        self,
+        right: enum.CaseRight,
+        on_invalid_case_id: str,
+        filter_content: bool,
+        calculate_case_date: bool,
+    ) -> None:
+        if right not in enum.CaseRightSet.CASE_CONTENT.value:
+            raise ValueError(f"Invalid case abac right: {right.value}")
+        if on_invalid_case_id not in {"raise", "ignore"}:
+            raise ValueError(f"Invalid on_invalid_case_id: {on_invalid_case_id}")
+        if not filter_content and calculate_case_date:
+            raise ValueError("Cannot calculate case date when filter_content is False")
 
     def _retrieve_case_data_collections_map(
         self,

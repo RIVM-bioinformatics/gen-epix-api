@@ -72,6 +72,7 @@ class BaseCaseAbacTestCase(TestCase):
             remove_case_set_from_data_collection_ids=remove_set_from or set(),
         )
 
+
 @pytest.mark.scenario_ids("TC-SEC-29-01")
 class TestCaseTypeAccessAbac(BaseCaseAbacTestCase):
     def test_has_any_rights_false(self) -> None:

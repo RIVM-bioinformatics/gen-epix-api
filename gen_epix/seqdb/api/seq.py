@@ -39,11 +39,6 @@ class RetrieveSeqFastaRequestBody(PydanticBaseModel):
     )
 
 
-class RetrieveAlleleProfileRequestBody(PydanticBaseModel):
-    seq_ids: list[UUID]
-    locus_set_id: UUID
-
-
 def create_seq_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -127,27 +122,6 @@ def create_seq_endpoints(
                 "Content-Disposition": f'attachment; filename="{request_body.file_name}"'
             },
         )
-
-    @router.post(
-        "/retrieve/allele_profile",
-        operation_id="retrieve__allele_profile",
-        name="RetrieveAlleleProfile",
-        description=command.RetrieveAlleleProfileCommand.__doc__,
-    )
-    async def retrieve__allele_profile(
-        user: registered_user_dependency, request_body: RetrieveAlleleProfileRequestBody  # type: ignore
-    ) -> list[model.CompleteAlleleProfile]:
-        try:
-            retval: list[model.CompleteAlleleProfile] = app.handle(
-                command.RetrieveAlleleProfileCommand(
-                    user=user,
-                    seq_ids=request_body.seq_ids,
-                    locus_set_id=request_body.locus_set_id,
-                )
-            )
-        except Exception as exception:
-            handle_exception("f1d282b4", user, exception, request_ids=request_body.seq_ids)  # type: ignore
-        return retval
 
     @router.post(
         "/upload/samples",

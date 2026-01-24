@@ -4,7 +4,12 @@ from enum import Enum
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import CrudOperation, PermissionType, PermissionTypeSet
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    ExceptionHandlingMode,
+    PermissionType,
+    PermissionTypeSet,
+)
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 
@@ -487,7 +492,28 @@ class Domain:
     ) -> list[Entity]:
         if service_type:
             self._verify_service_type_exists(service_type)
-        entities = []
+        entities = self._filter_entities(
+            service_type,
+            persistable,
+            url_name,
+            database_name,
+            schema_name,
+            invert,
+        )
+        if reverse:
+            return list(reversed(entities))
+        return entities
+
+    def _filter_entities(
+        self,
+        service_type: Hashable | None,
+        persistable: bool | None,
+        url_name: str | None,
+        database_name: str | None,
+        schema_name: str | None,
+        invert: bool,
+    ) -> list[Entity]:
+        entities: list[Entity] = []
         for entity in self._dag_sorted_entities:
             if (
                 service_type
@@ -506,8 +532,6 @@ class Domain:
             if schema_name and (entity.schema_name != schema_name) != invert:
                 continue
             entities.append(entity)
-        if reverse:
-            return list(reversed(entities))
         return entities
 
     def get_dag_sorted_models(
@@ -549,7 +573,7 @@ class Domain:
         service_type: Hashable | None = None,
         model_class: type[Model] | None = None,
         crud_command_class: type[CrudCommand] | None = None,
-        on_cycle: str = "raise",
+        on_cycle: ExceptionHandlingMode = ExceptionHandlingMode.RAISE,
     ) -> Entity:
         # Set service type Model and CrudCommand
         if model_class:
@@ -573,41 +597,63 @@ class Domain:
                     f"Model name {model_name} is already registered"
                 )
             # Add Entity and Model
-            self._entities.add(entity)
-            self._entity_dag[entity] = []
-            self._models.add(model_class)
-            self._model_for_name[model_name] = model_class
-            self._name_for_model[model_class] = model_name
+            self._add_new_entity_and_model(entity, model_class, model_name)
 
             # Add relations between classes (service_type, Entity, Model)
-            self._service_type_for_entity[entity] = service_type
-            self._entities_for_service_type[service_type].add(entity)
-            self._service_type_for_model[model_class] = service_type
-            self._service_type_for_model[model_name] = service_type
-            self._models_for_service_type[service_type].add(model_class)
-            self._entity_for_model[model_class] = entity
-            self._entity_for_model[model_name] = entity
-            self._model_for_entity[entity] = model_class
+            self._link_new_entity_and_model(
+                entity, service_type, model_class, model_name
+            )
 
             # Update entity DAG
-            for link in entity.links.values():
-                if link.link_model_class not in self._models:
-                    if on_cycle.upper() == "RAISE":
-                        raise exc.DomainException(
-                            f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order"
-                        )
-                    if on_cycle.upper() != "IGNORE":
-                        continue
-                    raise NotImplementedError(f"Unsupported on_cycle: {on_cycle}")
-                link_entity = self.get_entity_for_model(link.link_model_class)  # type: ignore
-                self._entity_dag[entity].append(link_entity)
-            self._dag_sorted_entities.append(entity)
+            self._update_entity_dag(entity, on_cycle)
 
         # Register CrudCommand if necessary
         if entity.persistable and entity.crud_command_class:
             self.register_command(entity.crud_command_class, service_type=service_type)  # type: ignore
 
         return entity
+
+    def _update_entity_dag(
+        self, entity: Entity, on_cycle: ExceptionHandlingMode
+    ) -> None:
+        for link in entity.links.values():
+            if link.link_model_class not in self._models:
+                if on_cycle == ExceptionHandlingMode.RAISE:
+                    raise exc.DomainException(
+                        f"Entity {entity.name} references unknown model {link.link_model_class} - add entities in DAG sorted order"
+                    )
+                elif on_cycle == ExceptionHandlingMode.IGNORE:
+                    continue
+                else:
+                    raise NotImplementedError(f"Unsupported on_cycle: {on_cycle.value}")
+            link_entity = self.get_entity_for_model(link.link_model_class)  # type: ignore
+            self._entity_dag[entity].append(link_entity)
+        self._dag_sorted_entities.append(entity)
+
+    def _link_new_entity_and_model(
+        self,
+        entity: Entity,
+        service_type: Hashable,
+        model_class: type[Model],
+        model_name: str,
+    ) -> None:
+        self._service_type_for_entity[entity] = service_type
+        self._entities_for_service_type[service_type].add(entity)
+        self._service_type_for_model[model_class] = service_type
+        self._service_type_for_model[model_name] = service_type
+        self._models_for_service_type[service_type].add(model_class)
+        self._entity_for_model[model_class] = entity
+        self._entity_for_model[model_name] = entity
+        self._model_for_entity[entity] = model_class
+
+    def _add_new_entity_and_model(
+        self, entity: Entity, model_class: type[Model], model_name: str
+    ) -> None:
+        self._entities.add(entity)
+        self._entity_dag[entity] = []
+        self._models.add(model_class)
+        self._model_for_name[model_name] = model_class
+        self._name_for_model[model_class] = model_name
 
     def register_command(
         self, command_class: type[Command], service_type: Hashable | None = None
@@ -616,51 +662,18 @@ class Domain:
 
         # Verify already registered Command
         if command_class in self._commands:
-            if command_name != self._name_for_command[command_class]:
-                raise exc.DomainException(
-                    f"Command {command_name} is already registered with different name {self._name_for_command[command_class]}"
-                )
-            linked_service_type = self._service_type_for_command[command_class]
-            if linked_service_type != service_type:
-                raise exc.DomainException(
-                    f"Command {command_name} is already registered with service type {linked_service_type}"
-                )
-            if issubclass(command_class, CrudCommand):
-                if command_class.MODEL_CLASS is None:
-                    raise exc.DomainException(
-                        f"Model class not set for CrudCommand {command_name}"
-                    )
-                linked_model_class = self._model_for_crud_command[command_class]
-                if linked_model_class is not command_class.MODEL_CLASS:
-                    raise exc.DomainException(
-                        f"Command {command_name} is already registered and linked to model {linked_model_class.NAME}"
-                    )
+            self._verify_registered_command(command_class, service_type, command_name)
             return command_class
 
         # Register new service_type
         self.register_service_type(service_type)
 
         # Register new Command
-        permissions = Domain.get_command_permissions(command_class)
-        self._commands.add(command_class)
-        self._permissions.update(permissions)
-        self._command_for_name[command_name] = command_class
-        self._name_for_command[command_class] = command_name
+        permissions = self._add_new_command(command_class, command_name)
         # Add relations between classes (service_type, Command, Permission)
-        self._service_type_for_command[command_class] = service_type
-        self._commands_for_service_type[service_type].add(command_class)
-        self._permissions_for_service_type[service_type].update(permissions)
-        self._permissions_for_command[command_class] = permissions
-        self._permissions_for_command[command_name] = permissions
-        for permission in permissions:
-            self._service_type_for_permission[permission] = service_type
-            self._command_for_permission[permission] = command_class
-            self._permission_for_tuple[(command_class, permission.permission_type)] = (
-                permission
-            )
-            self._permission_for_tuple[(command_name, permission.permission_type)] = (
-                permission
-            )
+        self._associate_command_with_service(
+            command_class, service_type, command_name, permissions
+        )
 
         # Add CrudCommand specific verifications and data
         if issubclass(command_class, CrudCommand):
@@ -688,18 +701,14 @@ class Domain:
             # Register new CrudCommand
             self._crud_commands.add(crud_command_class)
             # Add relations between classes (service_type, Entity, Model, CrudCommand, Permission)
-            model_name = Domain.get_model_name(model_class)
-            self._crud_commands_for_service_type[service_type].add(crud_command_class)
-            self._entity_for_crud_command[crud_command_class] = entity
-            self._entity_for_crud_command[command_name] = entity
-            self._crud_command_for_entity[entity] = crud_command_class
-            self._model_for_crud_command[crud_command_class] = model_class
-            self._model_for_crud_command[command_name] = model_class
-            self._permissions_for_model[model_class] = permissions
-            for permission in permissions:
-                self._model_for_permission[permission] = model_class
-            self._crud_command_for_model[model_class] = crud_command_class
-            self._crud_command_for_model[model_name] = crud_command_class
+            self._link_new_command(
+                service_type,
+                command_name,
+                permissions,
+                crud_command_class,
+                model_class,
+                entity,
+            )
 
             # Set entity to be registered
             if entity not in self._entities:
@@ -710,6 +719,86 @@ class Domain:
                     service_type=service_type,
                 )
         return command_class
+
+    def _link_new_command(
+        self,
+        service_type: Hashable,
+        command_name: str,
+        permissions: frozenset[Permission],
+        crud_command_class: type[CrudCommand],
+        model_class: type[Model],
+        entity: Entity,
+    ) -> None:
+        model_name = Domain.get_model_name(model_class)
+        self._crud_commands_for_service_type[service_type].add(crud_command_class)
+        self._entity_for_crud_command[crud_command_class] = entity
+        self._entity_for_crud_command[command_name] = entity
+        self._crud_command_for_entity[entity] = crud_command_class
+        self._model_for_crud_command[crud_command_class] = model_class
+        self._model_for_crud_command[command_name] = model_class
+        self._permissions_for_model[model_class] = permissions
+        for permission in permissions:
+            self._model_for_permission[permission] = model_class
+        self._crud_command_for_model[model_class] = crud_command_class
+        self._crud_command_for_model[model_name] = crud_command_class
+
+    def _associate_command_with_service(
+        self,
+        command_class: type[Command],
+        service_type: Hashable | None,
+        command_name: str,
+        permissions: frozenset[Permission],
+    ) -> None:
+        self._service_type_for_command[command_class] = service_type
+        self._commands_for_service_type[service_type].add(command_class)
+        self._permissions_for_service_type[service_type].update(permissions)
+        self._permissions_for_command[command_class] = permissions
+        self._permissions_for_command[command_name] = permissions
+        for permission in permissions:
+            self._service_type_for_permission[permission] = service_type
+            self._command_for_permission[permission] = command_class
+            self._permission_for_tuple[(command_class, permission.permission_type)] = (
+                permission
+            )
+            self._permission_for_tuple[(command_name, permission.permission_type)] = (
+                permission
+            )
+
+    def _add_new_command(
+        self, command_class: type[Command], command_name: str
+    ) -> frozenset[Permission]:
+        permissions = Domain.get_command_permissions(command_class)
+        self._commands.add(command_class)
+        self._permissions.update(permissions)
+        self._command_for_name[command_name] = command_class
+        self._name_for_command[command_class] = command_name
+        return permissions
+
+    def _verify_registered_command(
+        self,
+        command_class: type[Command],
+        service_type: Hashable | None,
+        command_name: str,
+    ) -> None:
+        if command_name != self._name_for_command[command_class]:
+            raise exc.DomainException(
+                f"Command {command_name} is already registered with different name {self._name_for_command[command_class]}"
+            )
+        linked_service_type = self._service_type_for_command[command_class]
+        if linked_service_type != service_type:
+            raise exc.DomainException(
+                f"Command {command_name} is already registered with service type {linked_service_type}"
+            )
+        if issubclass(command_class, CrudCommand):
+            if command_class.MODEL_CLASS is None:
+                raise exc.DomainException(
+                    f"Model class not set for CrudCommand {command_name}"
+                )
+            linked_model_class = self._model_for_crud_command[command_class]
+            if linked_model_class is not command_class.MODEL_CLASS:
+                raise exc.DomainException(
+                    f"Command {command_name} is already registered and linked to model {linked_model_class.NAME}"
+                )
 
     def _verify_model_has_entity(self, model_class: type[Model]) -> None:
         if model_class.ENTITY is None:

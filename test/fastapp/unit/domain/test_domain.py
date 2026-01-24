@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from gen_epix.fastapp import exc
+from gen_epix.fastapp import ExceptionHandlingMode, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import CrudOperation, PermissionType, PermissionTypeSet
@@ -453,14 +453,13 @@ class TestRegistrationAndLookups(BaseDomainTestCase):
                 entity_c, service_type=ServiceType.SVC3, model_class=ModelD
             )
 
-        # IGNORE branch -> NotImplementedError
-        with self.assertRaises(NotImplementedError):
-            self.domain.register_entity(
-                entity_e,
-                service_type=ServiceType.SVC3,
-                model_class=ModelF,
-                on_cycle="IGNORE",
-            )
+        # IGNORE branch
+        self.domain.register_entity(
+            entity_e,
+            service_type=ServiceType.SVC3,
+            model_class=ModelF,
+            on_cycle=ExceptionHandlingMode.IGNORE,
+        )
 
         class BrokenEntity(Entity):
             @property

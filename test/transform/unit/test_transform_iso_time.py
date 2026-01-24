@@ -6,6 +6,7 @@ from gen_epix.transform.enum import (
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
 import pytest
 
+
 @pytest.mark.scenario_ids("TC-MAIN-12-01")
 def test_transform_iso_time() -> None:
     def assert_equal(actual: list[str | None], expected: list[str | None]) -> None:
