@@ -99,25 +99,20 @@ class UploadCasesCommand(Command, UploadBatchCommandMixin):
         return self
 
 
-class RetrieveCaseSetStatsCommand(Command):
+class RetrieveCaseStatsCommand(Command):
     """
-    Retrieve statistics for a set of case sets.
-    """
-
-    case_set_ids: list[UUID] | None = Field(
-        default=None,
-        description="The case set ids to retrieve stats for, if not all. UNIQUE",
-    )
-
-
-class RetrieveCaseTypeStatsCommand(Command):
-    """
-    Retrieve statistics for a set of case types.
+    Retrieve statistics for a set of case types. Each of the parameters, when
+    provided, will further filter the cases that are considered for the
+    statistics.
     """
 
     case_type_ids: set[UUID] | None = Field(
         default=None,
         description="The case type ids to retrieve stats for, if not all.",
+    )
+    case_set_ids: list[UUID] | None = Field(
+        default=None,
+        description="The case set ids to retrieve stats for, if not all. UNIQUE",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,

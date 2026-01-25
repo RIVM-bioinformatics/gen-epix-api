@@ -23,10 +23,19 @@ from gen_epix.util import copy_model_field
 
 
 class CompleteCaseType(CaseType):
+    """
+    A complete case type with all its related entities, to avoid multiple queries
+    and allow efficient access. The complete case type is unique for each
+    (id, user_id) whereby id is the inherited case type id.
+    """
+
     NAME: ClassVar = "CompleteCaseType"
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="complete_case_types",
         persistable=False,
+    )
+    user_id: UUID = Field(
+        description="The ID of the user for whom the complete case type is retrieved."
     )
     etiologies: dict[UUID, Etiology] = Field(
         description="The etiologies used by the case type"
@@ -68,6 +77,10 @@ class CompleteCaseType(CaseType):
     )
     case_date_case_type_dim_id: UUID | None = Field(
         description="The case type dimension ID to use for time-based statistics unless otherwise specified"
+    )
+    case_date_col_type_map: dict[enum.ColType, UUID] = Field(
+        default_factory=dict,
+        description="The mapping of column types, restricted to time-related column types, to column IDs for the case date column of the case type. Calculated during model validation.",
     )
     create_max_n_cases: int = copy_model_field(CaseType, "create_max_n_cases")
     read_max_n_cases: int = copy_model_field(CaseType, "read_max_n_cases")
@@ -126,4 +139,21 @@ class CompleteCaseType(CaseType):
                 ordered_dim_case_type_cols
             )
         self.ordered_case_type_col_ids_by_dim = ordered_case_type_col_ids_by_dim
+        # Calculate case_date_col_type_map
+        self.case_date_col_type_map: dict[enum.ColType, UUID] = {}
+        if self.case_date_case_type_dim_id is not None:
+            case_type_col_ids = self.ordered_case_type_col_ids_by_dim[
+                self.case_date_case_type_dim_id
+            ]
+            time_col_types = enum.ColTypeSet.TIME.value
+            for case_type_col_id in case_type_col_ids:
+                case_type_col = self.case_type_cols[case_type_col_id]
+                col = self.cols[case_type_col.col_id]
+                if col.col_type not in time_col_types:
+                    continue
+                if col.col_type in self.case_date_col_type_map:
+                    raise ValueError(
+                        f"Multiple case date columns found for col_type {col.col_type}"
+                    )
+                self.case_date_col_type_map[col.col_type] = case_type_col_id
         return self

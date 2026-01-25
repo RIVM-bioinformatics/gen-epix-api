@@ -235,6 +235,7 @@ def case_service_retrieve_complete_case_type(
         # Compose complete case type and return
         return model.CompleteCaseType(
             **case_type.model_dump(),
+            user_id=cmd.user.id if cmd.user else None,
             etiologies=etiologies,
             etiological_agents=etiological_agents,
             dims=dim_map,

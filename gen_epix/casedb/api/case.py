@@ -325,20 +325,20 @@ def create_case_endpoints(
         "/retrieve/case_type_stats",
         operation_id="retrieve__case_type_stats",
         name="Retrieve case type statistics",
-        description=command.RetrieveCaseTypeStatsCommand.__doc__,
+        description=command.RetrieveCaseStatsCommand.__doc__,
     )
     async def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveCaseTypeStatsRequestBody,
-    ) -> list[model.CaseTypeStat]:
+    ) -> list[model.CaseStats]:
         return cast(
-            list[model.CaseTypeStat],
+            list[model.CaseStats],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="80c99f53",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveCaseTypeStatsCommand(
+                input_command=command.RetrieveCaseStatsCommand(
                     user=user,
                     case_type_ids=request_body.case_type_ids,
                     datetime_range_filter=request_body.datetime_range_filter,
@@ -350,20 +350,20 @@ def create_case_endpoints(
         "/retrieve/case_set_stats",
         operation_id="retrieve__case_set_stats",
         name="Retrieve case set statistics",
-        description=command.RetrieveCaseSetStatsCommand.__doc__,
+        description=command.RetrieveCaseStatsCommand.__doc__,
     )
     async def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveCaseSetStatsRequestBody,
-    ) -> list[model.CaseSetStat]:
+    ) -> list[model.CaseStats]:
         return cast(
-            list[model.CaseSetStat],
+            list[model.CaseStats],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="be54843e",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveCaseSetStatsCommand(
+                input_command=command.RetrieveCaseStatsCommand(
                     user=user,
                     case_set_ids=(
                         None

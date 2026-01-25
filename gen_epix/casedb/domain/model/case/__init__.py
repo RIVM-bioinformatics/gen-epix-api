@@ -16,10 +16,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 from gen_epix.casedb.domain.model.case.non_persistable import (
     CaseSetRights as CaseSetRights,
 )
-from gen_epix.casedb.domain.model.case.non_persistable import CaseSetStat as CaseSetStat
-from gen_epix.casedb.domain.model.case.non_persistable import (
-    CaseTypeStat as CaseTypeStat,
-)
+from gen_epix.casedb.domain.model.case.non_persistable import CaseStats as CaseStats
 from gen_epix.casedb.domain.model.case.operational_data import Case as Case
 from gen_epix.casedb.domain.model.case.operational_data import (
     CaseDataCollectionLink as CaseDataCollectionLink,

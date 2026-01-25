@@ -13,15 +13,16 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
-SKIP_ENDPOINTS = False
+SKIP_ENDPOINTS = True
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
+# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -77,9 +78,72 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
-        case_type_stats = app.handle(
-            command.RetrieveCaseTypeStatsCommand(user=root_user)
-        )
+        # # --------------------------------------------------------------------------------------
+
+        # # Code for performance profiling of a code chunk
+        # import pyinstrument
+
+        # users = app.handle(
+        #     command.UserCrudCommand(
+        #         user=root_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_admin_policies = app.handle(
+        #     command.OrganizationAdminPolicyCrudCommand(
+        #         user=root_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_admin_user: model.User = [
+        #     x for x in users if x.id == org_admin_policies[0].user_id
+        # ][0]
+        # user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
+        #     command.UserAccessCasePolicyCrudCommand(
+        #         user=org_admin_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_user: model.User = [
+        #     x
+        #     for x in users
+        #     if x.id in {y.user_id for y in user_access_case_policies}
+        #     and app_impl.role_map[CommonRole.ORG_USER] in x.roles
+        #     and len(x.roles) == 1
+        # ][0]
+
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
+
+        # t0 = datetime.datetime.now()
+
+        # case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        # case_sets: list[model.CaseSet] = app.handle(
+        #     command.CaseSetCrudCommand(
+        #         user=org_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # case_set_ids: list[UUID] = [x.id for x in case_sets]  # type:ignore[assignment]
+        # case_set_stats = app.handle(
+        #     command.RetrieveCaseStatsCommand(user=org_user, case_set_ids=case_set_ids)
+        # )
+
+        # t1 = datetime.datetime.now()
+        # print(f"\n\n\n\nRetrieveCaseSetStatsCommand took {t1 - t0}\n\n\n\n")
+        # profiler.stop()
+        # dir = Path("./test/output/performance")
+        # if not dir.exists():
+        #     dir.mkdir()
+        # with open(
+        #     dir
+        #     / f"performance.{datetime.datetime.now().isoformat().replace(':', '.')}.case_set_stats.{DEV_REPOSITORY_CONFIG.value}.html",
+        #     "w",
+        # ) as f:
+        #     f.write("".join(profiler.output_html()))
+        # return
+
+        # # --------------------------------------------------------------------------------------
 
         # Get all users and permissions
         users = app.handle(
@@ -199,15 +263,11 @@ class TestContent:
         }
 
         # Get case type and and case set stats
-        case_type_stats = app.handle(
-            command.RetrieveCaseTypeStatsCommand(user=org_user)
-        )
-        case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
+        case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
         # Go over all case types with data
-        has_cases_case_type_ids = {
-            x.case_type_id for x in case_type_stats if x.n_cases > 0
-        }
+        has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
