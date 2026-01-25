@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, cast
+from typing import Any
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -43,6 +43,12 @@ class BaseRetrieveStatsTestCase(TestCase):
         self.uow.__enter__ = Mock(return_value=self.uow)
         self.uow.__exit__ = Mock(return_value=None)
         self.repository.uow.return_value = self.uow
+
+        # Default mock for repository.crud that returns case type IDs
+        self.repository.crud = Mock(
+            return_value=[self.case_type_id1, self.case_type_id2]
+        )
+
         # Align service.repository and repository object returned by _get_user_and_repository
         self.service.repository = self.repository
         self.service._get_user_and_repository = Mock(
@@ -54,7 +60,7 @@ class BaseRetrieveStatsTestCase(TestCase):
         self.service.app = Mock()
         self.service.app.handle = Mock(return_value=[])
         self.service.retrieve_complete_case_type = Mock()
-        
+
         # Mock repository.retrieve_case_stats method which is now called by the implementation
         self.repository.retrieve_case_stats = Mock()
         self.repository.read_fields = Mock(return_value=[])
@@ -102,6 +108,7 @@ class BaseRetrieveStatsTestCase(TestCase):
             case_type_access_abacs=case_type_access_abacs or {},
             case_type_share_abacs={},
             case_date_col_type_map=case_date_col_type_map or {},
+            case_date_case_type_dim_id=None,  # Add this required field
             create_max_n_cases=1000,
             read_max_n_cases=1000,
             read_max_tree_size=1000,
@@ -186,8 +193,12 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         self.repository.crud = Mock(return_value=case_type_ids)
 
         # Mock complete case types
-        complete_case_type_1 = self.create_complete_case_type(case_type_id=self.case_type_id1)
-        complete_case_type_2 = self.create_complete_case_type(case_type_id=self.case_type_id2)
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        complete_case_type_2 = self.create_complete_case_type(
+            case_type_id=self.case_type_id2
+        )
         self.service.retrieve_complete_case_type = Mock(
             side_effect=[complete_case_type_1, complete_case_type_2]
         )
@@ -203,9 +214,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             case_type_id=self.case_type_id2,
             n_cases=0,
         )
-        self.repository.retrieve_case_stats = Mock(
-            side_effect=[stats_1, stats_2]
-        )
+        self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
 
         abac = self.mock_abac(is_full_access=True, readable_case_type_ids=set())
 
@@ -228,10 +237,12 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         }
         self.assertEqual(result_by_id[self.case_type_id1].n_cases, 4)
         self.assertEqual(
-            result_by_id[self.case_type_id1].first_case_date, datetime(2024, 1, 1, 12, 0, 0)
+            result_by_id[self.case_type_id1].first_case_date,
+            datetime(2024, 1, 1, 12, 0, 0),
         )
         self.assertEqual(
-            result_by_id[self.case_type_id1].last_case_date, datetime(2024, 1, 1, 12, 0, 0)
+            result_by_id[self.case_type_id1].last_case_date,
+            datetime(2024, 1, 1, 12, 0, 0),
         )
         self.assertEqual(result_by_id[self.case_type_id2].n_cases, 0)
         self.assertIsNone(result_by_id[self.case_type_id2].first_case_date)
@@ -248,17 +259,21 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         # Assert retrieve_complete_case_type interactions
         retrieve_calls = self.service.retrieve_complete_case_type.call_args_list
         self.assertEqual(len(retrieve_calls), 2)
-        
-        # Assert repository.retrieve_case_stats interactions  
+
+        # Assert repository.retrieve_case_stats interactions
         stats_calls = self.repository.retrieve_case_stats.call_args_list
         self.assertEqual(len(stats_calls), 2)
 
     def test_no_case_type_ids_restricted_access_uses_abac_ids(self) -> None:
         readable_ids = {self.case_type_id1, self.case_type_id2}
-        
+
         # Mock complete case types
-        complete_case_type_1 = self.create_complete_case_type(case_type_id=self.case_type_id1)
-        complete_case_type_2 = self.create_complete_case_type(case_type_id=self.case_type_id2)
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        complete_case_type_2 = self.create_complete_case_type(
+            case_type_id=self.case_type_id2
+        )
         self.service.retrieve_complete_case_type = Mock(
             side_effect=[complete_case_type_1, complete_case_type_2]
         )
@@ -276,9 +291,7 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             first_case_date=datetime(2023, 6, 2, 0, 0, 0),
             last_case_date=datetime(2023, 6, 2, 0, 0, 0),
         )
-        self.repository.retrieve_case_stats = Mock(
-            side_effect=[stats_1, stats_2]
-        )
+        self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
 
         abac = self.mock_abac(is_full_access=False, readable_case_type_ids=readable_ids)
 
@@ -325,8 +338,12 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock complete case type
-        complete_case_type_1 = self.create_complete_case_type(case_type_id=self.case_type_id1)
-        self.service.retrieve_complete_case_type = Mock(return_value=complete_case_type_1)
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
+        )
 
         # Mock repository.retrieve_case_stats
         stats_1 = case_model.CaseStats(
@@ -377,10 +394,13 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.read_fields to return case set info
-        def mock_read_fields(*args, **kwargs):
+        def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
             model_class = args[2]
             if model_class == case_model.CaseSet:
-                return [(self.case_set_id1, self.case_type_id1), (self.case_set_id2, self.case_type_id1)]
+                return [
+                    (self.case_set_id1, self.case_type_id1),
+                    (self.case_set_id2, self.case_type_id1),
+                ]
             elif model_class == case_model.CaseSetMember:
                 filter_arg = kwargs.get("filter")
                 if hasattr(filter_arg, "value"):
@@ -393,9 +413,16 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
+        # Mock repository.crud to return case type IDs when needed
+        self.repository.crud = Mock(return_value=[self.case_type_id1])
+
         # Mock complete case type
-        complete_case_type_1 = self.create_complete_case_type(case_type_id=self.case_type_id1)
-        self.service.retrieve_complete_case_type = Mock(return_value=complete_case_type_1)
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
+        )
 
         # Mock repository.retrieve_case_stats
         stats_1 = case_model.CaseStats(
@@ -417,7 +444,9 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
 
         # Mock ABAC to allow access
-        abac = self.mock_abac(is_full_access=True, readable_case_type_ids={self.case_type_id1})
+        abac = self.mock_abac(
+            is_full_access=True, readable_case_type_ids={self.case_type_id1}
+        )
 
         cmd = self.case_stats_cmd(
             case_type_ids=None, case_set_ids={self.case_set_id1, self.case_set_id2}
@@ -451,8 +480,10 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         # Mock ABAC to allow access
         abac = self.mock_abac(is_full_access=True, readable_case_type_ids=set())
 
+        # Mock repository.crud to return empty list for case types
+        self.repository.crud = Mock(return_value=[])
         cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids=None)
-        
+
         with patch.object(
             BaseCaseAbacPolicy,
             "get_case_abac_from_command",
@@ -472,7 +503,7 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         )
 
         # Mock repository.read_fields to return case set info but no members
-        def mock_read_fields(*args, **kwargs):
+        def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
             model_class = args[2]
             if model_class == case_model.CaseSet:
                 return [(self.case_set_id1, self.case_type_id1)]
@@ -482,9 +513,16 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
 
         self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
+        # Mock repository.crud to return case type IDs when needed
+        self.repository.crud = Mock(return_value=[self.case_type_id1])
+
         # Mock complete case type
-        complete_case_type_1 = self.create_complete_case_type(case_type_id=self.case_type_id1)
-        self.service.retrieve_complete_case_type = Mock(return_value=complete_case_type_1)
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
+        )
 
         # Mock repository.retrieve_case_stats to return zero stats for empty case set
         stats_empty = case_model.CaseStats(
@@ -496,10 +534,12 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
         self.repository.retrieve_case_stats = Mock(return_value=stats_empty)
 
         # Mock ABAC to allow access
-        abac = self.mock_abac(is_full_access=True, readable_case_type_ids={self.case_type_id1})
+        abac = self.mock_abac(
+            is_full_access=True, readable_case_type_ids={self.case_type_id1}
+        )
 
         cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids={self.case_set_id1})
-        
+
         with patch.object(
             BaseCaseAbacPolicy,
             "get_case_abac_from_command",
