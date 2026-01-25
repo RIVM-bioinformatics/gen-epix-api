@@ -44,7 +44,7 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
     "types-setuptools==80.10.*",
-    "python-multipart==0.0.21",
+    "python-multipart==0.0.22",
 ]
 
 [project.urls]
