@@ -79,6 +79,7 @@ def case_service_retrieve_complete_case_type(
                 x: model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
                     data_collection_id=x,
+                    # TODO: is_private should be determined properly
                     is_private=True,
                     add_case=True,
                     remove_case=True,
