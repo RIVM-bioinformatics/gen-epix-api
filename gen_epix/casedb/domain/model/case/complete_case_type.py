@@ -34,7 +34,7 @@ class CompleteCaseType(CaseType):
         snake_case_plural_name="complete_case_types",
         persistable=False,
     )
-    user_id: UUID = Field(
+    user_id: UUID | None = Field(
         description="The ID of the user for whom the complete case type is retrieved."
     )
     etiologies: dict[UUID, Etiology] = Field(

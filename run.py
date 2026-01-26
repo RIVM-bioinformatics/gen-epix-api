@@ -502,6 +502,16 @@ class Run:
             ]
         )
 
+    def test_casedb_integration_refdata_access(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/refdata_access",
+            ]
+        )
+
     def test_casedb_performance(self) -> None:
         import pytest
 

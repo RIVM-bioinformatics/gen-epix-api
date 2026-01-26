@@ -19,7 +19,7 @@ from gen_epix.seqdb.domain import model as seqdb_model
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
-SKIP_ENDPOINTS = True
+SKIP_ENDPOINTS = False
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
 # DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO

@@ -5,6 +5,7 @@ from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.repository import BaseCaseRepository
 from gen_epix.fastapp.repositories import DictRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.filter.datetime_range import DatetimeRangeFilter
 
 
 class CaseDictRepository(DictRepository, BaseCaseRepository):
