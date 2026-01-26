@@ -73,7 +73,7 @@ class OrganizationService(BaseOrganizationService):
         retval = super().crud(cmd)
         # Invalidate cache
         if issubclass(type(cmd), OrganizationService.CACHE_INVALIDATION_COMMANDS):
-            self.retrieve_user_by_key.cache_clear()  # type:ignore[attr-defined]
+            self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
         return retval
 
     @cached(cache=TTLCache(maxsize=1000, ttl=60))

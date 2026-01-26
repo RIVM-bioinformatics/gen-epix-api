@@ -39,7 +39,7 @@ def _crud_case_set_without_abac(
 ) -> list[model.CaseSet] | model.CaseSet | list[UUID] | UUID | list[bool] | bool | None:
     """CaseSet admin command handling, no ABAC applied."""
     # Any other operation
-    return self.crud(cmd)  # type:ignore[return-value]
+    return self.crud(cmd)  # type: ignore[return-value]
 
 
 def _crud_case_set_with_abac(
@@ -54,7 +54,7 @@ def _crud_case_set_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if case_abac is None:
         # No policy: allows for internal commands to retrieve all
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialise some
     is_create = cmd.operation in CrudOperationSet.CREATE.value
@@ -96,7 +96,7 @@ def _crud_case_set_with_abac(
             self, uow, cmd, case_abac, is_delete_all, case_set_ids
         )
         # Delete with cascade
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
     else:
         raise AssertionError("Unexpected operation")
 
@@ -116,7 +116,7 @@ def _validate_case_set_deletion(
         )
         # Get all case sets and data collection links
     assert case_set_ids is not None
-    case_sets: list[model.CaseSet] = self.repository.crud(  # type:ignore[assignment]
+    case_sets: list[model.CaseSet] = self.repository.crud(  # type: ignore[assignment]
         uow,
         cmd.user.id,  # type: ignore[union-attr]
         model.CaseSet,

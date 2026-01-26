@@ -41,7 +41,7 @@ class SystemService(BaseSystemService):
     ) -> list[model.Outage]:
         with self.repository.uow() as uow:
             outages: list[model.Outage] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     None,
                     model.Outage,

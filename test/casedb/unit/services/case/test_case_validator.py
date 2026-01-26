@@ -31,6 +31,7 @@ class BaseCaseValidatorTestCase(TestCase):
 
     def setUp(self) -> None:
         # Common IDs
+        self.user_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440000")
         self.case_type_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400aa")
         self.time_dim_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400ab")
         self.geo_dim_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400ac")
@@ -363,6 +364,7 @@ class BaseCaseValidatorTestCase(TestCase):
 
         complete = CompleteCaseType(
             id=self.case_type_id,
+            user_id=self.user_id,
             name="Test CT",
             etiologies={},
             etiological_agents={},

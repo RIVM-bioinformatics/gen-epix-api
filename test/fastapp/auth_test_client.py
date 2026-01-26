@@ -2,9 +2,10 @@ from test.fastapp.enum import ServiceType
 from test.fastapp.unit.auth.mock_jwk_and_token import MockJWKAndToken
 from test.fastapp.user_manager import UserManager
 
+import jwt
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-import jwt
+
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.middleware import HandleAuthExceptionMiddleware
 from gen_epix.fastapp.services.auth import AuthService, OauthIdpClient

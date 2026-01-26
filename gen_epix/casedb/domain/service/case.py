@@ -160,8 +160,7 @@ class BaseCaseService(BaseService):
         f(command.UploadCasesCommand, self.upload_cases)
         f(command.CreateCaseSetCommand, self.create_case_set)
         f(command.RetrieveCompleteCaseTypeCommand, self.retrieve_complete_case_type)
-        f(command.RetrieveCaseTypeStatsCommand, self.retrieve_case_type_stats)
-        f(command.RetrieveCaseSetStatsCommand, self.retrieve_case_set_stats)
+        f(command.RetrieveCaseStatsCommand, self.retrieve_case_stats)
         f(command.RetrieveCasesByQueryCommand, self.retrieve_cases_by_query)
         f(command.RetrieveCasesByIdCommand, self.retrieve_cases_by_id)
         f(command.RetrieveCaseRightsCommand, self.retrieve_case_or_set_rights)
@@ -489,17 +488,10 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_case_set_stats(
+    def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseSetStatsCommand,
-    ) -> list[model.CaseSetStat]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_case_type_stats(
-        self,
-        cmd: command.RetrieveCaseTypeStatsCommand,
-    ) -> list[model.CaseTypeStat]:
+        cmd: command.RetrieveCaseStatsCommand,
+    ) -> list[model.CaseStats]:
         raise NotImplementedError()
 
     @abc.abstractmethod

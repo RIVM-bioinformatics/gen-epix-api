@@ -60,11 +60,11 @@ class TestRead:
     def test_read_organization_admin_emails(self, env: Env) -> None:
         # Read all organization admin emails
         all_users: dict[UUID, model.User] = {
-            x.id: x for x in env.read_all("root1_1", model.User)  # type:ignore[misc]
+            x.id: x for x in env.read_all("root1_1", model.User)  # type: ignore[misc]
         }
         all_org_admin_policies: list[model.OrganizationAdminPolicy] = env.read_all(
             "root1_1", model.OrganizationAdminPolicy
-        )  # type:ignore[assignment]
+        )  # type: ignore[assignment]
         org_admin_users_by_org: dict[UUID, set[UUID]] = {}
         for policy in all_org_admin_policies:
             org_admin_users_by_org.setdefault(policy.organization_id, set()).add(
@@ -73,7 +73,7 @@ class TestRead:
         for user_or_str in DATA_USERS:
             user: model.User = env._get_obj(
                 model.User, user_or_str
-            )  # type:ignore[assignment]
+            )  # type: ignore[assignment]
             user_name_emails = sorted(
                 env.read_organization_admin_name_emails(user),
                 key=lambda x: (x.name, x.email),

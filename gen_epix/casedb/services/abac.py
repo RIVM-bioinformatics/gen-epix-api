@@ -158,7 +158,7 @@ class AbacService(BaseAbacService):
                     command.UserAccessCasePolicyCrudCommand(
                         user=user,
                         obj_ids=[
-                            x.id for x in user_access_case_policies  # type:ignore[misc]
+                            x.id for x in user_access_case_policies  # type: ignore[misc]
                         ],
                         operation=CrudOperation.DELETE_SOME,
                     )
@@ -168,7 +168,7 @@ class AbacService(BaseAbacService):
                     command.UserShareCasePolicyCrudCommand(
                         user=user,
                         obj_ids=[
-                            x.id for x in user_share_case_policies  # type:ignore[misc]
+                            x.id for x in user_share_case_policies  # type: ignore[misc]
                         ],
                         operation=CrudOperation.DELETE_SOME,
                     )
@@ -177,14 +177,14 @@ class AbacService(BaseAbacService):
             new_user_access_case_policies = self.app.handle(
                 command.UserAccessCasePolicyCrudCommand(
                     user=user,
-                    objs=new_user_access_case_policies,  # type:ignore[arg-type]
+                    objs=new_user_access_case_policies,  # type: ignore[arg-type]
                     operation=CrudOperation.CREATE_SOME,
                 )
             )
             new_user_share_case_policies = self.app.handle(
                 command.UserShareCasePolicyCrudCommand(
                     user=user,
-                    objs=new_user_share_case_policies,  # type:ignore[arg-type]
+                    objs=new_user_share_case_policies,  # type: ignore[arg-type]
                     operation=CrudOperation.CREATE_SOME,
                 )
             )
@@ -244,7 +244,7 @@ class AbacService(BaseAbacService):
             # Retrieve organization access and share case policies
             organization_access_case_policies: list[
                 model.OrganizationAccessCasePolicy
-            ] = self.repository.crud(  # type:ignore[assignment]
+            ] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationAccessCasePolicy,
@@ -255,7 +255,7 @@ class AbacService(BaseAbacService):
             )
             organization_share_case_policies: list[
                 model.OrganizationShareCasePolicy
-            ] = self.repository.crud(  # type:ignore[assignment]
+            ] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id=user_id,
                 model_class=model.OrganizationShareCasePolicy,
@@ -266,7 +266,7 @@ class AbacService(BaseAbacService):
             )
             # Retrieve user access and share case policies
             user_access_case_policies: list[model.UserAccessCasePolicy] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id=user_id,
                     model_class=model.UserAccessCasePolicy,
@@ -277,7 +277,7 @@ class AbacService(BaseAbacService):
                 )
             )
             user_share_case_policies: list[model.UserShareCasePolicy] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id=user_id,
                     model_class=model.UserShareCasePolicy,
@@ -438,7 +438,7 @@ class AbacService(BaseAbacService):
     ) -> dict[UUID, dict[UUID, model.CaseTypeAccessAbac]]:
         dict1: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = (
             AbacService._get_access_dict(
-                organization_access_case_policies,  # type:ignore[arg-type]
+                organization_access_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
                 case_type_col_map,
                 case_type_col_set_member_map,
@@ -446,7 +446,7 @@ class AbacService(BaseAbacService):
         )
         dict2: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = (
             AbacService._get_access_dict(
-                user_access_case_policies,  # type:ignore[arg-type]
+                user_access_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
                 case_type_col_map,
                 case_type_col_set_member_map,
@@ -556,13 +556,13 @@ class AbacService(BaseAbacService):
     ) -> dict[UUID, dict[UUID, model.CaseTypeShareAbac]]:
         dict1: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = (
             AbacService._get_share_dict(
-                organization_share_case_policies,  # type:ignore[arg-type]
+                organization_share_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
             )
         )
         dict2: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = (
             AbacService._get_share_dict(
-                user_share_case_policies,  # type:ignore[arg-type]
+                user_share_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
             )
         )

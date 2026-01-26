@@ -99,7 +99,7 @@ class ReadSet(Model, HasSampleMixin, CodeMixin, QualityMixin):
         description="The code of the sequencing run.", max_length=255, default=None
     )
 
-    @computed_field(  # type:ignore[prop-decorator]
+    @computed_field(  # type: ignore[prop-decorator]
         description="Whether the read set has any linked reads data available, either via URIs or file links."
     )
     @property

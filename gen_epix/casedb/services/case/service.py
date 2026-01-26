@@ -2,6 +2,8 @@ import datetime
 from collections.abc import Callable, Iterable
 from uuid import UUID
 
+from cachetools import TTLCache, cached
+
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
@@ -81,8 +83,7 @@ from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_sequencing_protocols,
 )
 from gen_epix.casedb.services.case.retrieve_stats import (
-    case_service_retrieve_case_set_stats,
-    case_service_retrieve_case_type_stats,
+    case_service_retrieve_case_stats,
 )
 from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
@@ -115,23 +116,21 @@ class CaseService(BaseCaseService):
     def create_file_for_seq(self, cmd: command.CreateFileForSeqCommand) -> UUID:
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
+    @cached(
+        cache=TTLCache(maxsize=1024, ttl=300),
+        key=lambda self, cmd: (cmd.case_type_id, cmd.user.id if cmd.user else None),
+    )
     def retrieve_complete_case_type(
         self,
         cmd: command.RetrieveCompleteCaseTypeCommand,
     ) -> model.CompleteCaseType:
         return case_service_retrieve_complete_case_type(self, cmd)
 
-    def retrieve_case_type_stats(
+    def retrieve_case_stats(
         self,
-        cmd: command.RetrieveCaseTypeStatsCommand,
-    ) -> list[model.CaseTypeStat]:
-        return case_service_retrieve_case_type_stats(self, cmd)
-
-    def retrieve_case_set_stats(
-        self,
-        cmd: command.RetrieveCaseSetStatsCommand,
-    ) -> list[model.CaseSetStat]:
-        return case_service_retrieve_case_set_stats(self, cmd)
+        cmd: command.RetrieveCaseStatsCommand,
+    ) -> list[model.CaseStats]:
+        return case_service_retrieve_case_stats(self, cmd)
 
     def retrieve_cases_by_query(
         self, cmd: command.RetrieveCasesByQueryCommand
@@ -297,7 +296,7 @@ class CaseService(BaseCaseService):
         # TODO: This is a temporary implementation, to be replaced by optimized query
         self.validate_case_right(right, on_invalid_case_set_id)
         case_sets: list[model.CaseSet] = (
-            self.repository.crud(  # type:ignore[assignment]
+            self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.CaseSet,
@@ -592,7 +591,7 @@ class CaseService(BaseCaseService):
                 raise exc.InvalidArgumentsError(
                     "Cannot use datetime range filter with case ids"
                 )
-            cases = self.repository.crud(  # type:ignore[assignment]
+            cases = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.Case,
@@ -607,13 +606,13 @@ class CaseService(BaseCaseService):
         else:
             case_type_filter = EqualsUuidFilter(key="case_type_id", value=case_type_id)
             if datetime_range_filter:
-                case_filter = CompositeFilter(
+                case_filter: Filter = CompositeFilter(
                     operator=LogicalOperator.AND,
                     filters=[case_type_filter, datetime_range_filter],
                 )
             else:
                 case_filter = case_type_filter
-            cases = self.repository.crud(  # type:ignore[assignment]
+            cases = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.Case,
@@ -661,7 +660,7 @@ class CaseService(BaseCaseService):
         case_type_id: UUID,
     ) -> model.CaseType:
         case_types: list[model.CaseType] = (
-            self.repository.crud(  # type:ignore[assignment]
+            self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
                 model.CaseType,
@@ -838,7 +837,7 @@ class CaseService(BaseCaseService):
             case_set_ids = {x.case_set_id for x in case_set_members}
             case_ids = {x.case_id for x in case_set_members}
             case_sets_: list[model.CaseSet] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user.id if user else None,
                     model.CaseSet,
@@ -848,7 +847,7 @@ class CaseService(BaseCaseService):
                 )
             )
             case_sets = {x.id: x for x in case_sets_}
-            cases_: list[model.Case] = self.repository.crud(  # type:ignore[assignment]
+            cases_: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id if user else None,
                 model.Case,

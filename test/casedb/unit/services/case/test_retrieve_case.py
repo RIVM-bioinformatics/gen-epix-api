@@ -5,7 +5,7 @@ Tests follow the style and conventions of the commondb upload tests,
 using typed variables, explicit mocking, and clear structure.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any, Callable
 from unittest import TestCase
@@ -120,7 +120,7 @@ class BaseRetrieveCaseTestCase(TestCase):
             subject_id=None,
             created_in_data_collection_id=self.data_collection_id,
             count=None,
-            case_date=case_date or datetime.now(),
+            case_date=case_date or datetime.now(timezone.utc),
             content=content,
         )
 
@@ -331,7 +331,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             created_in_data_collection=None,
             name="authorized",
             description="",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
             case_set_category_id=uuid4(),
             case_set_category=None,
             case_set_status_id=uuid4(),
@@ -482,7 +482,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             created_in_data_collection=None,
             name="authorized",
             description="",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
             case_set_category_id=uuid4(),
             case_set_category=None,
             case_set_status_id=uuid4(),

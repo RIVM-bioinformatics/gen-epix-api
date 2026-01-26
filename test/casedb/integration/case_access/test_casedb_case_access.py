@@ -215,7 +215,7 @@ class TestCaseAccess(CaseAccessSetup):
                     ],
                     case_batch=model.CaseBatchForUpload(
                         cases=[
-                            _create_case(  # type:ignore[list-item]
+                            _create_case(  # type: ignore[list-item]
                                 row, for_upload=True
                             )
                         ]

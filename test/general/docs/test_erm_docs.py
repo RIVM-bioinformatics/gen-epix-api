@@ -3,8 +3,9 @@ from pathlib import Path
 from test.test_client import enum
 from test.test_client.util import get_test_name, get_test_output_dir
 
-import docs.erm_hash
 import pytest
+
+import docs.erm_hash
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-08")

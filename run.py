@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import fire
@@ -151,35 +151,42 @@ class Run:
 
     ## test
     def test_all(self) -> None:
-        import pytest
+        import subprocess
 
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "--cov=gen_epix",
-                "--cov-report=html:test/output/coverage.html",
-                "--cov-report=xml:test/output/coverage.xml",
-                "test/filter/unit",
-                "test/transform/unit",
-                "test/fastapp/unit",
-                "test/commondb/unit",
-                "test/commondb/integration",
-                "test/casedb/unit",
-                "test/casedb/integration",
-                "test/seqdb/unit",
-                "test/seqdb/integration",
-                "test/omopdb/unit",
-                "test/omopdb/integration",
-                "test/general/docs",
-                "test/end_to_end",
-                # Not normally included, uncomment if needed
-                # "test/casedb/performance",
-                # "test/seqdb/performance",
-                # "test/omopdb/performance",
-                # "test/commondb/performance",
-                # "test/fastapp/performance",
-                # "test/general/code",
-            ]
+        pytest_args = Run.DEFAULT_PYTEST_ARGS + [
+            "test/filter/unit",
+            "test/transform/unit",
+            "test/fastapp/unit",
+            "test/commondb/unit",
+            "test/commondb/integration",
+            "test/casedb/unit",
+            "test/casedb/integration",
+            "test/seqdb/unit",
+            "test/seqdb/integration",
+            "test/omopdb/unit",
+            "test/omopdb/integration",
+            "test/general/docs",
+            "test/end_to_end",
+            # Not normally included, uncomment if needed
+            # "test/casedb/performance",
+            # "test/seqdb/performance",
+            # "test/omopdb/performance",
+            # "test/commondb/performance",
+            # "test/fastapp/performance",
+            # "test/general/code",
+        ]
+
+        subprocess.run(
+            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            check=False,
+        )
+        # Generate HTML report
+        subprocess.run(
+            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+        )
+        # Generate XML report
+        subprocess.run(
+            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
         )
 
     def test_all_incl_performance(self) -> None:
@@ -496,6 +503,16 @@ class Run:
             ]
         )
 
+    def test_casedb_integration_refdata_access(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/casedb/integration/refdata_access",
+            ]
+        )
+
     def test_casedb_performance(self) -> None:
         import pytest
 
@@ -767,7 +784,7 @@ class Run:
         filter_on_codes = None
 
         file = Path(__file__).parent / "test" / "output" / "linter.pylint.txt"
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         file2 = (
             Path(__file__).parent / "test" / "output" / f"linter.{now_str}.pylint.txt"
         )
@@ -796,7 +813,7 @@ class Run:
         # filter_on_codes = None
 
         file = Path(__file__).parent / "test" / "output" / "linter.mypy.txt"
-        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         file2 = Path(__file__).parent / "test" / "output" / f"linter.{now_str}.mypy.txt"
         linter = Linter()
         linter.run_mypy(file=file, filter_on_codes=filter_on_codes)

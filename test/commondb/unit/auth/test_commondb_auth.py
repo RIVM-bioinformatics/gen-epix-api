@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import floor
 from test.fastapp.auth_test_client import AuthTestClient
 from test.fastapp.user_manager import MOCK_USER, MockUser
@@ -18,7 +18,7 @@ class CommonAuthTestClient(AuthTestClient):
 def get_test_client() -> CommonAuthTestClient:
     return (
         CommonAuthTestClient.get_test_client()
-    )  # type:ignore[no-any-return,no-untyped_call]
+    )  # type: ignore[no-any-return,no-untyped_call]
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-01")
@@ -26,7 +26,7 @@ class TestAuth:
     NON_SECURE_ENDPOINT = "/non_secure"
     CURRENT_USER_ENDPOINT = "/secure/current_user"
 
-    NOW = datetime.now()
+    NOW = datetime.now(timezone.utc)
     INVALID_CLAIMS = {
         "aud": "wrong_aud",  # client id
         "iss": "http://localhost:5003",  # authorization server

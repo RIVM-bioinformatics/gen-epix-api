@@ -56,7 +56,7 @@ def _crud_case_type_dim_without_abac(
 
     # Perform the primary CRUD operation
     retval = self.crud(cmd)
-    return retval  # type:ignore[return-value]
+    return retval  # type: ignore[return-value]
 
 
 def _crud_create_case_type_dim(
@@ -95,7 +95,7 @@ def _verify_one_case_date_dim(
     If another is found, set its is_case_date_dim to False.
     """
     other_time_dims: list[model.CaseTypeDim] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             cmd.user.id,
             model.CaseTypeDim,
@@ -130,7 +130,7 @@ def _validate_case_date_dim(
     case_type_dim: model.CaseTypeDim,
 ) -> None:
     dim: model.Dim | None = None
-    dim_list: list[model.Dim] = self.repository.crud(  # type:ignore[assignment]
+    dim_list: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
         uow,
         cmd.user.id,
         model.Dim,
@@ -168,7 +168,7 @@ def _load_existing_case_type_dims(
     case_type_dim: model.CaseTypeDim,
 ) -> list[model.CaseTypeDim]:
     existing_dims: list[model.CaseTypeDim] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             cmd.user.id,
             model.CaseTypeDim,
@@ -247,7 +247,7 @@ def _get_existing_case_type_dim(
     updated: model.CaseTypeDim,
 ) -> model.CaseTypeDim:
     existing_list: list[model.CaseTypeDim] = (
-        self.repository.crud(  # type:ignore[assignment]
+        self.repository.crud(  # type: ignore[assignment]
             uow,
             cmd.user.id,
             model.CaseTypeDim,
@@ -284,7 +284,7 @@ def _crud_case_type_dim_with_abac(
     # Special case: no policy, allows for internal commands to retrieve all
     if not case_abac:
         # No policy: allows for internal commands to retrieve all
-        return self.crud(cmd)  # type:ignore[return-value]
+        return self.crud(cmd)  # type: ignore[return-value]
 
     # Initialize some
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value

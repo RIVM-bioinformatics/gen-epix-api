@@ -3,12 +3,12 @@ from decimal import Decimal
 from test.filter.unit import util
 
 import numpy as np
+import pytest
 
 from gen_epix.filter import ExistsFilter, NumberRangeFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.date_range import DateRangeFilter
 from gen_epix.filter.string_set import StringSetFilter
-import pytest
 
 
 @pytest.mark.scenario_ids("TC-SEC-28-07")

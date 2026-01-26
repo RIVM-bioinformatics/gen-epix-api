@@ -144,7 +144,7 @@ class AbacService(BaseAbacService):
         # Retrieve organizations for which the user is an admin
         with self.repository.uow() as uow:
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id=cmd.user.id,
                     model_class=self.organization_admin_policy_model_class,
@@ -172,7 +172,7 @@ class AbacService(BaseAbacService):
             )
         with self.repository.uow() as uow:
             organization_admin_policies: list[model.OrganizationAdminPolicy] = (
-                self.repository.crud(  # type:ignore[assignment]
+                self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id=cmd.user.id,
                     model_class=self.organization_admin_policy_model_class,

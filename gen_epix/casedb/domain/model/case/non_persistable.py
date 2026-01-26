@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain.model import Model
@@ -10,36 +10,20 @@ from gen_epix.fastapp.domain import Entity
 from gen_epix.filter import TypedCompositeFilter, TypedDatetimeRangeFilter
 
 
-class CaseTypeStat(fastapp.Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_stats",
-        persistable=False,
-    )
-    case_type_id: UUID = Field(description="The ID of the case type.")
-    n_cases: int | None = Field(
-        default=None, description="The number of cases for the case type."
-    )
-    first_case_date: datetime | None = Field(
-        default=None,
-        description="The date of the first case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
-    )
-    last_case_date: datetime | None = Field(
-        default=None,
-        description="The date of the last case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
-    )
-
-
-class CaseSetStat(fastapp.Model):
+class CaseStats(fastapp.Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_set_stats",
         persistable=False,
     )
-    case_set_id: UUID = Field(description="The ID of the case set.")
-    n_cases: int | None = Field(
-        default=None, description="The number of cases in the case set."
+    case_type_id: UUID = Field(description="The ID of the case type.")
+    case_set_id: UUID | None = Field(
+        default=None, description="The ID of the case set, if applicable."
     )
-    n_own_cases: int | None = Field(
-        default=None, description="The number of own cases in the case set."
+    n_cases: int = Field(
+        default=0, description="The number of cases in the case set.", ge=0
+    )
+    n_own_cases: int = Field(
+        default=0, description="The number of own cases in the case set.", ge=0
     )
     first_case_date: datetime | None = Field(
         default=None,
@@ -49,6 +33,26 @@ class CaseSetStat(fastapp.Model):
         default=None,
         description="The date of the last case. In case the user has rights only to lower time resolution for the case date, the first day of the week, month, quarter, year, as available to the user, is used during calculation.",
     )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        if self.n_own_cases > self.n_cases:
+            raise ValueError("n_own_cases cannot be greater than n_cases")
+        if self.n_cases == 0:
+            if self.first_case_date is not None or self.last_case_date is not None:
+                raise ValueError(
+                    "first_case_date and last_case_date must be None when n_cases is 0"
+                )
+        else:
+            if self.first_case_date is None or self.last_case_date is None:
+                raise ValueError(
+                    "first_case_date and last_case_date must be provided when n_cases is greater than 0"
+                )
+            if self.first_case_date > self.last_case_date:
+                raise ValueError(
+                    "first_case_date must be before or equal to last_case_date"
+                )
+        return self
 
 
 class CaseQuery(Model):

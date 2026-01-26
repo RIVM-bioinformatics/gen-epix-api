@@ -76,6 +76,15 @@ class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
         return self
 
 
+class RetrieveCaseRightsRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveCaseRightsCommand, "case_type_id"
+    )
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveCaseRightsCommand, "case_ids"
+    )
+
+
 class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
         command.RetrieveCasesByIdCommand, "case_type_id"
@@ -86,6 +95,9 @@ class RetrieveCasesByIdsRequestBody(PydanticBaseModel):
 
 
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrievePhylogeneticTreeByCasesCommand, "case_type_id"
+    )
     genetic_distance_case_type_col_id: UUID = copy_model_field(
         command.RetrievePhylogeneticTreeByCasesCommand,
         "genetic_distance_case_type_col_id",
@@ -99,6 +111,9 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
 
 
 class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
+    case_type_id: UUID = copy_model_field(
+        command.RetrieveGeneticSequenceByCaseCommand, "case_type_id"
+    )
     genetic_sequence_case_type_col_id: UUID = copy_model_field(
         command.RetrieveGeneticSequenceByCaseCommand,
         "genetic_sequence_case_type_col_id",
@@ -120,8 +135,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
-    case_set_ids: set[UUID] | None = Field(
-        default=None,
+    case_set_ids: set[UUID] = Field(
         description="The case set ids to retrieve stats for, if not all.",
     )
 
@@ -310,20 +324,20 @@ def create_case_endpoints(
         "/retrieve/case_type_stats",
         operation_id="retrieve__case_type_stats",
         name="Retrieve case type statistics",
-        description=command.RetrieveCaseTypeStatsCommand.__doc__,
+        description=command.RetrieveCaseStatsCommand.__doc__,
     )
     async def retrieve__case_type_stats(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveCaseTypeStatsRequestBody,
-    ) -> list[model.CaseTypeStat]:
+    ) -> list[model.CaseStats]:
         return cast(
-            list[model.CaseTypeStat],
+            list[model.CaseStats],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="80c99f53",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveCaseTypeStatsCommand(
+                input_command=command.RetrieveCaseStatsCommand(
                     user=user,
                     case_type_ids=request_body.case_type_ids,
                     datetime_range_filter=request_body.datetime_range_filter,
@@ -335,20 +349,20 @@ def create_case_endpoints(
         "/retrieve/case_set_stats",
         operation_id="retrieve__case_set_stats",
         name="Retrieve case set statistics",
-        description=command.RetrieveCaseSetStatsCommand.__doc__,
+        description=command.RetrieveCaseStatsCommand.__doc__,
     )
     async def retrieve__case_set_stats(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveCaseSetStatsRequestBody,
-    ) -> list[model.CaseSetStat]:
+    ) -> list[model.CaseStats]:
         return cast(
-            list[model.CaseSetStat],
+            list[model.CaseStats],
             handle_command(
                 app=app,
                 user=user,
                 exception_code="be54843e",
                 input_handle_exception=handle_exception,
-                input_command=command.RetrieveCaseSetStatsCommand(
+                input_command=command.RetrieveCaseStatsCommand(
                     user=user,
                     case_set_ids=(
                         None
@@ -416,7 +430,7 @@ def create_case_endpoints(
     )
     async def retrieve__case_rights(
         user: registered_user_dependency,  # type: ignore
-        request_body: list[UUID],
+        request_body: RetrieveCaseRightsRequestBody,
     ) -> list[model.CaseRights]:
         return cast(
             list[model.CaseRights],
@@ -427,7 +441,8 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrieveCaseRightsCommand(
                     user=user,
-                    case_ids=request_body,
+                    case_type_id=request_body.case_type_id,
+                    case_ids=request_body.case_ids,
                 ),
             ),
         )
@@ -501,6 +516,7 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrievePhylogeneticTreeByCasesCommand(
                     user=user,
+                    case_type_id=request_body.case_type_id,
                     genetic_distance_case_type_col_id=request_body.genetic_distance_case_type_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
                     case_ids=request_body.case_ids,
@@ -527,6 +543,7 @@ def create_case_endpoints(
                 input_handle_exception=handle_exception,
                 input_command=command.RetrieveGeneticSequenceByCaseCommand(
                     user=user,
+                    case_type_id=request_body.case_type_id,
                     genetic_sequence_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
                     case_ids=request_body.case_ids,
                 ),
@@ -541,6 +558,7 @@ def create_case_endpoints(
     )
     async def retrieve__genetic_sequence_fasta(
         token: Annotated[str, Form()],
+        case_type_id: Annotated[UUID, Form()],
         genetic_sequence_case_type_col_id: Annotated[UUID, Form()],
         case_ids: Annotated[list[UUID], Form()],
         file_name: Annotated[str, Form()],
@@ -555,6 +573,7 @@ def create_case_endpoints(
             fasta_iterable = app.handle(
                 command.RetrieveGeneticSequenceFastaByCaseCommand(
                     user=user,
+                    case_type_id=case_type_id,
                     genetic_sequence_case_type_col_id=(
                         genetic_sequence_case_type_col_id
                     ),
@@ -562,7 +581,7 @@ def create_case_endpoints(
                 )
             )
         except Exception as exception:
-            handle_exception(  # type:ignore[call-arg]
+            handle_exception(  # type: ignore[call-arg]
                 "d4c2e1b1",
                 user,
                 exception,

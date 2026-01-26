@@ -208,24 +208,24 @@ def load_demo_data(
             str(demo_dict_file).replace(".full.", ".empty.")
         ).resolve()
         zip_file: str = str(demo_dict_file).replace(".pkl.gz", ".zip")
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.now(datetime.timezone.utc)
         dict_repository: DictRepository = (
-            dict_repository_class.create_repository(  # type:ignore[assignment]
+            dict_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities, file=zip_file
             )
         )
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.now(datetime.timezone.utc)
         if verbose:
             print(
                 f"App {app_type.value}, service {service_type.value}: demo data parsed in {end_time - start_time}s"
             )
         # Write empty and demo dict repository to file
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.now(datetime.timezone.utc)
         with gzip.open(empty_dict_file, "wb") as handle:
             pickle.dump({x: {} for x in dict_repository.db}, handle)
         with gzip.open(demo_dict_file, "wb") as handle:
             pickle.dump(dict_repository.db, handle)
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.now(datetime.timezone.utc)
         if verbose:
             print(
                 f"App {app_type.value}, service {service_type.value}: dict repository written to file in {end_time - start_time}s"
@@ -239,7 +239,7 @@ def load_demo_data(
         empty_sa_sqlite_file = Path(
             str(demo_sa_sqlite_file).replace(".full", ".empty")
         ).resolve()
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.now(datetime.timezone.utc)
         # Empty repository
         sa_repository_class.create_repository(
             entities=entities,
@@ -249,7 +249,7 @@ def load_demo_data(
         )
         # Full repository
         sa_sqlite_repository: SARepository = (
-            sa_repository_class.create_repository(  # type:ignore[assignment]
+            sa_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities,
                 file=demo_sa_sqlite_file,
                 name=service_type.value,
@@ -259,7 +259,7 @@ def load_demo_data(
         create_demo_data_from_repository(
             user_id, entities, dict_repository, sa_sqlite_repository, module_root
         )
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.now(datetime.timezone.utc)
         if verbose:
             print(
                 f"App {app_type.value}, service {service_type.value}: sa_sqlite repository written to file in {end_time - start_time}s"
@@ -289,12 +289,12 @@ def load_demo_data(
                     f"App {app_type.value}, service {service_type.value}: sa_sql connection failed"
                 )
             continue
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.now(datetime.timezone.utc)
         sa_repository_class.clear_repository_content(
             entities=entities, connection_string=connection_string
         )
         sa_sql_repository: SARepository = (
-            sa_repository_class.create_repository(  # type:ignore[assignment]
+            sa_repository_class.create_repository(  # type: ignore[assignment]
                 entities=entities,
                 connection_string=connection_string,
                 name=service_type.value,
@@ -303,7 +303,7 @@ def load_demo_data(
         create_demo_data_from_repository(
             user_id, entities, dict_repository, sa_sql_repository, module_root
         )
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.now(datetime.timezone.utc)
         if verbose:
             print(
                 f"App {app_type.value}, service {service_type.value}: sa_sql repository loaded in {end_time - start_time}s"

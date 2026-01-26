@@ -7,7 +7,7 @@ This module contains the ReceiverApp FastAPI application that validates OAuth to
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -114,4 +114,7 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
         @self.app.get("/health")
         async def health() -> dict[str, str]:
             """Health check endpoint."""
-            return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+            return {
+                "status": "healthy",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }

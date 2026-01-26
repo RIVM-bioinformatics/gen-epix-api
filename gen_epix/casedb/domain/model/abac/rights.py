@@ -431,14 +431,14 @@ class CaseAbac(BaseModel):
             set() if tgt_data_collection_ids is None else set(tgt_data_collection_ids)
         )
         remaining_data_collection_ids.discard(
-            created_in_data_collection_id  # type:ignore[arg-type]
+            created_in_data_collection_id  # type: ignore[arg-type]
         )
         if current_data_collection_ids:
             remaining_data_collection_ids = (
                 remaining_data_collection_ids - current_data_collection_ids
             )
         current_data_collection_ids.add(
-            created_in_data_collection_id  # type:ignore[arg-type]
+            created_in_data_collection_id  # type: ignore[arg-type]
         )
 
         for data_collection_id in remaining_data_collection_ids:
@@ -481,7 +481,7 @@ class CaseAbac(BaseModel):
         # the right to remove cases or case sets from it
         remaining_data_collection_ids = set(tgt_data_collection_ids)
         remaining_data_collection_ids.discard(
-            created_in_data_collection_id  # type:ignore[arg-type]
+            created_in_data_collection_id  # type: ignore[arg-type]
         )
         for data_collection_id in remaining_data_collection_ids:
             if not self._check_access_or_share(
@@ -528,7 +528,7 @@ class CaseAbac(BaseModel):
         data_collection_ids: frozenset[UUID],
     ) -> CaseRights:
         case_rights: CaseRights = (
-            self._get_case_or_set_rights(  # type:ignore[assignment]
+            self._get_case_or_set_rights(  # type: ignore[assignment]
                 case_id,
                 False,
                 case_type_id,
@@ -546,7 +546,7 @@ class CaseAbac(BaseModel):
         data_collection_ids: frozenset[UUID],
     ) -> CaseSetRights:
         case_set_rights: CaseSetRights = (
-            self._get_case_or_set_rights(  # type:ignore[assignment]
+            self._get_case_or_set_rights(  # type: ignore[assignment]
                 case_set_id,
                 True,
                 case_type_id,
@@ -572,7 +572,7 @@ class CaseAbac(BaseModel):
                 case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
+                data_collection_ids=data_collection_ids,  # type: ignore[arg-type]
                 is_full_access=True,
                 add_data_collection_ids=set(),
                 remove_data_collection_ids=set(),
@@ -585,7 +585,7 @@ class CaseAbac(BaseModel):
             case_id=case_or_set_id,
             case_type_id=case_type_id,
             created_in_data_collection_id=created_in_data_collection_id,
-            data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
+            data_collection_ids=data_collection_ids,  # type: ignore[arg-type]
             is_full_access=True,
             add_data_collection_ids=set(),
             remove_data_collection_ids=set(),
@@ -645,7 +645,7 @@ class CaseAbac(BaseModel):
                 case_set_id=case_or_set_id,
                 case_type_id=case_type_id,
                 created_in_data_collection_id=created_in_data_collection_id,
-                data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
+                data_collection_ids=data_collection_ids,  # type: ignore[arg-type]
                 is_full_access=self.is_full_access,
                 add_data_collection_ids=add_data_collection_ids,
                 remove_data_collection_ids=remove_data_collection_ids,
@@ -665,7 +665,7 @@ class CaseAbac(BaseModel):
             case_id=case_or_set_id,
             case_type_id=case_type_id,
             created_in_data_collection_id=created_in_data_collection_id,
-            data_collection_ids=data_collection_ids,  # type:ignore[arg-type]
+            data_collection_ids=data_collection_ids,  # type: ignore[arg-type]
             is_full_access=self.is_full_access,
             add_data_collection_ids=add_data_collection_ids,
             remove_data_collection_ids=remove_data_collection_ids,
