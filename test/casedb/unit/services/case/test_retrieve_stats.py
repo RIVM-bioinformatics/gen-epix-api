@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, cast
+from typing import Any
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
@@ -11,8 +11,7 @@ import gen_epix.casedb.domain.enum as case_enum
 import gen_epix.casedb.domain.model as case_model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.retrieve_stats import (
-    case_service_retrieve_case_set_stats,
-    case_service_retrieve_case_type_stats,
+    case_service_retrieve_case_stats,
 )
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
@@ -44,6 +43,12 @@ class BaseRetrieveStatsTestCase(TestCase):
         self.uow.__enter__ = Mock(return_value=self.uow)
         self.uow.__exit__ = Mock(return_value=None)
         self.repository.uow.return_value = self.uow
+
+        # Default mock for repository.crud that returns case type IDs
+        self.repository.crud = Mock(
+            return_value=[self.case_type_id1, self.case_type_id2]
+        )
+
         # Align service.repository and repository object returned by _get_user_and_repository
         self.service.repository = self.repository
         self.service._get_user_and_repository = Mock(
@@ -54,7 +59,11 @@ class BaseRetrieveStatsTestCase(TestCase):
         self.service.crud = Mock(return_value=[])
         self.service.app = Mock()
         self.service.app.handle = Mock(return_value=[])
-        self.service._retrieve_cases_with_content_right = Mock(return_value=[])
+        self.service.retrieve_complete_case_type = Mock()
+
+        # Mock repository.retrieve_case_stats method which is now called by the implementation
+        self.repository.retrieve_case_stats = Mock()
+        self.repository.read_fields = Mock(return_value=[])
 
     def create_case(
         self,
@@ -74,6 +83,37 @@ class BaseRetrieveStatsTestCase(TestCase):
             count=count,
             case_date=case_date or datetime.now(timezone.utc),
             content={},
+        )
+
+    def create_complete_case_type(
+        self,
+        *,
+        case_type_id: UUID,
+        case_type_access_abacs: dict[UUID, case_model.CaseTypeAccessAbac] | None = None,
+        case_date_col_type_map: dict[case_enum.ColType, UUID] | None = None,
+    ) -> case_model.CompleteCaseType:
+        return case_model.CompleteCaseType(
+            id=case_type_id,
+            user_id=self.user.id,
+            name="Test Case Type",
+            description="Test Description",
+            etiologies={},
+            etiological_agents={},
+            dims={},
+            cols={},
+            case_type_dims={},
+            case_type_cols={},
+            genetic_distance_protocols={},
+            tree_algorithms={},
+            case_type_access_abacs=case_type_access_abacs or {},
+            case_type_share_abacs={},
+            case_date_col_type_map=case_date_col_type_map or {},
+            case_date_case_type_dim_id=None,  # Add this required field
+            create_max_n_cases=1000,
+            read_max_n_cases=1000,
+            read_max_tree_size=1000,
+            update_max_n_cases=1000,
+            delete_max_n_cases=1000,
         )
 
     def create_case_set(
@@ -97,24 +137,32 @@ class BaseRetrieveStatsTestCase(TestCase):
             case_set_status_id=uuid4(),
         )
 
-    def case_type_stats_cmd(
+    def case_stats_cmd(
         self,
         *,
         case_type_ids: set[UUID] | None,
-        dt_filter: TypedDatetimeRangeFilter | None = None,
-    ) -> case_command.RetrieveCaseTypeStatsCommand:
-        return case_command.RetrieveCaseTypeStatsCommand(
+        case_set_ids: set[UUID] | None = None,
+        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
+    ) -> case_command.RetrieveCaseStatsCommand:
+        return case_command.RetrieveCaseStatsCommand(
             user=self.user,
             case_type_ids=case_type_ids,
-            datetime_range_filter=dt_filter,
+            case_set_ids=case_set_ids,
+            datetime_range_filter=datetime_range_filter,
         )
 
     def case_set_stats_cmd(
-        self, *, case_set_ids: list[UUID] | None
-    ) -> case_command.RetrieveCaseSetStatsCommand:
-        return case_command.RetrieveCaseSetStatsCommand(
+        self,
+        *,
+        case_type_ids: set[UUID] | None = None,
+        case_set_ids: set[UUID] | None = None,
+        datetime_range_filter: TypedDatetimeRangeFilter | None = None,
+    ) -> case_command.RetrieveCaseStatsCommand:
+        return case_command.RetrieveCaseStatsCommand(
             user=self.user,
+            case_type_ids=case_type_ids,
             case_set_ids=case_set_ids,
+            datetime_range_filter=datetime_range_filter,
         )
 
     def mock_abac(
@@ -139,25 +187,34 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             lower_bound=datetime.now(timezone.utc) - timedelta(days=7),
             upper_bound=datetime.now(timezone.utc),
         )
-        case_ids: list[UUID] = [self.case_type_id1, self.case_type_id2]
+        case_type_ids: list[UUID] = [self.case_type_id1, self.case_type_id2]
 
-        self.repository.crud = Mock(return_value=case_ids)
+        # Mock repository.crud to return case type IDs
+        self.repository.crud = Mock(return_value=case_type_ids)
 
-        case1 = self.create_case(
+        # Mock complete case types
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        complete_case_type_2 = self.create_complete_case_type(
+            case_type_id=self.case_type_id2
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            side_effect=[complete_case_type_1, complete_case_type_2]
+        )
+
+        # Mock repository.retrieve_case_stats
+        stats_1 = case_model.CaseStats(
             case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2024, 1, 1, 12, 0, 0),
-            count=None,
+            n_cases=4,
+            first_case_date=datetime(2024, 1, 1, 12, 0, 0),
+            last_case_date=datetime(2024, 1, 1, 12, 0, 0),
         )
-        case2 = self.create_case(
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=case1.case_date,  # ignored in date stats
-            count=3,
+        stats_2 = case_model.CaseStats(
+            case_type_id=self.case_type_id2,
+            n_cases=0,
         )
-        self.service._retrieve_cases_with_content_right = Mock(
-            side_effect=[[case1, case2], []]
-        )
+        self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
 
         abac = self.mock_abac(is_full_access=True, readable_case_type_ids=set())
 
@@ -166,22 +223,26 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ) as get_abac:
-            cmd = self.case_type_stats_cmd(case_type_ids=None, dt_filter=dt_filter)
-            result: list[case_model.CaseTypeStat] = (
-                case_service_retrieve_case_type_stats(self.service, cmd)
+            cmd = self.case_stats_cmd(
+                case_type_ids=None, datetime_range_filter=dt_filter
+            )
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+                self.service, cmd
             )
 
         # Verify
         self.assertEqual(len(result), 2)
-        result_by_id: dict[UUID, case_model.CaseTypeStat] = {
+        result_by_id: dict[UUID, case_model.CaseStats] = {
             x.case_type_id: x for x in result
         }
-        self.assertEqual(result_by_id[self.case_type_id1].n_cases, 1 + 3)
+        self.assertEqual(result_by_id[self.case_type_id1].n_cases, 4)
         self.assertEqual(
-            result_by_id[self.case_type_id1].first_case_date, case1.case_date
+            result_by_id[self.case_type_id1].first_case_date,
+            datetime(2024, 1, 1, 12, 0, 0),
         )
         self.assertEqual(
-            result_by_id[self.case_type_id1].last_case_date, case1.case_date
+            result_by_id[self.case_type_id1].last_case_date,
+            datetime(2024, 1, 1, 12, 0, 0),
         )
         self.assertEqual(result_by_id[self.case_type_id2].n_cases, 0)
         self.assertIsNone(result_by_id[self.case_type_id2].first_case_date)
@@ -195,34 +256,42 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
         self.assertIs(model_class, case_model.CaseType)
         self.assertEqual(operation, CrudOperation.READ_ALL)
 
-        # Assert _retrieve_cases_with_content_right interactions
-        calls = self.service._retrieve_cases_with_content_right.call_args_list
-        self.assertEqual(len(calls), 2)
-        for i, ct_id in enumerate(case_ids):
-            args, kwargs = calls[i]
-            self.assertEqual(args[3], case_enum.CaseRight.READ_CASE)  # right
-            self.assertEqual(args[4], ct_id)  # case_type_id
-            self.assertTrue(kwargs.get("calculate_case_date"))
-            self.assertFalse(kwargs.get("apply_max_n_cases"))
-            self.assertIs(kwargs.get("datetime_range_filter"), dt_filter)
+        # Assert retrieve_complete_case_type interactions
+        retrieve_calls = self.service.retrieve_complete_case_type.call_args_list
+        self.assertEqual(len(retrieve_calls), 2)
+
+        # Assert repository.retrieve_case_stats interactions
+        stats_calls = self.repository.retrieve_case_stats.call_args_list
+        self.assertEqual(len(stats_calls), 2)
 
     def test_no_case_type_ids_restricted_access_uses_abac_ids(self) -> None:
         readable_ids = {self.case_type_id1, self.case_type_id2}
-        case1 = self.create_case(
+
+        # Mock complete case types
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        complete_case_type_2 = self.create_complete_case_type(
+            case_type_id=self.case_type_id2
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            side_effect=[complete_case_type_1, complete_case_type_2]
+        )
+
+        # Mock repository.retrieve_case_stats
+        stats_1 = case_model.CaseStats(
             case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2023, 6, 1, 0, 0, 0),
-            count=None,
+            n_cases=1,
+            first_case_date=datetime(2023, 6, 1, 0, 0, 0),
+            last_case_date=datetime(2023, 6, 1, 0, 0, 0),
         )
-        case2 = self.create_case(
+        stats_2 = case_model.CaseStats(
             case_type_id=self.case_type_id2,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2023, 6, 2, 0, 0, 0),
-            count=2,
+            n_cases=2,
+            first_case_date=datetime(2023, 6, 2, 0, 0, 0),
+            last_case_date=datetime(2023, 6, 2, 0, 0, 0),
         )
-        self.service._retrieve_cases_with_content_right = Mock(
-            side_effect=[[case1], [case2]]
-        )
+        self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
 
         abac = self.mock_abac(is_full_access=False, readable_case_type_ids=readable_ids)
 
@@ -231,9 +300,9 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_type_stats_cmd(case_type_ids=None)
-            result: list[case_model.CaseTypeStat] = (
-                case_service_retrieve_case_type_stats(self.service, cmd)
+            cmd = self.case_stats_cmd(case_type_ids=None)
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+                self.service, cmd
             )
 
         # Verify stats aggregated for both readable IDs
@@ -256,9 +325,9 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_type_stats_cmd(case_type_ids=requested_ids)
+            cmd = self.case_stats_cmd(case_type_ids=requested_ids)
             with self.assertRaisesRegex(Exception, "READ_CASE right for case types"):
-                case_service_retrieve_case_type_stats(self.service, cmd)
+                case_service_retrieve_case_stats(self.service, cmd)
 
         self.repository.crud.assert_not_called()
 
@@ -268,44 +337,39 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             is_full_access=False, readable_case_type_ids=requested_ids
         )
 
-        case1 = self.create_case(
+        # Mock complete case type
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
+        )
+
+        # Mock repository.retrieve_case_stats
+        stats_1 = case_model.CaseStats(
             case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2022, 5, 1, 0, 0, 0),
-            count=None,
+            n_cases=6,  # 1 + 4 + 1
+            first_case_date=datetime(2022, 5, 1, 0, 0, 0),
+            last_case_date=datetime(2022, 6, 1, 0, 0, 0),
         )
-        case2 = self.create_case(
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2022, 6, 1, 0, 0, 0),
-            count=4,
-        )
-        case3 = self.create_case(
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=case1.case_date,
-            count=1,
-        )
-        self.service._retrieve_cases_with_content_right = Mock(
-            return_value=[case1, case2, case3]
-        )
+        self.repository.retrieve_case_stats = Mock(return_value=stats_1)
 
         with patch.object(
             BaseCaseAbacPolicy,
             "get_case_abac_from_command",
             return_value=abac,
         ):
-            cmd = self.case_type_stats_cmd(case_type_ids=requested_ids)
-            result: list[case_model.CaseTypeStat] = (
-                case_service_retrieve_case_type_stats(self.service, cmd)
+            cmd = self.case_stats_cmd(case_type_ids=requested_ids)
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
+                self.service, cmd
             )
 
         self.assertEqual(len(result), 1)
         stat = result[0]
         self.assertEqual(stat.case_type_id, self.case_type_id1)
-        self.assertEqual(stat.n_cases, 1 + 4 + 1)
-        self.assertEqual(stat.first_case_date, case1.case_date)
-        self.assertEqual(stat.last_case_date, case2.case_date)
+        self.assertEqual(stat.n_cases, 6)
+        self.assertEqual(stat.first_case_date, datetime(2022, 5, 1, 0, 0, 0))
+        self.assertEqual(stat.last_case_date, datetime(2022, 6, 1, 0, 0, 0))
 
     def test_missing_abac_policy_raises_assertion(self) -> None:
         with patch.object(
@@ -313,9 +377,9 @@ class TestCaseTypeStats(BaseRetrieveStatsTestCase):
             "get_case_abac_from_command",
             return_value=None,
         ):
-            cmd = self.case_type_stats_cmd(case_type_ids={self.case_type_id1})
+            cmd = self.case_stats_cmd(case_type_ids={self.case_type_id1})
             with self.assertRaises(AssertionError):
-                case_service_retrieve_case_type_stats(self.service, cmd)
+                case_service_retrieve_case_stats(self.service, cmd)
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
@@ -329,186 +393,159 @@ class TestCaseSetStats(BaseRetrieveStatsTestCase):
             case_set_id=self.case_set_id2, case_type_id=self.case_type_id1
         )
 
-        # Build cases for the single case_type
-        c1 = self.create_case(
-            case_id=uuid4(),
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_private,
-            case_date=datetime(2024, 1, 1),
-        )
-        c2 = self.create_case(
-            case_id=uuid4(),
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_public,
-            case_date=datetime(2024, 1, 2),
-        )
-        c3 = self.create_case(
-            case_id=uuid4(),
-            case_type_id=self.case_type_id1,
-            created_in_data_collection_id=self.data_collection_id_private,
-            case_date=datetime(2024, 1, 3),
-        )
-
-        # Patch map_paired_elements to return our mapping
-        def map_pairs(
-            _: Iterable[tuple[UUID, UUID]], as_set: bool = True
-        ) -> dict[UUID, set[UUID]]:
-            _use_as_set = as_set
-            id_c1: UUID = cast(UUID, c1.id)
-            id_c2: UUID = cast(UUID, c2.id)
-            id_c3: UUID = cast(UUID, c3.id)
-            return {
-                self.case_set_id1: {id_c1, id_c2},
-                self.case_set_id2: {id_c2, id_c3},
-            }
-
-        # app.handle side effects: first for OrganizationAccessCasePolicy, then for RetrieveCasesById
-        def app_handle_side_effect(cmd: case_command.Command) -> list[object]:
-            if isinstance(cmd, case_command.OrganizationAccessCasePolicyCrudCommand):
-                policy_private = case_model.OrganizationAccessCasePolicy(
-                    id=self.data_collection_id_private,
-                    organization_id=self.user.organization_id,
-                    data_collection_id=self.data_collection_id_private,
-                    case_type_set_id=uuid4(),
-                    is_active=True,
-                    is_private=True,
-                    add_case=False,
-                    remove_case=False,
-                    add_case_set=False,
-                    remove_case_set=False,
-                    read_case_set=False,
-                    write_case_set=False,
-                )
-                policy_public = case_model.OrganizationAccessCasePolicy(
-                    id=self.data_collection_id_public,
-                    organization_id=self.user.organization_id,
-                    data_collection_id=self.data_collection_id_public,
-                    case_type_set_id=uuid4(),
-                    is_active=True,
-                    is_private=False,
-                    add_case=False,
-                    remove_case=False,
-                    add_case_set=False,
-                    remove_case_set=False,
-                    read_case_set=False,
-                    write_case_set=False,
-                )
-                return [policy_private, policy_public]
-            if isinstance(cmd, case_command.RetrieveCasesByIdCommand):
-                return [c1, c2, c3]
+        # Mock repository.read_fields to return case set info
+        def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
+            model_class = args[2]
+            if model_class == case_model.CaseSet:
+                return [
+                    (self.case_set_id1, self.case_type_id1),
+                    (self.case_set_id2, self.case_type_id1),
+                ]
+            elif model_class == case_model.CaseSetMember:
+                filter_arg = kwargs.get("filter")
+                if hasattr(filter_arg, "value"):
+                    if filter_arg.value == self.case_set_id1:
+                        return [(uuid4(),), (uuid4(),)]  # 2 case IDs for case set 1
+                    elif filter_arg.value == self.case_set_id2:
+                        return [(uuid4(),), (uuid4(),)]  # 2 case IDs for case set 2
+                return []
             return []
 
-        self.service.app.handle.side_effect = app_handle_side_effect
+        self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
-        cmd = self.case_set_stats_cmd(
-            case_set_ids=[self.case_set_id1, self.case_set_id2]
+        # Mock repository.crud to return case type IDs when needed
+        self.repository.crud = Mock(return_value=[self.case_type_id1])
+
+        # Mock complete case type
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
         )
 
-        with (
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-                new=map_pairs,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
-                return_value=[],
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
-                return_value=[cs1, cs2],
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_retrieve_cases_by_id",
-                return_value=[c1, c2, c3],
-            ),
+        # Mock repository.retrieve_case_stats
+        stats_1 = case_model.CaseStats(
+            case_type_id=self.case_type_id1,
+            case_set_id=self.case_set_id1,
+            n_cases=2,
+            n_own_cases=1,
+            first_case_date=datetime(2024, 1, 1),
+            last_case_date=datetime(2024, 1, 2),
+        )
+        stats_2 = case_model.CaseStats(
+            case_type_id=self.case_type_id1,
+            case_set_id=self.case_set_id2,
+            n_cases=2,
+            n_own_cases=1,
+            first_case_date=datetime(2024, 1, 2),
+            last_case_date=datetime(2024, 1, 3),
+        )
+        self.repository.retrieve_case_stats = Mock(side_effect=[stats_1, stats_2])
+
+        # Mock ABAC to allow access
+        abac = self.mock_abac(
+            is_full_access=True, readable_case_type_ids={self.case_type_id1}
+        )
+
+        cmd = self.case_stats_cmd(
+            case_type_ids=None, case_set_ids={self.case_set_id1, self.case_set_id2}
+        )
+
+        with patch.object(
+            BaseCaseAbacPolicy,
+            "get_case_abac_from_command",
+            return_value=abac,
         ):
-            result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
         # Verify result for both case sets
         self.assertEqual(len(result), 2)
-        by_id: dict[UUID, case_model.CaseSetStat] = {x.case_set_id: x for x in result}
+        by_id: dict[UUID, case_model.CaseStats] = {x.case_set_id: x for x in result}
         self.assertEqual(by_id[self.case_set_id1].n_cases, 2)
-        self.assertEqual(by_id[self.case_set_id1].n_own_cases, 1)  # c1 only
+        self.assertEqual(by_id[self.case_set_id1].n_own_cases, 1)
         self.assertEqual(by_id[self.case_set_id1].first_case_date, datetime(2024, 1, 1))
         self.assertEqual(by_id[self.case_set_id1].last_case_date, datetime(2024, 1, 2))
 
         self.assertEqual(by_id[self.case_set_id2].n_cases, 2)
-        self.assertEqual(by_id[self.case_set_id2].n_own_cases, 1)  # c3 only
+        self.assertEqual(by_id[self.case_set_id2].n_own_cases, 1)
         self.assertEqual(by_id[self.case_set_id2].first_case_date, datetime(2024, 1, 2))
         self.assertEqual(by_id[self.case_set_id2].last_case_date, datetime(2024, 1, 3))
-
-        # Verify app.handle was called with OrganizationAccessCasePolicy and RetrieveCasesById
-        handle_types = [type(x.args[0]) for x in self.service.app.handle.call_args_list]
-        self.assertIn(
-            case_command.OrganizationAccessCasePolicyCrudCommand, handle_types
-        )
 
     def test_no_case_sets_initially_sets_ids_from_members_and_returns_empty(
         self,
     ) -> None:
+        # Mock ABAC to allow access
+        abac = self.mock_abac(is_full_access=True, readable_case_type_ids=set())
 
-        # Mapping from members (unused here, ensure callable still returns a dict)
-        def map_pairs(
-            _: Iterable[tuple[UUID, UUID]], as_set: bool = True
-        ) -> dict[UUID, set[UUID]]:
-            _use_as_set = as_set
-            return {}
+        # Mock repository.crud to return empty list for case types
+        self.repository.crud = Mock(return_value=[])
+        cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids=None)
 
-        cmd = self.case_set_stats_cmd(case_set_ids=None)
-        with (
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-                new=map_pairs,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
-                return_value=[],
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
-                return_value=[],
-            ),
+        with patch.object(
+            BaseCaseAbacPolicy,
+            "get_case_abac_from_command",
+            return_value=abac,
         ):
-            result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 
+        # When no case_set_ids provided and no case_type_ids, should return empty
+        # as case_type_ids will be set() after processing
         self.assertEqual(result, [])
 
     def test_special_case_case_set_with_no_members(self) -> None:
-
         cs = self.create_case_set(
             case_set_id=self.case_set_id1, case_type_id=self.case_type_id1
         )
 
-        # Map includes the case set id with an empty set to avoid KeyError in union
-        def map_pairs(
-            _: Iterable[tuple[UUID, UUID]], as_set: bool = True
-        ) -> dict[UUID, set[UUID]]:
-            _use_as_set = as_set
-            return {self.case_set_id1: set()}
+        # Mock repository.read_fields to return case set info but no members
+        def mock_read_fields(*args: Any, **kwargs: Any) -> list[tuple]:
+            model_class = args[2]
+            if model_class == case_model.CaseSet:
+                return [(self.case_set_id1, self.case_type_id1)]
+            elif model_class == case_model.CaseSetMember:
+                return []  # No members
+            return []
 
-        # Policies: none, and retrieving cases for empty list returns empty
-        self.service.app.handle = Mock(return_value=[])
+        self.repository.read_fields = Mock(side_effect=mock_read_fields)
 
-        cmd = self.case_set_stats_cmd(case_set_ids=[self.case_set_id1])
-        with (
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.map_paired_elements",
-                new=map_pairs,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set_member",
-                return_value=[],
-            ),
-            patch(
-                "gen_epix.casedb.services.case.retrieve_stats.case_service_crud_case_set",
-                return_value=[cs],
-            ),
+        # Mock repository.crud to return case type IDs when needed
+        self.repository.crud = Mock(return_value=[self.case_type_id1])
+
+        # Mock complete case type
+        complete_case_type_1 = self.create_complete_case_type(
+            case_type_id=self.case_type_id1
+        )
+        self.service.retrieve_complete_case_type = Mock(
+            return_value=complete_case_type_1
+        )
+
+        # Mock repository.retrieve_case_stats to return zero stats for empty case set
+        stats_empty = case_model.CaseStats(
+            case_type_id=self.case_type_id1,
+            case_set_id=self.case_set_id1,
+            n_cases=0,
+            n_own_cases=0,
+        )
+        self.repository.retrieve_case_stats = Mock(return_value=stats_empty)
+
+        # Mock ABAC to allow access
+        abac = self.mock_abac(
+            is_full_access=True, readable_case_type_ids={self.case_type_id1}
+        )
+
+        cmd = self.case_stats_cmd(case_type_ids=None, case_set_ids={self.case_set_id1})
+
+        with patch.object(
+            BaseCaseAbacPolicy,
+            "get_case_abac_from_command",
+            return_value=abac,
         ):
-            result: list[case_model.CaseSetStat] = case_service_retrieve_case_set_stats(
+            result: list[case_model.CaseStats] = case_service_retrieve_case_stats(
                 self.service, cmd
             )
 

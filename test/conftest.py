@@ -119,7 +119,7 @@ def generate_excel_report(
         result_by_scenario_df.write_excel(workbook, worksheet="result_by_scenario")
         result_by_test_df.write_excel(workbook, worksheet="result_by_test")
     if verbose:
-        print(f"Analysis complete. Results written to: {file_path}")
+        print(f"\nAnalysis complete. Results written to: {file_path}")
     return
 
 

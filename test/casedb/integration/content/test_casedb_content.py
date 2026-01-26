@@ -1,6 +1,7 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from typing import Iterable
 
 import pytest
 
@@ -12,14 +13,16 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain import model as seqdb_model
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
 SKIP_ENDPOINTS = False
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
+# DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -75,9 +78,72 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
-        case_type_stats = app.handle(
-            command.RetrieveCaseTypeStatsCommand(user=root_user)
-        )
+        # # --------------------------------------------------------------------------------------
+
+        # # Code for performance profiling of a code chunk
+        # import pyinstrument
+
+        # users = app.handle(
+        #     command.UserCrudCommand(
+        #         user=root_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_admin_policies = app.handle(
+        #     command.OrganizationAdminPolicyCrudCommand(
+        #         user=root_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_admin_user: model.User = [
+        #     x for x in users if x.id == org_admin_policies[0].user_id
+        # ][0]
+        # user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
+        #     command.UserAccessCasePolicyCrudCommand(
+        #         user=org_admin_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # org_user: model.User = [
+        #     x
+        #     for x in users
+        #     if x.id in {y.user_id for y in user_access_case_policies}
+        #     and app_impl.role_map[CommonRole.ORG_USER] in x.roles
+        #     and len(x.roles) == 1
+        # ][0]
+
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
+
+        # t0 = datetime.datetime.now()
+
+        # case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        # case_sets: list[model.CaseSet] = app.handle(
+        #     command.CaseSetCrudCommand(
+        #         user=org_user,
+        #         operation=CrudOperation.READ_ALL,
+        #     )
+        # )
+        # case_set_ids: list[UUID] = [x.id for x in case_sets]  # type:ignore[assignment]
+        # case_set_stats = app.handle(
+        #     command.RetrieveCaseStatsCommand(user=org_user, case_set_ids=case_set_ids)
+        # )
+
+        # t1 = datetime.datetime.now()
+        # print(f"\n\n\n\nRetrieveCaseSetStatsCommand took {t1 - t0}\n\n\n\n")
+        # profiler.stop()
+        # dir = Path("./test/output/performance")
+        # if not dir.exists():
+        #     dir.mkdir()
+        # with open(
+        #     dir
+        #     / f"performance.{datetime.datetime.now().isoformat().replace(':', '.')}.case_set_stats.{DEV_REPOSITORY_CONFIG.value}.html",
+        #     "w",
+        # ) as f:
+        #     f.write("".join(profiler.output_html()))
+        # return
+
+        # # --------------------------------------------------------------------------------------
 
         # Get all users and permissions
         users = app.handle(
@@ -165,19 +231,19 @@ class TestContent:
         )
 
         # Get some refdata as org user
-        case_types = app.handle(
+        case_types: list[model.CaseType] = app.handle(
             command.CaseTypeCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        case_sets = app.handle(
+        case_sets: list[model.CaseSet] = app.handle(
             command.CaseSetCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        concept_sets = app.handle(
+        concept_sets: list[model.ConceptSet] = app.handle(
             command.ConceptSetCrudCommand(
                 user=org_user,
                 operation=CrudOperation.READ_ALL,
@@ -197,19 +263,16 @@ class TestContent:
         }
 
         # Get case type and and case set stats
-        case_type_stats = app.handle(
-            command.RetrieveCaseTypeStatsCommand(user=org_user)
-        )
-        case_set_stats = app.handle(command.RetrieveCaseSetStatsCommand(user=org_user))
+        case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
         # Go over all case types with data
-        has_cases_case_type_ids = {
-            x.case_type_id for x in case_type_stats if x.n_cases > 0
-        }
+        has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
+            assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
-            complete_case_type: model.CompleteCaseType = app.handle(  # type: ignore
+            complete_case_type: model.CompleteCaseType = app.handle(
                 command.RetrieveCompleteCaseTypeCommand(
                     user=org_user,
                     case_type_id=case_type.id,
@@ -221,7 +284,7 @@ class TestContent:
 
             # Retrieve cases based on a filter
             # print(f"Retrieving cases for case type {complete_case_type.name}")
-            filters = []
+            filters: list = []
             for case_type_col in complete_case_type.case_type_cols.values():
                 col = complete_case_type.cols[case_type_col.col_id]
                 if col.concept_set_id:
@@ -278,10 +341,14 @@ class TestContent:
             ]
             for dist_case_type_col in dist_case_type_cols:
                 assert dist_case_type_col is not None
-                for tree_algorithm_code in dist_case_type_col.tree_algorithm_codes:
+                assert dist_case_type_col.id is not None
+                for tree_algorithm_code in (
+                    dist_case_type_col.tree_algorithm_codes or []
+                ):
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
+                            case_type_id=complete_case_type.id,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
                             tree_algorithm=tree_algorithm_code,
                             case_ids=case_ids,
@@ -326,25 +393,26 @@ class TestContent:
                 #         raise ValueError(
                 #             "Genetic sequence should have nucleotide_sequence attribute"
                 #         )
-                # TODO: enable once seqdb service retrieval of FASTA is implemented properly
-                # # Retrieve genetic sequences in FASTA format
-                # fasta_iterator: Iterable[str] = app.handle(
-                #     command.RetrieveGeneticSequenceFastaByCaseCommand(
-                #         user=org_user,
-                #         case_ids=has_seq_case_ids[0:1],
-                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
-                #     )
-                # )
-                # if not fasta_iterator:
-                #     raise ValueError("generator should not be empty")
-                # # convert generator to string
-                # fasta_str = "\n".join(fasta_iterator)
-                # if not fasta_str.startswith(">"):
-                #     raise ValueError("FASTA string should start with '>'")
-                # if "\n" not in fasta_str:
-                #     raise ValueError("FASTA string should contain new lines")
+
+                # Retrieve genetic sequences in FASTA format
+                fasta_iterator: Iterable[str] = app.handle(
+                    command.RetrieveGeneticSequenceFastaByCaseCommand(
+                        user=org_user,
+                        case_type_id=complete_case_type.id,
+                        case_ids=has_seq_case_ids[0:1],
+                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
+                    )
+                )
+                if not fasta_iterator:
+                    raise ValueError("generator should not be empty")
+                # convert generator to string
+                fasta_str = "\n".join(fasta_iterator)
+                if not fasta_str.startswith(">"):
+                    raise ValueError("FASTA string should start with '>'")
+                if "\n" not in fasta_str:
+                    raise ValueError("FASTA string should contain new lines")
                 # Retrieve SequencingProtocols
-                sequencing_protocols: list[model.SequencingProtocol] = app.handle(
+                sequencing_protocols: list[seqdb_model.SequencingProtocol] = app.handle(
                     command.RetrieveSequencingProtocolsCommand(
                         user=org_user,
                     )
@@ -355,7 +423,7 @@ class TestContent:
                     if not sequencing_protocol.id:
                         raise ValueError("Library prep protocol ID should not be empty")
                 # Retrieve AssemblyProtocols
-                assembly_protocols: list[model.AssemblyProtocol] = app.handle(
+                assembly_protocols: list[seqdb_model.AssemblyProtocol] = app.handle(
                     command.RetrieveAssemblyProtocolsCommand(
                         user=org_user,
                     )
@@ -368,14 +436,15 @@ class TestContent:
 
         # Go over all case sets
         for case_set in case_sets:
-            case_ids: model.CaseQueryResult = app.handle(
+            case_query_result = app.handle(
                 command.RetrieveCasesByQueryCommand(
                     user=org_user,
                     case_query=model.CaseQuery(
                         case_type_id=case_set.case_type_id,
                     ),
                 )
-            ).case_ids
+            )
+            case_ids = case_query_result.case_ids
             cases = app.handle(
                 command.RetrieveCasesByIdCommand(
                     user=org_user,
@@ -386,7 +455,7 @@ class TestContent:
 
         # Read all for all models with read permission
         for model_class, command_class in app._model_crud_command_map.items():
-            permissions: frozenset[fastapp.Permission] = (
+            permissions: frozenset[fastapp.Permission] = (  # type: ignore[assignment]
                 app.domain.get_permissions_for_command(command_class)
             )
             if PermissionType.READ not in {x.permission_type for x in permissions}:

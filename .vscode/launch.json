@@ -471,6 +471,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.casedb.integration.refdata_access",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_casedb_integration_refdata_access"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.casedb.performance",
             "type": "debugpy",
             "request": "launch",

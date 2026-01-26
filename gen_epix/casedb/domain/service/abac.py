@@ -51,8 +51,7 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveCasesByIdCommand,
         command.RetrieveCaseRightsCommand,
         command.RetrieveCaseSetRightsCommand,
-        command.RetrieveCaseTypeStatsCommand,
-        command.RetrieveCaseSetStatsCommand,
+        command.RetrieveCaseStatsCommand,
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,
@@ -74,8 +73,7 @@ class BaseAbacService(CommonAbacService):
         command.RetrievePhylogeneticTreeByCasesCommand,
         command.RetrieveGeneticSequenceByCaseCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
-        command.RetrieveCaseSetStatsCommand,
-        command.RetrieveCaseTypeStatsCommand,
+        command.RetrieveCaseStatsCommand,
     }
 
     @abc.abstractmethod

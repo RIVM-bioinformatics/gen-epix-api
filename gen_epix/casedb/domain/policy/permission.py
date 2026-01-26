@@ -123,8 +123,7 @@ class RoleGenerator(CommonRoleGenerator):
             (command.UploadCasesCommand, PermissionTypeSet.E),
             (command.CaseSetCrudCommand, PermissionTypeSet.RUD),
             (command.CaseSetMemberCrudCommand, PermissionTypeSet.CRUD),
-            (command.RetrieveCaseSetStatsCommand, PermissionTypeSet.E),
-            (command.RetrieveCaseTypeStatsCommand, PermissionTypeSet.E),
+            (command.RetrieveCaseStatsCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByIdCommand, PermissionTypeSet.E),
             (command.RetrieveCasesByQueryCommand, PermissionTypeSet.E),
             (command.RetrieveCompleteCaseTypeCommand, PermissionTypeSet.E),
@@ -150,7 +149,6 @@ class RoleGenerator(CommonRoleGenerator):
             (command.UserAccessCasePolicyCrudCommand, PermissionTypeSet.R),
             (command.UserShareCasePolicyCrudCommand, PermissionTypeSet.R),
             # seq
-            (command.RetrieveAlleleProfileCommand, PermissionTypeSet.E),
             (command.RetrieveGeneticSequenceByCaseCommand, PermissionTypeSet.E),
             (command.RetrieveGeneticSequenceFastaByCaseCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
