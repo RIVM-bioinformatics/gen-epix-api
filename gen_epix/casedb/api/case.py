@@ -135,8 +135,7 @@ class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
 
 
 class RetrieveCaseSetStatsRequestBody(PydanticBaseModel):
-    case_set_ids: set[UUID] | None = Field(
-        default=None,
+    case_set_ids: set[UUID] = Field(
         description="The case set ids to retrieve stats for, if not all.",
     )
 
