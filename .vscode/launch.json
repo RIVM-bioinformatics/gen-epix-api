@@ -193,6 +193,29 @@
             ],
             "justMyCode": true
         },
+        // api.platform
+        {
+            "name": "api.platform.local.mock.dict_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api_platform_local_mock_dict_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "api.platform.local.mock.sa_sql_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api_platform_local_mock_sa_sql_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         // env
         {
             "name": "env.casedb",
@@ -1032,28 +1055,6 @@
             "program": "run.py",
             "args": [
                 "other_oauth_server_start",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.start.all.services.dict_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_start_all_services_dict_demo",
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "other.start.all.services.sa_sql_demo",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "other_start_all_services_sa_sql_demo",
             ],
             "console": "integratedTerminal",
             "justMyCode": true

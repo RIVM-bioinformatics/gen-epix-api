@@ -106,6 +106,16 @@ class Run:
             ssl_certfile=ssl_certfile,
         )
 
+    def api_platform_local_mock_dict_demo(self) -> None:
+        from test.test_client.start_all_services import run_platform
+
+        run_platform(use_dict_repository=False, start_omopdb=False)
+
+    def api_platform_local_mock_sa_sql_demo(self) -> None:
+        from test.test_client.oauth.demo_client import demo_client_credentials_flow
+
+        demo_client_credentials_flow()
+
     ## env
 
     def env_casedb(self) -> None:
@@ -875,16 +885,6 @@ class Run:
         from test.test_client.start_all_services import run_platform
 
         run_platform(use_dict_repository=True, start_omopdb=False)
-
-    def other_start_all_services_sa_sql_demo(self) -> None:
-        from test.test_client.start_all_services import run_platform
-
-        run_platform(use_dict_repository=False, start_omopdb=False)
-
-    def other_oauth_server_client_demo(self) -> None:
-        from test.test_client.oauth.demo_client import demo_client_credentials_flow
-
-        demo_client_credentials_flow()
 
 
 if __name__ == "__main__":
