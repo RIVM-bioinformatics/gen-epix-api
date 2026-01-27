@@ -17,6 +17,7 @@ import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from test.test_client.oauth.authorization_code_store import AuthorizationCodeStore
 from test.test_client.oauth.client_store import Client, ClientStore
 from test.test_client.oauth.jwks import JWKSManager
 from test.test_client.oauth.oidc_provider import OIDCProvider
@@ -26,7 +27,7 @@ from typing import Any
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
@@ -40,6 +41,7 @@ token_store = TokenStore()
 jwks_manager = JWKSManager()
 oauth_validator = OAuth2Validator(client_store, token_store)
 oidc_provider = OIDCProvider(jwks_manager)
+authorization_code_store = AuthorizationCodeStore()
 
 
 @asynccontextmanager
@@ -185,7 +187,7 @@ async def jwks_endpoint() -> dict[str, Any]:
 
 @app.post("/oauth/token")
 async def token_endpoint(request: Request) -> JSONResponse:
-    """OAuth 2.0 Token endpoint supporting Client Credentials flow."""
+    """OAuth 2.0 Token endpoint supporting Client Credentials and Authorization Code flows."""
 
     # Authenticate client using either HTTP Basic Auth or form data
     client = await authenticate_client(request)
@@ -194,6 +196,97 @@ async def token_endpoint(request: Request) -> JSONResponse:
     form_data = await request.form()
     grant_type = form_data.get("grant_type")
     scope_value = form_data.get("scope", "")
+
+    if grant_type == "authorization_code":
+        code_value = form_data.get("code")
+        redirect_uri_value = form_data.get("redirect_uri")
+        code_verifier_value = form_data.get("code_verifier")
+
+        code_str = code_value if isinstance(code_value, str) else ""
+        redirect_uri_str = (
+            redirect_uri_value if isinstance(redirect_uri_value, str) else ""
+        )
+        code_verifier_str = (
+            code_verifier_value if isinstance(code_verifier_value, str) else ""
+        )
+
+        if not code_str or not redirect_uri_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="invalid_request",
+            )
+
+        auth_code = authorization_code_store.validate(
+            code_str, client.client_id, redirect_uri_str
+        )
+        if not auth_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_grant"
+            )
+
+        if not AuthorizationCodeStore.verify_pkce(
+            code_verifier_str, auth_code.code_challenge, auth_code.code_challenge_method
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_grant"
+            )
+
+        authorization_code_store.consume(code_str)
+
+        now = datetime.now(timezone.utc)
+        expires_in = 3600
+        expires_at = now + timedelta(seconds=expires_in)
+
+        access_token_payload = {
+            "iss": f"{request.url.scheme}://{request.url.netloc}",
+            "sub": auth_code.user_id,
+            "aud": client.audience or client.client_id,
+            "iat": int(now.timestamp()),
+            "exp": int(expires_at.timestamp()),
+            "scope": " ".join(auth_code.scopes),
+            "client_id": client.client_id,
+            "token_type": "Bearer",
+        }
+
+        access_token = jwks_manager.create_jwt(access_token_payload)
+
+        token = Token(
+            access_token=access_token,
+            token_type="Bearer",
+            expires_in=expires_in,
+            scope=" ".join(auth_code.scopes),
+            client_id=client.client_id,
+        )
+        token_store.store_token(access_token, token)
+
+        response_data: dict[str, Any] = {
+            "access_token": access_token,
+            "token_type": "Bearer",
+            "expires_in": expires_in,
+            "scope": " ".join(auth_code.scopes),
+        }
+
+        if "openid" in auth_code.scopes:
+            id_token_payload = {
+                "iss": f"{request.url.scheme}://{request.url.netloc}",
+                "sub": auth_code.user_id,
+                "aud": client.audience or client.client_id,
+                "iat": int(now.timestamp()),
+                "exp": int(expires_at.timestamp()),
+            }
+            if auth_code.nonce:
+                id_token_payload["nonce"] = auth_code.nonce
+            id_token = jwks_manager.create_jwt(id_token_payload)
+            response_data["id_token"] = id_token
+
+        logger.info(
+            f"Exchanged authorization code for client {client.client_id} with scopes: {auth_code.scopes}"
+        )
+
+        return JSONResponse(
+            content=response_data,
+            headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
+        )
 
     if grant_type != "client_credentials":
         raise HTTPException(
@@ -262,6 +355,63 @@ async def token_endpoint(request: Request) -> JSONResponse:
         content=response_data,
         headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
     )
+
+
+@app.get("/oauth/authorize")
+async def authorize_endpoint(request: Request) -> RedirectResponse:
+    response_type = request.query_params.get("response_type")
+    client_id = request.query_params.get("client_id")
+    redirect_uri = request.query_params.get("redirect_uri")
+    scope = request.query_params.get("scope", "")
+    state = request.query_params.get("state")
+    nonce = request.query_params.get("nonce")
+    code_challenge = request.query_params.get("code_challenge")
+    code_challenge_method = request.query_params.get("code_challenge_method")
+    user_id = request.query_params.get("user_id")
+
+    if response_type != "code" or not client_id or not redirect_uri:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_request"
+        )
+
+    client = client_store.get_client(client_id)
+    if not client or "authorization_code" not in client.grant_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="unauthorized_client"
+        )
+
+    if redirect_uri not in client.redirect_uris:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_request"
+        )
+
+    scope_str = scope if isinstance(scope, str) else ""
+    requested_scopes = scope_str.split() if scope_str else []
+    allowed_scopes = client.validate_scopes(requested_scopes)
+
+    if not user_id:
+        user_id = "demo-user"
+
+    auth_code = authorization_code_store.issue_code(
+        client_id=client.client_id,
+        user_id=user_id,
+        scopes=allowed_scopes,
+        redirect_uri=redirect_uri,
+        nonce=nonce,
+        code_challenge=code_challenge,
+        code_challenge_method=code_challenge_method,
+    )
+
+    logger.info(
+        f"Issued authorization code for client {client.client_id} scopes={allowed_scopes} user={user_id}"
+    )
+
+    sep = "&" if ("?" in redirect_uri) else "?"
+    location = f"{redirect_uri}{sep}code={auth_code.code}"
+    if state:
+        location += f"&state={state}"
+
+    return RedirectResponse(url=location, status_code=status.HTTP_302_FOUND)
 
 
 @app.post("/oauth/introspect")

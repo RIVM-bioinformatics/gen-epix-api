@@ -922,6 +922,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.test_client.authorization_code_flow",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_test_client_authorization_code_flow"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "other.general.generate_uuids",
             "type": "debugpy",
             "request": "launch",
@@ -1021,6 +1032,28 @@
             "program": "run.py",
             "args": [
                 "other_oauth_server_start",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "other.start.all.services.dict_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_start_all_services_dict_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "other.start.all.services.sa_sql_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "other_start_all_services_sa_sql_demo",
             ],
             "console": "integratedTerminal",
             "justMyCode": true
