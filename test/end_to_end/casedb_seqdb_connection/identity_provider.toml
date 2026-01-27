@@ -7,6 +7,7 @@ client_id = "CASEDB_FOR_SEQDB"
 client_secret = "CASEDB_FOR_SEQDB_CLIENT_SECRET"
 scope = "openid profile"
 audience = "SEQDB"
+public = true
 
 [service.auth.props.idps_cfg.claim_map]
 __key__ = "sub"
