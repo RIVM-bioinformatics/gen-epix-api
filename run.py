@@ -109,12 +109,12 @@ class Run:
     def api_platform_local_mock_dict_demo(self) -> None:
         from test.test_client.start_all_services import run_platform
 
-        run_platform(use_dict_repository=False, start_omopdb=False)
+        run_platform(use_dict_repository=True, start_omopdb=False)
 
     def api_platform_local_mock_sa_sql_demo(self) -> None:
-        from test.test_client.oauth.demo_client import demo_client_credentials_flow
+        from test.test_client.start_all_services import run_platform
 
-        demo_client_credentials_flow()
+        run_platform(use_dict_repository=False, start_omopdb=False)
 
     ## env
 
@@ -880,11 +880,6 @@ class Run:
         from test.test_client.oauth.start_server import start_server
 
         start_server()
-
-    def other_start_all_services_dict_demo(self) -> None:
-        from test.test_client.start_all_services import run_platform
-
-        run_platform(use_dict_repository=True, start_omopdb=False)
 
 
 if __name__ == "__main__":
