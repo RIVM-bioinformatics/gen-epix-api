@@ -1,13 +1,16 @@
 import gzip
 import hashlib
 import logging
+import random
 import uuid
 from enum import Enum
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
+
+from pydantic import BaseModel, field_validator, model_validator
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -17,6 +20,73 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
+
+
+class SequenceGenerationSettings(BaseModel):
+
+    n_loci: int
+    locus_length: int
+    p_locus_deletion: float = 0.01
+    p_nucleotide_substitution: float = 0.02
+    p_nucleotide_deletion: float = 0.005
+    seed: Optional[int] = 1001
+
+    # derived fields
+    seq_length: int | None = None
+    # list of length n_loci with linear interpolated probabilities
+    p_locus_mutation: list[float] | None = None
+
+    # lists of length n_loci which contains the probabilities of mutation of the locus times the probability of the mutation event
+    p_locus_deletion_vec: list[float] | None = None
+
+    # lists of length seq_length which contains the probabilities of mutation of the locus times the probability of the mutation event
+    p_nucleotide_substitution_vec: list[float] | None = None
+    p_nucleotide_deletion_vec: list[float] | None = None
+
+    @field_validator(
+        "p_locus_deletion",
+        "p_nucleotide_substitution",
+        "p_nucleotide_deletion",
+    )
+    @classmethod
+    def _validate_probability(cls, p: float) -> float:
+        if not 0.0 < p < 1.0:
+            raise ValueError("Probabilities must be in ]0,1[")
+        return p
+
+    @model_validator(mode="after")
+    def _derive_fields(self) -> "SequenceGenerationSettings":
+
+        # sequence length
+        self.seq_length = self.n_loci * self.locus_length
+
+        # linear interpolation of mutation probabilities over loci
+        self.p_locus_mutation = [
+            (i + 1) / (self.n_loci + 1) for i in range(self.n_loci)
+        ]
+        # Deterministic shuffle based on provided seed
+        _rng = random.Random(self.seed if self.seed is not None else 0)
+        _rng.shuffle(self.p_locus_mutation)
+
+        # locus deletion probabilities
+        self.p_locus_deletion_vec = [
+            p * self.p_locus_deletion for p in self.p_locus_mutation
+        ]
+
+        # per-nucleotide mutation probabilities
+        self.p_nucleotide_substitution_vec = []
+        self.p_nucleotide_deletion_vec = []
+
+        for locus_idx in range(self.n_loci):
+            for _ in range(self.locus_length):
+                self.p_nucleotide_substitution_vec.append(
+                    self.p_locus_mutation[locus_idx] * self.p_nucleotide_substitution
+                )
+                self.p_nucleotide_deletion_vec.append(
+                    self.p_locus_mutation[locus_idx] * self.p_nucleotide_deletion
+                )
+
+        return self
 
 
 class SeqdbTestClient(TestClient):
@@ -572,3 +642,170 @@ class SeqdbTestClient(TestClient):
                 self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
             ).id  # type: ignore[assignment]
         return obj_id
+
+    @staticmethod
+    def generate_random_sequences(
+        n_loci: int,
+        locus_length: int,
+        p_locus_deletion: float = 0.01,
+        p_nucleotide_substitution: float = 0.02,
+        p_nucleotide_deletion: float = 0.005,
+        seed: Optional[int] = 1001,
+    ) -> model.SampleBatchForUpload:
+        settings = SequenceGenerationSettings(
+            n_loci=n_loci,
+            locus_length=locus_length,
+            p_locus_deletion=p_locus_deletion,
+            p_nucleotide_substitution=p_nucleotide_substitution,
+            p_nucleotide_deletion=p_nucleotide_deletion,
+            seed=seed,
+        )
+        # local RNG to  ensure reproducibility with same seed
+        rng = random.Random(seed if seed is not None else 0)
+
+        sequence: list[str] = ["A"] * settings.seq_length
+        has_locus: list[bool] = [True] * settings.n_loci
+
+        children: list[tuple[list[str], list[bool]]] = [(sequence, has_locus)]
+
+        while len(children) < settings.n_loci:
+            parent_sequence, parent_has_locus = children.pop(0)
+
+            for _ in range(2):  # Create two children
+                seq = parent_sequence.copy()
+                has_locus = parent_has_locus.copy()
+
+                # Apply locus deletions
+                SeqdbTestClient._apply_locus_deletions(settings, rng, has_locus, seq)
+
+                # Apply nucleotide substitutions
+                SeqdbTestClient._apply_nucleotide_substitutions(settings, rng, has_locus, seq)
+
+                # Apply nucleotide deletions
+                SeqdbTestClient._apply_nucleotide_deletions(settings, rng, has_locus, seq)
+
+                children.append((seq, has_locus))
+
+        seqs = [
+            "".join(seq) for seq, _ in children
+        ]
+
+        alleles_for_upload: list[model.AlleleForUpload] = [
+            model.AlleleForUpload(
+                id=UUID(
+                    hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
+                ),
+                seq=seq,
+                seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
+                length=len(seq),
+            )
+            for seq in seqs
+        ]
+        seqs_for_upload: list[model.SeqForUpload] = [
+            model.SeqForUpload(
+                contigs=[
+                    model.Contig(
+                        id=UUID(
+                            hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
+                        ),
+                        seq=seq,
+                        seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
+                        length=len(seq),
+                    )
+                ],
+                assembly_protocol_id=uuid.uuid4(),
+            )
+            for seq in seqs
+        ]
+
+        return model.SampleBatchForUpload(
+            samples=[model.SampleForUpload(
+                seqs=seqs_for_upload
+            )],
+            alleles=alleles_for_upload,
+        )
+
+        # allele_for_upload_bath: list[model.AlleleForUpload] = []
+        # seqs_for_upload: list[model.SeqForUpload] = []
+        # for seq, has_locus in children:
+        #     seq_str = "".join(seq)
+
+        #     contig = model.Contig(
+        #         id=uuid.uuid4(),
+        #         seq=seq_str,
+        #         seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
+        #         length=len(seq_str),
+        #     )
+
+        #     seqs_for_upload.append(
+        #         model.SeqForUpload(contigs=[contig], assembly_protocol_id=uuid.uuid4())
+        #     )
+
+        #     allele_for_upload_bath.append(
+        #         model.AlleleForUpload(
+        #             id=uuid.uuid4(),
+        #             seq=seq_str,
+        #             seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
+        #             length=len(seq_str),
+        #         )
+        #     )
+
+        # sample_batch_for_upload = model.SampleBatchForUpload(
+        #     samples=[model.SampleForUpload(seqs=seqs_for_upload)],
+        #     alleles=allele_for_upload_bath,
+        # )
+
+        # return sample_batch_for_upload
+
+    @staticmethod
+    def _apply_nucleotide_deletions(
+        settings: SequenceGenerationSettings, 
+        rng: random.Random, 
+        has_locus: list[bool], 
+        seq: list[str]
+        ) -> None:
+        for i in range(settings.seq_length):
+            locus_idx = i // settings.locus_length
+            if (
+                        has_locus[locus_idx]
+                        and rng.random() <= settings.p_nucleotide_deletion_vec[i]
+                    ):
+                # Delete nucleotide
+                seq[i] = "-"
+
+    @staticmethod
+    def _apply_nucleotide_substitutions(
+        settings: SequenceGenerationSettings, 
+        rng: random.Random, 
+        has_locus: list[bool], 
+        seq: list[str]
+        ) -> None:
+        for i in range(settings.seq_length):
+            locus_idx = i // settings.locus_length
+            if (
+                        has_locus[locus_idx]
+                        and rng.random() <= settings.p_nucleotide_substitution_vec[i]
+                    ):
+                # Substitute nucleotide
+                original_nuc = seq[i]
+                if original_nuc != "-":
+                    seq[i] = rng.choice(
+                                [n for n in "ACGT" if n != original_nuc]
+                            )
+
+    @staticmethod
+    def _apply_locus_deletions(
+        settings: SequenceGenerationSettings, 
+        rng: random.Random, 
+        has_locus: list[bool], 
+        seq: list[str]
+        ) -> None:
+        for i in range(settings.n_loci):
+            if rng.random() <= settings.p_locus_deletion_vec[i]:
+                # Delete locus
+                has_locus[i] = False
+                # update the sequence to have all gaps for that locus.
+                for j in range(
+                            i * settings.locus_length, (i + 1) * settings.locus_length
+                        ):
+                    seq[j] = "-"
