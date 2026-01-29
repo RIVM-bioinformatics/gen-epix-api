@@ -1,10 +1,10 @@
-import base64
 import gzip
 import hashlib
 import logging
 import random
 import uuid
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
@@ -12,7 +12,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 import numpy as np
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, computed_field, field_validator
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -25,7 +25,7 @@ from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
 
 
-class SequenceGenerationSettings(BaseModel):
+class SeqGenerationSettings(BaseModel):
 
     n_loci: int
     locus_length: int
@@ -33,18 +33,6 @@ class SequenceGenerationSettings(BaseModel):
     p_nucleotide_substitution: float = 0.02
     p_nucleotide_deletion: float = 0.005
     seed: Optional[int] = 1001
-
-    # derived fields
-    seq_length: int | None = None
-    # list of length n_loci with linear interpolated probabilities
-    p_locus_mutation: list[float] | None = None
-
-    # lists of length n_loci which contains the probabilities of mutation of the locus times the probability of the mutation event
-    p_locus_deletion_vec: list[float] | None = None
-
-    # lists of length seq_length which contains the probabilities of mutation of the locus times the probability of the mutation event
-    p_nucleotide_substitution_vec: list[float] | None = None
-    p_nucleotide_deletion_vec: list[float] | None = None
 
     @field_validator(
         "p_locus_deletion",
@@ -57,42 +45,62 @@ class SequenceGenerationSettings(BaseModel):
             raise ValueError("Probabilities must be in ]0,1[")
         return p
 
-    @model_validator(mode="after")
-    def _derive_fields(self) -> "SequenceGenerationSettings":
+    @computed_field(  # type: ignore[prop-decorator]
+        description="Total sequence length computed as n_loci * locus_length."
+    )
+    @cached_property
+    def seq_length(self) -> int:
+        return self.n_loci * self.locus_length
 
-        # sequence length
-        self.seq_length = self.n_loci * self.locus_length
-
+    @computed_field(  # type: ignore[prop-decorator]
+        description="list of length n_loci with linear interpolated mutation probabilities over loci."
+    )
+    @cached_property
+    def p_locus_mutation(self) -> list[float]:
         # linear interpolation of mutation probabilities over loci
-        self.p_locus_mutation = [
-            (i + 1) / (self.n_loci + 1) for i in range(self.n_loci)
-        ]
+        p_locus_mutation = [(i + 1) / (self.n_loci + 1) for i in range(self.n_loci)]
         # Deterministic shuffle based on provided seed
         _rng = random.Random(self.seed if self.seed is not None else 0)
-        _rng.shuffle(self.p_locus_mutation)
+        _rng.shuffle(p_locus_mutation)
+        return p_locus_mutation
 
-        # locus deletion probabilities
-        self.p_locus_deletion_vec = [
-            p * self.p_locus_deletion for p in self.p_locus_mutation
-        ]
+    @computed_field(  # type: ignore[prop-decorator]
+        description="locus deletion probabilities computed as p_locus_mutation * p_locus_deletion."
+    )
+    @cached_property
+    def p_locus_deletion_vec(self) -> list[float]:
+        return [p * self.p_locus_deletion for p in self.p_locus_mutation]
 
-        # per-nucleotide mutation probabilities
-        self.p_nucleotide_substitution_vec = []
-        self.p_nucleotide_deletion_vec = []
-
+    @computed_field(  # type: ignore[prop-decorator]
+        description="per-nucleotide substitution probabilities computed as p_locus_mutation * p_nucleotide_substitution."
+    )
+    @cached_property
+    def p_nucleotide_substitution_vec(self) -> list[float]:
+        p_nucleotide_substitution_vec: list[float] = []
         for locus_idx in range(self.n_loci):
             for _ in range(self.locus_length):
-                self.p_nucleotide_substitution_vec.append(
+                p_nucleotide_substitution_vec.append(
                     self.p_locus_mutation[locus_idx] * self.p_nucleotide_substitution
                 )
-                self.p_nucleotide_deletion_vec.append(
+        return p_nucleotide_substitution_vec
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="per-nucleotide deletion probabilities computed as p_locus_mutation * p_nucleotide_deletion."
+    )
+    @cached_property
+    def p_nucleotide_deletion_vec(self) -> list[float]:
+        p_nucleotide_deletion_vec: list[float] = []
+        for locus_idx in range(self.n_loci):
+            for _ in range(self.locus_length):
+                p_nucleotide_deletion_vec.append(
                     self.p_locus_mutation[locus_idx] * self.p_nucleotide_deletion
                 )
-
-        return self
+        return p_nucleotide_deletion_vec
 
 
 class DistanceMatrix(BaseModel):
+
+    model_config = {"arbitrary_types_allowed": True}
 
     obj_ids: list[UUID]
     matrix: np.ndarray
@@ -654,14 +662,18 @@ class SeqdbTestClient(TestClient):
 
     @staticmethod
     def generate_random_sequences(
+        n_seqs: int,
         n_loci: int,
         locus_length: int,
         p_locus_deletion: float = 0.01,
         p_nucleotide_substitution: float = 0.02,
         p_nucleotide_deletion: float = 0.005,
         seed: Optional[int] = 1001,
+        assembly_protocol_id: UUID | None = None,
+        locus_set_id: UUID | None = None,
+        locus_detection_protocol_id: UUID | None = None,
     ) -> model.SampleBatchForUpload:
-        settings = SequenceGenerationSettings(
+        settings = SeqGenerationSettings(
             n_loci=n_loci,
             locus_length=locus_length,
             p_locus_deletion=p_locus_deletion,
@@ -669,15 +681,26 @@ class SeqdbTestClient(TestClient):
             p_nucleotide_deletion=p_nucleotide_deletion,
             seed=seed,
         )
+        assembly_protocol_id = (
+            assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
+        )
+        locus_set_id = locus_set_id if locus_set_id is not None else uuid.uuid4()
+        locus_detection_protocol_id = (
+            locus_detection_protocol_id
+            if locus_detection_protocol_id is not None
+            else uuid.uuid4()
+        )
+
+
         # local RNG to  ensure reproducibility with same seed
         rng = random.Random(seed if seed is not None else 0)
-
-        sequence: list[str] = ["A"] * settings.seq_length  # type: ignore[operator]
+        locus_ids: list[UUID] = [uuid.uuid4() for _ in range(settings.n_loci)]
+        sequence: list[str] = [rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)]  # type: ignore[operator]
         has_locus: list[bool] = [True] * settings.n_loci
 
         children: list[tuple[list[str], list[bool]]] = [(sequence, has_locus)]
 
-        while len(children) < settings.n_loci:
+        while len(children) < n_seqs:
             parent_sequence, parent_has_locus = children.pop(0)
 
             for _ in range(2):
@@ -700,76 +723,61 @@ class SeqdbTestClient(TestClient):
                 children.append((seq, has_locus))
 
         seqs = ["".join(seq) for seq, _ in children]
-
-        alleles_for_upload: list[model.AlleleForUpload] = [
-            model.AlleleForUpload(
-                id=UUID(hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()),
-                seq=seq,
-                seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
-                length=len(seq),
-            )
-            for seq in seqs
-        ]
-        seqs_for_upload: list[model.SeqForUpload] = [
-            model.SeqForUpload(
-                contigs=[
-                    model.Contig(
-                        id=UUID(
-                            hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
-                        ),
-                        seq=seq,
-                        seq_format=enum.SeqFormat.STR_DNA_INCL_GAP,
-                        length=len(seq),
-                    )
-                ],
-                assembly_protocol_id=uuid.uuid4(),
-            )
-            for seq in seqs
-        ]
-
-        allele_profiles_for_upload: list[model.AlleleProfileForUpload] = []
+        alleles: dict[str, model.AlleleForUpload] = {}
+        samples_for_upload: list[model.SampleForUpload] = []
         for seq in seqs:
-            allele_ids: list[UUID] = []
+            seq_id: UUID = uuid.uuid4()
+            allele_ids: list[UUID] = [NULL_ID] * settings.n_loci
             for locus_idx in range(settings.n_loci):
-                locus_seq = seq[
+                locus_id = locus_ids[locus_idx]
+                allele_seq = seq[
                     locus_idx
                     * settings.locus_length : (locus_idx + 1)
                     * settings.locus_length
                 ]
-                if set(locus_seq) == {"-"}:
-                    allele_ids.append(NULL_ID)
-                else:
-                    allele_id = UUID(
-                        hashlib.sha256(locus_seq.encode("ascii")).digest()[:16].hex()
+                if set(allele_seq) != {"-"}:
+                    if allele_seq in alleles and alleles[allele_seq].locus_id != locus_id:
+                        raise AssertionError(
+                            "Allele sequence already exists for a different locus"
+                        )
+                    alleles[allele_seq] = model.AlleleForUpload(
+                        seq="".join(x for x in allele_seq if x != "-"),
+                        seq_format=enum.SeqFormat.STR_DNA,
+                        locus_id=locus_id,
                     )
-                    allele_ids.append(allele_id)
-            # Build base64-encoded concatenated 128-bit allele IDs (including NULL_ID)
-            bytes_profile = b"".join([allele_id.bytes for allele_id in allele_ids])
-            allele_profile_str = base64.b64encode(bytes_profile).decode("ascii")
-            allele_profiles_for_upload.append(
-                model.AlleleProfileForUpload(
-                    locus_set_id=uuid.uuid4(),
-                    locus_detection_protocol_id=uuid.uuid4(),
-                    allele_profile=allele_profile_str,
-                    allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-                    seq_id=UUID(
-                        hashlib.sha256(seq.encode("ascii")).digest()[:16].hex()
-                    ),
+                    allele_ids[locus_idx] = alleles[allele_seq].id
+            allele_profile_for_upload = model.AlleleProfileForUpload(
+                locus_set_id=locus_set_id,
+                locus_detection_protocol_id=locus_detection_protocol_id,
+                allele_ids=allele_ids,
+                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                seq_id=seq_id,
+            )
+            seq_for_upload = model.SeqForUpload(
+                id=seq_id,
+                contigs=[
+                    model.Contig(
+                        seq="".join(x for x in seq if x != "-"),
+                        seq_format=enum.SeqFormat.STR_DNA,
+                    )
+                ],
+                assembly_protocol_id=assembly_protocol_id,
+            )
+            samples_for_upload.append(
+                model.SampleForUpload(
+                    seqs=[seq_for_upload],
+                    allele_profiles=[allele_profile_for_upload],
                 )
             )
-
-        return model.SampleBatchForUpload(
-            samples=[
-                model.SampleForUpload(
-                    seqs=seqs_for_upload, allele_profiles=allele_profiles_for_upload
-                )
-            ],
-            alleles=alleles_for_upload,
+        sample_batch_for_upload = model.SampleBatchForUpload(
+            samples=samples_for_upload,
+            alleles=list(alleles.values()),
         )
+        return sample_batch_for_upload
 
     @staticmethod
     def _apply_nucleotide_deletions(
-        settings: SequenceGenerationSettings,
+        settings: SeqGenerationSettings,
         rng: random.Random,
         has_locus: list[bool],
         seq: list[str],
@@ -785,7 +793,7 @@ class SeqdbTestClient(TestClient):
 
     @staticmethod
     def _apply_nucleotide_substitutions(
-        settings: SequenceGenerationSettings,
+        settings: SeqGenerationSettings,
         rng: random.Random,
         has_locus: list[bool],
         seq: list[str],
@@ -803,7 +811,7 @@ class SeqdbTestClient(TestClient):
 
     @staticmethod
     def _apply_locus_deletions(
-        settings: SequenceGenerationSettings,
+        settings: SeqGenerationSettings,
         rng: random.Random,
         has_locus: list[bool],
         seq: list[str],
