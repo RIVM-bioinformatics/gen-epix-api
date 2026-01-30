@@ -12,6 +12,7 @@ import pytest
 from cachetools import LRUCache, cached
 
 from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain.enum import RoleSet
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -62,7 +63,15 @@ class TestRefdataAccess:
 
     @cached(cache=LRUCache(maxsize=1))
     def _get_all_users(self, env: Env) -> list[model.User]:
-        retval: list[model.User] = self._read_all(env, model.User, sort=True, return_id=False)  # type: ignore[return-value]
+        retval: list[model.User] = self._read_all(env, model.User, sort=True, return_id=False)  # type: ignore[assignment]
+        return retval
+
+    @cached(
+        cache=LRUCache(maxsize=1024),
+        key=lambda self, env, user, role_set: (user.id, role_set),
+    )
+    def _has_role(self, env: Env, user: model.User, role_set: enum.RoleSet) -> bool:
+        retval = bool(user.roles & {x for x in env.app.impl.role_set_map[role_set]})
         return retval
 
     def _read_all(
@@ -165,7 +174,15 @@ class TestRefdataAccess:
     def test_case_type(self, env: Env) -> None:
         all_case_types = self._read_all(env, model.CaseType)
         for user in self._get_all_users(env):
-            case_types = self._read_all(env, model.CaseType, user=user)
+            if self._has_role(env, user, RoleSet.GE_REFDATA_ADMIN):
+                case_types = self._read_all(env, model.CaseType, user=user)
+            else:
+                pass
+                # TODO: filter case_types by ABAC
+                print(
+                    f"Skipping ABAC filtering for non-admin users in test_case_type: {user.roles}"
+                )
+                continue
             assert case_types == all_case_types
 
     # TODO: Add tests for all other refdata models

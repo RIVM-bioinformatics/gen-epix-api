@@ -159,16 +159,21 @@ class BaseRepository(abc.ABC):
 
         # Retrieve non-excluded existing objects
         # TODO: replace retrieval of existing objects with a more efficient method
-        existing_objs: list[Model] = [
-            x  # type: ignore
-            for x in self.crud(  # type: ignore
-                uow, user_id, model_class, None, None, CrudOperation.READ_ALL
-            )
-            if get_id_pair(x) in obj_dict  # type: ignore
-        ]
+        all_existing_objs: list[Model] = list(
+            self.crud(uow, user_id, model_class, None, None, CrudOperation.READ_ALL)  # type: ignore
+        )
+        # Filter to get only associations for the specified relationship (obj_id1 or obj_id2)
+        relevant_existing_objs = self._get_relevant_existing_objs(
+            model_class,
+            link_field_name1,
+            link_field_name2,
+            obj_id1,
+            obj_id2,
+            all_existing_objs,
+        )
         existing_obj_dict: dict[Hashable, Model] = {
             get_id_pair(x): x
-            for x in existing_objs
+            for x in relevant_existing_objs
             if get_id_pair(x) not in excluded_id_pairs
         }
 

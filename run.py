@@ -213,6 +213,7 @@ class Run:
                 "test/filter/unit",
                 "test/transform/unit",
                 "test/fastapp/unit",
+                "test/seqdb/unit",
                 "test/commondb/unit",
                 "test/casedb/unit",
                 "test/omopdb/unit",

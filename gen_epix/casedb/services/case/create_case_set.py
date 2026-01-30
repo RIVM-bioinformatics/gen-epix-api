@@ -20,9 +20,9 @@ def case_service_create_case_set(
     assert case_abac is not None
     is_allowed = case_abac.is_allowed(
         case_type_id,
+        created_in_data_collection_id,
         enum.CaseRight.ADD_CASE_SET,
         True,
-        created_in_data_collection_id=created_in_data_collection_id,
         tgt_data_collection_ids=cmd.data_collection_ids,
     )
     if not is_allowed:
