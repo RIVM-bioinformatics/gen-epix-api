@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet
+from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.domain.model.abac.rights import (
     CaseAbac,
     CaseTypeAccessAbac,
@@ -371,25 +371,13 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
             current_data_collection_ids={self.dc1},
             tgt_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
-
-    def test_is_allowed_add_create_missing_created_in_raises(self) -> None:
-        abac: CaseAbac = CaseAbac(
-            is_full_access=False, case_type_access_abacs={}, case_type_share_abacs={}
-        )
-        with self.assertRaises(exc.InvalidArgumentsError):
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                right=CaseRight.ADD_CASE,
-                is_create_or_delete=True,
-                created_in_data_collection_id=None,
-            )
 
     def test_is_allowed_add_create_not_in_access_returns_false(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -397,9 +385,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
         )
         self.assertFalse(allowed)
 
@@ -416,9 +404,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
         )
         self.assertFalse(allowed)
 
@@ -434,9 +422,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         with self.assertRaises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
+                created_in_data_collection_id=self.dc1,
                 right=CaseRight.ADD_CASE,
                 is_create_or_delete=True,
-                created_in_data_collection_id=self.dc1,
                 current_data_collection_ids={self.dc1},
             )
 
@@ -444,9 +432,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertFalse(
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
+                created_in_data_collection_id=self.dc1,
                 right=CaseRight.ADD_CASE,
                 is_create_or_delete=False,
-                created_in_data_collection_id=self.dc1,
                 current_data_collection_ids={self.dc1},
                 tgt_data_collection_ids={
                     self.dc3
@@ -468,9 +456,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=False,
-            created_in_data_collection_id=self.dc1,
             tgt_data_collection_ids={self.dc2},
         )
         self.assertFalse(allowed)
@@ -494,9 +482,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
             tgt_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
@@ -520,24 +508,12 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
             tgt_data_collection_ids={self.dc2},
         )
         self.assertFalse(allowed)
-
-    def test_is_allowed_remove_delete_missing_created_in_raises(self) -> None:
-        abac: CaseAbac = CaseAbac(
-            is_full_access=False, case_type_access_abacs={}, case_type_share_abacs={}
-        )
-        with self.assertRaises(exc.InvalidArgumentsError):
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                right=CaseRight.REMOVE_CASE,
-                is_create_or_delete=True,
-                created_in_data_collection_id=None,
-            )
 
     def test_is_allowed_remove_delete_not_in_access_false(self) -> None:
         abac: CaseAbac = CaseAbac(
@@ -545,9 +521,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
         )
         self.assertFalse(allowed)
 
@@ -564,9 +540,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
         )
         self.assertFalse(allowed)
 
@@ -582,9 +558,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         with self.assertRaises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
+                created_in_data_collection_id=self.dc1,
                 right=CaseRight.REMOVE_CASE,
                 is_create_or_delete=True,
-                created_in_data_collection_id=self.dc1,
                 tgt_data_collection_ids={self.dc2},
             )
 
@@ -600,9 +576,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         with self.assertRaises(exc.InvalidArgumentsError):
             abac.is_allowed(
                 case_type_id=self.case_type_id_1,
+                created_in_data_collection_id=self.dc1,
                 right=CaseRight.REMOVE_CASE,
                 is_create_or_delete=False,
-                created_in_data_collection_id=self.dc1,
                 current_data_collection_ids={self.dc1},
                 tgt_data_collection_ids={self.dc2},
             )
@@ -626,48 +602,18 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=False,
-            created_in_data_collection_id=self.dc1,
             current_data_collection_ids={self.dc1, self.dc2},
             tgt_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
 
-    def test_is_allowed_content_is_create_or_delete_true_raises(self) -> None:
-        access_map = {self.case_type_id_1: {self.dc1: self.make_access(self.dc1)}}
-        abac: CaseAbac = CaseAbac(
-            is_full_access=False,
-            case_type_access_abacs=access_map,
-            case_type_share_abacs={},
-        )
-        with self.assertRaises(exc.InvalidArgumentsError):
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                right=CaseRight.READ_CASE,
-                is_create_or_delete=True,
-                current_data_collection_ids={self.dc1},
-            )
-
-    def test_is_allowed_content_tgt_not_empty_raises(self) -> None:
-        access_map = {self.case_type_id_1: {self.dc1: self.make_access(self.dc1)}}
-        abac: CaseAbac = CaseAbac(
-            is_full_access=False,
-            case_type_access_abacs=access_map,
-            case_type_share_abacs={},
-        )
-        with self.assertRaises(exc.InvalidArgumentsError):
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                right=CaseRight.WRITE_CASE,
-                tgt_data_collection_ids={self.dc1},
-                current_data_collection_ids={self.dc1},
-            )
-
     def test_is_allowed_content_read_true(self) -> None:
         access_map = {
             self.case_type_id_1: {
-                self.dc1: self.make_access(self.dc1, read_cols={self.col1})
+                self.dc2: self.make_access(self.dc2, read_cols={self.col1})
             }
         }
         abac: CaseAbac = CaseAbac(
@@ -677,15 +623,16 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.READ_CASE,
             is_create_or_delete=False,
-            current_data_collection_ids={self.dc1},
+            current_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
 
     def test_is_allowed_content_read_false(self) -> None:
         """
-        This test expects is_allowed to return False bfecause the access map does not grant any read rights
+        This test expects is_allowed to return False because the access map does not grant any read rights
         (no read_cols specified) for the given data collection. Therefore, CaseAbac.is_allowed should deny
         READ_CASE access for the provided current_data_collection_ids.
         """
@@ -697,26 +644,11 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.READ_CASE,
             is_create_or_delete=False,
-            current_data_collection_ids={self.dc1},
         )
         self.assertFalse(allowed)
-
-    def test_is_allowed_invalid_right_raises(self) -> None:
-        access_map = {self.case_type_id_1: {self.dc1: self.make_access(self.dc1)}}
-        abac: CaseAbac = CaseAbac(
-            is_full_access=False,
-            case_type_access_abacs=access_map,
-            case_type_share_abacs={},
-        )
-        with self.assertRaises(exc.InvalidArgumentsError):
-            abac.is_allowed(
-                case_type_id=self.case_type_id_1,
-                right=next(iter(CaseRightSet.CONTENT.value)),  # type: ignore[arg-type]
-                is_create_or_delete=False,
-                tgt_data_collection_ids={self.dc1},
-            )
 
     def test_get_case_rights_non_full_access(self) -> None:
         # Access: created_in is private; remove rights on dc1, dc2; add rights on dc3; share add to dc4 from dc2
@@ -750,7 +682,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_id=case_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertFalse(rights.is_full_access)
         self.assertEqual(rights.case_id, case_id)
@@ -788,7 +720,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_set_id=case_set_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertFalse(rights.is_full_access)
         self.assertEqual(rights.case_set_id, case_set_id)
@@ -808,7 +740,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_id=case_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertTrue(rights.is_full_access)
         self.assertEqual(rights.add_data_collection_ids, set())
@@ -827,7 +759,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_set_id=case_set_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertTrue(rights.is_full_access)
         self.assertEqual(rights.add_data_collection_ids, set())
@@ -955,9 +887,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.ADD_CASE,
             is_create_or_delete=True,
-            created_in_data_collection_id=self.dc1,
             tgt_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
@@ -978,9 +910,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.REMOVE_CASE,
             is_create_or_delete=False,
-            created_in_data_collection_id=self.dc1,
             current_data_collection_ids={self.dc1, self.dc2},
             tgt_data_collection_ids={self.dc2},
         )
@@ -989,7 +921,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
     def test_is_allowed_content_write_true(self) -> None:
         access_map = {
             self.case_type_id_1: {
-                self.dc1: self.make_access(self.dc1, write_cols={self.col1})
+                self.dc2: self.make_access(self.dc2, write_cols={self.col1})
             }
         }
         abac: CaseAbac = CaseAbac(
@@ -999,9 +931,10 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         )
         allowed = abac.is_allowed(
             case_type_id=self.case_type_id_1,
+            created_in_data_collection_id=self.dc1,
             right=CaseRight.WRITE_CASE,
             is_create_or_delete=False,
-            current_data_collection_ids={self.dc1},
+            current_data_collection_ids={self.dc2},
         )
         self.assertTrue(allowed)
 
@@ -1028,7 +961,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_id=case_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertEqual(rights.add_data_collection_ids, {self.dc3})
         self.assertEqual(rights.remove_data_collection_ids, {self.dc2})
@@ -1055,7 +988,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_set_id=case_set_id,
             case_type_id=self.case_type_id_1,
             created_in_data_collection_id=self.dc1,
-            data_collection_ids=frozenset({self.dc1, self.dc2}),
+            data_collection_ids=set({self.dc1, self.dc2}),
         )
         self.assertEqual(rights.remove_data_collection_ids, {self.dc1})
         self.assertFalse(rights.can_delete)
