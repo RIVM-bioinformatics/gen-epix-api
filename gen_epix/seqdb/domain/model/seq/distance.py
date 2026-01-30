@@ -8,7 +8,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
-from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq, Seq
 
 
@@ -101,15 +101,20 @@ class SeqDistance(Model, HasSampleMixin):
         links=create_links(
             {
                 1: (
-                    "seq_distance_protocol_id",
-                    SeqDistanceProtocol,
-                    "seq_distance_protocol",
+                    "sample_id",
+                    Sample,
+                    "sample",
                 ),
                 # TODO: remove seq_id link once no longer needed
                 2: (
                     "seq_id",
                     Seq,
                     "seq",
+                ),
+                3: (
+                    "seq_distance_protocol_id",
+                    SeqDistanceProtocol,
+                    "seq_distance_protocol",
                 ),
             }
         ),
