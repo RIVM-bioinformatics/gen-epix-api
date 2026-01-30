@@ -193,6 +193,29 @@
             ],
             "justMyCode": true
         },
+        // api.platform
+        {
+            "name": "api.platform.local.mock.dict_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api_platform_local_mock_dict_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "api.platform.local.mock.sa_sql_demo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "api_platform_local_mock_sa_sql_demo",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
         // env
         {
             "name": "env.casedb",
@@ -917,6 +940,17 @@
             "program": "run.py",
             "args": [
                 "test_general_code_test_model_field_properties"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.test_client.authorization_code_flow",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_test_client_authorization_code_flow"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
