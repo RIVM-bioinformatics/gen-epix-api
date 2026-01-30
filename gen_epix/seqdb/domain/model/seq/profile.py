@@ -339,6 +339,10 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
     mlva_detection_protocol: MlvaDetectionProtocol | None = Field(
         default=None, description="The MLVA detection protocol."
     )
+    locus_set_id: UUID = Field(
+        description="The unique identifier for the locus set. FOREIGN KEY"
+    )
+    locus_set: LocusSet | None = Field(default=None, description="The locus set.")
     mlva_profile: str = Field(description="The number of tandem repeats per locus.")
     mlva_profile_format: enum.MlvaProfileFormat = Field(
         default=enum.MlvaProfileFormat.MLVA_PROFILE_FORMAT1,

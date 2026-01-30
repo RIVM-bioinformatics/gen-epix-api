@@ -8,7 +8,8 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq
+from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin
+from gen_epix.seqdb.domain.model.seq.seq import RefSeq, Seq
 
 
 class SeqDistanceProtocol(Model, ProtocolMixin):
@@ -84,7 +85,7 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
         return value
 
 
-class SeqDistance(Model):
+class SeqDistance(Model, HasSampleMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="seq_distances",
         table_name="seq_distance",
@@ -104,11 +105,26 @@ class SeqDistance(Model):
                     SeqDistanceProtocol,
                     "seq_distance_protocol",
                 ),
+                # TODO: remove seq_id link once no longer needed
+                2: (
+                    "seq_id",
+                    Seq,
+                    "seq",
+                ),
             }
         ),
     )
+    # TODO: remove seq_id link once no longer needed
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The unique identifier for the sequence, if applicable. FOREIGN KEY",
+    )
+    seq: Seq | None = Field(default=None, description="The sequence.")
     seq_distance_protocol_id: UUID = Field(
         description="The unique identifier for the genetic distance protocol. FOREIGN KEY"
+    )
+    seq_distance_protocol: SeqDistanceProtocol | None = Field(
+        default=None, description="The genetic distance protocol."
     )
     profile_id: UUID = Field(
         description="The unique identifier for the profile.",
