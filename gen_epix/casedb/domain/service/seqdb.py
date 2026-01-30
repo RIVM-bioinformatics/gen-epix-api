@@ -32,8 +32,6 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
 
-        # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
-
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand

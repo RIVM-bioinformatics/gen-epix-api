@@ -14,7 +14,7 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq, RefSnp, Seq
+from gen_epix.seqdb.domain.model.seq.seq import RefSeq, Seq
 
 
 class LocusDetectionProtocol(Model, ProtocolMixin):
@@ -416,36 +416,3 @@ class KmerProfile(Model, HasSampleMixin, QualityMixin):
     @field_serializer("kmer_profile_hash")
     def _serialize_kmer_profile_hash(self, value: UUID) -> str:
         return str(value)
-
-
-class CompleteAlleleProfile(Model, HasSampleMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_allele_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    locus_set_id: UUID = Field(description="The ID of the locus set.")
-    locus_ids: list[UUID] = Field(description="The IDs of the loci.")
-    allele_ids: list[UUID | None] = Field(
-        description="The IDs of the alleles for each locus."
-    )
-    multiple_allele_ids: dict[UUID, list[UUID]] = Field(
-        description="Mapping of locus ID to multiple allele IDs."
-    )
-    allele_count_by_qc: dict[enum.QualityControlResult, int] = Field(
-        description="Mapping of quality control result to allele count."
-    )
-
-
-class CompleteSnpProfile(Model, HasSampleMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_snp_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    ref_snps: list[RefSnp] = Field(description="The list of reference SNPs.")
-    snps: str = Field(description="The SNPs in the profile.")
-    snp_profile: str = Field(description="The SNP profile string.")
-    snp_profile_format: enum.SnpProfileFormat = Field(
-        description="The format of the SNP profile."
-    )
