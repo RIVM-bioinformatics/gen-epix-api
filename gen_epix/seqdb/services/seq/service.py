@@ -114,7 +114,7 @@ class SeqService(BaseSeqService):
         # Special case: 0 or 1 sequences
         if len(seq_ids) < 2:
             return model.PhylogeneticTree(
-                id=self.generate_id(),
+                id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
                 seq_distance_protocol_id=seq_distance_protocol_id,
                 seq_ids=seq_ids,
@@ -202,7 +202,7 @@ class SeqService(BaseSeqService):
             # Handle sequences with no stored distances
             if len(tree_seq_ids) < 2:
                 return model.PhylogeneticTree(
-                    id=self.generate_id(),
+                    id=self.generate_id(),  # type: ignore[arg-type]
                     tree_algorithm=tree_algorithm,
                     seq_distance_protocol_id=seq_distance_protocol_id,
                     seq_ids=seq_ids,
@@ -259,7 +259,7 @@ class SeqService(BaseSeqService):
                 f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
         phylogenetic_tree = model.PhylogeneticTree(
-            id=self.generate_id(),
+            id=self.generate_id(),  # type: ignore[arg-type]
             tree_algorithm=tree_algorithm,
             seq_distance_protocol_id=seq_distance_protocol_id,
             seq_ids=seq_ids,

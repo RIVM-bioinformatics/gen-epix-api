@@ -305,15 +305,24 @@ class AstResultFormat(Enum):
 
 class SeqDistanceProtocolType(Enum):
     ALLELE_HAMMING = "ALLELE_HAMMING"
-    SNP_HAMMING = "SNP_HAMMING"
     KMER_EUCLIDEAN = "KMER_EUCLIDEAN"
+    MLVA_HAMMING = "MLVA_HAMMING"
+    SNP_HAMMING = "SNP_HAMMING"
     OTHER = "OTHER"
 
 
 class SeqDistanceProtocolTypeSet(Enum):
-    ALLELE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
-    SNP_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
-    KMER_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
+    ALLELE_PROFILE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
+    SNP_PROFILE_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
+    KMER_PROFILE_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
+    MLVA_PROFILE_BASED = frozenset({SeqDistanceProtocolType.MLVA_HAMMING})
+    HAMMING_DISTANCE_BASED = frozenset(
+        {
+            SeqDistanceProtocolType.ALLELE_HAMMING,
+            SeqDistanceProtocolType.SNP_HAMMING,
+            SeqDistanceProtocolType.MLVA_HAMMING,
+        }
+    )
 
 
 class SeqDistanceResultFormat(Enum):

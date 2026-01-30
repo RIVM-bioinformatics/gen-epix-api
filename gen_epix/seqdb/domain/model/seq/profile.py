@@ -320,7 +320,8 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
-                3: (
+                3: ("locus_set_id", LocusSet, "locus_set"),
+                4: (
                     "mlva_detection_protocol_id",
                     MlvaDetectionProtocol,
                     "mlva_detection_protocol",
