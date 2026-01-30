@@ -88,6 +88,11 @@ class CaseSetQuery(Model):
 
 
 class BaseCaseRights(Model):
+    """
+    Base class describing all the rights that a user has on one particular item,
+    based on the data collections in which it is currently shared.
+    """
+
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the item was created",
     )
