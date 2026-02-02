@@ -663,24 +663,12 @@ class SeqdbTestClient(TestClient):
     @staticmethod
     def generate_random_sequences(
         n_seqs: int,
-        n_loci: int,
-        locus_length: int,
-        p_locus_deletion: float = 0.01,
-        p_nucleotide_substitution: float = 0.02,
-        p_nucleotide_deletion: float = 0.005,
-        seed: Optional[int] = 1001,
+        settings: SeqGenerationSettings,
         assembly_protocol_id: UUID | None = None,
         locus_set_id: UUID | None = None,
         locus_detection_protocol_id: UUID | None = None,
     ) -> model.SampleBatchForUpload:
-        settings = SeqGenerationSettings(
-            n_loci=n_loci,
-            locus_length=locus_length,
-            p_locus_deletion=p_locus_deletion,
-            p_nucleotide_substitution=p_nucleotide_substitution,
-            p_nucleotide_deletion=p_nucleotide_deletion,
-            seed=seed,
-        )
+        # set IDs if not provided
         assembly_protocol_id = (
             assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
         )
@@ -690,42 +678,45 @@ class SeqdbTestClient(TestClient):
             if locus_detection_protocol_id is not None
             else uuid.uuid4()
         )
-
-
         # local RNG to  ensure reproducibility with same seed
-        rng = random.Random(seed if seed is not None else 0)
+        rng = random.Random(settings.seed)
+
         locus_ids: list[UUID] = [uuid.uuid4() for _ in range(settings.n_loci)]
-        sequence: list[str] = [rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)]  # type: ignore[operator]
+        sequence: list[str] = [
+            rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)
+        ]
         has_locus: list[bool] = [True] * settings.n_loci
 
-        children: list[tuple[list[str], list[bool]]] = [(sequence, has_locus)]
+        class SeqNode(BaseModel):
+            sequence: list[str]
+            has_locus: list[bool]
+
+        children: list[SeqNode] = [SeqNode(sequence=sequence, has_locus=has_locus)]
 
         while len(children) < n_seqs:
-            parent_sequence, parent_has_locus = children.pop(0)
+            parent: SeqNode = children.pop(0)
+            parent_sequence = parent.sequence
+            parent_has_locus = parent.has_locus
 
             for _ in range(2):
                 seq = parent_sequence.copy()
                 has_locus = parent_has_locus.copy()
-
                 # Apply locus deletions
                 SeqdbTestClient._apply_locus_deletions(settings, rng, has_locus, seq)
-
                 # Apply nucleotide substitutions
                 SeqdbTestClient._apply_nucleotide_substitutions(
                     settings, rng, has_locus, seq
                 )
-
                 # Apply nucleotide deletions
                 SeqdbTestClient._apply_nucleotide_deletions(
                     settings, rng, has_locus, seq
                 )
+                children.append(SeqNode(sequence=seq, has_locus=has_locus))
 
-                children.append((seq, has_locus))
-
-        seqs = ["".join(seq) for seq, _ in children]
+        seqs: list[str] = ["".join(node.sequence) for node in children]
         alleles: dict[str, model.AlleleForUpload] = {}
         samples_for_upload: list[model.SampleForUpload] = []
-        for seq in seqs:
+        for seq in seqs:  # type: ignore[assignment]
             seq_id: UUID = uuid.uuid4()
             allele_ids: list[UUID] = [NULL_ID] * settings.n_loci
             for locus_idx in range(settings.n_loci):
@@ -736,20 +727,23 @@ class SeqdbTestClient(TestClient):
                     * settings.locus_length
                 ]
                 if set(allele_seq) != {"-"}:
-                    if allele_seq in alleles and alleles[allele_seq].locus_id != locus_id:
+                    if (
+                        allele_seq in alleles  # type: ignore[comparison-overlap]
+                        and alleles[allele_seq].locus_id != locus_id  # type: ignore[index]
+                    ):
                         raise AssertionError(
                             "Allele sequence already exists for a different locus"
                         )
-                    alleles[allele_seq] = model.AlleleForUpload(
+                    alleles[allele_seq] = model.AlleleForUpload(  # type: ignore[index]
                         seq="".join(x for x in allele_seq if x != "-"),
                         seq_format=enum.SeqFormat.STR_DNA,
                         locus_id=locus_id,
                     )
-                    allele_ids[locus_idx] = alleles[allele_seq].id
+                    allele_ids[locus_idx] = alleles[allele_seq].id  # type: ignore[assignment,index]
             allele_profile_for_upload = model.AlleleProfileForUpload(
                 locus_set_id=locus_set_id,
                 locus_detection_protocol_id=locus_detection_protocol_id,
-                allele_ids=allele_ids,
+                allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                 seq_id=seq_id,
             )
