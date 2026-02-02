@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-01")
-class TestGenerateSequences:
+class TestGenerateRandomSequences:
 
     def test_generate_sequences_happy_flow(self) -> None:
         settings = SeqGenerationSettings(
