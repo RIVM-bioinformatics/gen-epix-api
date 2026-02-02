@@ -103,6 +103,7 @@ class TestModelCompleteCaseType:
         ordered_case_type_col_ids = [case_type_cols[x].id for x in [4, 3, 2, 1, 0]]
 
         complete_case_type = model.CompleteCaseType(
+            user_id=uuid4(),
             name="test",
             etiologies={},
             etiological_agents={},

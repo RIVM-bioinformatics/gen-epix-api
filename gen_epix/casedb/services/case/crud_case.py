@@ -77,7 +77,7 @@ def _crud_case_with_abac(
             )
         # Get all cases and data collection links
         assert case_ids is not None
-        cases = self.repository.crud(  # type: ignore[assignment]
+        cases: list[model.Case] = self.repository.crud(  # type: ignore[assignment]
             uow,
             cmd.user.id,
             model.Case,
@@ -98,9 +98,9 @@ def _crud_case_with_abac(
             )
             is_allowed = case_abac.is_allowed(
                 case.case_type_id,
+                case.created_in_data_collection_id,
                 enum.CaseRight.REMOVE_CASE,
                 True,
-                created_in_data_collection_id=case.created_in_data_collection_id,
                 current_data_collection_ids=data_collection_ids,
             )
             if not is_allowed:

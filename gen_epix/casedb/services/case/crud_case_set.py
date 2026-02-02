@@ -140,9 +140,9 @@ def _validate_case_set_deletion(
         )
         is_allowed = case_abac.is_allowed(
             case_set.case_type_id,
+            case_set.created_in_data_collection_id,
             enum.CaseRight.REMOVE_CASE_SET,
             True,
-            created_in_data_collection_id=case_set.created_in_data_collection_id,
             current_data_collection_ids=data_collection_ids,
         )
         if not is_allowed:

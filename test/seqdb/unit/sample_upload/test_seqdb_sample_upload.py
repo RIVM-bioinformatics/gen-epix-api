@@ -419,8 +419,8 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         # Verify
         self.assertFalse(success)
         # Check that error was added to retval (code is passed as message in upload.py)
-        self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("b4c5d6e7"))
+        self.assertTrue(retval.samples[0].seqs[0].has_errors())  # type: ignore[index]
+        self.assertTrue(retval.samples[0].seqs[0].has_log_code("b4c5d6e7"))  # type: ignore[index]
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -664,8 +664,8 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         # Verify
         self.assertFalse(success)
         # Check that error was added to retval
-        self.assertTrue(retval.has_errors())
-        self.assertTrue(retval.has_log_code("d8a3b7f4"))
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())  # type: ignore[index]
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("d8a3b7f4"))  # type: ignore[index]
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""
