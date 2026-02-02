@@ -82,7 +82,7 @@ def seqdb_server(
         service=ServerType.SEQDB,
         app=seqdb_fastapi_app,
         host="127.0.0.1",
-        port=8001,
+        port=8003,
         ssl_certfile=SSL_CERTFILE,
         ssl_keyfile=SSL_KEYFILE,
     ) as server:
@@ -124,7 +124,7 @@ def test_casedb_seqdb_connection(
     # Test that the SeqDB server is accessible
     try:
         with httpx.Client(timeout=5.0, verify=SSL_CERTFILE) as client:
-            response = client.get(f"{protocol}://127.0.0.1:8001/v1/health")
+            response = client.get(f"{protocol}://127.0.0.1:8003/v1/health")
             assert response.status_code == 200
             logging.info("✅ SeqDB server is accessible")
     except Exception as e:
