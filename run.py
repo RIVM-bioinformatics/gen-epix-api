@@ -603,6 +603,7 @@ class Run:
             ]
         )
 
+
     def test_seqdb_integration(self) -> None:
         import pytest
 
@@ -640,36 +641,6 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/seqdb/performance",
-            ]
-        )
-
-    def test_seqdb_performance_repository(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/performance/repository",
-            ]
-        )
-
-    def test_seqdb_performance_user_journey(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/performance/user_journey",
-            ]
-        )
-
-    def test_seqdb_performance_startup(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS
-            + [
-                "test/seqdb/performance/startup",
             ]
         )
 
