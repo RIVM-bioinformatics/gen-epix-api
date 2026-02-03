@@ -280,6 +280,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
+        GetSimilarProfilesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,
