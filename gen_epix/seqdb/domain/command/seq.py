@@ -106,6 +106,18 @@ class RetrieveSeqFastaCommand(Command):
     )
 
 
+class GetSimilarProfilesCommand(Command):
+    seq_distance_protocol_id: UUID = Field(
+        description="ID of the sequence distance protocol to use for similarity search.",
+    )
+    profile_ids: list[UUID] = Field(
+        description="List of profile IDs to find similar profiles for.",
+    )
+    max_distance: float = Field(
+        description="Maximum distance threshold for considering profiles as similar.",
+    )
+
+
 # CRUD commands
 
 

@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -33,6 +34,10 @@ class BaseSeqService(BaseService):
         f(
             command.UploadSamplesCommand,
             self.upload_samples,
+        )
+        f(
+            command.GetSimilarProfilesCommand,
+            self.get_similar_profiles,
         )
 
     @abc.abstractmethod
@@ -78,4 +83,11 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_similar_profiles(
+        self,
+        cmd: command.GetSimilarProfilesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()

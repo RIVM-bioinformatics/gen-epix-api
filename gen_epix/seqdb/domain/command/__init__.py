@@ -175,6 +175,9 @@ from gen_epix.seqdb.domain.command.seq import (
 from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
 )
+from gen_epix.seqdb.domain.command.seq import (
+    GetSimilarProfilesCommand as GetSimilarProfilesCommand,
+)
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
     SampleDataCollectionLinkCrudCommand as SampleDataCollectionLinkCrudCommand,

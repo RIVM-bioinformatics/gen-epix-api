@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -29,4 +30,15 @@ class BaseSeqRepository(BaseRepository):
         Retrieve an Iterable[tuple[seq_id, list[tuple[contig_hash, contig_seq]]]] that
         can be converted into FASTA format through a streaming approach.
         """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_similar_profiles(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+        ) -> list[UUID]:
         raise NotImplementedError()
