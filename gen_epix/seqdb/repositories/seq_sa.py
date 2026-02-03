@@ -61,3 +61,34 @@ class SeqSARepository(SARepository, BaseSeqRepository):
                     )
                 contig_list.append((contig.id, contig.seq))
             yield (seq.id, contig_list)
+
+    def get_similar_profiles(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+    ) -> list[UUID]:
+        stmt = sa.select(
+            sa_model.SeqDistance.id,
+            sa_model.SeqDistance.distances,
+            sa_model.SeqDistance.distance_format,
+        ).where(
+            (sa_model.SeqDistance.seq_distance_protocol_id == seq_distance_protocol_id)
+            & sa_model.SeqDistance.profile_id.in_(profile_ids)
+        )
+        result_iterator = uow.session.execute(stmt)
+        matching_profile_ids: set[UUID] = set()
+        for row in result_iterator:
+            distances: str = row[1]
+            distance_format: enum.SeqDistanceFormat = row[2]
+            if not distances:
+                raise exc.InitializationServiceError(
+                    "Distances field is empty in SeqDistance record"
+                )
+            BaseSeqRepository._get_matching_profiles_for_distance_dict_format(
+                max_distance, matching_profile_ids, distances, distance_format
+            )
+
+        return list(matching_profile_ids)
