@@ -9,7 +9,7 @@ from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq, Seq
+from gen_epix.seqdb.domain.model.seq.seq import RefSeq
 
 
 class SeqDistanceProtocol(Model, ProtocolMixin):
@@ -54,28 +54,30 @@ class SeqDistanceProtocol(Model, ProtocolMixin):
     def _validate_state(self) -> Self:
         if (
             self.seq_distance_protocol_type
-            in enum.SeqDistanceProtocolTypeSet.SNP_PROFILE_BASED.value
-            and self.ref_seq_id is None
+            in enum.SeqDistanceProtocolTypeSet.LOCUS_SET_BASED.value
         ):
-            raise ValueError(
-                "ref_seq_id must be provided for snp based distance protocol"
-            )
-        elif (
+            if self.locus_set_id is None:
+                raise ValueError(
+                    f"locus_set_id must be provided for seq_distance_protocol_type {self.seq_distance_protocol_type}"
+                )
+        else:
+            if self.locus_set_id is not None:
+                raise ValueError(
+                    f"locus_set_id must be None for seq_distance_protocol_type {self.seq_distance_protocol_type}"
+                )
+        if (
             self.seq_distance_protocol_type
-            in enum.SeqDistanceProtocolTypeSet.ALLELE_PROFILE_BASED.value
-            and self.locus_set_id is None
+            in enum.SeqDistanceProtocolTypeSet.REF_SEQ_BASED.value
         ):
-            raise ValueError(
-                "locus_set_id must be provided for allele profile based distance protocol"
-            )
-        elif (
-            self.seq_distance_protocol_type
-            in enum.SeqDistanceProtocolTypeSet.MLVA_PROFILE_BASED.value
-            and self.locus_set_id is None
-        ):
-            raise ValueError(
-                "locus_set_id must be provided for MLVA profile based distance protocol"
-            )
+            if self.ref_seq_id is None:
+                raise ValueError(
+                    f"ref_seq_id must be provided for seq_distance_protocol_type {self.seq_distance_protocol_type}"
+                )
+        else:
+            if self.ref_seq_id is not None:
+                raise ValueError(
+                    f"ref_seq_id must be None for seq_distance_protocol_type {self.seq_distance_protocol_type}"
+                )
         return self
 
     @field_serializer("seq_distance_protocol_type", mode="plain")
@@ -105,13 +107,7 @@ class SeqDistance(Model, HasSampleMixin):
                     Sample,
                     "sample",
                 ),
-                # TODO: remove seq_id link once no longer needed
                 2: (
-                    "seq_id",
-                    Seq,
-                    "seq",
-                ),
-                3: (
                     "seq_distance_protocol_id",
                     SeqDistanceProtocol,
                     "seq_distance_protocol",
@@ -119,12 +115,6 @@ class SeqDistance(Model, HasSampleMixin):
             }
         ),
     )
-    # TODO: remove seq_id link once no longer needed
-    seq_id: UUID | None = Field(
-        default=None,
-        description="The unique identifier for the sequence, if applicable. FOREIGN KEY",
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     seq_distance_protocol_id: UUID = Field(
         description="The unique identifier for the genetic distance protocol. FOREIGN KEY"
     )

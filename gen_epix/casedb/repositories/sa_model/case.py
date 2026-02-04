@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods
-from __future__ import (
+from __future__ import (  # Resolves pylint not recognizing Mapped as subscriptable
     annotations,
-)  # Resolves pylint not recognizing Mapped as subscriptable
+)
 
 from datetime import datetime
 from typing import Any
@@ -16,6 +16,7 @@ from gen_epix.commondb.repositories.sa_model import (
     create_mapped_column,
     create_table_args,
 )
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 Base: type = orm.declarative_base(name=enum.ServiceType.CASE.value)
 
@@ -83,6 +84,11 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
         DOMAIN,
         model.GeneticDistanceProtocol,
         "seqdb_seq_distance_protocol_id",
+    )
+    seqdb_seq_distance_protocol_type: Mapped[seqdb_enum.SeqDistanceProtocolType] = (
+        create_mapped_column(
+            DOMAIN, model.GeneticDistanceProtocol, "seqdb_seq_distance_protocol_type"
+        )
     )
     name: Mapped[str] = create_mapped_column(
         DOMAIN, model.GeneticDistanceProtocol, "name"

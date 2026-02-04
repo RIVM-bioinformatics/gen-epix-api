@@ -648,9 +648,6 @@ class SeqDistance(Base, RowMetadataMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "sample_id"
     )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "seq_id"
-    )
     seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "seq_distance_protocol_id"
     )
