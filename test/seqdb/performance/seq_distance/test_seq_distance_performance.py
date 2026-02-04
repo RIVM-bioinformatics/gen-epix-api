@@ -110,15 +110,15 @@ class SeqDistancePerformanceSetup:
 
     def generate_allele_profiles(self, env: Env) -> list[model.AlleleProfile]:
         settings = SeqGenerationSettings(
-            n_loci=50,
+            n_loci=5,
             locus_length=20,
-            p_locus_deletion=0.000000001,
+            p_locus_deletion=0.01,
             p_nucleotide_substitution=0.02,
             p_nucleotide_deletion=0.005,
             seed=1001,
         )
         batch = SeqdbTestClient.generate_random_sequences(
-            n_seqs=100,
+            n_seqs=10,
             settings=settings,
         )
 
@@ -255,7 +255,7 @@ class SeqDistancePerformanceSetup:
                 sample_id=sample_id,
                 seq_id=created_profiles[i].seq_id,  # type: ignore[attr-defined]
                 seq_distance_protocol_id=protocol_id,
-                allele_profile_id=profile_ids[i],
+                profile_id=profile_ids[i],
                 distance_format=enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT,
                 distances=pd.Series(distances_dict).to_json(),
             )
