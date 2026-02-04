@@ -1,7 +1,8 @@
 from test.seqdb.seqdb_test_client import SeqdbTestClient, SeqGenerationSettings
 
-from gen_epix.seqdb.domain import model
 import pytest
+
+from gen_epix.seqdb.domain import model
 
 
 @pytest.mark.scenario_ids("TC-SEC-31-01")
