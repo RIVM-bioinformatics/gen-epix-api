@@ -96,6 +96,85 @@ class SeqForUpload(Seq, IsNewIdMixin):
         return self
 
 
+class SnpProfileForUpload(SnpProfile):
+    """
+    A SNP profile record intended for upload. Equal to a SnpProfile, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    NAME: ClassVar = "SnpProfileForUpload"
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the SNP profile is associated with. If not available, the null ID is put.",
+    )
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the sequence that the SNP profile was derived from, if available.",
+    )
+    ref_seq_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the reference sequence, if available. If not available, the null ID is put. Must be present if ref_seq_code is not present. The use of ref_seq_id is preferred over ref_seq_code since the latter may change.",
+    )
+    ref_seq_code: str | None = Field(
+        default=None,
+        description="The code of the reference sequence. Must be present if ref_seq_id is not present. The use of ref_seq_code is meant for situations where the ref_seq_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    snp_detection_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the SNP detection protocol, if available. If not available, the null ID is put. Must be present if snp_detection_protocol_code is not present. The use of snp_detection_protocol_id is preferred over snp_detection_protocol_code since the latter may change.",
+    )
+    snp_detection_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the SNP detection protocol. Must be present if snp_detection_protocol_id is not present. The use of snp_detection_protocol_code is meant for situations where the snp_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    snp_profile: str = Field(
+        default="",
+        description="String representation of the SNPs detected in the sequence, with the format depending on snp_profile_format. Must be present if aligned_nucleotide_seq is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+    aligned_nucleotide_seq: str | None = Field(
+        default=None,
+        description="The full nucleotide sequence aligned to the reference sequence. Must be present if snp_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Override parent validation for upload format to handle aligned_nucleotide_seq.
+        """
+        n_representations = sum(
+            [
+                self.snp_profile != "",
+                self.aligned_nucleotide_seq is not None,
+            ]
+        )
+        if n_representations != 1:
+            raise ValueError(
+                "Exactly one of snp_profile or aligned_nucleotide_seq must be provided."
+            )
+
+        if self.snp_profile != "":
+            # Use parent validation for snp_profile string format
+            super()._validate_model()
+        elif self.aligned_nucleotide_seq is not None:
+            pass
+
+        # Upload-specific validation
+        if (
+            not self.snp_detection_protocol_code
+            and self.snp_detection_protocol_id == NULL_ID
+        ):
+            raise ValueError(
+                "Either snp_detection_protocol_code or snp_detection_protocol_id must be provided."
+            )
+        if self.ref_seq_code is None and self.ref_seq_id == NULL_ID:
+            raise ValueError("Either ref_seq_code or ref_seq_id must be provided.")
+        return self
+
+
 class AlleleForUpload(Allele):
     """
     An allele intended for upload. Equal to an Allele, with
@@ -157,7 +236,7 @@ class AlleleProfileForUpload(AlleleProfile):
     )
     allele_profile: str = Field(
         default="",
-        description="The allele profile as a string representation, e.g. a comma-separated list of allele codes or ids, in the order defined by the locus set. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+        description="String representation of the alleles detected in the sequence for the loci in the locus set, with the format depending on allele_profile_format. Must be present if alleles and locus_allele_id_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )
     allele_ids: list[UUID | None] | None = Field(
         default=None,
@@ -173,14 +252,14 @@ class AlleleProfileForUpload(AlleleProfile):
         """
         Override parent validation for upload format to handle alleles and locus_allele_id_map.
         """
-        n_profiles = sum(
+        n_representations = sum(
             [
                 self.allele_profile != "",
                 self.allele_ids is not None,
                 self.locus_allele_id_map is not None,
             ]
         )
-        if n_profiles != 1:
+        if n_representations != 1:
             raise ValueError(
                 "Exactly one of allele_profile, allele_ids, or locus_allele_id_map must be provided."
             )
@@ -250,6 +329,133 @@ class AlleleProfileForUpload(AlleleProfile):
         return self
 
 
+class MlvaProfileForUpload(MlvaProfile):
+    """
+    An MLVA profile record intended for upload. Equal to an MlvaProfile, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    NAME: ClassVar = "MlvaProfileForUpload"
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the allele profile is associated with. If not available, the null ID is put.",
+    )
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the sequence that the allele profile was derived from, if available.",
+    )
+    mlva_detection_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the MLVA detection protocol, if available. If not available, the null ID is put. Must be present if mlva_detection_protocol_code is not present. The use of mlva_detection_protocol_id is preferred over mlva_detection_protocol_code since the latter may change.",
+    )
+    mlva_detection_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the MLVA detection protocol. Must be present if mlva_detection_protocol_id is not present. The use of mlva_detection_protocol_code is meant for situations where the mlva_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    locus_set_id: UUID = Field(
+        default=NULL_ID,
+        description="UUID of the locus set, if available. If not available, the null ID is put. Must be present if locus_set_code is not present. The use of locus_set_id is preferred over locus_set_code since the latter may change.",
+    )
+    locus_set_code: str | None = Field(
+        default=None,
+        description="The code of the locus set. Must be present if locus_set_id is not present. The use of locus_set_code is meant for situations where the locus_set_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    locus_code_map_id: UUID | None = Field(
+        default=None,
+        description="The id of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_code is not provided and any alleles have locus_code filled in. The use of locus_code_map_id is preferred over locus_code_map_code since the latter may change.",
+    )
+    locus_code_map_code: str | None = Field(
+        default=None,
+        description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    allele_profile: str = Field(
+        default="",
+        description="String representation of the repeat number per locus in the locus set, with the format depending on mlva_profile_format. Must be present if repeat_numbers and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    repeat_numbers: list[int | None] | None = Field(
+        default=None,
+        description="List of all repeat numbers detected for this sample and for the loci within the locus set, in the order of the locus set. Loci that are not present must have None as repeat number. Must be present if mlva_profile and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+    locus_repeat_number_map: dict[str, int | None] | None = Field(
+        default=None,
+        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if mlva_profile and repeat_numbers are not provided: these 3 properties are different representations of the same data that can be chosen between.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Override parent validation for upload format to handle alleles and locus_allele_id_map.
+        """
+        n_representations = sum(
+            [
+                self.mlva_profile != "",
+                self.repeat_numbers is not None,
+                self.locus_repeat_number_map is not None,
+            ]
+        )
+        if n_representations != 1:
+            raise ValueError(
+                "Exactly one of mlva_profile, repeat_numbers, or locus_repeat_number_map must be provided."
+            )
+
+        if self.mlva_profile != "":
+            # Use parent validation for mlva_profile string format
+            super()._validate_model()
+        elif self.repeat_numbers is not None:
+            # Set or verify mlva_profile_hash
+            computed_profile_hash = MlvaProfile.get_mlva_profile_hash(
+                self.repeat_numbers
+            )  # Will raise ValueError if invalid
+            if self.mlva_profile_hash == NULL_ID:
+                self.mlva_profile_hash = computed_profile_hash
+            elif self.mlva_profile_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided MLVA profile hash does not match computed hash"
+                )
+        elif self.locus_repeat_number_map is not None:
+            # Verify locus code map provided
+            if (
+                self.locus_code_map_id is None or self.locus_code_map_id == NULL_ID
+            ) and self.locus_code_map_code is None:
+                raise ValueError(
+                    "locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
+                )
+            # Set or verify mlva_profile_hash: not possible with this representation since loci are unordered
+
+        # Upload-specific validation
+        if (
+            not self.mlva_detection_protocol_code
+            and self.mlva_detection_protocol_id == NULL_ID
+        ):
+            raise ValueError(
+                "Either mlva_detection_protocol_code or mlva_detection_protocol_id must be provided."
+            )
+        if self.locus_set_code is None and self.locus_set_id == NULL_ID:
+            raise ValueError("Either locus_set_code or locus_set_id must be provided.")
+        if (
+            self.locus_repeat_number_map is not None
+            and self.locus_code_map_id == NULL_ID
+            and self.locus_code_map_code is None
+        ):
+            raise ValueError(
+                "Either locus_code_map_id or locus_code_map_code must be provided when locus_repeat_number_map is used."
+            )
+        return self
+
+
+# TODO: add KmerProfileForUpload and update SampleForUpload accordingly
+# TODO: add PcrMeasurementForUpload and update SampleForUpload accordingly
+# TODO: add AstMeasurementForUpload and update SampleForUpload accordingly
+# TODO: add SeqTaxonomyForUpload and update SampleForUpload accordingly
+# TODO: add SeqClassificationForUpload and update SampleForUpload accordingly
+# TODO: add LocusProfileForUpload and update SampleForUpload accordingly
+
+
 class SampleForUpload(ParentForUpload):
     """
     A sample intended for upload, together with any relevant associated data.
@@ -268,8 +474,8 @@ class SampleForUpload(ParentForUpload):
         SeqClassification: SeqClassification,
         LocusProfile: LocusProfile,
         AlleleProfile: AlleleProfileForUpload,
-        SnpProfile: SnpProfile,
-        MlvaProfile: MlvaProfile,
+        SnpProfile: SnpProfileForUpload,
+        MlvaProfile: MlvaProfileForUpload,
         KmerProfile: KmerProfile,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
@@ -322,11 +528,11 @@ class SampleForUpload(ParentForUpload):
         default=None,
         description="The allele profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    snp_profiles: list[SnpProfile] | None = Field(
+    snp_profiles: list[SnpProfileForUpload] | None = Field(
         default=None,
         description="The SNP profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    mlva_profiles: list[MlvaProfile] | None = Field(
+    mlva_profiles: list[MlvaProfileForUpload] | None = Field(
         default=None,
         description="The MLVA profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )

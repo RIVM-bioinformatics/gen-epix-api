@@ -114,7 +114,7 @@ class SeqService(BaseSeqService):
         # Special case: 0 or 1 sequences
         if len(seq_ids) < 2:
             return model.PhylogeneticTree(
-                id=self.generate_id(),
+                id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
                 seq_distance_protocol_id=seq_distance_protocol_id,
                 seq_ids=seq_ids,
@@ -202,7 +202,7 @@ class SeqService(BaseSeqService):
             # Handle sequences with no stored distances
             if len(tree_seq_ids) < 2:
                 return model.PhylogeneticTree(
-                    id=self.generate_id(),
+                    id=self.generate_id(),  # type: ignore[arg-type]
                     tree_algorithm=tree_algorithm,
                     seq_distance_protocol_id=seq_distance_protocol_id,
                     seq_ids=seq_ids,
@@ -259,7 +259,7 @@ class SeqService(BaseSeqService):
                 f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
         phylogenetic_tree = model.PhylogeneticTree(
-            id=self.generate_id(),
+            id=self.generate_id(),  # type: ignore[arg-type]
             tree_algorithm=tree_algorithm,
             seq_distance_protocol_id=seq_distance_protocol_id,
             seq_ids=seq_ids,
@@ -272,30 +272,9 @@ class SeqService(BaseSeqService):
         # )
         return phylogenetic_tree
 
-    def retrieve_allele_profile(
-        self,
-        cmd: command.RetrieveAlleleProfileCommand,
-    ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
-        raise NotImplementedError()
-
-    def retrieve_snp_profile(
-        self, cmd: command.RetrieveCompleteSnpProfileCommand
-    ) -> model.CompleteSnpProfile | list[model.CompleteSnpProfile]:
-        raise NotImplementedError()
-
-    def retrieve_contig(
-        self, cmd: command.RetrieveCompleteContigCommand
-    ) -> model.CompleteContig | list[model.CompleteContig]:
-        raise NotImplementedError()
-
     def retrieve_multiple_alignment(
         self, cmd: command.RetrieveMultipleAlignmentCommand
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
-        raise NotImplementedError()
-
-    def retrieve_samples(
-        self, cmd: command.RetrieveSamplesCommand
-    ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:

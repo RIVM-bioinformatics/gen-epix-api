@@ -13,12 +13,6 @@ class BaseSeqService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         self.register_default_crud_handlers()
-        f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
-        f(command.RetrieveSamplesCommand, self.retrieve_samples)
-        f(
-            command.RetrieveCompleteSnpProfileCommand,
-            self.retrieve_snp_profile,
-        )
         f(
             command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
@@ -39,27 +33,6 @@ class BaseSeqService(BaseService):
             command.GetSimilarProfilesCommand,
             self.get_similar_profiles,
         )
-
-    @abc.abstractmethod
-    def retrieve_allele_profile(
-        self,
-        cmd: command.RetrieveAlleleProfileCommand,
-    ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_samples(
-        self,
-        cmd: command.RetrieveSamplesCommand,
-    ) -> list[model.SampleForUpload]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_snp_profile(
-        self,
-        cmd: command.RetrieveCompleteSnpProfileCommand,
-    ) -> model.CompleteSnpProfile | list[model.CompleteSnpProfile]:
-        raise NotImplementedError()
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(

@@ -355,19 +355,6 @@ class Seq(Model, HasSampleMixin, CodeMixin, QualityMixin):
         return json.dumps([contig.model_dump() for contig in value])
 
 
-class CompleteContig(Model):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_contigs",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    seq: str = Field(description="The contig sequence.")
-    qc: enum.QualityControlResult = Field(
-        description="The quality control result of the contig sequence."
-    )
-    index: int = Field(description="The index of the contig in the sequence.")
-
-
 class RefSnp(Model):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ref_snps",

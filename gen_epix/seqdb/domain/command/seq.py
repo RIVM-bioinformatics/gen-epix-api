@@ -50,27 +50,6 @@ class GeneratePhylogeneticTreeCommand(Command):
     pass
 
 
-class RetrieveCompleteAlleleProfileCommand(Command):
-    pass
-
-
-class RetrieveCompleteContigCommand(Command):
-    pass
-
-
-class RetrieveCompleteSampleCommand(Command):
-    pass
-
-
-class RetrieveCompleteSamplesCommand(Command):
-
-    sample_ids: list[UUID]
-
-
-class RetrieveCompleteSnpProfileCommand(Command):
-    pass
-
-
 class RetrieveMultipleAlignmentCommand(Command):
     pass
 
