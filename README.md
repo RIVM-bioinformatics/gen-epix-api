@@ -94,12 +94,12 @@ conda activate gen-epix
 ```
 2. Run the application:
 ```console
-python run.py [service] [app_type] [env_name] [idp_config]
+python run.py [service] [app_type] [idp_config] [env_name] 
 ```
 - `service`: The service to run (api, etl) 
 - `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
+- `idp_config`: Which authentication setting to use (idps, mock, none)
 - `env_name`: Name of the environment.
-- `idp_config`: Which authentication setting to use (idps, mock_idps, debug)
 
 ---
 
@@ -107,7 +107,7 @@ python run.py [service] [app_type] [env_name] [idp_config]
 
 ```console
 conda activate gen-epix
-python run.py api casedb local idps
+python run.py api casedb none dict_demo
 ```
 
 See other examples in [.vscode/launch.json](.vscode/launch.json)
