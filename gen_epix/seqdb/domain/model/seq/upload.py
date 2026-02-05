@@ -373,7 +373,7 @@ class MlvaProfileForUpload(MlvaProfile):
         description="The code of the locus code map that has to be used to map locus codes to locus IDs, if available. Must be provided if locus_code_map_id is not provided and any alleles have locus_code filled in. The use of locus_code_map_code is meant for situations where the locus_code_map_id is not known, but the code is and/or improves human interpretation.",
         max_length=255,
     )
-    allele_profile: str = Field(
+    mlva_profile: str = Field(
         default="",
         description="String representation of the repeat number per locus in the locus set, with the format depending on mlva_profile_format. Must be present if repeat_numbers and locus_repeat_number_map are not provided: these 3 properties are different representations of the same data that can be chosen between.",
     )

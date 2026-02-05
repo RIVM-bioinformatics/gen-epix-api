@@ -92,6 +92,9 @@ from gen_epix.seqdb.domain.model.seq.upload import AlleleForUpload as AlleleForU
 from gen_epix.seqdb.domain.model.seq.upload import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.upload import (
+    MlvaProfileForUpload as MlvaProfileForUpload,
+)
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchForUpload as SampleBatchForUpload,
@@ -104,3 +107,6 @@ from gen_epix.seqdb.domain.model.seq.upload import (
     SampleUploadResult as SampleUploadResult,
 )
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
+from gen_epix.seqdb.domain.model.seq.upload import (
+    SnpProfileForUpload as SnpProfileForUpload,
+)

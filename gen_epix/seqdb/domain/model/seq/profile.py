@@ -432,9 +432,13 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
         sha256 = hashlib.sha256()
         for repeat_number in repeat_numbers:
             if repeat_number is not None:
-                sha256.update(repeat_number.to_bytes())
+                sha256.update(repeat_number.to_bytes(4, byteorder="big", signed=True))
             else:
-                sha256.update(MLVA_NO_LOCUS_REPEAT_NUMBER.to_bytes())
+                sha256.update(
+                    MLVA_NO_LOCUS_REPEAT_NUMBER.to_bytes(
+                        4, byteorder="big", signed=True
+                    )
+                )
         return UUID(sha256.digest()[:16].hex())
 
 
