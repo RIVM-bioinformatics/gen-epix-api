@@ -110,6 +110,8 @@ conda activate gen-epix
 python run.py api casedb local idps
 ```
 
+See other examples in [.vscode/launch.json](.vscode/launch.json)
+
 | ![Example documentation screenshot](https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true) |
 |:--:|
 
