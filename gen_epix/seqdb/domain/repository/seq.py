@@ -52,6 +52,10 @@ class BaseSeqRepository(BaseRepository):
         distances: str,
         distance_format: enum.SeqDistanceFormat,
     ) -> None:
+        if not distances:
+            raise exc.InitializationServiceError(
+                "Distances field is empty in SeqDistance record"
+            )
         if distance_format == enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT:
             try:
                 distance_dict = json.loads(distances)
