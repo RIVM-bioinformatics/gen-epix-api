@@ -68,29 +68,30 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
-        # Check if provided profile_ids are valid for the protocol
-        # read_all seq_distances with filter (where profile id in profile_ids) and
+        if not profile_ids:
+            return []
 
-        # select seq_distances where seq_distance_protocol_id is the given protocol and profile_id in profile_ids
-        # while iterating over the results, extract the distances and keep profiles that are within max_distance
-        filter1 = EqualsUuidFilter(
+        filter_protocol = EqualsUuidFilter(
             key="seq_distance_protocol_id", value=seq_distance_protocol_id
         )
-        filter2 = UuidSetFilter(key="profile_id", members=frozenset(profile_ids))
-        seq_distances: list[model.SeqDistance] = (
-            self.read_all(  # type: ignore[assignment]
-                model.SeqDistance,
-                filter=CompositeFilter(
-                    filters=[filter1, filter2],
-                    operator=LogicalOperator.AND,
-                ),
-            )
+        filter_profiles = UuidSetFilter(
+            key="profile_id", members=frozenset(profile_ids)
+        )
+        seq_distances: list[model.SeqDistance] = self.read_all(  # type: ignore[assignment]
+            model.SeqDistance,
+            filter=CompositeFilter(
+                filters=[filter_protocol, filter_profiles],
+                operator=LogicalOperator.AND,
+            ),
         )
 
         matching_profile_ids: set[UUID] = set()
         for seq_distance in seq_distances:
+            # Each seq_distance corresponds to one profile_id
+            # distances is a stringified dict: {other_profile_id: distance}
             distances: str = seq_distance.distances
             distance_format: enum.SeqDistanceFormat = seq_distance.distance_format
+            # shared logic to parse distances for dict format in BaseSeqRepository
             BaseSeqRepository._get_matching_profiles_for_distance_dict_format(
                 max_distance, matching_profile_ids, distances, distance_format
             )

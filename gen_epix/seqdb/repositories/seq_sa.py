@@ -1,5 +1,5 @@
-from typing import Any
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -71,6 +71,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         max_distance: float,
         **kwargs: Any,
     ) -> list[UUID]:
+        if not profile_ids:
+            return []
         stmt = sa.select(
             sa_model.SeqDistance.id,
             sa_model.SeqDistance.distances,
@@ -84,10 +86,6 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         for row in result_iterator:
             distances: str = row[1]
             distance_format: enum.SeqDistanceFormat = row[2]
-            if not distances:
-                raise exc.InitializationServiceError(
-                    "Distances field is empty in SeqDistance record"
-                )
             BaseSeqRepository._get_matching_profiles_for_distance_dict_format(
                 max_distance, matching_profile_ids, distances, distance_format
             )
