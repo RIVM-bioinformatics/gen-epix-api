@@ -20,6 +20,7 @@ from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import command
+from gen_epix.seqdb.domain import DOMAIN
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
@@ -125,6 +126,10 @@ class SeqDistancePerformanceSetup:
             n_seqs=10,
         )
         entities: list[Entity] = [model_class.ENTITY for model_class in db_100.keys()]  # type: ignore[attr-defined]
+        dag_sorted_entities = DOMAIN.get_dag_sorted_entities(service_type=seqdb_enum.ServiceType.SEQ, persistable=True)
+        # use dag sorted entities to ensure correct order of creation in sqlite repository
+        entities = [entity for entity in dag_sorted_entities if entity in entities]
+
         write_db_to_pickle(
             db_100, Path(__file__).parent / "test_seq_distance_performance_100.pkl"
         )
