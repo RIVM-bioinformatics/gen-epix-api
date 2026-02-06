@@ -3,7 +3,7 @@
 from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, field_serializer
+from pydantic import Field
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.reference_data import (
@@ -14,28 +14,6 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
 from gen_epix.seqdb.domain.model import File as SeqdbFile
-
-
-class GeneticSequence(Model):
-    """
-    A genetic sequence. Temporary implementation.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="genetic_sequences",
-    )
-    nucleotide_sequence: str | None = Field(
-        default=None, description="The nucleotide sequence"
-    )
-    distances: dict[UUID, float] | None = Field(
-        default=None, description="The distances to other sequences"
-    )
-
-    @field_serializer("distances", mode="plain")
-    def _serialize_distances(
-        self, value: dict[UUID, float] | None
-    ) -> dict[str, float] | None:
-        return None if value is None else {str(x): y for x, y in value.items()}
 
 
 class PhylogeneticTree(Model):

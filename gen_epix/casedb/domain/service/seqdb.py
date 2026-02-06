@@ -39,13 +39,6 @@ class BaseSeqdbService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def retrieve_genetic_sequences(
-        self,
-        cmd: command.RetrieveGeneticSequenceByIdCommand,
-    ) -> list[model.GeneticSequence]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def retrieve_genetic_sequence_fasta_by_id(
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,

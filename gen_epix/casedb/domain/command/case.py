@@ -225,23 +225,6 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
 
 
-class RetrieveGeneticSequenceByCaseCommand(Command):
-    """
-    Retrieve a set of genetic sequences based on a set of case IDs and a genetic
-    sequence case type column.
-    """
-
-    case_type_id: UUID = Field(
-        description="The case type ID that all the cases must belong to."
-    )
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The ID of the genetic sequence case type column to use."
-    )
-    case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve genetic sequences for."
-    )
-
-
 class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     """
     Retrieve a set of genetic sequences in FASTA format based on a set of case IDs and a genetic

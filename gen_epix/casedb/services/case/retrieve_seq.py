@@ -150,46 +150,6 @@ def case_service_retrieve_phylogenetic_tree(
     return phylogenetic_tree
 
 
-def case_service_retrieve_genetic_sequence_by_case(
-    self: BaseCaseService,
-    cmd: command.RetrieveGeneticSequenceByCaseCommand,
-) -> list[model.GeneticSequence]:
-    case_type_id = cmd.case_type_id
-    seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
-    case_ids = cmd.case_ids
-    user, repository = self._get_user_and_repository(cmd)
-    assert isinstance(user, model.User) and user.id is not None
-    if not case_ids:
-        return []
-
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-
-    with repository.uow() as uow:
-        seq_ids_or_none: list[UUID | None] = _get_seq_ids_from_cases(
-            self,
-            uow,
-            user,
-            case_abac,
-            case_type_id,
-            case_ids,
-            seq_case_type_col_id,
-        )
-        if any(x is None for x in seq_ids_or_none):
-            raise exc.NoResultsError("Not all cases have a sequence")
-        seq_ids: list[UUID] = seq_ids_or_none  # type: ignore[assignment]
-
-        # Retrieve sequences
-        genetic_sequences: list[model.GeneticSequence] = self.app.handle(
-            command.RetrieveGeneticSequenceByIdCommand(
-                user=user,
-                seq_ids=seq_ids,
-            )
-        )
-
-    return genetic_sequences
-
-
 def case_service_retrieve_genetic_sequence_fasta_by_case(
     self: BaseCaseService, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand
 ) -> Iterable[str]:

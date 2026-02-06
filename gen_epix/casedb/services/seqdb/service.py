@@ -100,32 +100,6 @@ class SeqdbService(BaseSeqdbService):
         )
         return seqs
 
-    def retrieve_genetic_sequences(
-        self, cmd: command.RetrieveGeneticSequenceByIdCommand
-    ) -> list[model.GeneticSequence]:
-        # naive implementation that retrieves sequences by ID
-        seqs: list[seqdb_model.Seq] = self._retrieve_seq_objects_by_ids(cmd.seq_ids)
-        file_ids = [seq.file_id for seq in seqs if seq.file_id is not None]
-        files: list[seqdb_model.File] = self._seqdb_app.handle(
-            seqdb_command.FileCrudCommand(
-                user=cmd.user,
-                obj_ids=list(set(file_ids)),
-                operation=CrudOperation.READ_SOME,
-            )
-        )
-        file_map = {x.id: x for x in files}
-        # Convert raw sequences to model.GeneticSequence
-        genetic_sequences = [
-            # TODO: handle parsing a single raw sequence from the file
-            model.GeneticSequence(
-                id=seq.id,
-                nucleotide_sequence=file_map[file_id].content.decode(encoding="utf-8"),
-                distances={},
-            )
-            for seq, file_id in zip(seqs, file_ids)
-        ]
-        return genetic_sequences
-
     def retrieve_genetic_sequence_fasta_by_id(
         self,
         cmd: command.RetrieveGeneticSequenceFastaByIdCommand,

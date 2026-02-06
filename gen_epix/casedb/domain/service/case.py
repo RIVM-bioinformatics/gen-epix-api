@@ -166,16 +166,8 @@ class BaseCaseService(BaseService):
         f(command.RetrieveCaseRightsCommand, self.retrieve_case_or_set_rights)
         f(command.RetrieveCaseSetRightsCommand, self.retrieve_case_or_set_rights)
         f(
-            command.RetrieveGeneticSequenceByCaseCommand,
-            self.retrieve_genetic_sequence_by_case,
-        )
-        f(
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree,
-        )
-        f(
-            command.RetrieveGeneticSequenceByCaseCommand,
-            self.retrieve_genetic_sequence_by_case,
         )
         f(
             command.RetrieveGeneticSequenceFastaByCaseCommand,
@@ -518,13 +510,6 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrievePhylogeneticTreeByCasesCommand,
     ) -> model.PhylogeneticTree:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_genetic_sequence_by_case(
-        self,
-        cmd: command.RetrieveGeneticSequenceByCaseCommand,
-    ) -> list[model.GeneticSequence]:
         raise NotImplementedError()
 
     @abc.abstractmethod

@@ -148,7 +148,6 @@ class RoleGenerator(CommonRoleGenerator):
             (command.UserAccessCasePolicyCrudCommand, PermissionTypeSet.R),
             (command.UserShareCasePolicyCrudCommand, PermissionTypeSet.R),
             # seq
-            (command.RetrieveGeneticSequenceByCaseCommand, PermissionTypeSet.E),
             (command.RetrieveGeneticSequenceFastaByCaseCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeBySequencesCommand, PermissionTypeSet.E),
