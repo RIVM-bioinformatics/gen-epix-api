@@ -13,6 +13,7 @@ from uuid import UUID
 
 import numpy as np
 from pydantic import BaseModel, computed_field, field_validator
+from scipy.sparse import dok_matrix
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
@@ -41,7 +42,7 @@ class SeqGenerationSettings(BaseModel):
     )
     @classmethod
     def _validate_probability(cls, p: float) -> float:
-        if not 0.0 < p < 1.0:
+        if not 0.0 <= p < 1.0:
             raise ValueError("Probabilities must be in ]0,1[")
         return p
 
@@ -393,7 +394,7 @@ class SeqdbTestClient(TestClient):
         code: str,
         name: str | None = None,
         is_integer_distance: bool = True,
-        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.OTHER,
+        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.ALLELE_HAMMING,
         max_stored_distance: float = 100.0,
     ) -> model.SeqDistanceProtocol:
         return self._create_protocol(
@@ -821,7 +822,7 @@ class SeqdbTestClient(TestClient):
                     seq[j] = "-"
 
     @staticmethod
-    def calculate_distance_matrix_from_allele_profile(
+    def calculate_distance_matrix_from_allele_profiles(
         allele_profiles: list[model.AlleleProfile],
     ) -> DistanceMatrix:
         n_profiles = len(allele_profiles)
@@ -837,19 +838,122 @@ class SeqdbTestClient(TestClient):
                 matrix=np.array([[0]]),
             )
 
-        distance_matrix = np.zeros((n_profiles, n_profiles), dtype=int)
-        for i in range(n_profiles - 1):
-            allele_ids = allele_profiles[i].get_allele_ids()
-            for j in range(i + 1, n_profiles):
-                other_allele_ids = allele_profiles[j].get_allele_ids()
-                # Calculate hamming distance
-                distance = np.count_nonzero(
-                    np.array(allele_ids) != np.array(other_allele_ids)
+        # Vector-Based Hamming Distance Computation
+        # distance_matrix = np.zeros((n_profiles, n_profiles), dtype=int)
+        # for i in range(n_profiles - 1):
+        #     allele_ids = allele_profiles[i].get_allele_ids()
+        #     for j in range(i + 1, n_profiles):
+        #         other_allele_ids = allele_profiles[j].get_allele_ids()
+        #         # Calculate hamming distance
+        #         distance = np.count_nonzero(
+        #             np.array(allele_ids) != np.array(other_allele_ids)
+        #         )
+        #         distance_matrix[i][j] = distance
+        #         distance_matrix[j][i] = distance
+
+        # p-dist approach
+        # X = np.asarray(
+        #     [
+        #         allele_profile.get_allele_ids()
+        #         for allele_profile in allele_profiles
+        #     ]
+        # )
+        # distance_matrix = pdist(X, metric="hamming") * X.shape[1]
+
+        # Categorical Hamming distance matrix one-hot encoding approach
+        # per_sample_alleles_ids: list[list[UUID | None]] = [
+        #     allele_profile.get_allele_ids() for allele_profile in allele_profiles
+        # ]
+        # # all profiles must share the same number of loci
+        # n_loci = len(per_sample_alleles_ids[0])
+        # for allele_ids in per_sample_alleles_ids:
+        #     if len(allele_ids) != n_loci:
+        #         raise ValueError(
+        #             "All allele profiles must have the same number of loci"
+        #         )
+
+        # # prepare matrices to accumulate results
+        # matches = np.zeros((n_profiles, n_profiles), dtype=np.int32)
+        # comparable = np.zeros((n_profiles, n_profiles), dtype=np.int32)
+
+        # # for each locus:
+        # # - group samples by allele id
+        # # - add 1 to matches for every pair in the same allele group
+        # # - add 1 to comparable for every pair where both samples have any allele
+        # for locus_idx in range(n_loci):
+        #     groups: dict[UUID, list[int]] = {}
+        #     present_indices: list[int] = []
+
+        #     for sample_idx in range(n_profiles):
+        #         allele_id = per_sample_alleles_ids[sample_idx][locus_idx]
+        #         if allele_id is not None:
+        #             present_indices.append(sample_idx)
+        #             if allele_id not in groups:
+        #                 groups[allele_id] = []
+        #             groups[allele_id].append(sample_idx)
+
+        #     # update matches, for each locus:
+        #     # - retrieve the groups of samples sharing the same allele
+        #     # - get the coordinates of the submatrix for each group
+        #     # - add 1 to all those coordinates in the matches matrix
+        #     for _, idx_list in groups.items():
+        #         if len(idx_list) > 0:
+        #             idx = np.asarray(idx_list, dtype=np.int32)
+        #             matches[idx[:, None], idx[None, :]] += 1
+
+        #     # update comparable, for each locus:
+        #     # - determine if there are samples with an allele (data) at this locus (not None)
+        #     # - get the coordinates of the submatrix for those samples
+        #     # - add 1 to all those coordinates in the comparable matrix
+        #     if len(present_indices) > 0:
+        #         pidx = np.asarray(present_indices, dtype=np.int32)
+        #         comparable[pidx[:, None], pidx[None, :]] += 1
+
+        # # calculate distance matrix
+        # distance_matrix = comparable - matches
+        # np.fill_diagonal(distance_matrix, 0)
+
+        # Sparse matrix approach
+        per_sample_alleles_ids: list[list[UUID | None]] = [
+            allele_profile.get_allele_ids() for allele_profile in allele_profiles
+        ]
+        n_loci = len(per_sample_alleles_ids[0])
+        for allele_ids in per_sample_alleles_ids:
+            if len(allele_ids) != n_loci:
+                raise ValueError(
+                    "All allele profiles must have the same number of loci"
                 )
-                distance_matrix[i][j] = distance
-                distance_matrix[j][i] = distance
+
+        matches = dok_matrix((n_profiles, n_profiles), dtype=np.int32)
+        comparable = dok_matrix((n_profiles, n_profiles), dtype=np.int32)
+
+        for locus_idx in range(n_loci):
+            groups: dict[UUID, list[int]] = {}
+            present_indices: list[int] = []
+
+            for sample_idx in range(n_profiles):
+                allele_id = per_sample_alleles_ids[sample_idx][locus_idx]
+                if allele_id is not None:
+                    present_indices.append(sample_idx)
+                    if allele_id not in groups:
+                        groups[allele_id] = []
+                    groups[allele_id].append(sample_idx)
+
+            for idx_list in groups.values():
+                for i in idx_list:
+                    for j in idx_list:
+                        matches[i, j] += 1
+
+            for i in present_indices:
+                for j in present_indices:
+                    comparable[i, j] += 1
+
+        matches_dense = matches.toarray()
+        comparable_dense = comparable.toarray()
+        distance_matrix = comparable_dense - matches_dense
+        np.fill_diagonal(distance_matrix, 0)
 
         return DistanceMatrix(
-            obj_ids=[x.id for x in allele_profiles],
+            obj_ids=[x.id for x in allele_profiles if x.id is not None],
             matrix=distance_matrix,
         )

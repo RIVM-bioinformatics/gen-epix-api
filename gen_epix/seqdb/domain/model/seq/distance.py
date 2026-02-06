@@ -1,3 +1,4 @@
+import json
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -129,9 +130,3 @@ class SeqDistance(Model, HasSampleMixin):
         description="The representation format of the distances.",
     )
     distances: str = Field(description="The distances to other sequences.")
-
-    @field_serializer("distance_format", mode="plain")
-    def _serialize_distance_format(self, value: str | enum.SeqDistanceFormat) -> str:
-        if isinstance(value, enum.SeqDistanceFormat):
-            return value.value
-        return value
