@@ -19,7 +19,6 @@ class BaseSeqdbService(BaseService):
             command.RetrievePhylogeneticTreeBySequencesCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(command.RetrieveGeneticSequenceByIdCommand, self.retrieve_genetic_sequences)
         f(
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,

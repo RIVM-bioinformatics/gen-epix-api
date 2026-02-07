@@ -62,14 +62,14 @@ class SeqdbService(BaseSeqdbService):
         # Prepare seqdb command and calculate tree via seqdb
         leaf_id_mapper = cmd.props.get("leaf_id_mapper")
         if leaf_id_mapper:
-            leaf_names = [str(leaf_id_mapper(x)) for x in cmd.sequence_ids]
+            leaf_names = [str(leaf_id_mapper(x)) for x in cmd.profile_ids]
         else:
             leaf_names = None
         seqdb_cmd = seqdb_command.RetrievePhylogeneticTreeCommand(
             user=self.seqdb_user,
             seq_distance_protocol_id=cmd.seqdb_seq_distance_protocol_id,
             tree_algorithm=seqdb_enum.TreeAlgorithm[cmd.tree_algorithm_code.value],
-            seq_ids=cmd.sequence_ids,
+            profile_ids=cmd.profile_ids,
             leaf_names=leaf_names,
         )
         seqdb_phylogenetic_tree: seqdb_model.PhylogeneticTree = self.seqdb_app.handle(
@@ -78,7 +78,7 @@ class SeqdbService(BaseSeqdbService):
         # Convert seqdb tree model to casedb model
         phylogenetic_tree = model.PhylogeneticTree(
             tree_algorithm_code=cmd.tree_algorithm_code,
-            sequence_ids=seqdb_phylogenetic_tree.seq_ids,
+            profile_ids=seqdb_phylogenetic_tree.profile_ids,
             leaf_ids=(
                 [UUID(x) for x in seqdb_phylogenetic_tree.leaf_names]
                 if seqdb_phylogenetic_tree.leaf_names is not None

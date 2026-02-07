@@ -49,7 +49,7 @@ class TestSeqdbRemoteApp:
             user=mock_user,
             seq_distance_protocol_id=uuid4(),
             tree_algorithm=seqdb_enum.TreeAlgorithm.UPGMA,
-            seq_ids=[uuid4(), uuid4()],
+            profile_ids=[uuid4(), uuid4()],
             leaf_names=["seq1", "seq2"],
         )
 
@@ -113,8 +113,8 @@ class TestSeqdbRemoteApp:
         # we need to check for seqdb model attributes
         assert isinstance(result, seqdb_model.PhylogeneticTree)
         assert result.tree_algorithm == seqdb_enum.TreeAlgorithm.UPGMA
-        assert result.seq_ids is not None
-        assert len(result.seq_ids) == 2
+        assert result.profile_ids is not None
+        assert len(result.profile_ids) == 2
         assert result.leaf_names is not None
         assert len(result.leaf_names) == 2
         assert result.newick_repr == "(seq1:0.1,seq2:0.2);"
@@ -123,7 +123,7 @@ class TestSeqdbRemoteApp:
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
             seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            seq_ids=sample_command.seq_ids,
+            seq_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,
         )
 
@@ -170,8 +170,8 @@ class TestSeqdbRemoteApp:
         # Verify the result - check seqdb model attributes
         assert isinstance(result, seqdb_model.PhylogeneticTree)
         assert result.leaf_names is None
-        assert result.seq_ids is not None
-        assert len(result.seq_ids) == 2
+        assert result.profile_ids is not None
+        assert len(result.profile_ids) == 2
         assert result.newick_repr == "(seq1:0.1,seq2:0.2);"
 
     @patch("httpx.Client")
@@ -316,7 +316,7 @@ class TestSeqdbRemoteApp:
         expected_request_body = RetrievePhylogeneticTreeRequestBody(
             seq_distance_protocol_id=sample_command.seq_distance_protocol_id,
             tree_algorithm=sample_command.tree_algorithm,
-            seq_ids=sample_command.seq_ids,
+            seq_ids=sample_command.profile_ids,
             leaf_codes=sample_command.leaf_names,
         )
 

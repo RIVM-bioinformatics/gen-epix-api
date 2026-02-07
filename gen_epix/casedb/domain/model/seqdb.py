@@ -45,9 +45,9 @@ class PhylogeneticTree(Model):
         default=None,
         description="The list of unique identifiers of the leaves of the phylogenetic tree.",
     )
-    sequence_ids: list[UUID] | None = Field(
+    profile_ids: list[UUID] | None = Field(
         default=None,
-        description="The list of unique identifiers of the sequence of each leaf of the phylogenetic tree.",
+        description="The list of unique identifiers of the profile of each leaf of the phylogenetic tree.",
     )
     newick_repr: str = Field(
         description="The Newick representation of the phylogenetic tree."

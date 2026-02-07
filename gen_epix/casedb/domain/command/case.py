@@ -200,8 +200,8 @@ class RetrievePhylogeneticTreeBySequencesCommand(Command):
     seqdb_seq_distance_protocol_id: UUID = Field(
         description="The ID of the sequence distance protocol to use."
     )
-    sequence_ids: list[UUID] = Field(
-        description="The IDs of the sequences to calculate the phylogenetic tree for."
+    profile_ids: list[UUID] = Field(
+        description="The IDs of the profiles to calculate the phylogenetic tree for."
     )
 
 

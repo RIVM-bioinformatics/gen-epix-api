@@ -93,12 +93,12 @@ class SeqService(BaseSeqService):
         # profiler.start()
 
         user_id = cmd.user.id if cmd.user else None
-        seq_ids = cmd.seq_ids
+        profile_ids = cmd.profile_ids
         tree_algorithm = cmd.tree_algorithm
         seq_distance_protocol_id = cmd.seq_distance_protocol_id
-        if len(set(seq_ids)) != len(seq_ids):
-            raise exc.InvalidArgumentsError("seq_ids must be unique")
-        leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_ids]
+        if len(set(profile_ids)) != len(profile_ids):
+            raise exc.InvalidArgumentsError("profile_ids must be unique")
+        leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in profile_ids]
 
         # Retrieve genetic distance protocol
         with self.repository.uow() as uow:
@@ -112,20 +112,20 @@ class SeqService(BaseSeqService):
             )
 
         # Special case: 0 or 1 sequences
-        if len(seq_ids) < 2:
+        if len(profile_ids) < 2:
             return model.PhylogeneticTree(
                 id=self.generate_id(),  # type: ignore[arg-type]
                 tree_algorithm=tree_algorithm,
                 seq_distance_protocol_id=seq_distance_protocol_id,
-                seq_ids=seq_ids,
+                profile_ids=profile_ids,
                 leaf_names=leaf_names,
-                newick_repr=f"({leaf_names[0]});" if seq_ids else "();",
+                newick_repr=f"({leaf_names[0]});" if profile_ids else "();",
             )
 
         # Retrieve distance matrix
         if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
             with self.repository.uow() as uow:
-                seq_distances_: list[model.SeqDistance] = self.repository.crud(  # type: ignore[assignment]
+                seq_distances: list[model.SeqDistance] = self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id,
                     model.SeqDistance,
@@ -134,7 +134,9 @@ class SeqService(BaseSeqService):
                     CrudOperation.READ_ALL,
                     filter=CompositeFilter(
                         filters=[
-                            UuidSetFilter(key="seq_id", members=frozenset(seq_ids)),
+                            UuidSetFilter(
+                                key="profile_id", members=frozenset(profile_ids)
+                            ),
                             EqualsUuidFilter(
                                 key="seq_distance_protocol_id",
                                 value=seq_distance_protocol_id,
@@ -143,26 +145,20 @@ class SeqService(BaseSeqService):
                         operator=LogicalOperator.AND,
                     ),
                 )
-                seq_distances = {x.seq_id: x for x in seq_distances_}
+                seq_distance_map = {x.profile_id: x for x in seq_distances}
             max_stored_distance = seq_distance_protocol.max_stored_distance
             # Calculate condensed distance matrix
-            tree_seq_distances_ = [
-                seq_distances[x] for x in seq_ids if x in seq_distances
+            tree_seq_distances = [
+                seq_distance_map[x] for x in profile_ids if x in seq_distance_map
             ]
             tree_leaf_names = [
-                x for x, y in zip(leaf_names, seq_ids) if y in seq_distances
+                x for x, y in zip(leaf_names, profile_ids) if y in seq_distance_map
             ]
-            tree_seq_ids = [x.seq_id for x in tree_seq_distances_]
-            tree_seq_ids_index_map = {x: i for i, x in enumerate(tree_seq_ids)}
-            str_seq_profile_id_index_map = {
-                str(
-                    x.allele_profile_id
-                    if x.allele_profile_id
-                    else (x.snp_profile_id if x.snp_profile_id else x.kmer_profile_id)
-                ): tree_seq_ids_index_map[x.seq_id]
-                for x in seq_distances.values()
+            tree_profile_ids = [x.profile_id for x in tree_seq_distances]
+            tree_profile_id_idx_map = {
+                str(x): i for i, x in enumerate(tree_profile_ids)
             }
-            n_seqs_with_distances = len(tree_seq_ids)
+            n_seqs_with_distances = len(tree_profile_ids)
             condensed_distance_matrix = max_stored_distance * np.ones(
                 (int(n_seqs_with_distances * (n_seqs_with_distances - 1) / 2),),
                 dtype=float,
@@ -173,17 +169,17 @@ class SeqService(BaseSeqService):
                     i, j = j, i
                 return n * j - j * (j + 1) // 2 + i - 1 - j
 
-            for i, seq_distance in enumerate(tree_seq_distances_):
+            for i, seq_distance in enumerate(tree_seq_distances):
                 if (
                     seq_distance.distance_format
-                    != enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT
+                    == enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT
                 ):
                     distances = json.loads(seq_distance.distances)
                     for str_seq_profile_id, distance in distances.items():
-                        if str_seq_profile_id not in str_seq_profile_id_index_map:
+                        if str_seq_profile_id not in tree_profile_id_idx_map:
                             # Distance to a sequence not in the list of seq_ids
                             continue
-                        j = str_seq_profile_id_index_map[str_seq_profile_id]
+                        j = tree_profile_id_idx_map[str_seq_profile_id]
                         if distance > max_stored_distance:
                             # Go only up to max_stored_distance in distance matrix,
                             # even if this actual stored distance is larger, e.g.
@@ -200,19 +196,21 @@ class SeqService(BaseSeqService):
                         "Only distance format SEQ_ID_DISTANCE_DICT is supported"
                     )
             # Handle sequences with no stored distances
-            if len(tree_seq_ids) < 2:
+            if len(tree_profile_ids) < 2:
                 return model.PhylogeneticTree(
                     id=self.generate_id(),  # type: ignore[arg-type]
                     tree_algorithm=tree_algorithm,
                     seq_distance_protocol_id=seq_distance_protocol_id,
-                    seq_ids=seq_ids,
+                    profile_ids=profile_ids,
                     leaf_names=leaf_names,
-                    newick_repr=f"({tree_leaf_names[0]});" if tree_seq_ids else "();",
+                    newick_repr=(
+                        f"({tree_leaf_names[0]});" if tree_profile_ids else "();"
+                    ),
                 )
             # Calculate tree
             # Increase recursion limit to allow for larger trees
             sys_recursion_limit = sys.getrecursionlimit()
-            sys.setrecursionlimit(sys_recursion_limit + len(tree_seq_ids) + 1)
+            sys.setrecursionlimit(sys_recursion_limit + len(tree_profile_ids) + 1)
             scipy_tree_algorithm_code_map = {
                 enum.TreeAlgorithm.SLINK: "single",
                 enum.TreeAlgorithm.UPGMA: "average",
@@ -262,7 +260,7 @@ class SeqService(BaseSeqService):
             id=self.generate_id(),  # type: ignore[arg-type]
             tree_algorithm=tree_algorithm,
             seq_distance_protocol_id=seq_distance_protocol_id,
-            seq_ids=seq_ids,
+            profile_ids=profile_ids,
             leaf_names=leaf_names,
             newick_repr=newick_repr,
         )

@@ -14,6 +14,8 @@ from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import TypedStringSetFilter
+from gen_epix.filter.composite import TypedCompositeFilter
+from gen_epix.filter.enum import LogicalOperator
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -345,6 +347,10 @@ class TestContent:
                 for tree_algorithm_code in (
                     dist_case_type_col.tree_algorithm_codes or []
                 ):
+                    if VERBOSE:
+                        print(
+                            f"Case type {complete_case_type.name}: retrieving phylogenetic tree using tree algorithm {tree_algorithm_code}"
+                        )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
@@ -354,8 +360,6 @@ class TestContent:
                             case_ids=case_ids,
                         )
                     )
-                    if phylogenetic_tree.sequence_ids:
-                        raise ValueError("Sequence IDs should not be returned")
                     assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
@@ -377,6 +381,10 @@ class TestContent:
                     continue
 
                 # Retrieve genetic sequences in FASTA format
+                if VERBOSE:
+                    print(
+                        f"Case type {complete_case_type.name}: retrieving genetic sequences"
+                    )
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,

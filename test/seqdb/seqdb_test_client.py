@@ -306,7 +306,7 @@ class SeqdbTestClient(TestClient):
         code: str,
         name: str | None = None,
         is_integer_distance: bool = True,
-        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.OTHER,
+        seq_distance_protocol_type: enum.SeqDistanceProtocolType = enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
         max_stored_distance: float = 100.0,
     ) -> model.SeqDistanceProtocol:
         return self._create_protocol(
@@ -315,7 +315,7 @@ class SeqdbTestClient(TestClient):
             code,
             name,
             is_integer_distance=is_integer_distance,  # Required field
-            seq_distance_protocol_type=seq_distance_protocol_type,  # Required field - using OTHER to avoid locus_set_id requirement
+            seq_distance_protocol_type=seq_distance_protocol_type,  # Required field - using KMER_EUCLIDEAN to avoid locus_set_id requirement
             max_stored_distance=max_stored_distance,  # Required field
         )  # type: ignore[return-value]
 
