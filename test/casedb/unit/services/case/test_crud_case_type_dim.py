@@ -356,7 +356,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
             id=self.ctd_id,
             case_type_id=self.case_type_id,
             dim_id=self.dim_id,
-            is_time_stats_dim=True,
+            is_case_date_dim=True,
         )
         cmd = make_command(CrudOperation.UPDATE_ONE, self.user_id, objs=[updated])
 
@@ -370,7 +370,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
             id=self.other_ctd_id,
             case_type_id=self.case_type_id,
             dim_id=self.other_dim_id,
-            is_time_stats_dim=True,
+            is_case_date_dim=True,
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
@@ -401,75 +401,13 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
             retval = case_service_crud_case_type_dim(self.service, cmd)
 
             # 4. Verify
-            self.assertFalse(other_time_true.is_time_stats_dim)
+            self.assertFalse(other_time_true.is_case_date_dim)
             self.service.repository.crud.assert_any_call(
                 self.uow,
                 self.user_id,
                 model.CaseTypeDim,
                 other_time_true,
-                [other_time_true.id],
-                CrudOperation.UPDATE_ONE,
-            )
-            self.assertIsInstance(retval, list)
-
-    def test_update_geo_stats_exclusivity_unsets_others(self) -> None:
-        # 1. Input
-        updated: CaseTypeDimLike = CaseTypeDimLike(
-            id=self.ctd_id,
-            case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
-            is_geo_stats_dim=True,
-        )
-        cmd = make_command(CrudOperation.UPDATE_ONE, self.user_id, objs=[updated])
-
-        # 2. Mocks
-        stored: CaseTypeDimLike = CaseTypeDimLike(
-            id=self.ctd_id,
-            case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
-        )
-        other_geo_true: CaseTypeDimLike = CaseTypeDimLike(
-            id=self.other_ctd_id,
-            case_type_id=self.case_type_id,
-            dim_id=self.other_dim_id,
-            is_geo_stats_dim=True,
-        )
-
-        def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
-            op: CrudOperation = args[5]
-            model_class = args[2]
-            if op == CrudOperation.READ_SOME and model_class == model.CaseTypeDim:
-                return [stored]
-            if op == CrudOperation.READ_ALL and model_class == model.CaseTypeDim:
-                return [other_geo_true]
-            return []
-
-        self.service.repository.crud.side_effect = repo_crud_side_effect
-
-        with (
-            patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
-                return_value=True,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
-            ),
-        ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
-
-            # 3. Execute
-            retval = case_service_crud_case_type_dim(self.service, cmd)
-
-            # 4. Verify
-            self.assertFalse(other_geo_true.is_geo_stats_dim)
-            self.service.repository.crud.assert_any_call(
-                self.uow,
-                self.user_id,
-                model.CaseTypeDim,
-                other_geo_true,
-                [other_geo_true.id],
+                None,
                 CrudOperation.UPDATE_ONE,
             )
             self.assertIsInstance(retval, list)

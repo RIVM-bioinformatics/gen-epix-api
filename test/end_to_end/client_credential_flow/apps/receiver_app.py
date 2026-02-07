@@ -60,14 +60,20 @@ class ReceiverApp:  # pylint: disable=too-few-public-methods
 
     def _setup_routes(self) -> None:
         """Setup FastAPI routes."""
-        security = HTTPBearer()
+        security = HTTPBearer(auto_error=False)
 
         @self.app.get("/test_client_credential_flow")
         async def test_endpoint(
             request: Request,  # pylint: disable=unused-argument
-            token: HTTPAuthorizationCredentials = Depends(security),
+            token: HTTPAuthorizationCredentials | None = Depends(security),
         ) -> JSONResponse:
             """Protected endpoint that validates access tokens."""
+            if token is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authorization token missing",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
             try:
                 if not self.oauth_idp_client:
                     raise HTTPException(

@@ -184,17 +184,21 @@ class ServerManager:
         client_secret: str,
         audience: str | None = None,
         scopes: list[str] | None = None,
+        grant_types: list[str] | None = None,
+        redirect_uris: list[str] | None = None,
     ) -> bool:
         if self.service not in ServerTypeSet.AUTH.value:
             raise RuntimeError("add_client is only supported for OAuth server")
         scopes = scopes or self.DEFAULT_SCOPES
+        grant_types = grant_types or ["client_credentials"]
+        redirect_uris = redirect_uris or []
         client_data = {
             "client_id": client_id,
             "client_secret": client_secret,
             "client_name": f"{client_id} M2M Client",
             "scopes": scopes,
-            "grant_types": ["client_credentials"],
-            "redirect_uris": [],
+            "grant_types": grant_types,
+            "redirect_uris": redirect_uris,
             "audience": audience,
         }
         try:

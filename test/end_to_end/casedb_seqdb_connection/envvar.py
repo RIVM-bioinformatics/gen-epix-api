@@ -19,6 +19,14 @@ def set_envvar() -> None:
         path / "seqdb.secrets.repository.toml",
         path / "identity_provider.toml",
     ]
+    omop_settings_files: list[Path] = [
+        path / "omop.settings.toml",
+        path / "omop.settings.repository.toml",
+        path / "omop.secrets.service.toml",
+        path / "omop.secrets.repository.toml",
+        path / "identity_provider.toml",
+    ]
+    
     log_config_file = path / "logging.yaml"
 
     os.environ["CASEDB_SETTINGS_FILES"] = json.dumps(
@@ -27,9 +35,14 @@ def set_envvar() -> None:
     os.environ["SEQDB_SETTINGS_FILES"] = json.dumps(
         [x.absolute().as_posix() for x in seqdb_settings_files]
     )
+    os.environ["OMOPDB_SETTINGS_FILES"] = json.dumps(
+        [x.absolute().as_posix() for x in omop_settings_files]
+    )
     os.environ["CASEDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
     os.environ["SEQDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
+    os.environ["OMOPDB_LOG_CONFIG_FILE"] = log_config_file.absolute().as_posix()
     # os.environ["CASEDB_LOG_LEVEL"] = "DEBUG"
     # os.environ["SEQDB_LOG_LEVEL"] = "DEBUG"
     os.environ["CASEDB_LOG_LEVEL"] = "WARNING"
     os.environ["SEQDB_LOG_LEVEL"] = "WARNING"
+    os.environ["OMOPDB_LOG_LEVEL"] = "WARNING"
