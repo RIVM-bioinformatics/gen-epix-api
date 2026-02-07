@@ -81,6 +81,11 @@ class RetrievePhylogeneticTreeCommand(Command):
         return self
 
 
+class RetrieveSamplesCommand(Command):
+
+    sample_ids: list[UUID]
+
+
 class RetrieveSeqFastaCommand(Command):
     """
     Retrieve the sequences for the given sequence IDs in FASTA format

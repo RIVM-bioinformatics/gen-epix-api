@@ -275,6 +275,11 @@ class SeqService(BaseSeqService):
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
+    def retrieve_samples(
+        self, cmd: command.RetrieveSamplesCommand
+    ) -> list[model.SampleForUpload]:
+        raise NotImplementedError()
+
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         wrap = cmd.wrap or 0
         self.repository: BaseSeqRepository

@@ -161,6 +161,9 @@ from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSamplesCommand as RetrieveSamplesCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
 )
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
