@@ -12,6 +12,52 @@ The platform is currently at the beta release stage and as such not yet usable f
 
 This repository contains the code for the backend and is one of several that together comprise the platform. See https://github.com/RIVM-bioinformatics/gen-epix for an overview of the repositories.
 
+## Architecture and Project Structure
+
+Gen-EpiX is a multi-service backend. Each service runs as its own FastAPI app with a dedicated database and a consistent hexagonal layout (api/domain/services/repositories/policies/config). Core entrypoints are in `run.py` (service startup, ETL, tests) and `etl.py` (data loading). Shared functionality lives under `gen_epix/fastapp`, `gen_epix/filter`, and `gen_epix/transform`.
+
+Services:
+
+| Service | Port | Layer | Description |
+|---------|------|-------|-------------|
+| `CASEDB` | 8000 | Gold | Case management and epidemiological analysis. Handles case search, filtering, signal detection, and visualization. |
+| `SEQDB` | 8001 | Silver | Genetic sequence data and phylogenetic tree computation. Enables genetic similarity searches linked to cases. |
+| `OMOPDB` | 8002 | Silver | Normalized patient/subject data compliant with OMOP Common Data Model. |
+
+Supporting modules:
+- `COMMONDB` (port 8010): Shared resources (users, organizations, authentication). Handles fine-grained access control (ABAC/RBAC).
+- `FASTAPP`: Shared FastAPI utilities and common functionality across all services.
+
+Project tree (trimmed to the main structure):
+```
+.
+├── gen_epix
+│   ├── commondb/                  # shared users, orgs, and cross-service resources
+│   │   ├── api/                   # FastAPI endpoints and HTTP models
+│   │   ├── domain/                # business models, commands, and policies
+│   │   ├── services/              # application orchestration and CRUD flows
+│   │   ├── repositories/          # data access (SQLAlchemy or in-memory)
+│   │   ├── policies/              # ABAC and RBAC policy logic
+│   │   ├── config/                # service settings and Dynaconf config
+│   │   └── app.py                 # FastAPI app object
+│   ├── casedb/, omopdb/, seqdb/   # other service modules with the same layout
+│   │   ├── api/
+│   │   ├── domain/
+│   │   ├── services/
+│   │   ├── repositories/
+│   │   ├── policies/
+│   │   ├── config/
+│   │   └── app.py
+│   ├── fastapp/                   # shared FastAPI utilities and base wiring
+│   ├── filter/                    # shared filtering utilities
+│   └── transform/                 # shared transformation utilities
+├── config/                        # global Dynaconf and identity provider configuration
+├── docs/                          # documentation and assets
+├── test/                          # unit, integration, and end-to-end tests
+├── run.py                         # CLI entrypoint for API, ETL, and tests
+└── etl.py                         # ETL entry script
+```
+
 ## Key Features
 
 - **Visualisation**: Visualize cases by time, place, person and also by genome through a phylogenetic tree coupled to the cases.

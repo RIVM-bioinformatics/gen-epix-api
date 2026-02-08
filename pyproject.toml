@@ -25,7 +25,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]==0.128.0",
     "gunicorn==24.1.*",
-    "starlette==0.52.1",
+    "starlette==0.52.1",  # NOTE: FastAPI 0.128.0 supports starlette <= 0.50.0
     "httpx==0.28.1",
     "pyjwt==2.10.1",
     "urllib3==2.6.3",
