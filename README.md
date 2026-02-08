@@ -140,12 +140,12 @@ conda activate gen-epix
 ```
 2. Run the application:
 ```console
-python run.py [service] [app_type] [idp_config] [env_name] 
+python run.py <command> <service> <idp_config> <repository_config>
 ```
-- `service`: The service to run (api, etl) 
-- `app_type`: Specific configuration for an app type (casedb, seqdb, omopbd)
-- `idp_config`: Which authentication setting to use (idps, mock, none)
-- `env_name`: Name of the environment.
+- `command`: Entry point to run (e.g., `api`).
+- `service`: `CASEDB`, `SEQDB`, `OMOPDB`, or `COMMONDB`.
+- `idp_config`: `IDPS` or `MOCK`.
+- `repository_config`: `DICT_DEMO`, `SA_SQLITE_DEMO`, or `SA_SQL`.
 
 ---
 
