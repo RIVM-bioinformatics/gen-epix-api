@@ -1,8 +1,11 @@
+import base64
+import hashlib
 import uuid
-from test.seqdb.seqdb_test_client import DistanceMatrix
-from test.seqdb.seqdb_test_client import SeqdbTestClient
-from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
-from test.seqdb.seqdb_test_client import SeqGenerationSettings
+from test.seqdb.seqdb_test_client import (
+    DistanceMatrix,
+    SeqdbTestClient,
+    SeqGenerationSettings,
+)
 from typing import Any
 from uuid import UUID
 
@@ -11,25 +14,20 @@ import pandas as pd
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.seqdb.domain import enum, model
 
-import base64
-import hashlib
 
 def create_seq_distance_database(
-    env: Env, n_loci: int = 5, n_seqs: int = 10
+    n_loci: int = 5, n_seqs: int = 10
 ) -> dict[type, dict[UUID, Any]]:
+
     sample_batch_for_upload = get_random_sequences(n_loci, n_seqs)
-    allele_profiles = convert_allele_profile_for_upload(sample_batch_for_upload)
     locus_set = get_locus_set(n_loci)
     locus_detection_protocol = get_locus_detection_protocol()
     data_collection = get_data_collection()
     sample = get_sample(data_collection)
-
-    for ap in allele_profiles:
-        ap.sample_id = sample.id  # type: ignore[assignment]
-        ap.locus_set_id = locus_set.id  # type: ignore[assignment]
-        ap.locus_detection_protocol_id = locus_detection_protocol.id  # type: ignore[assignment]
-        ap.seq_id = uuid.uuid4()  # type: ignore[assignment]
-
+    seqs = get_seqs(sample_batch_for_upload, sample)
+    allele_profiles = get_allele_profiles(
+        sample_batch_for_upload, sample, locus_set, locus_detection_protocol, seqs
+    )
     seq_distance_protocol = get_seq_distance_protocol(locus_set)
     profile_ids = get_allele_profile_ids(allele_profiles)
     distance_matrix = SeqdbTestClient.calculate_distance_matrix_from_allele_profiles(
@@ -48,6 +46,7 @@ def create_seq_distance_database(
     db[model.DataCollection] = {data_collection.id: data_collection}  # type: ignore[dict-item]
     db[model.Sample] = {sample.id: sample}  # type: ignore[dict-item]
     db[model.SeqDistanceProtocol] = {seq_distance_protocol.id: seq_distance_protocol}  # type: ignore[dict-item]
+    db[model.Seq] = {x.id: x for x in seqs}  # type: ignore[misc]
     db[model.AlleleProfile] = {x.id: x for x in allele_profiles}  # type: ignore[misc]
     db[model.SeqDistance] = {x.profile_id: x for x in seq_distances}
 
@@ -69,6 +68,7 @@ def get_seq_distances(
             pid_j = profile_ids[j]
             distances_dict[str(pid_j)] = float(distance_matrix.matrix[i][j])
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
+            id=uuid.uuid4(),
             sample_id=sample.id,
             seq_id=allele_profiles[i].seq_id,
             seq_distance_protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
@@ -148,61 +148,72 @@ def get_locus_set(n_loci: int) -> model.LocusSet:
     return locus_set
 
 
-def convert_upload_to_profile(
-    upload_profile: model.AlleleProfileForUpload,
-) -> model.AlleleProfile:
-    """Convert `AlleleProfileForUpload` to a persisted-ready `AlleleProfile`.
-
-    - Sorts allele IDs (None -> `NULL_ID`) and encodes them as base64 string.
-    - Computes a deterministic hash for the profile's byte representation.
-    - Counts non-null loci to populate `n_loci`.
-    """
-    if not upload_profile.allele_ids:
-        raise ValueError("allele_ids must be provided in AlleleProfileForUpload")
-
-    sorted_allele_ids = sorted(upload_profile.allele_ids, key=lambda x: x or NULL_ID)
-    allele_bytes_list = [
-        (allele_id.bytes if allele_id else NULL_ID.bytes)
-        for allele_id in sorted_allele_ids
-    ]
-    allele_profile_bytes = b"".join(allele_bytes_list)
-    allele_profile_str = base64.b64encode(allele_profile_bytes).decode("ascii")
-
-    sha256 = hashlib.sha256()
-    sha256.update(allele_profile_bytes)
-    allele_profile_hash = UUID(sha256.digest()[:16].hex())
-
-    # n_loci must reflect the number of detected loci, excluding both
-    # `None` and sentinel `NULL_ID` values. The model validator counts
-    # non-null 16-byte chunks by comparing to `NULL_ID.bytes`.
-    n_loci = sum(
-        1
-        for allele_id in upload_profile.allele_ids
-        if (allele_id is not None and allele_id != NULL_ID)
-    )
-
-    allele_profile = model.AlleleProfile(  # type: ignore[call-arg]
-        sample_id=upload_profile.sample_id,
-        seq_id=upload_profile.seq_id,
-        locus_set_id=upload_profile.locus_set_id,
-        locus_detection_protocol_id=upload_profile.locus_detection_protocol_id,
-        n_loci=n_loci,
-        allele_profile=allele_profile_str,
-        allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
-        allele_profile_hash=allele_profile_hash,
-    )
-
-    return allele_profile
-
-
-def convert_allele_profile_for_upload(
-    batch: model.SampleBatchForUpload,
+def get_allele_profiles(
+    sample_batch_for_upload: model.SampleBatchForUpload,
+    sample: model.Sample,
+    locus_set: model.LocusSet,
+    locus_detection_protocol: model.LocusDetectionProtocol,
+    seqs: list[model.Seq],
 ) -> list[model.AlleleProfile]:
     allele_profiles: list[model.AlleleProfile] = []
-    for sample in batch.samples:
-        for upload_ap in sample.allele_profiles:  # type: ignore[union-attr]
-            allele_profiles.append(convert_upload_to_profile(upload_ap))
+    samples_for_upload: list[model.SampleForUpload] = sample_batch_for_upload.samples
+    seq_idx = 0
+    for sample_for_upload in samples_for_upload:
+        for allele_profile_for_upload in sample_for_upload.allele_profiles:  # type: ignore[union-attr]
+            sorted_allele_ids = sorted(
+                allele_profile_for_upload.allele_ids, key=lambda x: x or NULL_ID  # type: ignore[arg-type]
+            )
+            allele_bytes_list: list[bytes] = [
+                (allele_id.bytes if allele_id else NULL_ID.bytes)
+                for allele_id in sorted_allele_ids
+            ]
+            allele_profile_bytes = b"".join(allele_bytes_list)
+            allele_profile_str = base64.b64encode(allele_profile_bytes).decode("ascii")
+            sha256 = hashlib.sha256()
+            sha256.update(allele_profile_bytes)
+            allele_profile_hash = UUID(sha256.digest()[:16].hex())
+            n_loci = sum(
+                1  # type: ignore[misc]
+                for allele_id in allele_profile_for_upload.allele_ids  # type: ignore[union-attr]
+                if (allele_id is not None and allele_id != NULL_ID)
+            )
+
+            allele_profile = model.AlleleProfile(  # type: ignore[call-arg]
+                sample_id=sample.id,
+                seq_id=seqs[seq_idx].id,
+                locus_set_id=locus_set.id,
+                locus_detection_protocol_id=locus_detection_protocol.id,  # type: ignore[arg-type]
+                n_loci=n_loci,
+                allele_profile=allele_profile_str,
+                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                allele_profile_hash=allele_profile_hash,
+            )
+            allele_profiles.append(allele_profile)
+            seq_idx += 1
+
     return allele_profiles
+
+
+def get_seqs(
+    sample_batch_for_upload: model.SampleBatchForUpload, sample: model.Sample
+) -> list[model.Seq]:
+    seqs: list[model.Seq] = []
+    for sample_for_upload in sample_batch_for_upload.samples:
+        for seq_for_upload in sample_for_upload.seqs:  # type: ignore[union-attr]
+            seq = model.Seq(  # type: ignore[call-arg]
+                id=uuid.uuid4(),
+                sample_id=sample.id,
+                code="SEQ_TEST_" + str(uuid.uuid4()),
+                contigs=[
+                    model.Contig(
+                        seq=seq_for_upload.contigs[0].seq,
+                        seq_format=seq_for_upload.contigs[0].seq_format,
+                        length=seq_for_upload.contigs[0].length,
+                    )
+                ],
+            )
+            seqs.append(seq)
+    return seqs
 
 
 def get_random_sequences(n_loci: int, n_seqs: int) -> model.SampleBatchForUpload:
