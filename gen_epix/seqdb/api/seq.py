@@ -20,7 +20,7 @@ class UploadSamplesRequestBody(command.UploadSamplesCommand):
 class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     seq_distance_protocol_id: UUID
     tree_algorithm: enum.TreeAlgorithm
-    seq_ids: list[UUID]
+    profile_ids: list[UUID]
     leaf_codes: list[str] | None = None
 
 
@@ -66,12 +66,12 @@ def create_seq_endpoints(
                     user=user,
                     seq_distance_protocol_id=request_body.seq_distance_protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
-                    profile_ids=request_body.seq_ids,
+                    profile_ids=request_body.profile_ids,
                     leaf_names=request_body.leaf_codes,
                 )
             )
         except Exception as exception:
-            handle_exception("dc71bce0", user, exception, request_ids=request_body.seq_ids)  # type: ignore
+            handle_exception("dc71bce0", user, exception, request_ids=request_body.profile_ids)  # type: ignore
         return retval
 
     @router.post(
