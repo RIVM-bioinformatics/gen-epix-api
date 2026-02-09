@@ -19,7 +19,6 @@ class BaseSeqdbService(BaseService):
             command.RetrievePhylogeneticTreeBySequencesCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(command.RetrieveGeneticSequenceByIdCommand, self.retrieve_genetic_sequences)
         f(
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
@@ -36,13 +35,6 @@ class BaseSeqdbService(BaseService):
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
     ) -> model.PhylogeneticTree | None:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_genetic_sequences(
-        self,
-        cmd: command.RetrieveGeneticSequenceByIdCommand,
-    ) -> list[model.GeneticSequence]:
         raise NotImplementedError()
 
     @abc.abstractmethod

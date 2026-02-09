@@ -110,19 +110,6 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     )
 
 
-class RetrieveGeneticSequenceRequestBody(PydanticBaseModel):
-    case_type_id: UUID = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand, "case_type_id"
-    )
-    genetic_sequence_case_type_col_id: UUID = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand,
-        "genetic_sequence_case_type_col_id",
-    )
-    case_ids: list[UUID] = copy_model_field(
-        command.RetrieveGeneticSequenceByCaseCommand, "case_ids"
-    )
-
-
 class RetrieveCaseTypeStatsRequestBody(PydanticBaseModel):
     case_type_ids: set[UUID] | None = Field(
         default=None,
@@ -519,32 +506,6 @@ def create_case_endpoints(
                     case_type_id=request_body.case_type_id,
                     genetic_distance_case_type_col_id=request_body.genetic_distance_case_type_col_id,
                     tree_algorithm=request_body.tree_algorithm_code,
-                    case_ids=request_body.case_ids,
-                ),
-            ),
-        )
-
-    @router.post(
-        "/retrieve/genetic_sequence",
-        operation_id="retrieve__genetic_sequence",
-        name="Retrieve genetic sequence by case",
-        description=command.RetrieveGeneticSequenceByCaseCommand.__doc__,
-    )
-    async def retrieve__genetic_sequence(
-        user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveGeneticSequenceRequestBody,
-    ) -> list[model.GeneticSequence]:
-        return cast(
-            list[model.GeneticSequence],
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="1238afb2",
-                input_handle_exception=handle_exception,
-                input_command=command.RetrieveGeneticSequenceByCaseCommand(
-                    user=user,
-                    case_type_id=request_body.case_type_id,
-                    genetic_sequence_case_type_col_id=request_body.genetic_sequence_case_type_col_id,
                     case_ids=request_body.case_ids,
                 ),
             ),

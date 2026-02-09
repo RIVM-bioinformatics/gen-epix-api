@@ -77,7 +77,6 @@ from gen_epix.casedb.services.case.retrieve_complete_case_type import (
 )
 from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_assembly_protocols,
-    case_service_retrieve_genetic_sequence_by_case,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
     case_service_retrieve_sequencing_protocols,
@@ -219,12 +218,6 @@ class CaseService(BaseCaseService):
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
         return case_service_retrieve_phylogenetic_tree(self, cmd)
-
-    def retrieve_genetic_sequence_by_case(
-        self,
-        cmd: command.RetrieveGeneticSequenceByCaseCommand,
-    ) -> list[model.GeneticSequence]:
-        return case_service_retrieve_genetic_sequence_by_case(self, cmd)
 
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand

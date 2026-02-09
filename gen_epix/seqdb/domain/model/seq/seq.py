@@ -416,3 +416,11 @@ class RefSnpSetMember(Model):
     index: int = Field(
         description="The index (ordinal number) of the reference SNP in the reference SNP set."
     )
+
+
+class HasSeqMixin:
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The unique identifier for the sequence from which these results were obtained. FOREIGN KEY",
+    )
+    seq: Seq | None = Field(default=None, description="The sequence.")

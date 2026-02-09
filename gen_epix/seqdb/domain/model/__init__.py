@@ -75,6 +75,7 @@ from gen_epix.seqdb.domain.model.seq import (
     MlvaDetectionProtocol as MlvaDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import MlvaProfile as MlvaProfile
+from gen_epix.seqdb.domain.model.seq import MlvaProfileForUpload as MlvaProfileForUpload
 from gen_epix.seqdb.domain.model.seq import MultipleAlignment as MultipleAlignment
 from gen_epix.seqdb.domain.model.seq import PcrMeasurement as PcrMeasurement
 from gen_epix.seqdb.domain.model.seq import PcrProtocol as PcrProtocol
@@ -114,6 +115,7 @@ from gen_epix.seqdb.domain.model.seq import SeqTaxonomy as SeqTaxonomy
 from gen_epix.seqdb.domain.model.seq import SequencingProtocol as SequencingProtocol
 from gen_epix.seqdb.domain.model.seq import SnpDetectionProtocol as SnpDetectionProtocol
 from gen_epix.seqdb.domain.model.seq import SnpProfile as SnpProfile
+from gen_epix.seqdb.domain.model.seq import SnpProfileForUpload as SnpProfileForUpload
 from gen_epix.seqdb.domain.model.seq import Taxon as Taxon
 from gen_epix.seqdb.domain.model.seq import TaxonomyProtocol as TaxonomyProtocol
 from gen_epix.seqdb.domain.model.seq import TaxonSet as TaxonSet
@@ -199,6 +201,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SeqForUpload,
             AlleleForUpload,
             AlleleProfileForUpload,
+            SnpProfileForUpload,
+            MlvaProfileForUpload,
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,

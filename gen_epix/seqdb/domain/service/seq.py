@@ -21,6 +21,7 @@ class BaseSeqService(BaseService):
             command.RetrieveMultipleAlignmentCommand,
             self.retrieve_multiple_alignment,
         )
+        f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
@@ -47,6 +48,13 @@ class BaseSeqService(BaseService):
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def retrieve_samples(
+        self,
+        cmd: command.RetrieveSamplesCommand,
+    ) -> list[model.SampleForUpload]:
+        raise NotImplementedError()
+        
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()

@@ -66,7 +66,7 @@ def create_seq_endpoints(
                     user=user,
                     seq_distance_protocol_id=request_body.seq_distance_protocol_id,
                     tree_algorithm=request_body.tree_algorithm,
-                    seq_ids=request_body.seq_ids,
+                    profile_ids=request_body.seq_ids,
                     leaf_names=request_body.leaf_codes,
                 )
             )

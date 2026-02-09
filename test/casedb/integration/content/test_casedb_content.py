@@ -345,6 +345,10 @@ class TestContent:
                 for tree_algorithm_code in (
                     dist_case_type_col.tree_algorithm_codes or []
                 ):
+                    if VERBOSE:
+                        print(
+                            f"Case type {complete_case_type.name}: retrieving phylogenetic tree using tree algorithm {tree_algorithm_code}"
+                        )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
@@ -354,8 +358,6 @@ class TestContent:
                             case_ids=case_ids,
                         )
                     )
-                    if phylogenetic_tree.sequence_ids:
-                        raise ValueError("Sequence IDs should not be returned")
                     assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
@@ -375,26 +377,12 @@ class TestContent:
                 ]
                 if not has_seq_case_ids:
                     continue
-                # TODO: retrieval of genetic sequences method likely not needed anymore, delete when this is confirmed or otherwise enable again
-                # # Retrieve genetic sequence
-                # genetic_sequences: list[model.GeneticSequence] = app.handle(
-                #     command.RetrieveGeneticSequenceByCaseCommand(
-                #         user=org_user,
-                #         case_ids=has_seq_case_ids[0:1],
-                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
-                #     )
-                # )
-                # if not genetic_sequences:
-                #     raise ValueError("Genetic sequence should not be empty")
-                # for seq in genetic_sequences:
-                #     if not seq.id:
-                #         raise ValueError("Genetic sequence ID should not be empty")
-                #     if not hasattr(seq, "nucleotide_sequence"):
-                #         raise ValueError(
-                #             "Genetic sequence should have nucleotide_sequence attribute"
-                #         )
 
                 # Retrieve genetic sequences in FASTA format
+                if VERBOSE:
+                    print(
+                        f"Case type {complete_case_type.name}: retrieving genetic sequences"
+                    )
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,

@@ -49,12 +49,6 @@ def case_service_retrieve_phylogenetic_tree(
             raise exc.InvalidArgumentsError(
                 f"Case type column {dist_case_type_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
             )
-        # Get sequence column data
-        seq_case_type_col_id = dist_case_type_col.genetic_sequence_case_type_col_id
-        if not seq_case_type_col_id:
-            raise exc.InvalidArgumentsError(
-                f"Case type column {dist_case_type_col_id} has no associated sequence column"
-            )
 
         # @ABAC
         assert dist_case_type_col.tree_algorithm_codes is not None
@@ -85,109 +79,47 @@ def case_service_retrieve_phylogenetic_tree(
                     user=user,
                     tree_algorithm_code=tree_algorithm_code,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                    sequence_ids=[],
+                    profile_ids=[],
                 )
             )
             retval.genetic_distance_protocol_id = genetic_distance_protocol.id
             return retval
 
-        # Create temporary case_abac only for this case type and the
-        # seq_case_type_col_id having the same rights as the dist_case_type_col
-        temp_case_abac = model.CaseAbac(
-            is_full_access=case_abac.is_full_access,
-            case_type_access_abacs={},
-            case_type_share_abacs={},
-        )
-        for data_collection_id, x in case_abac.case_type_access_abacs.get(
-            case_type_id, {}
-        ).items():
-            if dist_case_type_col_id not in x.read_case_type_col_ids:
-                continue
-            if case_type_id not in temp_case_abac.case_type_access_abacs:
-                temp_case_abac.case_type_access_abacs[case_type_id] = {}
-            temp_case_abac.case_type_access_abacs[case_type_id][data_collection_id] = (
-                model.CaseTypeAccessAbac(
-                    read_case_type_col_ids={seq_case_type_col_id},
-                    **x.model_dump(exclude={"read_case_type_col_ids"}),
-                )
-            )
-
         # @ABAC: Get cases
         cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
-            temp_case_abac,
+            case_abac,
             enum.CaseRight.READ_CASE,
             case_type_id,
             case_ids=case_ids,
             filter_content=True,
         )
 
-        # Get sequence_ids from seq_case_type_col
-        case_sequence_map = {}
+        # Get profile_ids from dist_case_type_col
+        case_profile_map = {}
         for case in cases:
-            sequence_id = case.content.get(seq_case_type_col_id)
-            if sequence_id:
-                case_sequence_map[case.id] = UUID(sequence_id)
+            profile_id = case.content.get(dist_case_type_col_id)
+            if profile_id:
+                case_profile_map[case.id] = UUID(profile_id)
 
-        # Retrieve tree and remove sequence_ids to avoid leaking information
-        sequence_ids = list(case_sequence_map.values())
-        sequence_case_map = {y: x for x, y in case_sequence_map.items()}
+        # Retrieve tree
+        profile_ids = list(case_profile_map.values())
+        profile_case_map = {y: x for x, y in case_profile_map.items()}
         phylogenetic_tree: model.PhylogeneticTree = self.app.handle(
             command.RetrievePhylogeneticTreeBySequencesCommand(
                 user=cmd.user,
                 tree_algorithm_code=tree_algorithm_code,
                 seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
-                sequence_ids=sequence_ids,
+                profile_ids=profile_ids,
                 props={
-                    "leaf_id_mapper": lambda x: sequence_case_map[x],
+                    "leaf_id_mapper": lambda x: profile_case_map[x],
                 },
             )
         )
         phylogenetic_tree.genetic_distance_protocol_id = genetic_distance_protocol.id
-        phylogenetic_tree.sequence_ids = None
 
     return phylogenetic_tree
-
-
-def case_service_retrieve_genetic_sequence_by_case(
-    self: BaseCaseService,
-    cmd: command.RetrieveGeneticSequenceByCaseCommand,
-) -> list[model.GeneticSequence]:
-    case_type_id = cmd.case_type_id
-    seq_case_type_col_id = cmd.genetic_sequence_case_type_col_id
-    case_ids = cmd.case_ids
-    user, repository = self._get_user_and_repository(cmd)
-    assert isinstance(user, model.User) and user.id is not None
-    if not case_ids:
-        return []
-
-    case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
-    assert case_abac is not None
-
-    with repository.uow() as uow:
-        seq_ids_or_none: list[UUID | None] = _get_seq_ids_from_cases(
-            self,
-            uow,
-            user,
-            case_abac,
-            case_type_id,
-            case_ids,
-            seq_case_type_col_id,
-        )
-        if any(x is None for x in seq_ids_or_none):
-            raise exc.NoResultsError("Not all cases have a sequence")
-        seq_ids: list[UUID] = seq_ids_or_none  # type: ignore[assignment]
-
-        # Retrieve sequences
-        genetic_sequences: list[model.GeneticSequence] = self.app.handle(
-            command.RetrieveGeneticSequenceByIdCommand(
-                user=user,
-                seq_ids=seq_ids,
-            )
-        )
-
-    return genetic_sequences
 
 
 def case_service_retrieve_genetic_sequence_fasta_by_case(
