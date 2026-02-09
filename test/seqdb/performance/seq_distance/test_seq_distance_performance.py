@@ -15,6 +15,7 @@ from time import perf_counter
 from uuid import UUID
 
 import pytest
+from pydantic import BaseModel
 
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.util import get_app_cfgs
@@ -61,6 +62,16 @@ ENTITIES: list[Entity] = [
     model.AlleleProfile.ENTITY,
     model.SeqDistance.ENTITY,
 ]
+
+
+class TestRepositoryPerformance(BaseModel):
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    repository_type: seqdb_enum.RepositoryType
+    dataset_size: int
+    file: Path
+    repository: SeqDictRepository | SeqSARepository
 
 
 @pytest.fixture(scope="module", name="env")
@@ -125,7 +136,6 @@ def fill_empty_sqlite_repository(
     entities: list[Entity],
     user_id: UUID,
 ) -> None:
-    # Use UnitOfWork context to ensure transactions are committed to disk.
     with (
         dict_repository.uow() as dict_uow,
         sqlite_repository.uow() as sa_uow,
@@ -151,6 +161,16 @@ def fill_empty_sqlite_repository(
             )
 
 
+def ensure_datasets_exist_and_valid() -> None:
+    for _, pkl_path, sqlite_path in DATASETS:
+        assert (
+            pkl_path.exists() and pkl_path.stat().st_size > 0
+        ), f"Pickle file {pkl_path} missing or empty"
+        assert (
+            sqlite_path.exists() and sqlite_path.stat().st_size > 0
+        ), f"SQLite file {sqlite_path} missing or empty"
+
+
 class SeqDistancePerformanceSetup:
 
     @pytest.fixture(scope="module", autouse=True)
@@ -160,7 +180,7 @@ class SeqDistancePerformanceSetup:
 
             self.create_demo_data(env)
         else:
-            pass
+            ensure_datasets_exist_and_valid()
 
     def create_demo_data(self, env: Env) -> None:
 
@@ -186,20 +206,60 @@ class SeqDistancePerformanceSetup:
 
 class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
 
-    @pytest.mark.parametrize("repo_kind", ["DICT", "SA_SQLITE"])
-    def test_get_similar_profiles_happy_flow(self, env: Env, repo_kind: str) -> None:
+    dict_repositories: list[TestRepositoryPerformance] = []
+    sa_repositories: list[TestRepositoryPerformance] = []
+
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_repositories(self) -> None:
+        """
+        Method that initializes the repositories for the tests.
+        The method reads in the datasets from the DATASETS list,
+        creates two separate LISTS with TestRepositoryPerformance for each dataset
+        and sets them as CLASS VARIABLES to be used in the parameterized tests.
+        """
+        # self.dict_repositories: list[TestRepositoryPerformance] = []
+        # self.sa_repositories: list[TestRepositoryPerformance] = []
+        # self.repositories: list[TestRepositoryPerformance] = []
         for size, pkl_path, sqlite_path in DATASETS:
-            repository: SeqDictRepository | SeqSARepository
-            if repo_kind == "DICT":
-                repository = create_dict_repository(
-                    pickle_file=pkl_path, db=None, entities=ENTITIES
+            dict_repo = create_dict_repository(
+                db=None, pickle_file=pkl_path, entities=ENTITIES
+            )
+            sa_repo = create_sqlite_repository(
+                sqlite_path, ENTITIES, recreate_sqlite_file=False
+            )
+            self.dict_repositories.append(
+                TestRepositoryPerformance(
+                    repository_type=seqdb_enum.RepositoryType.DICT,
+                    dataset_size=size,
+                    file=pkl_path,
+                    repository=dict_repo,
                 )
-            else:
-                repository = create_sqlite_repository(
-                    sqlite_path, ENTITIES, recreate_sqlite_file=False
+            )
+            self.sa_repositories.append(
+                TestRepositoryPerformance(
+                    repository_type=seqdb_enum.RepositoryType.SA_SQLITE,
+                    dataset_size=size,
+                    file=sqlite_path,
+                    repository=sa_repo,
                 )
-            with repository.uow() as uow:
-                profiles: list[model.AlleleProfile] = repository.crud(  # type: ignore[assignment]
+            )
+
+    @pytest.mark.parametrize(
+        "repository_type",
+        [seqdb_enum.RepositoryType.DICT, seqdb_enum.RepositoryType.SA_SQLITE],
+    )
+    def test_get_similar_profiles_happy_flow(
+        self, env: Env, repository_type: seqdb_enum.RepositoryType
+    ) -> None:
+        test_repositories_performance: list[TestRepositoryPerformance]
+        if repository_type == seqdb_enum.RepositoryType.DICT:
+            test_repositories_performance = self.dict_repositories
+        elif repository_type == seqdb_enum.RepositoryType.SA_SQLITE:
+            test_repositories_performance = self.sa_repositories
+
+        for test_repository_performance in test_repositories_performance:
+            with test_repository_performance.repository.uow() as uow:
+                profiles: list[model.AlleleProfile] = test_repository_performance.repository.crud(  # type: ignore[assignment]
                     uow,
                     env.get_root_user().id,
                     model.AlleleProfile,
@@ -208,7 +268,7 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
                     CrudOperation.READ_ALL,
                 )
                 profile_ids = [x.id for x in profiles if x.id is not None]
-                protocols: list[model.SeqDistanceProtocol] = repository.crud(  # type: ignore[assignment]
+                protocols: list[model.SeqDistanceProtocol] = test_repository_performance.repository.crud(  # type: ignore[assignment]
                     uow,
                     env.get_root_user().id,
                     model.SeqDistanceProtocol,
@@ -219,16 +279,20 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
                 assert len(protocols) == 1
                 protocol_id = protocols[0].id
             start = perf_counter()
-            with repository.uow() as uow:
-                result_ids = repository.get_similar_profiles(
-                    uow,
-                    protocol_id,  # type: ignore[arg-type]
-                    profile_ids,
-                    1.0,
+            with test_repository_performance.repository.uow() as uow:
+                result_ids = (
+                    test_repository_performance.repository.get_similar_profiles(
+                        uow,
+                        protocol_id,  # type: ignore[arg-type]
+                        profile_ids,
+                        1.0,
+                    )
                 )
             duration = perf_counter() - start
             assert isinstance(result_ids, list)
             expected_id = profile_ids[0]
             assert (expected_id in result_ids) or (str(expected_id) in result_ids)
             assert len(result_ids) > 1
-            print(f"{repo_kind} size={size} duration={duration:.4f}s")
+            print(
+                f"\n{test_repository_performance.repository_type} size={test_repository_performance.dataset_size} duration={duration:.4f}s"
+            )
