@@ -6,6 +6,7 @@ from test.seqdb.performance.create_demo_seq_distances import (
 )
 from test.seqdb.performance.seq_distance.base import (
     DEV_REPOSITORY_CONFIG,
+    ENTITIES,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
@@ -37,30 +38,20 @@ CREATE_DEMO_DATA: bool = False
 BASE = Path(__file__).parent
 DATASETS: list[tuple[int, Path, Path]] = [
     (
-        10,
+        100,
         BASE / "test_seq_distance_performance_100.pkl",
         BASE / "test_seq_distance_performance_100.sqlite",
     ),
     (
-        20,
+        200,
         BASE / "test_seq_distance_performance_200.pkl",
         BASE / "test_seq_distance_performance_200.sqlite",
     ),
     (
-        50,
+        500,
         BASE / "test_seq_distance_performance_500.pkl",
         BASE / "test_seq_distance_performance_500.sqlite",
     ),
-]
-
-ENTITIES: list[Entity] = [
-    model.LocusSet.ENTITY,
-    model.LocusDetectionProtocol.ENTITY,
-    model.SeqDistanceProtocol.ENTITY,
-    model.Sample.ENTITY,
-    model.Seq.ENTITY,
-    model.AlleleProfile.ENTITY,
-    model.SeqDistance.ENTITY,
 ]
 
 
@@ -259,22 +250,26 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
 
         for test_repository_performance in test_repositories_performance:
             with test_repository_performance.repository.uow() as uow:
-                profiles: list[model.AlleleProfile] = test_repository_performance.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    env.get_root_user().id,
-                    model.AlleleProfile,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
+                profiles: list[model.AlleleProfile] = (
+                    test_repository_performance.repository.crud(  # type: ignore[assignment]
+                        uow,
+                        env.get_root_user().id,
+                        model.AlleleProfile,
+                        None,
+                        None,
+                        CrudOperation.READ_ALL,
+                    )
                 )
-                profile_ids = [x.id for x in profiles if x.id is not None]
-                protocols: list[model.SeqDistanceProtocol] = test_repository_performance.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    env.get_root_user().id,
-                    model.SeqDistanceProtocol,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
+                profile_ids: list[UUID] = [x.id for x in profiles if x.id is not None]
+                protocols: list[model.SeqDistanceProtocol] = (
+                    test_repository_performance.repository.crud(  # type: ignore[assignment]
+                        uow,
+                        env.get_root_user().id,
+                        model.SeqDistanceProtocol,
+                        None,
+                        None,
+                        CrudOperation.READ_ALL,
+                    )
                 )
                 assert len(protocols) == 1
                 protocol_id = protocols[0].id
@@ -285,7 +280,7 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
                         uow,
                         protocol_id,  # type: ignore[arg-type]
                         profile_ids,
-                        1.0,
+                        5.0,
                     )
                 )
             duration = perf_counter() - start
