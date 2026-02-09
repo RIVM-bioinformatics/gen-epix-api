@@ -161,6 +161,16 @@ See other examples in [.vscode/launch.json](.vscode/launch.json)
 | ![Example documentation screenshot](https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true) |
 |:--:|
 
+### Implementation Details
+
+Go here for a more in depth exploration of specific parts of the application, see the following:
+[run.py](docs/run.md) is the single CLI entry point for the entire project.
+[fastapp](docs/fastapp.md) is the reusable framework that every Gen-EpiX app is built on.
+[app creation](docs/app_creation.md) traces every component that participates in building the COMMONDB
+FastAPI application.
+
+
+
 ---
 
 ## Dependencies
