@@ -10,13 +10,13 @@ from gen_epix.commondb.domain.command import CrudCommand
 
 
 class OrganizationAccessCasePolicyCrudCommand(CrudCommand):
-    """Manage organization-level access to cases and case sets in a data collection, scoped by case-type and read/write column sets."""
+    """Manage organization-level access policies to cases and case sets in a data collection, scoped by case-type and read/write column sets."""
 
     MODEL_CLASS: ClassVar = model.OrganizationAccessCasePolicy
 
 
 class UserAccessCasePolicyCrudCommand(CrudCommand):
-    """Manage per-user maximum access to cases and case sets in a data collection; effective rights intersect with the organization policy."""
+    """Manage per-user maximum access policies to cases and case sets in a data collection; effective rights intersect with the organization policy."""
 
     MODEL_CLASS: ClassVar = model.UserAccessCasePolicy
 

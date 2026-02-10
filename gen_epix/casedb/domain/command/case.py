@@ -18,6 +18,11 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 
 
 class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
+    """
+    Replace the case types in a case-type set with the provided list of members,
+    keeping the set in sync for downstream access policies and presets.
+    """
+
     ASSOCIATION_CLASS: ClassVar = model.CaseTypeSetMember
     LINK_FIELD_NAME1: ClassVar = "case_type_set_id"
     LINK_FIELD_NAME2: ClassVar = "case_type_id"
@@ -28,6 +33,11 @@ class CaseTypeSetCaseTypeUpdateAssociationCommand(UpdateAssociationCommand):
 
 
 class CaseTypeColSetCaseTypeColUpdateAssociationCommand(UpdateAssociationCommand):
+    """
+    Replace the columns in a case-type column set with the provided members so
+    read/write scopes and UI column groupings stay aligned.
+    """
+
     ASSOCIATION_CLASS: ClassVar = model.CaseTypeColSetMember
     LINK_FIELD_NAME1: ClassVar = "case_type_col_set_id"
     LINK_FIELD_NAME2: ClassVar = "case_type_col_id"
@@ -266,7 +276,9 @@ class RetrieveGeneticSequenceFastaByCaseCommand(Command):
 
 class CreateFileForReadSetCommand(Command):
     """
-    Create a file for a read set associated with a case.
+    Upload a raw reads file (e.g., FASTQ) for a case's read-set column and return
+    the stored file ID. Accepts base64 content, optional compression, and marks
+    whether the payload is forward or reverse reads.
     """
 
     is_fwd: bool = Field(
@@ -289,7 +301,9 @@ class CreateFileForReadSetCommand(Command):
 
 class CreateFileForSeqCommand(Command):
     """
-    Create a file for a sequence associated with a case.
+    Upload an assembled sequence file (e.g., FASTA) for a case's sequence column
+    and return the stored file ID. Accepts base64 content with optional
+    compression.
     """
 
     case_id: UUID = Field(description="The ID of the case the sequence belongs to.")
@@ -309,7 +323,8 @@ class CreateFileForSeqCommand(Command):
 
 class RetrieveSequencingProtocolsCommand(Command):
     """
-    Retrieve sequencing protocols from seqdb database
+    Retrieve the sequencing protocols registered in seqdb so clients can populate
+    protocol pickers when uploading read sets.
     """
 
     pass
@@ -317,7 +332,8 @@ class RetrieveSequencingProtocolsCommand(Command):
 
 class RetrieveAssemblyProtocolsCommand(Command):
     """
-    Retrieve assembly protocols from seqdb database
+    Retrieve the assembly protocols registered in seqdb for downstream sequence
+    processing and provenance.
     """
 
     pass
@@ -327,13 +343,13 @@ class RetrieveAssemblyProtocolsCommand(Command):
 
 
 class CaseCrudCommand(CrudCommand):
-    """Create and manage individual cases with typed content for a case type, subject, and data collection."""
+    """Manage cases (list/get/create/update/delete) with typed content tied to a case type, subject, and data collection."""
 
     MODEL_CLASS: ClassVar = model.Case
 
 
 class CaseDataCollectionLinkCrudCommand(CrudCommand):
-    """Attach or detach cases to additional data collections to widen or restrict sharing beyond their origin."""
+    """Manage links that associate cases with additional data collections to widen or restrict sharing beyond their origin."""
 
     MODEL_CLASS: ClassVar = model.CaseDataCollectionLink
 
@@ -345,37 +361,37 @@ class CaseSetCategoryCrudCommand(CrudCommand):
 
 
 class CaseSetCrudCommand(CrudCommand):
-    """Create and manage named groups of cases with case type, category, status, and data-collection context."""
+    """Manage case sets (list/get/create/update/delete) including type, category, status, and data-collection context."""
 
     MODEL_CLASS: ClassVar = model.CaseSet
 
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
-    """Share case sets into additional data collections for cross-group collaboration."""
+    """Manage links that share case sets into additional data collections for cross-group collaboration."""
 
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
 
 
 class CaseSetMemberCrudCommand(CrudCommand):
-    """Add or remove cases from a case set, optionally carrying per-member classification."""
+    """Manage membership of cases in a case set, including per-member classification when present."""
 
     MODEL_CLASS: ClassVar = model.CaseSetMember
 
 
 class CaseSetStatusCrudCommand(CrudCommand):
-    """Define lifecycle/status values for case sets (e.g., draft, active, closed)."""
+    """Maintain lifecycle/status values for case sets (e.g., draft, active, closed)."""
 
     MODEL_CLASS: ClassVar = model.CaseSetStatus
 
 
 class CaseTypeColCrudCommand(CrudCommand):
-    """Define the variables (columns) for a case type, including datatype, vocabularies/regions, and genetic-distance settings."""
+    """Manage case-type columns: datatype, vocab/region bindings, and genetic-distance settings."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeCol
 
 
 class CaseTypeColSetCrudCommand(CrudCommand):
-    """Bundle columns into sets used for read/write scopes and default column groupings."""
+    """Manage column sets used for read/write scopes and default column groupings."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeColSet
 
@@ -387,13 +403,13 @@ class CaseTypeColSetMemberCrudCommand(CrudCommand):
 
 
 class CaseTypeCrudCommand(CrudCommand):
-    """Define a case type (structure, metadata, and defaults) that all cases of that type must follow."""
+    """Manage case types—the structural and default definitions cases must follow."""
 
     MODEL_CLASS: ClassVar = model.CaseType
 
 
 class CaseTypeDimCrudCommand(CrudCommand):
-    """Define dimensions that group case-type columns (e.g., demographics, sample, sequencing)."""
+    """Manage dimensions that group case-type columns (e.g., demographics, sample, sequencing)."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeDim
 
@@ -405,42 +421,42 @@ class CaseTypeSetCategoryCrudCommand(CrudCommand):
 
 
 class CaseTypeSetCrudCommand(CrudCommand):
-    """Group related case types into reusable sets for access policies and presets."""
+    """Manage sets of related case types reused in access policies and presets."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSet
 
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
-    """Assign or remove case types within a case-type set."""
+    """Manage which case types belong to a case-type set."""
 
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
 class ColCrudCommand(CrudCommand):
-    """Manage reusable column definitions (code/label/type) that back case-type columns and reference vocabularies."""
+    """Manage reusable column definitions (code/label/type) referenced by case-type columns and vocabularies."""
 
     MODEL_CLASS: ClassVar = model.Col
 
 
 class DimCrudCommand(CrudCommand):
-    """Define column dimensions, including code prefixes and ordering, reused across case types."""
+    """Manage column dimensions, including code prefixes and ordering, reused across case types."""
 
     MODEL_CLASS: ClassVar = model.Dim
 
 
 class GeneticDistanceProtocolCrudCommand(CrudCommand):
-    """Register genetic distance protocols (e.g., TN93) available for sequence comparisons in phylogenetic analyses."""
+    """Manage genetic distance protocols (e.g., TN93) available for sequence comparisons in phylogenetic analyses."""
 
     MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):
-    """Register categories of phylogenetic algorithms and whether they require sequences vs. distance matrices."""
+    """Manage categories of phylogenetic algorithms and whether they require sequences vs. distance matrices."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithmClass
 
 
 class TreeAlgorithmCrudCommand(CrudCommand):
-    """Register specific phylogenetic tree algorithms linked to seqdb implementations and tuning parameters."""
+    """Manage specific phylogenetic tree algorithms linked to seqdb implementations and parameters."""
 
     MODEL_CLASS: ClassVar = model.TreeAlgorithm
