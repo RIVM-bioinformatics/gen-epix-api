@@ -322,80 +322,120 @@ class RetrieveAssemblyProtocolsCommand(Command):
 
 
 class CaseCrudCommand(CrudCommand):
+    """Create and manage individual cases with typed content for a case type, subject, and data collection."""
+
     MODEL_CLASS: ClassVar = model.Case
 
 
 class CaseDataCollectionLinkCrudCommand(CrudCommand):
+    """Attach or detach cases to additional data collections to widen or restrict sharing beyond their origin."""
+
     MODEL_CLASS: ClassVar = model.CaseDataCollectionLink
 
 
 class CaseSetCategoryCrudCommand(CrudCommand):
+    """Maintain the categories used to tag case sets (e.g., outbreak, surveillance, QA)."""
+
     MODEL_CLASS: ClassVar = model.CaseSetCategory
 
 
 class CaseSetCrudCommand(CrudCommand):
+    """Create and manage named groups of cases with case type, category, status, and data-collection context."""
+
     MODEL_CLASS: ClassVar = model.CaseSet
 
 
 class CaseSetDataCollectionLinkCrudCommand(CrudCommand):
+    """Share case sets into additional data collections for cross-group collaboration."""
+
     MODEL_CLASS: ClassVar = model.CaseSetDataCollectionLink
 
 
 class CaseSetMemberCrudCommand(CrudCommand):
+    """Add or remove cases from a case set, optionally carrying per-member classification."""
+
     MODEL_CLASS: ClassVar = model.CaseSetMember
 
 
 class CaseSetStatusCrudCommand(CrudCommand):
+    """Define lifecycle/status values for case sets (e.g., draft, active, closed)."""
+
     MODEL_CLASS: ClassVar = model.CaseSetStatus
 
 
 class CaseTypeColCrudCommand(CrudCommand):
+    """Define the variables (columns) for a case type, including datatype, vocabularies/regions, and genetic-distance settings."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeCol
 
 
 class CaseTypeColSetCrudCommand(CrudCommand):
+    """Bundle columns into sets used for read/write scopes and default column groupings."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeColSet
 
 
 class CaseTypeColSetMemberCrudCommand(CrudCommand):
+    """Manage which columns belong to a column set used in policies or UI presets."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeColSetMember
 
 
 class CaseTypeCrudCommand(CrudCommand):
+    """Define a case type (structure, metadata, and defaults) that all cases of that type must follow."""
+
     MODEL_CLASS: ClassVar = model.CaseType
 
 
 class CaseTypeDimCrudCommand(CrudCommand):
+    """Define dimensions that group case-type columns (e.g., demographics, sample, sequencing)."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeDim
 
 
 class CaseTypeSetCategoryCrudCommand(CrudCommand):
+    """Maintain categories used to organize case-type sets for policy scoping."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeSetCategory
 
 
 class CaseTypeSetCrudCommand(CrudCommand):
+    """Group related case types into reusable sets for access policies and presets."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeSet
 
 
 class CaseTypeSetMemberCrudCommand(CrudCommand):
+    """Assign or remove case types within a case-type set."""
+
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
 class ColCrudCommand(CrudCommand):
+    """Manage reusable column definitions (code/label/type) that back case-type columns and reference vocabularies."""
+
     MODEL_CLASS: ClassVar = model.Col
 
 
 class DimCrudCommand(CrudCommand):
+    """Define column dimensions, including code prefixes and ordering, reused across case types."""
+
     MODEL_CLASS: ClassVar = model.Dim
 
 
 class GeneticDistanceProtocolCrudCommand(CrudCommand):
+    """Register genetic distance protocols (e.g., TN93) available for sequence comparisons in phylogenetic analyses."""
+
     MODEL_CLASS: ClassVar = model.GeneticDistanceProtocol
 
 
 class TreeAlgorithmClassCrudCommand(CrudCommand):
+    """Register categories of phylogenetic algorithms and whether they require sequences vs. distance matrices."""
+
     MODEL_CLASS: ClassVar = model.TreeAlgorithmClass
 
 
 class TreeAlgorithmCrudCommand(CrudCommand):
+    """Register specific phylogenetic tree algorithms linked to seqdb implementations and tuning parameters."""
+
     MODEL_CLASS: ClassVar = model.TreeAlgorithm
