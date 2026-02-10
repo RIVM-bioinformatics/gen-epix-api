@@ -28,6 +28,8 @@ Supporting modules:
 - `COMMONDB` (port 8010): Shared resources (users, organizations, authentication). Handles fine-grained access control (ABAC/RBAC).
 - `FASTAPP`: Shared FastAPI utilities and common functionality across all services.
 
+Shared API surface across services: each service mounts the COMMONDB routers (auth, rbac, organization, system) via `create_fast_api` → `create_routers` → `fast_api.include_router(...)`, so `/api/v1/organization/*` and related endpoints are available on CASEDB, SEQDB, and OMOPDB.
+
 Project tree (trimmed to the main structure):
 ```
 .
