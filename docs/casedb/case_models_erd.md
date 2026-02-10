@@ -90,14 +90,32 @@ erDiagram
     TreeAlgorithm
 ```
 
-## 7. Access Control Policies
+## 7. Access Control Policies (ABAC)
 
 ```mermaid
 erDiagram
-    UserAccessCasePolicy
-    UserShareCasePolicy
-    OrganizationAccessCasePolicy
-    OrganizationShareCasePolicy
+    %% Top Level - Security Principals
+    Organization ||--o{ OrganizationAccessCasePolicy : "has access policies"
+    Organization ||--o{ OrganizationShareCasePolicy : "has share policies"
+    
+    User ||--o{ UserAccessCasePolicy : "has access policies"
+    User ||--o{ UserShareCasePolicy : "has share policies"
+    
+    %% Second Level - Protected Resources
+    DataCollection ||--o{ OrganizationAccessCasePolicy : "target collection"
+    DataCollection ||--o{ UserAccessCasePolicy : "target collection"
+    DataCollection }o--|| OrganizationShareCasePolicy : "source collection"
+    DataCollection }o--|| UserShareCasePolicy : "source collection"
+    
+    CaseTypeSet }o--|| OrganizationAccessCasePolicy : "applies to case types"
+    CaseTypeSet }o--|| OrganizationShareCasePolicy : "applies to case types"
+    CaseTypeSet }o--|| UserAccessCasePolicy : "applies to case types"
+    CaseTypeSet }o--|| UserShareCasePolicy : "applies to case types"
+    
+    CaseTypeColSet }o--|| OrganizationAccessCasePolicy : "read column set"
+    CaseTypeColSet }o--|| OrganizationAccessCasePolicy : "write column set"
+    CaseTypeColSet }o--|| UserAccessCasePolicy : "read column set"
+    CaseTypeColSet }o--|| UserAccessCasePolicy : "write column set"
 ```
 
 ## Key Model Groups
@@ -137,11 +155,19 @@ erDiagram
 - **GeneticDistanceProtocol** - Methods for calculating genetic distances
 - **TreeAlgorithm/TreeAlgorithmClass** - Phylogenetic tree algorithms
 
-### 🔐 **Security and Access Control**
-- **UserAccessCasePolicy** - Individual user access permissions
-- **UserShareCasePolicy** - User data sharing permissions  
-- **OrganizationAccessCasePolicy** - Organization-level access rules
-- **OrganizationShareCasePolicy** - Organization data sharing rules
+### 🔐 **Security and Access Control (ABAC)**
+- **OrganizationAccessCasePolicy** - Organization-level case access permissions
+- **OrganizationShareCasePolicy** - Organization-level case sharing permissions
+- **UserAccessCasePolicy** - Individual user case access permissions  
+- **UserShareCasePolicy** - Individual user case sharing permissions
+
+#### ABAC Policy Features:
+- **Granular Permissions**: add_case, remove_case, add_case_set, remove_case_set
+- **Field-Level Access**: read_case_type_col_set_id, write_case_type_col_set_id
+- **Data Collection Scoping**: Policies apply to specific data collections
+- **Case Type Filtering**: Policies target specific case type sets
+- **Privacy Controls**: is_private flag for sensitive data
+- **Data Sharing**: Cross-collection data sharing with from_data_collection_id
 
 ### 🔗 **Integration Points**
 - **SubjectIdentifier** - External system identifiers for subjects
