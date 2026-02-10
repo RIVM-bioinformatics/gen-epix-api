@@ -65,6 +65,9 @@ from gen_epix.casedb.services.case.crud_tree_algorithm import (
 from gen_epix.casedb.services.case.crud_tree_algorithm_class import (
     case_service_crud_tree_algorithm_class,
 )
+from gen_epix.casedb.services.case.get_similar_cases import (
+    case_service_get_similar_cases,
+)
 from gen_epix.casedb.services.case.read_association_with_valid_ids import (
     case_service_read_association_with_valid_ids,
 )
@@ -218,6 +221,9 @@ class CaseService(BaseCaseService):
         self, cmd: command.RetrievePhylogeneticTreeByCasesCommand
     ) -> model.PhylogeneticTree:
         return case_service_retrieve_phylogenetic_tree(self, cmd)
+
+    def get_similar_cases(self, cmd: command.GetSimilarCasesCommand) -> list[UUID]:
+        return case_service_get_similar_cases(self, cmd)
 
     def retrieve_genetic_sequence_fasta_by_case(
         self, cmd: command.RetrieveGeneticSequenceFastaByCaseCommand

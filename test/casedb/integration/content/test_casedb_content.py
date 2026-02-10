@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from typing import Iterable
@@ -333,6 +334,7 @@ class TestContent:
                 continue
 
             # Retrieve phylogenetic tree
+            found_similar_cases = False
             dist_case_type_cols = [
                 case_type_col
                 for case_type_col in complete_case_type.case_type_cols.values()
@@ -361,6 +363,25 @@ class TestContent:
                     assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
+
+                    # retrieve similar cases
+                    similar_case_ids: list[UUID] = app.handle(
+                        command.GetSimilarCasesCommand(
+                            user=root_user,
+                            case_type_id=complete_case_type.id,
+                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            case_ids=case_ids[0:5],
+                            max_distance=5,
+                        )
+                    )
+                    if len(similar_case_ids) > 0:
+                        found_similar_cases = True
+        
+            if found_similar_cases:
+                assert len(dist_case_type_cols) >= 1
+                # assert that any item in similar_case_ids is a UUID
+                for similar_case_id in similar_case_ids:
+                    assert isinstance(similar_case_id, UUID)
 
             # Retrieve genetic sequence
             genetic_sequence_case_type_cols = [

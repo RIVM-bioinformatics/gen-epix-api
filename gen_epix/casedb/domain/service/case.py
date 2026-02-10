@@ -169,6 +169,7 @@ class BaseCaseService(BaseService):
             command.RetrievePhylogeneticTreeByCasesCommand,
             self.retrieve_phylogenetic_tree,
         )
+        f(command.GetSimilarCasesCommand, self.get_similar_cases)
         f(
             command.RetrieveGeneticSequenceFastaByCaseCommand,
             self.retrieve_genetic_sequence_fasta_by_case,
@@ -510,6 +511,13 @@ class BaseCaseService(BaseService):
         self,
         cmd: command.RetrievePhylogeneticTreeByCasesCommand,
     ) -> model.PhylogeneticTree:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_similar_cases(
+        self,
+        cmd: command.GetSimilarCasesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()
 
     @abc.abstractmethod

@@ -225,6 +225,27 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
 
 
+class GetSimilarCasesCommand(Command):
+    """
+    Retrieve cases that are (genetically) similar to a given list of case_ids, 
+    based on the genetic distance values in a specified genetic distance case type column and a maximum distance threshold.
+    """
+    case_type_id: UUID = Field(
+        description="The case type ID that all the cases must belong to."
+    )
+
+    max_distance: float = Field(
+        description="The maximum genetic distance for cases to be considered similar.",
+        default=5,
+    )
+    case_ids: list[UUID] = Field(
+        description="The IDs of cases to get the similar cases for.",
+    )
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The case type column ID to use for determining the genetic distance between cases."
+    )
+
+
 class RetrieveGeneticSequenceFastaByCaseCommand(Command):
     """
     Retrieve a set of genetic sequences in FASTA format based on a set of case IDs and a genetic

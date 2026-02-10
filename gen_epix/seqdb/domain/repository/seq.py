@@ -65,4 +65,4 @@ class BaseSeqRepository(BaseRepository):
                 ) from e
             for profile_id, distance in distance_dict.items():
                 if distance <= max_distance:
-                    matching_profile_ids.add(profile_id)
+                    matching_profile_ids.add(UUID(profile_id))
