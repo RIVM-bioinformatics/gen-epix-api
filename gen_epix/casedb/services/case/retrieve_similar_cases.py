@@ -73,7 +73,7 @@ def case_service_retrieve_similar_cases(
             case_abac,
             enum.CaseRight.READ_CASE,
             case_type_id,
-            case_ids=case_ids,
+            case_ids=None,
             filter_content=True,
         )
 
