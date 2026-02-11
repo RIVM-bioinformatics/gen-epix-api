@@ -501,12 +501,12 @@ class SeqService(BaseSeqService):
         newick = f"({newick}"
         return newick
 
-    def get_similar_profiles(
+    def retrieve_similar_profiles(
         self,
-        cmd: command.GetSimilarProfilesCommand,
+        cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
         with self.repository.uow() as uow:
-            profile_ids: list[UUID] = self.repository.get_similar_profiles(
+            profile_ids: list[UUID] = self.repository.retrieve_similar_profiles(
                 uow,
                 cmd.seq_distance_protocol_id,
                 cmd.profile_ids,

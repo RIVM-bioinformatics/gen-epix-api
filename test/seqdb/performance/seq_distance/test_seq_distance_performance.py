@@ -162,7 +162,7 @@ def ensure_datasets_exist_and_valid() -> None:
         ), f"SQLite file {sqlite_path} missing or empty"
 
 
-class SeqDistancePerformanceSetup:
+class BaseSeqDistancePerformance:
 
     @pytest.fixture(scope="module", autouse=True)
     def setup(self, env: Env) -> None:
@@ -195,7 +195,7 @@ class SeqDistancePerformanceSetup:
         print("Demo data for 100, 200, 500 created and persisted")
 
 
-class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
+class TestSeqDistancePerformance(BaseSeqDistancePerformance):
 
     dict_repositories: list[TestRepositoryPerformance] = []
     sa_repositories: list[TestRepositoryPerformance] = []
@@ -239,7 +239,7 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
         "repository_type",
         [seqdb_enum.RepositoryType.DICT, seqdb_enum.RepositoryType.SA_SQLITE],
     )
-    def test_get_similar_profiles_happy_flow(
+    def test_retrieve_similar_profiles_happy_flow(
         self, env: Env, repository_type: seqdb_enum.RepositoryType
     ) -> None:
         test_repositories_performance: list[TestRepositoryPerformance]
@@ -276,7 +276,7 @@ class TestSeqDistancePerformance(SeqDistancePerformanceSetup):
             start = perf_counter()
             with test_repository_performance.repository.uow() as uow:
                 result_ids = (
-                    test_repository_performance.repository.get_similar_profiles(
+                    test_repository_performance.repository.retrieve_similar_profiles(
                         uow,
                         protocol_id,  # type: ignore[arg-type]
                         profile_ids,

@@ -110,16 +110,18 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     )
 
 
-class GetSimilarCasesRequestBody(PydanticBaseModel):
+class RetrieveSimilarCasesRequestBody(PydanticBaseModel):
     case_type_id: UUID = copy_model_field(
-        command.GetSimilarCasesCommand, "case_type_id"
+        command.RetrieveSimilarCasesCommand, "case_type_id"
     )
     max_distance: float = copy_model_field(
-        command.GetSimilarCasesCommand, "max_distance"
+        command.RetrieveSimilarCasesCommand, "max_distance"
     )
-    case_ids: list[UUID] = copy_model_field(command.GetSimilarCasesCommand, "case_ids")
+    case_ids: list[UUID] = copy_model_field(
+        command.RetrieveSimilarCasesCommand, "case_ids"
+    )
     genetic_distance_case_type_col_id: UUID = copy_model_field(
-        command.GetSimilarCasesCommand, "genetic_distance_case_type_col_id"
+        command.RetrieveSimilarCasesCommand, "genetic_distance_case_type_col_id"
     )
 
 
@@ -525,13 +527,13 @@ def create_case_endpoints(
         )
 
     @router.post(
-        "/get_similar_cases",
-        operation_id="get__similar_cases",
-        name="Get similar cases",
-        description=command.GetSimilarCasesCommand.__doc__,
+        "/retrieve/similar_cases",
+        operation_id="retrieve__similar_cases",
+        name="Retrieve similar cases",
+        description=command.RetrieveSimilarCasesCommand.__doc__,
     )
-    async def get__similar_cases(
-        user: registered_user_dependency, request_body: GetSimilarCasesRequestBody  # type: ignore
+    async def retrieve__similar_cases(
+        user: registered_user_dependency, request_body: RetrieveSimilarCasesRequestBody  # type: ignore
     ) -> list[UUID]:
         return cast(
             list[UUID],
@@ -540,7 +542,7 @@ def create_case_endpoints(
                 user=user,
                 exception_code="e4c2e1b2",
                 input_handle_exception=handle_exception,
-                input_command=command.GetSimilarCasesCommand(
+                input_command=command.RetrieveSimilarCasesCommand(
                     user=user,
                     case_type_id=request_body.case_type_id,
                     max_distance=request_body.max_distance,

@@ -21,7 +21,7 @@ class SeqdbService(BaseSeqdbService):
 
     COMMAND_MAP: dict[type[command.Command], type[seqdb_command.Command]] = {
         command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
-        command.GetSimilarCasesCommand: seqdb_command.GetSimilarProfilesCommand,
+        command.RetrieveSimilarCasesCommand: seqdb_command.RetrieveSimilarProfilesCommand,
     }
     TREE_ALGORITHM_MAP = {
         x: y
@@ -145,10 +145,10 @@ class SeqdbService(BaseSeqdbService):
         file_id: UUID = self.seqdb_app.handle(cmd)
         cmd.user = user
         return file_id
-    
-    def get_similar_profiles(
+
+    def retrieve_similar_profiles(
         self,
-        cmd: seqdb_command.GetSimilarProfilesCommand,
+        cmd: seqdb_command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
         user = cmd.user
         cmd.user = self.seqdb_user

@@ -24,7 +24,7 @@ class RetrievePhylogeneticTreeRequestBody(PydanticBaseModel):
     leaf_codes: list[str] | None = None
 
 
-class GetSimilarProfilesRequestBody(PydanticBaseModel):
+class RetrieveSimilarProfilesRequestBody(PydanticBaseModel):
     seq_distance_protocol_id: UUID
     profile_ids: list[UUID]
     max_distance: float
@@ -81,18 +81,18 @@ def create_seq_endpoints(
         return retval
 
     @router.post(
-        "/get_similar_profiles",
-        operation_id="get_similar_profiles",
-        name="GetSimilarProfiles",
-        description=command.GetSimilarProfilesCommand.__doc__,
+        "/retrieve/similar_profiles",
+        operation_id="retrieve_similar_profiles",
+        name="RetrieveSimilarProfiles",
+        description=command.RetrieveSimilarProfilesCommand.__doc__,
     )
-    async def get_similar_profiles(
+    async def retrieve_similar_profiles(
         user: registered_user_dependency,
-        request_body: GetSimilarProfilesRequestBody,  # type: ignore
+        request_body: RetrieveSimilarProfilesRequestBody,  # type: ignore
     ) -> list[UUID]:
         try:
             retval: list[UUID] = app.handle(
-                command.GetSimilarProfilesCommand(
+                command.RetrieveSimilarProfilesCommand(
                     user=user,
                     seq_distance_protocol_id=request_body.seq_distance_protocol_id,
                     profile_ids=request_body.profile_ids,

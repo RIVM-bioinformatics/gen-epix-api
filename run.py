@@ -603,7 +603,6 @@ class Run:
             ]
         )
 
-
     def test_seqdb_integration(self) -> None:
         import pytest
 

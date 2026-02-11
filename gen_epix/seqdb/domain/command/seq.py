@@ -55,6 +55,15 @@ class RetrieveMultipleAlignmentCommand(Command):
 
 
 class RetrievePhylogeneticTreeCommand(Command):
+    """
+    Retrieve a phylogenetic tree based on the given sequence distance protocol, tree
+    algorithm, and query profile IDs. The returned tree is expected to contain
+    the query profiles as well as any additional profiles that are within the maximum
+    distance threshold specified in the sequence distance protocol for at least one
+    of the query profiles. The leaf names in the tree correspond to the profile IDs,
+    but can optionally be replaced with custom leaf names provided in the command
+    (e.g. for better readability of the tree).
+    """
 
     seq_distance_protocol_id: UUID = Field(
         description="The ID of the sequence distance protocol to use for generating the distances"
@@ -101,12 +110,18 @@ class RetrieveSeqFastaCommand(Command):
     )
 
 
-class GetSimilarProfilesCommand(Command):
+class RetrieveSimilarProfilesCommand(Command):
+    """
+    Retrieve all profiles that match at least one of the given query profiles within
+    the given maximum distance and based on the given seq distance protocol. The
+    returned profiles do not contain the query profiles.
+    """
+
     seq_distance_protocol_id: UUID = Field(
         description="ID of the sequence distance protocol to use for similarity search.",
     )
     profile_ids: list[UUID] = Field(
-        description="List of profile IDs to find similar profiles for.",
+        description="List of query profile IDs to find similar profiles for.",
     )
     max_distance: float = Field(
         description="Maximum distance threshold for considering profiles as similar.",
