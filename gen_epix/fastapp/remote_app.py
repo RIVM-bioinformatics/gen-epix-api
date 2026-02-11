@@ -248,18 +248,14 @@ class RemoteApp(App):
             match cmd.operation:
                 case CrudOperation.READ_ALL:
                     if cmd.query_filter:
-                        if cmd.props.get("return_id", False):
-                            query_suffix = query_route_suffix.rstrip("/")
-                            ids_suffix = (
-                                ids_route_suffix
-                                if ids_route_suffix.startswith("/")
-                                else ("/" + ids_route_suffix)
-                            )
-                            url = base_route + query_suffix + ids_suffix
-                        else:
-                            url = base_route + query_route_suffix
                         response = client.post(
-                            url,
+                            base_route
+                            + query_route_suffix
+                            + (
+                                "/" + ids_route_suffix
+                                if cmd.props.get("return_id", False)
+                                else ""
+                            ),
                             json=json.loads(cmd.query_filter.model_dump_json()),
                             headers=headers,
                         )
