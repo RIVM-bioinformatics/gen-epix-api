@@ -82,11 +82,11 @@ def create_seq_endpoints(
 
     @router.post(
         "/retrieve/similar_profiles",
-        operation_id="retrieve_similar_profiles",
+        operation_id="retrieve__similar_profiles",
         name="RetrieveSimilarProfiles",
         description=command.RetrieveSimilarProfilesCommand.__doc__,
     )
-    async def retrieve_similar_profiles(
+    async def retrieve__similar_profiles(
         user: registered_user_dependency,
         request_body: RetrieveSimilarProfilesRequestBody,  # type: ignore
     ) -> list[UUID]:
