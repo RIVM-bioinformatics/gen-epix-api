@@ -81,8 +81,11 @@ def case_service_retrieve_similar_cases(
         case_id_profile_id_map: dict[UUID, str | None] = {
             x.id: x.content.get(dist_case_type_col_id) for x in all_cases
         }
+        case_ids_set = set(case_ids)
         profile_ids: list[UUID] = [
-            UUID(x) for x in case_id_profile_id_map.values() if x is not None
+            UUID(profile_id)
+            for case_id, profile_id in case_id_profile_id_map.items()
+            if profile_id is not None and case_id in case_ids_set
         ]
 
         # Get similar profile ids from seqdb, expected not to include the query profile ids
