@@ -1,4 +1,4 @@
-# python 3.14
+# python 3.13.5
 
 # application server
 fastapi[standard]==0.128.0
