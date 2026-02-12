@@ -13,7 +13,7 @@ from pydantic import (
 )
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.util import copy_model_field

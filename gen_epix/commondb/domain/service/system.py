@@ -1,7 +1,7 @@
 import abc
 
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.domain.enum import ServiceType
+from gen_epix.commondb.enum import ServiceType
 from gen_epix.commondb.domain.repository.system import BaseSystemRepository
 from gen_epix.fastapp import BaseService
 

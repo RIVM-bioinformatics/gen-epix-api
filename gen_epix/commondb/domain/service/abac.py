@@ -2,7 +2,7 @@ import abc
 import uuid
 
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.domain.enum import ServiceType
+from gen_epix.commondb.enum import ServiceType
 from gen_epix.commondb.domain.repository import BaseAbacRepository
 from gen_epix.fastapp import BaseService
 from gen_epix.fastapp.model import Command

@@ -21,7 +21,7 @@ from gen_epix.casedb.services.case.retrieve_case import (
     case_service_retrieve_cases_by_id,
     case_service_retrieve_cases_by_query,
 )
-from gen_epix.commondb.domain.enum import Role
+from gen_epix.commondb.enum import Role
 from gen_epix.filter.composite import TypedCompositeFilter
 from gen_epix.filter.enum import FilterType, LogicalOperator
 from gen_epix.filter.exists import TypedExistsFilter

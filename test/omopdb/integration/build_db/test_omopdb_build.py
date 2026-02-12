@@ -15,7 +15,7 @@ from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
 
 import pytest
 
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.enum import AppType
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.omopdb.domain import enum
 

@@ -18,8 +18,8 @@ import pydantic
 import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
-from gen_epix.commondb.domain.enum import Role as CommonRole
-from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
+from gen_epix.commondb.enum import Role as CommonRole
+from gen_epix.commondb.enum import RoleSet as CommonRoleSet
 
 
 @pytest.mark.scenario_ids(

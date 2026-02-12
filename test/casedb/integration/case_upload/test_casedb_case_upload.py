@@ -18,7 +18,7 @@ import pytest
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain import model as commondb_model
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.enum import AppType
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.env import App
 from gen_epix.commondb.util import get_app_cfgs

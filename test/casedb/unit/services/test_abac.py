@@ -26,7 +26,7 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.casedb.policies.case_abac_policy import CaseAbacPolicy
 from gen_epix.casedb.services.abac import AbacService
-from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
+from gen_epix.commondb.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.domain.model.organization import User as OrgUser
 from gen_epix.fastapp import EventTiming
 

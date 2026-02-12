@@ -4,7 +4,7 @@ from uuid import UUID
 import gen_epix.fastapp.model
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, exc, model
-from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
+from gen_epix.commondb.enum import OnExistsUploadAction, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,

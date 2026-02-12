@@ -3,7 +3,7 @@ from typing import Any
 from uuid import UUID
 
 import gen_epix.commondb.domain.model.upload
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation

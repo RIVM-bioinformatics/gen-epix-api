@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import (
+from gen_epix.commondb.enum import (
     AppType,
     AppTypeSet,
     DevIdpConfig,

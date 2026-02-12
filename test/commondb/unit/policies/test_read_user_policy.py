@@ -20,7 +20,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.commondb.domain import command, exc
-from gen_epix.commondb.domain.enum import Role, RoleSet
+from gen_epix.commondb.enum import Role, RoleSet
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.commondb.policies.read_user_policy import ReadUserPolicy
 from gen_epix.fastapp.enum import CrudOperation

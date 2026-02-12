@@ -6,7 +6,7 @@ from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain import enum as enum
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain.service import BaseSeqdbService
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.enum import AppType
 from gen_epix.commondb.services import CommondbRemoteApp
 from gen_epix.fastapp import App, CrudCommand, Model
 from gen_epix.fastapp.enum import CrudOperation

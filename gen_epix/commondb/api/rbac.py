@@ -4,7 +4,7 @@ from typing import Any, NoReturn
 from fastapi import APIRouter, FastAPI
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api import CrudEndpointGenerator
 

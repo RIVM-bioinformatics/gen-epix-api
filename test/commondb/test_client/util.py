@@ -6,7 +6,7 @@ from typing import Any
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.env import AppComposer
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient

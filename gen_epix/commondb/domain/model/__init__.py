@@ -1,6 +1,6 @@
 # pylint: disable=useless-import-alias
 import gen_epix.fastapp as fastapp
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
@@ -53,10 +53,10 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult as ParentUploadResult,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
-from gen_epix.commondb.util import (
+from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps
+from gen_epix.fastapp.model_util import (
     complete_stored_model_field_props as complete_stored_model_field_props,
 )
-from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 

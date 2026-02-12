@@ -3,7 +3,7 @@
 
 from enum import Enum
 
-from gen_epix.commondb.domain.enum import RoleSet as RoleSet
+from gen_epix.commondb.enum import RoleSet as RoleSet
 
 
 class ServiceType(Enum):

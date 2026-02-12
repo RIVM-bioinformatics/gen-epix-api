@@ -17,7 +17,7 @@ from gen_epix.casedb.domain import model
 from gen_epix.casedb.env import AppComposer as CasedbAppComposer
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.enum import AppType
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.api.router import create_routers as seqdb_create_routers
 from gen_epix.seqdb.domain import enum as seqdb_enum

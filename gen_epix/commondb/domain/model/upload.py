@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from gen_epix.commondb.domain.enum import IdentifierType, UploadStatus, UploadStatusSet
+from gen_epix.commondb.enum import IdentifierType, UploadStatus, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import (

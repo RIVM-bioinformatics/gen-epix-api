@@ -87,7 +87,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (
+from gen_epix.commondb.enum import (
     IdentifierType,
     OnExistsUploadAction,
     Role,

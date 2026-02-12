@@ -2,7 +2,7 @@ from enum import Enum
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command
-from gen_epix.commondb.domain.enum import Role, RoleSet
+from gen_epix.commondb.enum import Role, RoleSet
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.enum import PermissionType
 from gen_epix.fastapp.services.rbac import BaseRbacService

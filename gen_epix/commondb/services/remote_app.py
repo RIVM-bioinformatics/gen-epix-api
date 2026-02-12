@@ -7,7 +7,8 @@ from typing import Any
 import jwt
 
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import enum, model
+from gen_epix.commondb import enum
+from gen_epix.commondb.domain import model
 from gen_epix.fastapp import HttpProtocol, RemoteApp, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain

@@ -1,6 +1,6 @@
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.commondb.domain.command.abac import (
     OrganizationAdminPolicyCrudCommand as OrganizationAdminPolicyCrudCommand,
 )

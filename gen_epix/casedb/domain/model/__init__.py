@@ -80,7 +80,7 @@ from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequenc
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
-from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb import enum as common_enum
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
@@ -110,8 +110,8 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
-from gen_epix.commondb.util import complete_stored_model_field_props
 from gen_epix.fastapp.model import ModelFieldProps
+from gen_epix.fastapp.model_util import complete_stored_model_field_props
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
 from gen_epix.util import add_parent_class_docs

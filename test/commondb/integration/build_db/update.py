@@ -8,8 +8,8 @@ import pydantic
 import pytest
 
 from gen_epix.commondb.domain import exc, model
-from gen_epix.commondb.domain.enum import Role as CommonRole
-from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
+from gen_epix.commondb.enum import Role as CommonRole
+from gen_epix.commondb.enum import RoleSet as CommonRoleSet
 from gen_epix.commondb.test.test_client import TestClient as Env
 
 

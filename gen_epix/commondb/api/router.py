@@ -10,7 +10,7 @@ from gen_epix.commondb.api.organization import (
 )
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
-from gen_epix.commondb.domain import enum
+from gen_epix.commondb import enum
 from gen_epix.fastapp import App
 
 

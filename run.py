@@ -3,7 +3,7 @@ from pathlib import Path
 
 import fire
 
-from gen_epix.commondb.domain.enum import (
+from gen_epix.commondb.enum import (
     AppType,
     AppTypeSet,
     DevIdpConfig,

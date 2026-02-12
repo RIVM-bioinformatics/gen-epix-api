@@ -163,7 +163,7 @@ from gen_epix.casedb.domain.command.subject import (
 from gen_epix.casedb.domain.command.subject import (
     SubjectIdentifierCrudCommand as SubjectIdentifierCrudCommand,
 )
-from gen_epix.commondb.domain import enum as common_enum
+from gen_epix.commondb import enum as common_enum
 from gen_epix.commondb.domain.command import (
     COMMANDS_BY_SERVICE_TYPE as _COMMON_COMMANDS_BY_SERVICE_TYPE,
 )

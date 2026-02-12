@@ -13,7 +13,7 @@ from cachetools import LRUCache, cached
 
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.enum import RoleSet
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.enum import AppType
 from gen_epix.commondb.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum

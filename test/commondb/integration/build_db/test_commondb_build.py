@@ -15,8 +15,8 @@ from test.commondb.test_client.util import get_test_client as commondb_get_test_
 
 import pytest
 
-from gen_epix.commondb.domain import enum
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb import enum
+from gen_epix.commondb.enum import AppType
 from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.commondb.util import get_app_cfgs
 

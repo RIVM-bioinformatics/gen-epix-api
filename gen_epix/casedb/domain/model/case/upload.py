@@ -6,7 +6,7 @@ from pydantic import Field, computed_field, field_serializer, model_validator
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.operational_data import Case
-from gen_epix.commondb.domain.enum import IdentifierType
+from gen_epix.commondb.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model

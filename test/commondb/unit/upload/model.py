@@ -6,7 +6,7 @@ from pydantic import Field, model_validator
 import gen_epix.fastapp.model
 from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import model as commondb_model
-from gen_epix.commondb.domain.enum import IdentifierType
+from gen_epix.commondb.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader

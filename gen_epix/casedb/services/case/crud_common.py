@@ -10,7 +10,7 @@ import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
+from gen_epix.commondb.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.filter import CompositeFilter, Filter, LogicalOperator
