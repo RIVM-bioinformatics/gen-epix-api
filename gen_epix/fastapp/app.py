@@ -328,7 +328,7 @@ class App:
 
     def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
         msg = self.create_log_message(
-            "5ab6c248", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
+            "14a19691", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
         )
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(msg)
