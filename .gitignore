@@ -168,3 +168,6 @@ test/output/*
 logs/*
 
 cert/*.pem
+
+# Macbook specific files
+.DS_Store
