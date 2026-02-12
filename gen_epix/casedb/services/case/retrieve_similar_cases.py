@@ -108,17 +108,4 @@ def case_service_retrieve_similar_cases(
             if x in profile_id_case_id_map
         ]
 
-        # TODO: Does this code do anythin more than the code above?
-        # # Normalize result ids and include seed profile_ids; map back to case ids
-        # unique_similar_profile_ids: set[UUID] = {
-        #     UUID(str(x)) for x in similar_profile_ids
-        # }
-        # norm_seed_profile_ids: set[UUID] = {UUID(str(x)) for x in profile_ids}
-        # lookup_ids: set[UUID] = unique_similar_profile_ids | norm_seed_profile_ids
-        # similar_case_ids: list[UUID] = [
-        #     case_id
-        #     for case_id, profile_id in case_id_profile_id_map.items()
-        #     if profile_id in lookup_ids
-        # ]
-
     return similar_case_ids

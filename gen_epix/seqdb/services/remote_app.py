@@ -73,19 +73,12 @@ class SeqdbRemoteApp(CommondbRemoteApp):
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
 
-        # Create request body matching seqdb API expectations
-
         request_body = RetrievePhylogeneticTreeRequestBody(
             seq_distance_protocol_id=cmd.seq_distance_protocol_id,
             tree_algorithm=cmd.tree_algorithm,
             profile_ids=cmd.profile_ids,
             leaf_codes=cmd.leaf_names,
         )
-
-        # print(f"DEBUG: Host is {self.host}")
-        # print(f"DEBUG: Port is {self.port}")
-        # print(f"DEBUG: Protocol is {self.protocol}")
-        # print(f"DEBUG: Making request to {route} with ssl_context: {self.ssl_context}")
 
         with httpx.Client(verify=self.ssl_context) as client:
             response = client.post(
@@ -156,12 +149,6 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     ) -> list[UUID]:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
-
-        # print("DEBUG CODE: 0xC2B2B6B9E1")
-        # print(f"DEBUG: Host is {self.host}")
-        # print(f"DEBUG: Port is {self.port}")
-        # print(f"DEBUG: Protocol is {self.protocol}")
-        # print(f"DEBUG: Making request to {route} with ssl_context: {self.ssl_context}")
 
         request_body = RetrieveSimilarProfilesRequestBody(
             seq_distance_protocol_id=cmd.seq_distance_protocol_id,
