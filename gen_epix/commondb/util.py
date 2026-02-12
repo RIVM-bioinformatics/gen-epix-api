@@ -437,6 +437,8 @@ def register_domain_entities(
             if isinstance(service_type, Enum)
             else str(service_type)
         )
+        if domain.name:
+            schema_name = f"{domain.name.lower()}_{schema_name}"
         # Register the models
         for i, model_class in enumerate(
             sorted_models_by_service_type.get(service_type, [])
