@@ -9,10 +9,11 @@ from typing import Any
 from dynaconf import Dynaconf
 
 from gen_epix import fastapp
+from gen_epix.commondb import enum
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import AppCfg
-from gen_epix.commondb.domain import DOMAIN, command, enum, model
+from gen_epix.commondb.domain import DOMAIN, command, model
 from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.services import AuthService, RbacService

@@ -4,8 +4,9 @@ from collections.abc import Hashable
 from enum import Enum
 from typing import Any
 
+from gen_epix.commondb import enum
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.policy.permission import NO_RBAC_PERMISSIONS
 from gen_epix.commondb.domain.service import BaseRbacService
 from gen_epix.fastapp import Command, Permission

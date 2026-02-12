@@ -3,7 +3,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain import command, enum
+from gen_epix.commondb import enum
+from gen_epix.commondb.domain import command
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.commondb.policies.update_user_policy import UpdateUserPolicy
 

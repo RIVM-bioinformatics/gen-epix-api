@@ -1,7 +1,8 @@
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import declarative_mixin
 
-from gen_epix.commondb.domain import DOMAIN, enum, model
+from gen_epix.commondb import enum
+from gen_epix.commondb.domain import DOMAIN, model
 from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
 from gen_epix.commondb.repositories.sa_model.util import (
     create_mapped_column,

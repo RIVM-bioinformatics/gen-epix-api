@@ -1,5 +1,6 @@
 # pylint: disable=useless-import-alias
-from gen_epix.commondb.domain import DOMAIN, enum, model
+from gen_epix.commondb import enum
+from gen_epix.commondb.domain import DOMAIN, model
 from gen_epix.commondb.repositories.sa_model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )

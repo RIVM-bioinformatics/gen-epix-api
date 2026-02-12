@@ -5,8 +5,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from gen_epix.commondb import enum
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.commondb.policies.read_organization_results_only_policy import (
     ReadOrganizationResultsOnlyPolicy,

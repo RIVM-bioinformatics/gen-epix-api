@@ -5,7 +5,8 @@ from typing import TypeVar, overload
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb import enum
+from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import BaseUserManager
 from gen_epix.fastapp.services.rbac import BaseRbacService
 

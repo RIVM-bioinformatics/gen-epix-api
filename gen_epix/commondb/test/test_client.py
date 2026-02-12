@@ -8,10 +8,11 @@ from time import sleep
 from typing import Any, TypeVar, cast
 from uuid import UUID
 
+from gen_epix.commondb import enum
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.base_env import BaseAppComposer
 from gen_epix.commondb.config import BaseAppCfg
-from gen_epix.commondb.domain import command, enum, model
+from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.test.endpoint_test_client import EndpointTestClient
 from gen_epix.commondb.test.util import set_log_level
 from gen_epix.fastapp.enum import CrudOperation
