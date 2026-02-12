@@ -98,7 +98,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
             rows: list[tuple[datetime.datetime, UUID, int, bool]] = [
                 (
                     x.case_date,
-                    x.id,  # type:ignore[misc]
+                    x.id,  # type: ignore[misc]
                     data_collection_time_unit_index_map[
                         x.created_in_data_collection_id
                     ],
@@ -123,7 +123,7 @@ class CaseDictRepository(DictRepository, BaseCaseRepository):
                         if has_private_data_collections
                         else False
                     ),
-                )  # type:ignore[misc]
+                )  # type: ignore[misc]
                 for x in case_map.values()
             ]
 

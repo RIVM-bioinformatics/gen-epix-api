@@ -169,15 +169,13 @@ class UserManager(BaseUserManager):
                 )  # type: ignore[assignment]
                 root_user.email = get_email_from_claims(claims)
                 root_user.name = self.get_user_name_from_claims(claims)
-                user = (
-                    self._organization_service.repository.crud(  # type: ignore[assignment]
-                        uow,
-                        root_user.id,
-                        self._user_class,
-                        root_user,
-                        None,
-                        CrudOperation.CREATE_ONE,
-                    )
+                user = self._organization_service.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    root_user.id,
+                    self._user_class,
+                    root_user,
+                    None,
+                    CrudOperation.CREATE_ONE,
                 )
 
         return user
