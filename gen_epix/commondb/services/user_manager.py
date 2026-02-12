@@ -147,33 +147,38 @@ class UserManager(BaseUserManager):
                     CrudOperation.CREATE_ONE,
                 )
 
-            # Create root user
+            # Create root user (or retrieve if already exists)
+            user_key = claims.get(self._key_claim)
             is_existing_root_user = (
                 self._organization_service.repository.is_existing_user_by_key(
-                    uow, claims.get(self._key_claim)
+                    uow, user_key
                 )
             )
             if is_existing_root_user:
-                raise exc.InitializationServiceError(
-                    "Root user with the specified key already exists"
+                # Root user already exists (e.g., from demo data), retrieve it
+                user: model.User = (
+                    self._organization_service.repository.retrieve_user_by_key(
+                        uow, user_key
+                    )
                 )
-            # Create and store root user
-            root_user = self._root_user.model_copy()
-            root_user.id = (
-                self._organization_service.generate_id()
-            )  # type: ignore[assignment]
-            root_user.email = get_email_from_claims(claims)
-            root_user.name = self.get_user_name_from_claims(claims)
-            user: model.User = (
-                self._organization_service.repository.crud(  # type: ignore[assignment]
-                    uow,
-                    root_user.id,
-                    self._user_class,
-                    root_user,
-                    None,
-                    CrudOperation.CREATE_ONE,
+            else:
+                # Create and store root user
+                root_user = self._root_user.model_copy()
+                root_user.id = (
+                    self._organization_service.generate_id()
+                )  # type: ignore[assignment]
+                root_user.email = get_email_from_claims(claims)
+                root_user.name = self.get_user_name_from_claims(claims)
+                user = (
+                    self._organization_service.repository.crud(  # type: ignore[assignment]
+                        uow,
+                        root_user.id,
+                        self._user_class,
+                        root_user,
+                        None,
+                        CrudOperation.CREATE_ONE,
+                    )
                 )
-            )
 
         return user
 
