@@ -6,8 +6,8 @@ This document contains simplified ERDs showing different functional areas of the
 
 ```mermaid
 erDiagram
-    Subject ||--o{ Case : "has cases"
     Subject ||--o{ SubjectIdentifier : "has identifiers"
+    Case }o--|| Subject : "belongs to subject"
     
     Case }o--|| CaseType : "belongs to type"
     Case ||--o{ CaseDataCollectionLink : "linked to collections"
@@ -28,20 +28,25 @@ erDiagram
     CaseType }o--|| Disease : "associated with disease"
     CaseType }o--|| EtiologicalAgent : "caused by agent"
     
+    CaseType ||--o{ CaseTypeCol : "has columns"
     CaseType ||--o{ CaseTypeDim : "has dimensions"
-    CaseTypeDim }o--|| Dim : "dimension definition"
     
-    Dim ||--o{ Col : "has columns"
+    CaseTypeCol }o--|| CaseTypeDim : "belongs to dimension"
+    CaseTypeCol }o--|| Col : "references column definition"
+    CaseTypeDim }o--|| Dim : "references dimension definition"
+    
+    Dim ||--o{ Col : "contains columns"
     Col }o--|| ConceptSet : "references concept set"
     Col }o--|| RegionSet : "references region set"
     Col }o--|| GeneticDistanceProtocol : "uses genetic distance"
     
-    CaseType ||--o{ CaseTypeSet : "member of type sets"
+    CaseType ||--o{ CaseTypeSetMember : "member of type sets"
+    CaseTypeSetMember }o--|| CaseTypeSet : "belongs to set"
     CaseTypeSet }o--|| CaseTypeSetCategory : "categorized by"
     
     CaseType ||--o{ CaseTypeColSet : "has column sets"
-    CaseTypeColSet ||--o{ CaseTypeColSetMember : "contains columns"
-    CaseTypeColSetMember }o--|| Col : "references column"
+    CaseTypeColSet ||--o{ CaseTypeColSetMember : "contains column members"
+    CaseTypeColSetMember }o--|| CaseTypeCol : "references type column"
 ```
 
 ## 3. Disease and Etiology
@@ -51,18 +56,18 @@ erDiagram
     Disease ||--o{ Etiology : "has etiologies"
     EtiologicalAgent ||--o{ Etiology : "causes diseases"
     
-    Disease ||--o{ CaseType : "associated with case types"
-    EtiologicalAgent ||--o{ CaseType : "associated with case types"
+    CaseType }o--|| Disease : "associated with disease"
+    CaseType }o--|| EtiologicalAgent : "caused by agent"
 ```
 
 ## 4. Ontology and Concepts
 
 ```mermaid
 erDiagram
-    ConceptSet ||--o{ Concept : "contains concepts"
+    Concept }o--|| ConceptSet : "belongs to concept set"
     
-    Concept ||--o{ ConceptRelation : "source concept"
-    Concept ||--o{ ConceptRelation : "target concept"
+    Concept ||--o{ ConceptRelation : "from concept"
+    Concept ||--o{ ConceptRelation : "to concept"
     
     ConceptSet ||--o{ Col : "used in columns"
 ```
@@ -71,11 +76,11 @@ erDiagram
 
 ```mermaid
 erDiagram
-    RegionSet ||--o{ Region : "contains regions"
+    Region }o--|| RegionSet : "belongs to region set"
     RegionSet ||--o{ RegionSetShape : "has shapes"
     
-    Region ||--o{ RegionRelation : "source region"
-    Region ||--o{ RegionRelation : "target region"
+    Region ||--o{ RegionRelation : "from region"
+    Region ||--o{ RegionRelation : "to region"
     
     RegionSet ||--o{ Col : "used in columns"
 ```
@@ -102,10 +107,12 @@ erDiagram
     User ||--o{ UserShareCasePolicy : "has share policies"
     
     %% Second Level - Protected Resources
-    DataCollection ||--o{ OrganizationAccessCasePolicy : "target collection"
-    DataCollection ||--o{ UserAccessCasePolicy : "target collection"
-    DataCollection }o--|| OrganizationShareCasePolicy : "source collection"
-    DataCollection }o--|| UserShareCasePolicy : "source collection"
+    DataCollection ||--o{ OrganizationAccessCasePolicy : "data_collection_id"
+    DataCollection ||--o{ UserAccessCasePolicy : "data_collection_id"
+    DataCollection ||--o{ OrganizationShareCasePolicy : "data_collection_id"
+    DataCollection ||--o{ OrganizationShareCasePolicy : "from_data_collection_id"
+    DataCollection ||--o{ UserShareCasePolicy : "data_collection_id"
+    DataCollection ||--o{ UserShareCasePolicy : "from_data_collection_id"
     
     CaseTypeSet }o--|| OrganizationAccessCasePolicy : "applies to case types"
     CaseTypeSet }o--|| OrganizationShareCasePolicy : "applies to case types"
@@ -124,31 +131,35 @@ erDiagram
 - **Case** - Individual epidemiological cases with flexible content structure
 - **Subject** - People or entities associated with cases
 - **CaseType** - Templates defining case structure and validation rules
+- **CaseTypeSetMember** - Many-to-many association linking case types to case type sets
 
 ### 👥 **Case Management**
 - **CaseSet** - Collections of related cases for analysis
-- **CaseSetMember** - Case membership with classification status
+- **CaseSetMember** - Many-to-many association between cases and case sets with classification status
 - **CaseSetCategory/Status** - Case set organization and workflow
 
 ### 🏗️ **Case Structure Definition** 
 - **Dim** - Dimensions for organizing case data fields
 - **Col** - Columns defining specific data fields in cases
-- **CaseTypeDim/CaseTypeColSet** - Linking case types to their structure
+- **CaseTypeDim** - Links case types to their dimensional structure
+- **CaseTypeCol** - Links case types to their column definitions
+- **CaseTypeColSet** - Groups of columns for case types
+- **CaseTypeColSetMember** - Many-to-many association between column sets and columns
 
 ### 🦠 **Disease and Causation**
 - **Disease** - Disease definitions with ICD codes
 - **EtiologicalAgent** - Causative agents (pathogens, toxins, etc.)
-- **Etiology** - Disease-agent relationships
+- **Etiology** - Many-to-many association between diseases and their causative agents
 
 ### 📚 **Knowledge Management**
 - **ConceptSet** - Controlled vocabularies and value sets
 - **Concept** - Individual concepts with codes and descriptions
-- **ConceptRelation** - Hierarchical and associative relationships
+- **ConceptRelation** - Self-referential many-to-many associations between concepts (hierarchical/associative)
 
 ### 🗺️ **Geographic Data**
 - **RegionSet** - Geographic hierarchies (countries, states, etc.)
 - **Region** - Individual geographic areas with coordinates
-- **RegionRelation** - Geographic containment relationships
+- **RegionRelation** - Self-referential many-to-many associations between regions (containment)
 - **RegionSetShape** - GeoJSON shape data for mapping
 
 ### 🧬 **Genetic Analysis**
