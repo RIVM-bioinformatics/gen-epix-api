@@ -2,7 +2,7 @@
 
 # application server
 fastapi[standard]==0.128.0
-gunicorn==24.1.*
+gunicorn==25.1.*
 starlette==0.50.*
 httpx==0.28.1
 urllib3==2.6.3
