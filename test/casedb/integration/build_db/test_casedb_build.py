@@ -17,7 +17,7 @@ import pytest
 
 from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.util import get_app_cfgs
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(

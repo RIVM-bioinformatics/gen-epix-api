@@ -53,7 +53,7 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult as ParentUploadResult,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
-from gen_epix.commondb.util import (
+from gen_epix.commondb.domain.util import (
     complete_stored_model_field_props as complete_stored_model_field_props,
 )
 from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps

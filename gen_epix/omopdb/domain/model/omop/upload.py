@@ -1,4 +1,3 @@
-
 from typing import ClassVar, Self
 from uuid import UUID
 

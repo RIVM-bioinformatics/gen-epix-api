@@ -1070,5 +1070,14 @@
             "console": "integratedTerminal",
             "justMyCode": true
         },
+        // Run current file
+        {
+            "name": "Run Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
     ]
 }

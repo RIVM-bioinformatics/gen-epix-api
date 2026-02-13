@@ -9,7 +9,7 @@ from gen_epix.commondb.domain.enum import (
     DevIdpConfig,
     DevRepositoryConfig,
 )
-from gen_epix.commondb.util import set_env_variables
+from gen_epix.commondb.domain.util import set_env_variables
 
 
 class Run:
@@ -134,7 +134,7 @@ class Run:
     def etl_load_demo_data(
         self, app_type: AppType | str, connect_timeout: float = 1, verbose: bool = True
     ) -> None:
-        from gen_epix.commondb.util import load_demo_data
+        from gen_epix.commondb.domain.util import load_demo_data
 
         # Set all environment variables
         set_env_variables(

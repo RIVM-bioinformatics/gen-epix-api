@@ -3,7 +3,7 @@ from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE,
     SORTED_SERVICE_TYPES,
 )
-from gen_epix.commondb.util import register_domain_entities
+from gen_epix.commondb.domain.util import register_domain_entities
 from gen_epix.fastapp import Domain
 
 DOMAIN = Domain("commondb")
