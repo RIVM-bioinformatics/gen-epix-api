@@ -11,7 +11,7 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
-from gen_epix.commondb.util import get_app_cfgs
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter

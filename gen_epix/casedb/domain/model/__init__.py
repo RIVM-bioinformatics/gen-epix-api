@@ -109,7 +109,7 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
-from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.commondb.domain.util import complete_stored_model_field_props
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
