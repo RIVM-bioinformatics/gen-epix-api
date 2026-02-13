@@ -11,14 +11,14 @@ from uuid import UUID
 import pytest
 from cachetools import LRUCache, cached
 
+from rich import print
+
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.enum import RoleSet
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
-
-from rich import print
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -175,14 +175,14 @@ class TestRefdataAccess:
 
     def get_expected_case_type_ids(
         self,
-        all_organization_access_case_policies,
-        all_organization_share_case_policies,
-        all_user_access_case_policies,
-        all_user_share_case_policies,
-        all_case_type_set_members,
-        all_case_type_sets,
-        user,
-    ):
+        all_organization_access_case_policies: list[model.OrganizationAccessCasePolicy],
+        all_organization_share_case_policies: list[model.OrganizationShareCasePolicy],
+        all_user_access_case_policies: list[model.UserAccessCasePolicy],
+        all_user_share_case_policies: list[model.UserShareCasePolicy],
+        all_case_type_set_members: list[model.CaseTypeSetMember],
+        user: model.User,
+    ) -> set[UUID]:
+
         # Get case type sets from organization access policies for this user's org
         org_access_case_type_set_ids = {
             x.case_type_set_id
@@ -248,17 +248,18 @@ class TestRefdataAccess:
         # Union: case types accessible through either access OR share rights
         expected_case_type_ids = access_case_type_ids | share_case_type_ids
 
-        print("org access case type sets:", len(org_access_case_type_set_ids))
-        print("user access case type sets:", len(user_access_case_type_set_ids))
-        print("org access case types:", len(org_access_case_type_ids))
-        print("user access case types:", len(user_access_case_type_ids))
-        print("access intersection case types:", len(access_case_type_ids))
-        print("org share case type sets:", len(org_share_case_type_set_ids))
-        print("user share case type sets:", len(user_share_case_type_set_ids))
-        print("org share case types:", len(org_share_case_type_ids))
-        print("user share case types:", len(user_share_case_type_ids))
-        print("share intersection case types:", len(share_case_type_ids))
-        print("final union case type IDs:", len(expected_case_type_ids))
+        if VERBOSE:
+            print("org access case type sets:", len(org_access_case_type_set_ids))
+            print("user access case type sets:", len(user_access_case_type_set_ids))
+            print("org access case types:", len(org_access_case_type_ids))
+            print("user access case types:", len(user_access_case_type_ids))
+            print("access intersection case types:", len(access_case_type_ids))
+            print("org share case type sets:", len(org_share_case_type_set_ids))
+            print("user share case type sets:", len(user_share_case_type_set_ids))
+            print("org share case types:", len(org_share_case_type_ids))
+            print("user share case types:", len(user_share_case_type_ids))
+            print("share intersection case types:", len(share_case_type_ids))
+            print("final union case type IDs:", len(expected_case_type_ids))
 
         return expected_case_type_ids
 
@@ -289,54 +290,52 @@ class TestRefdataAccess:
 
         all_users = self._get_all_users(env)
 
-        all_organization_access_case_policies: list[
-            model.OrganizationAccessCasePolicy
-        ] = self._read_all(env, model.OrganizationAccessCasePolicy, return_id=False)
-
         # retrieve all OrganizationAccessCasePolicy objects
         all_organization_access_case_policies: list[
             model.OrganizationAccessCasePolicy
-        ] = self._read_all(env, model.OrganizationAccessCasePolicy, return_id=False)
+        ] = self._read_all(
+            env, model.OrganizationAccessCasePolicy, return_id=False
+        )  # type: ignore[assignment]
 
         # retrieve all OrganizationShareCasePolicy objects
         all_organization_share_case_policies: list[
             model.OrganizationShareCasePolicy
-        ] = self._read_all(env, model.OrganizationShareCasePolicy, return_id=False)
+        ] = self._read_all(
+            env, model.OrganizationShareCasePolicy, return_id=False
+        )  # type: ignore[assignment]
         # retrieve all UserAccessCasePolicy objects
-        all_user_access_case_policies: list[model.UserAccessCasePolicy] = (
-            self._read_all(env, model.UserAccessCasePolicy, return_id=False)
-        )
+        all_user_access_case_policies: list[
+            model.UserAccessCasePolicy
+        ] = self._read_all(
+            env, model.UserAccessCasePolicy, return_id=False
+        )  # type: ignore[assignment]
         # retrieve all UserShareCasePolicy objects
         all_user_share_case_policies: list[model.UserShareCasePolicy] = self._read_all(
             env, model.UserShareCasePolicy, return_id=False
-        )
+        )  # type: ignore[assignment]
         # retrieve all case type set members
         all_case_type_set_members: list[model.CaseTypeSetMember] = self._read_all(
             env, model.CaseTypeSetMember, return_id=False
-        )
-
-        # retrieve all case type sets
-        all_case_type_sets: list[model.CaseTypeSet] = self._read_all(
-            env, model.CaseTypeSet, return_id=False
-        )
+        )  # type: ignore[assignment]
 
         all_organizations: list[model.Organization] = self._read_all(
             env, model.Organization, return_id=False
-        )
+        )  # type: ignore[assignment]
 
         for user in all_users:
 
-            case_types = self._read_all(env, model.CaseType, user=user)
+            case_types = self._read_all(env, model.CaseType, user=user, return_id=True)
 
-            print("-------------")
-            # print(user)
+            if VERBOSE:
+                print("-------------")
+                # print(user)
 
-            # print user name and organization name for debugging purposes
-            org_name = next(
-                (o.name for o in all_organizations if o.id == user.organization_id),
-                "Unknown",
-            )
-            print(f"user: {user.name}, organization_name: {org_name}")
+                # print user name and organization name for debugging purposes
+                org_name = next(
+                    (o.name for o in all_organizations if o.id == user.organization_id),
+                    "Unknown",
+                )
+                print(f"user: {user.name}, organization_name: {org_name}")
 
             if self._has_role(env, user, RoleSet.GE_REFDATA_ADMIN):
 
@@ -350,17 +349,17 @@ class TestRefdataAccess:
                     all_user_access_case_policies,
                     all_user_share_case_policies,
                     all_case_type_set_members,
-                    all_case_type_sets,
                     user,
                 )
 
                 # get actual case type IDs from the returned case types
-                actual_case_type_ids: set[UUID] = set(case_types)
+                actual_case_type_ids: set[UUID] = set(case_types)  # type: ignore[assignment]
 
                 # temporarily print the user and the actual vs expected case type IDs for debugging purposes
-                print(
-                    f"user: {user.name} actual: {len(actual_case_type_ids)}, expected: {len(expected_case_type_ids)}"
-                )
+                if VERBOSE:
+                    print(
+                        f"user: {user.name} actual: {len(actual_case_type_ids)}, expected: {len(expected_case_type_ids)}"
+                    )
 
                 assert actual_case_type_ids == expected_case_type_ids, (
                     f"User {user.name} should have access to case types: {expected_case_type_ids}, "
@@ -368,3 +367,7 @@ class TestRefdataAccess:
                 )
 
     # TODO: Add tests for all other refdata models
+
+    # For testing with generated test data in another fixture:
+    # Save all generated data as a pickle file
+    # In case of stable set of data for testing => use pickle file instead of generating new data each time
