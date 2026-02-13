@@ -17,8 +17,8 @@ import pytest
 
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.test.test_client import TestClient as Env
-from gen_epix.commondb.util import get_app_cfgs
 
 APP_CFGS = get_app_cfgs(
     AppType.COMMONDB,
