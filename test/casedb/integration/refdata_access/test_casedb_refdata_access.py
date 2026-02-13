@@ -18,6 +18,8 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
+from rich import print
+
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
     seqdb_enum.ServiceType,
@@ -171,18 +173,198 @@ class TestRefdataAccess:
             case_set_categories = self._read_all(env, model.CaseSetCategory, user=user)
             assert case_set_categories == all_case_set_categories
 
+    def get_expected_case_type_ids(
+        self,
+        all_organization_access_case_policies,
+        all_organization_share_case_policies,
+        all_user_access_case_policies,
+        all_user_share_case_policies,
+        all_case_type_set_members,
+        all_case_type_sets,
+        user,
+    ):
+        # Get case type sets from organization access policies for this user's org
+        org_access_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_organization_access_case_policies
+            if x.organization_id == user.organization_id
+        }
+
+        # Get case type sets from user access policies for this user
+        user_access_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_user_access_case_policies
+            if x.user_id == user.id
+        }
+
+        # Get all case types accessible through organization access policies
+        org_access_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in org_access_case_type_set_ids
+        }
+
+        # Get all case types accessible through user access policies
+        user_access_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in user_access_case_type_set_ids
+        }
+
+        # Intersection: case types that are accessible through BOTH org AND user access policies
+        access_case_type_ids = org_access_case_type_ids & user_access_case_type_ids
+
+        # Get case type sets from organization share policies for this user's org
+        org_share_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_organization_share_case_policies
+            if x.organization_id == user.organization_id
+        }
+
+        # Get case type sets from user share policies for this user
+        user_share_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_user_share_case_policies
+            if x.user_id == user.id
+        }
+
+        # Get all case types accessible through organization share policies
+        org_share_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in org_share_case_type_set_ids
+        }
+
+        # Get all case types accessible through user share policies
+        user_share_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in user_share_case_type_set_ids
+        }
+
+        # Intersection: case types that are accessible through BOTH org AND user share policies
+        share_case_type_ids = org_share_case_type_ids & user_share_case_type_ids
+
+        # Union: case types accessible through either access OR share rights
+        expected_case_type_ids = access_case_type_ids | share_case_type_ids
+
+        print("org access case type sets:", len(org_access_case_type_set_ids))
+        print("user access case type sets:", len(user_access_case_type_set_ids))
+        print("org access case types:", len(org_access_case_type_ids))
+        print("user access case types:", len(user_access_case_type_ids))
+        print("access intersection case types:", len(access_case_type_ids))
+        print("org share case type sets:", len(org_share_case_type_set_ids))
+        print("user share case type sets:", len(user_share_case_type_set_ids))
+        print("org share case types:", len(org_share_case_type_ids))
+        print("user share case types:", len(user_share_case_type_ids))
+        print("share intersection case types:", len(share_case_type_ids))
+        print("final union case type IDs:", len(expected_case_type_ids))
+
+        return expected_case_type_ids
+
+    ## Add more fine-grained tests for case type access, e.g. with ABAC filtering, and not just all-or-nothing as in the current test
     def test_case_type(self, env: Env) -> None:
+        """
+        Test that case type access is correctly controlled by ABAC policies.
+
+        This test verifies that users can only access case types they are authorized to see
+        based on the intersection of organization-level and user-level access/share policies.
+
+        Access logic:
+        - Organization access policies + User access policies (intersection) = access_case_type_ids
+        - Organization share policies + User share policies (intersection) = share_case_type_ids
+        - Final accessible case types = access_case_type_ids | share_case_type_ids (union)
+
+        Users with GE_REFDATA_ADMIN role have access to all case types.
+
+        :param env: Test environment with app context and test utilities
+        :type env: Env
+        """
+
         all_case_types = self._read_all(env, model.CaseType)
-        for user in self._get_all_users(env):
+
+        assert (
+            len(all_case_types) > 0
+        ), "No case types found in the system, cannot test access control for case types"
+
+        all_users = self._get_all_users(env)
+
+        all_organization_access_case_policies: list[
+            model.OrganizationAccessCasePolicy
+        ] = self._read_all(env, model.OrganizationAccessCasePolicy, return_id=False)
+
+        # retrieve all OrganizationAccessCasePolicy objects
+        all_organization_access_case_policies: list[
+            model.OrganizationAccessCasePolicy
+        ] = self._read_all(env, model.OrganizationAccessCasePolicy, return_id=False)
+
+        # retrieve all OrganizationShareCasePolicy objects
+        all_organization_share_case_policies: list[
+            model.OrganizationShareCasePolicy
+        ] = self._read_all(env, model.OrganizationShareCasePolicy, return_id=False)
+        # retrieve all UserAccessCasePolicy objects
+        all_user_access_case_policies: list[model.UserAccessCasePolicy] = (
+            self._read_all(env, model.UserAccessCasePolicy, return_id=False)
+        )
+        # retrieve all UserShareCasePolicy objects
+        all_user_share_case_policies: list[model.UserShareCasePolicy] = self._read_all(
+            env, model.UserShareCasePolicy, return_id=False
+        )
+        # retrieve all case type set members
+        all_case_type_set_members: list[model.CaseTypeSetMember] = self._read_all(
+            env, model.CaseTypeSetMember, return_id=False
+        )
+
+        # retrieve all case type sets
+        all_case_type_sets: list[model.CaseTypeSet] = self._read_all(
+            env, model.CaseTypeSet, return_id=False
+        )
+
+        all_organizations: list[model.Organization] = self._read_all(
+            env, model.Organization, return_id=False
+        )
+
+        for user in all_users:
+
+            case_types = self._read_all(env, model.CaseType, user=user)
+
+            print("-------------")
+            # print(user)
+
+            # print user name and organization name for debugging purposes
+            org_name = next(
+                (o.name for o in all_organizations if o.id == user.organization_id),
+                "Unknown",
+            )
+            print(f"user: {user.name}, organization_name: {org_name}")
+
             if self._has_role(env, user, RoleSet.GE_REFDATA_ADMIN):
-                case_types = self._read_all(env, model.CaseType, user=user)
+
+                assert case_types == all_case_types
+
             else:
-                pass
-                # TODO: filter case_types by ABAC
-                print(
-                    f"Skipping ABAC filtering for non-admin users in test_case_type: {user.roles}"
+                # retrieve all unique case type set IDs from the retrieved policies for the user/organization in question
+                expected_case_type_ids = self.get_expected_case_type_ids(
+                    all_organization_access_case_policies,
+                    all_organization_share_case_policies,
+                    all_user_access_case_policies,
+                    all_user_share_case_policies,
+                    all_case_type_set_members,
+                    all_case_type_sets,
+                    user,
                 )
-                continue
-            assert case_types == all_case_types
+
+                # get actual case type IDs from the returned case types
+                actual_case_type_ids: set[UUID] = set(case_types)
+
+                # temporarily print the user and the actual vs expected case type IDs for debugging purposes
+                print(
+                    f"user: {user.name} actual: {len(actual_case_type_ids)}, expected: {len(expected_case_type_ids)}"
+                )
+
+                assert actual_case_type_ids == expected_case_type_ids, (
+                    f"User {user.name} should have access to case types: {expected_case_type_ids}, "
+                    f"but got: {actual_case_type_ids}"
+                )
 
     # TODO: Add tests for all other refdata models
