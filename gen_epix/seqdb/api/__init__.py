@@ -5,9 +5,6 @@ from gen_epix.commondb.api import (
 from gen_epix.seqdb.api.file import CreateFileRequestBody as CreateFileRequestBody
 from gen_epix.seqdb.api.organization import ApiPermission as ApiPermission
 from gen_epix.seqdb.api.seq import (
-    GetSimilarProfilesRequestBody as GetSimilarProfilesRequestBody,
-)
-from gen_epix.seqdb.api.seq import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
 from gen_epix.seqdb.api.seq import (
@@ -15,5 +12,8 @@ from gen_epix.seqdb.api.seq import (
 )
 from gen_epix.seqdb.api.seq import (
     RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,
+)
+from gen_epix.seqdb.api.seq import (
+    RetrieveSimilarProfilesRequestBody as RetrieveSimilarProfilesRequestBody,
 )
 from gen_epix.seqdb.api.seq import UploadSamplesRequestBody as UploadSamplesRequestBody

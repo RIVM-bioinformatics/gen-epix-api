@@ -167,7 +167,7 @@ from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    GetSimilarProfilesCommand as GetSimilarProfilesCommand,
+    RetrieveSimilarProfilesCommand as RetrieveSimilarProfilesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -267,7 +267,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
-        GetSimilarProfilesCommand,
+        RetrieveSimilarProfilesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,

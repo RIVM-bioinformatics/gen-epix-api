@@ -31,8 +31,8 @@ class BaseSeqService(BaseService):
             self.upload_samples,
         )
         f(
-            command.GetSimilarProfilesCommand,
-            self.get_similar_profiles,
+            command.RetrieveSimilarProfilesCommand,
+            self.retrieve_similar_profiles,
         )
 
     @abc.abstractmethod
@@ -54,7 +54,7 @@ class BaseSeqService(BaseService):
         cmd: command.RetrieveSamplesCommand,
     ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
-        
+
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()
@@ -67,8 +67,8 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_similar_profiles(
+    def retrieve_similar_profiles(
         self,
-        cmd: command.GetSimilarProfilesCommand,
+        cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
         raise NotImplementedError()

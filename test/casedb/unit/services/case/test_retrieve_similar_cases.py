@@ -8,8 +8,8 @@ import pytest
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.get_similar_cases import (
-    case_service_get_similar_cases,
+from gen_epix.casedb.services.case.retrieve_similar_cases import (
+    case_service_retrieve_similar_cases,
 )
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
@@ -74,9 +74,9 @@ class BaseSimilarCasesTestCase(TestCase):
         self,
         case_ids: list[UUID],
         max_distance: float = 5.0,
-    ) -> command.GetSimilarCasesCommand:
-        """Create a GetSimilarCasesCommand for tests."""
-        return command.GetSimilarCasesCommand(
+    ) -> command.RetrieveSimilarCasesCommand:
+        """Create a RetrieveSimilarCasesCommand for tests."""
+        return command.RetrieveSimilarCasesCommand(
             user=self.user,
             case_type_id=self.case_type_id,
             genetic_distance_case_type_col_id=self.dist_case_type_col_id,
@@ -137,17 +137,16 @@ class BaseSimilarCasesTestCase(TestCase):
 class TestInputValidation(BaseSimilarCasesTestCase):
     def test_empty_case_ids_raises_error(self) -> None:
         # 1. Input
-        cmd: command.GetSimilarCasesCommand = self.create_command(case_ids=[])
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(case_ids=[])
 
         # 2. Mocks
         # (already configured in setUp)
 
         # 3. Execute
-        with pytest.raises(exc.InvalidArgumentsError) as err:
-            case_service_get_similar_cases(self.service, cmd)
+        profile_ids = case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
-        assert "At least one case ID" in str(err.value)
+        assert profile_ids == []
         self.repository.crud.assert_not_called()
         self.service._retrieve_cases_with_content_right.assert_not_called()  # type: ignore[attr-defined]
 
@@ -157,7 +156,9 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
     def test_case_type_col_mismatch_raises(self) -> None:
         # 1. Input
         case_id: UUID = uuid4()
-        cmd: command.GetSimilarCasesCommand = self.create_command(case_ids=[case_id])
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(
+            case_ids=[case_id]
+        )
 
         # 2. Mocks
         dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
@@ -167,7 +168,7 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
 
         # 3. Execute
         with pytest.raises(exc.InvalidArgumentsError) as err:
-            case_service_get_similar_cases(self.service, cmd)
+            case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
         assert "does not belong to case type" in str(err.value)
@@ -185,7 +186,9 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
     def test_col_type_not_genetic_distance_raises(self) -> None:
         # 1. Input
         case_id: UUID = uuid4()
-        cmd: command.GetSimilarCasesCommand = self.create_command(case_ids=[case_id])
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(
+            case_ids=[case_id]
+        )
 
         # 2. Mocks
         dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
@@ -199,7 +202,7 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
 
         # 3. Execute
         with pytest.raises(exc.InvalidArgumentsError) as err:
-            case_service_get_similar_cases(self.service, cmd)
+            case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
         assert enum.ColType.GENETIC_DISTANCE.value in str(err.value)
@@ -227,7 +230,7 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestHappyPath(BaseSimilarCasesTestCase):
-    def test_returns_seed_and_similar_case_ids(self) -> None:
+    def test_returns_similar_case_ids(self) -> None:
         # 1. Input
         seed_case_id1: UUID = uuid4()
         seed_case_id2: UUID = uuid4()
@@ -235,7 +238,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         seed_profile_id1: UUID = uuid4()
         seed_profile_id2: UUID = uuid4()
         other_profile_id: UUID = uuid4()
-        cmd: command.GetSimilarCasesCommand = self.create_command(
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(
             case_ids=[seed_case_id1, seed_case_id2], max_distance=7.5
         )
 
@@ -262,11 +265,11 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         self.service.app.handle.return_value = [str(other_profile_id)]  # type: ignore[attr-defined]
 
         # 3. Execute
-        result: list[UUID] = case_service_get_similar_cases(self.service, cmd)
+        result: list[UUID] = case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
-        # Result must include the two seeds and the other case
-        assert set(result) == {seed_case_id1, seed_case_id2, other_case_id}
+        # Result must exclude the two seeds and the other case
+        assert set(result) == {other_case_id}
 
         # Verify repository interactions
         assert self.repository.crud.mock_calls == [
@@ -305,13 +308,17 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         assert (
             seq_cmd.seq_distance_protocol_id == protocol.seqdb_seq_distance_protocol_id
         )
-        assert set(seq_cmd.profile_ids) == {seed_profile_id1, seed_profile_id2}
+        assert set(seq_cmd.profile_ids) == {
+            seed_profile_id1,
+            seed_profile_id2,
+            other_profile_id,
+        }
         assert seq_cmd.max_distance == 7.5
 
     def test_no_profile_ids_extracted_returns_empty(self) -> None:
         # 1. Input
         seed_case_id: UUID = uuid4()
-        cmd: command.GetSimilarCasesCommand = self.create_command(
+        cmd: command.RetrieveSimilarCasesCommand = self.create_command(
             case_ids=[seed_case_id]
         )
 
@@ -331,7 +338,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         self.service._retrieve_cases_with_content_right.return_value = all_cases  # type: ignore[attr-defined]
 
         # 3. Execute
-        result: list[UUID] = case_service_get_similar_cases(self.service, cmd)
+        result: list[UUID] = case_service_retrieve_similar_cases(self.service, cmd)
 
         # 4. Verify
         assert result == []

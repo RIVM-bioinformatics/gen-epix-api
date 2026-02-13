@@ -7,8 +7,8 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp.enum import CrudOperation
 
 
-def case_service_get_similar_cases(
-    self: BaseCaseService, cmd: command.GetSimilarCasesCommand
+def case_service_retrieve_similar_cases(
+    self: BaseCaseService, cmd: command.RetrieveSimilarCasesCommand
 ) -> list[UUID]:
     case_type_id = cmd.case_type_id
     dist_case_type_col_id = cmd.genetic_distance_case_type_col_id
@@ -20,8 +20,9 @@ def case_service_get_similar_cases(
     case_abac = BaseCaseAbacPolicy.get_case_abac_from_command(cmd)
     assert case_abac is not None
 
+    # Special case: zero query cases
     if len(case_ids) == 0:
-        raise exc.InvalidArgumentsError("At least one case ID must be provided")
+        return []
 
     with repository.uow() as uow:
         # Get distance column data
@@ -65,7 +66,7 @@ def case_service_get_similar_cases(
             genetic_distance_protocol.seqdb_seq_distance_protocol_id
         )
 
-        # @ABAC: Get cases
+        # @ABAC: Get all cases
         all_cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
@@ -77,31 +78,34 @@ def case_service_get_similar_cases(
         )
 
         # Get profile_ids from dist_case_type_col
-        case_id_profile_id_map: dict[UUID, UUID] = {}
-        for case in all_cases:
-            profile_id = case.content.get(dist_case_type_col_id)
-            if profile_id:
-                case_id_profile_id_map[case.id] = UUID(profile_id)
+        case_id_profile_id_map: dict[UUID, str | None] = {
+            x.id: x.content.get(dist_case_type_col_id) for x in all_cases
+        }
+        case_ids_set = set(case_ids)
+        profile_ids: list[UUID] = [
+            UUID(profile_id)
+            for case_id, profile_id in case_id_profile_id_map.items()
+            if profile_id is not None and case_id in case_ids_set
+        ]
 
-        profile_ids: list[UUID] = []
-        for case_id, profile_id in case_id_profile_id_map.items():
-            if case_id in case_ids:
-                profile_ids.append(profile_id)
-
+        # Get similar profile ids from seqdb, expected not to include the query profile ids
         similar_profile_ids: list[UUID] = self.app.handle(
-            seqdb_command.GetSimilarProfilesCommand(
+            seqdb_command.RetrieveSimilarProfilesCommand(
                 seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
                 profile_ids=profile_ids,
                 max_distance=max_distance,
             )
         )
 
-        # Normalize result ids and include seed profile_ids; map back to case ids
-        unique_similar_profile_ids: set[UUID] = {UUID(str(x)) for x in similar_profile_ids}
-        norm_seed_profile_ids: set[UUID] = {UUID(str(x)) for x in profile_ids}
-        lookup_ids: set[UUID] = unique_similar_profile_ids | norm_seed_profile_ids
-        similar_case_ids: list[UUID] = [
-            case_id for case_id, profile_id in case_id_profile_id_map.items() if profile_id in lookup_ids
+        # Retrieve cases for similar profiles
+        # TODO: theoretically two cases could have the same profile as content. If this detected, then an alternate (slower) process should be chosen to map profile ID back to case ID.
+        profile_id_case_id_map = {
+            y: x for x, y in case_id_profile_id_map.items() if y is not None
+        }
+        similar_case_ids = [
+            profile_id_case_id_map[str(x)]
+            for x in similar_profile_ids
+            if x in profile_id_case_id_map
         ]
 
     return similar_case_ids

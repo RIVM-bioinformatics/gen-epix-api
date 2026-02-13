@@ -1,8 +1,8 @@
 import logging
-from uuid import UUID
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from typing import Iterable
+from uuid import UUID
 
 import pytest
 
@@ -366,7 +366,7 @@ class TestContent:
 
                     # retrieve similar cases
                     similar_case_ids: list[UUID] = app.handle(
-                        command.GetSimilarCasesCommand(
+                        command.RetrieveSimilarCasesCommand(
                             user=root_user,
                             case_type_id=complete_case_type.id,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
@@ -376,7 +376,7 @@ class TestContent:
                     )
                     if len(similar_case_ids) > 0:
                         found_similar_cases = True
-        
+
             if found_similar_cases:
                 assert len(dist_case_type_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
