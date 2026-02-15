@@ -268,8 +268,11 @@ class TestContent:
         case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
         # Go over all case types with data
+        found_some_similar_cases = False
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
+            if VERBOSE:
+                print(f"Checking case type {case_type.name}")
             assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
@@ -349,7 +352,7 @@ class TestContent:
                 ):
                     if VERBOSE:
                         print(
-                            f"Case type {complete_case_type.name}: retrieving phylogenetic tree using tree algorithm {tree_algorithm_code}"
+                            f"\tRetrieving phylogenetic tree for {dist_case_type_col.code} using tree algorithm {tree_algorithm_code}"
                         )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
@@ -367,17 +370,18 @@ class TestContent:
                     # retrieve similar cases
                     similar_case_ids: list[UUID] = app.handle(
                         command.RetrieveSimilarCasesCommand(
-                            user=root_user,
+                            user=org_user,
                             case_type_id=complete_case_type.id,
                             genetic_distance_case_type_col_id=dist_case_type_col.id,
                             case_ids=case_ids[0:5],
-                            max_distance=5,
+                            max_distance=20,
                         )
                     )
                     if len(similar_case_ids) > 0:
                         found_similar_cases = True
 
             if found_similar_cases:
+                found_some_similar_cases = True
                 assert len(dist_case_type_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
                 for similar_case_id in similar_case_ids:
@@ -401,9 +405,7 @@ class TestContent:
 
                 # Retrieve genetic sequences in FASTA format
                 if VERBOSE:
-                    print(
-                        f"Case type {complete_case_type.name}: retrieving genetic sequences"
-                    )
+                    print(f"\tRetrieving genetic sequences")
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
@@ -442,6 +444,11 @@ class TestContent:
                 for assembly_protocol in assembly_protocols:
                     if not assembly_protocol.id:
                         raise ValueError("Assembly protocol ID should not be empty")
+
+        if not found_some_similar_cases:
+            raise ValueError(
+                "Did not find similar cases for any case type, cannot validate RetrieveSimilarCasesCommand"
+            )
 
         # Go over all case sets
         for case_set in case_sets:

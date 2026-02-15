@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from typing import Any
 from uuid import UUID
 
-
 from gen_epix.fastapp import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import enum
@@ -42,7 +41,7 @@ class BaseSeqRepository(BaseRepository):
         distances: str,
         distance_format: enum.SeqDistanceFormat,
     ) -> None:
-        if distance_format == enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT:
+        if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
             distance_dict = json.loads(distances)
             for profile_id, distance in distance_dict.items():
                 if distance <= max_distance:

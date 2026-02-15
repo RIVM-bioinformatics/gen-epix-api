@@ -388,6 +388,7 @@ class ExceptionHandlingMode(Enum):
     RAISE = "RAISE"
     IGNORE = "IGNORE"
     SKIP = "SKIP"
+    REPLACE = "REPLACE"
 
 
 class FileExtension(Enum):

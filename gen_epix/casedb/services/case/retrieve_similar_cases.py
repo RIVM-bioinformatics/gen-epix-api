@@ -75,6 +75,7 @@ def case_service_retrieve_similar_cases(
             case_type_id,
             case_ids=None,
             filter_content=True,
+            apply_max_n_cases=False,
         )
 
         # Get profile_ids from dist_case_type_col
@@ -102,9 +103,10 @@ def case_service_retrieve_similar_cases(
         profile_id_case_id_map = {
             y: x for x, y in case_id_profile_id_map.items() if y is not None
         }
+        similar_profile_ids_str = [str(x) for x in similar_profile_ids]
         similar_case_ids = [
-            profile_id_case_id_map[str(x)]
-            for x in similar_profile_ids
+            profile_id_case_id_map[x]
+            for x in similar_profile_ids_str
             if x in profile_id_case_id_map
         ]
 

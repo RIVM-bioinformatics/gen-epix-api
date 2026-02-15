@@ -70,10 +70,9 @@ def get_seq_distances(
         seq_distance = model.SeqDistance(  # type: ignore[call-arg]
             id=uuid.uuid4(),
             sample_id=sample.id,
-            seq_id=allele_profiles[i].seq_id,
             seq_distance_protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
             profile_id=profile_ids[i],
-            distance_format=enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT,
+            distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
             distances=pd.Series(distances_dict).to_json(),
         )
         seq_distances.append(seq_distance)
