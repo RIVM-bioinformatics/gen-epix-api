@@ -7,7 +7,7 @@ import pandas as pd
 
 
 class LogCode(Enum):
-    APP_START = "e94cad9b"
+    APP_START = "a7f3b1d2"
     APP_FINISH = "5ab6c248"
 
 

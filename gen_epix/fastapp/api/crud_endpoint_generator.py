@@ -594,7 +594,7 @@ class CrudEndpointGenerator:
             # TODO: Add a specific exception for NotImplementedError
             except Exception as exception:
                 handle_exception_fn(
-                    "79d26f4f" + route.endpoint_basename,
+                    "5dc0b25f" + route.endpoint_basename,
                     user,
                     exception,
                     request_ids=obj_ids,

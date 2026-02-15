@@ -13,4 +13,7 @@ from gen_epix.seqdb.api.seq import (
 from gen_epix.seqdb.api.seq import (
     RetrieveSeqFastaRequestBody as RetrieveSeqFastaRequestBody,
 )
+from gen_epix.seqdb.api.seq import (
+    RetrieveSimilarProfilesRequestBody as RetrieveSimilarProfilesRequestBody,
+)
 from gen_epix.seqdb.api.seq import UploadSamplesRequestBody as UploadSamplesRequestBody

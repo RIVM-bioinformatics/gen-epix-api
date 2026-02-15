@@ -155,25 +155,19 @@ from gen_epix.seqdb.domain.command.seq import (
     RefSnpSetMemberCrudCommand as RefSnpSetMemberCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteAlleleProfileCommand as RetrieveAlleleProfileCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteContigCommand as RetrieveCompleteContigCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteSamplesCommand as RetrieveSamplesCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
-    RetrieveCompleteSnpProfileCommand as RetrieveCompleteSnpProfileCommand,
-)
-from gen_epix.seqdb.domain.command.seq import (
     RetrieveMultipleAlignmentCommand as RetrieveMultipleAlignmentCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     RetrievePhylogeneticTreeCommand as RetrievePhylogeneticTreeCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSamplesCommand as RetrieveSamplesCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     RetrieveSeqFastaCommand as RetrieveSeqFastaCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    RetrieveSimilarProfilesCommand as RetrieveSimilarProfilesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import SampleCrudCommand as SampleCrudCommand
 from gen_epix.seqdb.domain.command.seq import (
@@ -270,13 +264,10 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RefSnpCrudCommand,
         RefSnpSetCrudCommand,
         RefSnpSetMemberCrudCommand,
-        RetrieveAlleleProfileCommand,
-        RetrieveCompleteContigCommand,
-        RetrieveSamplesCommand,
-        RetrieveCompleteSnpProfileCommand,
         RetrieveMultipleAlignmentCommand,
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
+        RetrieveSimilarProfilesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,

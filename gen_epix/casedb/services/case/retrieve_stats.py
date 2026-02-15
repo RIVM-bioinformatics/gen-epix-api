@@ -28,7 +28,7 @@ def case_service_retrieve_case_stats(
             if case_abac.is_full_access:
                 # All case types
                 case_type_ids = set(
-                    self.repository.crud(  # type:ignore[arg-type]
+                    self.repository.crud(  # type: ignore[arg-type]
                         uow,
                         user.id,
                         model.CaseType,

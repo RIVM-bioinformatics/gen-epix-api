@@ -2,6 +2,7 @@ import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from typing import Iterable
+from uuid import UUID
 
 import pytest
 
@@ -10,7 +11,7 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.enum import Role as CommonRole
-from gen_epix.commondb.util import get_app_cfgs
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
 from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
@@ -267,8 +268,11 @@ class TestContent:
         case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
         # Go over all case types with data
+        found_some_similar_cases = False
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
+            if VERBOSE:
+                print(f"Checking case type {case_type.name}")
             assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
@@ -333,6 +337,7 @@ class TestContent:
                 continue
 
             # Retrieve phylogenetic tree
+            found_similar_cases = False
             dist_case_type_cols = [
                 case_type_col
                 for case_type_col in complete_case_type.case_type_cols.values()
@@ -345,6 +350,10 @@ class TestContent:
                 for tree_algorithm_code in (
                     dist_case_type_col.tree_algorithm_codes or []
                 ):
+                    if VERBOSE:
+                        print(
+                            f"\tRetrieving phylogenetic tree for {dist_case_type_col.code} using tree algorithm {tree_algorithm_code}"
+                        )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
@@ -354,11 +363,29 @@ class TestContent:
                             case_ids=case_ids,
                         )
                     )
-                    if phylogenetic_tree.sequence_ids:
-                        raise ValueError("Sequence IDs should not be returned")
                     assert phylogenetic_tree.leaf_ids is not None
                     if not set(phylogenetic_tree.leaf_ids).issubset(set(case_ids)):
                         raise ValueError("Leaf IDs should be a subset of the case IDs")
+
+                    # retrieve similar cases
+                    similar_case_ids: list[UUID] = app.handle(
+                        command.RetrieveSimilarCasesCommand(
+                            user=org_user,
+                            case_type_id=complete_case_type.id,
+                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            case_ids=case_ids[0:5],
+                            max_distance=20,
+                        )
+                    )
+                    if len(similar_case_ids) > 0:
+                        found_similar_cases = True
+
+            if found_similar_cases:
+                found_some_similar_cases = True
+                assert len(dist_case_type_cols) >= 1
+                # assert that any item in similar_case_ids is a UUID
+                for similar_case_id in similar_case_ids:
+                    assert isinstance(similar_case_id, UUID)
 
             # Retrieve genetic sequence
             genetic_sequence_case_type_cols = [
@@ -375,26 +402,10 @@ class TestContent:
                 ]
                 if not has_seq_case_ids:
                     continue
-                # TODO: retrieval of genetic sequences method likely not needed anymore, delete when this is confirmed or otherwise enable again
-                # # Retrieve genetic sequence
-                # genetic_sequences: list[model.GeneticSequence] = app.handle(
-                #     command.RetrieveGeneticSequenceByCaseCommand(
-                #         user=org_user,
-                #         case_ids=has_seq_case_ids[0:1],
-                #         genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,
-                #     )
-                # )
-                # if not genetic_sequences:
-                #     raise ValueError("Genetic sequence should not be empty")
-                # for seq in genetic_sequences:
-                #     if not seq.id:
-                #         raise ValueError("Genetic sequence ID should not be empty")
-                #     if not hasattr(seq, "nucleotide_sequence"):
-                #         raise ValueError(
-                #             "Genetic sequence should have nucleotide_sequence attribute"
-                #         )
 
                 # Retrieve genetic sequences in FASTA format
+                if VERBOSE:
+                    print(f"\tRetrieving genetic sequences")
                 fasta_iterator: Iterable[str] = app.handle(
                     command.RetrieveGeneticSequenceFastaByCaseCommand(
                         user=org_user,
@@ -433,6 +444,11 @@ class TestContent:
                 for assembly_protocol in assembly_protocols:
                     if not assembly_protocol.id:
                         raise ValueError("Assembly protocol ID should not be empty")
+
+        if not found_some_similar_cases:
+            raise ValueError(
+                "Did not find similar cases for any case type, cannot validate RetrieveSimilarCasesCommand"
+            )
 
         # Go over all case sets
         for case_set in case_sets:

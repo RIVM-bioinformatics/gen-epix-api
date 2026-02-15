@@ -127,7 +127,7 @@ def _verify_children_seqs(
                     # cannot verify if indeed it was derived from the same reads sets
                     success = False
                     seq_result.add_error(
-                        "f1e2d3c4",
+                        "b9e4f8a1",
                         f"Seq with same hash ({seq.seq_hash}) and assembly protocol already exists with ID {seq_id}, but new seq has no read sets no read sets are provided for the new seq to compare",
                     )
                     break
