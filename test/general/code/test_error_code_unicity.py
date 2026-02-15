@@ -34,7 +34,7 @@ def _get_python_files(root_dir: Path) -> list[Path]:
         "dist",
         "site-packages",
         "Gen_EpiX.egg-info",
-        "test"
+        "test",
     }
 
     for root, dirs, files in os.walk(root_dir):
