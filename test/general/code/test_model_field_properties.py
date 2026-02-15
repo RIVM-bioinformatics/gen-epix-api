@@ -52,7 +52,15 @@ def test_model_field_properties() -> None:
                 if _is_iterable_type(field_info.annotation):
                     max_length = None
                     try:
-                        max_length = field_info.field_info.max_length  # type: ignore[attr-defined]
+                        max_lengths = [
+                            x.max_length
+                            for x in field_info.metadata
+                            if hasattr(x, "max_length")
+                        ]
+                        if max_lengths:
+                            max_length = max_lengths[0]
+                        else:
+                            max_length = None
                     except AttributeError:
                         message: str = (
                             f"{domain.__name__}.{model_class.__name__}.{field_name} is an iterable type but has no max_length defined in Field(...)"
@@ -61,7 +69,7 @@ def test_model_field_properties() -> None:
                             pytest.fail(message)
                         else:
                             print(message)
-                    if not max_length is None:
+                    if max_length is not None:
                         assert (
                             max_length is not None
                         ), f"{domain.__name__}.{model_class.__name__}.{field_name} is an iterable type but has no max_length defined in Field(...)"

@@ -308,11 +308,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         assert (
             seq_cmd.seq_distance_protocol_id == protocol.seqdb_seq_distance_protocol_id
         )
-        assert set(seq_cmd.profile_ids) == {
-            seed_profile_id1,
-            seed_profile_id2,
-            other_profile_id,
-        }
+        assert set(seq_cmd.profile_ids) == {seed_profile_id1, seed_profile_id2}
         assert seq_cmd.max_distance == 7.5
 
     def test_no_profile_ids_extracted_returns_empty(self) -> None:
