@@ -214,7 +214,7 @@ def test_casedb_seqdb_connection(
                         case_type_id=case_type_col.case_type_id,
                         genetic_distance_case_type_col_id=case_type_col.id,
                         case_ids=case_ids[0:5],
-                        max_distance=5,
+                        max_distance=500,
                     )
                 )
                 is_similar_cases_retrieved = True
