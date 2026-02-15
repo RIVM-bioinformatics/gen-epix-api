@@ -50,45 +50,49 @@ class GeneratePhylogeneticTreeCommand(Command):
     pass
 
 
-class RetrieveCompleteAlleleProfileCommand(Command):
-    pass
-
-
-class RetrieveCompleteContigCommand(Command):
-    pass
-
-
-class RetrieveCompleteSampleCommand(Command):
-    pass
-
-
-class RetrieveCompleteSamplesCommand(Command):
-
-    sample_ids: list[UUID]
-
-
-class RetrieveCompleteSnpProfileCommand(Command):
-    pass
-
-
 class RetrieveMultipleAlignmentCommand(Command):
     pass
 
 
 class RetrievePhylogeneticTreeCommand(Command):
+    """
+    Retrieve a phylogenetic tree based on the given sequence distance protocol, tree
+    algorithm, and query profile IDs. The returned tree is expected to contain
+    the query profiles as well as any additional profiles that are within the maximum
+    distance threshold specified in the sequence distance protocol for at least one
+    of the query profiles. The leaf names in the tree correspond to the profile IDs,
+    but can optionally be replaced with custom leaf names provided in the command
+    (e.g. for better readability of the tree).
+    """
 
-    seq_distance_protocol_id: UUID
-    tree_algorithm: enum.TreeAlgorithm
-    seq_ids: list[UUID]
-    leaf_names: list[str] | None
+    seq_distance_protocol_id: UUID = Field(
+        description="The ID of the sequence distance protocol to use for generating the distances"
+    )
+    tree_algorithm: enum.TreeAlgorithm = Field(
+        description="The tree algorithm to use for generating the phylogenetic tree"
+    )
+    profile_ids: list[UUID] = Field(
+        description="List of profile IDs to calculate the phylogenetic tree for"
+    )
+    leaf_names: list[str] | None = Field(
+        default=None,
+        description="Optional list of leaf names corresponding to the profile IDs",
+    )
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
-        if self.leaf_names is not None and len(self.leaf_names) != len(self.seq_ids):
+        if self.leaf_names is not None and len(self.leaf_names) != len(
+            self.profile_ids
+        ):
             raise ValueError(
-                "leaf_codes must be None or have the same length as seq_ids"
+                "leaf_names must be None or have the same length as profile_ids"
             )
         return self
+
+
+class RetrieveSamplesCommand(Command):
+
+    sample_ids: list[UUID]
 
 
 class RetrieveSeqFastaCommand(Command):
@@ -103,6 +107,24 @@ class RetrieveSeqFastaCommand(Command):
     wrap: int | None = Field(
         default=80,
         description="Number of characters to wrap the sequence lines.",
+    )
+
+
+class RetrieveSimilarProfilesCommand(Command):
+    """
+    Retrieve all profiles that match at least one of the given query profiles within
+    the given maximum distance and based on the given seq distance protocol. The
+    returned profiles do not contain the query profiles.
+    """
+
+    seq_distance_protocol_id: UUID = Field(
+        description="ID of the sequence distance protocol to use for similarity search.",
+    )
+    profile_ids: list[UUID] = Field(
+        description="List of query profile IDs to find similar profiles for.",
+    )
+    max_distance: float = Field(
+        description="Maximum distance threshold for considering profiles as similar.",
     )
 
 

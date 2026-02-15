@@ -424,7 +424,13 @@ class BaseBatchForUpload(Model):
             x.id for x in parents_for_upload if x.id is not None and x.id != NULL_ID
         ]
         if len(parent_ids) != len(set(parent_ids)):
-            raise ValueError("Duplicate parent IDs found in batch.")
+            duplicate_ids = sorted(
+                set(x for x in parent_ids if parent_ids.count(x) > 1)
+            )
+            duplicate_ids_str = ", ".join(str(x) for x in duplicate_ids)
+            raise ValueError(
+                f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
+            )
         # Verify duplicate external identifiers
         all_external_identifiers = []
         for parent_for_upload in parents_for_upload:

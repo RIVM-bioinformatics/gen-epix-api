@@ -90,20 +90,6 @@ class TestManual:
         pass
 
     @pytest.mark.skip(reason="manual test")
-    def test_retrieve_genetic_sequence(self, env: Env) -> None:
-        user = TestManual.get_user(env, TestManual.USER_MAP[5])
-        genetic_sequence = env.app.handle(
-            command.RetrieveGeneticSequenceByCaseCommand(
-                user=user,
-                genetic_sequence_case_type_col_id=UUID(
-                    "0191c0e1-041b-360a-269d-8c5e6ebc4e42"
-                ),
-                case_ids=[UUID("018c3e98-5a42-b60b-9480-f3a2a04f4661")],
-            )
-        )
-        pass
-
-    @pytest.mark.skip(reason="manual test")
     def test_retrieve_phylogenetic_tree(self, env: Env) -> None:
         user = TestManual.get_user(env, TestManual.USER_MAP[5])
         phylogenetic_tree = env.app.handle(

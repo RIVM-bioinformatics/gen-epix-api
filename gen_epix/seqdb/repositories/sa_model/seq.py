@@ -312,6 +312,9 @@ class MlvaProfile(Base, RowMetadataMixin, QualityMixin):
     mlva_detection_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_detection_protocol_id"
     )
+    locus_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MlvaProfile, "locus_set_id"
+    )
     mlva_profile: Mapped[str] = create_mapped_column(
         DOMAIN, model.MlvaProfile, "mlva_profile"
     )
@@ -645,20 +648,11 @@ class SeqDistance(Base, RowMetadataMixin):
     sample_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "sample_id"
     )
-    seq_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "seq_id"
-    )
     seq_distance_protocol_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.SeqDistance, "seq_distance_protocol_id"
     )
-    allele_profile_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "allele_profile_id"
-    )
-    snp_profile_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "snp_profile_id"
-    )
-    kmer_profile_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SeqDistance, "kmer_profile_id"
+    profile_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SeqDistance, "profile_id"
     )
     distance_format: Mapped[str] = create_mapped_column(
         DOMAIN, model.SeqDistance, "distance_format"

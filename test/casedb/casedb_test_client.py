@@ -18,6 +18,7 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
+from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 
 
@@ -150,7 +151,7 @@ class CasedbTestClient(TestClient):
                 log_setup=log_setup,
                 **kwargs,
             )
-        return cls.TEST_CLIENTS[app_cfg.name]  # type: ignore[no-any-return]
+        return cls.TEST_CLIENTS[app_cfg.name]
 
     def __init__(
         self,
@@ -174,7 +175,7 @@ class CasedbTestClient(TestClient):
 
         # Create app
         TestClient._set_log_level(app_cfg, log_level)
-        app_composer = AppComposer(app_cfg, log_setup=log_setup, **kwargs)
+        app_composer = AppComposer(app_cfg, log_setup=log_setup, **kwargs)  #
 
         # Create endpoint test client if endpoints are to be used (including own
         # app_composer), otherwise construct app env separately
@@ -222,10 +223,10 @@ class CasedbTestClient(TestClient):
             model.User, user_or_str
         )  # type: ignore[assignment]
         concept_set: model.ConceptSet = (
-            self._get_obj(model.ConceptSet, concept_set_or_str)
+            self._get_obj(model.ConceptSet, concept_set_or_str)  # type: ignore[assignment]
             if concept_set_or_str
             else None
-        )  # type: ignore[assignment]
+        )
         if set_dummy_concept_set:
             if concept_set:
                 raise ValueError(
@@ -233,13 +234,13 @@ class CasedbTestClient(TestClient):
                 )
             concept_set_id = self.generate_id()
         else:
-            concept_set_id = concept_set.id
+            concept_set_id = concept_set.id  # type: ignore[assignment]
         concept = self.handle(
             command.ConceptCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.Concept(
-                    concept_set_id=concept_set_id,
+                    concept_set_id=concept_set_id,  # type: ignore[assignment]
                     code=code,
                 ),
             )
@@ -322,7 +323,7 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.RegionSetShape(
                     region_set_id=(
-                        self.generate_id()
+                        self.generate_id()  # type: ignore[arg-type]
                         if set_dummy_region_set
                         else self._get_obj(model.RegionSet, region_set).id
                     ),
@@ -349,7 +350,7 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.Region(
                     region_set_id=(
-                        self.generate_id()
+                        self.generate_id()  # type: ignore[arg-type]
                         if set_dummy_region_set
                         else self._get_obj(model.RegionSet, region_set).id
                     ),
@@ -369,6 +370,7 @@ class CasedbTestClient(TestClient):
         user_or_str: str | model.User,
         name: str,
         seqdb_seq_distance_protocol_id: UUID | None = None,
+        seqdb_seq_distance_protocol_type: seqdb_enum.SeqDistanceProtocolType = seqdb_enum.SeqDistanceProtocolType.KMER_EUCLIDEAN,
         min_scale_unit: float = 1,
     ) -> model.GeneticDistanceProtocol:
         user: model.User = self._get_obj(
@@ -386,6 +388,7 @@ class CasedbTestClient(TestClient):
                 objs=model.GeneticDistanceProtocol(
                     name=name,
                     seqdb_seq_distance_protocol_id=seqdb_seq_distance_protocol_id,
+                    seqdb_seq_distance_protocol_type=seqdb_seq_distance_protocol_type,
                     min_scale_unit=min_scale_unit,
                     seqdb_is_integer_distance=True,
                 ),
@@ -438,25 +441,25 @@ class CasedbTestClient(TestClient):
             raise ValueError(f"Invalid code {code}")
         dim = "dim" + m.group(2)
         rank = int(m.group(3))
-        dim_id = (
-            self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id
+        dim_id: UUID = (
+            self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id  # type: ignore[union-attr]
         )
-        concept_set_id = (
+        concept_set_id: UUID | None = (
             self.generate_id()
             if set_dummy_concept_set
             else (
                 None
                 if not concept_set
-                else self._get_obj(model.ConceptSet, concept_set).id
+                else self._get_obj(model.ConceptSet, concept_set).id  # type: ignore[union-attr]
             )
         )
-        region_set_id = (
+        region_set_id: UUID | None = (
             self.generate_id()
             if set_dummy_region_set
             else (
                 None
                 if not region_set
-                else self._get_obj(model.RegionSet, region_set).id
+                else self._get_obj(model.RegionSet, region_set).id  # type: ignore[union-attr]
             )
         )
         genetic_distance_protocol_id = (
@@ -468,7 +471,7 @@ class CasedbTestClient(TestClient):
                 else self._get_obj(
                     model.GeneticDistanceProtocol,
                     genetic_distance_protocol,
-                ).id
+                ).id  # type: ignore[union-attr]
             )
         )
         col = self.handle(
@@ -554,7 +557,7 @@ class CasedbTestClient(TestClient):
                             if not etiological_agent
                             else self._get_obj(
                                 model.EtiologicalAgent, etiological_agent
-                            ).id
+                            ).id  # type: ignore[union-attr]
                         )
                     ),
                 ),
@@ -565,7 +568,7 @@ class CasedbTestClient(TestClient):
     def create_case_type(
         self,
         user_or_str: str | model.User,
-        case_type: str | model.CaseType,
+        case_type_or_str: str | model.CaseType,
         disease: str | model.Disease | None,
         etiological_agent: str | model.EtiologicalAgent | None,
         set_dummy_disease: bool = False,
@@ -574,19 +577,19 @@ class CasedbTestClient(TestClient):
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        case_type = self.handle(
+        case_type: model.CaseType = self.handle(
             command.CaseTypeCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseType(
-                    name=case_type,
+                    name=case_type_or_str,
                     disease_id=(
                         self.generate_id()
                         if set_dummy_disease
                         else (
                             None
                             if not disease
-                            else self._get_obj(model.Disease, disease).id
+                            else self._get_obj(model.Disease, disease).id  # type: ignore[union-attr]
                         )
                     ),
                     etiological_agent_id=(
@@ -597,7 +600,7 @@ class CasedbTestClient(TestClient):
                             if not etiological_agent
                             else self._get_obj(
                                 model.EtiologicalAgent, etiological_agent
-                            ).id
+                            ).id  # type: ignore[union-attr]
                         )
                     ),
                 ),
@@ -608,8 +611,8 @@ class CasedbTestClient(TestClient):
     def create_case_type_set_member(
         self,
         user_or_str: str | model.User,
-        case_type_set: str | model.CaseTypeSet,
-        case_type: str | model.CaseType,
+        case_type_set_or_str: str | model.CaseTypeSet,
+        case_type_or_str: str | model.CaseType,
         set_dummy_case_type_set: bool = False,
         set_dummy_case_type: bool = False,
     ) -> model.CaseTypeSetMember:
@@ -619,11 +622,11 @@ class CasedbTestClient(TestClient):
         if set_dummy_case_type_set:
             case_type_set_id = self.generate_id()
         else:
-            case_type_set_id = self._get_obj(model.CaseTypeSet, case_type_set).id
+            case_type_set_id: UUID = self._get_obj(model.CaseTypeSet, case_type_set_or_str).id  # type: ignore[union-attr]
         if set_dummy_case_type:
-            case_type_id = self.generate_id()
+            case_type_id: UUID = self.generate_id()
         else:
-            case_type_id = self._get_obj(model.CaseType, case_type).id
+            case_type_id = self._get_obj(model.CaseType, case_type_or_str).id  # type: ignore[union-attr]
 
         case_type_set_member = self.handle(
             command.CaseTypeSetMemberCrudCommand(
@@ -640,18 +643,18 @@ class CasedbTestClient(TestClient):
     def create_case_type_set_category(
         self,
         user_or_str: str | model.User,
-        case_type_set_category: str | model.CaseTypeSetCategory,
+        case_type_set_category_or_str: str | model.CaseTypeSetCategory,
         rank: int = 0,
     ) -> model.CaseTypeSetCategory:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        case_type_set_category = self.handle(
+        case_type_set_category: model.CaseTypeSetCategory = self.handle(
             command.CaseTypeSetCategoryCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeSetCategory(
-                    name=case_type_set_category,
+                    name=case_type_set_category_or_str,
                     rank=rank,
                 ),
             )
