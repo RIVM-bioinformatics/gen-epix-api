@@ -42,7 +42,7 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             return []
 
         profile_id_set = set(profile_ids)
-        table: dict[UUID, model.SeqDistance] = self.db[  # type:ignore[assignment]
+        table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
             model.SeqDistance
         ]
         matching_profile_ids: set[UUID] = set()
