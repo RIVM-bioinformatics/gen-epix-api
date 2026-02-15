@@ -21,9 +21,6 @@ from gen_epix.casedb.api.case import (
     RetrieveCaseTypeStatsRequestBody as RetrieveCaseTypeStatsRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    RetrieveGeneticSequenceRequestBody as RetrieveGeneticSequenceRequestBody,
-)
-from gen_epix.casedb.api.case import (
     RetrieveOrganizationContactRequestBody as RetrieveOrganizationContactRequestBody,
 )
 from gen_epix.casedb.api.case import (

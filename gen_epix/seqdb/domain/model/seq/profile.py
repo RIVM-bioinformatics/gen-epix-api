@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
@@ -11,10 +12,11 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.domain.model.seq.base import ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.locus import LocusSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
-from gen_epix.seqdb.domain.model.seq.seq import RefSeq, RefSnp, Seq
+from gen_epix.seqdb.domain.model.seq.seq import HasSeqMixin, RefSeq, Seq
 
 
 class LocusDetectionProtocol(Model, ProtocolMixin):
@@ -26,7 +28,7 @@ class LocusDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class LocusProfile(Model, HasSampleMixin, QualityMixin):
+class LocusProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="locus_profiles",
         table_name="locus_profile",
@@ -47,10 +49,6 @@ class LocusProfile(Model, HasSampleMixin, QualityMixin):
             }
         ),
     )
-    seq_id: UUID | None = Field(
-        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     locus_set_id: UUID = Field(
         description="The unique identifier for the locus set. FOREIGN KEY"
     )
@@ -78,7 +76,7 @@ class LocusProfile(Model, HasSampleMixin, QualityMixin):
         return str(value)
 
 
-class AlleleProfile(Model, HasSampleMixin, QualityMixin):
+class AlleleProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     """
     An allele profile derived from a sequence for a given locus set and locus
     detection protocol. The class includes validation logic to ensure consistency
@@ -105,10 +103,6 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
             }
         ),
     )
-    seq_id: UUID | None = Field(
-        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     locus_set_id: UUID = Field(
         description="The unique identifier for the locus set. FOREIGN KEY"
     )
@@ -133,7 +127,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
     )
     allele_profile_hash: UUID = Field(
         default=NULL_ID,
-        description="The first 128 bits of the SHA256 hash of the sorted list of allele ids, including null alleles (null ID) as bytes. Derived from the allele profile if possible and if the value is the null ID. If set to the null ID and it is not possible to derive the value, an error is raised.",
+        description="The first 128 bits of the SHA256 hash of the list allele ids ordered by locus set loci, and including null alleles (null ID) as bytes. Derived from the allele profile if possible and if the value is the null ID. If set to the null ID and it is not possible to derive the value, an error is raised.",
     )
 
     @model_validator(mode="after")
@@ -191,7 +185,7 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         return str(value)
 
     @field_serializer("allele_profile_format", mode="plain")
-    def _serialize_snp_profile_format(
+    def _serialize_allele_profile_format(
         self, value: str | enum.AlleleProfileFormat
     ) -> str:
         if isinstance(value, enum.AlleleProfileFormat):
@@ -218,9 +212,23 @@ class AlleleProfile(Model, HasSampleMixin, QualityMixin):
         return allele_ids
 
     @staticmethod
+    def get_sorted_allele_ids_profile(allele_ids: list[UUID | None]) -> str:
+        """
+        Generate and return the allele profile in SORTED_ALLELE_IDS format based on
+        the sorted allele IDs.
+        """
+        return base64.b64encode(
+            b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
+        ).decode("ascii")
+
+    @staticmethod
     def get_allele_profile_hash(allele_ids: list[UUID | None]) -> UUID:
         sha256 = hashlib.sha256()
-        sha256.update(b"".join(sorted([x.bytes for x in allele_ids if x is not None])))
+        for allele_id in allele_ids:
+            if allele_id is not None:
+                sha256.update(allele_id.bytes)
+            else:
+                sha256.update(NULL_ID.bytes)
         return UUID(sha256.digest()[:16].hex())
 
 
@@ -233,7 +241,7 @@ class SnpDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class SnpProfile(Model, HasSampleMixin, QualityMixin):
+class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="snp_profiles",
         table_name="snp_profile",
@@ -261,10 +269,6 @@ class SnpProfile(Model, HasSampleMixin, QualityMixin):
             }
         ),
     )
-    seq_id: UUID | None = Field(
-        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     ref_seq_id: UUID = Field(
         description="The unique identifier for the reference sequence. FOREIGN KEY"
     )
@@ -284,6 +288,32 @@ class SnpProfile(Model, HasSampleMixin, QualityMixin):
         description="The first 128 bits of the SHA256 hash of the ASCII lower case reference sequence with all SNPs applied.",
     )
 
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Derive the SNP profile hash, if not provided, or otherwise verify that it is
+        correctly derived if possible.
+        """
+        profile_hash = self.snp_profile_hash
+
+        # Parse SNP profile and derive values depending on snp_profile_format
+        if self.snp_profile_format == enum.SnpProfileFormat.REF_ALN_SEQ:
+            # TODO: implement any validation and calculate hash
+            computed_profile_hash = profile_hash
+        else:
+            if profile_hash == NULL_ID:
+                raise ValueError("Unable to calculate SNP profile hash for this format")
+            # Unable to compute profile hash but provided -> assume correct
+            computed_profile_hash = profile_hash
+
+        # Set or verify snp_profile_hash
+        if profile_hash == NULL_ID:
+            self.snp_profile_hash = computed_profile_hash
+        elif profile_hash != computed_profile_hash:
+            raise ValueError("Provided SNP profile hash does not match computed hash")
+
+        return self
+
     @field_serializer("snp_profile_hash")
     def _serialize_snp_profile_hash(self, value: UUID) -> str:
         return str(value)
@@ -302,7 +332,7 @@ class MlvaDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class MlvaProfile(Model, HasSampleMixin, QualityMixin):
+class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="mlva_profiles",
         table_name="mlva_profile",
@@ -320,7 +350,8 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
             {
                 1: ("sample_id", Sample, "sample"),
                 2: ("seq_id", Seq, "seq"),
-                3: (
+                3: ("locus_set_id", LocusSet, "locus_set"),
+                4: (
                     "mlva_detection_protocol_id",
                     MlvaDetectionProtocol,
                     "mlva_detection_protocol",
@@ -328,28 +359,96 @@ class MlvaProfile(Model, HasSampleMixin, QualityMixin):
             }
         ),
     )
-    seq_id: UUID | None = Field(
-        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     mlva_detection_protocol_id: UUID = Field(
         description="The unique identifier for the MLVA detection protocol. FOREIGN KEY"
     )
     mlva_detection_protocol: MlvaDetectionProtocol | None = Field(
         default=None, description="The MLVA detection protocol."
     )
-    mlva_profile: str = Field(description="The number of tandem repeats per locus.")
+    locus_set_id: UUID = Field(
+        description="The unique identifier for the locus set. FOREIGN KEY"
+    )
+    locus_set: LocusSet | None = Field(default=None, description="The locus set.")
+    mlva_profile: str = Field(
+        description="String representation of the repeat number per locus in the locus set, with the format depending on mlva_profile_format."
+    )
     mlva_profile_format: enum.MlvaProfileFormat = Field(
-        default=enum.MlvaProfileFormat.MLVA_PROFILE_FORMAT1,
+        default=enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS,
         description="The representation format of the profile.",
     )
     mlva_profile_hash: UUID = Field(
-        description="The first 128 bits of the SHA256 hash of the ASCII sorted loci followed by their corresponding sorted counts as 32 bit signed integers.",
+        default=NULL_ID,
+        description="The first 128 bits of the SHA256 hash of the repeat numbers ordered by locus set loci, as 4-byte big-endian signed integers.",
     )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Derive the MLVA profile hash, if not provided, or otherwise verify that it is
+        correctly derived if possible.
+        """
+        profile_hash = self.mlva_profile_hash
+
+        # Parse MLVA profile and derive values depending on mlva_profile_format
+        if self.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
+            # Parse the MLVA profile from json array
+            repeat_numbers: list[int] = json.loads(self.mlva_profile)
+            # Compute hash
+            computed_profile_hash = MlvaProfile.get_mlva_profile_hash(repeat_numbers)
+        else:
+            if profile_hash == NULL_ID:
+                raise ValueError(
+                    "Unable to calculate allele profile hash for this format"
+                )
+            # Unable to compute n_loci or profile hash but provided -> assume correct
+            computed_profile_hash = profile_hash
+
+        # Set or verify mlva_profile_hash
+        if profile_hash == NULL_ID:
+            self.mlva_profile_hash = computed_profile_hash
+        elif profile_hash != computed_profile_hash:
+            raise ValueError("Provided MLVA profile hash does not match computed hash")
+
+        return self
 
     @field_serializer("mlva_profile_hash")
     def _serialize_mlva_profile_hash(self, value: UUID) -> str:
         return str(value)
+
+    @field_serializer("mlva_profile_format", mode="plain")
+    def _serialize_mlva_profile_format(
+        self, value: str | enum.MlvaProfileFormat
+    ) -> str:
+        if isinstance(value, enum.MlvaProfileFormat):
+            return value.value
+        return value
+
+    @staticmethod
+    def get_sorted_repeat_numbers_profile(repeat_numbers: list[int | None]) -> str:
+        """
+        Generate and return the MLVA profile in SORTED_REPEAT_NUMBERS format based on
+        the sorted repeat numbers.
+        """
+        return json.dumps(
+            [
+                int(x) if x is not None else MLVA_NO_LOCUS_REPEAT_NUMBER
+                for x in repeat_numbers
+            ]
+        )
+
+    @staticmethod
+    def get_mlva_profile_hash(repeat_numbers: list[int | None]) -> UUID:
+        sha256 = hashlib.sha256()
+        for repeat_number in repeat_numbers:
+            if repeat_number is not None:
+                sha256.update(repeat_number.to_bytes(4, byteorder="big", signed=True))
+            else:
+                sha256.update(
+                    MLVA_NO_LOCUS_REPEAT_NUMBER.to_bytes(
+                        4, byteorder="big", signed=True
+                    )
+                )
+        return UUID(sha256.digest()[:16].hex())
 
 
 class KmerDetectionProtocol(Model, ProtocolMixin):
@@ -361,7 +460,7 @@ class KmerDetectionProtocol(Model, ProtocolMixin):
     )
 
 
-class KmerProfile(Model, HasSampleMixin, QualityMixin):
+class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="kmer_profiles",
         table_name="kmer_profile",
@@ -387,10 +486,6 @@ class KmerProfile(Model, HasSampleMixin, QualityMixin):
             }
         ),
     )
-    seq_id: UUID | None = Field(
-        description="The unique identifier for the sequence that the result was derived from, if available. FOREIGN KEY"
-    )
-    seq: Seq | None = Field(default=None, description="The sequence.")
     kmer_detection_protocol_id: UUID = Field(
         description="The unique identifier for the k-mer detection protocol. FOREIGN KEY"
     )
@@ -411,36 +506,3 @@ class KmerProfile(Model, HasSampleMixin, QualityMixin):
     @field_serializer("kmer_profile_hash")
     def _serialize_kmer_profile_hash(self, value: UUID) -> str:
         return str(value)
-
-
-class CompleteAlleleProfile(Model, HasSampleMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_allele_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    locus_set_id: UUID = Field(description="The ID of the locus set.")
-    locus_ids: list[UUID] = Field(description="The IDs of the loci.")
-    allele_ids: list[UUID | None] = Field(
-        description="The IDs of the alleles for each locus."
-    )
-    multiple_allele_ids: dict[UUID, list[UUID]] = Field(
-        description="Mapping of locus ID to multiple allele IDs."
-    )
-    allele_count_by_qc: dict[enum.QualityControlResult, int] = Field(
-        description="Mapping of quality control result to allele count."
-    )
-
-
-class CompleteSnpProfile(Model, HasSampleMixin):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="complete_snp_profiles",
-        persistable=False,
-    )
-    seq_id: UUID = Field(description="The ID of the sequence.")
-    ref_snps: list[RefSnp] = Field(description="The list of reference SNPs.")
-    snps: str = Field(description="The SNPs in the profile.")
-    snp_profile: str = Field(description="The SNP profile string.")
-    snp_profile_format: enum.SnpProfileFormat = Field(
-        description="The format of the SNP profile."
-    )

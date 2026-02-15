@@ -80,7 +80,9 @@ class User(fastapp.User, Model):
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
     )
-    roles: set[str] = Field(description="The roles of the user", min_length=1)
+    roles: set[str] = Field(
+        description="The roles of the user", min_length=1, max_length=255
+    )
     organization_id: UUID = Field(
         description="The ID of the organization of the user. FOREIGN KEY"
     )
@@ -319,7 +321,9 @@ class UserInvitation(Model):
         description="The expiry date of the invitation"
     )
     roles: set[str] = Field(
-        description="The initial roles that the new user will have", min_length=1
+        description="The initial roles that the new user will have",
+        min_length=1,
+        max_length=255,
     )
     invited_by_user_id: UUID = Field(
         description="The ID of the user who invited the new user. FOREIGN KEY"
@@ -363,10 +367,12 @@ class UserInvitationConstraints(Model):
     )
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     roles: set[str] = Field(
-        description="The roles that the user may be assigned by the inviting user."
+        description="The roles that the user may be assigned by the inviting user.",
+        max_length=255,
     )
     organization_ids: set[UUID] = Field(
-        description="The organizations that the user may be assigned by the inviting user."
+        description="The organizations that the user may be assigned by the inviting user.",
+        max_length=1000000,
     )
 
 

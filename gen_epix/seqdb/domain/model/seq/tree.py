@@ -95,7 +95,7 @@ class PhylogeneticTree(Model):
         default=None,
         description="The list of names of the leaves of the phylogenetic tree to be put in the tree representation instead of seq_ids. Must have the same length as seq_ids.",
     )
-    seq_ids: list[UUID] | None = Field(
+    profile_ids: list[UUID] | None = Field(
         default=None,
         description="The list of unique identifiers of the sequence of each leaf of the phylogenetic tree.",
     )
@@ -108,10 +108,10 @@ class PhylogeneticTree(Model):
         if self.leaf_names:
             if len(set(self.leaf_names)) < len(self.leaf_names):
                 raise ValueError("Duplicate leaf_codes")
-        if self.seq_ids:
-            if len(set(self.seq_ids)) < len(self.seq_ids):
+        if self.profile_ids:
+            if len(set(self.profile_ids)) < len(self.profile_ids):
                 raise ValueError("Duplicate seq_ids")
-            if self.leaf_names and len(self.seq_ids) != len(self.leaf_names):
+            if self.leaf_names and len(self.profile_ids) != len(self.leaf_names):
                 raise ValueError(
                     "seq_ids and leaf_codes must have the same length if leaf_codes is provided."
                 )

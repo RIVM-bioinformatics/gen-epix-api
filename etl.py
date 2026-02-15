@@ -37,7 +37,10 @@ from gen_epix.commondb.domain.enum import (
     DevIdpConfig,
     DevRepositoryConfig,
 )
-from gen_epix.commondb.util import create_demo_data_from_repository, set_env_variables
+from gen_epix.commondb.domain.util import (
+    create_demo_data_from_repository,
+    set_env_variables,
+)
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 

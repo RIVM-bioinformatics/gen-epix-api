@@ -19,6 +19,7 @@ from gen_epix.commondb.domain.enum import (
     DevRepositoryConfig,
     DevRepositoryConfigSet,
 )
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.fastapp import Command, Domain, Model, ModelFieldProps, exc
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.repositories.dict import DictRepository
@@ -120,7 +121,7 @@ def set_env_variables(
 
 
 def create_demo_data_from_repository(
-    user_id: str,
+    user_id: UUID,
     entities: list,
     dict_repository: DictRepository,
     sa_repository: SARepository,
@@ -190,7 +191,7 @@ def load_demo_data(
         app_type.value, enum.ServiceType, enum.RepositoryType, log_setup=False
     )
     # user_id = dict_app_cfg.cfg["service"]["auth"]["props"]["root"]["user"]["id"]
-    user_id = UUID("00000000-0000-0000-0000-000000000000")
+    user_id = NULL_ID
     for service_type in enum.ServiceType:
         # # TODO: TEMPORARY for debugging, remove later
         # if service_type.value != "CASE":

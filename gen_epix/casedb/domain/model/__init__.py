@@ -76,7 +76,6 @@ from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
 from gen_epix.casedb.domain.model.seqdb import File as File
-from gen_epix.casedb.domain.model.seqdb import GeneticSequence as GeneticSequence
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
@@ -110,7 +109,7 @@ from gen_epix.commondb.domain.model import (
 )
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
-from gen_epix.commondb.util import complete_stored_model_field_props
+from gen_epix.commondb.domain.util import complete_stored_model_field_props
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.services.auth import IdentityProvider as IdentityProvider
 from gen_epix.fastapp.services.auth import IDPUser as IDPUser
@@ -148,7 +147,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             RegionSetShape,
         ],
         enum.ServiceType.SEQDB: [
-            GeneticSequence,
             PhylogeneticTree,
             File,
         ],

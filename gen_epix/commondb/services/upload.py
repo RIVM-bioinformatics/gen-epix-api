@@ -148,7 +148,7 @@ class BatchUploader:
             if cmd.verify_only:
                 # Stop here if only verification was requested
                 retval.add_info(
-                    code="b5c6d7e8",
+                    code="c849b0e2",
                     message="Verification only requested, upload will not proceed",
                 )
                 return retval
@@ -585,7 +585,7 @@ class BatchUploader:
                             if parent.id != child_parent_id:
                                 success = False
                                 child_result.add_error(
-                                    "b4c5d6e7",
+                                    "13ba4246",
                                     f"{parent_id_field_name}={child_parent_id} does not match {self.parent_for_upload_class.NAME}.id={parent.id}",
                                 )
                             if child.id in existing_child_ids:
