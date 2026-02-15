@@ -148,10 +148,10 @@ class RoleGenerator(CommonRoleGenerator):
             (command.UserAccessCasePolicyCrudCommand, PermissionTypeSet.R),
             (command.UserShareCasePolicyCrudCommand, PermissionTypeSet.R),
             # seq
-            (command.RetrieveGeneticSequenceByCaseCommand, PermissionTypeSet.E),
             (command.RetrieveGeneticSequenceFastaByCaseCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeByCasesCommand, PermissionTypeSet.E),
             (command.RetrievePhylogeneticTreeBySequencesCommand, PermissionTypeSet.E),
+            (command.RetrieveSimilarCasesCommand, PermissionTypeSet.E),
         },
         Role.GUEST: COMMON_ROLE_PERMISSION_SETS[Role.GUEST] | set(),
     }

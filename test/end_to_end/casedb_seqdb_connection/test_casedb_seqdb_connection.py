@@ -175,7 +175,8 @@ def test_casedb_seqdb_connection(
     )
 
     # Test phylogenetic tree retrieval (which calls SeqDB)
-    phylogenetic_tree_retrieved = False
+    is_phylogenetic_tree_retrieved = False
+    is_similar_cases_retrieved = False
     genetic_distance_case_type_col_ids: list[UUID] = [
         x.id  # type: ignore[misc]
         for x in case_type_cols.values()
@@ -188,8 +189,8 @@ def test_casedb_seqdb_connection(
         genetic_sequence_case_type_col_id: UUID = (
             case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
         )
-        case_ids: list[UUID] = [  # type: ignore[assignment]
-            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
+        case_ids: list[UUID] = [
+            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)  # type: ignore[assignment]
         ]
         if len(case_ids) < 2:
             continue
@@ -206,13 +207,24 @@ def test_casedb_seqdb_connection(
                         case_ids=case_ids,
                     )
                 )
-                phylogenetic_tree_retrieved = True
+                is_phylogenetic_tree_retrieved = True
+                similar_case_ids: list[UUID] = casedb_app.handle(
+                    command.RetrieveSimilarCasesCommand(
+                        user=root_user,
+                        case_type_id=case_type_col.case_type_id,
+                        genetic_distance_case_type_col_id=case_type_col.id,
+                        case_ids=case_ids[0:5],
+                        max_distance=5,
+                    )
+                )
+                is_similar_cases_retrieved = True
                 break
-        if phylogenetic_tree_retrieved:
+        if is_phylogenetic_tree_retrieved and is_similar_cases_retrieved:
             break
 
-    # Log results
-    assert phylogenetic_tree_retrieved
+    assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
+    assert isinstance(similar_case_ids, list)
+    assert len(similar_case_ids) > 0
 
     genetic_sequence_case_type_cols = [
         x

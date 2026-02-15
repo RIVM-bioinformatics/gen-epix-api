@@ -648,39 +648,6 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.performance.user_journey",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_performance_user_journey"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.performance.repository",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_performance_repository"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
-            "name": "test.seqdb.performance.startup",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "run.py",
-            "args": [
-                "test_seqdb_performance_startup"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": true,
-        },
-        {
             "name": "test.omopdb.unit",
             "type": "debugpy",
             "request": "launch",
@@ -1067,6 +1034,15 @@
             "args": [
                 "other_oauth_server_client_demo",
             ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        // Run current file
+        {
+            "name": "Run Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
         },

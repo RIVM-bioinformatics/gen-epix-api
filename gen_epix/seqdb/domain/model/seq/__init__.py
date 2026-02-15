@@ -49,12 +49,6 @@ from gen_epix.seqdb.domain.model.seq.pheno import PcrMeasurement as PcrMeasureme
 from gen_epix.seqdb.domain.model.seq.pheno import PcrProtocol as PcrProtocol
 from gen_epix.seqdb.domain.model.seq.profile import AlleleProfile as AlleleProfile
 from gen_epix.seqdb.domain.model.seq.profile import (
-    CompleteAlleleProfile as CompleteAlleleProfile,
-)
-from gen_epix.seqdb.domain.model.seq.profile import (
-    CompleteSnpProfile as CompleteSnpProfile,
-)
-from gen_epix.seqdb.domain.model.seq.profile import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq.profile import KmerProfile as KmerProfile
@@ -80,7 +74,6 @@ from gen_epix.seqdb.domain.model.seq.sample import (
 )
 from gen_epix.seqdb.domain.model.seq.sample import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq.seq import AssemblyProtocol as AssemblyProtocol
-from gen_epix.seqdb.domain.model.seq.seq import CompleteContig as CompleteContig
 from gen_epix.seqdb.domain.model.seq.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq.seq import RefSeq as RefSeq
 from gen_epix.seqdb.domain.model.seq.seq import RefSnp as RefSnp
@@ -99,6 +92,9 @@ from gen_epix.seqdb.domain.model.seq.upload import AlleleForUpload as AlleleForU
 from gen_epix.seqdb.domain.model.seq.upload import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
+from gen_epix.seqdb.domain.model.seq.upload import (
+    MlvaProfileForUpload as MlvaProfileForUpload,
+)
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchForUpload as SampleBatchForUpload,
@@ -111,3 +107,6 @@ from gen_epix.seqdb.domain.model.seq.upload import (
     SampleUploadResult as SampleUploadResult,
 )
 from gen_epix.seqdb.domain.model.seq.upload import SeqForUpload as SeqForUpload
+from gen_epix.seqdb.domain.model.seq.upload import (
+    SnpProfileForUpload as SnpProfileForUpload,
+)

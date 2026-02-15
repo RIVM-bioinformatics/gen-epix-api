@@ -1,4 +1,3 @@
-from test.commondb.unit.upload.model import ParentUploadResult
 from typing import ClassVar, Self
 from uuid import UUID
 
@@ -11,6 +10,7 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult,
     IsNewIdMixin,
     ParentForUpload,
+    ParentUploadResult,
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
