@@ -123,7 +123,11 @@ class RemoteApp(App):
             raise ServiceException(
                 f"Route already registered for command: {command_class.__name__}"
             )
-        route = self._default_route_prefix + route if add_prefix else route
+        if add_prefix:
+            route = f"{self._default_route_prefix.rstrip('/')}/{route.lstrip('/')}"
+        elif not route.startswith("/"):
+            route = "/" + route
+
         route = route if not add_host else f"{self.host_url}{route}"
         self._routes[command_class] = route
         return route

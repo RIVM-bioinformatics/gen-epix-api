@@ -1,23 +1,15 @@
 import abc
+import json
 from collections.abc import Iterable
+from typing import Any
 from uuid import UUID
-
-import numpy as np
 
 from gen_epix.fastapp import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
+from gen_epix.seqdb.domain import enum
 
 
 class BaseSeqRepository(BaseRepository):
-
-    @abc.abstractmethod
-    def get_distance_matrix_by_seq_ids(
-        self,
-        uow: BaseUnitOfWork,
-        seq_distance_protocol_id: UUID,
-        seq_ids: list[UUID],
-    ) -> np.ndarray:
-        raise NotImplementedError
 
     @abc.abstractmethod
     def retrieve_seq_fasta(
@@ -30,3 +22,27 @@ class BaseSeqRepository(BaseRepository):
         can be converted into FASTA format through a streaming approach.
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_similar_profiles(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+        profile_ids: list[UUID],
+        max_distance: float,
+        **kwargs: Any,
+    ) -> list[UUID]:
+        raise NotImplementedError()
+
+    @staticmethod
+    def _get_matching_profiles_for_distance_dict_format(
+        max_distance: float,
+        matching_profile_ids: set[UUID],
+        distances: str,
+        distance_format: enum.SeqDistanceFormat,
+    ) -> None:
+        if distance_format == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP:
+            distance_dict = json.loads(distances)
+            for profile_id, distance in distance_dict.items():
+                if distance <= max_distance:
+                    matching_profile_ids.add(UUID(profile_id))

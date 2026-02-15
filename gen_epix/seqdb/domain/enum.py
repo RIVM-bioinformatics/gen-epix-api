@@ -344,8 +344,7 @@ class SeqDistanceResultFormat(Enum):
 
 
 class SeqDistanceFormat(Enum):
-    SEQ_ID_DISTANCE_DICT = "SEQ_ID_DISTANCE_DICT"
-    PROFILE_ID_DISTANCE_DICT = "PROFILE_ID_DISTANCE_DICT"
+    PROFILE_DISTANCE_MAP = "PROFILE_DISTANCE_MAP"
 
 
 class SeqFileFormat(Enum):

@@ -172,14 +172,14 @@ class SeqService(BaseSeqService):
             for i, seq_distance in enumerate(tree_seq_distances):
                 if (
                     seq_distance.distance_format
-                    == enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT
+                    == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP
                 ):
                     distances = json.loads(seq_distance.distances)
-                    for str_seq_profile_id, distance in distances.items():
-                        if str_seq_profile_id not in tree_profile_id_idx_map:
+                    for profile_id_str, distance in distances.items():
+                        if profile_id_str not in tree_profile_id_idx_map:
                             # Distance to a sequence not in the list of seq_ids
                             continue
-                        j = tree_profile_id_idx_map[str_seq_profile_id]
+                        j = tree_profile_id_idx_map[profile_id_str]
                         if distance > max_stored_distance:
                             # Go only up to max_stored_distance in distance matrix,
                             # even if this actual stored distance is larger, e.g.
@@ -193,7 +193,7 @@ class SeqService(BaseSeqService):
                         condensed_distance_matrix[k] = distance
                 else:
                     raise exc.InvalidArgumentsError(
-                        "Only distance format SEQ_ID_DISTANCE_DICT is supported"
+                        f"Distance format {seq_distance.distance_format.value} is not supported"
                     )
             # Handle sequences with no stored distances
             if len(tree_profile_ids) < 2:
@@ -390,17 +390,17 @@ class SeqService(BaseSeqService):
 
             # Create SeqDistance objects from distances
             for i, allele_profile in enumerate(curr_allele_profiles):
-                # Calculate SeqDistance.id as 128 bit hash of seq_id, so that it is always the same
+                # Calculate SeqDistance.id as 128 bit hash of sample_id, so that it is always the same
                 seq_distance_id = UUID(
-                    bytes=hashlib.md5(allele_profile_str_seq_ids[i].encode()).digest()
+                    bytes=hashlib.sha256(allele_profile.sample_id.bytes).digest()[:16]
                 )
                 # Create seq_distance and add to dict_db
                 seq_distance = model.SeqDistance(
                     id=seq_distance_id,
-                    seq_id=allele_profile.seq_id,
+                    sample_id=allele_profile.sample_id,
                     seq_distance_protocol_id=seq_distance_protocol.id,
                     allele_profile_id=allele_profile.id,
-                    distance_format=enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT,
+                    distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
                     distances=json.dumps(curr_seq_distances[i]),
                 )
                 seq_distances.append(seq_distance)
@@ -500,3 +500,20 @@ class SeqService(BaseSeqService):
         )
         newick = f"({newick}"
         return newick
+
+    def retrieve_similar_profiles(
+        self,
+        cmd: command.RetrieveSimilarProfilesCommand,
+    ) -> list[UUID]:
+        # Special case: zero query profile ids
+        if not cmd.profile_ids:
+            return []
+        # Use dedicated repository method to retrieve similar profiles, which allows for more efficient retrieval of distances and distance formats
+        with self.repository.uow() as uow:
+            similar_profile_ids: list[UUID] = self.repository.retrieve_similar_profiles(
+                uow,
+                cmd.seq_distance_protocol_id,
+                cmd.profile_ids,
+                cmd.max_distance,
+            )
+        return similar_profile_ids

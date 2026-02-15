@@ -305,8 +305,8 @@ class TestRouteRegistration(BaseRemoteAppTestCase):
         )
 
         # Verify
-        self.assertEqual(route, "endpoint")
-        self.assertEqual(self.app.get_route(DummyCmd()), "endpoint")
+        self.assertEqual(route, "/endpoint")
+        self.assertEqual(self.app.get_route(DummyCmd()), "/endpoint")
 
     def test_register_route_duplicate_raises(self) -> None:
         # Create input

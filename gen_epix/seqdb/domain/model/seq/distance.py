@@ -125,13 +125,13 @@ class SeqDistance(Model, HasSampleMixin):
         description="The unique identifier for the profile.",
     )
     distance_format: enum.SeqDistanceFormat = Field(
-        default=enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT,
+        default=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
         description="The representation format of the distances.",
     )
     distances: str = Field(description="The distances to other sequences.")
 
     @field_serializer("distance_format", mode="plain")
-    def _serialize_distance_format(self, value: str | enum.SeqDistanceFormat) -> str:
+    def _serialize_seq_format(self, value: str | enum.SeqDistanceFormat) -> str:
         if isinstance(value, enum.SeqDistanceFormat):
             return value.value
         return value

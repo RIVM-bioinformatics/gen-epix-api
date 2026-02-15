@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -29,6 +30,10 @@ class BaseSeqService(BaseService):
             command.UploadSamplesCommand,
             self.upload_samples,
         )
+        f(
+            command.RetrieveSimilarProfilesCommand,
+            self.retrieve_similar_profiles,
+        )
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -49,7 +54,7 @@ class BaseSeqService(BaseService):
         cmd: command.RetrieveSamplesCommand,
     ) -> list[model.SampleForUpload]:
         raise NotImplementedError()
-        
+
     @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()
@@ -59,4 +64,11 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_similar_profiles(
+        self,
+        cmd: command.RetrieveSimilarProfilesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()

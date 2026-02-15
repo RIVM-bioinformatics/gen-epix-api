@@ -1,22 +1,110 @@
 import gzip
 import hashlib
 import logging
+import random
 import uuid
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID
+
+import numpy as np
+from pydantic import BaseModel, computed_field, field_validator
+from scipy.sparse import dok_matrix
 
 from gen_epix.commondb.api.exc import LAST_HANDLED_EXCEPTION
 from gen_epix.commondb.app_setup import create_fast_api
 from gen_epix.commondb.config import AppCfg, BaseAppCfg
+from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
+
+
+class SeqGenerationSettings(BaseModel):
+
+    n_loci: int
+    locus_length: int
+    p_locus_deletion: float = 0.01
+    p_nucleotide_substitution: float = 0.02
+    p_nucleotide_deletion: float = 0.005
+    seed: Optional[int] = 1001
+
+    @field_validator(
+        "p_locus_deletion",
+        "p_nucleotide_substitution",
+        "p_nucleotide_deletion",
+    )
+    @classmethod
+    def _validate_probability(cls, p: float) -> float:
+        if not 0.0 <= p < 1.0:
+            raise ValueError("Probabilities must be in ]0,1[")
+        return p
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="Total sequence length computed as n_loci * locus_length."
+    )
+    @cached_property
+    def seq_length(self) -> int:
+        return self.n_loci * self.locus_length
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="list of length n_loci with linear interpolated mutation probabilities over loci."
+    )
+    @cached_property
+    def p_locus_mutation(self) -> list[float]:
+        # linear interpolation of mutation probabilities over loci
+        p_locus_mutation = [(i + 1) / (self.n_loci + 1) for i in range(self.n_loci)]
+        # Deterministic shuffle based on provided seed
+        _rng = random.Random(self.seed if self.seed is not None else 0)
+        _rng.shuffle(p_locus_mutation)
+        return p_locus_mutation
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="locus deletion probabilities computed as p_locus_mutation * p_locus_deletion."
+    )
+    @cached_property
+    def p_locus_deletion_vec(self) -> list[float]:
+        return [p * self.p_locus_deletion for p in self.p_locus_mutation]
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="per-nucleotide substitution probabilities computed as p_locus_mutation * p_nucleotide_substitution."
+    )
+    @cached_property
+    def p_nucleotide_substitution_vec(self) -> list[float]:
+        p_nucleotide_substitution_vec: list[float] = []
+        for locus_idx in range(self.n_loci):
+            for _ in range(self.locus_length):
+                p_nucleotide_substitution_vec.append(
+                    self.p_locus_mutation[locus_idx] * self.p_nucleotide_substitution
+                )
+        return p_nucleotide_substitution_vec
+
+    @computed_field(  # type: ignore[prop-decorator]
+        description="per-nucleotide deletion probabilities computed as p_locus_mutation * p_nucleotide_deletion."
+    )
+    @cached_property
+    def p_nucleotide_deletion_vec(self) -> list[float]:
+        p_nucleotide_deletion_vec: list[float] = []
+        for locus_idx in range(self.n_loci):
+            for _ in range(self.locus_length):
+                p_nucleotide_deletion_vec.append(
+                    self.p_locus_mutation[locus_idx] * self.p_nucleotide_deletion
+                )
+        return p_nucleotide_deletion_vec
+
+
+class DistanceMatrix(BaseModel):
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    obj_ids: list[UUID]
+    matrix: np.ndarray
 
 
 class SeqdbTestClient(TestClient):
@@ -572,3 +660,300 @@ class SeqdbTestClient(TestClient):
                 self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
             ).id  # type: ignore[assignment]
         return obj_id
+
+    @staticmethod
+    def generate_random_sequences(
+        n_seqs: int,
+        settings: SeqGenerationSettings,
+        assembly_protocol_id: UUID | None = None,
+        locus_set_id: UUID | None = None,
+        locus_detection_protocol_id: UUID | None = None,
+    ) -> model.SampleBatchForUpload:
+        # set IDs if not provided
+        assembly_protocol_id = (
+            assembly_protocol_id if assembly_protocol_id is not None else uuid.uuid4()
+        )
+        locus_set_id = locus_set_id if locus_set_id is not None else uuid.uuid4()
+        locus_detection_protocol_id = (
+            locus_detection_protocol_id
+            if locus_detection_protocol_id is not None
+            else uuid.uuid4()
+        )
+        # local RNG to  ensure reproducibility with same seed
+        rng = random.Random(settings.seed)
+
+        locus_ids: list[UUID] = [uuid.uuid4() for _ in range(settings.n_loci)]
+        sequence: list[str] = [
+            rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)
+        ]
+        has_locus: list[bool] = [True] * settings.n_loci
+
+        class SeqNode(BaseModel):
+            sequence: list[str]
+            has_locus: list[bool]
+
+        children: list[SeqNode] = [SeqNode(sequence=sequence, has_locus=has_locus)]
+
+        while len(children) < n_seqs:
+            parent: SeqNode = children.pop(0)
+            parent_sequence = parent.sequence
+            parent_has_locus = parent.has_locus
+
+            for _ in range(2):
+                seq = parent_sequence.copy()
+                has_locus = parent_has_locus.copy()
+                # Apply locus deletions
+                SeqdbTestClient._apply_locus_deletions(settings, rng, has_locus, seq)
+                # Apply nucleotide substitutions
+                SeqdbTestClient._apply_nucleotide_substitutions(
+                    settings, rng, has_locus, seq
+                )
+                # Apply nucleotide deletions
+                SeqdbTestClient._apply_nucleotide_deletions(
+                    settings, rng, has_locus, seq
+                )
+                children.append(SeqNode(sequence=seq, has_locus=has_locus))
+
+        seqs: list[str] = ["".join(node.sequence) for node in children]
+        alleles: dict[str, model.AlleleForUpload] = {}
+        samples_for_upload: list[model.SampleForUpload] = []
+        for seq in seqs:  # type: ignore[assignment]
+            seq_id: UUID = uuid.uuid4()
+            allele_ids: list[UUID] = [NULL_ID] * settings.n_loci
+            for locus_idx in range(settings.n_loci):
+                locus_id = locus_ids[locus_idx]
+                allele_seq = seq[
+                    locus_idx
+                    * settings.locus_length : (locus_idx + 1)
+                    * settings.locus_length
+                ]
+                if set(allele_seq) != {"-"}:
+                    if (
+                        allele_seq in alleles  # type: ignore[comparison-overlap]
+                        and alleles[allele_seq].locus_id != locus_id  # type: ignore[index]
+                    ):
+                        raise AssertionError(
+                            "Allele sequence already exists for a different locus"
+                        )
+                    alleles[allele_seq] = model.AlleleForUpload(  # type: ignore[index]
+                        seq="".join(x for x in allele_seq if x != "-"),
+                        seq_format=enum.SeqFormat.STR_DNA,
+                        locus_id=locus_id,
+                    )
+                    allele_ids[locus_idx] = alleles[allele_seq].id  # type: ignore[assignment,index]
+            allele_profile_for_upload = model.AlleleProfileForUpload(
+                locus_set_id=locus_set_id,
+                locus_detection_protocol_id=locus_detection_protocol_id,
+                allele_ids=allele_ids,  # type: ignore[arg-type]
+                allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
+                seq_id=seq_id,
+            )
+            seq_for_upload = model.SeqForUpload(
+                id=seq_id,
+                contigs=[
+                    model.Contig(
+                        seq="".join(x for x in seq if x != "-"),
+                        seq_format=enum.SeqFormat.STR_DNA,
+                    )
+                ],
+                assembly_protocol_id=assembly_protocol_id,
+            )
+            samples_for_upload.append(
+                model.SampleForUpload(
+                    seqs=[seq_for_upload],
+                    allele_profiles=[allele_profile_for_upload],
+                )
+            )
+        sample_batch_for_upload = model.SampleBatchForUpload(
+            samples=samples_for_upload,
+            alleles=list(alleles.values()),
+        )
+        return sample_batch_for_upload
+
+    @staticmethod
+    def _apply_nucleotide_deletions(
+        settings: SeqGenerationSettings,
+        rng: random.Random,
+        has_locus: list[bool],
+        seq: list[str],
+    ) -> None:
+        for i in range(settings.seq_length):
+            locus_idx = i // settings.locus_length
+            if (
+                has_locus[locus_idx]
+                and rng.random() <= settings.p_nucleotide_deletion_vec[i]
+            ):
+                # Delete nucleotide
+                seq[i] = "-"
+
+    @staticmethod
+    def _apply_nucleotide_substitutions(
+        settings: SeqGenerationSettings,
+        rng: random.Random,
+        has_locus: list[bool],
+        seq: list[str],
+    ) -> None:
+        for i in range(settings.seq_length):
+            locus_idx = i // settings.locus_length
+            if (
+                has_locus[locus_idx]
+                and rng.random() <= settings.p_nucleotide_substitution_vec[i]
+            ):
+                # Substitute nucleotide
+                original_nuc = seq[i]
+                if original_nuc != "-":
+                    seq[i] = rng.choice([n for n in "ACGT" if n != original_nuc])
+
+    @staticmethod
+    def _apply_locus_deletions(
+        settings: SeqGenerationSettings,
+        rng: random.Random,
+        has_locus: list[bool],
+        seq: list[str],
+    ) -> None:
+        for i in range(settings.n_loci):
+            if rng.random() <= settings.p_locus_deletion_vec[i]:
+                # Delete locus
+                has_locus[i] = False
+                # update the sequence to have all gaps for that locus.
+                for j in range(
+                    i * settings.locus_length, (i + 1) * settings.locus_length
+                ):
+                    seq[j] = "-"
+
+    @staticmethod
+    def calculate_distance_matrix_from_allele_profiles(
+        allele_profiles: list[model.AlleleProfile],
+    ) -> DistanceMatrix:
+        n_profiles = len(allele_profiles)
+
+        if n_profiles == 0:
+            return DistanceMatrix(
+                obj_ids=[],
+                matrix=np.array([[]]),
+            )
+        if n_profiles == 1:
+            return DistanceMatrix(
+                obj_ids=[allele_profiles[0].id],  # type: ignore[list-item]
+                matrix=np.array([[0]]),
+            )
+
+        # Vector-Based Hamming Distance Computation
+        # distance_matrix = np.zeros((n_profiles, n_profiles), dtype=int)
+        # for i in range(n_profiles - 1):
+        #     allele_ids = allele_profiles[i].get_allele_ids()
+        #     for j in range(i + 1, n_profiles):
+        #         other_allele_ids = allele_profiles[j].get_allele_ids()
+        #         # Calculate hamming distance
+        #         distance = np.count_nonzero(
+        #             np.array(allele_ids) != np.array(other_allele_ids)
+        #         )
+        #         distance_matrix[i][j] = distance
+        #         distance_matrix[j][i] = distance
+
+        # p-dist approach
+        # X = np.asarray(
+        #     [
+        #         allele_profile.get_allele_ids()
+        #         for allele_profile in allele_profiles
+        #     ]
+        # )
+        # distance_matrix = pdist(X, metric="hamming") * X.shape[1]
+
+        # Categorical Hamming distance matrix one-hot encoding approach
+        # per_sample_alleles_ids: list[list[UUID | None]] = [
+        #     allele_profile.get_allele_ids() for allele_profile in allele_profiles
+        # ]
+        # # all profiles must share the same number of loci
+        # n_loci = len(per_sample_alleles_ids[0])
+        # for allele_ids in per_sample_alleles_ids:
+        #     if len(allele_ids) != n_loci:
+        #         raise ValueError(
+        #             "All allele profiles must have the same number of loci"
+        #         )
+
+        # # prepare matrices to accumulate results
+        # matches = np.zeros((n_profiles, n_profiles), dtype=np.int32)
+        # comparable = np.zeros((n_profiles, n_profiles), dtype=np.int32)
+
+        # # for each locus:
+        # # - group samples by allele id
+        # # - add 1 to matches for every pair in the same allele group
+        # # - add 1 to comparable for every pair where both samples have any allele
+        # for locus_idx in range(n_loci):
+        #     groups: dict[UUID, list[int]] = {}
+        #     present_indices: list[int] = []
+
+        #     for sample_idx in range(n_profiles):
+        #         allele_id = per_sample_alleles_ids[sample_idx][locus_idx]
+        #         if allele_id is not None:
+        #             present_indices.append(sample_idx)
+        #             if allele_id not in groups:
+        #                 groups[allele_id] = []
+        #             groups[allele_id].append(sample_idx)
+
+        #     # update matches, for each locus:
+        #     # - retrieve the groups of samples sharing the same allele
+        #     # - get the coordinates of the submatrix for each group
+        #     # - add 1 to all those coordinates in the matches matrix
+        #     for _, idx_list in groups.items():
+        #         if len(idx_list) > 0:
+        #             idx = np.asarray(idx_list, dtype=np.int32)
+        #             matches[idx[:, None], idx[None, :]] += 1
+
+        #     # update comparable, for each locus:
+        #     # - determine if there are samples with an allele (data) at this locus (not None)
+        #     # - get the coordinates of the submatrix for those samples
+        #     # - add 1 to all those coordinates in the comparable matrix
+        #     if len(present_indices) > 0:
+        #         pidx = np.asarray(present_indices, dtype=np.int32)
+        #         comparable[pidx[:, None], pidx[None, :]] += 1
+
+        # # calculate distance matrix
+        # distance_matrix = comparable - matches
+        # np.fill_diagonal(distance_matrix, 0)
+
+        # Sparse matrix approach
+        per_sample_alleles_ids: list[list[UUID | None]] = [
+            allele_profile.get_allele_ids() for allele_profile in allele_profiles
+        ]
+        n_loci = len(per_sample_alleles_ids[0])
+        for allele_ids in per_sample_alleles_ids:
+            if len(allele_ids) != n_loci:
+                raise ValueError(
+                    "All allele profiles must have the same number of loci"
+                )
+
+        matches = dok_matrix((n_profiles, n_profiles), dtype=np.int32)
+        comparable = dok_matrix((n_profiles, n_profiles), dtype=np.int32)
+
+        for locus_idx in range(n_loci):
+            groups: dict[UUID, list[int]] = {}
+            present_indices: list[int] = []
+
+            for sample_idx in range(n_profiles):
+                allele_id = per_sample_alleles_ids[sample_idx][locus_idx]
+                if allele_id is not None:
+                    present_indices.append(sample_idx)
+                    if allele_id not in groups:
+                        groups[allele_id] = []
+                    groups[allele_id].append(sample_idx)
+
+            for idx_list in groups.values():
+                for i in idx_list:
+                    for j in idx_list:
+                        matches[i, j] += 1
+
+            for i in present_indices:
+                for j in present_indices:
+                    comparable[i, j] += 1
+
+        matches_dense = matches.toarray()
+        comparable_dense = comparable.toarray()
+        distance_matrix = comparable_dense - matches_dense
+        np.fill_diagonal(distance_matrix, 0)
+
+        return DistanceMatrix(
+            obj_ids=[x.id for x in allele_profiles if x.id is not None],
+            matrix=distance_matrix,
+        )

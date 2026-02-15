@@ -30,6 +30,7 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
         f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
+        f(seqdb_command.RetrieveSimilarProfilesCommand, self.retrieve_similar_profiles)
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -56,4 +57,11 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_similar_profiles(
+        self,
+        cmd: seqdb_command.RetrieveSimilarProfilesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()

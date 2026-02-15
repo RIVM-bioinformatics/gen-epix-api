@@ -254,13 +254,13 @@ class TestModelSeq(TestCase):
             "contigs": [TestModelSeq._create_valid_contig()],
         }
         defaults.update(kwargs)
-        return model.Seq(**defaults)  # type:ignore[arg-type]
+        return model.Seq(**defaults)  # type: ignore[arg-type]
 
     def test_seq_creation_with_contigs(self) -> None:
         """Test creating Seq with contigs."""
         contigs = [self._create_valid_contig(), model.Contig(seq="GCTAGCTA")]
         seq = model.Seq(
-            sample_id=uuid4(), code="test_seq", contigs=contigs  # type:ignore[call-arg]
+            sample_id=uuid4(), code="test_seq", contigs=contigs  # type: ignore[call-arg]
         )
         self.assertEqual(len(seq.contigs), 2)
         self.assertEqual(seq.code, "test_seq")
@@ -269,7 +269,7 @@ class TestModelSeq(TestCase):
     def test_seq_without_contigs(self) -> None:
         """Test creating Seq without contigs (not available)."""
         seq = model.Seq(
-            sample_id=uuid4(), code="test_seq", contigs=[]  # type:ignore[call-arg]
+            sample_id=uuid4(), code="test_seq", contigs=[]  # type: ignore[call-arg]
         )
         self.assertEqual(len(seq.contigs), 0)
         self.assertFalse(seq.is_available)
@@ -299,8 +299,8 @@ class TestModelSeq(TestCase):
         short_contig = model.Contig(seq="ATCG")
         long_contig = model.Contig(seq="ATCGATCGATCGATCG")
         seq = model.Seq(
-            sample_id=uuid4(),  # type:ignore[call-arg]
-            code="test_seq",  # type:ignore[call-arg]
+            sample_id=uuid4(),  # type: ignore[call-arg]
+            code="test_seq",  # type: ignore[call-arg]
             contigs=[short_contig, long_contig],
         )
         self.assertEqual(seq.min_contig_length, 4)
@@ -309,7 +309,7 @@ class TestModelSeq(TestCase):
     def test_empty_contigs_computed_lengths(self) -> None:
         """Test computed lengths with empty contigs list."""
         seq = model.Seq(
-            sample_id=uuid4(), code="test_seq", contigs=[]  # type:ignore[call-arg]
+            sample_id=uuid4(), code="test_seq", contigs=[]  # type: ignore[call-arg]
         )
         self.assertEqual(seq.min_contig_length, 0)
         self.assertEqual(seq.max_contig_length, 0)
@@ -366,7 +366,7 @@ class TestModelSeqForUpload(TestCase):
             "assembly_protocol_id": uuid4(),  # Required: either assembly_protocol_id or assembly_protocol_code
         }
         defaults.update(kwargs)
-        return model.SeqForUpload(**defaults)  # type:ignore[arg-type]
+        return model.SeqForUpload(**defaults)  # type: ignore[arg-type]
 
     def test_seq_for_upload_creation(self) -> None:
         """Test creating SeqForUpload with basic fields."""
@@ -374,7 +374,7 @@ class TestModelSeqForUpload(TestCase):
         code = "test_seq_upload"
         seq_upload = model.SeqForUpload(
             sample_id=sample_id,
-            code=code,  # type:ignore[call-arg]
+            code=code,  # type: ignore[call-arg]
             contigs=[model.Contig(seq="ATCGATCG")],
             assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
         )
@@ -397,7 +397,7 @@ class TestModelSeqForUpload(TestCase):
         """Test SeqForUpload with NULL_ID for sample_id."""
         seq_upload = model.SeqForUpload(
             sample_id=NULL_ID,
-            code="test_seq",  # type:ignore[call-arg]
+            code="test_seq",  # type: ignore[call-arg]
             contigs=[model.Contig(seq="ATCGATCG")],
             assembly_protocol_code="TEST_PROTOCOL",  # Required: either assembly_protocol_id or assembly_protocol_code
         )
