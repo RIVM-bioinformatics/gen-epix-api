@@ -363,8 +363,19 @@ class App:
                 type(cmd), []
             ):
                 listener(cmd, retval)
+        except exc.ServiceException as exception:
+            # Service errors should always capture the stack trace to aid diagnosis.
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "f3c7a1d9", "SERVICE_EXCEPTION", cmd=cmd, exception=exception
+                    ),
+                    exc_info=True,
+                )
+            self._command_stack.pop()
+            raise exception
         except exc.DomainException as exception:
-            # Domain exception does not require stack trace
+            # Other domain exceptions are expected; log without stack trace to reduce noise.
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
