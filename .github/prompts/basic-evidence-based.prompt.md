@@ -8,7 +8,10 @@ Docs workflow:
 
 Evidence requirements:
 - When stating behavior/architecture, cite concrete repo evidence: file paths + symbols (and line ranges when possible).
-- Don’t invent endpoints, config keys, or module responsibilities. If unsure, ask to inspect specific files or search the workspace.
+- If evidence isn’t obvious, use `@workspace` search and report the top matches before concluding.
+- Don’t invent endpoints, config keys, ports, or module responsibilities.
+- Confirm which layer each change belongs to (api/domain/services/repositories) and keep boundaries intact.
+- Prefer minimal, localized changes that match existing patterns.
 
 Output format:
 1) What I consulted (docs + key code files)

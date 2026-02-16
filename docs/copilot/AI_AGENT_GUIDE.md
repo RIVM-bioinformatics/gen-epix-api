@@ -16,6 +16,7 @@ Use docs to find the right places and constraints quickly, but if docs conflict 
 ## 2) How to give Copilot Chat the right context (VS Code)
 
 Copilot Chat is strongest when you deliberately attach the *right* context rather than hoping it “reads the whole repo.”
+The canonical prompt lives in .github/prompts/basic-evidence-based.prompt.md; this guide shows how to apply it.
 
 ### A) Start broad when needed
 Use **workspace context** for questions like:
