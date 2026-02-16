@@ -68,6 +68,56 @@ class TestRefdataAccess:
         retval: list[model.User] = self._read_all(env, model.User, sort=True, return_id=False)  # type: ignore[assignment]
         return retval
 
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_organization_access_case_policies(
+        self, env: Env
+    ) -> list[model.OrganizationAccessCasePolicy]:
+        retval: list[model.OrganizationAccessCasePolicy] = self._read_all(
+            env, model.OrganizationAccessCasePolicy, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_organization_share_case_policies(
+        self, env: Env
+    ) -> list[model.OrganizationShareCasePolicy]:
+        retval: list[model.OrganizationShareCasePolicy] = self._read_all(
+            env, model.OrganizationShareCasePolicy, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_user_access_case_policies(
+        self, env: Env
+    ) -> list[model.UserAccessCasePolicy]:
+        retval: list[model.UserAccessCasePolicy] = self._read_all(
+            env, model.UserAccessCasePolicy, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_user_share_case_policies(
+        self, env: Env
+    ) -> list[model.UserShareCasePolicy]:
+        retval: list[model.UserShareCasePolicy] = self._read_all(
+            env, model.UserShareCasePolicy, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_case_type_set_members(self, env: Env) -> list[model.CaseTypeSetMember]:
+        retval: list[model.CaseTypeSetMember] = self._read_all(
+            env, model.CaseTypeSetMember, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
+    def _get_all_organizations(self, env: Env) -> list[model.Organization]:
+        retval: list[model.Organization] = self._read_all(
+            env, model.Organization, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
     @cached(
         cache=LRUCache(maxsize=1024),
         key=lambda self, env, user, role_set: (user.id, role_set),
@@ -173,15 +223,27 @@ class TestRefdataAccess:
             case_set_categories = self._read_all(env, model.CaseSetCategory, user=user)
             assert case_set_categories == all_case_set_categories
 
-    def get_expected_case_type_ids(
+    # TODO get_expected_case_type_ids_for_reference_data
+    # Correction for reference data: The actual rights of the organization user for reference data
+    # are limited to read rights and are the union of the reference data available
+    # to the organization through the organization (access/share) policies
+    # => all (both admin and organization) users of the same organization see the same reference data.
+
+    def get_expected_case_type_ids_for_operational_data(
         self,
-        all_organization_access_case_policies: list[model.OrganizationAccessCasePolicy],
-        all_organization_share_case_policies: list[model.OrganizationShareCasePolicy],
-        all_user_access_case_policies: list[model.UserAccessCasePolicy],
-        all_user_share_case_policies: list[model.UserShareCasePolicy],
-        all_case_type_set_members: list[model.CaseTypeSetMember],
+        env: Env,
         user: model.User,
     ) -> set[UUID]:
+        # Get all the reference data using cached methods
+        all_organization_access_case_policies = (
+            self._get_all_organization_access_case_policies(env)
+        )
+        all_organization_share_case_policies = (
+            self._get_all_organization_share_case_policies(env)
+        )
+        all_user_access_case_policies = self._get_all_user_access_case_policies(env)
+        all_user_share_case_policies = self._get_all_user_share_case_policies(env)
+        all_case_type_set_members = self._get_all_case_type_set_members(env)
 
         # Get case type sets from organization access policies for this user's org
         org_access_case_type_set_ids = {
@@ -289,38 +351,7 @@ class TestRefdataAccess:
         ), "No case types found in the system, cannot test access control for case types"
 
         all_users = self._get_all_users(env)
-
-        # retrieve all OrganizationAccessCasePolicy objects
-        all_organization_access_case_policies: list[
-            model.OrganizationAccessCasePolicy
-        ] = self._read_all(
-            env, model.OrganizationAccessCasePolicy, return_id=False
-        )  # type: ignore[assignment]
-
-        # retrieve all OrganizationShareCasePolicy objects
-        all_organization_share_case_policies: list[
-            model.OrganizationShareCasePolicy
-        ] = self._read_all(
-            env, model.OrganizationShareCasePolicy, return_id=False
-        )  # type: ignore[assignment]
-        # retrieve all UserAccessCasePolicy objects
-        all_user_access_case_policies: list[
-            model.UserAccessCasePolicy
-        ] = self._read_all(
-            env, model.UserAccessCasePolicy, return_id=False
-        )  # type: ignore[assignment]
-        # retrieve all UserShareCasePolicy objects
-        all_user_share_case_policies: list[model.UserShareCasePolicy] = self._read_all(
-            env, model.UserShareCasePolicy, return_id=False
-        )  # type: ignore[assignment]
-        # retrieve all case type set members
-        all_case_type_set_members: list[model.CaseTypeSetMember] = self._read_all(
-            env, model.CaseTypeSetMember, return_id=False
-        )  # type: ignore[assignment]
-
-        all_organizations: list[model.Organization] = self._read_all(
-            env, model.Organization, return_id=False
-        )  # type: ignore[assignment]
+        all_organizations = self._get_all_organizations(env)
 
         for user in all_users:
 
@@ -342,14 +373,12 @@ class TestRefdataAccess:
                 assert case_types == all_case_types
 
             else:
-                # retrieve all unique case type set IDs from the retrieved policies for the user/organization in question
-                expected_case_type_ids = self.get_expected_case_type_ids(
-                    all_organization_access_case_policies,
-                    all_organization_share_case_policies,
-                    all_user_access_case_policies,
-                    all_user_share_case_policies,
-                    all_case_type_set_members,
-                    user,
+                # retrieve all unique case type IDs from the retrieved policies for the user in question
+                expected_case_type_ids = (
+                    self.get_expected_case_type_ids_for_operational_data(
+                        env,
+                        user,
+                    )
                 )
 
                 # get actual case type IDs from the returned case types
