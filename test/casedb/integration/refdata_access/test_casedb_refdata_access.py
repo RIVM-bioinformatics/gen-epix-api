@@ -112,6 +112,13 @@ class TestRefdataAccess:
         return retval
 
     @cached(cache=LRUCache(maxsize=1))
+    def _get_all_case_type_sets(self, env: Env) -> list[model.CaseTypeSet]:
+        retval: list[model.CaseTypeSet] = self._read_all(
+            env, model.CaseTypeSet, return_id=False
+        )  # type: ignore[assignment]
+        return retval
+
+    @cached(cache=LRUCache(maxsize=1))
     def _get_all_organizations(self, env: Env) -> list[model.Organization]:
         retval: list[model.Organization] = self._read_all(
             env, model.Organization, return_id=False
@@ -223,11 +230,91 @@ class TestRefdataAccess:
             case_set_categories = self._read_all(env, model.CaseSetCategory, user=user)
             assert case_set_categories == all_case_set_categories
 
-    # TODO get_expected_case_type_ids_for_reference_data
-    # Correction for reference data: The actual rights of the organization user for reference data
-    # are limited to read rights and are the union of the reference data available
-    # to the organization through the organization (access/share) policies
-    # => all (both admin and organization) users of the same organization see the same reference data.
+    def get_expected_case_type_ids_for_reference_data(
+        self,
+        env: Env,
+        user: model.User,
+    ) -> set[UUID]:
+        """
+        Get expected case type IDs for reference data access.
+
+        For reference data, the actual rights of organization users are limited to read rights
+        and are the union of the reference data available to the organization through the
+        organization (access/share) policies. This means all users of the same organization
+        see the same reference data.
+
+        Logic:
+        - Organization access policies OR organization share policies (union) = org_case_type_ids
+        - All users in the same organization have the same reference data access
+        """
+        # Get all the reference data using cached methods
+        all_organization_access_case_policies = (
+            self._get_all_organization_access_case_policies(env)
+        )
+        all_organization_share_case_policies = (
+            self._get_all_organization_share_case_policies(env)
+        )
+        all_case_type_set_members = self._get_all_case_type_set_members(env)
+
+        # Get case type sets from organization access policies for this user's org
+        org_access_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_organization_access_case_policies
+            if x.organization_id == user.organization_id
+        }
+
+        # Get case type sets from organization share policies for this user's org
+        org_share_case_type_set_ids = {
+            x.case_type_set_id
+            for x in all_organization_share_case_policies
+            if x.organization_id == user.organization_id
+        }
+
+        # Get all case types accessible through organization access policies
+        org_access_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in org_access_case_type_set_ids
+        }
+
+        # Get all case types accessible through organization share policies
+        org_share_case_type_ids = {
+            x.case_type_id
+            for x in all_case_type_set_members
+            if x.case_type_set_id in org_share_case_type_set_ids
+        }
+
+        # Union: case types accessible through organization access OR share policies
+        expected_case_type_ids = org_access_case_type_ids | org_share_case_type_ids
+
+        if VERBOSE:
+            all_case_type_sets = self._get_all_case_type_sets(env)
+            case_type_set_name_map = {cts.id: cts.name for cts in all_case_type_sets}
+
+            org_access_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in org_access_case_type_set_ids
+            ]
+            org_share_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in org_share_case_type_set_ids
+            ]
+
+            print(
+                "org access case type sets:",
+                len(org_access_case_type_set_ids),
+                org_access_case_type_set_names,
+            )
+            print(
+                "org share case type sets:",
+                len(org_share_case_type_set_ids),
+                org_share_case_type_set_names,
+            )
+            print("org access case types:", len(org_access_case_type_ids))
+            print("org share case types:", len(org_share_case_type_ids))
+            print("reference data case type IDs:", len(expected_case_type_ids))
+
+        return expected_case_type_ids
 
     def get_expected_case_type_ids_for_operational_data(
         self,
@@ -311,13 +398,49 @@ class TestRefdataAccess:
         expected_case_type_ids = access_case_type_ids | share_case_type_ids
 
         if VERBOSE:
-            print("org access case type sets:", len(org_access_case_type_set_ids))
-            print("user access case type sets:", len(user_access_case_type_set_ids))
+            all_case_type_sets = self._get_all_case_type_sets(env)
+            case_type_set_name_map = {cts.id: cts.name for cts in all_case_type_sets}
+
+            org_access_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in org_access_case_type_set_ids
+            ]
+            user_access_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in user_access_case_type_set_ids
+            ]
+            org_share_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in org_share_case_type_set_ids
+            ]
+            user_share_case_type_set_names = [
+                case_type_set_name_map.get(cts_id, str(cts_id))
+                for cts_id in user_share_case_type_set_ids
+            ]
+
+            print(
+                "org access case type sets:",
+                len(org_access_case_type_set_ids),
+                org_access_case_type_set_names,
+            )
+            print(
+                "user access case type sets:",
+                len(user_access_case_type_set_ids),
+                user_access_case_type_set_names,
+            )
             print("org access case types:", len(org_access_case_type_ids))
             print("user access case types:", len(user_access_case_type_ids))
             print("access intersection case types:", len(access_case_type_ids))
-            print("org share case type sets:", len(org_share_case_type_set_ids))
-            print("user share case type sets:", len(user_share_case_type_set_ids))
+            print(
+                "org share case type sets:",
+                len(org_share_case_type_set_ids),
+                org_share_case_type_set_names,
+            )
+            print(
+                "user share case type sets:",
+                len(user_share_case_type_set_ids),
+                user_share_case_type_set_names,
+            )
             print("org share case types:", len(org_share_case_type_ids))
             print("user share case types:", len(user_share_case_type_ids))
             print("share intersection case types:", len(share_case_type_ids))
@@ -328,15 +451,16 @@ class TestRefdataAccess:
     ## Add more fine-grained tests for case type access, e.g. with ABAC filtering, and not just all-or-nothing as in the current test
     def test_case_type(self, env: Env) -> None:
         """
-        Test that case type access is correctly controlled by ABAC policies.
+        Test that case type access is correctly controlled by ABAC policies for reference data.
 
         This test verifies that users can only access case types they are authorized to see
-        based on the intersection of organization-level and user-level access/share policies.
+        based on organization-level policies. For reference data, all users within the same
+        organization see the same reference data.
 
-        Access logic:
-        - Organization access policies + User access policies (intersection) = access_case_type_ids
-        - Organization share policies + User share policies (intersection) = share_case_type_ids
-        - Final accessible case types = access_case_type_ids | share_case_type_ids (union)
+        Access logic for reference data:
+        - Organization access policies OR organization share policies (union) = accessible case types
+        - User-level policies are NOT considered for reference data access
+        - All users in the same organization have identical reference data access
 
         Users with GE_REFDATA_ADMIN role have access to all case types.
 
@@ -375,7 +499,7 @@ class TestRefdataAccess:
             else:
                 # retrieve all unique case type IDs from the retrieved policies for the user in question
                 expected_case_type_ids = (
-                    self.get_expected_case_type_ids_for_operational_data(
+                    self.get_expected_case_type_ids_for_reference_data(
                         env,
                         user,
                     )
