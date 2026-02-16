@@ -1,4 +1,6 @@
-﻿# Consolidated System Documentation
+Creation Date: February 16, 2026
+
+# Consolidated System Documentation
 
 ## 1. Purpose and Audience
 This document is the system-level map for maintainers, security reviewers, and operators. It explains how Gen-EpiX is structured, where control points live, and what is explicitly evidenced versus still undocumented. (Source: `gen_epix/casedb/app.py#L28-L45`; Source: `gen_epix/commondb/env.py#L89-L205`; Source: `.github/workflows/main.yml#L1-L197`)

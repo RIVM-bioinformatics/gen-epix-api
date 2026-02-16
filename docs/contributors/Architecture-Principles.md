@@ -1,3 +1,5 @@
+Creation Date: February 16, 2026
+
 # Architecture Principles
 
 ## 1. Layer Boundaries
