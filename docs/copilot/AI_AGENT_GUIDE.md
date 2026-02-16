@@ -177,3 +177,20 @@ Fix:
 Keep these separate so:
 - Copilot gets short, strict constraints
 - the team gets practical “how to use it” guidance
+
+---
+
+## 10) Troubleshooting Copilot Chat
+
+**Copilot says “I can’t see that file” / misses important context**
+- Make sure you explicitly attach it using #<file> (or drag & drop the file/folder into chat).
+- If it’s relevant code, open it in an editor tab and use #editor or highlight and use #selection.
+
+**Copilot answers without evidence**
+- Reply: “Stop and cite evidence: file paths + symbols + line ranges. If you can’t find them, add a ‘Suspected Stale Documentation’ section.”
+
+**Copilot suggests a pattern that doesn’t match this repo (e.g., bypassing commands/policies)**
+- Reply: “Use the repo patterns (Command/App mediator + policies). Show precedents in code.”
+
+**Copilot invents endpoints/config**
+- Reply: “Search the workspace for the endpoint/config key; if not found, list under ‘Suspected Stale Documentation’ and propose verified alternatives only.”

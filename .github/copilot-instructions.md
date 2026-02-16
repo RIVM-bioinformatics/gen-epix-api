@@ -219,7 +219,19 @@ python run.py etl_load_demo_data casedb
 
 ---
 
-## 7) Integration Points
+## 7) Cross-Service Discovery (HTTP boundaries)
+
+Services communicate via **HTTP APIs**, not direct imports.
+
+When generating or modifying cross-service calls:
+1) **Search the workspace for existing patterns first** (e.g., `RemoteApp`, `httpx`, “client”, “base_url”, “external”, “gateway`).
+2) **Reuse existing client abstractions/config patterns** instead of introducing new ones.
+3) **Cite precedent**: include file paths + symbols (and line ranges if possible) that match the pattern you used.
+4) If no client pattern exists, propose a minimal client design and label it as a **new pattern** (include risks and where to document it).
+
+---
+
+## 8) Integration Points
 
 - **Cross-service communication**: via HTTP APIs (not direct imports)
 - **Remote service support**: can connect to remote instances via a `RemoteApp` pattern (verify exact location in repo)

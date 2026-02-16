@@ -12,6 +12,7 @@ Evidence requirements:
 - Don’t invent endpoints, config keys, ports, or module responsibilities.
 - Confirm which layer each change belongs to (api/domain/services/repositories) and keep boundaries intact.
 - Prefer minimal, localized changes that match existing patterns.
+- Stale-docs check: If a doc references a file path, module, symbol, command name, env var, endpoint, or config key that you cannot locate in the current codebase via workspace search, list it under a “Suspected Stale Documentation” section (include the doc name + referenced term). Do not invent replacements—propose likely candidates only if you can cite evidence.
 
 Output format:
 1) What I consulted (docs + key code files)
