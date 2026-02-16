@@ -108,6 +108,9 @@ from gen_epix.seqdb.domain.command.seq import (
     AstProtocolCrudCommand as AstProtocolCrudCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
+    CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
     GenerateMultipleAlignmentCommand as GenerateMultipleAlignmentCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
@@ -268,6 +271,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
+        CalculateSeqDistancesForNewProfilesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,

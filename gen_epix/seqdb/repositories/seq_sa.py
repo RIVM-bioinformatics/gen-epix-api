@@ -65,3 +65,19 @@ class SeqSARepository(SARepository, BaseSeqRepository):
             )
 
         return list(matching_profile_ids - set(profile_ids))
+
+    def iter_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+    ) -> Iterable[model.SeqDistance]:
+        stmt = sa.select(sa_model.SeqDistance).where(
+            sa_model.SeqDistance.seq_distance_protocol_id == seq_distance_protocol_id
+        )
+        mapper = self.get_mapper(model.SeqDistance)
+        assert isinstance(uow, SAUnitOfWork)
+        result_iterator = uow.session.execute(stmt)
+        for row in result_iterator:
+            sa_seq_distance: sa_model.SeqDistance = row[0]
+            seq_distance: model.SeqDistance = mapper.load(sa_seq_distance)  # type: ignore[assignment]
+            yield seq_distance

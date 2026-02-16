@@ -57,6 +57,9 @@ from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
+from gen_epix.seqdb.domain.model.seq import (
+    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
+)
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
@@ -206,6 +209,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,
+            CalculateSeqDistancesResult,
             SampleBatchUploadResult,
         ],
         enum.ServiceType.FILE: [File],

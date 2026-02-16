@@ -712,6 +712,19 @@ class SampleBatchForUpload(BaseBatchForUpload):
         return self
 
 
+class CalculateSeqDistancesResult(UploadResult):
+    """
+    The result of calculating distances between sequences.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "CalculateSeqDistancesResult"
+
+    seq_distance_profile_id: UUID = Field(
+        description="The UUID of the sequence distance profile that contains the calculated distances.",
+    )
+
+
 class SampleBatchUploadResult(BaseBatchUploadResult):
     """
     The result of uploading a batch of cases.
@@ -725,4 +738,8 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
 
     samples: list[SampleUploadResult] = Field(
         description="The results of uploading the individual samples, in the same order as provided."
+    )
+    seq_distances: list[CalculateSeqDistancesResult] | None = Field(
+        default=None,
+        description="The results of calculating distances between sequences, if this was performed as part of the upload.",
     )

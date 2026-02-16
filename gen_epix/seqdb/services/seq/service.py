@@ -21,6 +21,9 @@ from gen_epix.filter import (
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
+from gen_epix.seqdb.services.seq.calculate_seq_distance import (
+    seq_service_calculate_seq_distances_for_new_profiles,
+)
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
@@ -517,3 +520,9 @@ class SeqService(BaseSeqService):
                 cmd.max_distance,
             )
         return similar_profile_ids
+
+    def calculate_seq_distances_for_new_profiles(
+        self,
+        cmd: command.CalculateSeqDistancesForNewProfilesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
+        return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
