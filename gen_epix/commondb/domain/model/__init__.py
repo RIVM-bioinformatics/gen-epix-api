@@ -47,6 +47,7 @@ from gen_epix.commondb.domain.model.upload import (
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult as BaseBatchUploadResult,
 )
+from gen_epix.commondb.domain.model.upload import DataIssue as DataIssue
 from gen_epix.commondb.domain.model.upload import IsNewIdMixin as IsNewIdMixin
 from gen_epix.commondb.domain.model.upload import ParentForUpload as ParentForUpload
 from gen_epix.commondb.domain.model.upload import (

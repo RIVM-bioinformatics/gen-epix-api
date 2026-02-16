@@ -7,7 +7,6 @@ import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
-from gen_epix.casedb.domain.enum import DataIssueTypeSet
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
@@ -145,8 +144,9 @@ class CaseBatchUploader(BatchUploader):
         ):
             # Create a new case for upload without any read sets or seqs, and with
             # updated case content equal to the validated content from the verification
-            # step.
-            new_case_for_upload = case_for_upload.model_copy()
+            # step. This is a shallow copy so that the case contained in both the
+            # original and the new case for upload is the shared.
+            new_case_for_upload = case_for_upload.model_copy(deep=False)
             new_case_for_upload.read_sets = None
             new_case_for_upload.seqs = None
             cases_only_cmd.case_batch.cases[i] = new_case_for_upload
@@ -212,6 +212,8 @@ class CaseBatchUploader(BatchUploader):
                 for case, case_only in zip(
                     cmd.case_batch.cases, cases_only_cmd.case_batch.cases
                 ):
+                    assert case is not None and case.case is not None
+                    assert case_only.case is not None
                     case_only.case.content = case.case.content
                 success &= super().upsert_batch(cases_only_cmd, retval, uow)
 
@@ -268,11 +270,13 @@ class CaseBatchUploader(BatchUploader):
                     seqdb_model.ReadSetForUpload
                 ][(sample_index, i)]
                 case = cmd.case_batch.cases[case_index]
+                assert case is not None and case.case is not None
                 case_content = case.case.content
                 result = retval.cases[case_index].read_sets[child_index]  # type: ignore[index]
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                assert case.read_sets is not None
                 case_content[case.read_sets[child_index].case_type_col_id] = str(
                     seqdb_result.id
                 )
@@ -282,11 +286,13 @@ class CaseBatchUploader(BatchUploader):
                     seqdb_model.SeqForUpload
                 ][(sample_index, i)]
                 case = cmd.case_batch.cases[case_index]
+                assert case is not None and case.case is not None
                 case_content = case.case.content
                 result = retval.cases[case_index].seqs[child_index]  # type: ignore[index]
                 result.id = seqdb_result.id
                 result.status = seqdb_result.status
                 result.add_logs(seqdb_result.logs)
+                assert case.seqs is not None
                 case_content[case.seqs[child_index].case_type_col_id] = str(
                     seqdb_result.id
                 )
@@ -312,47 +318,9 @@ class CaseBatchUploader(BatchUploader):
         # Validate and transform each case
         case_validator.validate_and_transform(cmd, retval)
 
-        # Convert data issues found into failed upload status
+        # Update status of each result with data issues found
         for case_result in retval.cases:
-            data_issues = case_result.data_issues
-            if data_issues is None:
-                continue
-            # Errors
-            error_codes = {
-                x.code
-                for x in data_issues
-                if x.data_issue_type in DataIssueTypeSet.ERROR.value
-            }
-            if error_codes:
-                error_codes_str = ", ".join(sorted(error_codes))
-                case_result.add_error(
-                    "d3f5c1a2",
-                    f"Case has content error(s): {error_codes_str}",
-                )
-            # Warnings
-            warning_codes = {
-                x.code
-                for x in data_issues
-                if x.data_issue_type in DataIssueTypeSet.WARNING.value
-            }
-            if warning_codes:
-                warning_codes_str = ", ".join(sorted(warning_codes))
-                case_result.add_warning(
-                    "b4e6d2c3",
-                    f"Case has content warning(s): {warning_codes_str}",
-                )
-            # Info
-            info_codes = {
-                x.code
-                for x in data_issues
-                if x.data_issue_type in DataIssueTypeSet.INFO.value
-            }
-            if info_codes:
-                info_codes_str = ", ".join(sorted(info_codes))
-                case_result.add_info(
-                    "c5d7e8f9",
-                    f"Case has content info(s): {info_codes_str}",
-                )
+            case_result.update_status_with_data_issues()
 
         # Update batch status if necessary
         status_count_after = retval.get_status_count()
@@ -554,7 +522,6 @@ class CaseBatchUploader(BatchUploader):
             sample_batch=seqdb_model.SampleBatchForUpload(
                 id=batch_id, samples=samples_for_upload
             ),
-            on_exists=cmd.on_exists,
         )
         return upload_samples_cmd, child_index_map
 

@@ -8,6 +8,7 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    DataIssue,
     IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
@@ -20,29 +21,7 @@ from gen_epix.omopdb.domain.model.omop.omop import (
     Person,
     Specimen,
 )
-
-# class Subject(Model):
-#     ENTITY: ClassVar = Entity(persistable=False)
-
-#     id: UUID | None = Field(default=None, description="The ID of the subject.")
-#     person: Person | None = Field(
-#         default=None, description="The person associated with the subject."
-#     )
-#     specimen_records: list[Specimen] = Field(
-#         description="The specimen records associated with the subject."
-#     )
-#     observation_records: list[Observation] = Field(
-#         description="The observations records associated with the subject."
-#     )
-#     measurement_records: list[Measurement] = Field(
-#         description="The measurements records associated with the subject."
-#     )
-#     drug_exposure_records: list[DrugExposure] = Field(
-#         description="The drug exposure records associated with the subject."
-#     )
-#     location_history_records: list[LocationHistory] = Field(
-#         description="The location history records associated with the subject."
-#     )
+from gen_epix.util import copy_model_field
 
 
 class ConceptFieldsForUploadMixin:
@@ -308,6 +287,10 @@ class PersonForUpload(ParentForUpload):
     # TODO: add other associated data types when needed
 
 
+class PersonDataIssue(DataIssue):
+    pass
+
+
 class PersonUploadResult(ParentUploadResult):
     """
     The result of uploading a single person.
@@ -316,7 +299,11 @@ class PersonUploadResult(ParentUploadResult):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonUploadResult"
 
-    PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
+    PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload
+
+    data_issues: list[PersonDataIssue] = copy_model_field(
+        ParentUploadResult, "data_issues"
+    )
 
     measurements: list[UploadResult] | None = Field(
         description="The results of uploading the individual measurements, if any were provided, in the same order as provided."

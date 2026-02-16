@@ -63,6 +63,7 @@ from gen_epix.omopdb.domain.model.omop.upload import (
 from gen_epix.omopdb.domain.model.omop.upload import (
     PersonBatchUploadResult as PersonBatchUploadResult,
 )
+from gen_epix.omopdb.domain.model.omop.upload import PersonDataIssue as PersonDataIssue
 from gen_epix.omopdb.domain.model.omop.upload import PersonForUpload as PersonForUpload
 from gen_epix.omopdb.domain.model.omop.upload import (
     PersonUploadResult as PersonUploadResult,

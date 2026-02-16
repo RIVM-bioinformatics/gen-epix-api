@@ -3,15 +3,17 @@ import uuid
 from typing import Callable, ClassVar, Self
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    Field,
-    field_serializer,
-    field_validator,
-    model_validator,
-)
+from pydantic import BaseModel
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, field_serializer, field_validator, model_validator
 
-from gen_epix.commondb.domain.enum import IdentifierType, UploadStatus, UploadStatusSet
+from gen_epix.commondb.domain import enum
+from gen_epix.commondb.domain.enum import (
+    DataIssueTypeSet,
+    IdentifierType,
+    UploadStatus,
+    UploadStatusSet,
+)
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import (
@@ -70,6 +72,18 @@ class UploadLogItem(BaseModel):
     severity: LogLevel = Field(
         description="The severity level of the log item.",
     )
+
+
+class DataIssue(PydanticBaseModel):
+    original_value: str | None = Field(description="The original value")
+    updated_value: str | None = Field(
+        description="The new value after potential resolution of the issue. If not resolved, this will be None.",
+    )
+    data_issue_type: enum.DataIssueType = Field(
+        description="The type of validation issue"
+    )
+    code: str = Field(description="The code of the data issue")
+    message: str | None = Field(description="The details of the data issue")
 
 
 class UploadResult(Model):
@@ -347,6 +361,10 @@ class ParentUploadResult(UploadResult):
     # The ParentForUpload child class corresponding to this result class
     PARENT_FOR_UPLOAD_CLASS: ClassVar[type[ParentForUpload]] = None  # type: ignore[assignment]
 
+    data_issues: list[DataIssue] = Field(
+        default_factory=list,
+        description="The data issues found for the original content and potential corresponding updates made to it.",
+    )
     external_identifiers: list[UploadResult] | None = Field(
         default=None,
         description="The upload results for the external identifiers associated with the parent model, if any.",
@@ -365,6 +383,49 @@ class ParentUploadResult(UploadResult):
             for child_result in child_results:
                 retval[child_result.status] += 1
         return retval
+
+    def update_status_with_data_issues(self) -> None:
+        """
+        Update the upload status of this result based on the data issues found, adding
+        corresponding log items.
+        """
+        data_issues = self.data_issues
+        # Errors
+        error_codes = {
+            x.code
+            for x in data_issues
+            if x.data_issue_type in DataIssueTypeSet.ERROR.value
+        }
+        if error_codes:
+            error_codes_str = ", ".join(sorted(error_codes))
+            self.add_error(
+                "d3f5c1a2",
+                f"Data has errors: {error_codes_str}",
+            )
+        # Warnings
+        warning_codes = {
+            x.code
+            for x in data_issues
+            if x.data_issue_type in DataIssueTypeSet.WARNING.value
+        }
+        if warning_codes:
+            warning_codes_str = ", ".join(sorted(warning_codes))
+            self.add_warning(
+                "b4e6d2c3",
+                f"Data has warnings: {warning_codes_str}",
+            )
+        # Info
+        info_codes = {
+            x.code
+            for x in data_issues
+            if x.data_issue_type in DataIssueTypeSet.INFO.value
+        }
+        if info_codes:
+            info_codes_str = ", ".join(sorted(info_codes))
+            self.add_info(
+                "c5d7e8f9",
+                f"Data has info: {info_codes_str}",
+            )
 
     @classmethod
     def get_child_results_field_names(cls) -> list[str]:

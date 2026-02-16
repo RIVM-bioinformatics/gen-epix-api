@@ -1,10 +1,8 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, computed_field, field_serializer, model_validator
 
-from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -14,6 +12,7 @@ from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpl
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    DataIssue,
     IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
@@ -217,17 +216,8 @@ class CaseForUpload(ParentForUpload):
                     sample_id_map[external_sample_id] = sample_id
 
 
-class CaseDataIssue(PydanticBaseModel):
+class CaseDataIssue(DataIssue):
     case_type_col_id: UUID = Field(description="The ID of the case type column")
-    original_value: str | None = Field(description="The value of the case type column")
-    updated_value: str | None = Field(
-        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
-    )
-    data_issue_type: enum.DataIssueType = Field(
-        description="The type of validation issue"
-    )
-    code: str = Field(description="The code of the data issue")
-    message: str | None = Field(description="The details of the data issue")
 
 
 class CaseUploadResult(ParentUploadResult):

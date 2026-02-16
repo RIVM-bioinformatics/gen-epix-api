@@ -8,6 +8,7 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    DataIssue,
     IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
@@ -30,6 +31,7 @@ from gen_epix.seqdb.domain.model.seq.profile import (
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq
+from gen_epix.util import copy_model_field
 
 
 class ReadSetForUpload(ReadSet, IsNewIdMixin):
@@ -550,6 +552,10 @@ class SampleForUpload(ParentForUpload):
     )
 
 
+class SampleDataIssue(DataIssue):
+    pass
+
+
 class SampleUploadResult(ParentUploadResult):
     """
     The result of uploading a single sample. The field names for the results for
@@ -560,6 +566,10 @@ class SampleUploadResult(ParentUploadResult):
     NAME: ClassVar = "SampleUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload  # type: ignore[assignment]
+
+    data_issues: list[SampleDataIssue] = copy_model_field(
+        ParentUploadResult, "data_issues"
+    )
 
     read_sets: list[UploadResult] | None = Field(
         default=None,

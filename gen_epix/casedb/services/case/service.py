@@ -356,7 +356,8 @@ class CaseService(BaseCaseService):
                     f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
                 )
         # Check if user has access to any of the data collections of the case set
-        data_collection_ids = set(case_set_data_collections.get(case_set.id, ()))
+        assert case_set.id is not None
+        data_collection_ids = case_set_data_collections.get(case_set.id, set())
         data_collection_ids.add(case_set.created_in_data_collection_id)
 
         if (

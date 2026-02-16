@@ -61,42 +61,39 @@ from gen_epix.omopdb.domain.model.omop import FactRelationship as FactRelationsh
 from gen_epix.omopdb.domain.model.omop import Location as Location
 from gen_epix.omopdb.domain.model.omop import LocationHistory as LocationHistory
 from gen_epix.omopdb.domain.model.omop import Measurement as Measurement
+from gen_epix.omopdb.domain.model.omop import (
+    MeasurementForUpload as MeasurementForUpload,
+)
 from gen_epix.omopdb.domain.model.omop import MeasurementRelation as MeasurementRelation
 from gen_epix.omopdb.domain.model.omop import Metadata as Metadata
 from gen_epix.omopdb.domain.model.omop import Note as Note
 from gen_epix.omopdb.domain.model.omop import NoteNlp as NoteNlp
 from gen_epix.omopdb.domain.model.omop import Observation as Observation
+from gen_epix.omopdb.domain.model.omop import (
+    ObservationForUpload as ObservationForUpload,
+)
 from gen_epix.omopdb.domain.model.omop import ObservationPeriod as ObservationPeriod
 from gen_epix.omopdb.domain.model.omop import PayerPlanPeriod as PayerPlanPeriod
 from gen_epix.omopdb.domain.model.omop import Person as Person
+from gen_epix.omopdb.domain.model.omop import (
+    PersonBatchForUpload as PersonBatchForUpload,
+)
+from gen_epix.omopdb.domain.model.omop import (
+    PersonBatchUploadResult as PersonBatchUploadResult,
+)
+from gen_epix.omopdb.domain.model.omop import PersonDataIssue as PersonDataIssue
+from gen_epix.omopdb.domain.model.omop import PersonForUpload as PersonForUpload
+from gen_epix.omopdb.domain.model.omop import PersonUploadResult as PersonUploadResult
 from gen_epix.omopdb.domain.model.omop import ProcedureOccurrence as ProcedureOccurrence
 from gen_epix.omopdb.domain.model.omop import Provider as Provider
 from gen_epix.omopdb.domain.model.omop import Relationship as Relationship
 from gen_epix.omopdb.domain.model.omop import SourceToConceptMap as SourceToConceptMap
 from gen_epix.omopdb.domain.model.omop import Specimen as Specimen
+from gen_epix.omopdb.domain.model.omop import SpecimenForUpload as SpecimenForUpload
 from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
-from gen_epix.omopdb.domain.model.omop.upload import (
-    MeasurementForUpload as MeasurementForUpload,
-)
-from gen_epix.omopdb.domain.model.omop.upload import (
-    ObservationForUpload as ObservationForUpload,
-)
-from gen_epix.omopdb.domain.model.omop.upload import (
-    PersonBatchForUpload as PersonBatchForUpload,
-)
-from gen_epix.omopdb.domain.model.omop.upload import (
-    PersonBatchUploadResult as PersonBatchUploadResult,
-)
-from gen_epix.omopdb.domain.model.omop.upload import PersonForUpload as PersonForUpload
-from gen_epix.omopdb.domain.model.omop.upload import (
-    PersonUploadResult as PersonUploadResult,
-)
-from gen_epix.omopdb.domain.model.omop.upload import (
-    SpecimenForUpload as SpecimenForUpload,
-)
 from gen_epix.util import add_parent_class_docs
 
 # from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
