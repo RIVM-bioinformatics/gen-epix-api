@@ -2,8 +2,10 @@
 
 This repository contains the backend for Gen-EpiX, a genomic epidemiology platform. It includes four FastAPI app variants: `CASEDB`, `SEQDB`, `OMOPDB`, and `COMMONDB`. (Source: `README.md#L7-L14`; Source: `run.py#L17-L38`)
 
-## Core System Docs
-- Consolidated system map: [System-Documentation-Index.md](./0_System-Documentation-Index.md)
+## Master Index
+- Master system documentation index: [0_System-Documentation-Index.md](./0_System-Documentation-Index.md)
+
+## Deep-Dive Guides
 - High-level architecture: [High-Level-Architecture-Deep-Dive.md](./High-Level-Architecture-Deep-Dive.md)
 - Authorization and authentication: [Authorization-Authentication-Deep-Dive.md](./Authorization-Authentication-Deep-Dive.md)
 - API surface: [API-Endpoints-Deep-Dive.md](./API-Endpoints-Deep-Dive.md)
