@@ -1,22 +1,16 @@
 import datetime
 import json
 from enum import Enum
-from typing import ClassVar, Self
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    Field,
-    field_serializer,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, field_serializer, field_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.model.base import Model
+from gen_epix.commondb.util import copy_model_field
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
-from gen_epix.util import copy_model_field
 
 
 class Organization(Model):
@@ -67,8 +61,8 @@ class User(fastapp.User, Model):
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
-    key: str | None = Field(
-        description="The key of the user, lowercase, UNIQUE", max_length=320, default=None
+    key: str = Field(
+        description="The key of the user, lowercase, UNIQUE", max_length=320
     )
     email: str | None = Field(
         default=None, description="The email of the user", max_length=320
@@ -80,9 +74,7 @@ class User(fastapp.User, Model):
         default=True,
         description="Whether the user is active or not. An inactive user cannot perform any actions that require authorization.",
     )
-    roles: set[str] = Field(
-        description="The roles of the user", min_length=1, max_length=255
-    )
+    roles: set[str] = Field(description="The roles of the user", min_length=1)
     organization_id: UUID = Field(
         description="The ID of the organization of the user. FOREIGN KEY"
     )
@@ -92,9 +84,7 @@ class User(fastapp.User, Model):
 
     @field_validator("key", mode="before")
     @classmethod
-    def _validate_key(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
+    def _validate_key(cls, value: str) -> str:
         return value.lower()
 
     def get_key(self) -> str:
@@ -127,7 +117,7 @@ class OrganizationSet(Model):
     )
     name: str = Field(description="The name of the organization set", max_length=255)
     description: str | None = Field(
-        None, description="The description of the organization set.", max_length=1000
+        None, description="The description of the organization set."
     )
 
 
@@ -219,15 +209,8 @@ class IdentifierIssuer(Model):
         snake_case_plural_name="identifier_issuers",
         table_name="identifier_issuer",
         persistable=True,
-        keys=create_keys({1: "code"}),
     )
-    code: str = Field(description="The name of the issuer", max_length=255)
     name: str = Field(description="The name of the issuer", max_length=255)
-    description: str | None = Field(
-        default=None,
-        description="The description of the identifier issuer.",
-        max_length=1000,
-    )
 
 
 class DataCollection(Model):
@@ -246,9 +229,7 @@ class DataCollection(Model):
         description="The name of a data collection, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        default=None,
-        description="The description of the data collection.",
-        max_length=1000,
+        default=None, description="The description of the data collection."
     )
 
 
@@ -261,9 +242,7 @@ class DataCollectionSet(Model):
     )
     name: str = Field(description="The name of the data collection set", max_length=255)
     description: str | None = Field(
-        default=None,
-        description="The description of the data collection set.",
-        max_length=1000,
+        default=None, description="The description of the data collection set."
     )
 
 
@@ -315,9 +294,7 @@ class UserInvitation(Model):
         ),
     )
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
-    key: str | None = Field(
-        description="The key of the user, lowercase, UNIQUE", max_length=320, default=None
-    )
+    key: str = copy_model_field(User, "key")
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
     token: str = Field(description="The token of the invitation", max_length=255)
@@ -325,9 +302,7 @@ class UserInvitation(Model):
         description="The expiry date of the invitation"
     )
     roles: set[str] = Field(
-        description="The initial roles that the new user will have",
-        min_length=1,
-        max_length=255,
+        description="The initial roles that the new user will have", min_length=1
     )
     invited_by_user_id: UUID = Field(
         description="The ID of the user who invited the new user. FOREIGN KEY"
@@ -371,138 +346,8 @@ class UserInvitationConstraints(Model):
     )
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
     roles: set[str] = Field(
-        description="The roles that the user may be assigned by the inviting user.",
-        max_length=255,
+        description="The roles that the user may be assigned by the inviting user."
     )
     organization_ids: set[UUID] = Field(
-        description="The organizations that the user may be assigned by the inviting user.",
-        max_length=1000000,
-    )
-
-
-class OrganizationIdentifierIssuerLink(Model):
-    """
-    The association between an organization and an identifier issuer.
-
-    This information can be used to restrict which identifier issuers
-    are available to users of a particular organization.
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="organization_identifier_issuer_links",
-        table_name="organization_identifier_issuer_link",
-        persistable=True,
-        keys=create_keys({1: ("organization_id", "identifier_issuer_id")}),
-        links=create_links(
-            {
-                1: ("organization_id", Organization, "organization"),
-                2: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
-            }
-        ),
-    )
-    organization_id: UUID = Field(description="The ID of the organization. FOREIGN KEY")
-    organization: Organization | None = Field(
-        default=None, description="The organization corresponding to the ID"
-    )
-    identifier_issuer_id: UUID = Field(
-        description="The ID of the identifier issuer. FOREIGN KEY"
-    )
-    identifier_issuer: IdentifierIssuer | None = Field(
-        default=None, description="The identifier issuer corresponding to the ID"
-    )
-
-
-class ExternalIdentifier(Model):
-    """
-    An externally generated identifier of a particular type and its corresponding
-    internal identifier. The externally generated identifier consists of the
-    combination (identifier issuer, identifier)
-    """
-
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="external_identifiers",
-        table_name="external_identifier",
-        persistable=True,
-        keys=create_keys(
-            {
-                1: ("identifier_type", "identifier_issuer_id", "external_id"),
-                2: ("identifier_type", "internal_id"),
-            }
-        ),
-        links=create_links(
-            {
-                1: ("identifier_issuer_id", IdentifierIssuer, "identifier_issuer"),
-            }
-        ),
-    )
-    identifier_type: enum.IdentifierType = Field(
-        description="The type of external identifier"
-    )
-    identifier_issuer_id: UUID = Field(
-        description="The UUID of the identifier issuer that issued the external identifier",
-    )
-    identifier_issuer: IdentifierIssuer | None = Field(
-        default=None, description="The identifier issuer corresponding to the ID"
-    )
-    external_id: str = Field(description="The external identifier", max_length=255)
-    internal_id: UUID = Field(
-        description="The internal identifier. This identifier is not guaranteed to still exist, so operations using it should check this first."
-    )
-
-
-class ExternalIdentifierForUpload(BaseModel, frozen=True):
-    """
-    An external identifier, defined as the combination of
-    (identifier issuer, identifier), intended for an upload operation.
-    The identifier issuer can be given either as its code or ID to facilitate the
-    upload operation where applicable.
-    The model is immutable (frozen) to allow its use in sets and as dictionary keys.
-    """
-
-    identifier_issuer_id: UUID | None = Field(
-        default=None,
-        description="The UUID of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_code is not present.",
-    )
-    identifier_issuer_code: str | None = Field(
-        default=None,
-        description="The code of the identifier issuer that issued the identifier. Must be present if the identifier_issuer_id is not present.",
-        max_length=255,
-    )
-    external_id: str = Field(description="The external identifier", max_length=255)
-
-    @model_validator(mode="after")
-    def _validate_issuer_fields(self) -> Self:
-        """Ensure that either identifier_issuer_id or identifier_issuer_code is set."""
-        if self.identifier_issuer_id is None and self.identifier_issuer_code is None:
-            raise ValueError(
-                "Either identifier_issuer_id or identifier_issuer_code must be provided."
-            )
-        return self
-
-    def __eq__(self, other: object) -> bool:
-        """
-        Check equality based on identifier_issuer_id, identifier_issuer_code, and identifier.
-        Only when all three match, the objects are considered equal.
-        """
-        if not isinstance(other, ExternalIdentifierForUpload):
-            return False
-        return (
-            self.identifier_issuer_id == other.identifier_issuer_id
-            and self.identifier_issuer_code == other.identifier_issuer_code
-            and self.external_id == other.external_id
-        )
-
-    def __hash__(self) -> int:
-        return hash(
-            (self.identifier_issuer_id, self.identifier_issuer_code, self.external_id)
-        )
-
-
-class OrganizationContacts(BaseModel):
-    organization: Organization = Field(
-        description="The organization corresponding to the contacts"
-    )
-    sites: list[Site] = Field(description="The list of sites for the organization")
-    contacts: list[Contact] = Field(
-        description="The list of contacts for the organization"
+        description="The organizations that the user may be assigned by the inviting user."
     )

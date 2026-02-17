@@ -2,10 +2,13 @@ import hashlib
 import json
 import sys
 from collections.abc import Callable, Hashable, Iterable
+from io import BytesIO, TextIOWrapper
+from typing import Any
 from uuid import UUID
 
 import numpy as np
 import scipy
+from Bio import SeqIO
 from Bio.Phylo.BaseTree import Clade
 from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from scipy.cluster.hierarchy import ClusterNode
@@ -21,10 +24,6 @@ from gen_epix.filter import (
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
-from gen_epix.seqdb.services.seq.calculate_seq_distance import (
-    seq_service_calculate_seq_distances_for_new_profiles,
-)
-from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 
 class SeqService(BaseSeqService):
@@ -83,11 +82,28 @@ class SeqService(BaseSeqService):
 
         return super().crud(cmd)
 
-    def upload_samples(
-        self,
-        cmd: command.UploadSamplesCommand,
-    ) -> model.SampleBatchUploadResult:
-        return seq_service_upload_samples(self, cmd)
+    def _calculate_allele_profile_distances(
+        self, uow: BaseUnitOfWork, allele_profiles: list[model.AlleleProfile]
+    ) -> list[model.SeqDistance]:
+        """
+        Calculate all distances for these allele profiles between themselves and with
+        all stored allele profiles, for all distance protocols that are applicable to
+        the locus set of the allele profiles.
+        """
+        locus_set_ids = {x.locus_set_id for x in allele_profiles}
+        cmd = command.SeqDistanceProtocolCrudCommand(
+            user=None,
+            operation=CrudOperation.READ_ALL,
+            query_filter=UuidSetFilter(key="locus_set_id", members=locus_set_ids),
+        )
+        seq_distance_protocols = self.crud_repository(uow, cmd)
+        seq_distances = self.calculate_pairwise_allele_profile_distances(
+            seq_distance_protocols, allele_profiles
+        )
+        # TODO: calculate distances with all stored allele profiles
+        # TODO: store/update distances
+        # raise NotImplementedError()
+        return seq_distances
 
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeCommand
@@ -96,12 +112,12 @@ class SeqService(BaseSeqService):
         # profiler.start()
 
         user_id = cmd.user.id if cmd.user else None
-        profile_ids = cmd.profile_ids
+        seq_ids = cmd.seq_ids
         tree_algorithm = cmd.tree_algorithm
         seq_distance_protocol_id = cmd.seq_distance_protocol_id
-        if len(set(profile_ids)) != len(profile_ids):
-            raise exc.InvalidArgumentsError("profile_ids must be unique")
-        leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in profile_ids]
+        if len(set(seq_ids)) != len(seq_ids):
+            raise exc.InvalidArgumentsError("seq_ids must be unique")
+        leaf_names = cmd.leaf_names if cmd.leaf_names else [str(x) for x in seq_ids]
 
         # Retrieve genetic distance protocol
         with self.repository.uow() as uow:
@@ -115,20 +131,20 @@ class SeqService(BaseSeqService):
             )
 
         # Special case: 0 or 1 sequences
-        if len(profile_ids) < 2:
+        if len(seq_ids) < 2:
             return model.PhylogeneticTree(
-                id=self.generate_id(),  # type: ignore[arg-type]
+                id=self.generate_id(),
                 tree_algorithm=tree_algorithm,
                 seq_distance_protocol_id=seq_distance_protocol_id,
-                profile_ids=profile_ids,
+                seq_ids=seq_ids,
                 leaf_names=leaf_names,
-                newick_repr=f"({leaf_names[0]});" if profile_ids else "();",
+                newick_repr=f"({leaf_names[0]});" if seq_ids else "();",
             )
 
         # Retrieve distance matrix
         if tree_algorithm in enum.TreeAlgorithmSet.DISTANCE_BASED.value:
             with self.repository.uow() as uow:
-                seq_distances: list[model.SeqDistance] = self.repository.crud(  # type: ignore[assignment]
+                seq_distances_: list[model.SeqDistance] = self.repository.crud(  # type: ignore[assignment]
                     uow,
                     user_id,
                     model.SeqDistance,
@@ -137,9 +153,7 @@ class SeqService(BaseSeqService):
                     CrudOperation.READ_ALL,
                     filter=CompositeFilter(
                         filters=[
-                            UuidSetFilter(
-                                key="profile_id", members=frozenset(profile_ids)
-                            ),
+                            UuidSetFilter(key="seq_id", members=frozenset(seq_ids)),
                             EqualsUuidFilter(
                                 key="seq_distance_protocol_id",
                                 value=seq_distance_protocol_id,
@@ -148,20 +162,26 @@ class SeqService(BaseSeqService):
                         operator=LogicalOperator.AND,
                     ),
                 )
-                seq_distance_map = {x.profile_id: x for x in seq_distances}
+                seq_distances = {x.seq_id: x for x in seq_distances_}
             max_stored_distance = seq_distance_protocol.max_stored_distance
             # Calculate condensed distance matrix
-            tree_seq_distances = [
-                seq_distance_map[x] for x in profile_ids if x in seq_distance_map
+            tree_seq_distances_ = [
+                seq_distances[x] for x in seq_ids if x in seq_distances
             ]
             tree_leaf_names = [
-                x for x, y in zip(leaf_names, profile_ids) if y in seq_distance_map
+                x for x, y in zip(leaf_names, seq_ids) if y in seq_distances
             ]
-            tree_profile_ids = [x.profile_id for x in tree_seq_distances]
-            tree_profile_id_idx_map = {
-                str(x): i for i, x in enumerate(tree_profile_ids)
+            tree_seq_ids = [x.seq_id for x in tree_seq_distances_]
+            tree_seq_ids_index_map = {x: i for i, x in enumerate(tree_seq_ids)}
+            str_seq_profile_id_index_map = {
+                str(
+                    x.allele_profile_id
+                    if x.allele_profile_id
+                    else (x.snp_profile_id if x.snp_profile_id else x.kmer_profile_id)
+                ): tree_seq_ids_index_map[x.seq_id]
+                for x in seq_distances.values()
             }
-            n_seqs_with_distances = len(tree_profile_ids)
+            n_seqs_with_distances = len(tree_seq_ids)
             condensed_distance_matrix = max_stored_distance * np.ones(
                 (int(n_seqs_with_distances * (n_seqs_with_distances - 1) / 2),),
                 dtype=float,
@@ -172,17 +192,17 @@ class SeqService(BaseSeqService):
                     i, j = j, i
                 return n * j - j * (j + 1) // 2 + i - 1 - j
 
-            for i, seq_distance in enumerate(tree_seq_distances):
+            for i, seq_distance in enumerate(tree_seq_distances_):
                 if (
                     seq_distance.distance_format
-                    == enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP
+                    != enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT
                 ):
                     distances = json.loads(seq_distance.distances)
-                    for profile_id_str, distance in distances.items():
-                        if profile_id_str not in tree_profile_id_idx_map:
+                    for str_seq_profile_id, distance in distances.items():
+                        if str_seq_profile_id not in str_seq_profile_id_index_map:
                             # Distance to a sequence not in the list of seq_ids
                             continue
-                        j = tree_profile_id_idx_map[profile_id_str]
+                        j = str_seq_profile_id_index_map[str_seq_profile_id]
                         if distance > max_stored_distance:
                             # Go only up to max_stored_distance in distance matrix,
                             # even if this actual stored distance is larger, e.g.
@@ -196,24 +216,22 @@ class SeqService(BaseSeqService):
                         condensed_distance_matrix[k] = distance
                 else:
                     raise exc.InvalidArgumentsError(
-                        f"Distance format {seq_distance.distance_format.value} is not supported"
+                        "Only distance format SEQ_ID_DISTANCE_DICT is supported"
                     )
             # Handle sequences with no stored distances
-            if len(tree_profile_ids) < 2:
+            if len(tree_seq_ids) < 2:
                 return model.PhylogeneticTree(
-                    id=self.generate_id(),  # type: ignore[arg-type]
+                    id=self.generate_id(),
                     tree_algorithm=tree_algorithm,
                     seq_distance_protocol_id=seq_distance_protocol_id,
-                    profile_ids=profile_ids,
+                    seq_ids=seq_ids,
                     leaf_names=leaf_names,
-                    newick_repr=(
-                        f"({tree_leaf_names[0]});" if tree_profile_ids else "();"
-                    ),
+                    newick_repr=f"({tree_leaf_names[0]});" if tree_seq_ids else "();",
                 )
             # Calculate tree
             # Increase recursion limit to allow for larger trees
             sys_recursion_limit = sys.getrecursionlimit()
-            sys.setrecursionlimit(sys_recursion_limit + len(tree_profile_ids) + 1)
+            sys.setrecursionlimit(sys_recursion_limit + len(tree_seq_ids) + 1)
             scipy_tree_algorithm_code_map = {
                 enum.TreeAlgorithm.SLINK: "single",
                 enum.TreeAlgorithm.UPGMA: "average",
@@ -260,10 +278,10 @@ class SeqService(BaseSeqService):
                 f"{tree_algorithm.value} tree algorithm not yet implemented"
             )
         phylogenetic_tree = model.PhylogeneticTree(
-            id=self.generate_id(),  # type: ignore[arg-type]
+            id=self.generate_id(),
             tree_algorithm=tree_algorithm,
             seq_distance_protocol_id=seq_distance_protocol_id,
-            profile_ids=profile_ids,
+            seq_ids=seq_ids,
             leaf_names=leaf_names,
             newick_repr=newick_repr,
         )
@@ -273,54 +291,55 @@ class SeqService(BaseSeqService):
         # )
         return phylogenetic_tree
 
+    def retrieve_allele_profile(
+        self,
+        cmd: command.RetrieveCompleteAlleleProfileCommand,
+    ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
+        raise NotImplementedError()
+
+    def retrieve_snp_profile(
+        self, cmd: command.RetrieveCompleteSnpProfileCommand
+    ) -> model.CompleteSnpProfile | list[model.CompleteSnpProfile]:
+        raise NotImplementedError()
+
+    def retrieve_contig(
+        self, cmd: command.RetrieveCompleteContigCommand
+    ) -> model.CompleteContig | list[model.CompleteContig]:
+        raise NotImplementedError()
+
     def retrieve_multiple_alignment(
         self, cmd: command.RetrieveMultipleAlignmentCommand
     ) -> model.MultipleAlignment | list[model.MultipleAlignment]:
         raise NotImplementedError()
 
-    def retrieve_samples(
-        self, cmd: command.RetrieveSamplesCommand
-    ) -> list[model.SampleForUpload]:
+    def retrieve_sample(
+        self, cmd: command.RetrieveCompleteSampleCommand
+    ) -> model.CompleteSample | list[model.CompleteSample]:
+        raise NotImplementedError()
+
+    def retrieve_seq(
+        self, cmd: command.RetrieveCompleteSeqCommand
+    ) -> model.CompleteSeq | list[model.CompleteSeq]:
         raise NotImplementedError()
 
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
+        """
+        Retrieve the raw sequences for the given sequence IDs in FASTA format
+        as an iterable that yields one sequence at a time.
+        """
         wrap = cmd.wrap or 0
         self.repository: BaseSeqRepository
         with self.repository.uow() as uow:
-            for seq_id, contigs in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
-                for contig_seq_hash, raw_seq in contigs:
-                    header = f">{seq_id}:{contig_seq_hash}\n"
-                    if not wrap:
-                        yield f"{header}{raw_seq}\n"
-                    seq_length = len(raw_seq)
-                    n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
-                    yield header + "\n".join(
-                        raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
-                        for i in range(n_chunks)
-                    )
-
-    def _calculate_allele_profile_distances(
-        self, uow: BaseUnitOfWork, allele_profiles: list[model.AlleleProfile]
-    ) -> list[model.SeqDistance]:
-        """
-        Calculate all distances for these allele profiles between themselves and with
-        all stored allele profiles, for all distance protocols that are applicable to
-        the locus set of the allele profiles.
-        """
-        locus_set_ids = {x.locus_set_id for x in allele_profiles}
-        cmd = command.SeqDistanceProtocolCrudCommand(
-            user=None,
-            operation=CrudOperation.READ_ALL,
-            query_filter=UuidSetFilter(key="locus_set_id", members=locus_set_ids),
-        )
-        seq_distance_protocols = self.crud_repository(uow, cmd)
-        seq_distances = self.calculate_pairwise_allele_profile_distances(
-            seq_distance_protocols, allele_profiles
-        )
-        # TODO: calculate distances with all stored allele profiles
-        # TODO: store/update distances
-        # raise NotImplementedError()
-        return seq_distances
+            for seq_id, raw_seq in self.repository.retrieve_seq_fasta(uow, cmd.seq_ids):
+                header = f">{seq_id}\n"
+                if not wrap:
+                    yield f"{header}{raw_seq}\n"
+                seq_length = len(raw_seq)
+                n_chunks = (seq_length // wrap) + (seq_length % wrap > 0)
+                yield header + "\n".join(
+                    raw_seq[i * wrap : min((i + 1) * wrap, seq_length)]
+                    for i in range(n_chunks)
+                )
 
     @staticmethod
     def calculate_pairwise_allele_profile_distances(
@@ -353,8 +372,8 @@ class SeqService(BaseSeqService):
                 x
                 for x in allele_profiles
                 if x.locus_set_id == locus_set_id
-                and x.qc_result
-                and x.qc_result.is_usable()
+                and x.quality
+                and x.quality.is_usable()
             ]
             # Convert allele_profile from json to object
             allele_profile_allele_ids = [
@@ -393,17 +412,17 @@ class SeqService(BaseSeqService):
 
             # Create SeqDistance objects from distances
             for i, allele_profile in enumerate(curr_allele_profiles):
-                # Calculate SeqDistance.id as 128 bit hash of sample_id, so that it is always the same
+                # Calculate SeqDistance.id as 128 bit hash of seq_id, so that it is always the same
                 seq_distance_id = UUID(
-                    bytes=hashlib.sha256(allele_profile.sample_id.bytes).digest()[:16]
+                    bytes=hashlib.md5(allele_profile_str_seq_ids[i].encode()).digest()
                 )
                 # Create seq_distance and add to dict_db
                 seq_distance = model.SeqDistance(
                     id=seq_distance_id,
-                    sample_id=allele_profile.sample_id,
+                    seq_id=allele_profile.seq_id,
                     seq_distance_protocol_id=seq_distance_protocol.id,
                     allele_profile_id=allele_profile.id,
-                    distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
+                    distance_format=enum.SeqDistanceFormat.SEQ_ID_DISTANCE_DICT,
                     distances=json.dumps(curr_seq_distances[i]),
                 )
                 seq_distances.append(seq_distance)
@@ -503,26 +522,3 @@ class SeqService(BaseSeqService):
         )
         newick = f"({newick}"
         return newick
-
-    def retrieve_similar_profiles(
-        self,
-        cmd: command.RetrieveSimilarProfilesCommand,
-    ) -> list[UUID]:
-        # Special case: zero query profile ids
-        if not cmd.profile_ids:
-            return []
-        # Use dedicated repository method to retrieve similar profiles, which allows for more efficient retrieval of distances and distance formats
-        with self.repository.uow() as uow:
-            similar_profile_ids: list[UUID] = self.repository.retrieve_similar_profiles(
-                uow,
-                cmd.seq_distance_protocol_id,
-                cmd.profile_ids,
-                cmd.max_distance,
-            )
-        return similar_profile_ids
-
-    def calculate_seq_distances_for_new_profiles(
-        self,
-        cmd: command.CalculateSeqDistancesForNewProfilesCommand,
-    ) -> list[model.CalculateSeqDistancesResult]:
-        return seq_service_calculate_seq_distances_for_new_profiles(self, cmd)
