@@ -1,1 +1,2 @@
+# Could be merged with dev-requirements.txt, when so adjust mutation_testing.md accordingly
 mutmut

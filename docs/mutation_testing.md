@@ -42,7 +42,26 @@ sudo apt update
 sudo apt install -y python3-venv python3-pip
 ```
 
-## Open a WSL terminal window in this repo
+## Store the repo on WSL Linux disk (recommended)
+
+Running from `~/projects/...` is faster than `/mnt/c/...` for Python test and mutation workloads.
+
+If this repo currently exists only on Windows disk, copy it once:
+
+```bash
+mkdir -p ~/projects
+cp -a "/mnt/c/Py Projects/RIVM-LSP/gen-epix-api" ~/projects/
+```
+
+Or clone directly into Linux disk:
+
+```bash
+mkdir -p ~/projects
+cd ~/projects
+git clone <repo-url> gen-epix-api
+```
+
+## Open a WSL terminal window in this repo (Linux disk path)
 
 Use either approach:
 
@@ -50,7 +69,7 @@ Use either approach:
 
 ```powershell
 wsl
-cd "/mnt/c/Py Projects/RIVM-LSP/gen-epix-api"
+cd ~/projects/gen-epix-api
 ```
 
 2. From VS Code:
@@ -59,10 +78,10 @@ cd "/mnt/c/Py Projects/RIVM-LSP/gen-epix-api"
 - In that WSL terminal, run:
 
 ```bash
-cd "/mnt/c/Py Projects/RIVM-LSP/gen-epix-api"
+cd ~/projects/gen-epix-api
 ```
 
-You are in a WSL terminal when paths look like `/mnt/c/...` and the prompt is Linux-style (for example `user@machine:~$`).
+You are in a WSL terminal when paths are Linux-style (for example `~/projects/...`) and the prompt looks like `user@machine:~$`.
 
 ## Create and activate virtual environment (inside WSL terminal)
 

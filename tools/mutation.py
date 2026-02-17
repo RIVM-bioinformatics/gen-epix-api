@@ -26,6 +26,18 @@ def ensure_mutmut_platform() -> None:
         )
 
 
+def parse_multiline(value: str) -> list[str]:
+    return [line.strip() for line in value.splitlines() if line.strip()]
+
+
+def as_multiline(values: list[str]) -> str:
+    return "\n" + "\n".join(values)
+
+
+def normalize_scope_path(path: str) -> str:
+    return path.replace("\\", "/").strip().strip("/")
+
+
 @contextmanager
 def temporary_mutation_scope(paths: list[str]) -> Iterator[None]:
     original_text = SETUP_CFG.read_text(encoding="utf-8")
@@ -35,7 +47,19 @@ def temporary_mutation_scope(paths: list[str]) -> Iterator[None]:
     if "mutmut" not in parser:
         raise SystemExit("Missing [mutmut] section in setup.cfg.")
 
-    parser["mutmut"]["paths_to_mutate"] = "\n" + "\n".join(paths)
+    mutmut_cfg = parser["mutmut"]
+    original_paths = parse_multiline(mutmut_cfg.get("paths_to_mutate", ""))
+    if not original_paths:
+        raise SystemExit("setup.cfg [mutmut] paths_to_mutate is empty.")
+
+    scoped_paths = [normalize_scope_path(path) for path in paths]
+    mutmut_cfg["paths_to_mutate"] = as_multiline(scoped_paths)
+
+    # Keep the original source roots available in mutants/ for imports while mutating a subset.
+    existing_also_copy = parse_multiline(mutmut_cfg.get("also_copy", ""))
+    merged_also_copy = list(dict.fromkeys(existing_also_copy + original_paths))
+    mutmut_cfg["also_copy"] = as_multiline(merged_also_copy)
+
     with SETUP_CFG.open("w", encoding="utf-8", newline="\n") as f:
         parser.write(f)
 
@@ -71,7 +95,7 @@ def main() -> None:
     smoke_parser.add_argument(
         "--path",
         default="gen_epix/filter",
-        help="Scoped path for paths_to_mutate (default: gen_epix/filter).",
+        help="Scoped mutation path relative to repo root (default: gen_epix/filter).",
     )
     smoke_parser.add_argument(
         "--skip-baseline",

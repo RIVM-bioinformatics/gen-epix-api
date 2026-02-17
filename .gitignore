@@ -164,6 +164,7 @@ gen_epix/casedb/config/.ignore/*
 
 # Test output
 test/output/*
+mutants/*
 
 # Logs
 logs/*
