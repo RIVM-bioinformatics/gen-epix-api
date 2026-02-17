@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import configparser
 import io
+import os
 import platform
 import shutil
 import subprocess
@@ -14,6 +15,7 @@ from typing import Iterator
 ROOT = Path(__file__).resolve().parents[1]
 SETUP_CFG = ROOT / "setup.cfg"
 BASELINE_CMD = [sys.executable, "run.py", "test_all"]
+MAX_TROUBLESHOOT_MUTANTS = 6
 SMOKE_TEST_SELECTION_BY_PATH: dict[str, list[str]] = {
     "gen_epix/filter": ["test/filter/unit"],
     "gen_epix/transform": ["test/transform/unit"],
@@ -25,8 +27,28 @@ SMOKE_TEST_SELECTION_BY_PATH: dict[str, list[str]] = {
 }
 
 
-def run_command(cmd: list[str]) -> None:
-    subprocess.run(cmd, cwd=ROOT, check=True)
+def run_command(cmd: list[str], env_overrides: dict[str, str] | None = None) -> None:
+    env = os.environ.copy()
+    if env_overrides:
+        env.update(env_overrides)
+    subprocess.run(cmd, cwd=ROOT, check=True, env=env)
+
+
+def run_command_capture(
+    cmd: list[str], env_overrides: dict[str, str] | None = None
+) -> str:
+    env = os.environ.copy()
+    if env_overrides:
+        env.update(env_overrides)
+    result = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        check=True,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+    return result.stdout
 
 
 def ensure_mutmut_platform() -> None:
@@ -46,6 +68,17 @@ def as_multiline(values: list[str]) -> str:
 
 def normalize_scope_path(path: str) -> str:
     return path.replace("\\", "/").strip().strip("/")
+
+
+def get_configured_mutation_paths() -> list[str]:
+    parser = configparser.ConfigParser()
+    parser.read(SETUP_CFG, encoding="utf-8")
+    if "mutmut" not in parser:
+        raise SystemExit("Missing [mutmut] section in setup.cfg.")
+    paths = parse_multiline(parser["mutmut"].get("paths_to_mutate", ""))
+    if not paths:
+        raise SystemExit("setup.cfg [mutmut] paths_to_mutate is empty.")
+    return [normalize_scope_path(path) for path in paths]
 
 
 @contextmanager
@@ -97,7 +130,59 @@ def run_mutmut(args: list[str]) -> None:
             "Could not find `mutmut` on PATH. Activate your virtual environment "
             "and install requirements-mutation.txt."
         )
-    run_command([mutmut_executable] + args)
+    run_command(
+        [mutmut_executable] + args,
+        env_overrides={"GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT": "1"},
+    )
+
+
+def run_mutmut_capture(args: list[str]) -> str:
+    ensure_mutmut_platform()
+    mutmut_executable = shutil.which("mutmut")
+    if not mutmut_executable:
+        raise SystemExit(
+            "Could not find `mutmut` on PATH. Activate your virtual environment "
+            "and install requirements-mutation.txt."
+        )
+    return run_command_capture(
+        [mutmut_executable] + args,
+        env_overrides={"GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT": "1"},
+    )
+
+
+def build_mutmut_run_args(max_children: int) -> list[str]:
+    if max_children < 1:
+        raise SystemExit("--max-children must be >= 1.")
+    return ["run", "--max-children", str(max_children)]
+
+
+def parse_mutmut_results(output: str) -> list[tuple[str, str]]:
+    mutants: list[tuple[str, str]] = []
+    for line in output.splitlines():
+        if ":" not in line:
+            continue
+        name, status = line.split(":", 1)
+        mutant_name = name.strip()
+        mutant_status = status.strip().lower()
+        if mutant_name and mutant_status:
+            mutants.append((mutant_name, mutant_status))
+    return mutants
+
+
+def select_mutants(
+    output: str, statuses: list[str], name_contains: str | None, limit: int
+) -> list[str]:
+    normalized_statuses = {status.lower().strip() for status in statuses}
+    selected: list[str] = []
+    for mutant_name, mutant_status in parse_mutmut_results(output):
+        if mutant_status not in normalized_statuses:
+            continue
+        if name_contains and name_contains not in mutant_name:
+            continue
+        selected.append(mutant_name)
+        if len(selected) >= limit:
+            break
+    return selected
 
 
 def resolve_smoke_tests(path: str) -> list[str]:
@@ -117,6 +202,24 @@ def main() -> None:
         "--skip-baseline",
         action="store_true",
         help="Skip baseline run of `python run.py test_all`.",
+    )
+    full_parser.add_argument(
+        "--max-children",
+        type=int,
+        default=1,
+        help=(
+            "mutmut worker processes (default: 1). "
+            "Lower values reduce timeout-only runs on heavy suites."
+        ),
+    )
+    full_parser.add_argument(
+        "--tests",
+        action="append",
+        default=[],
+        help=(
+            "Optional test path(s) overriding mutmut test selection for this run. "
+            "Repeatable."
+        ),
     )
 
     smoke_parser = subparsers.add_parser(
@@ -141,16 +244,87 @@ def main() -> None:
             "If omitted, defaults are inferred from --path when possible."
         ),
     )
+    smoke_parser.add_argument(
+        "--max-children",
+        type=int,
+        default=1,
+        help="mutmut worker processes (default: 1).",
+    )
 
     subparsers.add_parser("results", help="Show mutation results summary.")
     subparsers.add_parser("browse", help="Open the mutmut TUI browser.")
+    retry_parser = subparsers.add_parser(
+        "retry",
+        help=(
+            "Rerun a small mutant batch from `mutmut results` "
+            "(for timeout-focused troubleshooting)."
+        ),
+    )
+    retry_parser.add_argument(
+        "--status",
+        action="append",
+        default=[],
+        help=(
+            "Mutant status to include (repeatable). "
+            "Examples: timeout, survived, no tests, not checked."
+        ),
+    )
+    retry_parser.add_argument(
+        "--contains",
+        default="",
+        help="Only include mutants whose name contains this text.",
+    )
+    retry_parser.add_argument(
+        "--limit",
+        type=int,
+        default=MAX_TROUBLESHOOT_MUTANTS,
+        help=(
+            f"Maximum mutants to rerun (default: {MAX_TROUBLESHOOT_MUTANTS}, "
+            f"hard cap: {MAX_TROUBLESHOOT_MUTANTS})."
+        ),
+    )
+    retry_parser.add_argument(
+        "--path",
+        default="gen_epix/filter/range.py",
+        help=(
+            "Scoped mutation path relative to repo root used while rerunning "
+            "(default: gen_epix/filter/range.py)."
+        ),
+    )
+    retry_parser.add_argument(
+        "--tests",
+        action="append",
+        default=[],
+        help=(
+            "Optional test path(s) during retry run. Repeatable. "
+            "If omitted, defaults are inferred from --path when possible."
+        ),
+    )
+    retry_parser.add_argument(
+        "--skip-baseline",
+        action="store_true",
+        help="Skip baseline run of `python run.py test_all`.",
+    )
+    retry_parser.add_argument(
+        "--max-children",
+        type=int,
+        default=1,
+        help="mutmut worker processes (default: 1).",
+    )
 
     args = parser.parse_args()
 
     if args.command == "full":
         if not args.skip_baseline:
             run_baseline()
-        run_mutmut(["run"])
+        run_args = build_mutmut_run_args(args.max_children)
+        if args.tests:
+            mutation_paths = get_configured_mutation_paths()
+            print("Full run test selection override:", ", ".join(args.tests))
+            with temporary_mutation_scope(mutation_paths, args.tests):
+                run_mutmut(run_args)
+        else:
+            run_mutmut(run_args)
         return
 
     if args.command == "smoke":
@@ -160,7 +334,7 @@ def main() -> None:
         if smoke_tests:
             print("Smoke test selection:", ", ".join(smoke_tests))
         with temporary_mutation_scope([args.path], smoke_tests):
-            run_mutmut(["run", "--max-children", "1"])
+            run_mutmut(build_mutmut_run_args(args.max_children))
         return
 
     if args.command == "results":
@@ -169,6 +343,39 @@ def main() -> None:
 
     if args.command == "browse":
         run_mutmut(["browse"])
+        return
+
+    if args.command == "retry":
+        if args.limit < 1:
+            raise SystemExit("--limit must be >= 1.")
+        if args.limit > MAX_TROUBLESHOOT_MUTANTS:
+            raise SystemExit(
+                f"--limit cannot exceed {MAX_TROUBLESHOOT_MUTANTS} for troubleshooting runs."
+            )
+        if not args.skip_baseline:
+            run_baseline()
+        results_output = run_mutmut_capture(["results"])
+        statuses = args.status or ["timeout"]
+        contains_filter = args.contains.strip() or None
+        mutants = select_mutants(
+            results_output, statuses, contains_filter, limit=args.limit
+        )
+        if not mutants:
+            status_desc = ", ".join(statuses)
+            contains_desc = f", contains='{args.contains}'" if contains_filter else ""
+            print(f"No mutants found for status={status_desc}{contains_desc}.")
+            return
+        print("Retrying mutants:")
+        for mutant in mutants:
+            print(f"  {mutant}")
+        retry_tests = args.tests or resolve_smoke_tests(args.path)
+        if retry_tests:
+            print("Retry test selection:", ", ".join(retry_tests))
+        with temporary_mutation_scope([args.path], retry_tests):
+            # Run selected mutants in a single mutmut invocation.
+            # mutmut regenerates `.meta` on each `run`, so per-mutant calls would
+            # overwrite prior statuses back to "not checked".
+            run_mutmut(build_mutmut_run_args(args.max_children) + mutants)
         return
 
     raise SystemExit(f"Unknown command: {args.command}")

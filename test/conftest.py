@@ -1,4 +1,5 @@
 import re
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -10,6 +11,17 @@ import xlsxwriter
 tests: list[dict[str, Any]] = []
 scenario_ids: set[str] = set()
 test_scenario_links: list[dict[str, str]] = []
+
+
+def _reset_report_state() -> None:
+    tests.clear()
+    scenario_ids.clear()
+    test_scenario_links.clear()
+
+
+def pytest_sessionstart(session: pytest.Session) -> None:
+    """Reset report state for each pytest session (important for mutmut repeated sessions)."""
+    _reset_report_state()
 
 
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[Any]) -> None:
@@ -131,6 +143,9 @@ def _remove_timezone_from_datetime(test: list[dict[str, Any]]) -> None:
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     """custom pytest hook to perform actions at the end of the test session."""
+    # mutmut runs pytest many times; skip XLSX generation to avoid heavy per-mutant I/O overhead.
+    if os.getenv("GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT") == "1":
+        return
     # only create report if there is data to report
     if tests and scenario_ids and test_scenario_links:
         generate_excel_report(tests, "test/output/test_report.xlsx")

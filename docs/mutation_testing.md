@@ -106,7 +106,7 @@ python -m pip install -r requirements-mutation.txt
 Full run (includes baseline regression check with the canonical command `python run.py test_all`):
 
 ```bash
-python tools/mutation.py full
+python tools/mutation.py full --max-children 1
 ```
 
 Quick smoke run (scope mutations and tests to one module):
@@ -127,6 +127,41 @@ python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit -
 If `python tools/mutation.py smoke --help` does not show `--tests`, sync your local `tools/mutation.py` first.
 When smoke scoping is active, the command prints `Smoke test selection: ...` before running mutmut.
 
+## Timeout Triage
+
+If mutmut reports nearly all mutants as timeout, this usually means the selected tests exceed mutmut's runtime budget for each mutant. It does **not** automatically mean your tests contain infinite loops.
+
+Start with:
+
+```bash
+python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit --skip-baseline --max-children 1
+```
+
+If smoke works but `full` times out, run `full` with an explicit unit-focused test selection:
+
+```bash
+python tools/mutation.py full --skip-baseline --max-children 1 \
+  --tests test/filter/unit \
+  --tests test/transform/unit \
+  --tests test/fastapp/unit \
+  --tests test/commondb/unit \
+  --tests test/casedb/unit \
+  --tests test/seqdb/unit \
+  --tests test/omopdb/unit \
+  --tests test/general/docs
+```
+
+Then add integration/end-to-end suites back gradually only if runtime remains stable.
+
+Run a small troubleshooting batch (max 6 mutants) from current results:
+
+```bash
+python tools/mutation.py retry --status timeout --contains "RangeFilter" --limit 6 \
+  --path gen_epix/filter/range.py --tests test/filter/unit --skip-baseline
+```
+
+`retry` runs the selected mutants in one mutmut invocation so prior statuses are not reset to `not checked`.
+
 ## View Results (inside WSL terminal)
 
 Summary:
@@ -145,6 +180,8 @@ python tools/mutation.py browse
 
 - `setup.cfg` contains the mutmut configuration.
 - Test selection and warning flags are aligned with `run.py test_all`.
+- `tools/mutation.py` disables the custom Excel pytest report during mutmut runs (`GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT=1`) to reduce per-mutant overhead and avoid false timeout-heavy runs.
+- `test/conftest.py` resets report state at `pytest_sessionstart`, preventing cross-session growth when mutmut executes many pytest sessions.
 - Local timeout triage exclusions are configured in `setup.cfg` under `do_not_mutate`:
   - `gen_epix/filter/base.py`
   - `gen_epix/filter/composite.py`
