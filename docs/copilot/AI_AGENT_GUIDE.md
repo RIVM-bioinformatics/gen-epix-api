@@ -137,6 +137,12 @@ Add:
 Add:
 - “Propose the minimal patch that matches existing patterns; avoid rewrites.”
 
+### D) Ensure multi-repository compatibility
+
+Add:
+- “Ensure changes work in DICT, SA_SQLITE, and SA_SQL modes.”
+- “If repository logic changes, update both DICT and SQL implementations.”
+
 ---
 
 ## 7) Common failure modes (and how to prevent them)
@@ -156,6 +162,12 @@ Fix:
 ### 4) “Docs look stale”
 Fix:
 - Run a mismatch check prompt (Section 4C) and update docs as part of the PR.
+
+### 5) “It changed auth behavior but ignored IDP modes”
+
+Fix:
+- Ask: “State implications for IDPS, MOCK, and NONE modes.”
+- Confirm whether root fallback behavior is impacted.
 
 ---
 
