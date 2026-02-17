@@ -34,7 +34,9 @@ class OrganizationSARepository(SARepository, BaseOrganizationRepository):
             return False
         assert isinstance(uow, SAUnitOfWork)
         user_row = uow.session.execute(
-            select(self.sa_user_class.id).where(self.sa_user_class.key == user_key.lower())
+            select(self.sa_user_class.id).where(
+                self.sa_user_class.key == user_key.lower()
+            )
         ).all()
         return True if user_row else False
 

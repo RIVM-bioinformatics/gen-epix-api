@@ -146,8 +146,10 @@ class SeqdbRemoteApp(RemoteApp):
                 return self._oauth_header_cache[1]
             # Retrieve new token
 
-            jwt_token = self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
-                scope=self._oauth_scope
+            jwt_token = (
+                self._oauth_idp_client.retrieve_jwt_with_client_credentials_flow(
+                    scope=self._oauth_scope
+                )
             )
             # Create headers
             headers = dict(self._default_headers)

@@ -522,4 +522,3 @@ class SeqService(BaseSeqService):
         )
         newick = f"({newick}"
         return newick
-

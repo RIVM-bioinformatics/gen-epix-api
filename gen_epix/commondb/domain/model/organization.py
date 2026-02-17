@@ -61,7 +61,9 @@ class User(fastapp.User, Model):
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
-    key: str = Field(description="The key of the user, lowercase, UNIQUE", max_length=320)
+    key: str = Field(
+        description="The key of the user, lowercase, UNIQUE", max_length=320
+    )
     email: str | None = Field(
         default=None, description="The email of the user", max_length=320
     )
