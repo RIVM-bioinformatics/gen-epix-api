@@ -57,3 +57,11 @@ include = ["gen_epix*"]
 exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert.*", "cicd", "cicd.*"]
 
 
+[tool.black]
+line-length = 88
+target-version = ['py313']
+
+[tool.isort]
+profile = "black"
+float_to_top = true
+line_length = 88

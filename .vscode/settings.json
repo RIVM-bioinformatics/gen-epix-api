@@ -1,10 +1,5 @@
 {
     "editor.formatOnSave": true,
-    "isort.args": [
-        "--float-to-top",
-        "--profile",
-        "black"
-    ],
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
     },
