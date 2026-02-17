@@ -316,11 +316,45 @@ class TestRefdataAccess:
 
         return expected_case_type_ids
 
+    # Note that this method is currently not used in the test, but it can be used for future more fine-grained tests that check ABAC filtering for operational data access,
+    # instead of the current all-or-nothing approach for reference data access
+    # It should test for access on case level, not just case type level, to verify that ABAC filtering is correctly applied for operational data access
     def get_expected_case_type_ids_for_operational_data(
         self,
         env: Env,
         user: model.User,
     ) -> set[UUID]:
+        """
+        Determine the case type IDs that a user should have access to for operational data.
+
+        This method calculates the union of case types accessible through either access rights
+        or share rights. For each type of right (access/share), a user must satisfy BOTH
+        organization-level and user-level policies to gain access to case types.
+
+        Args:
+            env (Env): The environment context for retrieving reference data
+            user (model.User): The user for whom to determine accessible case type IDs
+
+        Returns:
+            set[UUID]: A set of case type IDs that the user should have operational access to
+
+        Logic:
+            1. Retrieves all relevant policies and case type set memberships
+            2. For access rights:
+               - Finds case type sets from organization access policies for user's org
+               - Finds case type sets from user access policies for the specific user
+               - Gets case types that are in BOTH org AND user accessible case type sets
+            3. For share rights:
+               - Finds case type sets from organization share policies for user's org
+               - Finds case type sets from user share policies for the specific user
+               - Gets case types that are in BOTH org AND user shareable case type sets
+            4. Returns the union of case types accessible through either access OR share rights
+
+        Note:
+            - Access requires intersection of org AND user policies
+            - Final result is union of access OR share case types
+        """
+
         # Get all the reference data using cached methods
         all_organization_access_case_policies = (
             self._get_all_organization_access_case_policies(env)
