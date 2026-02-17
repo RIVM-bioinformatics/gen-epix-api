@@ -109,11 +109,21 @@ Full run (includes baseline regression check with the canonical command `python 
 python tools/mutation.py full
 ```
 
-Quick smoke run (scope mutations to one module/package path):
+Quick smoke run (scope mutations and tests to one module):
 
 ```bash
-python tools/mutation.py smoke --path gen_epix/filter --skip-baseline
+python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit --skip-baseline
 ```
+
+`smoke` automatically narrows test selection for common module roots (for example, `gen_epix/filter` runs `test/filter/unit`) to avoid unrelated integration-test failures during quick checks.
+
+If needed, override smoke test selection explicitly:
+
+```bash
+python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit --skip-baseline
+```
+
+If `python tools/mutation.py smoke --help` does not show `--tests`, sync your local `tools/mutation.py` first.
 
 ## View Results (inside WSL terminal)
 

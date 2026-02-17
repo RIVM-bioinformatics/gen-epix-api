@@ -4,6 +4,7 @@ import argparse
 import configparser
 import io
 import platform
+import shutil
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -13,6 +14,15 @@ from typing import Iterator
 ROOT = Path(__file__).resolve().parents[1]
 SETUP_CFG = ROOT / "setup.cfg"
 BASELINE_CMD = [sys.executable, "run.py", "test_all"]
+SMOKE_TEST_SELECTION_BY_PATH: dict[str, list[str]] = {
+    "gen_epix/filter": ["test/filter/unit"],
+    "gen_epix/transform": ["test/transform/unit"],
+    "gen_epix/fastapp": ["test/fastapp/unit"],
+    "gen_epix/commondb": ["test/commondb/unit"],
+    "gen_epix/casedb": ["test/casedb/unit"],
+    "gen_epix/seqdb": ["test/seqdb/unit"],
+    "gen_epix/omopdb": ["test/omopdb/unit"],
+}
 
 
 def run_command(cmd: list[str]) -> None:
@@ -39,7 +49,9 @@ def normalize_scope_path(path: str) -> str:
 
 
 @contextmanager
-def temporary_mutation_scope(paths: list[str]) -> Iterator[None]:
+def temporary_mutation_scope(
+    paths: list[str], test_selection: list[str] | None = None
+) -> Iterator[None]:
     original_text = SETUP_CFG.read_text(encoding="utf-8")
     parser = configparser.ConfigParser()
     parser.read_file(io.StringIO(original_text))
@@ -59,6 +71,8 @@ def temporary_mutation_scope(paths: list[str]) -> Iterator[None]:
     existing_also_copy = parse_multiline(mutmut_cfg.get("also_copy", ""))
     merged_also_copy = list(dict.fromkeys(existing_also_copy + original_paths))
     mutmut_cfg["also_copy"] = as_multiline(merged_also_copy)
+    if test_selection:
+        mutmut_cfg["pytest_add_cli_args_test_selection"] = as_multiline(test_selection)
 
     with SETUP_CFG.open("w", encoding="utf-8", newline="\n") as f:
         parser.write(f)
@@ -75,7 +89,21 @@ def run_baseline() -> None:
 
 def run_mutmut(args: list[str]) -> None:
     ensure_mutmut_platform()
-    run_command([sys.executable, "-m", "mutmut"] + args)
+    mutmut_executable = shutil.which("mutmut")
+    if not mutmut_executable:
+        raise SystemExit(
+            "Could not find `mutmut` on PATH. Activate your virtual environment "
+            "and install requirements-mutation.txt."
+        )
+    run_command([mutmut_executable] + args)
+
+
+def resolve_smoke_tests(path: str) -> list[str]:
+    normalized_path = normalize_scope_path(path)
+    for prefix, tests in SMOKE_TEST_SELECTION_BY_PATH.items():
+        if normalized_path == prefix or normalized_path.startswith(prefix + "/"):
+            return tests
+    return []
 
 
 def main() -> None:
@@ -102,6 +130,15 @@ def main() -> None:
         action="store_true",
         help="Skip baseline run of `python run.py test_all`.",
     )
+    smoke_parser.add_argument(
+        "--tests",
+        action="append",
+        default=[],
+        help=(
+            "Optional test path(s) for smoke run. Repeatable. "
+            "If omitted, defaults are inferred from --path when possible."
+        ),
+    )
 
     subparsers.add_parser("results", help="Show mutation results summary.")
     subparsers.add_parser("browse", help="Open the mutmut TUI browser.")
@@ -117,7 +154,8 @@ def main() -> None:
     if args.command == "smoke":
         if not args.skip_baseline:
             run_baseline()
-        with temporary_mutation_scope([args.path]):
+        smoke_tests = args.tests or resolve_smoke_tests(args.path)
+        with temporary_mutation_scope([args.path], smoke_tests):
             run_mutmut(["run", "--max-children", "1"])
         return
 
