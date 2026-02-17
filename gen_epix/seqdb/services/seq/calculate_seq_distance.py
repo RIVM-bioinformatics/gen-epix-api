@@ -210,15 +210,14 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 
             # Batch update modified existing SeqDistances
             with self.repository.uow() as uow:
-                for seq_distance in modified_existing_seq_distances:
-                    self.repository.crud(
-                        uow,
-                        user_id,
-                        model.SeqDistance,
-                        seq_distance,
-                        None,
-                        CrudOperation.UPDATE_ONE,
-                    )
+                self.repository.crud(
+                    uow,
+                    user_id,
+                    model.SeqDistance,
+                    modified_existing_seq_distances,
+                    None,
+                    CrudOperation.UPDATE_SOME,
+                )
 
             # Create new SeqDistances
             with self.repository.uow() as uow:
