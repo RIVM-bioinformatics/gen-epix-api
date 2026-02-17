@@ -99,7 +99,11 @@ Then continue with dependency installation:
 python -m pip install -r requirements.txt
 python -m pip install -r dev-requirements.txt
 python -m pip install -r requirements-mutation.txt
+python tools/patch_mutmut_template.py
 ```
+
+`python tools/patch_mutmut_template.py` is safe to run multiple times.
+Run it again whenever you recreate the virtual environment or reinstall `mutmut`.
 
 ## Run (inside WSL terminal)
 
@@ -108,6 +112,14 @@ Full run (includes baseline regression check with the canonical command `python 
 ```bash
 python tools/mutation.py full --max-children 1
 ```
+
+Optional safety switch for all mutmut commands (`full`, `smoke`, `retry`, `results`, `browse`):
+
+```bash
+python tools/mutation.py full --max-children 1 --auto-patch-mutmut
+```
+
+This runs a pre-check and auto-applies `tools/patch_mutmut_template.py` when needed.
 
 Quick smoke run (scope mutations and tests to one module):
 
@@ -176,10 +188,32 @@ Interactive browser:
 python tools/mutation.py browse
 ```
 
+## Workflow
+
+This section describes how to work with mutmut to enhance your test suite.
+
+1. Run mutmut. A full run is preferred but if you're just
+   getting started you can exit in the middle and start working with what you
+   have found so far.
+```bash
+python tools/mutation.py full --max-children 1
+```
+2. Show the mutants with:
+```bash
+python tools/mutation.py browse
+```
+3. Find a mutant you want to work on and write a test to try to kill it.
+4. Press `r` to rerun the mutant and see if you successfully managed to kill it.
+
+Mutmut keeps the data of what it has done and the mutants in the `mutants/`
+directory.If  you want to make sure you run a full mutmut run you can delete
+this directory to start from scratch.
+
 ## Notes
 
 - `setup.cfg` contains the mutmut configuration.
 - Test selection and warning flags are aligned with `run.py test_all`.
+- `tools/patch_mutmut_template.py` patches the installed `mutmut` trampoline template in the active environment to avoid known `dict` alias collisions during stats collection.
 - `tools/mutation.py` disables the custom Excel pytest report during mutmut runs (`GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT=1`) to reduce per-mutant overhead and avoid false timeout-heavy runs.
 - `test/conftest.py` resets report state at `pytest_sessionstart`, preventing cross-session growth when mutmut executes many pytest sessions.
 - Local timeout triage exclusions are configured in `setup.cfg` under `do_not_mutate`:

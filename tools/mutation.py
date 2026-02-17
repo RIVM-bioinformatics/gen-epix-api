@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SETUP_CFG = ROOT / "setup.cfg"
 BASELINE_CMD = [sys.executable, "run.py", "test_all"]
 MAX_TROUBLESHOOT_MUTANTS = 6
+PATCH_MUTMUT_TEMPLATE_SCRIPT = ROOT / "tools" / "patch_mutmut_template.py"
 SMOKE_TEST_SELECTION_BY_PATH: dict[str, list[str]] = {
     "gen_epix/filter": ["test/filter/unit"],
     "gen_epix/transform": ["test/transform/unit"],
@@ -122,7 +123,35 @@ def run_baseline() -> None:
     run_command(BASELINE_CMD)
 
 
-def run_mutmut(args: list[str]) -> None:
+def maybe_patch_mutmut_template(auto_patch_mutmut: bool) -> None:
+    if not PATCH_MUTMUT_TEMPLATE_SCRIPT.exists():
+        raise SystemExit(
+            "Missing tools/patch_mutmut_template.py. "
+            "Sync your repository before running mutation tests."
+        )
+
+    check = subprocess.run(
+        [sys.executable, str(PATCH_MUTMUT_TEMPLATE_SCRIPT), "--check"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if check.returncode == 0:
+        return
+
+    if not auto_patch_mutmut:
+        raise SystemExit(
+            "mutmut template patch check failed. "
+            "Run `python tools/patch_mutmut_template.py` or rerun with "
+            "`--auto-patch-mutmut`."
+        )
+
+    print("Applying mutmut template patch...")
+    run_command([sys.executable, str(PATCH_MUTMUT_TEMPLATE_SCRIPT)])
+
+
+def run_mutmut(args: list[str], auto_patch_mutmut: bool = False) -> None:
     ensure_mutmut_platform()
     mutmut_executable = shutil.which("mutmut")
     if not mutmut_executable:
@@ -130,13 +159,14 @@ def run_mutmut(args: list[str]) -> None:
             "Could not find `mutmut` on PATH. Activate your virtual environment "
             "and install requirements-mutation.txt."
         )
+    maybe_patch_mutmut_template(auto_patch_mutmut)
     run_command(
         [mutmut_executable] + args,
         env_overrides={"GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT": "1"},
     )
 
 
-def run_mutmut_capture(args: list[str]) -> str:
+def run_mutmut_capture(args: list[str], auto_patch_mutmut: bool = False) -> str:
     ensure_mutmut_platform()
     mutmut_executable = shutil.which("mutmut")
     if not mutmut_executable:
@@ -144,6 +174,7 @@ def run_mutmut_capture(args: list[str]) -> str:
             "Could not find `mutmut` on PATH. Activate your virtual environment "
             "and install requirements-mutation.txt."
         )
+    maybe_patch_mutmut_template(auto_patch_mutmut)
     return run_command_capture(
         [mutmut_executable] + args,
         env_overrides={"GEN_EPIX_DISABLE_PYTEST_XLSX_REPORT": "1"},
@@ -193,6 +224,17 @@ def resolve_smoke_tests(path: str) -> list[str]:
     return []
 
 
+def add_auto_patch_mutmut_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--auto-patch-mutmut",
+        action="store_true",
+        help=(
+            "Automatically run `python tools/patch_mutmut_template.py` when the "
+            "mutmut template patch is missing."
+        ),
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Local mutation testing entrypoint.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -221,6 +263,7 @@ def main() -> None:
             "Repeatable."
         ),
     )
+    add_auto_patch_mutmut_arg(full_parser)
 
     smoke_parser = subparsers.add_parser(
         "smoke", help="Run scoped mutation testing for a quick smoke check."
@@ -250,9 +293,12 @@ def main() -> None:
         default=1,
         help="mutmut worker processes (default: 1).",
     )
+    add_auto_patch_mutmut_arg(smoke_parser)
 
-    subparsers.add_parser("results", help="Show mutation results summary.")
-    subparsers.add_parser("browse", help="Open the mutmut TUI browser.")
+    results_parser = subparsers.add_parser("results", help="Show mutation results summary.")
+    add_auto_patch_mutmut_arg(results_parser)
+    browse_parser = subparsers.add_parser("browse", help="Open the mutmut TUI browser.")
+    add_auto_patch_mutmut_arg(browse_parser)
     retry_parser = subparsers.add_parser(
         "retry",
         help=(
@@ -311,6 +357,7 @@ def main() -> None:
         default=1,
         help="mutmut worker processes (default: 1).",
     )
+    add_auto_patch_mutmut_arg(retry_parser)
 
     args = parser.parse_args()
 
@@ -322,9 +369,9 @@ def main() -> None:
             mutation_paths = get_configured_mutation_paths()
             print("Full run test selection override:", ", ".join(args.tests))
             with temporary_mutation_scope(mutation_paths, args.tests):
-                run_mutmut(run_args)
+                run_mutmut(run_args, auto_patch_mutmut=args.auto_patch_mutmut)
         else:
-            run_mutmut(run_args)
+            run_mutmut(run_args, auto_patch_mutmut=args.auto_patch_mutmut)
         return
 
     if args.command == "smoke":
@@ -334,15 +381,18 @@ def main() -> None:
         if smoke_tests:
             print("Smoke test selection:", ", ".join(smoke_tests))
         with temporary_mutation_scope([args.path], smoke_tests):
-            run_mutmut(build_mutmut_run_args(args.max_children))
+            run_mutmut(
+                build_mutmut_run_args(args.max_children),
+                auto_patch_mutmut=args.auto_patch_mutmut,
+            )
         return
 
     if args.command == "results":
-        run_mutmut(["results"])
+        run_mutmut(["results"], auto_patch_mutmut=args.auto_patch_mutmut)
         return
 
     if args.command == "browse":
-        run_mutmut(["browse"])
+        run_mutmut(["browse"], auto_patch_mutmut=args.auto_patch_mutmut)
         return
 
     if args.command == "retry":
@@ -354,7 +404,9 @@ def main() -> None:
             )
         if not args.skip_baseline:
             run_baseline()
-        results_output = run_mutmut_capture(["results"])
+        results_output = run_mutmut_capture(
+            ["results"], auto_patch_mutmut=args.auto_patch_mutmut
+        )
         statuses = args.status or ["timeout"]
         contains_filter = args.contains.strip() or None
         mutants = select_mutants(
@@ -375,7 +427,10 @@ def main() -> None:
             # Run selected mutants in a single mutmut invocation.
             # mutmut regenerates `.meta` on each `run`, so per-mutant calls would
             # overwrite prior statuses back to "not checked".
-            run_mutmut(build_mutmut_run_args(args.max_children) + mutants)
+            run_mutmut(
+                build_mutmut_run_args(args.max_children) + mutants,
+                auto_patch_mutmut=args.auto_patch_mutmut,
+            )
         return
 
     raise SystemExit(f"Unknown command: {args.command}")
