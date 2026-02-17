@@ -73,6 +73,8 @@ def temporary_mutation_scope(
     mutmut_cfg["also_copy"] = as_multiline(merged_also_copy)
     if test_selection:
         mutmut_cfg["pytest_add_cli_args_test_selection"] = as_multiline(test_selection)
+        # Keep legacy and current mutmut selection keys in sync for smoke runs.
+        mutmut_cfg["tests_dir"] = as_multiline(test_selection)
 
     with SETUP_CFG.open("w", encoding="utf-8", newline="\n") as f:
         parser.write(f)
@@ -155,6 +157,8 @@ def main() -> None:
         if not args.skip_baseline:
             run_baseline()
         smoke_tests = args.tests or resolve_smoke_tests(args.path)
+        if smoke_tests:
+            print("Smoke test selection:", ", ".join(smoke_tests))
         with temporary_mutation_scope([args.path], smoke_tests):
             run_mutmut(["run", "--max-children", "1"])
         return

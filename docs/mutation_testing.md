@@ -116,6 +116,7 @@ python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit -
 ```
 
 `smoke` automatically narrows test selection for common module roots (for example, `gen_epix/filter` runs `test/filter/unit`) to avoid unrelated integration-test failures during quick checks.
+Do not use bare `pytest -q` as a baseline in this repo; it can collect unsupported/custom/performance suites. Use `python run.py test_all` or an explicit scoped path (for example `pytest -q test/filter/unit`).
 
 If needed, override smoke test selection explicitly:
 
@@ -124,6 +125,7 @@ python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit -
 ```
 
 If `python tools/mutation.py smoke --help` does not show `--tests`, sync your local `tools/mutation.py` first.
+When smoke scoping is active, the command prints `Smoke test selection: ...` before running mutmut.
 
 ## View Results (inside WSL terminal)
 
@@ -143,3 +145,7 @@ python tools/mutation.py browse
 
 - `setup.cfg` contains the mutmut configuration.
 - Test selection and warning flags are aligned with `run.py test_all`.
+- Local timeout triage exclusions are configured in `setup.cfg` under `do_not_mutate`:
+  - `gen_epix/filter/base.py`
+  - `gen_epix/filter/composite.py`
+- If you want to investigate those files specifically, temporarily remove those two lines, run a scoped smoke command, then add them back.
