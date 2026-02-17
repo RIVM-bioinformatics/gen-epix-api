@@ -13,6 +13,7 @@
             "source.organizeImports.isort": "always",
         }
     },
+    "isort.importStrategy": "fromEnvironment",
     "files.exclude": {
         "**/.git": false
     },
