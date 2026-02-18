@@ -668,6 +668,7 @@ class SeqdbTestClient(TestClient):
         assembly_protocol_id: UUID | None = None,
         locus_set_id: UUID | None = None,
         locus_detection_protocol_id: UUID | None = None,
+        sample_id: UUID | None = None,
     ) -> model.SampleBatchForUpload:
         # set IDs if not provided
         assembly_protocol_id = (
@@ -679,6 +680,7 @@ class SeqdbTestClient(TestClient):
             if locus_detection_protocol_id is not None
             else uuid.uuid4()
         )
+        sample_id = sample_id if sample_id is not None else uuid.uuid4()
         # local RNG to  ensure reproducibility with same seed
         rng = random.Random(settings.seed)
 
@@ -747,6 +749,7 @@ class SeqdbTestClient(TestClient):
                 allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                 seq_id=seq_id,
+                sample_id=sample_id,
             )
             seq_for_upload = model.SeqForUpload(
                 id=seq_id,

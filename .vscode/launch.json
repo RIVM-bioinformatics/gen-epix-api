@@ -637,6 +637,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.seqdb.integration.sample_batch_uploader",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_sample_batch_uploader"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
             "name": "test.seqdb.performance",
             "type": "debugpy",
             "request": "launch",

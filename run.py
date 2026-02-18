@@ -632,6 +632,16 @@ class Run:
                 "test/seqdb/integration/content",
             ]
         )
+    
+    def test_seqdb_sample_batch_uploader(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/integration/sample_batch_uploader",
+            ]
+        )
 
     def test_seqdb_performance(self) -> None:
         import pytest

@@ -19,7 +19,7 @@ import pytest
 from pydantic import BaseModel
 
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.util import get_app_cfgs
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -98,13 +98,18 @@ def create_dict_repository(
     pickle_file: Path | None,
     db: dict[type, dict[UUID, model.Model]] | None,
     entities: list[Entity],
+    missing_data: str = "ignore",
 ) -> SeqDictRepository:
 
     if pickle_file is not None:
         with open(pickle_file, "rb") as f:
             db = pickle.load(f)
 
-    return SeqDictRepository(entities=entities, db=db)  # type: ignore[arg-type]
+    return SeqDictRepository(
+        entities=entities,
+        db=db,
+        missing_data=missing_data,
+    )  # type: ignore[arg-type]
 
 
 def create_sqlite_repository(
