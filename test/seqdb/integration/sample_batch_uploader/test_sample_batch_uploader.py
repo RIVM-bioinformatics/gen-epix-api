@@ -99,7 +99,6 @@ class SampleBatchUploaderSetUp:
                 entities=entities,
             )
 
-        # Replace the repository in the service
         app = env.app.impl.services[enum.ServiceType.SEQ].app
         seq_service = app.impl.services[enum.ServiceType.SEQ]
         seq_service.repository = seq_dict_repository
@@ -119,6 +118,10 @@ class TestSampleBatchUploader(SampleBatchUploaderSetUp):
         locus_detection_protocol_id = next(
             iter(self.db[model.LocusDetectionProtocol].keys())
         )
+        locus_code_map_id = next(iter(self.db[model.LocusCodeMap].keys()))
+        
+        locus_set = self.db[model.LocusSet][locus_set_id]
+        locus_ids = locus_set.locus_ids
 
         sample_batch_for_upload = env.generate_random_sequences(
             n_seqs=10,
@@ -126,6 +129,8 @@ class TestSampleBatchUploader(SampleBatchUploaderSetUp):
             assembly_protocol_id=assembly_protocol_id,
             locus_set_id=locus_set_id,
             locus_detection_protocol_id=locus_detection_protocol_id,
+            locus_code_map_id=locus_code_map_id,
+            locus_ids=locus_ids,
         )
 
         cmd = command.UploadSamplesCommand(

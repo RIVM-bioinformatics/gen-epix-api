@@ -668,7 +668,9 @@ class SeqdbTestClient(TestClient):
         assembly_protocol_id: UUID | None = None,
         locus_set_id: UUID | None = None,
         locus_detection_protocol_id: UUID | None = None,
+        locus_code_map_id: UUID | None = None,
         sample_id: UUID | None = None,
+        locus_ids: list[UUID] | None = None,
     ) -> model.SampleBatchForUpload:
         # set IDs if not provided
         assembly_protocol_id = (
@@ -680,11 +682,23 @@ class SeqdbTestClient(TestClient):
             if locus_detection_protocol_id is not None
             else uuid.uuid4()
         )
+        locus_code_map_id = (
+            locus_code_map_id if locus_code_map_id is not None else uuid.uuid4()
+        )
         sample_id = sample_id if sample_id is not None else uuid.uuid4()
         # local RNG to  ensure reproducibility with same seed
         rng = random.Random(settings.seed)
 
-        locus_ids: list[UUID] = [uuid.uuid4() for _ in range(settings.n_loci)]
+        # Use provided locus_ids or generate random ones
+        if locus_ids is None:
+            locus_ids = [uuid.uuid4() for _ in range(settings.n_loci)]
+        else:
+            # Validate that provided locus_ids match expected count
+            if len(locus_ids) != settings.n_loci:
+                raise ValueError(
+                    f"Provided locus_ids count ({len(locus_ids)}) does not match "
+                    f"settings.n_loci ({settings.n_loci})"
+                )
         sequence: list[str] = [
             rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)
         ]
@@ -746,6 +760,7 @@ class SeqdbTestClient(TestClient):
             allele_profile_for_upload = model.AlleleProfileForUpload(
                 locus_set_id=locus_set_id,
                 locus_detection_protocol_id=locus_detection_protocol_id,
+                locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                 seq_id=seq_id,
@@ -760,6 +775,7 @@ class SeqdbTestClient(TestClient):
                     )
                 ],
                 assembly_protocol_id=assembly_protocol_id,
+                is_new_id=True,
             )
             samples_for_upload.append(
                 model.SampleForUpload(

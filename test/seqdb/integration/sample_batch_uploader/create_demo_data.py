@@ -15,30 +15,34 @@ def generate_demo_seqdb_models() -> dict[type, dict[UUID, Any]]:
         code="DEMO_ASSEMBLY_PROTOCOL1",
         name="Demo Assembly Protocol 1",
     )
-    locus1: model.Locus = model.Locus(
-        id=UUID("00000000-0000-0000-0000-000000000011"),
-        code="locus1",
-        locus_type=enum.LocusType.OTHER,
-    )
-    locus2: model.Locus = model.Locus(
-        id=UUID("00000000-0000-0000-0000-000000000012"),
-        code="locus2",
-        locus_type=enum.LocusType.OTHER,
-    )
+    
+    loci: list[model.Locus] = []
+    for i in range(1, 6):
+        locus = model.Locus(
+            id=UUID(f"00000000-0000-0000-0000-00000000001{i}"),
+            code=f"locus{i}",
+            locus_type=enum.LocusType.OTHER,
+        )
+        loci.append(locus)
+    
     locus_set: model.LocusSet = model.LocusSet(
         id=UUID("00000000-0000-0000-0000-000000000021"),
         code="locus_set1",
         name="Demo Locus Set 1",
-        locus_ids=[locus1.id, locus2.id],  # type: ignore[list-item]
+        locus_ids=[locus.id for locus in loci],  # type: ignore[list-item]
+    )
+
+    locus_code_map: model.LocusCodeMap = model.LocusCodeMap(
+        id=UUID("00000000-0000-0000-0000-000000000031"),
+        code="DEMO_LOCUS_CODE_MAP",
+        code_map={locus.code: locus.id for locus in loci},  # type: ignore[dict-item]
     )
 
     db: dict[type, dict[UUID, Any]] = {}
     db[model.LocusDetectionProtocol] = {locus_detection_protocol.id: locus_detection_protocol}  # type: ignore[dict-item]
     db[model.AssemblyProtocol] = {assembly_protocol.id: assembly_protocol}  # type: ignore[dict-item]
-    db[model.Locus] = {
-        locus1.id: locus1,  # type: ignore[dict-item]
-        locus2.id: locus2,  # type: ignore[dict-item]
-    }
+    db[model.Locus] = {locus.id: locus for locus in loci}  # type: ignore[dict-item]
     db[model.LocusSet] = {locus_set.id: locus_set}  # type: ignore[dict-item]
+    db[model.LocusCodeMap] = {locus_code_map.id: locus_code_map}  # type: ignore[dict-item]
 
     return db
