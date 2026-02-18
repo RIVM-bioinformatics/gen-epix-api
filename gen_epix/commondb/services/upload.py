@@ -1123,7 +1123,7 @@ class BatchUploader:
     ) -> bool:
         """
         Create any new objects and update the corresponding UploadResults.
-        ️"""
+        """
         success = True
         if not to_create_obj_result_pairs:
             return success
