@@ -202,6 +202,8 @@ grep -n "gen_epix/commondb/policies/\\*.py" setup.cfg
 grep -n "gen_epix/seqdb/policies/\\*.py" setup.cfg
 grep -n "gen_epix/commondb/repositories/organization_dict.py" setup.cfg
 grep -n "gen_epix/omopdb/repositories/organization_dict.py" setup.cfg
+grep -n "gen_epix/commondb/services/organization.py" setup.cfg
+grep -n "gen_epix/omopdb/services/organization.py" setup.cfg
 ```
 
 6. Verify mutmut is loading exclusions from `setup.cfg`:
@@ -223,6 +225,8 @@ print(c.should_ignore_for_mutation(Path("gen_epix/commondb/policies/read_organiz
 print(c.should_ignore_for_mutation(Path("gen_epix/seqdb/policies/read_organization_results_only_policy.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/repositories/organization_dict.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/omopdb/repositories/organization_dict.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/commondb/services/organization.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/omopdb/services/organization.py")))
 PY
 ```
 
@@ -339,4 +343,8 @@ this directory to start from scratch.
   - `gen_epix/casedb/repositories/organization_dict.py`
   - `gen_epix/seqdb/repositories/organization_dict.py`
   - `gen_epix/omopdb/repositories/organization_dict.py` (same helper-name collision pattern for inherited repositories, e.g. `OrganizationDictRepository.__init__`)
+  - `gen_epix/commondb/services/organization.py`
+  - `gen_epix/casedb/services/organization.py`
+  - `gen_epix/seqdb/services/organization.py`
+  - `gen_epix/omopdb/services/organization.py` (same helper-name collision pattern for inherited service classes, e.g. `OrganizationService.__init__`)
 - If you want to investigate those files specifically, temporarily remove the relevant exclusion lines, run a scoped smoke command, then add them back.
