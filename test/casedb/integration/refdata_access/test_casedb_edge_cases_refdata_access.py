@@ -7,22 +7,17 @@ from test.casedb.integration.refdata_access.base_empty import (
     VERBOSE,
 )
 
-from gen_epix.commondb.domain import enum, model
-from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand
+import logging
+from gen_epix.casedb.domain import enum, model
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
-
-import logging
+from gen_epix.casedb.domain.command import CaseTypeCrudCommand
 
 
 SEQDB_APP_CFGS = get_app_cfgs(
-    AppType.SEQDB,
-    seqdb_enum.ServiceType,
-    seqdb_enum.RepositoryType,
-    TEST_TYPE,
+    AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE
 )
 CASEDB_APP_CFGS = get_app_cfgs(
     AppType.CASEDB,
@@ -50,6 +45,37 @@ def get_test_client() -> Env:
     )
 
 
+@pytest.fixture(scope="module")
+def base_setup(env: Env) -> None:
+    """
+    Set up common test data used across all tests.
+    Bootstrap root user and org1 into env.db for name-based lookups.
+    """
+    root_user = env.get_root_user()
+    env._set_obj(root_user)
+
+    org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
+    env._set_obj(org1)
+
+
+# The test_data fixture needs to declare a dependency on base_setup
+# to ensure it runs after the user is properly set up
+# => properly setting up the root user and organization before the test data creation begins.
+@pytest.fixture(scope="module")
+def test_data(env: Env, base_setup: None) -> None:
+    """
+    Create reference data (diseases, etiological agents) for tests.
+    Objects are automatically stored in env.db by create methods.
+    """
+    root_user = env.get_root_user()
+
+    env.create_disease(root_user, "disease_1")
+    env.create_disease(root_user, "disease_2")
+
+    env.create_etiological_agent(root_user, "etiological_agent_1")
+    env.create_etiological_agent(root_user, "etiological_agent_2")
+
+
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
     """Test edge cases for ABAC filtering on reference data access.
@@ -73,43 +99,29 @@ class TestCaseDBEdgeCasesRefDataAccess:
         # Root user should have access to case types
         assert isinstance(result, list)
 
-    def test_user_with_no_policies_has_no_access(self, env: Env) -> None:
-        """User with no policies should have no access to any case types."""
-
+    def test_organization_user_with_no_policies_has_no_access(
+        self, env: Env, test_data: None
+    ) -> None:
+        """Organization user with no policies should have no access to any case types."""
         root_user = env.get_root_user()
-        env._set_obj(root_user)  # Bootstrap root user into tracking db
 
-        # Bootstrap org1 into tracking db (it exists in the actual database)
-
-        org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-        env._set_obj(org1)
-
-        # Create a guest user with no ABAC policies
+        # Create org user with no ABAC policies
+        # Note: ORG_USER has RBAC permission to read case types,
+        # but needs ABAC policies for actual access to specific case types
         org_user = env.invite_and_register_user(root_user, "org_user1_1")
 
-        # Note: Create case types with different sharing levels and verify that the user with no policies does not have access to any of them,
-        # while users with org/user policies have access to the appropriate ones.
-        # This will require setting up proper ABAC policies for the test users and
-        # creating case types with different sharing levels (org-shared, user-shared, etc.)
-
-        # create disease1
-        assert env.create_disease(root_user, "disease1") is not None
-        # create etiological_agent1
-        assert env.create_etiological_agent(root_user, "etiological_agent1") is not None
-
-        # Create case type
-        # Create a case type that should be accessible to users with proper policies
+        # Create case type using pre-created reference data from env.db
+        # This case type should only be accessible to users with proper ABAC policies
         created_case_type = env.create_case_type(
-            root_user, "case_type1", "disease1", "etiological_agent1"
+            root_user, "case_type_1", "disease_1", "etiological_agent_1"
         )
-        # Verify case type was created
         assert created_case_type is not None
 
-        # Try to get case types as organisation user with no ABAC policies
+        # Try to get case types as org user with no ABAC policies
         get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
         result = env.app.handle(get_cmd)
 
-        # User with no policies should have no access to case types
+        # User with no ABAC policies should have no access to case types
         assert isinstance(result, list)
         assert (
             len(result) == 0
