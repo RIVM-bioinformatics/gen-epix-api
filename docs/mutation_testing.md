@@ -161,6 +161,18 @@ cd ~/projects/gen-epix-api
 git pull --ff-only
 ```
 
+If your WSL clone still misses local edits that exist in a Windows clone (for example uncommitted changes), copy the changed files explicitly:
+
+```bash
+WINDOWS_REPO="/mnt/c/<path-to-repo>"
+WSL_REPO="$HOME/projects/gen-epix-api"
+
+cp "$WINDOWS_REPO/tools/mutation.py" "$WSL_REPO/tools/mutation.py"
+cp "$WINDOWS_REPO/tools/patch_mutmut_template.py" "$WSL_REPO/tools/patch_mutmut_template.py"
+cp "$WINDOWS_REPO/setup.cfg" "$WSL_REPO/setup.cfg"
+cp "$WINDOWS_REPO/docs/mutation_testing.md" "$WSL_REPO/docs/mutation_testing.md"
+```
+
 3. Activate the WSL virtual environment:
 
 ```bash
@@ -182,6 +194,8 @@ grep -n "gen_epix/fastapp/services/rbac/service.py" setup.cfg
 grep -n "gen_epix/commondb/domain/service/rbac.py" setup.cfg
 grep -n "gen_epix/commondb/services/abac.py" setup.cfg
 grep -n "gen_epix/casedb/services/abac.py" setup.cfg
+grep -n "gen_epix/commondb/env.py" setup.cfg
+grep -n "gen_epix/seqdb/env.py" setup.cfg
 ```
 
 6. Verify mutmut is loading exclusions from `setup.cfg`:
@@ -195,6 +209,8 @@ print(c.should_ignore_for_mutation(Path("gen_epix/fastapp/services/rbac/service.
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/domain/service/rbac.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/services/abac.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/casedb/services/abac.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/commondb/env.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/seqdb/env.py")))
 PY
 ```
 
@@ -295,4 +311,8 @@ this directory to start from scratch.
   - `gen_epix/commondb/domain/service/rbac.py` (reason: mutmut generates helper names from class+method, so superclass/subclass collide and recurse)
   - `gen_epix/commondb/services/abac.py`
   - `gen_epix/casedb/services/abac.py` (same superclass/subclass helper-name collision pattern as RBAC)
+  - `gen_epix/commondb/env.py`
+  - `gen_epix/casedb/env.py`
+  - `gen_epix/seqdb/env.py`
+  - `gen_epix/omopdb/env.py` (same helper-name collision pattern for `AppComposer.__init__` across inherited env composers)
 - If you want to investigate those files specifically, temporarily remove the relevant exclusion lines, run a scoped smoke command, then add them back.
