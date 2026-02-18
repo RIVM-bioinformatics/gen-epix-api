@@ -3,6 +3,27 @@
 This project supports local mutation testing with `pytest-gremlins`.
 Official docs on: https://pytest-gremlins.readthedocs.io/en/latest/
 
+## Mutation Testing Overview
+
+`pytest-gremlins` mutates source code and reruns `pytest` per mutation.
+Interpretation of outcomes:
+
+- `zapped`: A test failed on the mutation. This is good.
+- `survived`: Tests still passed. Add or strengthen assertions.
+- `timeout`: The mutation caused hangs/very slow execution.
+- `error`: Pytest could not run the mutation properly (for example collection/import/setup crash).
+
+### Interpreting many `error` mutations
+
+A high `error` count usually indicates run instability, not weak assertions.
+In this repository that is often caused by collection/setup paths outside pure unit scope
+(integration/performance-style dependencies, app startup/import side effects, env-sensitive setup).
+
+Practical rule:
+
+- First reduce `error` and `timeout` by using stable scoped runs.
+- Then evaluate `survived` to improve test quality.
+
 ## Prerequisites
 
 - Python 3.11+ (project uses Python 3.14)
@@ -19,7 +40,7 @@ Run the full mutation test pass:
 **WINDOWS USERS -> please see chapter: "Use WSL on Windows.." below**
 
 ```console
-python -m pytest --gremlins
+python -m pytest -c pytest.gremlins.ini --gremlins
 ```
 
 Practical "full" baseline for this repository (uses `pytest.gremlins.ini`):
@@ -35,13 +56,13 @@ prefer the scoped commands in the next section.
 Generate an HTML mutation report:
 
 ```console
-python -m pytest --gremlins --gremlin-report=html
+python -m pytest -c pytest.gremlins.ini --gremlins --gremlin-report=html
 ```
 
 Use console summary output (default):
 
 ```console
-python -m pytest --gremlins
+python -m pytest -c pytest.gremlins.ini --gremlins
 ```
 
 ## Scope the Run
@@ -49,25 +70,29 @@ python -m pytest --gremlins
 Mutation testing can be slow. Start with a focused path:
 
 ```console
-python -m pytest test/filter/unit --gremlins
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter
 ```
 
 Or a single test module:
 
 ```console
-python -m pytest test/filter/unit/test_base_filter.py --gremlins
+python -m pytest -c pytest.gremlins.ini test/filter/unit/test_base_filter.py --gremlins \
+  --gremlin-targets=gen_epix/filter/base.py
 ```
 
 Run a reliable scoped mutation pass (cache, no parallel):
 
 ```bash
-python -m pytest test/filter/unit --gremlins \
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter \
   --gremlin-cache \
   --gremlin-report=html
 ```
 
 ```powershell
-python -m pytest test/filter/unit --gremlins `
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins `
+  --gremlin-targets=gen_epix/filter `
   --gremlin-cache `
   --gremlin-report html
 ```
@@ -77,7 +102,8 @@ Validate cache behavior (recommended sequence):
 1. Warm cache (expected: mostly/all misses):
 
 ```bash
-python -m pytest test/filter/unit --gremlins \
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter \
   --gremlin-cache --gremlin-clear-cache \
   --gremlin-report=html
 ```
@@ -85,7 +111,8 @@ python -m pytest test/filter/unit --gremlins \
 2. Re-run using cache (expected: many/all `cache hit (skipping)`):
 
 ```bash
-python -m pytest test/filter/unit --gremlins \
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter \
   --gremlin-cache
 ```
 
@@ -185,13 +212,14 @@ python -m pip install -r dev-requirements.txt
 Full run:
 
 ```bash
-python -m pytest --gremlins --gremlin-report=html
+python -m pytest -c pytest.gremlins.ini --gremlins --gremlin-report=html
 ```
 
 Scoped run, with html report:
 
 ```bash
-python -m pytest test/filter/unit --gremlins \
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter \
   --gremlin-cache \
   --gremlin-report=html
 ```
@@ -199,13 +227,14 @@ python -m pytest test/filter/unit --gremlins \
 Re-run same scope using cache (console summary):
 
 ```bash
-python -m pytest test/filter/unit --gremlins \
+python -m pytest -c pytest.gremlins.ini test/filter/unit --gremlins \
+  --gremlin-targets=gen_epix/filter \
   --gremlin-cache
 ```
 
 ### Refresh WSL after config changes
 
-When you change config files (for example `pytest.ini`, `pyproject.toml`, or this doc), make sure your WSL working copy has those changes before rerunning.
+When you change config files (for example `pytest.ini`, `pyproject.toml`, or `pytest.gremlins.ini`), make sure your WSL working copy has those changes before rerunning.
 
 1. Open WSL and go to the repo you actually run tests from:
 
@@ -220,7 +249,7 @@ cd ~/projects/gen-epix-api
 source .venv-wsl/bin/activate
 ```
 
-4. Verify key config changes are present:
+4. Verify key config changes are present (examples):
 
 ```bash
 grep -n "norecursedirs" pytest.ini || echo "MISSING: norecursedirs in pytest.ini"
@@ -246,6 +275,7 @@ python -m pytest -c pytest.gremlins.ini --collect-only -q
 - If you see import mismatch errors under `mutants/...`, that directory is from another mutation workflow and should not be collected by pytest.
 - `[tool.pytest-gremlins]` in `pyproject.toml` controls mutation source targeting (for example `paths`, `operators`), not pytest test collection baseline.
 - Use `pytest.gremlins.ini` to define the practical baseline test scope for mutation runs in this repository.
+- For consistency, include `-c pytest.gremlins.ini` in full and scoped mutation commands. Omit it only when you intentionally want to include paths ignored by `pytest.gremlins.ini` (for example `test/casedb/custom` or performance suites).
 - `Cache: 4803 hits, 0 misses` on the second run is expected when no files changed and `--gremlin-clear-cache` is omitted.
 - Cached `ERROR`/`TIMEOUT` results are reused too; if you change runtime flags, run once with `--gremlin-clear-cache` to refresh results.
 - Use `--gremlin-clear-cache` when you need a fresh baseline:
