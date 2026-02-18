@@ -22,6 +22,12 @@ Run the full mutation test pass:
 python -m pytest --gremlins
 ```
 
+Practical "full" baseline for this repository (uses `pytest.gremlins.ini`):
+
+```console
+python -m pytest -c pytest.gremlins.ini --gremlins --gremlin-report=html
+```
+
 If full-suite collection fails in this repository, `pytest-gremlins` can still write
 an HTML report (when requested) to `gremlin-report.html`. For reliable local usage,
 prefer the scoped commands in the next section.
@@ -227,7 +233,7 @@ No output from `grep` means no match. You should see line output for each expect
 5. Optional quick validation before a long run:
 
 ```bash
-python -m pytest --collect-only -q --ignore=mutants
+python -m pytest -c pytest.gremlins.ini --collect-only -q
 ```
 
 ## Notes
@@ -238,6 +244,8 @@ python -m pytest --collect-only -q --ignore=mutants
 - With `--gremlin-report=html`, the plugin writes an HTML report to its default output location.
 - Excel export from `test/conftest.py` is skipped automatically for `--gremlins` runs; regular pytest runs still generate the Excel report by default.
 - If you see import mismatch errors under `mutants/...`, that directory is from another mutation workflow and should not be collected by pytest.
+- `[tool.pytest-gremlins]` in `pyproject.toml` controls mutation source targeting (for example `paths`, `operators`), not pytest test collection baseline.
+- Use `pytest.gremlins.ini` to define the practical baseline test scope for mutation runs in this repository.
 - `Cache: 4803 hits, 0 misses` on the second run is expected when no files changed and `--gremlin-clear-cache` is omitted.
 - Cached `ERROR`/`TIMEOUT` results are reused too; if you change runtime flags, run once with `--gremlin-clear-cache` to refresh results.
 - Use `--gremlin-clear-cache` when you need a fresh baseline:
