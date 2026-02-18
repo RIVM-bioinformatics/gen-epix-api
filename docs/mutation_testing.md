@@ -180,6 +180,8 @@ python tools/patch_mutmut_template.py
 grep -n "auto-patch-mutmut" tools/mutation.py
 grep -n "gen_epix/fastapp/services/rbac/service.py" setup.cfg
 grep -n "gen_epix/commondb/domain/service/rbac.py" setup.cfg
+grep -n "gen_epix/commondb/services/abac.py" setup.cfg
+grep -n "gen_epix/casedb/services/abac.py" setup.cfg
 ```
 
 6. Verify mutmut is loading exclusions from `setup.cfg`:
@@ -191,10 +193,12 @@ from mutmut.__main__ import load_config
 c = load_config()
 print(c.should_ignore_for_mutation(Path("gen_epix/fastapp/services/rbac/service.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/domain/service/rbac.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/commondb/services/abac.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/casedb/services/abac.py")))
 PY
 ```
 
-Both lines should print `True`.
+All lines should print `True`.
 
 7. Remove old mutation artifacts and rerun:
 
@@ -288,5 +292,7 @@ this directory to start from scratch.
   - `gen_epix/fastapp/repositories/__init__.py`
   - `gen_epix/fastapp/services/auth/*.py`
   - `gen_epix/fastapp/services/rbac/service.py`
-  - `gen_epix/commondb/domain/service/rbac.py` (reason: mutmut generates helper names from class+method, so superclass/subclass     collide and recurse)
+  - `gen_epix/commondb/domain/service/rbac.py` (reason: mutmut generates helper names from class+method, so superclass/subclass collide and recurse)
+  - `gen_epix/commondb/services/abac.py`
+  - `gen_epix/casedb/services/abac.py` (same superclass/subclass helper-name collision pattern as RBAC)
 - If you want to investigate those files specifically, temporarily remove the relevant exclusion lines, run a scoped smoke command, then add them back.
