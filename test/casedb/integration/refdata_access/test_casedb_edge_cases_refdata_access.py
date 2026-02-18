@@ -57,7 +57,14 @@ def base_setup(env: Env) -> None:
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
     env._set_obj(org1)
 
+    env.create_organization(root_user, "org2")
+
+    # User with org policy (should have access to case types shared with org)
     env.invite_and_register_user(root_user, "org_user1_1")
+    env.invite_and_register_user(root_user, "org_user1_2")
+
+    # User with no policies (should have no access to case types)
+    env.invite_and_register_user(root_user, "org_user2_1")
 
 
 # The test_data fixture needs to declare a dependency on base_setup
@@ -83,6 +90,22 @@ def case_test_data(env: Env, base_setup: None) -> None:
         root_user, "case_type_1", "disease_1", "etiological_agent_1"
     )
     assert created_case_type is not None
+
+    # Create case type set category
+    env.create_case_type_set_category(root_user, "category_1", 0)
+
+    # Create case type set
+    env.create_case_type_set(
+        root_user, "case_type_set1", [created_case_type.id], "category_1"
+    )
+    # Create data collection
+    env.create_data_collection(root_user, "data_collection1")
+
+    # Create organization access policy for the case type
+    # This policy should grant access to org users for the case type
+    env.create_organization_access_case_policy(
+        root_user, "org_case_policy1_1", "case_type_set1"
+    )
 
 
 @pytest.mark.integration
@@ -145,11 +168,10 @@ class TestCaseDBEdgeCasesRefDataAccess:
         # Create org user with no ABAC policies
         # Note: ORG_USER has RBAC permission to read case types,
         # but needs ABAC policies for actual access to specific case types
-        # org_user = self.env.invite_and_register_user(root_user, "org_user1_1")
 
         # I want to retrieve user by name not by key
         # Verify user was created and can be retrieved by name
-        org_user = self._get_user("org_user1_1")
+        org_user = self._get_user("org_user2_1")
 
         # TEST
         # Try to get case types as org user with no ABAC policies
@@ -163,11 +185,31 @@ class TestCaseDBEdgeCasesRefDataAccess:
             len(result) == 0
         ), "User with no policies should not have access to any case types"
 
-    @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
     def test_user_with_only_org_policies_has_org_access(self, base_setup: None) -> None:
         """User with only org policies should access org-shared case types."""
         # TODO: Implement test with proper ABAC policy setup
-        pass
+
+        # SETUP
+        # Create org user with no ABAC policies
+        # Note: ORG_USER has RBAC permission to read case types,
+        # but needs ABAC policies for actual access to specific case types
+
+        # I want to retrieve user by name not by key
+        # Verify user was created and can be retrieved by name
+        org_user = self._get_user("org_user1_1")
+
+        # TEST
+        # Try to get case types as org user with no ABAC policies
+        get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
+        result = self.env.app.handle(get_cmd)
+
+        # ASSERT
+        # assert that the first case type in result has the expected name (the one we created in the test data setup)
+        first_case_type = result[0] if len(result) > 0 else None
+        assert first_case_type is not None, "Expected at least one case type in result"
+        assert (
+            first_case_type.name == "case_type_1"
+        ), "User with org policy should have access to org-shared case type"
 
     @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
     def test_user_with_only_user_policies_has_user_access(
