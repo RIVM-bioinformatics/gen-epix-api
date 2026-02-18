@@ -197,12 +197,46 @@ python -m pytest test/filter/unit --gremlins \
   --gremlin-cache
 ```
 
+### Refresh WSL after config changes
+
+When you change config files (for example `pytest.ini`, `pyproject.toml`, or this doc), make sure your WSL working copy has those changes before rerunning.
+
+1. Open WSL and go to the repo you actually run tests from:
+
+```bash
+cd ~/projects/gen-epix-api
+```
+
+2. If needed, sync changes into that WSL repo (for example via git pull/merge).
+3. Re-activate your virtual environment:
+
+```bash
+source .venv-wsl/bin/activate
+```
+
+4. Verify key config changes are present:
+
+```bash
+grep -n "norecursedirs" pytest.ini || echo "MISSING: norecursedirs in pytest.ini"
+grep -n "mutants" pytest.ini || echo "MISSING: mutants ignore in pytest.ini"
+grep -n "gremlin-clear-cache" docs/mutation_testing.md || echo "MISSING: docs update not present"
+```
+
+No output from `grep` means no match. You should see line output for each expected config item.
+
+5. Optional quick validation before a long run:
+
+```bash
+python -m pytest --collect-only -q --ignore=mutants
+```
+
 ## Notes
 
 - `pytest --gremlins` is expected to run much slower than a normal `pytest` run.
 - Terminal output includes the mutation summary.
 - Supported report modes in this project are `console` (default) and `html`.
 - With `--gremlin-report=html`, the plugin writes an HTML report to its default output location.
+- Excel export from `test/conftest.py` is skipped automatically for `--gremlins` runs; regular pytest runs still generate the Excel report by default.
 - If you see import mismatch errors under `mutants/...`, that directory is from another mutation workflow and should not be collected by pytest.
 - `Cache: 4803 hits, 0 misses` on the second run is expected when no files changed and `--gremlin-clear-cache` is omitted.
 - Cached `ERROR`/`TIMEOUT` results are reused too; if you change runtime flags, run once with `--gremlin-clear-cache` to refresh results.
