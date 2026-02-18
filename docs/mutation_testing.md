@@ -139,6 +139,72 @@ python tools/mutation.py smoke --path gen_epix/filter --tests test/filter/unit -
 If `python tools/mutation.py smoke --help` does not show `--tests`, sync your local `tools/mutation.py` first.
 When smoke scoping is active, the command prints `Smoke test selection: ...` before running mutmut.
 
+## Reload Latest Mutation Config In WSL
+
+Use this checklist after pulling changes or after editing mutation tooling from Windows.
+
+1. Sanity check: confirm you are in the expected WSL clone:
+
+```bash
+pwd
+git rev-parse --show-toplevel
+ls tools | grep patch_mutmut_template.py || echo "missing in this clone"
+```
+
+If the script is missing here but present in your Windows repo, you are using different clones (`/home/...` vs `/mnt/c/...`).
+Sync this WSL clone first (via `git pull` after push, or copy updated files).
+
+2. Move to the WSL repo and sync:
+
+```bash
+cd ~/projects/gen-epix-api
+git pull --ff-only
+```
+
+3. Activate the WSL virtual environment:
+
+```bash
+source .venv-wsl/bin/activate
+```
+
+4. Ensure mutation dependencies and local mutmut patch are current:
+
+```bash
+python -m pip install -r requirements-mutation.txt
+python tools/patch_mutmut_template.py
+```
+
+5. Verify the expected script/config changes are actually present in WSL:
+
+```bash
+grep -n "auto-patch-mutmut" tools/mutation.py
+grep -n "gen_epix/fastapp/services/rbac/service.py" setup.cfg
+grep -n "gen_epix/commondb/domain/service/rbac.py" setup.cfg
+```
+
+6. Verify mutmut is loading exclusions from `setup.cfg`:
+
+```bash
+python - <<'PY'
+from pathlib import Path
+from mutmut.__main__ import load_config
+c = load_config()
+print(c.should_ignore_for_mutation(Path("gen_epix/fastapp/services/rbac/service.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/commondb/domain/service/rbac.py")))
+PY
+```
+
+Both lines should print `True`.
+
+7. Remove old mutation artifacts and rerun:
+
+```bash
+rm -rf mutants
+python tools/mutation.py full --max-children 1 --auto-patch-mutmut
+```
+
+You do not need to restart WSL just to pick up repo file edits. Running the commands above from the same WSL shell is enough.
+
 ## Timeout Triage
 
 If mutmut reports nearly all mutants as timeout, this usually means the selected tests exceed mutmut's runtime budget for each mutant. It does **not** automatically mean your tests contain infinite loops.
@@ -222,5 +288,5 @@ this directory to start from scratch.
   - `gen_epix/fastapp/repositories/__init__.py`
   - `gen_epix/fastapp/services/auth/*.py`
   - `gen_epix/fastapp/services/rbac/service.py`
-  - `gen_epix/commondb/domain/service/rbac.py`
+  - `gen_epix/commondb/domain/service/rbac.py` (reason: mutmut generates helper names from class+method, so superclass/subclass     collide and recurse)
 - If you want to investigate those files specifically, temporarily remove the relevant exclusion lines, run a scoped smoke command, then add them back.
