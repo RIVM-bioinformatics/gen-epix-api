@@ -127,13 +127,13 @@ class TupleMapTransformer(Transformer):
 
         The object has the target fields added or updated based on the mapping, and is also returned again to allow for method chaining.
         """
-        key = tuple(obj.get(x) for x in self._map_src_fields)
+        key = tuple(obj.get(x) for x in self._row_src_fields)
         if key not in self._tuple_map:
             raise ValueError(
                 f"Transformer {self.name}: Could not find mapping for object: {obj.unwrap()}"
             )
         values = self._tuple_map[key]
-        for field, value in zip(self._map_tgt_fields, values):
+        for field, value in zip(self._row_tgt_fields, values):
             obj.set(field, value)
         return obj
 
@@ -141,12 +141,12 @@ class TupleMapTransformer(Transformer):
         """
         Same as the transform method, but specifically for dicts instead of ObjectAdapters.
         """
-        key = tuple(row.get(x) for x in self._map_src_fields)
+        key = tuple(row.get(x) for x in self._row_src_fields)
         if key not in self._tuple_map:
             raise ValueError(
                 f"Transformer {self.name}: Could not find mapping for row: {row}"
             )
         values = self._tuple_map[key]
-        for field, value in zip(self._map_tgt_fields, values):
+        for field, value in zip(self._row_tgt_fields, values):
             row[field] = value
         return row
