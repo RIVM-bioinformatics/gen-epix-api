@@ -22,6 +22,10 @@ Run the full mutation test pass:
 python -m pytest --gremlins
 ```
 
+If full-suite collection fails in this repository, `pytest-gremlins` can still write
+an HTML report (when requested) to `gremlin-report.html`. For reliable local usage,
+prefer the scoped commands in the next section.
+
 Generate an HTML mutation report:
 
 ```console
@@ -199,6 +203,7 @@ python -m pytest test/filter/unit --gremlins \
 - Terminal output includes the mutation summary.
 - Supported report modes in this project are `console` (default) and `html`.
 - With `--gremlin-report=html`, the plugin writes an HTML report to its default output location.
+- If you see import mismatch errors under `mutants/...`, that directory is from another mutation workflow and should not be collected by pytest.
 - `Cache: 4803 hits, 0 misses` on the second run is expected when no files changed and `--gremlin-clear-cache` is omitted.
 - Cached `ERROR`/`TIMEOUT` results are reused too; if you change runtime flags, run once with `--gremlin-clear-cache` to refresh results.
 - Use `--gremlin-clear-cache` when you need a fresh baseline:
