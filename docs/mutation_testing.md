@@ -192,6 +192,8 @@ python tools/patch_mutmut_template.py
 grep -n "auto-patch-mutmut" tools/mutation.py
 grep -n "gen_epix/fastapp/services/rbac/service.py" setup.cfg
 grep -n "gen_epix/commondb/domain/service/rbac.py" setup.cfg
+grep -n "gen_epix/commondb/services/rbac.py" setup.cfg
+grep -n "gen_epix/omopdb/services/rbac.py" setup.cfg
 grep -n "gen_epix/commondb/services/abac.py" setup.cfg
 grep -n "gen_epix/casedb/services/abac.py" setup.cfg
 grep -n "gen_epix/commondb/env.py" setup.cfg
@@ -209,6 +211,8 @@ from mutmut.__main__ import load_config
 c = load_config()
 print(c.should_ignore_for_mutation(Path("gen_epix/fastapp/services/rbac/service.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/domain/service/rbac.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/commondb/services/rbac.py")))
+print(c.should_ignore_for_mutation(Path("gen_epix/omopdb/services/rbac.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/services/abac.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/casedb/services/abac.py")))
 print(c.should_ignore_for_mutation(Path("gen_epix/commondb/env.py")))
@@ -313,6 +317,10 @@ this directory to start from scratch.
   - `gen_epix/fastapp/services/auth/*.py`
   - `gen_epix/fastapp/services/rbac/service.py`
   - `gen_epix/commondb/domain/service/rbac.py` (reason: mutmut generates helper names from class+method, so superclass/subclass collide and recurse)
+  - `gen_epix/commondb/services/rbac.py`
+  - `gen_epix/casedb/services/rbac.py`
+  - `gen_epix/seqdb/services/rbac.py`
+  - `gen_epix/omopdb/services/rbac.py` (same helper-name collision pattern for inherited service classes, e.g. `RbacService.__init__`)
   - `gen_epix/commondb/services/abac.py`
   - `gen_epix/casedb/services/abac.py` (same superclass/subclass helper-name collision pattern as RBAC)
   - `gen_epix/commondb/env.py`
