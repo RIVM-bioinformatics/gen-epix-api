@@ -219,4 +219,8 @@ this directory to start from scratch.
 - Local timeout triage exclusions are configured in `setup.cfg` under `do_not_mutate`:
   - `gen_epix/filter/base.py`
   - `gen_epix/filter/composite.py`
-- If you want to investigate those files specifically, temporarily remove those two lines, run a scoped smoke command, then add them back.
+  - `gen_epix/fastapp/repositories/__init__.py`
+  - `gen_epix/fastapp/services/auth/*.py`
+  - `gen_epix/fastapp/services/rbac/service.py`
+  - `gen_epix/commondb/domain/service/rbac.py`
+- If you want to investigate those files specifically, temporarily remove the relevant exclusion lines, run a scoped smoke command, then add them back.
