@@ -28,10 +28,10 @@ Generate an HTML mutation report:
 python -m pytest --gremlins --gremlin-report=html
 ```
 
-Generate a JSON mutation report:
+Use console summary output (default):
 
 ```console
-python -m pytest --gremlins --gremlin-report=json
+python -m pytest --gremlins
 ```
 
 ## Scope the Run
@@ -53,14 +53,12 @@ Run a reliable scoped mutation pass (cache, no parallel):
 ```bash
 python -m pytest test/filter/unit --gremlins \
   --gremlin-cache \
-  --gremlin-clear-cache \
   --gremlin-report=html
 ```
 
 ```powershell
 python -m pytest test/filter/unit --gremlins `
   --gremlin-cache `
-  --gremlin-clear-cache `
   --gremlin-report html
 ```
 
@@ -71,15 +69,14 @@ Validate cache behavior (recommended sequence):
 ```bash
 python -m pytest test/filter/unit --gremlins \
   --gremlin-cache --gremlin-clear-cache \
-  --gremlin-report=json
+  --gremlin-report=html
 ```
 
 2. Re-run using cache (expected: many/all `cache hit (skipping)`):
 
 ```bash
 python -m pytest test/filter/unit --gremlins \
-  --gremlin-cache \
-  --gremlin-report=json
+  --gremlin-cache
 ```
 
 ## Use WSL on Windows (recommended for full runs)
@@ -186,25 +183,28 @@ Scoped run, with html report:
 ```bash
 python -m pytest test/filter/unit --gremlins \
   --gremlin-cache \
-  --gremlin-clear-cache \
   --gremlin-report=html
 ```
 
-Re-run same scope using cache (json report):
+Re-run same scope using cache (console summary):
 
 ```bash
 python -m pytest test/filter/unit --gremlins \
-  --gremlin-cache \
-  --gremlin-report=json
+  --gremlin-cache
 ```
 
 ## Notes
 
 - `pytest --gremlins` is expected to run much slower than a normal `pytest` run.
 - Terminal output includes the mutation summary.
+- Supported report modes in this project are `console` (default) and `html`.
 - With `--gremlin-report=html`, the plugin writes an HTML report to its default output location.
 - `Cache: 4803 hits, 0 misses` on the second run is expected when no files changed and `--gremlin-clear-cache` is omitted.
 - Cached `ERROR`/`TIMEOUT` results are reused too; if you change runtime flags, run once with `--gremlin-clear-cache` to refresh results.
+- Use `--gremlin-clear-cache` when you need a fresh baseline:
+  - First run for a new scope/path.
+  - After changing gremlins runtime options (for example parallel/cache settings).
+  - After large source/test edits when you want to recompute all mutation outcomes from scratch.
 - Warning `DeprecationWarning: pl.count() is deprecated` comes from test code (`test/conftest.py`) and does not indicate a gremlins failure.
 - Avoid `--gremlin-parallel` for now in this project; it can produce unstable runs with many `Error` results.
 - Avoid `--gremlin-batch` for now if you rely on per-gremlin mutation or cache metrics; batch mode can produce misleading counts.
