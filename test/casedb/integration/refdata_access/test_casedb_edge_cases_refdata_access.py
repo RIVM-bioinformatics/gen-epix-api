@@ -165,30 +165,12 @@ class TestCaseDBEdgeCasesRefDataAccess:
         """Auto-inject the env fixture into the class."""
         self.env = env
 
-    def _get_user(self, user_name: str) -> model.User:
-        """
-        helper method to retrieve a user by name.
-        This is necessary because the env fixture and its helper methods are designed to retrieve objects by ID,
-        but for these tests we need to retrieve users by their name property.
-        This method uses the root user to perform a lookup in the database for a user with the specified name
-        and returns the user object if found.
-        """
-        root_user = self.env.get_root_user()
-
-        retrieved_user = self.env.read_one_by_property(
-            root_user, model.User, "name", user_name
-        )
-        assert isinstance(retrieved_user, model.User)
-        assert retrieved_user is not None
-        assert retrieved_user.name == user_name
-
-        return retrieved_user
-
     def test_org_user_1_exists(self, setup_test_users_and_organizations: None) -> None:
         """Test to verify org user 1 exists and can be retrieved."""
         # This test is just to verify that the org user created in the setup can be retrieved successfully.
         # It's a sanity check to ensure that the user setup is correct before we run access tests.
-        org_user = self._get_user("org_user1_1")
+        org_user = self.env.get_user("org_user1_1")
+
         assert org_user is not None
         assert org_user.name == "org_user1_1"
         print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
@@ -219,7 +201,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         # Note: ORG_USER has RBAC permission to read case types,
         # but needs ABAC policies for actual access to specific case types
 
-        org_user = self._get_user("org_user2_1")
+        org_user = self.env.get_user("org_user2_1")
 
         # TEST
         # Try to get case types as org user with no ABAC policies
@@ -246,7 +228,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         # I want to retrieve user by name not by key
         # Verify user was created and can be retrieved by name
-        org_user = self._get_user("org_user1_1")
+        org_user = self.env.get_user("org_user1_1")
         # TEST
         # Try to get case types as org user with no ABAC policies
         get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
@@ -272,7 +254,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     ) -> None:
         """User with both org and user policies should only access types shared with the org."""
         # TODO: Implement test with proper ABAC policy setup
-        org_user_plus_user_policy = self._get_user("org_user1_2")
+        org_user_plus_user_policy = self.env.get_user("org_user1_2")
 
         get_cmd = CaseTypeCrudCommand(
             user=org_user_plus_user_policy, operation=CrudOperation.READ_ALL
@@ -297,7 +279,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         """
         User with both org and user policies on the same case type set should have access to org-shared case types.
         """
-        org_user_plus_user_policy_same_set = self._get_user("org_user1_3")
+        org_user_plus_user_policy_same_set = self.env.get_user("org_user1_3")
 
         get_cmd = CaseTypeCrudCommand(
             user=org_user_plus_user_policy_same_set, operation=CrudOperation.READ_ALL
@@ -314,7 +296,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, setup_case_type_data: None
     ) -> None:
         """User with only user policies should have no access to case types, since case types are shared at org level."""
-        user_with_only_user_policy = self._get_user("org_user2_2")
+        user_with_only_user_policy = self.env.get_user("org_user2_2")
 
         get_cmd = CaseTypeCrudCommand(
             user=user_with_only_user_policy, operation=CrudOperation.READ_ALL
