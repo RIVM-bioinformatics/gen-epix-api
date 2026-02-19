@@ -62,10 +62,10 @@ def base_setup(env: Env) -> None:
     # User with org policy but no user policy (should have access to case types shared with org)
     env.invite_and_register_user(root_user, "org_user1_1")
 
-    # User with both org and user policies (should only have access to org-shared case types?)
+    # User with both org and user policies (should only have access to org-shared case types)
     env.invite_and_register_user(root_user, "org_user1_2")
 
-    # User with both org and user policies (should only have access to org-shared case types?)
+    # User with both org and user policies on the same case type set (should have access to org-shared case types)
     env.invite_and_register_user(root_user, "org_user1_3")
 
     # User with no policies (should have no access to case types)
@@ -122,6 +122,19 @@ def case_test_data(env: Env, base_setup: None) -> None:
     # This policy should grant access to org users for the case type
     env.create_organization_access_case_policy(
         root_user, "org_case_policy1_1", "case_type_set1"
+    )
+
+    # for org_user1_2 we will create both org and user policies to test that user policy does not grant additional access beyond org policy for reference data access
+    # there is already an org policy that grants access to case_type_1, so we will create a user policy that grants access to case_type_2 and
+    # verify that it does not grant access to case_type_2 since case types are shared at org level for reference data access
+    env.create_user_access_case_policy(
+        root_user, "org_user1_2", "data_collection1", "case_type_set2"
+    )
+
+    # for org_user1_3 we will create both org and user policies that grant access to the same case type set
+    # to verify that it does not cause any issues and user still has access to the case type via the org policy
+    env.create_user_access_case_policy(
+        root_user, "org_user1_3", "data_collection1", "case_type_set1"
     )
 
 
@@ -219,7 +232,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         # I want to retrieve user by name not by key
         # Verify user was created and can be retrieved by name
-        org_user = self._get_user("org_user_1_1")
+        org_user = self._get_user("org_user1_1")
         # TEST
         # Try to get case types as org user with no ABAC policies
         get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
@@ -240,13 +253,48 @@ class TestCaseDBEdgeCasesRefDataAccess:
             "case_type_2" not in case_type_names
         ), "User with org policy should not have access to case types not shared with org"
 
-    @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
     def test_user_with_both_org_and_user_policies_has_only_org_access(
         self, base_setup: None
     ) -> None:
-        """User with both org and user policies should access both types."""
+        """User with both org and user policies should only access types shared with the org."""
         # TODO: Implement test with proper ABAC policy setup
-        pass
+        org_user_plus_user_policy = self._get_user("org_user1_2")
+
+        get_cmd = CaseTypeCrudCommand(
+            user=org_user_plus_user_policy, operation=CrudOperation.READ_ALL
+        )
+        result = self.env.app.handle(get_cmd)
+
+        case_type_names = [ct.name for ct in result]
+        # assert that the user has access to the first case type which is shared with the org via the org policy
+        assert (
+            "case_type_1" in case_type_names
+        ), "User with org policy should have access to org-shared case type"
+
+        # assert that the user does not have access to the second case type which is not shared with the org and only shared with the user via user policy
+        assert (
+            "case_type_2" not in case_type_names
+        ), "User with org and user policy should not have access to case types not shared with org"
+
+    # Add a test for user org_user1_3 who has both org and user policies on the same case type set to verify that it does not cause any issues and user still has access to the case type via the org policy
+    def test_user_with_org_and_user_policies_on_same_case_type_set_has_org_access(
+        self, case_test_data: None
+    ) -> None:
+        """
+        User with both org and user policies on the same case type set should have access to org-shared case types.
+        """
+        org_user_plus_user_policy_same_set = self._get_user("org_user1_3")
+
+        get_cmd = CaseTypeCrudCommand(
+            user=org_user_plus_user_policy_same_set, operation=CrudOperation.READ_ALL
+        )
+        result = self.env.app.handle(get_cmd)
+
+        case_type_names = [ct.name for ct in result]
+        # assert that the user has access to the first case type which is shared with the org via the org policy
+        assert (
+            "case_type_1" in case_type_names
+        ), "User with org policy should have access to org-shared case type"
 
     @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
     def test_user_with_only_user_policies_has_no_access(self, base_setup: None) -> None:
