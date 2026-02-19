@@ -10,6 +10,8 @@ Gen-EpiX is a platform for visualizing and analyzing genomic epidemiology data. 
 
 The platform is currently at the beta release stage and as such not yet usable for production. We are currently working to get the platform released, for use in the Netherlands as the official national platform for laboratory-based surveillance of infectious diseases. Feel free to contact us <a href="mailto:ivo.van.walle@rivm.nl">here</a> if you are interested.
 
+A guide for contributors can be found [here](docs/contributors/README.md)
+
 This repository contains the code for the backend and is one of several that together comprise the platform. See https://github.com/RIVM-bioinformatics/gen-epix for an overview of the repositories.
 
 ## Architecture and Project Structure
@@ -140,6 +142,12 @@ Project tree (trimmed to the main structure):
 ```console
 conda activate gen-epix
 ```
+
+2. Run the tests:
+```console
+python run.py test_all
+```
+
 2. Run the application:
 ```console
 python run.py <command> <service> <idp_config> <repository_config>
@@ -168,10 +176,17 @@ See other examples in [.vscode/launch.json](.vscode/launch.json)
 Go here for a more in depth exploration of specific parts of the application, see the following:
 [run.py](docs/run.md) is the single CLI entry point for the entire project.
 [fastapp](docs/fastapp.md) is the reusable framework that every Gen-EpiX app is built on.
-[app creation](docs/app_creation.md) traces every component that participates in building the COMMONDB
-FastAPI application.
+[app creation](docs/app_creation.md) traces every component that participates in building the COMMONDB FastAPI application.
 
-
+The domain models are explained in depth here:
+[casedb](docs/casedb/case_models_erd.md)
+[commondb](docs/commondb/common_models_erd.md)
+[omopdb](docs/omopdb/omop_models_erd.md)
+[omopdb mixin](docs/omopdb/base_mixin_erd.md)
+[seqdb](docs/seqdb/seq_models_erd.md)
+[seqdb mixin](docs/seqdb/base_mixins_erd.md)
+[seqdb file model](docs/seqdb/file_model_erd.md)
+[seqdb attributes](docs/seqdb/seq_models_erd_attributes.md)
 
 ---
 
