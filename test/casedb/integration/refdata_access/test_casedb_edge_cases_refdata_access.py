@@ -8,7 +8,7 @@ from test.casedb.integration.refdata_access.base_empty import (
 )
 
 import logging
-from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -43,36 +43,6 @@ def get_test_client() -> Env:
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
     )
-
-
-@pytest.fixture(scope="module")
-def setup_test_users_and_organizations(env: Env) -> None:
-    """
-    Set up common test data used across all tests.
-    Bootstrap root user and org1 into env.db for name-based lookups.
-    """
-    root_user = env.get_root_user()
-    env._set_obj(root_user)
-
-    org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)
-
-    env.create_organization(root_user, "org2")
-
-    # User with org policy but no user policy (should have access to case types shared with org)
-    env.invite_and_register_user(root_user, "org_user1_1")
-
-    # User with both org and user policies (should only have access to org-shared case types)
-    env.invite_and_register_user(root_user, "org_user1_2")
-
-    # User with both org and user policies on the same case type set (should have access to org-shared case types)
-    env.invite_and_register_user(root_user, "org_user1_3")
-
-    # User with no policies (should have no access to case types)
-    env.invite_and_register_user(root_user, "org_user2_1")
-
-    # User with user policy but no org policy (should have no access to case types, since case types are shared at org level)
-    env.invite_and_register_user(root_user, "org_user2_2")
 
 
 # The test_data fixture needs to declare a dependency on base_setup
