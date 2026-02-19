@@ -10,6 +10,7 @@ from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.service import BaseService
 
 
@@ -146,8 +147,11 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
         return self
 
 
-class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
+class Child2ForUpload(
+    Child2, commondb_model.IsNewIdMixin, commondb_model.ExternalIdentifiersMixin
+):
     NAME: ClassVar = "Child2ForUpload"
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -188,6 +192,13 @@ class ParentForUpload(commondb_model.ParentForUpload):
         default=None,
         description="List of Child2 models associated with the Parent, if any.",
     )
+
+
+class Child1UploadResult(commondb_model.UploadResult):
+    """Result for uploading a single Child1 object."""
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "Child1UploadResult"
 
 
 class ParentUploadResult(commondb_model.ParentUploadResult):

@@ -67,6 +67,22 @@ combinations thereof:
 7.1 ERROR: error if any existing object
 7.2 SKIP: skip any existing object, do not update
 7.3 UPDATE: update any existing object
+8 External identifiers for Child2 objects (use IdentifierType=SAMPLE for testing purposes)
+8.1 No external identifiers provided: no issue
+8.2 One external identifier provided
+8.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
+8.2.1.1 Child2 ID None or NULL_ID: set child2 ID in upload result
+8.2.1.2 Child2 ID provided
+8.2.1.2.1 Same as existing external identifiers' child2 ID: no issue
+8.2.1.2.2 Different from existing external identifiers' child2 ID: error
+8.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this child2: create new external identifier once child2 ID is known
+8.2.3 Multiple external identifiers provided
+8.2.3.1 Some existing external identifiers: must all point to the same child2 ID AND same restrictions as 8.2 per external identifier
+8.2.3.2 All new external identifiers: create new external identifiers once child2 ID is known
+8.3 Identifier issuer invalid
+8.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
+8.3.2 Identifier issuer code provided and not found: error
+8.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
 from test.commondb.unit.upload.model import (
@@ -282,6 +298,7 @@ class BaseUploadTestCase(TestCase):
         x: str | None = None,
         y: list[str] | None = None,
         z: dict[str, str | None] | None = None,
+        external_identifiers: list[ExternalIdentifierForUpload] | None = None,
     ) -> Child2ForUpload:
         """Create a test child2 for upload."""
         return Child2ForUpload(
@@ -296,6 +313,7 @@ class BaseUploadTestCase(TestCase):
             x=x,
             y=y,
             z=z,
+            external_identifiers=external_identifiers,  # type: ignore[call-arg]
         )
 
     def create_command_for_parents(
@@ -357,6 +375,24 @@ class BaseUploadTestCase(TestCase):
             external_id=external_id or external_identifier_for_upload.external_id,
             internal_id=internal_id,
             identifier_type=IdentifierType.PERSON,
+        )
+
+    def get_child2_external_identifier_from_for_upload(
+        self,
+        external_identifier_for_upload: ExternalIdentifierForUpload,
+        internal_id: UUID,
+        id: UUID | None = None,
+        identifier_issuer_id: UUID | None = None,
+        external_id: str | None = None,
+    ) -> ExternalIdentifier:
+        """Get the ExternalIdentifier model for Child2, corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
+        return ExternalIdentifier(
+            id=id or uuid4(),
+            identifier_issuer_id=identifier_issuer_id
+            or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
+            external_id=external_id or external_identifier_for_upload.external_id,
+            internal_id=internal_id,
+            identifier_type=IdentifierType.SAMPLE,
         )
 
     def upload_batch(
@@ -438,7 +474,7 @@ class BaseUploadTestCase(TestCase):
 
 # Test Scenario 1: Existence of parent and/or child objects in the repository
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestObjectExistence(BaseUploadTestCase):
+class Test1ObjectExistence(BaseUploadTestCase):
     """Test scenarios related to object existence in repository."""
 
     def test_1_1_parent_id_not_provided_creates_new_object(self) -> None:
@@ -487,7 +523,7 @@ class TestObjectExistence(BaseUploadTestCase):
 
 # Test Scenario 2: Provision of child objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestChildObjectProvision(BaseUploadTestCase):
+class Test2ChildObjectProvision(BaseUploadTestCase):
     """Test scenarios related to providing different combinations of child objects."""
 
     def test_2_1_parent_without_children(self) -> None:
@@ -601,7 +637,7 @@ class TestChildObjectProvision(BaseUploadTestCase):
 
 # Test Scenario 3: Links to reference data in child objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestReferenceDataLinks(BaseUploadTestCase):
+class Test3ReferenceDataLinks(BaseUploadTestCase):
     """Test scenarios related to reference data linking in child objects."""
 
     def test_3_1_1_ref_id_provided_not_found_fails(self) -> None:
@@ -775,7 +811,7 @@ class TestReferenceDataLinks(BaseUploadTestCase):
 
 # Test Scenario 4: Parent link in child objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestParentLinks(BaseUploadTestCase):
+class Test4ParentLinks(BaseUploadTestCase):
     """Test scenarios related to parent links in child objects."""
 
     def test_4_1_child_null_parent_id_set_during_upload(self) -> None:
@@ -871,7 +907,7 @@ class TestParentLinks(BaseUploadTestCase):
 
 # Test Scenario 5: Field mutability for stored objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestFieldMutability(BaseUploadTestCase):
+class Test5FieldMutability(BaseUploadTestCase):
     """Test scenarios related to field mutability for existing objects."""
 
     def test_5_1_1_always_mutable_single_value_field(self) -> None:
@@ -1016,7 +1052,7 @@ class TestFieldMutability(BaseUploadTestCase):
 
 # Test Scenario 6: External identifiers for parent objects
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestExternalIdentifiers(BaseUploadTestCase):
+class Test6ExternalIdentifiers(BaseUploadTestCase):
     """Test scenarios related to external identifiers for parent objects."""
 
     def test_6_1_no_external_ids_provided(self) -> None:
@@ -1296,7 +1332,7 @@ class TestExternalIdentifiers(BaseUploadTestCase):
 
 # Test Scenario 7: Upload command on_exists value
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class TestOnExistsActions(BaseUploadTestCase):
+class Test7OnExistsActions(BaseUploadTestCase):
     """Test scenarios related to the on_exists command parameter."""
 
     def test_7_1_on_exists_error_with_existing_object_fails(self) -> None:
@@ -1335,6 +1371,35 @@ class TestOnExistsActions(BaseUploadTestCase):
         batch_result = self.upload_batch(parent, on_exists=OnExistsUploadAction.UPDATE)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
+
+
+# Test Scenario 8: External identifiers for Child2 objects
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
+    """Test scenarios related to external identifiers for Child2 objects."""
+
+    def test_8_1_no_external_ids_provided(self) -> None:
+        """Test 8.1: No external identifiers provided for Child2 - should succeed."""
+        # Create upload batch with Child2 that has no external identifiers
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=None
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[0]
+        created_child2_id = self.random_ids[1]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+            created_child2_id,  # ID of the newly created child2
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parents returned IDs
+            [created_child2_id],  # Create children2 returned IDs
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
 
 
 # Combined scenario tests
@@ -1454,3 +1519,59 @@ class TestCombinedScenarios(BaseUploadTestCase):
         batch_result = self.upload_batch(parent)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=5)
+
+    def test_child2_with_external_identifiers_and_parent_relationship(self) -> None:
+        """Test Child2 with external identifiers in combination with parent relationships and other children."""
+        # Create upload batch
+        # External identifier for Child2
+        child2_ext_id = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id
+        )
+        # Child2 with external identifier
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=[child2_ext_id]
+        )
+        # Child1 with reference data
+        existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
+        child1 = self.create_child1_for_upload(ref1_code=existing_ref1.code)
+        # Parent with both children
+        parent = self.create_parent_for_upload(children1=[child1], children2=[child2])
+
+        # Set up mocks
+        created_parent_id = self.random_ids[0]
+        created_child1_id = self.random_ids[1]
+        created_child2_id = self.random_ids[2]
+        created_child2_ext_id = self.random_ids[3]
+
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # Parent
+            created_child1_id,  # Child1
+            created_child2_id,  # Child2
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parent
+            [created_child1_id],  # Create child1
+            [created_child2_id],  # Create child2
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1
+        ]
+        # Resolve identifier issuer and create external identifier for Child2
+        child2_external_identifier = (
+            self.get_child2_external_identifier_from_for_upload(
+                child2_ext_id,
+                id=created_child2_ext_id,
+                internal_id=created_child2_id,
+            )
+        )
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # Resolve IdentifierIssuer by code
+            [],  # No existing ExternalIdentifiers for Child2
+            [child2_external_identifier],  # Created ExternalIdentifier for Child2
+        ]
+
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        # Result: 1 parent + 1 child1 + 1 child2 = 3 created (child2 external ID is created but not counted separately)
+        self.assertStatusCount(batch_result, n_created=3)
