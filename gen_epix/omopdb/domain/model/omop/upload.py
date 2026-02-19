@@ -306,13 +306,16 @@ class PersonUploadResult(ParentUploadResult):
     )
 
     measurements: list[UploadResult] | None = Field(
-        description="The results of uploading the individual measurements, if any were provided, in the same order as provided."
+        default=None,
+        description="The results of uploading the individual measurements, if any were provided, in the same order as provided.",
     )
     observations: list[UploadResult] | None = Field(
-        description="The results of uploading the individual observations, if any were provided, in the same order as provided."
+        default=None,
+        description="The results of uploading the individual observations, if any were provided, in the same order as provided.",
     )
     specimens: list[UploadResult] | None = Field(
-        description="The results of uploading the individual specimens, if any were provided, in the same order as provided."
+        default=None,
+        description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
     )
 
 
