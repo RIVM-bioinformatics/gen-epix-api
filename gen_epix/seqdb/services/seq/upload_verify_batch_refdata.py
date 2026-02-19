@@ -2,9 +2,9 @@ import base64
 from typing import Any
 from uuid import UUID
 
-import gen_epix.commondb.domain.model.upload
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -27,9 +27,7 @@ def _verify_batch_refdata_allele_profiles(
 
     # Get all allele profiles that are to be processed
     allele_profiles: list[model.AlleleProfileForUpload] = []
-    allele_profile_results: list[gen_epix.commondb.domain.model.upload.UploadResult] = (
-        []
-    )
+    allele_profile_results: list[UploadResult] = []
     for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
         objs = sample.allele_profiles or []
         obj_results = sample_result.allele_profiles or []
@@ -192,35 +190,20 @@ def _verify_batch_refdata_allele_profiles(
         if invalid_locus_allele_pairs:
             # Some invalid (locus ID, allele ID) pairs found
             success = False
-            if len(invalid_locus_allele_pairs) <= 5:
-                invalid_pairs_str = ", ".join(
-                    [
-                        f"({locus_id},{allele_id})"
-                        for locus_id, allele_id in invalid_locus_allele_pairs
-                    ]
-                )
-            else:
-                invalid_pairs_str = (
-                    ", ".join(
-                        [
-                            f"({locus_id},{allele_id})"
-                            for locus_id, allele_id in invalid_locus_allele_pairs[:5]
-                        ]
-                    )
-                    + f", ... (and {len(invalid_locus_allele_pairs) - 5} more)"
-                )
-            profile_result.add_error(
-                "c9b8a7d6",
-                f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
+            _handle_locus_allele_pair_mistmatch(
+                profile_result, invalid_locus_allele_pairs
             )
         # Convert to allele profile representation if not already the case
-        if profile.allele_profile is not None:
+        if profile.allele_profile != "":
             continue
-        profile.allele_profile = base64.b64encode(
-            b"".join(x.bytes if x is not None else b"\x00" * 16 for x in allele_ids)
-        ).decode("ascii")
+        profile.allele_profile = _construct_allele_profile_for_pending_profile(
+            allele_ids
+        )
         profile.allele_profile_format = enum.AlleleProfileFormat.SORTED_ALLELE_IDS
         profile.allele_ids = None
+        # Reset n_loci to 0 so AlleleProfile validator will auto-compute it from the base64 string
+        # (n_loci in AlleleProfile means "detected loci count", not total loci in set)
+        profile.n_loci = 0
 
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
@@ -246,7 +229,9 @@ def _verify_batch_refdata_allele_profiles(
                 f"Missing new alleles: {missing_alleles_str}",
             )
         # Determine if any extra alleles
-        extra_allele_ids: set[UUID] = provided_allele_ids - set(new_allele_locus_map.keys())  # type: ignore[assignment]
+        extra_allele_ids: set[UUID] = provided_allele_ids - set(
+            new_allele_locus_map.keys()
+        )  # type: ignore[assignment]
         if extra_allele_ids:
             # Some extra (superfluous) alleles provided
             extra_allele_ids_list = sorted(extra_allele_ids)
@@ -287,6 +272,43 @@ def _verify_batch_refdata_allele_profiles(
             del provided_alleles[index]
 
     return success
+
+
+def _handle_locus_allele_pair_mistmatch(
+    profile_result: UploadResult, invalid_locus_allele_pairs: list[tuple[UUID, UUID]]
+) -> None:
+    if len(invalid_locus_allele_pairs) <= 5:
+        invalid_pairs_str = ", ".join(
+            [
+                f"({locus_id},{allele_id})"
+                for locus_id, allele_id in invalid_locus_allele_pairs
+            ]
+        )
+    else:
+        invalid_pairs_str = (
+            ", ".join(
+                [
+                    f"({locus_id},{allele_id})"
+                    for locus_id, allele_id in invalid_locus_allele_pairs[:5]
+                ]
+            )
+            + f", ... (and {len(invalid_locus_allele_pairs) - 5} more)"
+        )
+    profile_result.add_error(
+        "c9b8a7d6",
+        f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
+    )
+
+
+def _construct_allele_profile_for_pending_profile(allele_ids: list[UUID | None]) -> str:
+    """
+    Method that constructs the allele_profile field for model.AlleleProfile.
+    Concatenate, in locus order, the 16 raw bytes of each allele UUID (using NULL_ID.bytes for missing/no-calls),
+    base64-encode the resulting bytes, and return the ascii string
+    """
+    return base64.b64encode(
+        b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
+    ).decode("ascii")
 
 
 # def _retrieve_child_refdata(

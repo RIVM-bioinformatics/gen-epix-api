@@ -38,6 +38,11 @@ def _update_profile_distances(
 ) -> bool:
     """
     Update distances for any profiles that are affected by the sample batch upload.
+
+    The ForUpload objects in cmd do not carry the IDs assigned during storage.
+    Those IDs are available in the UploadResult entries of retval, which are in
+    the same positional order as the upload objects.  We zip the two to patch the
+    correct ID onto each profile before dispatching the distance command.
     """
     success = True
     user = cmd.user if cmd.user else None
@@ -45,14 +50,30 @@ def _update_profile_distances(
     snp_profiles: list[model.SnpProfileForUpload] = []
     mlva_profiles: list[model.MlvaProfileForUpload] = []
 
-    # Collect all profiles from all samples in the batch
-    for sample in cmd.sample_batch.samples:
-        if sample.allele_profiles:
-            allele_profiles.extend(sample.allele_profiles)
-        if sample.snp_profiles:
-            snp_profiles.extend(sample.snp_profiles)
-        if sample.mlva_profiles:
-            mlva_profiles.extend(sample.mlva_profiles)
+    # Collect profiles with their assigned IDs from the upload result.
+    # retval.samples is positionally aligned with cmd.sample_batch.samples.
+    for sample_input, sample_result in zip(cmd.sample_batch.samples, retval.samples):
+        if sample_input.allele_profiles and sample_result.allele_profiles:
+            for profile, profile_result in zip(
+                sample_input.allele_profiles, sample_result.allele_profiles
+            ):
+                allele_profiles.append(
+                    profile.model_copy(update={"id": profile_result.id})
+                )
+        if sample_input.snp_profiles and sample_result.snp_profiles:
+            for profile, profile_result in zip(
+                sample_input.snp_profiles, sample_result.snp_profiles
+            ):
+                snp_profiles.append(
+                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
+                )
+        if sample_input.mlva_profiles and sample_result.mlva_profiles:
+            for profile, profile_result in zip(
+                sample_input.mlva_profiles, sample_result.mlva_profiles
+            ):
+                mlva_profiles.append(
+                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
+                )
 
     calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
         self.service.app.handle(
