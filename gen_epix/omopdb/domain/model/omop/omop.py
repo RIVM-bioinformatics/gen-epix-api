@@ -2453,9 +2453,15 @@ class MeasurementRelation(Model):
     measurement_relation_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
     )
+    person_id: UUID = Field(
+        description="User guidance:\nNot part of OMOP CDM. The PERSON_ID of the PERSON for whom the measurement is recorded. This may be a system generated code.\nETL conventions:\nNone"
+    )
     from_measurement_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The measurement from which the to measuremunt was derived.\nETL conventions:\nNone"
+        description="User guidance:\nNot part of OMOP CDM. The measurement from which the to measurement was derived.\nETL conventions:\nNone"
     )
     to_measurement_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The measurement that was derived.\nETL conventions:\nNone"
+    )
+    measurement_relation_concept_id: UUID = Field(
+        description="User guidance:\nNot part of OMOP CDM. The Concept Id that represents the relationship between the from and to measurement.\nETL conventions:\nNone"
     )

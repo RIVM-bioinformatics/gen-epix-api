@@ -1686,9 +1686,15 @@ class MeasurementRelation(Base, NoIdRowMetadataMixin):
     measurement_relation_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MeasurementRelation, "measurement_relation_id"
     )
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MeasurementRelation, "person_id"
+    )
     from_measurement_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MeasurementRelation, "from_measurement_id"
     )
     to_measurement_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MeasurementRelation, "to_measurement_id"
+    )
+    measurement_relation_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.MeasurementRelation, "relationship_concept_id"
     )

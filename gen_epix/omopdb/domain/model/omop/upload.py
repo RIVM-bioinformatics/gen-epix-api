@@ -5,6 +5,7 @@ from pydantic import Field, computed_field, field_serializer, model_validator
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
@@ -17,6 +18,7 @@ from gen_epix.commondb.domain.model.upload import (
 from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.omop import (
     Measurement,
+    MeasurementRelation,
     Observation,
     Person,
     Specimen,
@@ -196,6 +198,11 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
         ("derived_from_specimen_concept_id", "derived_from_specimen_concept_int_id"),
     ]
 
+    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
+        default=None,
+        description="The external identifiers associated with the specimen. If None, this element is not taken into consideration during the upload.",
+    )
+
     person_id: UUID = Field(
         default=NULL_ID,
         description="The id of the person associated with the specimen. If not available, it must be filled with the null ID.",
@@ -243,6 +250,45 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
         return None if value == NULL_ID else value
 
 
+class MeasurementRelationForUpload(
+    MeasurementRelation, IsNewIdMixin, ConceptFieldsForUploadMixin
+):
+    """
+    A measurement relation record intended for upload. Equal to a MeasurementRelation, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar = Entity(persistable=False)
+    NAME: ClassVar = "MeasurementRelationForUpload"
+    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
+        (
+            "measurement_relation_concept_id",
+            "measurement_relation_concept_int_id",
+        ),
+    ]
+
+    measurement_relation_id: UUID = Field(
+        default=NULL_ID,
+        description="The id of the measurement relation. If not available, it must be filled with the null ID.",
+    )
+    from_measurement_id: UUID = Field(
+        default=NULL_ID,
+        description="The measurement from which the to measurement was derived. If not available, it must be filled with the null ID.",
+    )
+    to_measurement_id: UUID = Field(
+        default=NULL_ID,
+        description="The measurement that was derived. If not available, it must be filled with the null ID.",
+    )
+    measurement_relation_concept_id: UUID = Field(
+        default=NULL_ID,
+        description="The Concept Id that represents the relationship between the from and to measurement. If not available, it must be filled with the null ID.",
+    )
+    measurement_relation_concept_int_id: int | None = Field(
+        default=None,
+        description="The corresponding integer concept ID of the measurement_relation_concept_id. Must be provided if the latter is not provided.",
+    )
+
+
 class PersonForUpload(ParentForUpload):
     """
     A person, together with any relevant associated data, intended for upload.
@@ -258,11 +304,13 @@ class PersonForUpload(ParentForUpload):
         Measurement: "measurements",
         Observation: "observations",
         Specimen: "specimens",
+        MeasurementRelation: "measurement_relations",
     }
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
         Measurement: MeasurementForUpload,
         Observation: ObservationForUpload,
         Specimen: SpecimenForUpload,
+        MeasurementRelation: MeasurementRelationForUpload,
     }
     CHILD_PARENT_ID_FIELD_NAME_MAP: ClassVar = {
         x: "person_id" for x in CHILD_FOR_UPLOAD_CLASS_MAP.keys()
@@ -276,13 +324,20 @@ class PersonForUpload(ParentForUpload):
 
     # Children
     measurements: list[MeasurementForUpload] | None = Field(
+        default=None,
         description="The measurements. If None, this element is not taken into consideration during the upload.",
     )
     observations: list[ObservationForUpload] | None = Field(
+        default=None,
         description="The observations. If None, this element is not taken into consideration during the upload.",
     )
     specimens: list[SpecimenForUpload] | None = Field(
+        default=None,
         description="The specimens. If None, this element is not taken into consideration during the upload.",
+    )
+    measurement_relations: list[MeasurementRelationForUpload] | None = Field(
+        default=None,
+        description="The measurement relations. If None, this element is not taken into consideration during the upload.",
     )
     # TODO: add other associated data types when needed
 
@@ -316,6 +371,10 @@ class PersonUploadResult(ParentUploadResult):
     specimens: list[UploadResult] | None = Field(
         default=None,
         description="The results of uploading the individual specimens, if any were provided, in the same order as provided.",
+    )
+    measurement_relations: list[UploadResult] | None = Field(
+        default=None,
+        description="The results of uploading the individual measurement relations, if any were provided, in the same order as provided.",
     )
 
 

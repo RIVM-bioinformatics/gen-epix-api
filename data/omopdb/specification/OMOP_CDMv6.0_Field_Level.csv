@@ -579,5 +579,7 @@ source_to_concept_map,source_to_concept_map_id,Yes,integer,Not part of OMOP CDM.
 metadata,metadata_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 fact_relationship,fact_relationship_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 measurement_relation,measurement_relation_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
-measurement_relation,from_measurement_id,Yes,integer,Not part of OMOP CDM. The measurement from which the to measuremunt was derived.,NA,No,Yes,MEASUREMENT,MEASUREMENT_ID,NA,NA,NA
+measurement_relation,person_id,Yes,integer,Not part of OMOP CDM. The PERSON_ID of the PERSON for whom the measurement is recorded. This may be a system generated code.,NA,No,Yes,PERSON,PERSON_ID,NA,NA,NA
+measurement_relation,from_measurement_id,Yes,integer,Not part of OMOP CDM. The measurement from which the to measurement was derived.,NA,No,Yes,MEASUREMENT,MEASUREMENT_ID,NA,NA,NA
 measurement_relation,to_measurement_id,Yes,integer,Not part of OMOP CDM. The measurement that was derived.,NA,No,Yes,MEASUREMENT,MEASUREMENT_ID,NA,NA,NA
+measurement_relation,measurement_relation_concept_id,No,integer,Not part of OMOP CDM. The Concept Id that represents the relationship between the from and to measurement.,NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA

@@ -1,8 +1,8 @@
 """
 Unit tests for omopdb person upload services.
 
-The tests use the Person, Measurement, Observation, and Specimen OMOP domain models
-and their ForUpload derivatives, and focus on verifying the upload logic via the
+The tests use the Person, Measurement, Observation, Specimen, and MeasurementRelation
+OMOP domain models and their ForUpload derivatives, and focus on verifying the
 PersonBatchUploader.
 
 The tests mirror the generic upload scenarios from test_commondb_upload.py, adapted to
@@ -14,11 +14,13 @@ the OMOP person domain:
 1.2.1 Object with this ID does not exist: succeeds (create with that ID)
 1.2.2 Object with this ID exists: error
 2 Provision of child objects
-2.1 Person without any child objects (no measurements, observations, specimens)
+2.1 Person without any child objects (no measurements, observations, specimens,
+    measurement relations)
 2.2 Person with measurements only
 2.3 Person with observations only
 2.4 Person with specimens only
-2.5 Person with multiple child types
+2.5 Person with measurement relations only
+2.6 Person with multiple child types
 3 Concept ID resolution in child objects (via concept UUID or integer ID)
 3.1 MeasurementForUpload with concept integer IDs resolving to existing concepts
 3.2 ObservationForUpload with concept integer IDs
@@ -67,11 +69,10 @@ from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain.command.omop import UploadPersonsCommand
-from gen_epix.omopdb.domain.model.omop.omop import (
-    Person,
-)
+from gen_epix.omopdb.domain.model.omop.omop import Person
 from gen_epix.omopdb.domain.model.omop.upload import (
     MeasurementForUpload,
+    MeasurementRelationForUpload,
     ObservationForUpload,
     PersonBatchForUpload,
     PersonBatchUploadResult,
@@ -176,6 +177,7 @@ class BasePersonUploadTestCase(TestCase):
         measurements: list[MeasurementForUpload] | None = None,
         observations: list[ObservationForUpload] | None = None,
         specimens: list[SpecimenForUpload] | None = None,
+        measurement_relations: list[MeasurementRelationForUpload] | None = None,
     ) -> PersonForUpload:
         """Create a test PersonForUpload. A default Person is created unless person=None."""
         if person == "_DEFAULT":
@@ -188,6 +190,7 @@ class BasePersonUploadTestCase(TestCase):
             measurements=measurements,
             observations=observations,
             specimens=specimens,
+            measurement_relations=measurement_relations,
         )
 
     def create_measurement_for_upload(
@@ -279,6 +282,27 @@ class BasePersonUploadTestCase(TestCase):
             anatomic_site_concept_int_id=0,
             disease_status_concept_int_id=0,
             derived_from_specimen_concept_int_id=0,
+        )
+
+    def create_measurement_relation_for_upload(
+        self,
+        measurement_relation_id: UUID = NULL_ID,
+        is_new_id: bool = False,
+        person_id: UUID = NULL_ID,
+        from_measurement_id: UUID = NULL_ID,
+        to_measurement_id: UUID = NULL_ID,
+        measurement_relation_concept_id: UUID | None = None,
+    ) -> MeasurementRelationForUpload:
+        """Create a test MeasurementRelationForUpload."""
+        return MeasurementRelationForUpload(
+            measurement_relation_id=measurement_relation_id,
+            is_new_id=is_new_id,  # type: ignore[call-arg]
+            person_id=person_id,
+            from_measurement_id=from_measurement_id,
+            to_measurement_id=to_measurement_id,
+            measurement_relation_concept_id=(
+                measurement_relation_concept_id or uuid4()
+            ),
         )
 
     def create_command_for_persons(
@@ -518,32 +542,61 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
         self.assertEqual(retval.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
 
     def test_2_5_person_with_all_child_types(self) -> None:
-        """Test 2.5: Person with measurements, observations, and specimens."""
+        """Test 2.5: Person with measurement relations only."""
+        measurement_relation = self.create_measurement_relation_for_upload()
+        person_for_upload = self.create_person_for_upload(
+            measurement_relations=[measurement_relation],
+        )
+        created_person_id = self.random_ids[0]
+        created_measurement_relation_id = self.random_ids[1]
+        self.service.repository.crud.side_effect = [
+            [created_person_id],  # Create persons returned IDs
+            [created_measurement_relation_id],  # Create measurement relations IDs
+        ]
+        retval = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(retval)
+        self.assertStatusCount(retval, n_created=2)
+        self.assertEqual(retval.persons[0].id, created_person_id)
+        self.assertEqual(
+            retval.persons[0].measurement_relations[0].id,  # type: ignore[index]
+            created_measurement_relation_id,
+        )
+
+    def test_2_6_person_with_all_child_types(self) -> None:
+        """Test 2.6: Person with measurements, observations, specimens, relations."""
         measurement = self.create_measurement_for_upload()
         observation = self.create_observation_for_upload()
         specimen = self.create_specimen_for_upload()
+        measurement_relation = self.create_measurement_relation_for_upload()
         person_for_upload = self.create_person_for_upload(
             measurements=[measurement],
             observations=[observation],
             specimens=[specimen],
+            measurement_relations=[measurement_relation],
         )
         created_person_id = self.random_ids[0]
         created_measurement_id = self.random_ids[1]
         created_observation_id = self.random_ids[2]
         created_specimen_id = self.random_ids[3]
+        created_measurement_relation_id = self.random_ids[4]
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
             [created_measurement_id],  # Create measurements returned IDs
             [created_observation_id],  # Create observations returned IDs
             [created_specimen_id],  # Create specimens returned IDs
+            [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         retval = self.upload_batch(person_for_upload)
         self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=4)
+        self.assertStatusCount(retval, n_created=5)
         self.assertEqual(retval.persons[0].id, created_person_id)
         self.assertEqual(retval.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
         self.assertEqual(retval.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
         self.assertEqual(retval.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
+        self.assertEqual(
+            retval.persons[0].measurement_relations[0].id,  # type: ignore[index]
+            created_measurement_relation_id,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -558,23 +611,33 @@ class TestPersonLinks(BasePersonUploadTestCase):
     def test_4_1_child_null_person_id_set_during_upload(self) -> None:
         """Test 4.1: NULL_ID person_id in child - should be set during upload."""
         measurement = self.create_measurement_for_upload(person_id=NULL_ID)
-        person_for_upload = self.create_person_for_upload(measurements=[measurement])
+        measurement_relation = self.create_measurement_relation_for_upload(
+            person_id=NULL_ID
+        )
+        person_for_upload = self.create_person_for_upload(
+            measurements=[measurement],
+            measurement_relations=[measurement_relation],
+        )
         created_person_id = self.random_ids[0]
         created_measurement_id = self.random_ids[1]
+        created_measurement_relation_id = self.random_ids[2]
         # generate_id must return the same ID that crud will return for the
         # parent, so that the child's person_id link is set consistently.
         self.service.generate_id.side_effect = [
             created_person_id,
             created_measurement_id,
+            created_measurement_relation_id,
         ]
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
             [created_measurement_id],  # Create measurements returned IDs
+            [created_measurement_relation_id],  # Create measurement relations IDs
         ]
         retval = self.upload_batch(person_for_upload)
         self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
+        self.assertStatusCount(retval, n_created=3)
         self.assertEqual(measurement.person_id, created_person_id)
+        self.assertEqual(measurement_relation.person_id, created_person_id)
 
     def test_4_2_1_child_person_id_mismatch_fails(self) -> None:
         """Test 4.2.1: Child person_id does not match parent - should fail."""
@@ -821,20 +884,23 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         measurement = self.create_measurement_for_upload()
         observation = self.create_observation_for_upload()
         specimen = self.create_specimen_for_upload()
+        measurement_relation = self.create_measurement_relation_for_upload()
         person_for_upload = self.create_person_for_upload(
             external_identifiers=[external_identifier],
             measurements=[measurement],
             observations=[observation],
             specimens=[specimen],
+            measurement_relations=[measurement_relation],
         )
         created_person_id = self.random_ids[0]
         created_measurement_id = self.random_ids[1]
         created_observation_id = self.random_ids[2]
         created_specimen_id = self.random_ids[3]
+        created_measurement_relation_id = self.random_ids[4]
         created_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier,
             internal_id=created_person_id,
-            id=self.random_ids[4],
+            id=self.random_ids[5],
             identifier_issuer_id=self.identifier_issuer_id,
         )
         self.service.app.handle.side_effect = [
@@ -847,10 +913,11 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
             [created_measurement_id],  # Create measurement
             [created_observation_id],  # Create observation
             [created_specimen_id],  # Create specimen
+            [created_measurement_relation_id],  # Create measurement relation
         ]
         retval = self.upload_batch(person_for_upload)
         self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=5)
+        self.assertStatusCount(retval, n_created=6)
         self.assertEqual(retval.persons[0].id, created_person_id)
 
     def test_multiple_persons_mixed_child_types(self) -> None:
@@ -860,22 +927,27 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         person1 = self.create_person_for_upload(measurements=[measurement])
         # Person 2: no children
         person2 = self.create_person_for_upload()
-        # Person 3: with observation and specimen
+        # Person 3: with observation, specimen, and measurement relation
         observation = self.create_observation_for_upload()
         specimen = self.create_specimen_for_upload()
+        measurement_relation = self.create_measurement_relation_for_upload()
         person3 = self.create_person_for_upload(
-            observations=[observation], specimens=[specimen]
+            observations=[observation],
+            specimens=[specimen],
+            measurement_relations=[measurement_relation],
         )
         created_person_ids = self.random_ids[0:3]
         created_measurement_id = self.random_ids[3]
         created_observation_id = self.random_ids[4]
         created_specimen_id = self.random_ids[5]
+        created_measurement_relation_id = self.random_ids[6]
         self.service.repository.crud.side_effect = [
             created_person_ids,  # Create persons
             [created_measurement_id],  # Create measurements
             [created_observation_id],  # Create observations
             [created_specimen_id],  # Create specimens
+            [created_measurement_relation_id],  # Create measurement relations
         ]
         retval = self.upload_batch([person1, person2, person3])
         self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=6)
+        self.assertStatusCount(retval, n_created=7)
