@@ -129,11 +129,18 @@ class BaseUploadTestCase(TestCase):
         self.ref1_id = UUID("550e8400-e29b-41d4-a716-446655440004")
         self.ref2_id = UUID("550e8400-e29b-41d4-a716-446655440005")
         self.identifier_issuer_id = UUID("550e8400-e29b-41d4-a716-446655440006")
+        self.identifier_issuer_id2 = UUID("550e8400-e29b-41d4-a716-446655440007")
         self.identifier_issuer_code = "test_issuer"
+        self.identifier_issuer_code2 = "test_issuer2"
         self.identifier_issuer = IdentifierIssuer(
             id=self.identifier_issuer_id,
             code=self.identifier_issuer_code,
             name="Test Issuer",
+        )
+        self.identifier_issuer2 = IdentifierIssuer(
+            id=self.identifier_issuer_id2,
+            code=self.identifier_issuer_code2,
+            name="Test Issuer 2",
         )
         self.random_ids = [
             UUID("550e8400-e29b-41d4-a716-446655440010"),
@@ -1157,7 +1164,9 @@ class TestExternalIdentifiers(BaseUploadTestCase):
             external_id="ext_id_1"
         )
         external_identifier2 = self.create_external_identifier_for_upload(
-            external_id="ext_id_2"
+            external_id="ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
         )
         parent = self.create_parent_for_upload(
             parent_id=self.parent_id,
@@ -1173,7 +1182,10 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         )
         # Set up mocks
         self.service.app.handle.side_effect = [
-            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
             [],
             [existing_external_identifier1, created_external_identifier2],
         ]
@@ -1195,7 +1207,9 @@ class TestExternalIdentifiers(BaseUploadTestCase):
             external_id="ext_id_1", identifier_issuer_id=self.random_ids[1]
         )
         external_identifier2 = self.create_external_identifier_for_upload(
-            external_id="ext_id_2"
+            external_id="ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
         )
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier1, external_identifier2]
@@ -1207,7 +1221,10 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         )
         # Set up mocks
         self.service.app.handle.side_effect = [
-            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
             [existing_external_identifier1],  # The existing external identifiers
         ]
 
@@ -1216,8 +1233,8 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
-    def test_6_2_3_2_multiple_external_ids_all_new(self) -> None:
-        """Test 6.2.3.2: Multiple external IDs, all new - should succeed."""
+    def test_6_2_3_2_multiple_external_ids_all_new_same_issuer(self) -> None:
+        """Test 6.2.3.2: Multiple external IDs, all new but same issuer - should fail."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
             external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
@@ -1225,10 +1242,25 @@ class TestExternalIdentifiers(BaseUploadTestCase):
         external_identifier2 = self.create_external_identifier_for_upload(
             external_id="new_ext_id_2", identifier_issuer_id=self.identifier_issuer_id
         )
+        with pytest.raises(ValueError):
+            parent = self.create_parent_for_upload(
+                external_identifiers=[external_identifier1, external_identifier2]
+            )
+
+    def test_6_2_3_2_multiple_external_ids_all_new_different_issuer(self) -> None:
+        """Test 6.2.3.2: Multiple external IDs, all new and different issuer - should succeed."""
+        # Create upload batch
+        external_identifier1 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
+        )
+        external_identifier2 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
+        )
         parent = self.create_parent_for_upload(
             external_identifiers=[external_identifier1, external_identifier2]
         )
-
         created_parent_id = self.random_ids[0]
         created_external_identifier1_id = self.get_external_identifier_from_for_upload(
             external_identifier1,
@@ -1247,7 +1279,10 @@ class TestExternalIdentifiers(BaseUploadTestCase):
 
         # Set up mocks
         self.service.app.handle.side_effect = [
-            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
             [],
             [created_external_identifier1_id, created_external_identifier2_id],
         ]

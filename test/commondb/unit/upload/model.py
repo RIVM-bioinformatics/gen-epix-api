@@ -160,7 +160,7 @@ class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
 
 class ParentForUpload(commondb_model.ParentForUpload):
     NAME: ClassVar = "ParentForUpload"
-    PARENT_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Parent
     PARENT_FIELD_NAME: ClassVar = "parent"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {

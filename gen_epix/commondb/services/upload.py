@@ -56,21 +56,10 @@ class BatchUploader:
             self.batch_for_upload_class.PARENT_FOR_UPLOAD_CLASS
         )
         self.parent_identifier_type = (
-            self.parent_for_upload_class.PARENT_IDENTIFIER_TYPE
+            self.parent_for_upload_class.EXTERNAL_IDENTIFIER_TYPE
         )
         self.parent_class = self.parent_for_upload_class.PARENT_CLASS
         self.parent_result_class = self.batch_upload_result_class.PARENT_RESULT_CLASS
-        self.external_identifier_for_upload_class = (
-            self.parent_for_upload_class.EXTERNAL_IDENTIFIER_FOR_UPLOAD_CLASS
-        )
-        self.external_identifier_class = (
-            self.parent_for_upload_class.EXTERNAL_IDENTIFIER_CLASS
-        )
-        self.external_identifier_crud_command_class = (
-            self.service.app.domain.get_crud_command_for_model(
-                self.external_identifier_class
-            )
-        )
         self.child_for_upload_class_map = (
             self.parent_for_upload_class.CHILD_FOR_UPLOAD_CLASS_MAP
         )
@@ -79,9 +68,6 @@ class BatchUploader:
         )
         self.child_model_parent_id_field_name_map = (
             self.parent_for_upload_class.CHILD_PARENT_ID_FIELD_NAME_MAP
-        )
-        self.external_identifiers_field_name = (
-            self.parent_for_upload_class.EXTERNAL_IDENTIFIERS_FIELD_NAME
         )
 
     def get_batch_for_upload(
@@ -315,7 +301,7 @@ class BatchUploader:
             parent_result_items,
             uow,
             cmd.user,
-            self.external_identifiers_field_name,
+            "external_identifiers",
             "identifier_issuer_id",
             "identifier_issuer_code",
             model.IdentifierIssuer,
@@ -326,7 +312,6 @@ class BatchUploader:
         success &= self.verify_external_identifiers(
             parent_result_items,
             cmd.user,
-            self.external_identifiers_field_name,
             self.parent_identifier_type,
         )
 
@@ -344,7 +329,6 @@ class BatchUploader:
         batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
         children_field_name: str,
-        external_identifiers_field_name: str,
         identifier_type: enum.IdentifierType,
     ) -> bool:
         """
@@ -369,7 +353,7 @@ class BatchUploader:
             child_result_items,
             uow,
             cmd.user,
-            external_identifiers_field_name,
+            "external_identifiers",
             "identifier_issuer_id",
             "identifier_issuer_code",
             model.IdentifierIssuer,
@@ -380,7 +364,6 @@ class BatchUploader:
         success &= self.verify_external_identifiers(
             child_result_items,
             cmd.user,
-            external_identifiers_field_name,
             identifier_type,
         )
         return success
@@ -819,9 +802,13 @@ class BatchUploader:
 
     def verify_external_identifiers(
         self,
-        obj_result_items: list[tuple[model.Model, model.UploadResult]],
+        obj_result_items: list[
+            tuple[
+                model.ExternalIdentifiersMixin,
+                model.UploadResultWithExternalIdentifiers,
+            ]
+        ],
         user: model.User | None,
-        external_identifiers_field_name: str,
         identifier_type: enum.IdentifierType,
     ) -> bool:
         success = True
@@ -831,7 +818,7 @@ class BatchUploader:
                 {
                     (y.identifier_issuer_id, y.external_id)
                     for x, _ in obj_result_items
-                    for y in getattr(x, external_identifiers_field_name) or []
+                    for y in x.external_identifiers or []
                 }
             )
         )
@@ -882,14 +869,9 @@ class BatchUploader:
         # Verify external IDs for each object
         for obj_for_upload, obj_result in obj_result_items:
             assert isinstance(obj_for_upload, IsNewIdMixin)
-            external_identifiers: list[model.ExternalIdentifier] = (
-                getattr(obj_for_upload, external_identifiers_field_name) or []
-            )
-            external_identifier_results: list[UploadResult] = (
-                getattr(obj_result, external_identifiers_field_name) or []
-            )
             for external_identifier, external_identifier_result in zip(
-                external_identifiers, external_identifier_results
+                obj_for_upload.external_identifiers or [],
+                obj_result.external_identifiers or [],
             ):
                 if external_identifier_result.status != UploadStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to check existence
@@ -937,22 +919,19 @@ class BatchUploader:
         to_create_external_identifier_result_pairs: list[
             tuple[model.ExternalIdentifier, model.UploadResult]
         ] = []
-        for parent, parent_result in self.parent_result_items(cmd, batch_result):
-            external_identifiers_for_upload: list[model.ExternalIdentifierForUpload] = (
-                getattr(parent, self.external_identifiers_field_name) or []
-            )
-            external_identifier_results: list[UploadResult] = (
-                getattr(parent_result, self.external_identifiers_field_name) or []
-            )
+        for parent_for_upload, parent_result in self.parent_result_items(
+            cmd, batch_result
+        ):
             for external_identifier_for_upload, external_identifier_result in zip(
-                external_identifiers_for_upload, external_identifier_results
+                parent_for_upload.external_identifiers or [],
+                parent_result.external_identifiers or [],
             ):
                 if external_identifier_result.status != UploadStatus.PENDING:
                     # Not pending (likely skipped or failed), no need to create
                     continue
                 external_identifier = model.ExternalIdentifier(
                     id=None,
-                    internal_id=parent.id,  # type: ignore[arg-type]
+                    internal_id=parent_for_upload.id,  # type: ignore[arg-type]
                     identifier_type=self.parent_identifier_type,
                     identifier_issuer_id=external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
                     external_id=external_identifier_for_upload.external_id,
