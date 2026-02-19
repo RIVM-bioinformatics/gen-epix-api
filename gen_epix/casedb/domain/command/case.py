@@ -210,8 +210,8 @@ class RetrievePhylogeneticTreeBySequencesCommand(Command):
     seqdb_seq_distance_protocol_id: UUID = Field(
         description="The ID of the sequence distance protocol to use."
     )
-    sequence_ids: list[UUID] = Field(
-        description="The IDs of the sequences to calculate the phylogenetic tree for."
+    profile_ids: list[UUID] = Field(
+        description="The IDs of the profiles to calculate the phylogenetic tree for."
     )
 
 
@@ -235,20 +235,25 @@ class RetrievePhylogeneticTreeByCasesCommand(Command):
     )
 
 
-class RetrieveGeneticSequenceByCaseCommand(Command):
+class RetrieveSimilarCasesCommand(Command):
     """
-    Retrieve a set of genetic sequences based on a set of case IDs and a genetic
-    sequence case type column.
+    Retrieve cases that are (genetically) similar to a given list of case_ids,
+    based on the genetic distance values in a specified genetic distance case type column and a maximum distance threshold.
     """
 
     case_type_id: UUID = Field(
         description="The case type ID that all the cases must belong to."
     )
-    genetic_sequence_case_type_col_id: UUID = Field(
-        description="The ID of the genetic sequence case type column to use."
+
+    max_distance: float = Field(
+        description="The maximum genetic distance for cases to be considered similar.",
+        default=5,
     )
     case_ids: list[UUID] = Field(
-        description="The IDs of the cases to retrieve genetic sequences for."
+        description="The IDs of cases to get the similar cases for.",
+    )
+    genetic_distance_case_type_col_id: UUID = Field(
+        description="The case type column ID to use for determining the genetic distance between cases."
     )
 
 

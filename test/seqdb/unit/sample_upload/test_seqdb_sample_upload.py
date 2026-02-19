@@ -383,7 +383,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to seq_result (code is passed as message in upload.py)
         self.assertTrue(retval.samples[0].seqs[0].has_errors())
-        self.assertTrue(retval.samples[0].seqs[0].has_log_code("f1e2d3c4"))
+        self.assertTrue(retval.samples[0].seqs[0].has_log_code("b9e4f8a1"))
 
     def test_seqs_exist_with_error_on_exists(self) -> None:
         """Test error when seqs exist and on_exists=ERROR."""

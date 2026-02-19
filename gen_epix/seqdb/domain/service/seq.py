@@ -1,5 +1,6 @@
 import abc
 from collections.abc import Iterable
+from uuid import UUID
 
 from gen_epix.fastapp import BaseService
 from gen_epix.seqdb.domain import command, model
@@ -12,12 +13,6 @@ class BaseSeqService(BaseService):
     def register_handlers(self) -> None:
         f = self.app.register_handler
         self.register_default_crud_handlers()
-        f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
-        f(command.RetrieveSamplesCommand, self.retrieve_samples)
-        f(
-            command.RetrieveCompleteSnpProfileCommand,
-            self.retrieve_snp_profile,
-        )
         f(
             command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
@@ -26,6 +21,7 @@ class BaseSeqService(BaseService):
             command.RetrieveMultipleAlignmentCommand,
             self.retrieve_multiple_alignment,
         )
+        f(command.RetrieveSamplesCommand, self.retrieve_samples)
         f(
             command.RetrieveSeqFastaCommand,
             self.retrieve_seq_fasta,
@@ -34,27 +30,10 @@ class BaseSeqService(BaseService):
             command.UploadSamplesCommand,
             self.upload_samples,
         )
-
-    @abc.abstractmethod
-    def retrieve_allele_profile(
-        self,
-        cmd: command.RetrieveAlleleProfileCommand,
-    ) -> model.CompleteAlleleProfile | list[model.CompleteAlleleProfile]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_samples(
-        self,
-        cmd: command.RetrieveSamplesCommand,
-    ) -> list[model.SampleForUpload]:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_snp_profile(
-        self,
-        cmd: command.RetrieveCompleteSnpProfileCommand,
-    ) -> model.CompleteSnpProfile | list[model.CompleteSnpProfile]:
-        raise NotImplementedError()
+        f(
+            command.RetrieveSimilarProfilesCommand,
+            self.retrieve_similar_profiles,
+        )
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -70,6 +49,13 @@ class BaseSeqService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def retrieve_samples(
+        self,
+        cmd: command.RetrieveSamplesCommand,
+    ) -> list[model.SampleForUpload]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def retrieve_seq_fasta(self, cmd: command.RetrieveSeqFastaCommand) -> Iterable[str]:
         raise NotImplementedError()
 
@@ -78,4 +64,11 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.UploadSamplesCommand,
     ) -> model.SampleBatchUploadResult:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_similar_profiles(
+        self,
+        cmd: command.RetrieveSimilarProfilesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()

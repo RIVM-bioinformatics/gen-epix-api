@@ -26,7 +26,7 @@ def set_envvar() -> None:
         path / "omop.secrets.repository.toml",
         path / "identity_provider.toml",
     ]
-    
+
     log_config_file = path / "logging.yaml"
 
     os.environ["CASEDB_SETTINGS_FILES"] = json.dumps(

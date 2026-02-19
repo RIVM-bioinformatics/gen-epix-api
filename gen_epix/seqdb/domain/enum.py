@@ -280,7 +280,7 @@ class SnpProfileFormat(Enum):
 
 
 class MlvaProfileFormat(Enum):
-    MLVA_PROFILE_FORMAT1 = "MLVA_PROFILE_FORMAT1"
+    SORTED_REPEAT_NUMBERS = "SORTED_REPEAT_NUMBERS"
 
 
 class KmerProfileFormat(Enum):
@@ -306,14 +306,37 @@ class AstResultFormat(Enum):
 class SeqDistanceProtocolType(Enum):
     ALLELE_HAMMING = "ALLELE_HAMMING"
     SNP_HAMMING = "SNP_HAMMING"
+    MLVA_HAMMING = "MLVA_HAMMING"
+    MLVA_EUCLIDEAN = "MLVA_EUCLIDEAN"
     KMER_EUCLIDEAN = "KMER_EUCLIDEAN"
-    OTHER = "OTHER"
 
 
 class SeqDistanceProtocolTypeSet(Enum):
-    ALLELE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
-    SNP_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
-    KMER_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
+    ALLELE_PROFILE_BASED = frozenset({SeqDistanceProtocolType.ALLELE_HAMMING})
+    SNP_PROFILE_BASED = frozenset({SeqDistanceProtocolType.SNP_HAMMING})
+    KMER_PROFILE_BASED = frozenset({SeqDistanceProtocolType.KMER_EUCLIDEAN})
+    MLVA_PROFILE_BASED = frozenset({SeqDistanceProtocolType.MLVA_HAMMING})
+    HAMMING_DISTANCE_BASED = frozenset(
+        {
+            SeqDistanceProtocolType.ALLELE_HAMMING,
+            SeqDistanceProtocolType.SNP_HAMMING,
+            SeqDistanceProtocolType.MLVA_HAMMING,
+        }
+    )
+    EUCLIDEAN_DISTANCE_BASED = frozenset(
+        {SeqDistanceProtocolType.KMER_EUCLIDEAN, SeqDistanceProtocolType.MLVA_EUCLIDEAN}
+    )
+    LOCUS_SET_BASED = frozenset(
+        {
+            SeqDistanceProtocolType.ALLELE_HAMMING,
+            SeqDistanceProtocolType.MLVA_HAMMING,
+        }
+    )
+    REF_SEQ_BASED = frozenset(
+        {
+            SeqDistanceProtocolType.SNP_HAMMING,
+        }
+    )
 
 
 class SeqDistanceResultFormat(Enum):
@@ -321,8 +344,7 @@ class SeqDistanceResultFormat(Enum):
 
 
 class SeqDistanceFormat(Enum):
-    SEQ_ID_DISTANCE_DICT = "SEQ_ID_DISTANCE_DICT"
-    PROFILE_ID_DISTANCE_DICT = "PROFILE_ID_DISTANCE_DICT"
+    PROFILE_DISTANCE_MAP = "PROFILE_DISTANCE_MAP"
 
 
 class SeqFileFormat(Enum):

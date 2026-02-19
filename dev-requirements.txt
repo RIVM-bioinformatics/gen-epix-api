@@ -1,6 +1,6 @@
 # code quality and testing extensions
 # typing_extensions==4.8.0 # do we need this?
-pandas==2.3.3
+pandas==3.0.0
 polars==1.37.1
 xlsxwriter==3.2.9
 pytest
@@ -11,9 +11,9 @@ isort==7.0.*
 black==26.1.*
 pylint==4.0.*
 mypy==1.19.*
-cryptography==46.0.4
+cryptography==46.0.5
 oauthlib==3.3.1
-coverage==7.13.2
+coverage==7.13.4
 
 
 # stubs

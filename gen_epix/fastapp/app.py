@@ -328,7 +328,7 @@ class App:
 
     def _log_command_finish(self, cmd: Command, is_initial_command: bool) -> None:
         msg = self.create_log_message(
-            "5ab6c248", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
+            "14a19691", "FINISHED_COMMAND", add_debug_info=False, cmd=cmd
         )
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(msg)
@@ -363,8 +363,19 @@ class App:
                 type(cmd), []
             ):
                 listener(cmd, retval)
+        except exc.ServiceException as exception:
+            # Service errors should always capture the stack trace to aid diagnosis.
+            if self._logger:
+                self._logger.error(
+                    self.create_log_message(
+                        "f3c7a1d9", "SERVICE_EXCEPTION", cmd=cmd, exception=exception
+                    ),
+                    exc_info=True,
+                )
+            self._command_stack.pop()
+            raise exception
         except exc.DomainException as exception:
-            # Domain exception does not require stack trace
+            # Other domain exceptions are expected; log without stack trace to reduce noise.
             if self._logger:
                 self._logger.warning(
                     self.create_log_message(
@@ -430,14 +441,15 @@ class App:
             raise exception
 
     def _log_command_start(self, cmd: Command, is_initial_command: bool) -> None:
+        log_code = "e94cad9b"
         if self._logger.level <= logging.DEBUG:
             self._logger.debug(
-                self.create_log_message("e94cad9b", "STARTED_COMMAND", cmd=cmd)
+                self.create_log_message(log_code, "STARTED_COMMAND", cmd=cmd)
             )
         elif is_initial_command:
             self._logger.info(
                 self.create_log_message(
-                    "e94cad9b",
+                    log_code,
                     "STARTED_COMMAND",
                     add_debug_info=False,
                     cmd=cmd,

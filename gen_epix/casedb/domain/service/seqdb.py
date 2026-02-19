@@ -19,7 +19,6 @@ class BaseSeqdbService(BaseService):
             command.RetrievePhylogeneticTreeBySequencesCommand,
             self.retrieve_phylogenetic_tree,
         )
-        f(command.RetrieveGeneticSequenceByIdCommand, self.retrieve_genetic_sequences)
         f(
             command.RetrieveGeneticSequenceFastaByIdCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
@@ -31,20 +30,12 @@ class BaseSeqdbService(BaseService):
         f(seqdb_command.SequencingProtocolCrudCommand, self.crud)
         f(seqdb_command.AssemblyProtocolCrudCommand, self.crud)
         f(seqdb_command.SeqCrudCommand, self.crud)
-
-        # f(command.RetrieveAlleleProfileCommand, self.retrieve_allele_profile)
+        f(seqdb_command.RetrieveSimilarProfilesCommand, self.retrieve_similar_profiles)
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
         self, cmd: command.RetrievePhylogeneticTreeBySequencesCommand
     ) -> model.PhylogeneticTree | None:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def retrieve_genetic_sequences(
-        self,
-        cmd: command.RetrieveGeneticSequenceByIdCommand,
-    ) -> list[model.GeneticSequence]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -66,4 +57,11 @@ class BaseSeqdbService(BaseService):
         self,
         cmd: seqdb_command.CreateFileCommand,
     ) -> UUID:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def retrieve_similar_profiles(
+        self,
+        cmd: seqdb_command.RetrieveSimilarProfilesCommand,
+    ) -> list[UUID]:
         raise NotImplementedError()
