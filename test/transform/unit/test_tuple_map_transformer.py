@@ -105,9 +105,9 @@ class TestTupleMapTransformer:
     def test_different_map_and_row_field_names(self) -> None:
         """Test that map_src_fields and map_tgt_fields can differ from row field names.
 
-        The row_src/tgt_fields define uniqueness constraints, while
-        map_src/tgt_fields define the actual field names used in the mapping
-        and in the objects being transformed.
+        The row_src/tgt_fields name the fields in the objects being transformed,
+        while map_src/tgt_fields name the fields in the mapping rows.
+        transform() reads/writes using row field names.
         """
         map_rows = [
             {"map_code": "A", "map_value": 10},
@@ -121,10 +121,10 @@ class TestTupleMapTransformer:
             map_tgt_fields=["map_value"],
         )
 
-        # The object must use map field names, since transform() reads/writes using map fields
-        adapter = ObjectAdapter({"map_code": "A"})
+        # The object must use row field names, since transform() reads/writes using row fields
+        adapter = ObjectAdapter({"row_code": "A"})
         result = transformer.transform(adapter)
-        assert result.get("map_value") == 10
+        assert result.get("row_value") == 10
 
     def test_is_active_map_field(self) -> None:
         """Test filtering of mappings using is_active_map_field."""
@@ -221,7 +221,7 @@ class TestTupleMapTransformer:
             {"src": "A", "tgt": 99},
             {"src": "D", "tgt": 4},
         ]
-        transformer.update_map(new_map)
+        transformer.set_map(new_map)
 
         adapter = ObjectAdapter({"src": "A"})
         result = transformer.transform(adapter)
@@ -273,8 +273,12 @@ class TestTupleMapTransformerValidation:
     """Test cases for TupleMapTransformer input validation."""
 
     def test_duplicate_row_src_fields(self) -> None:
-        """Test that duplicate row source field names raise ValueError."""
-        with pytest.raises(ValueError, match="Row source column names are not unique"):
+        """Test that duplicate row source field names raise ValueError.
+
+        When map_src_fields is not provided it defaults to row_src_fields,
+        so the map-level validation fires first.
+        """
+        with pytest.raises(ValueError, match="Map source column names must be unique"):
             TupleMapTransformer(
                 map_rows=[{"a": 1, "tgt": 2}],
                 row_src_fields=["a", "a"],
@@ -282,8 +286,12 @@ class TestTupleMapTransformerValidation:
             )
 
     def test_duplicate_row_tgt_fields(self) -> None:
-        """Test that duplicate row target field names raise ValueError."""
-        with pytest.raises(ValueError, match="Row target column names are not unique"):
+        """Test that duplicate row target field names raise ValueError.
+
+        When map_tgt_fields is not provided it defaults to row_tgt_fields,
+        so the map-level validation fires first.
+        """
+        with pytest.raises(ValueError, match="Map target column names must be unique"):
             TupleMapTransformer(
                 map_rows=[{"src": 1, "a": 2}],
                 row_src_fields=["src"],
@@ -291,10 +299,14 @@ class TestTupleMapTransformerValidation:
             )
 
     def test_overlapping_row_src_and_tgt_fields(self) -> None:
-        """Test that overlapping row source and target field names raise ValueError."""
+        """Test that overlapping row source and target field names raise ValueError.
+
+        When map fields are not provided they default to row fields,
+        so the map-level validation fires first.
+        """
         with pytest.raises(
             ValueError,
-            match="Row source and target column names together must be unique",
+            match="Map source and target column names together must be unique",
         ):
             TupleMapTransformer(
                 map_rows=[{"x": 1}],
