@@ -5,11 +5,11 @@ from pydantic import Field, computed_field, field_serializer, model_validator
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
+    ExternalIdentifiersMixin,
     IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
@@ -180,7 +180,9 @@ class ObservationForUpload(Observation, IsNewIdMixin, ConceptFieldsForUploadMixi
         return None if value == NULL_ID else value
 
 
-class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
+class SpecimenForUpload(
+    Specimen, IsNewIdMixin, ExternalIdentifiersMixin, ConceptFieldsForUploadMixin
+):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables. The different concepts can be given either as their UUID
@@ -189,6 +191,7 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
 
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "SpecimenForUpload"
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
         ("specimen_concept_id", "specimen_concept_int_id"),
         ("specimen_type_concept_id", "specimen_type_concept_int_id"),
@@ -197,11 +200,6 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ConceptFieldsForUploadMixin):
         ("disease_status_concept_id", "disease_status_concept_int_id"),
         ("derived_from_specimen_concept_id", "derived_from_specimen_concept_int_id"),
     ]
-
-    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
-        default=None,
-        description="The external identifiers associated with the specimen. If None, this element is not taken into consideration during the upload.",
-    )
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -297,7 +295,7 @@ class PersonForUpload(ParentForUpload):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "PersonForUpload"
 
-    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Person
     PARENT_FIELD_NAME: ClassVar = "person"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {

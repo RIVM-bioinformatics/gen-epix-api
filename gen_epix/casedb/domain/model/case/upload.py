@@ -138,7 +138,7 @@ class CaseForUpload(ParentForUpload):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "CaseForUpload"
 
-    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.CASE
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.CASE
     PARENT_CLASS: ClassVar = Case
     PARENT_FIELD_NAME: ClassVar = "case"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {

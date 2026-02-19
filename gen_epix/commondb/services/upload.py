@@ -9,8 +9,10 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    ExternalIdentifiersMixin,
     IsNewIdMixin,
     UploadResult,
+    UploadResultWithExternalIdentifiers,
 )
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.service import BaseService
@@ -222,14 +224,38 @@ class BatchUploader:
                 children: list[model.Model] | None = getattr(
                     parent_for_upload, children_field_name
                 )
-                child_results = (
-                    None
-                    if children is None
-                    else [
-                        UploadResult(id=x.id, status=UploadStatus.PENDING)
-                        for x in children
-                    ]
-                )
+                child_results: list[UploadResult] | None = None
+                if children is not None:
+                    has_external_identifiers = isinstance(
+                        children[0], ExternalIdentifiersMixin
+                    )
+                    if has_external_identifiers:
+                        # Child class has external identifiers, for which (sub)upload results also need to be initialized
+                        child_results = []
+                        for child in children:
+                            external_identifiers = getattr(
+                                child, "external_identifiers", None
+                            )
+                            external_identifier_results = (
+                                None
+                                if external_identifiers is None
+                                else [
+                                    UploadResult(status=UploadStatus.PENDING)
+                                    for _ in external_identifiers
+                                ]
+                            )
+                            child_results.append(
+                                UploadResultWithExternalIdentifiers(
+                                    status=UploadStatus.PENDING,
+                                    external_identifier_results=external_identifier_results,
+                                )
+                            )
+                    else:
+                        # Child class does not have external identifiers, only initialize corresponding upload result for the child
+                        child_results = [
+                            UploadResult(id=x.id, status=UploadStatus.PENDING)
+                            for x in children
+                        ]
                 setattr(parent_result, children_field_name, child_results)
             # Add parent result to parent results
             parent_results.append(parent_result)

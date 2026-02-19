@@ -3,7 +3,7 @@ from uuid import UUID
 import gen_epix.omopdb.domain.command as command
 import gen_epix.omopdb.domain.model as model
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import IdentifierType, UploadStatus
+from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
@@ -148,8 +148,7 @@ class PersonBatchUploader(BatchUploader):
             batch_result,
             uow,
             "specimens",
-            "external_identifiers",
-            IdentifierType.SAMPLE,
+            model.SpecimenForUpload.EXTERNAL_IDENTIFIER_TYPE,
         )
 
         return success

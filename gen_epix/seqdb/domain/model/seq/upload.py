@@ -466,7 +466,7 @@ class SampleForUpload(ParentForUpload):
     ENTITY: ClassVar = Entity(persistable=False)
     NAME = "SampleForUpload"
 
-    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
     PARENT_CLASS: ClassVar = Sample
     PARENT_FIELD_NAME: ClassVar = "sample"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
