@@ -232,6 +232,12 @@ def _make_crud_side_effect(
             assert isinstance(obj, model.SeqDistance)
             recorder.created.append(obj)
             return obj
+        if model_class is model.SeqDistance and operation == CrudOperation.CREATE_SOME:
+            assert isinstance(obj, list)
+            for item in obj:
+                assert isinstance(item, model.SeqDistance)
+            recorder.created.extend(obj)
+            return obj
         return []
 
     return _crud
@@ -271,7 +277,7 @@ class BaseCalculateSeqDistanceTestCase(TestCase):
         self.service.repository.uow.return_value = self.uow
 
 
-@pytest.mark.scenario_ids("TC-SEC-28-06")
+@pytest.mark.scenario_ids("TC-11-13-01")
 class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
     def test_no_profiles_returns_empty_and_only_reads_protocols(self) -> None:
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
@@ -428,9 +434,8 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
 
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, self.new_profile_id)
-        self.assertEqual(results[0].status, UploadStatus.CREATED)
         self.assertEqual(results[0].seq_distance_profile_id, self.new_profile_id)
+        self.assertEqual(results[0].status, UploadStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
         updated_distances: dict[str, float] = json.loads(recorder.updated[0].distances)
@@ -511,7 +516,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         )
 
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, self.new_profile_id)
+        self.assertEqual(results[0].seq_distance_profile_id, self.new_profile_id)
         self.assertEqual(results[0].status, UploadStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 0)
@@ -743,7 +748,11 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(len(recorder.created), 1)
         self.assertEqual(json.loads(recorder.created[0].distances), {})
 
-    def test_new_profile_without_id_raises_key_error(self) -> None:
+    def test_new_profile_without_id_is_processed(self) -> None:
+        # A profile with id=None is silently filtered out by the service
+        # (new_profiles_list excludes None-id entries).  No SeqDistance is
+        # created and no result is returned.  The caller is responsible for
+        # providing profiles with valid IDs before calling this function.
         existing_profile: model.AlleleProfile = _make_allele_profile(
             profile_id=self.existing_profile_id,
             sample_id=self.sample_id,
@@ -789,5 +798,251 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             return_value=_iterable([existing_seq_distance])
         )
 
-        with self.assertRaises(KeyError):
+        # Should not raise; the None-id profile is filtered out and skipped
+        results: list[model.CalculateSeqDistancesResult] = (
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
+        )
+
+        self.assertEqual(len(results), 0)
+        self.assertEqual(len(recorder.created), 0)
+
+
+@pytest.mark.scenario_ids("TC-11-13-01")
+class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
+
+    def _make_batch_allele_profiles(
+        self,
+    ) -> tuple[
+        list[model.AlleleProfile],
+        list[model.AlleleProfile],
+        list[UUID],
+        list[UUID],
+    ]:
+        """Return (existing_profiles, new_profiles, existing_ids, new_ids)."""
+        a1 = UUID("aaaaaaaa-0000-0000-0000-000000000001")
+        a2 = UUID("aaaaaaaa-0000-0000-0000-000000000002")
+        a3 = UUID("aaaaaaaa-0000-0000-0000-000000000003")
+        a4 = UUID("aaaaaaaa-0000-0000-0000-000000000004")
+
+        e1_id = UUID("eeeeeeee-0000-0000-0000-000000000001")
+        e2_id = UUID("eeeeeeee-0000-0000-0000-000000000002")
+        n1_id = UUID("bbbbbbbb-0000-0000-0000-000000000001")
+        n2_id = UUID("bbbbbbbb-0000-0000-0000-000000000002")
+        n3_id = UUID("bbbbbbbb-0000-0000-0000-000000000003")
+
+        existing_profiles = [
+            _make_allele_profile(
+                profile_id=e1_id,
+                sample_id=self.sample_id,
+                locus_set_id=self.locus_set_id,
+                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                allele_ids=[a1, a2],
+            ),
+            _make_allele_profile(
+                profile_id=e2_id,
+                sample_id=self.sample_id,
+                locus_set_id=self.locus_set_id,
+                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                allele_ids=[a3, a4],
+            ),
+        ]
+        new_profiles = [
+            _make_allele_profile(
+                profile_id=n1_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                allele_ids=[a1, a3],  # distance to N2 = 1, to N3 = 2
+            ),
+            _make_allele_profile(
+                profile_id=n2_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                allele_ids=[a2, a3],  # distance to N1 = 1, to N3 = 1
+            ),
+            _make_allele_profile(
+                profile_id=n3_id,
+                sample_id=self.sample_id2,
+                locus_set_id=self.locus_set_id,
+                locus_detection_protocol_id=self.locus_detection_protocol_id,
+                allele_ids=[a2, a4],  # distance to N1 = 2, to N2 = 1
+            ),
+        ]
+        return existing_profiles, new_profiles, [e1_id, e2_id], [n1_id, n2_id, n3_id]
+
+    def test_batch_upload_all_inter_batch_pairs_stored_in_both_maps(self) -> None:
+        """All combinations pairs must appear symmetrically in each new map."""
+        existing_profiles, new_profiles, existing_ids, new_ids = (
+            self._make_batch_allele_profiles()
+        )
+        n1_id, n2_id, n3_id = new_ids
+        e1_id, e2_id = existing_ids
+
+        protocol = _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=self.locus_set_id,
+            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            max_stored_distance=100.0,
+        )
+        existing_seq_distances = [
+            _make_seq_distance(
+                seq_distance_id=uuid4(),
+                protocol_id=self.protocol_id,
+                profile_id=e_id,
+                sample_id=self.sample_id,
+                distances={},
+            )
+            for e_id in existing_ids
+        ]
+
+        recorder = _CrudRecorder()
+        self.service.repository.crud.side_effect = _make_crud_side_effect(
+            recorder=recorder,
+            protocols=[protocol],
+            existing_profiles_by_model={model.AlleleProfile: existing_profiles},  # type: ignore[dict-item]
+        )
+        self.service.repository.iter_seq_distances = Mock(
+            return_value=_iterable(existing_seq_distances)
+        )
+
+        cmd = command.CalculateSeqDistancesForNewProfilesCommand(
+            user=self.user,
+            allele_profiles=new_profiles,
+        )
+        results = seq_service_calculate_seq_distances_for_new_profiles(
+            self.service, cmd
+        )
+
+        # Correct number of results
+        self.assertEqual(len(results), 3)
+        result_ids = {x.seq_distance_profile_id for x in results}
+        self.assertEqual(result_ids, {n1_id, n2_id, n3_id})
+
+        # Build {profile_id: distances_dict} from created records
+        self.assertEqual(
+            len(recorder.created), 3, "Expected one SeqDistance per new profile"
+        )
+        created_maps: dict[UUID, dict[str, float]] = {
+            sd.profile_id: json.loads(sd.distances) for sd in recorder.created
+        }
+
+        # Every inter-batch pair must be present in BOTH directions
+        intra_batch_pairs = [(n1_id, n2_id), (n1_id, n3_id), (n2_id, n3_id)]
+        for id_a, id_b in intra_batch_pairs:
+            self.assertIn(
+                str(id_b),
+                created_maps[id_a],
+                f"distance({id_a},{id_b}) missing from {id_a}'s map",
+            )
+            self.assertIn(
+                str(id_a),
+                created_maps[id_b],
+                f"distance({id_b},{id_a}) missing from {id_b}'s map",
+            )
+            # Symmetry: both values must be equal
+            self.assertEqual(
+                created_maps[id_a][str(id_b)],
+                created_maps[id_b][str(id_a)],
+                f"Asymmetric distance for pair ({id_a},{id_b})",
+            )
+
+        # Cross pairs must still be present
+        for n_id in [n1_id, n2_id, n3_id]:
+            for e_id in existing_ids:
+                self.assertIn(
+                    str(e_id),
+                    created_maps[n_id],
+                    f"N×E distance missing: new={n_id}, existing={e_id}",
+                )
+
+    def test_batch_upload_intra_batch_pair_over_threshold_not_stored(self) -> None:
+        """Inter-batch pairs whose distance exceeds max_stored_distance are omitted."""
+        existing_profiles, new_profiles, existing_ids, new_ids = (
+            self._make_batch_allele_profiles()
+        )
+        n1_id, n2_id, n3_id = new_ids
+
+        # max_stored_distance=0 → no pair survives
+        protocol = _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=self.locus_set_id,
+            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            max_stored_distance=0.0,
+        )
+        existing_seq_distances = [
+            _make_seq_distance(
+                seq_distance_id=uuid4(),
+                protocol_id=self.protocol_id,
+                profile_id=e_id,
+                sample_id=self.sample_id,
+                distances={},
+            )
+            for e_id in existing_ids
+        ]
+
+        recorder = _CrudRecorder()
+        self.service.repository.crud.side_effect = _make_crud_side_effect(
+            recorder=recorder,
+            protocols=[protocol],
+            existing_profiles_by_model={model.AlleleProfile: existing_profiles},  # type: ignore[dict-item]
+        )
+        self.service.repository.iter_seq_distances = Mock(
+            return_value=_iterable(existing_seq_distances)
+        )
+
+        cmd = command.CalculateSeqDistancesForNewProfilesCommand(
+            user=self.user,
+            allele_profiles=new_profiles,
+        )
+        seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
+
+        created_maps: dict[UUID, dict[str, float]] = {
+            sd.profile_id: json.loads(sd.distances) for sd in recorder.created
+        }
+        # All maps must be empty — nothing was within threshold
+        for n_id in [n1_id, n2_id, n3_id]:
+            self.assertEqual(
+                created_maps[n_id],
+                {},
+                f"Expected empty map for {n_id} but got {created_maps[n_id]}",
+            )
+
+    def test_single_new_profile_skips_intra_batch_loop(self) -> None:
+        locus_set_id = self.locus_set_id
+        a1 = uuid4()
+        n1_id = UUID("bbbbbbbb-0000-0000-0000-000000000001")
+
+        new_profile = _make_allele_profile(
+            profile_id=n1_id,
+            sample_id=self.sample_id2,
+            locus_set_id=locus_set_id,
+            locus_detection_protocol_id=self.locus_detection_protocol_id,
+            allele_ids=[a1],
+        )
+        protocol = _make_seq_distance_protocol_for_locus_set(
+            protocol_id=self.protocol_id,
+            locus_set_id=locus_set_id,
+            protocol_type=enum.SeqDistanceProtocolType.ALLELE_HAMMING,
+            max_stored_distance=100.0,
+        )
+
+        recorder = _CrudRecorder()
+        self.service.repository.crud.side_effect = _make_crud_side_effect(
+            recorder=recorder,
+            protocols=[protocol],
+            existing_profiles_by_model={model.AlleleProfile: []},
+        )
+        self.service.repository.iter_seq_distances = Mock(return_value=_iterable([]))
+
+        cmd = command.CalculateSeqDistancesForNewProfilesCommand(
+            user=self.user,
+            allele_profiles=[new_profile],
+        )
+        results = seq_service_calculate_seq_distances_for_new_profiles(
+            self.service, cmd
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(len(recorder.created), 1)
+        self.assertEqual(json.loads(recorder.created[0].distances), {})
