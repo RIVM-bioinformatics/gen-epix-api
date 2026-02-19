@@ -98,6 +98,9 @@ class PersonBatchUploader(BatchUploader):
             cmd.user.id if cmd.user and cmd.user.id else NULL_ID
         )
 
+        # Validate Specimen external identifiers
+        # TODO: implement
+
         # Validate and transform each person
         person_validator.validate_and_transform(cmd, batch_result)
 

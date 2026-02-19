@@ -80,7 +80,7 @@ from gen_epix.omopdb.domain.model.omop.upload import (
     SpecimenForUpload,
 )
 from gen_epix.omopdb.services.omop.base import BaseOmopService
-from gen_epix.omopdb.services.omop.upload_person import PersonBatchUploader
+from gen_epix.omopdb.services.omop.upload import PersonBatchUploader
 
 # ---------------------------------------------------------------------------
 # Base test case

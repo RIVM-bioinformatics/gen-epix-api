@@ -15,7 +15,7 @@ from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
 def _verify_sample_children(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Check child model existence and consistency"""
@@ -23,13 +23,13 @@ def _verify_sample_children(
     # Generic child model verifications
     success &= self.verify_children(
         cmd,
-        retval,
+        batch_result,
         uow,
     )
 
     # Child model specific verifications
-    success &= _verify_children_seqs(self, cmd, retval, uow)
-    success &= _verify_children_allele_profiles(self, cmd, retval, uow)
+    success &= _verify_children_seqs(self, cmd, batch_result, uow)
+    success &= _verify_children_allele_profiles(self, cmd, batch_result, uow)
 
     return success
 
@@ -37,19 +37,19 @@ def _verify_sample_children(
 def _verify_children_seqs(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Verify seq specific rules"""
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
-    sample_results = retval.samples
+    sample_results = batch_result.samples
     success = True
 
     # Retrieve and verify assembly protocols provided by ID and/or code
     success &= self.verify_link_id(
         cmd,
-        retval,
+        batch_result,
         uow,
         model.Seq,
         "assembly_protocol_id",
@@ -137,13 +137,13 @@ def _verify_children_seqs(
 def _verify_children_allele_profiles(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """Verify allele profile specific rules"""
     user_id = cmd.user.id if cmd.user else None
     samples = cmd.sample_batch.samples
-    sample_results = retval.samples
+    sample_results = batch_result.samples
     success = True
 
     # Get sample IDs
@@ -155,7 +155,7 @@ def _verify_children_allele_profiles(
     # Retrieve and verify locus detection protocols provided by ID and/or code
     success &= self.verify_link_id(
         cmd,
-        retval,
+        batch_result,
         uow,
         model.AlleleProfile,
         "locus_detection_protocol_id",
@@ -166,7 +166,7 @@ def _verify_children_allele_profiles(
     # Retrieve and verify locus sets provided by ID and/or code
     success &= self.verify_link_id(
         cmd,
-        retval,
+        batch_result,
         uow,
         model.AlleleProfile,
         "locus_set_id",
@@ -177,7 +177,7 @@ def _verify_children_allele_profiles(
     # Retrieve and verify locus code maps provided by ID and/or code
     success &= self.verify_link_id(
         cmd,
-        retval,
+        batch_result,
         uow,
         model.AlleleProfile,
         "locus_code_map_id",
@@ -270,7 +270,7 @@ def _verify_children_allele_profiles(
 def _verify_sample_refdata(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: fastapp.BaseUnitOfWork,
 ) -> bool:
     """
@@ -280,6 +280,6 @@ def _verify_sample_refdata(
     # Read sets: nothing to do
     # Sequences: nothing to do
     # Allele profiles
-    success &= _verify_batch_refdata_allele_profiles(self, cmd, retval, uow)
+    success &= _verify_batch_refdata_allele_profiles(self, cmd, batch_result, uow)
 
     return success
