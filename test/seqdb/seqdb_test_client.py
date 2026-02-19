@@ -6,8 +6,6 @@ import uuid
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
-from test.test_client.util import get_test_name, get_test_output_dir
 from typing import Any, Optional
 from uuid import UUID
 
@@ -24,10 +22,11 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
+from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
+from test.test_client.util import get_test_name, get_test_output_dir
 
 
 class SeqGenerationSettings(BaseModel):
-
     n_loci: int
     locus_length: int
     p_locus_deletion: float = 0.01
@@ -100,7 +99,6 @@ class SeqGenerationSettings(BaseModel):
 
 
 class DistanceMatrix(BaseModel):
-
     model_config = {"arbitrary_types_allowed": True}
 
     obj_ids: list[UUID]
@@ -454,9 +452,7 @@ class SeqdbTestClient(TestClient):
         props: dict[str, str | int | float | None] | None = None,
         set_dummy_created_in_data_collection: bool = False,
     ) -> model.Sample:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         created_in_data_collection_id = self._get_obj_id(
             model.DataCollection,
             created_in_data_collection_or_str,
@@ -482,9 +478,7 @@ class SeqdbTestClient(TestClient):
         format: enum.FileFormat,
         compression: enum.FileCompression = enum.FileCompression.NONE,
     ) -> model.File:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         content: bytes
         if isinstance(content_or_str, str):
             content = content_or_str.encode()
@@ -501,9 +495,7 @@ class SeqdbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(
-            model.File(id=file_id, content=content)
-        )  # type: ignore[return-value]
+        return self._set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
 
     def create_read_set(
         self,
@@ -522,9 +514,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_sequencing_protocol: bool = False,
     ) -> model.ReadSet:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         sequencing_protocol_id = self._get_obj_id(
             model.SequencingProtocol,
@@ -583,9 +573,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_assembly_protocol: bool = False,
     ) -> model.Seq:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         assembly_protocol_id = self._get_obj_id(
             model.AssemblyProtocol,
@@ -622,20 +610,14 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
         **kwargs: Any,
     ) -> model.Model:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         crud_command_class = self.app.domain.get_crud_command_for_model(protocol_class)
         protocol = self.app.handle(
             crud_command_class(
                 operation=CrudOperation.CREATE_ONE,
                 user=user,
-                objs=protocol_class(
-                    code=code, name=name if name else code, **kwargs
-                ),  # type: ignore
+                objs=protocol_class(code=code, name=name if name else code, **kwargs),  # type: ignore
             )
         )
         return self._set_obj(protocol)  # type: ignore[return-value]
@@ -669,7 +651,6 @@ class SeqdbTestClient(TestClient):
         locus_set_id: UUID | None = None,
         locus_detection_protocol_id: UUID | None = None,
         locus_code_map_id: UUID | None = None,
-        sample_id: UUID | None = None,
         locus_ids: list[UUID] | None = None,
     ) -> model.SampleBatchForUpload:
         # set IDs if not provided
@@ -685,7 +666,6 @@ class SeqdbTestClient(TestClient):
         locus_code_map_id = (
             locus_code_map_id if locus_code_map_id is not None else uuid.uuid4()
         )
-        sample_id = sample_id if sample_id is not None else uuid.uuid4()
         # local RNG to  ensure reproducibility with same seed
         rng = random.Random(settings.seed)
 
@@ -764,10 +744,8 @@ class SeqdbTestClient(TestClient):
                 allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                 seq_id=seq_id,
-                sample_id=sample_id,
             )
             seq_for_upload = model.SeqForUpload(
-                id=seq_id,
                 contigs=[
                     model.Contig(
                         seq="".join(x for x in seq if x != "-"),
@@ -775,12 +753,12 @@ class SeqdbTestClient(TestClient):
                     )
                 ],
                 assembly_protocol_id=assembly_protocol_id,
-                is_new_id=True,
             )
             samples_for_upload.append(
                 model.SampleForUpload(
                     seqs=[seq_for_upload],
                     allele_profiles=[allele_profile_for_upload],
+                    sample=model.Sample(created_in_data_collection_id=uuid.uuid4()),
                 )
             )
         sample_batch_for_upload = model.SampleBatchForUpload(
