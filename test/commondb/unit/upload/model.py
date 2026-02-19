@@ -325,15 +325,18 @@ class ParentBatchUploader(BatchUploader):
         Verify and complete reference data for allele profiles.
         """
         success = True
-        user_id = cmd.user.id if cmd.user else None
+        user = cmd.user
         parents = cmd.parent_batch.parents
         parent_results = retval.parents
 
+        # Create parent-result pairs
+        parent_result_pairs = list(zip(parents, parent_results))
+
         # Verify all Child1.ref1_id
         success &= self.verify_link_id(
-            cmd,
-            retval,
+            parent_result_pairs,
             uow,
+            user,
             "children1",
             "ref1_id",
             "ref1_code",
@@ -344,9 +347,9 @@ class ParentBatchUploader(BatchUploader):
 
         # Verify all Child2.ref2_id
         success &= self.verify_link_id(
-            cmd,
-            retval,
+            parent_result_pairs,
             uow,
+            user,
             "children2",
             "ref2_id",
             "ref2_code",

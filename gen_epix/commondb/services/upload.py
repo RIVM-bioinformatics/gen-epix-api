@@ -310,9 +310,9 @@ class BatchUploader:
 
         # Retrieve and verify identifier issuers in external IDs provided by ID
         success &= self.verify_link_id(
-            cmd,
-            batch_result,
+            list(self.parent_result_items(cmd, batch_result)),
             uow,
+            cmd.user,
             self.external_identifiers_field_name,
             "identifier_issuer_id",
             "identifier_issuer_code",
@@ -668,188 +668,6 @@ class BatchUploader:
         """
         return True
 
-    def verify_link_id(
-        self,
-        cmd: command.UploadBatchCommandMixin,
-        batch_result: BaseBatchUploadResult,
-        uow: fastapp.BaseUnitOfWork,
-        child_field_name_or_class: str | type[model.Model],
-        link_id_field_name: str,
-        link_code_field_name: str,
-        linked_model_class: type[model.Model],
-        linked_model_id_field_name: str = "id",
-        linked_model_code_field_name: str = "code",
-        is_same_service: bool = True,
-        is_frozen: bool = False,
-    ) -> bool:
-        """Set and verify entities provided by ID and/or code, filling in IDs and verifying consistency"""
-        assert isinstance(cmd, command.Command)
-        user_id = cmd.user.id if cmd.user else None
-        success = True
-
-        # Get child field name
-        if isinstance(child_field_name_or_class, str):
-            child_field_name = child_field_name_or_class
-        else:
-            child_field_name = self.children_field_name_map[child_field_name_or_class]
-
-        # Initialize some data
-        id_code_tuples = list(
-            {
-                (getattr(y, link_id_field_name), getattr(y, link_code_field_name))
-                for x in self.get_parents_for_upload(cmd)
-                for y in getattr(x, child_field_name) or []
-            }
-        )
-        ids = {x[0] for x in id_code_tuples if x[0] is not None and x[0] != NULL_ID}
-        codes = {x[1] for x in id_code_tuples if x[1] is not None}
-        id_code_map: dict[UUID, str] = {}
-        code_id_map: dict[str, UUID] = {}
-
-        # Retrieve links from child model provided by ID and/or code
-        if not ids and not codes:
-            # No IDs or codes provided, nothing to look up (but NULL_ID still has to be verified)
-            pass
-        elif is_same_service:
-            # Same service: use repository directly
-            result_iter = self.service.repository.read_fields(
-                uow,
-                user_id,
-                linked_model_class,
-                [linked_model_id_field_name, linked_model_code_field_name],
-                filter=CompositeFilter(
-                    operator=LogicalOperator.OR,
-                    filters=[
-                        UuidSetFilter(
-                            key=linked_model_id_field_name, members=frozenset(ids)
-                        ),
-                        StringSetFilter(
-                            key=linked_model_code_field_name, members=frozenset(codes)
-                        ),
-                    ],
-                ),
-            )
-            id_code_map = {x[0]: x[1] for x in result_iter}
-            code_id_map = {y: x for x, y in id_code_map.items()}
-        else:
-            # Different service: issue a command
-            crud_command_class = self.service.app.domain.get_crud_command_for_model(
-                linked_model_class
-            )
-            link_objs: list[model.Model] = self.service.app.handle(
-                crud_command_class(
-                    user=cmd.user,
-                    operation=CrudOperation.READ_ALL,
-                    query_filter=CompositeFilter(
-                        operator=LogicalOperator.OR,
-                        filters=[
-                            UuidSetFilter(
-                                key=linked_model_id_field_name, members=frozenset(ids)
-                            ),
-                            StringSetFilter(
-                                key=linked_model_code_field_name,
-                                members=frozenset(codes),
-                            ),
-                        ],
-                    ),
-                )
-            )
-            id_code_map = {
-                getattr(x, linked_model_id_field_name): getattr(
-                    x, linked_model_code_field_name
-                )
-                for x in link_objs
-            }
-            code_id_map = {
-                getattr(x, linked_model_code_field_name): getattr(
-                    x, linked_model_id_field_name
-                )
-                for x in link_objs
-            }
-
-        # Verify links
-        for parent, parent_result in self.parent_result_items(cmd, batch_result):
-            children: list[model.Model] = getattr(parent, child_field_name) or []
-            child_results: list[UploadResult] = (
-                getattr(parent_result, child_field_name) or []
-            )
-            for i, (child, child_result) in enumerate(zip(children, child_results)):
-                # Get link ID and code
-                link_id = getattr(child, link_id_field_name)
-                is_null_id = link_id == NULL_ID
-                if is_null_id:
-                    link_id = None
-                link_code = getattr(child, link_code_field_name)
-                # Check all combinations of link ID and code provided/not provided
-                if link_id is None:
-                    # Link ID not provided
-                    if link_code is None:
-                        # Neither link ID nor code provided
-                        if is_null_id:
-                            # NULL_ID provided: error since eventual ID may not be NULL_ID
-                            success = False
-                            child_result.add_error(
-                                "b7c2e5f8",
-                                f"{linked_model_id_field_name}=NULL_ID could not be resolved",
-                            )
-                        else:
-                            # Nothing provided: optional link assumed, nothing to do
-                            pass
-                    else:
-                        # Link code provided but not link ID
-                        if link_code not in code_id_map:
-                            # Link code does not exist
-                            success = False
-                            child_result.add_error(
-                                "d2c4b6a8",
-                                f"{linked_model_code_field_name}={link_code} does not exist",
-                            )
-                        else:
-                            # Link code exists: fill in link ID
-                            if is_frozen:
-                                # Need to create a new instance since the class is frozen
-                                new_child = child.model_copy(
-                                    update={link_id_field_name: code_id_map[link_code]}
-                                )
-                                children[i] = new_child
-                            else:
-                                # Not a frozen class, can set attribute directly
-                                setattr(
-                                    child,
-                                    link_id_field_name,
-                                    code_id_map[link_code],
-                                )
-                else:
-                    # Link ID provided
-                    if link_id not in id_code_map:
-                        # Link ID does not exist
-                        success = False
-                        child_result.add_error(
-                            "e3b5c7d9",
-                            f"{linked_model_id_field_name}={link_id} does not exist",
-                        )
-                    elif link_code is None:
-                        # Link ID exists and code not given: nothing to do since code is only meant to look up ID
-                        pass
-                    elif link_code not in code_id_map:
-                        # Link code does not exist
-                        success = False
-                        child_result.add_error(
-                            "c7a9b2e4",
-                            f"{linked_model_code_field_name}={link_code} does not exist",
-                        )
-                    elif link_code != id_code_map[link_id]:
-                        # Link ID exists but code does not match provided code
-                        success = False
-                        child_result.add_error(
-                            "a4d7b9c3",
-                            f"{linked_model_code_field_name}={link_code} with {linked_model_id_field_name}={code_id_map[link_code]} does not match provided {linked_model_id_field_name}={link_id}",
-                        )
-                    else:
-                        # Link ID and code both exist and match: nothing to do
-                        pass
-        return success
-
     def create_parents(
         self,
         cmd: command.UploadBatchCommandMixin,
@@ -1116,6 +934,182 @@ class BatchUploader:
         Override as needed.
         """
         return True
+
+    def verify_link_id(
+        self,
+        parent_result_pairs: list[tuple[model.Model, model.UploadResult]],
+        uow: fastapp.BaseUnitOfWork,
+        user: model.User | None,
+        child_field_name: str,
+        link_id_field_name: str,
+        link_code_field_name: str,
+        linked_model_class: type[model.Model],
+        linked_model_id_field_name: str = "id",
+        linked_model_code_field_name: str = "code",
+        is_same_service: bool = True,
+        is_frozen: bool = False,
+    ) -> bool:
+        """Set and verify entities provided by ID and/or code, filling in IDs and verifying consistency"""
+        success = True
+        if not parent_result_pairs:
+            return success
+
+        # Initialize some data
+        id_code_tuples = list(
+            {
+                (getattr(y, link_id_field_name), getattr(y, link_code_field_name))
+                for x, _ in parent_result_pairs
+                for y in getattr(x, child_field_name) or []
+            }
+        )
+        ids = {x[0] for x in id_code_tuples if x[0] is not None and x[0] != NULL_ID}
+        codes = {x[1] for x in id_code_tuples if x[1] is not None}
+        id_code_map: dict[UUID, str] = {}
+        code_id_map: dict[str, UUID] = {}
+
+        # Retrieve links from child model provided by ID and/or code
+        if not ids and not codes:
+            # No IDs or codes provided, nothing to look up (but NULL_ID still has to be verified)
+            pass
+        elif is_same_service:
+            # Same service: use repository directly
+            result_iter = self.service.repository.read_fields(
+                uow,
+                user.id,
+                linked_model_class,
+                [linked_model_id_field_name, linked_model_code_field_name],
+                filter=CompositeFilter(
+                    operator=LogicalOperator.OR,
+                    filters=[
+                        UuidSetFilter(
+                            key=linked_model_id_field_name, members=frozenset(ids)
+                        ),
+                        StringSetFilter(
+                            key=linked_model_code_field_name, members=frozenset(codes)
+                        ),
+                    ],
+                ),
+            )
+            id_code_map = {x[0]: x[1] for x in result_iter}
+            code_id_map = {y: x for x, y in id_code_map.items()}
+        else:
+            # Different service: issue a command
+            crud_command_class = self.service.app.domain.get_crud_command_for_model(
+                linked_model_class
+            )
+            link_objs: list[model.Model] = self.service.app.handle(
+                crud_command_class(
+                    user=user,
+                    operation=CrudOperation.READ_ALL,
+                    query_filter=CompositeFilter(
+                        operator=LogicalOperator.OR,
+                        filters=[
+                            UuidSetFilter(
+                                key=linked_model_id_field_name, members=frozenset(ids)
+                            ),
+                            StringSetFilter(
+                                key=linked_model_code_field_name,
+                                members=frozenset(codes),
+                            ),
+                        ],
+                    ),
+                )
+            )
+            id_code_map = {
+                getattr(x, linked_model_id_field_name): getattr(
+                    x, linked_model_code_field_name
+                )
+                for x in link_objs
+            }
+            code_id_map = {
+                getattr(x, linked_model_code_field_name): getattr(
+                    x, linked_model_id_field_name
+                )
+                for x in link_objs
+            }
+
+        # Verify links
+        for parent, parent_result in parent_result_pairs:
+            children: list[model.Model] = getattr(parent, child_field_name) or []
+            child_results: list[UploadResult] = (
+                getattr(parent_result, child_field_name) or []
+            )
+            for i, (child, child_result) in enumerate(zip(children, child_results)):
+                # Get link ID and code
+                link_id = getattr(child, link_id_field_name)
+                is_null_id = link_id == NULL_ID
+                if is_null_id:
+                    link_id = None
+                link_code = getattr(child, link_code_field_name)
+                # Check all combinations of link ID and code provided/not provided
+                if link_id is None:
+                    # Link ID not provided
+                    if link_code is None:
+                        # Neither link ID nor code provided
+                        if is_null_id:
+                            # NULL_ID provided: error since eventual ID may not be NULL_ID
+                            success = False
+                            child_result.add_error(
+                                "b7c2e5f8",
+                                f"{linked_model_id_field_name}=NULL_ID could not be resolved",
+                            )
+                        else:
+                            # Nothing provided: optional link assumed, nothing to do
+                            pass
+                    else:
+                        # Link code provided but not link ID
+                        if link_code not in code_id_map:
+                            # Link code does not exist
+                            success = False
+                            child_result.add_error(
+                                "d2c4b6a8",
+                                f"{linked_model_code_field_name}={link_code} does not exist",
+                            )
+                        else:
+                            # Link code exists: fill in link ID
+                            if is_frozen:
+                                # Need to create a new instance since the class is frozen
+                                new_child = child.model_copy(
+                                    update={link_id_field_name: code_id_map[link_code]}
+                                )
+                                children[i] = new_child
+                            else:
+                                # Not a frozen class, can set attribute directly
+                                setattr(
+                                    child,
+                                    link_id_field_name,
+                                    code_id_map[link_code],
+                                )
+                else:
+                    # Link ID provided
+                    if link_id not in id_code_map:
+                        # Link ID does not exist
+                        success = False
+                        child_result.add_error(
+                            "e3b5c7d9",
+                            f"{linked_model_id_field_name}={link_id} does not exist",
+                        )
+                    elif link_code is None:
+                        # Link ID exists and code not given: nothing to do since code is only meant to look up ID
+                        pass
+                    elif link_code not in code_id_map:
+                        # Link code does not exist
+                        success = False
+                        child_result.add_error(
+                            "c7a9b2e4",
+                            f"{linked_model_code_field_name}={link_code} does not exist",
+                        )
+                    elif link_code != id_code_map[link_id]:
+                        # Link ID exists but code does not match provided code
+                        success = False
+                        child_result.add_error(
+                            "a4d7b9c3",
+                            f"{linked_model_code_field_name}={link_code} with {linked_model_id_field_name}={code_id_map[link_code]} does not match provided {linked_model_id_field_name}={link_id}",
+                        )
+                    else:
+                        # Link ID and code both exist and match: nothing to do
+                        pass
+        return success
 
     def create_objects(
         self,

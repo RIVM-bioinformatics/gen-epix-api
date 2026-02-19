@@ -48,10 +48,10 @@ def _verify_children_seqs(
 
     # Retrieve and verify assembly protocols provided by ID and/or code
     success &= self.verify_link_id(
-        cmd,
-        batch_result,
+        list(self.parent_result_items(cmd, batch_result)),
         uow,
-        model.Seq,
+        cmd.user,
+        "seqs",
         "assembly_protocol_id",
         "assembly_protocol_code",
         model.AssemblyProtocol,
@@ -151,13 +151,14 @@ def _verify_children_allele_profiles(
     if not sample_ids:
         # No existing samples, nothing to verify
         return success
+    alleles_profile_result_pairs = list(self.parent_result_items(cmd, batch_result))
 
     # Retrieve and verify locus detection protocols provided by ID and/or code
     success &= self.verify_link_id(
-        cmd,
-        batch_result,
+        alleles_profile_result_pairs,
         uow,
-        model.AlleleProfile,
+        cmd.user,
+        "allele_profiles",
         "locus_detection_protocol_id",
         "locus_detection_protocol_code",
         model.LocusDetectionProtocol,
@@ -165,10 +166,10 @@ def _verify_children_allele_profiles(
 
     # Retrieve and verify locus sets provided by ID and/or code
     success &= self.verify_link_id(
-        cmd,
-        batch_result,
+        alleles_profile_result_pairs,
         uow,
-        model.AlleleProfile,
+        cmd.user,
+        "allele_profiles",
         "locus_set_id",
         "locus_set_code",
         model.LocusSet,
@@ -176,10 +177,10 @@ def _verify_children_allele_profiles(
 
     # Retrieve and verify locus code maps provided by ID and/or code
     success &= self.verify_link_id(
-        cmd,
-        batch_result,
+        alleles_profile_result_pairs,
         uow,
-        model.AlleleProfile,
+        cmd.user,
+        "allele_profiles",
         "locus_code_map_id",
         "locus_code_map_code",
         model.LocusCodeMap,
