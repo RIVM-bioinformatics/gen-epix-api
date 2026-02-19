@@ -46,7 +46,7 @@ def get_test_client() -> Env:
 
 
 @pytest.fixture(scope="module")
-def base_setup(env: Env) -> None:
+def setup_test_users_and_organizations(env: Env) -> None:
     """
     Set up common test data used across all tests.
     Bootstrap root user and org1 into env.db for name-based lookups.
@@ -71,14 +71,17 @@ def base_setup(env: Env) -> None:
     # User with no policies (should have no access to case types)
     env.invite_and_register_user(root_user, "org_user2_1")
 
+    # User with user policy but no org policy (should have no access to case types, since case types are shared at org level)
+    env.invite_and_register_user(root_user, "org_user2_2")
+
 
 # The test_data fixture needs to declare a dependency on base_setup
 # to ensure it runs after the user is properly set up.
 # => properly setting up the root user and organization before the case test data creation begins.
 @pytest.fixture(scope="module")
-def case_test_data(env: Env, base_setup: None) -> None:
+def setup_case_type_data(env: Env, setup_test_users_and_organizations: None) -> None:
     """
-    Create reference data (diseases, etiological agents) for tests.
+    Create reference data (diseases, etiological agents, case types and share policies) for tests.
     Objects are automatically stored in env.db by create methods.
     """
     root_user = env.get_root_user()
@@ -118,15 +121,17 @@ def case_test_data(env: Env, base_setup: None) -> None:
     # Create data collection
     env.create_data_collection(root_user, "data_collection1")
 
-    # Create organization access policy for the case type
+    # Create organization access policy for the case type 1 through case type set 1 for org1
     # This policy should grant access to org users for the case type
     env.create_organization_access_case_policy(
         root_user, "org_case_policy1_1", "case_type_set1"
     )
 
+    # org2 should not have any org policies to test that users in org2 do not have access to case types since there are no org policies granting access to their org
+
     # for org_user1_2 we will create both org and user policies to test that user policy does not grant additional access beyond org policy for reference data access
-    # there is already an org policy that grants access to case_type_1, so we will create a user policy that grants access to case_type_2 and
-    # verify that it does not grant access to case_type_2 since case types are shared at org level for reference data access
+    # there is already an org policy that grants access to case_type_1, so we will create a user policy that grants access to case_type_2
+    # and verify that it does not grant access to case_type_2 since case types are shared at org level for reference data access
     env.create_user_access_case_policy(
         root_user, "org_user1_2", "data_collection1", "case_type_set2"
     )
@@ -135,6 +140,11 @@ def case_test_data(env: Env, base_setup: None) -> None:
     # to verify that it does not cause any issues and user still has access to the case type via the org policy
     env.create_user_access_case_policy(
         root_user, "org_user1_3", "data_collection1", "case_type_set1"
+    )
+
+    # for org_user2_2 we will create a user policy that grants access to case_type_1 but no org policy to verify that user policies do not grant access to case types for reference data access since case types are shared at org level
+    env.create_user_access_case_policy(
+        root_user, "org_user2_2", "data_collection1", "case_type_set1"
     )
 
 
@@ -174,7 +184,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         return retrieved_user
 
-    def test_org_user_1_exists(self, base_setup: None) -> None:
+    def test_org_user_1_exists(self, setup_test_users_and_organizations: None) -> None:
         """Test to verify org user 1 exists and can be retrieved."""
         # This test is just to verify that the org user created in the setup can be retrieved successfully.
         # It's a sanity check to ensure that the user setup is correct before we run access tests.
@@ -183,7 +193,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
         assert org_user.name == "org_user1_1"
         print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
 
-    def test_root_user_has_access_to_all_case_types(self, case_test_data: None) -> None:
+    def test_root_user_has_access_to_all_case_types(
+        self, setup_case_type_data: None
+    ) -> None:
         """
         Root user should have access to all case types regardless of policies, since they are the superuser.
         (Also basic test to verify case type access works.)
@@ -199,7 +211,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         assert len(result) >= 2, "Root user should have access to all case types"
 
     def test_organization_user_with_no_policies_has_no_access(
-        self, case_test_data: None
+        self, setup_case_type_data: None
     ) -> None:
         """Organization user with no policies should have no access to any case types."""
         # SETUP
@@ -221,7 +233,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
             len(result) == 0
         ), "User with no policies should not have access to any case types"
 
-    def test_user_with_only_org_policies_has_org_access(self, base_setup: None) -> None:
+    def test_user_with_only_org_policies_has_org_access(
+        self, setup_case_type_data: None
+    ) -> None:
         """User with only org policies should access org-shared case types."""
         # TODO: Implement test with proper ABAC policy setup
 
@@ -254,7 +268,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         ), "User with org policy should not have access to case types not shared with org"
 
     def test_user_with_both_org_and_user_policies_has_only_org_access(
-        self, base_setup: None
+        self, setup_case_type_data: None
     ) -> None:
         """User with both org and user policies should only access types shared with the org."""
         # TODO: Implement test with proper ABAC policy setup
@@ -278,7 +292,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
     # Add a test for user org_user1_3 who has both org and user policies on the same case type set to verify that it does not cause any issues and user still has access to the case type via the org policy
     def test_user_with_org_and_user_policies_on_same_case_type_set_has_org_access(
-        self, case_test_data: None
+        self, setup_case_type_data: None
     ) -> None:
         """
         User with both org and user policies on the same case type set should have access to org-shared case types.
@@ -296,14 +310,19 @@ class TestCaseDBEdgeCasesRefDataAccess:
             "case_type_1" in case_type_names
         ), "User with org policy should have access to org-shared case type"
 
-    @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
-    def test_user_with_only_user_policies_has_no_access(self, base_setup: None) -> None:
+    def test_user_with_only_user_policies_has_no_access(
+        self, setup_case_type_data: None
+    ) -> None:
         """User with only user policies should have no access to case types, since case types are shared at org level."""
-        # TODO: Implement test with proper ABAC policy setup
-        pass
+        user_with_only_user_policy = self._get_user("org_user2_2")
 
-    @pytest.mark.skip(reason="Not implemented yet - needs proper ABAC policy setup")
-    def test_user_with_non_matching_policies_has_no_access(self) -> None:
-        """User with policies that don't match any case types has no access."""
-        # TODO: Implement test with proper ABAC policy setup
-        pass
+        get_cmd = CaseTypeCrudCommand(
+            user=user_with_only_user_policy, operation=CrudOperation.READ_ALL
+        )
+        result = self.env.app.handle(get_cmd)
+
+        case_type_names = [ct.name for ct in result]
+        # assert that the user has no access to any case types
+        assert (
+            not case_type_names
+        ), "User with only user policies should have no access to case types"
