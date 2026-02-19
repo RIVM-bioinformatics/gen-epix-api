@@ -3,7 +3,7 @@ from uuid import UUID
 import gen_epix.omopdb.domain.command as command
 import gen_epix.omopdb.domain.model as model
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
-from gen_epix.commondb.domain.enum import UploadStatus
+from gen_epix.commondb.domain.enum import IdentifierType, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
@@ -59,7 +59,7 @@ class PersonBatchUploader(BatchUploader):
 
         # Verify person content. Derived values and data issues are also added in the
         # form of ValidatedPersonForUpload objects in the result.
-        success &= self.verify_person_content(cmd, batch_result)
+        success &= self.verify_person_content(cmd, batch_result, uow)
 
         return success
 
@@ -81,12 +81,20 @@ class PersonBatchUploader(BatchUploader):
         # Use the general parent method for upserting the persons
         success &= super().upsert_batch(cmd, batch_result, uow)
 
+        # Upsert child external identifiers. This needs to be done after the main
+        # upsert to ensure that any new person IDs are available for the external
+        # identifiers.
+        success &= self.upsert_person_children_external_identifiers(
+            cmd, batch_result, uow
+        )
+
         return success
 
     def verify_person_content(
         self,
         cmd: command.UploadPersonsCommand,
         batch_result: model.PersonBatchUploadResult,
+        uow: BaseUnitOfWork,
     ) -> bool:
         """
         Verify the person content and add any derived values.
@@ -98,8 +106,10 @@ class PersonBatchUploader(BatchUploader):
             cmd.user.id if cmd.user and cmd.user.id else NULL_ID
         )
 
-        # Validate Specimen external identifiers
-        # TODO: implement
+        # Verify child external identifiers
+        success &= self.verify_person_children_external_identifiers(
+            cmd, batch_result, uow
+        )
 
         # Validate and transform each person
         person_validator.validate_and_transform(cmd, batch_result)
@@ -120,6 +130,44 @@ class PersonBatchUploader(BatchUploader):
     def _get_person_validator(self, user_id: UUID) -> PersonValidator:
         """Get person validator for the given complete person type"""
         return PersonValidator(self.service, user_id)
+
+    def verify_person_children_external_identifiers(
+        self,
+        cmd: command.UploadPersonsCommand,
+        batch_result: model.PersonBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """
+        Verify external identifiers in any of the person child objects. This includes
+        verifying that any provided external identifier IDs exist and are accessible
+        by the user, and filling in any missing IDs based on provided codes.
+        """
+        success = True
+        success &= self.verify_children_external_identifiers(
+            cmd,
+            batch_result,
+            uow,
+            "specimens",
+            "external_identifiers",
+            IdentifierType.SAMPLE,
+        )
+
+        return success
+
+    def upsert_person_children_external_identifiers(
+        self,
+        cmd: command.UploadPersonsCommand,
+        batch_result: model.PersonBatchUploadResult,
+        uow: BaseUnitOfWork,
+    ) -> bool:
+        """
+        Upsert external identifiers in any of the person child objects. This includes
+        upserting any provided external identifiers that are not marked as failed.
+        """
+        success = True
+        # TODO: implement
+
+        return success
 
 
 def omop_service_upload_persons(
