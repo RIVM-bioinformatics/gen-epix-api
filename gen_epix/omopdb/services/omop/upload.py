@@ -39,7 +39,7 @@ class PersonBatchUploader(BatchUploader):
     def verify_batch(
         self,
         cmd: UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -47,7 +47,7 @@ class PersonBatchUploader(BatchUploader):
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
             raise exc.InvalidArgumentsError("Invalid command type")
-        if not isinstance(retval, model.PersonBatchUploadResult):
+        if not isinstance(batch_result, model.PersonBatchUploadResult):
             raise exc.InvalidArgumentsError("Invalid return value type")
         success = True
 
@@ -55,18 +55,18 @@ class PersonBatchUploader(BatchUploader):
         # identifiers. The person IDs are needed for person content validation when the
         # person is being updated, since the merged content is validated and the IDs
         # are needed to retrieve the persons.
-        success &= super().verify_batch(cmd, retval, uow)
+        success &= super().verify_batch(cmd, batch_result, uow)
 
         # Verify person content. Derived values and data issues are also added in the
         # form of ValidatedPersonForUpload objects in the result.
-        success &= self.verify_person_content(cmd, retval)
+        success &= self.verify_person_content(cmd, batch_result)
 
         return success
 
     def upsert_batch(
         self,
         cmd: UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -74,39 +74,39 @@ class PersonBatchUploader(BatchUploader):
         """
         if not isinstance(cmd, command.UploadPersonsCommand):
             raise exc.InvalidArgumentsError("Invalid command type")
-        if not isinstance(retval, model.PersonBatchUploadResult):
+        if not isinstance(batch_result, model.PersonBatchUploadResult):
             raise exc.InvalidArgumentsError("Invalid return value type")
         success = True
 
         # Use the general parent method for upserting the persons
-        success &= super().upsert_batch(cmd, retval, uow)
+        success &= super().upsert_batch(cmd, batch_result, uow)
 
         return success
 
     def verify_person_content(
         self,
         cmd: command.UploadPersonsCommand,
-        retval: model.PersonBatchUploadResult,
+        batch_result: model.PersonBatchUploadResult,
     ) -> bool:
         """
         Verify the person content and add any derived values.
         """
         success = True
         # Initialize some
-        status_count_before = retval.get_status_count()
+        status_count_before = batch_result.get_status_count()
         person_validator = self._get_person_validator(
             cmd.user.id if cmd.user and cmd.user.id else NULL_ID
         )
 
         # Validate and transform each person
-        person_validator.validate_and_transform(cmd, retval)
+        person_validator.validate_and_transform(cmd, batch_result)
 
         # Update status of each result with data issues found
-        for person_result in retval.persons:
+        for person_result in batch_result.persons:
             person_result.update_status_with_data_issues()
 
         # Update batch status if necessary
-        status_count_after = retval.get_status_count()
+        status_count_after = batch_result.get_status_count()
         if (
             status_count_after[UploadStatus.FAILED]
             > status_count_before[UploadStatus.FAILED]
@@ -124,5 +124,5 @@ def omop_service_upload_persons(
 ) -> model.PersonBatchUploadResult:
     batch_uploader = PersonBatchUploader(self)
 
-    retval: model.PersonBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]
-    return retval
+    batch_result: model.PersonBatchUploadResult = batch_uploader.upload_batch(cmd)  # type: ignore[assignment]
+    return batch_result

@@ -373,8 +373,8 @@ class BasePersonUploadTestCase(TestCase):
             cmd = self.create_command_for_persons(
                 cmd, on_exists, validate_command=validate_command
             )
-        retval = self.batch_uploader.upload_batch(cmd)
-        return retval  # type: ignore[return-value]
+        batch_result = self.batch_uploader.upload_batch(cmd)
+        return batch_result  # type: ignore[return-value]
 
     # -- Assertion helpers ---------------------------------------------------
 
@@ -440,10 +440,10 @@ class TestPersonExistence(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
-        self.assertEqual(retval.persons[0].id, created_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
 
     def test_1_2_1_person_id_provided_new_id_not_exists_succeeds(self) -> None:
         """Test 1.2.1: Person with is_new_id=True and ID does not exist - should succeed."""
@@ -454,10 +454,10 @@ class TestPersonExistence(BasePersonUploadTestCase):
             [False],  # Person does not exist
             [person_for_upload.id],  # Create persons returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
-        self.assertEqual(retval.persons[0].id, person_for_upload.id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+        self.assertEqual(batch_result.persons[0].id, person_for_upload.id)
 
     def test_1_2_2_person_id_provided_new_id_exists_fails(self) -> None:
         """Test 1.2.2: Person with is_new_id=True and ID exists - should fail."""
@@ -467,9 +467,9 @@ class TestPersonExistence(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [True],  # Person already exists
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(retval)
-        self.assertStatusCount(retval, n_failed=1)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # ---------------------------------------------------------------------------
@@ -488,10 +488,10 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
-        self.assertEqual(retval.persons[0].id, created_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
 
     def test_2_2_person_with_measurements_only(self) -> None:
         """Test 2.2: Person with measurements only."""
@@ -503,11 +503,11 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
             [created_measurement_id],  # Create measurements returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
-        self.assertEqual(retval.persons[0].id, created_person_id)
-        self.assertEqual(retval.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
 
     def test_2_3_person_with_observations_only(self) -> None:
         """Test 2.3: Person with observations only."""
@@ -519,11 +519,11 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
             [created_observation_id],  # Create observations returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
-        self.assertEqual(retval.persons[0].id, created_person_id)
-        self.assertEqual(retval.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.assertEqual(batch_result.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
 
     def test_2_4_person_with_specimens_only(self) -> None:
         """Test 2.4: Person with specimens only."""
@@ -535,11 +535,11 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
             [created_specimen_id],  # Create specimens returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
-        self.assertEqual(retval.persons[0].id, created_person_id)
-        self.assertEqual(retval.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.assertEqual(batch_result.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
 
     def test_2_5_person_with_all_child_types(self) -> None:
         """Test 2.5: Person with measurement relations only."""
@@ -553,12 +553,12 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
             [created_person_id],  # Create persons returned IDs
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
-        self.assertEqual(retval.persons[0].id, created_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
         self.assertEqual(
-            retval.persons[0].measurement_relations[0].id,  # type: ignore[index]
+            batch_result.persons[0].measurement_relations[0].id,  # type: ignore[index]
             created_measurement_relation_id,
         )
 
@@ -586,15 +586,15 @@ class TestChildObjectProvision(BasePersonUploadTestCase):
             [created_specimen_id],  # Create specimens returned IDs
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=5)
-        self.assertEqual(retval.persons[0].id, created_person_id)
-        self.assertEqual(retval.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
-        self.assertEqual(retval.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
-        self.assertEqual(retval.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=5)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
+        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
+        self.assertEqual(batch_result.persons[0].observations[0].id, created_observation_id)  # type: ignore[index]
+        self.assertEqual(batch_result.persons[0].specimens[0].id, created_specimen_id)  # type: ignore[index]
         self.assertEqual(
-            retval.persons[0].measurement_relations[0].id,  # type: ignore[index]
+            batch_result.persons[0].measurement_relations[0].id,  # type: ignore[index]
             created_measurement_relation_id,
         )
 
@@ -633,9 +633,9 @@ class TestPersonLinks(BasePersonUploadTestCase):
             [created_measurement_id],  # Create measurements returned IDs
             [created_measurement_relation_id],  # Create measurement relations IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=3)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=3)
         self.assertEqual(measurement.person_id, created_person_id)
         self.assertEqual(measurement_relation.person_id, created_person_id)
 
@@ -652,9 +652,9 @@ class TestPersonLinks(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [False],  # Person does not exist
         ]
-        retval = self.upload_batch(person_for_upload, validate_command=False)
-        self.assertBatchFailed(retval)
-        self.assertStatusCount(retval, n_pending=1, n_failed=1)
+        batch_result = self.upload_batch(person_for_upload, validate_command=False)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_pending=1, n_failed=1)
 
     def test_4_2_2_child_person_id_matches_succeeds(self) -> None:
         """Test 4.2.2: Child person_id matches parent - should succeed."""
@@ -670,10 +670,10 @@ class TestPersonLinks(BasePersonUploadTestCase):
             [existing_person],  # Existing persons
             [created_measurement_id],  # Create measurements returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_skipped=1, n_created=1)
-        self.assertEqual(retval.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1, n_created=1)
+        self.assertEqual(batch_result.persons[0].measurements[0].id, created_measurement_id)  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------
@@ -692,9 +692,9 @@ class TestExternalIdentifiers(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=1)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
 
     def test_5_2_existing_external_id_resolves_person(self) -> None:
         """Test 5.2: Existing external identifier resolves person ID."""
@@ -722,10 +722,10 @@ class TestExternalIdentifiers(BasePersonUploadTestCase):
             [True],  # Person exists
             [existing_person],  # Existing persons
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_skipped=2)
-        self.assertEqual(retval.persons[0].id, existing_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=2)
+        self.assertEqual(batch_result.persons[0].id, existing_person_id)
 
     def test_5_3_new_external_id_created_on_upload(self) -> None:
         """Test 5.3: New external identifier created on upload."""
@@ -750,12 +750,12 @@ class TestExternalIdentifiers(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_person_id],  # Create persons returned IDs
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=2)
-        self.assertEqual(retval.persons[0].id, created_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
         self.assertEqual(
-            retval.persons[0].external_identifiers[0].id,  # type: ignore[index]
+            batch_result.persons[0].external_identifiers[0].id,  # type: ignore[index]
             created_external_identifier_id,
         )
 
@@ -775,11 +775,11 @@ class TestOnExistsActions(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
         ]
-        retval = self.upload_batch(
+        batch_result = self.upload_batch(
             person_for_upload, on_exists=OnExistsUploadAction.ERROR
         )
-        self.assertBatchFailed(retval)
-        self.assertStatusCount(retval, n_failed=1)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
 
     def test_6_2_on_exists_skip_with_existing_person_skips(self) -> None:
         """Test 6.2: on_exists=SKIP with existing person - should skip."""
@@ -787,11 +787,11 @@ class TestOnExistsActions(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
         ]
-        retval = self.upload_batch(
+        batch_result = self.upload_batch(
             person_for_upload, on_exists=OnExistsUploadAction.SKIP
         )
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_skipped=1)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
 
     def test_6_3_on_exists_update_with_existing_person_updates(self) -> None:
         """Test 6.3: on_exists=UPDATE with existing person - should update."""
@@ -809,11 +809,11 @@ class TestOnExistsActions(BasePersonUploadTestCase):
             [existing_person],  # READ_SOME: retrieve existing person for comparison
             [self.person_id],  # UPDATE_SOME: update returns ID
         ]
-        retval = self.upload_batch(
+        batch_result = self.upload_batch(
             person_for_upload, on_exists=OnExistsUploadAction.UPDATE
         )
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_updated=1)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_updated=1)
 
 
 # ---------------------------------------------------------------------------
@@ -835,11 +835,11 @@ class TestParametrizedBatchSizes(BasePersonUploadTestCase):
                 self.service.repository.crud.side_effect = [
                     created_ids,  # Create persons returned IDs
                 ]
-                retval = self.upload_batch(persons)
-                self.assertBatchProcessed(retval)
-                self.assertStatusCount(retval, n_created=n_persons)
+                batch_result = self.upload_batch(persons)
+                self.assertBatchProcessed(batch_result)
+                self.assertStatusCount(batch_result, n_created=n_persons)
                 for i, created_id in enumerate(created_ids):
-                    self.assertEqual(retval.persons[i].id, created_id)
+                    self.assertEqual(batch_result.persons[i].id, created_id)
 
     def test_7_person_with_n_measurements(self) -> None:
         """Test 7: Upload person with varying number of measurements."""
@@ -862,9 +862,9 @@ class TestParametrizedBatchSizes(BasePersonUploadTestCase):
                         created_measurement_ids
                     )  # Create measurements returned IDs
                 self.service.repository.crud.side_effect = side_effects
-                retval = self.upload_batch(person_for_upload)
-                self.assertBatchProcessed(retval)
-                self.assertStatusCount(retval, n_created=1 + n_children)
+                batch_result = self.upload_batch(person_for_upload)
+                self.assertBatchProcessed(batch_result)
+                self.assertStatusCount(batch_result, n_created=1 + n_children)
 
 
 # ---------------------------------------------------------------------------
@@ -915,10 +915,10 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
             [created_specimen_id],  # Create specimen
             [created_measurement_relation_id],  # Create measurement relation
         ]
-        retval = self.upload_batch(person_for_upload)
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=6)
-        self.assertEqual(retval.persons[0].id, created_person_id)
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=6)
+        self.assertEqual(batch_result.persons[0].id, created_person_id)
 
     def test_multiple_persons_mixed_child_types(self) -> None:
         """Test batch with multiple persons having different child type combinations."""
@@ -948,6 +948,6 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
             [created_specimen_id],  # Create specimens
             [created_measurement_relation_id],  # Create measurement relations
         ]
-        retval = self.upload_batch([person1, person2, person3])
-        self.assertBatchProcessed(retval)
-        self.assertStatusCount(retval, n_created=7)
+        batch_result = self.upload_batch([person1, person2, person3])
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=7)

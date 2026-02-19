@@ -51,7 +51,7 @@ class SampleBatchUploader(BatchUploader):
     def verify_batch(
         self,
         cmd: command.UploadSamplesCommand,
-        retval: model.SampleBatchUploadResult,
+        batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -59,19 +59,19 @@ class SampleBatchUploader(BatchUploader):
         """
         success = True
 
-        success &= self.verify_external_identifiers(cmd, retval, uow)
-        success &= self.verify_parents(cmd, retval, uow)
+        success &= self.verify_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_parents(cmd, batch_result, uow)
         # Verify existence and consistency of child models as needed
-        success &= _verify_sample_children(self, cmd, retval, uow)
+        success &= _verify_sample_children(self, cmd, batch_result, uow)
         # Verify reference data
-        success &= _verify_sample_refdata(self, cmd, retval, uow)
+        success &= _verify_sample_refdata(self, cmd, batch_result, uow)
 
         return success
 
     def upsert_batch(
         self,
         cmd: command.UploadSamplesCommand,
-        retval: model.SampleBatchUploadResult,
+        batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -80,15 +80,15 @@ class SampleBatchUploader(BatchUploader):
         success = True
 
         # Add any new reference data
-        success &= _create_sample_refdata(self, cmd, retval, uow)
+        success &= _create_sample_refdata(self, cmd, batch_result, uow)
         # Upsert sample data
-        success &= self.create_parents(cmd, retval, uow)
-        success &= self.update_parents(cmd, retval, uow)
+        success &= self.create_parents(cmd, batch_result, uow)
+        success &= self.update_parents(cmd, batch_result, uow)
         # Upsert child models
-        success &= self.create_children(cmd, retval, uow)
-        success &= self.update_children(cmd, retval, uow)
+        success &= self.create_children(cmd, batch_result, uow)
+        success &= self.update_children(cmd, batch_result, uow)
         # Create external identifiers
-        success &= self.create_external_identifiers(cmd, retval, uow)
+        success &= self.create_external_identifiers(cmd, batch_result, uow)
 
         return success
 
@@ -101,5 +101,7 @@ def seq_service_upload_samples(
     See command.UploadSamplesCommand for details.
     """
     sample_batch_uploader = SampleBatchUploader(self)
-    retval: model.SampleBatchUploadResult = sample_batch_uploader.upload_batch(cmd)
-    return retval
+    batch_result: model.SampleBatchUploadResult = sample_batch_uploader.upload_batch(
+        cmd
+    )
+    return batch_result

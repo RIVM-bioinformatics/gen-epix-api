@@ -96,19 +96,19 @@ class BatchUploader:
         return self.get_batch_for_upload(cmd).get_parents_for_upload()
 
     def get_parent_results(
-        self, retval: BaseBatchUploadResult
+        self, batch_result: BaseBatchUploadResult
     ) -> list[model.ParentUploadResult]:
         """Get parent upload results from the batch upload result."""
-        return retval.get_parent_results()
+        return batch_result.get_parent_results()
 
     def parent_result_items(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
     ) -> Generator[tuple[model.ParentForUpload, model.ParentUploadResult], None, None]:
         """Get (parent, parent_result) items from the batch upload result."""
         parents = cmd.get_batch_for_upload().get_parents_for_upload()
-        parent_results = retval.get_parent_results()
+        parent_results = batch_result.get_parent_results()
         for parent, parent_result in zip(parents, parent_results):
             yield parent, parent_result
 
@@ -128,79 +128,79 @@ class BatchUploader:
         self.verify_user_rights(cmd)
 
         # Initialize the upload result
-        retval = self.init_batch_upload_result(cmd)
-        retval.add_info(
+        batch_result = self.init_batch_upload_result(cmd)
+        batch_result.add_info(
             code="f1e2d3c4",
             message="Upload started",
         )
 
         with self.service.repository.uow() as uow:
             # Verify batch
-            retval.add_info(
+            batch_result.add_info(
                 code="8b4c2f91",
                 message="Verification started",
             )
-            success = self.verify_batch(cmd, retval, uow)
-            retval.add_info(
+            success = self.verify_batch(cmd, batch_result, uow)
+            batch_result.add_info(
                 code="a3f7e9d2",
                 message="Verification ended",
             )
             if cmd.verify_only:
                 # Stop here if only verification was requested
-                retval.add_info(
+                batch_result.add_info(
                     code="c849b0e2",
                     message="Verification only requested, upload will not proceed",
                 )
-                return retval
+                return batch_result
             if not success:
                 # Do not proceed with upsert due to errors
-                retval.add_error(
+                batch_result.add_error(
                     code="d6e5c3b4",
                     message="Verification found errors, upload will not proceed",
                 )
-                return retval
+                return batch_result
 
             # Upsert the batch data
-            retval.add_info(
+            batch_result.add_info(
                 code="c1a2b3d4",
                 message="Upsert started",
             )
-            success = self.upsert_batch(cmd, retval, uow)
-            retval.add_info(
+            success = self.upsert_batch(cmd, batch_result, uow)
+            batch_result.add_info(
                 code="e4f5a6b7",
                 message="Upsert ended",
             )
             if not success:
-                # Rollback due to errors, but do not raise an exception since those will be reported in retval
-                retval.add_error(
+                # Rollback due to errors, but do not raise an exception since those will be reported in batch_result
+                batch_result.add_error(
                     code="f8e7d6c5",
                     message="Upload had errors",
                 )
                 uow.rollback()
-                retval.add_info(
+                batch_result.add_info(
                     code="7729440d",
                     message="Upload had errors, changes have been rolled back",
                 )
-        retval.add_info(
+        batch_result.add_info(
             code="7b9e4a2f",
             message="Upload ended",
         )
 
         # Assign final status
-        if retval.status == UploadStatus.PENDING:
-            status_count = retval.get_status_count(include_self=False)
+        if batch_result.status == UploadStatus.PENDING:
+            status_count = batch_result.get_status_count(include_self=False)
             n_results = sum(status_count.values())
             if status_count[UploadStatus.SKIPPED] == n_results:
-                retval.status = UploadStatus.SKIPPED
+                batch_result.status = UploadStatus.SKIPPED
             elif status_count[UploadStatus.CREATED] == n_results:
-                retval.status = UploadStatus.CREATED
+                batch_result.status = UploadStatus.CREATED
             elif status_count[UploadStatus.UPDATED] == n_results:
-                retval.status = UploadStatus.UPDATED
+                batch_result.status = UploadStatus.UPDATED
             else:
                 # Mixed results, use status processed
-                retval.status = UploadStatus.PROCESSED
+                batch_result.status = UploadStatus.PROCESSED
 
-        return retval
+        return batch_result
 
     def verify_user_rights(self, cmd: command.UploadBatchCommandMixin) -> None:
         """
@@ -249,17 +249,17 @@ class BatchUploader:
 
         # Initialize batch result
         kwargs = {self.batch_parents_for_upload_field_name: parent_results}
-        retval = self.batch_upload_result_class(
+        batch_result = self.batch_upload_result_class(
             batch_id=cmd.id,
             status=UploadStatus.PENDING,
             **kwargs,  # type: ignore[arg-type]
         )
-        return retval
+        return batch_result
 
     def verify_batch(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -267,17 +267,17 @@ class BatchUploader:
         """
         success = True
         # Verify external identifiers first to fill in any missing parent IDs
-        success &= self.verify_external_identifiers(cmd, retval, uow)
-        success &= self.verify_parents(cmd, retval, uow)
-        success &= self.verify_children(cmd, retval, uow)
+        success &= self.verify_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_parents(cmd, batch_result, uow)
+        success &= self.verify_children(cmd, batch_result, uow)
         # Verify reference data last since it may depend on parent and children verification
-        success &= self.verify_refdata(cmd, retval, uow)
+        success &= self.verify_refdata(cmd, batch_result, uow)
         return success
 
     def upsert_batch(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -285,23 +285,23 @@ class BatchUploader:
         """
         success = True
         # Create refdata before parents and children to ensure all references exist
-        success &= self.create_refdata(cmd, retval, uow)
+        success &= self.create_refdata(cmd, batch_result, uow)
         # Create and update parents before children to ensure parents exist
-        success &= self.create_parents(cmd, retval, uow)
-        success &= self.update_parents(cmd, retval, uow)
-        success &= self.create_children(cmd, retval, uow)
-        success &= self.update_children(cmd, retval, uow)
+        success &= self.create_parents(cmd, batch_result, uow)
+        success &= self.update_parents(cmd, batch_result, uow)
+        success &= self.create_children(cmd, batch_result, uow)
+        success &= self.update_children(cmd, batch_result, uow)
         # Create external identifiers last to preserve atomicity without two-phase
         # commit: if there were any errors after this and a rollback is therefore
         # needed, the external identifiers could otherwise have already been changed
         # in the meantime
-        success &= self.create_external_identifiers(cmd, retval, uow)
+        success &= self.create_external_identifiers(cmd, batch_result, uow)
         return success
 
     def verify_external_identifiers(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Retrieve and verify identifier issuers in external IDs"""
@@ -311,7 +311,7 @@ class BatchUploader:
         # Retrieve and verify identifier issuers in external IDs provided by ID
         success &= self.verify_link_id(
             cmd,
-            retval,
+            batch_result,
             uow,
             self.external_identifiers_field_name,
             "identifier_issuer_id",
@@ -376,7 +376,9 @@ class BatchUploader:
         }
 
         # Verify external IDs for each parent
-        for parent_for_upload, parent_result in self.parent_result_items(cmd, retval):
+        for parent_for_upload, parent_result in self.parent_result_items(
+            cmd, batch_result
+        ):
             external_identifiers: list[model.ExternalIdentifier] = (
                 getattr(parent_for_upload, self.external_identifiers_field_name) or []
             )
@@ -425,7 +427,7 @@ class BatchUploader:
     def verify_parents(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Check parent model existence when ID is given"""
@@ -460,7 +462,7 @@ class BatchUploader:
             already_existing_new_parent_ids = new_parent_ids.intersection(
                 existing_parent_ids
             )
-            for parent, parent_result in self.parent_result_items(cmd, retval):
+            for parent, parent_result in self.parent_result_items(cmd, batch_result):
                 parent_id = parent.id
                 if parent_id == NULL_ID:
                     parent_id = None
@@ -506,7 +508,7 @@ class BatchUploader:
     def verify_children(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """Check child model existence and consistency"""
@@ -566,7 +568,7 @@ class BatchUploader:
                 already_existing_new_child_ids = set()
 
             # Process all children (both with and without IDs)
-            for parent, parent_result in self.parent_result_items(cmd, retval):
+            for parent, parent_result in self.parent_result_items(cmd, batch_result):
                 children: list[model.Model] = getattr(parent, children_field_name) or []
                 child_results: list[UploadResult] = (
                     getattr(parent_result, children_field_name) or []
@@ -656,7 +658,7 @@ class BatchUploader:
     def verify_refdata(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
     ) -> bool:
         """
@@ -669,7 +671,7 @@ class BatchUploader:
     def verify_link_id(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: fastapp.BaseUnitOfWork,
         child_field_name_or_class: str | type[model.Model],
         link_id_field_name: str,
@@ -766,7 +768,7 @@ class BatchUploader:
             }
 
         # Verify links
-        for parent, parent_result in self.parent_result_items(cmd, retval):
+        for parent, parent_result in self.parent_result_items(cmd, batch_result):
             children: list[model.Model] = getattr(parent, child_field_name) or []
             child_results: list[UploadResult] = (
                 getattr(parent_result, child_field_name) or []
@@ -851,7 +853,7 @@ class BatchUploader:
     def create_parents(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -865,7 +867,7 @@ class BatchUploader:
             tuple[model.ParentForUpload, model.Model, model.UploadResult]
         ] = [  # type: ignore[assignment]
             (x, x.get_parent(), y)
-            for x, y in self.parent_result_items(cmd, retval)
+            for x, y in self.parent_result_items(cmd, batch_result)
             if (x.id is None or x.id == NULL_ID or x.is_new_id)
             and y.status == UploadStatus.PENDING
             and x.get_parent() is not None
@@ -892,7 +894,7 @@ class BatchUploader:
     def update_parents(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -906,7 +908,7 @@ class BatchUploader:
             tuple[model.ParentForUpload, model.Model, model.UploadResult]
         ] = [
             (x, x.get_parent(), y)  # type: ignore[arg-type]
-            for x, y in self.parent_result_items(cmd, retval)
+            for x, y in self.parent_result_items(cmd, batch_result)
             if x.id is not None
             and x.id != NULL_ID
             and not x.is_new_id
@@ -935,7 +937,7 @@ class BatchUploader:
     def create_children(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -953,7 +955,7 @@ class BatchUploader:
             for_upload_model_class = self.child_for_upload_class_map[model_class]
             # Determine which objects need to be created
             to_create_child_result_pairs = []
-            for parent, parent_result in self.parent_result_items(cmd, retval):
+            for parent, parent_result in self.parent_result_items(cmd, batch_result):
                 children: list[model.Model] | None = getattr(
                     parent, children_field_name
                 )
@@ -990,7 +992,7 @@ class BatchUploader:
     def update_children(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -1007,7 +1009,7 @@ class BatchUploader:
             ]
             # Determine which children need to be updated
             to_update_child_result_pairs = []
-            for parent, parent_result in self.parent_result_items(cmd, retval):
+            for parent, parent_result in self.parent_result_items(cmd, batch_result):
                 children: list[model.Model] | None = getattr(
                     parent, children_field_name
                 )
@@ -1037,7 +1039,7 @@ class BatchUploader:
     def create_external_identifiers(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         assert isinstance(cmd, command.Command)
@@ -1047,7 +1049,7 @@ class BatchUploader:
         to_create_external_identifier_result_pairs: list[
             tuple[model.ExternalIdentifier, model.UploadResult]
         ] = []
-        for parent, parent_result in self.parent_result_items(cmd, retval):
+        for parent, parent_result in self.parent_result_items(cmd, batch_result):
             external_identifiers_for_upload: list[model.ExternalIdentifierForUpload] = (
                 getattr(parent, self.external_identifiers_field_name) or []
             )
@@ -1104,7 +1106,7 @@ class BatchUploader:
     def create_refdata(
         self,
         cmd: command.UploadBatchCommandMixin,
-        retval: BaseBatchUploadResult,
+        batch_result: BaseBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """

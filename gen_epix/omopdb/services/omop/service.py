@@ -1,6 +1,6 @@
 from gen_epix.omopdb.domain import command, model
 from gen_epix.omopdb.services.omop.base import BaseOmopService
-from gen_epix.omopdb.services.omop.upload_person import omop_service_upload_persons
+from gen_epix.omopdb.services.omop.upload import omop_service_upload_persons
 
 
 class OmopService(BaseOmopService):

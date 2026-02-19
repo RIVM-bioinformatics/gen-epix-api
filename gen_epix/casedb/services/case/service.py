@@ -87,7 +87,7 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_stats,
 )
-from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
+from gen_epix.casedb.services.case.upload import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
