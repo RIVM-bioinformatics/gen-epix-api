@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from itertools import product
 
 import pytest
 
@@ -44,57 +45,116 @@ class EdgeCaseSpec:
         )
 
 
-# Declarative edge case table. Each entry fully specifies one user's org membership,
-# the org-level policies for their org, user-level policies for this specific user,
-# and the resulting expected case type access.
+# ---------------------------------------------------------------------------
+# Edge case generation
+# ---------------------------------------------------------------------------
+# EDGE_CASES is generated as the Cartesian product of ORG_POLICY_COMBOS ×
+# USER_POLICY_COMBOS. Each org-policy combination gets its own org (shared by
+# all users with that org-level policy). Each user-policy combination produces
+# one user within that org.
 #
-# To add a new edge case: append an EdgeCaseSpec here. Both fixtures will automatically
-# create the necessary users, orgs, and policies.
-#
-# To generate cases programmatically, replace this list with a Cartesian product over
-# ORG_POLICY_COMBOS × USER_POLICY_COMBOS using itertools.product.
+# To add a new dimension: extend one of the combo lists below. Both fixtures
+# and the parametrized test will pick it up automatically.
+
+# Each entry is the list of case type sets granted at org level for one org.
+_ORG_POLICY_COMBOS: list[list[str]] = [
+    ["case_type_set1"],  # org has access to case_type_set1
+    [],  # org has no access
+]
+
+# Each entry is the list of case type sets granted directly to one user.
+_USER_POLICY_COMBOS: list[list[str]] = [
+    [],  # no user-level policy
+    ["case_type_set1"],  # user policy on the same set as the org policy
+    ["case_type_set2"],  # user policy on a different set
+]
+
+
+def _compute_expected_case_types(org_policy_sets: list[str]) -> list[str]:
+    """For reference data access, only org-level policies determine access.
+    User policies are intentionally ignored — tests verify this explicitly."""
+    return [s.replace("_set", "_") for s in org_policy_sets]
+
+
+def _generate_label(org_policy_sets: list[str], user_policy_sets: list[str]) -> str:
+    has_org = bool(org_policy_sets)
+    has_usr = bool(user_policy_sets)
+    if not has_org and not has_usr:
+        return "no policies at all — should have no access to any case types"
+    if not has_org:
+        return "user policy only, no org policy — case types are shared at org level so user policy must not grant access"
+    if not has_usr:
+        return "org policy only — should access org-shared case types, nothing more"
+    if set(org_policy_sets) == set(user_policy_sets):
+        return "org + user policy on the same set — overlap must not cause issues, org access preserved"
+    return "org + user policy on different sets — user policy must not grant access beyond the org policy"
+
+
+# The key semantic is: an org-level policy applies to every user in that org.
+# Sharing an org between multiple users within the same _ORG_POLICY_COMBOS entry
+# is what lets you test the cross-user dimension:
 EDGE_CASES: list[EdgeCaseSpec] = [
     EdgeCaseSpec(
-        user_name="org_user1_1",
-        org_name="org1",
-        label="org policy only — should access org-shared case types, nothing more",
-        org_policy_sets=["case_type_set1"],
-        user_policy_sets=[],
-        expected_case_types=["case_type_1"],
-    ),
-    EdgeCaseSpec(
-        user_name="org_user1_2",
-        org_name="org1",
-        label="org + user policy on different sets — user policy must not grant access beyond the org policy",
-        org_policy_sets=["case_type_set1"],
-        user_policy_sets=["case_type_set2"],
-        expected_case_types=["case_type_1"],
-    ),
-    EdgeCaseSpec(
-        user_name="org_user1_3",
-        org_name="org1",
-        label="org + user policy on the same set — overlap must not cause issues, org access preserved",
-        org_policy_sets=["case_type_set1"],
-        user_policy_sets=["case_type_set1"],
-        expected_case_types=["case_type_1"],
-    ),
-    EdgeCaseSpec(
-        user_name="org_user2_1",
-        org_name="org2",
-        label="no policies at all — should have no access to any case types",
-        org_policy_sets=[],
-        user_policy_sets=[],
-        expected_case_types=[],
-    ),
-    EdgeCaseSpec(
-        user_name="org_user2_2",
-        org_name="org2",
-        label="user policy only, no org policy — case types are shared at org level so user policy must not grant access",
-        org_policy_sets=[],
-        user_policy_sets=["case_type_set1"],
-        expected_case_types=[],
-    ),
+        user_name=f"org_user{org_idx + 1}_{usr_idx + 1}",
+        org_name=f"org{org_idx + 1}",
+        label=_generate_label(org_policies, user_policies),
+        org_policy_sets=org_policies,
+        user_policy_sets=user_policies,
+        expected_case_types=_compute_expected_case_types(org_policies),
+    )
+    for (org_idx, org_policies), (usr_idx, user_policies) in product(
+        enumerate(_ORG_POLICY_COMBOS), enumerate(_USER_POLICY_COMBOS)
+    )
 ]
+
+
+# Hardcoded edge cases — kept as the reference for the current test suite.
+# Compare with EDGE_CASES above to verify the generation logic
+# produces the same combinations before switching over.
+# Also we keep these as exampels of manually specifying edge cases for clarity and ease of debugging, and to allow for custom labels and expected results if needed in the future.
+# EDGE_CASES: list[EdgeCaseSpec] = [
+#     EdgeCaseSpec(
+#         user_name="org_user1_1",
+#         org_name="org1",
+#         label="org policy only — should access org-shared case types, nothing more",
+#         org_policy_sets=["case_type_set1"],
+#         user_policy_sets=[],
+#         expected_case_types=["case_type_1"],
+#     ),
+#     EdgeCaseSpec(
+#         user_name="org_user1_2",
+#         org_name="org1",
+#         label="org + user policy on different sets — user policy must not grant access beyond the org policy",
+#         org_policy_sets=["case_type_set1"],
+#         user_policy_sets=["case_type_set2"],
+#         expected_case_types=["case_type_1"],
+#     ),
+#     EdgeCaseSpec(
+#         user_name="org_user1_3",
+#         org_name="org1",
+#         label="org + user policy on the same set — overlap must not cause issues, org access preserved",
+#         org_policy_sets=["case_type_set1"],
+#         user_policy_sets=["case_type_set1"],
+#         expected_case_types=["case_type_1"],
+#     ),
+#     EdgeCaseSpec(
+#         user_name="org_user2_1",
+#         org_name="org2",
+#         label="no policies at all — should have no access to any case types",
+#         org_policy_sets=[],
+#         user_policy_sets=[],
+#         expected_case_types=[],
+#     ),
+#     EdgeCaseSpec(
+#         user_name="org_user2_2",
+#         org_name="org2",
+#         label="user policy only, no org policy — case types are shared at org level so user policy must not grant access",
+#         org_policy_sets=[],
+#         user_policy_sets=["case_type_set1"],
+#         expected_case_types=[],
+#     ),
+# ]
+
 
 # Lookup by user_name for use in tests:
 #   EDGE_CASE_BY_USER["org_user1_2"].expected_case_types

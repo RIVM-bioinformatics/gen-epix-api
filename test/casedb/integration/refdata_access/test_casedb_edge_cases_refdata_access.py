@@ -2,6 +2,7 @@ import logging
 
 import pytest
 
+from rich import print as rich_print
 from gen_epix.casedb.domain import enum, model
 from gen_epix.casedb.domain.command import CaseTypeCrudCommand
 from gen_epix.commondb.domain.enum import AppType
@@ -9,7 +10,11 @@ from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.conftest import EDGE_CASES, EdgeCaseSpec
+
+from test.casedb.integration.conftest import (
+    EDGE_CASES,
+    EdgeCaseSpec,
+)
 from test.casedb.integration.refdata_access.base_empty import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -96,6 +101,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
           Missing access:    ∅
           Unexpected access: ['case_type_2']
         """
+
+        rich_print(EDGE_CASES)  # Debug print to verify the test cases being run
+
         user = self.get_user(spec.user_name)
 
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
