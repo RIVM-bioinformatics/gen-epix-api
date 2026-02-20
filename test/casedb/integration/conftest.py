@@ -160,23 +160,24 @@ def setup_case_type_data(
     # case_type_1 is the primary case type shared via org policies.
     # case_type_2 tests that access to case_type_1 does not imply access to case_type_2
     # (no over-permissioning) and is used for user policy access tests.
-    case_type_1 = env.create_case_type(
-        root_user, "case_type_1", "disease_1", "etiological_agent_1"
-    )
-    assert case_type_1 is not None
-
-    case_type_2 = env.create_case_type(
-        root_user, "case_type_2", "disease_1", "etiological_agent_1"
-    )
-
     env.create_case_type_set_category(root_user, "category_1", 0)
 
-    env.create_case_type_set(
-        root_user, "case_type_set1", [case_type_1.id], "category_1"
-    )
-    env.create_case_type_set(
-        root_user, "case_type_set2", [case_type_2.id], "category_1"
-    )
+    # Derive case types and case type sets from EDGE_CASES rather than hardcoding them.
+    # Assumption: each case type set contains exactly one case type.
+    # Naming convention: case_type_set{N} → case_type_{N} (replace "_set" with "_").
+    # All case types share the same disease and etiological agent for now.
+    all_ct_set_names = {
+        ct_set_name
+        for spec in EDGE_CASES
+        for ct_set_name in spec.org_policy_sets + spec.user_policy_sets
+    }
+    for ct_set_name in all_ct_set_names:
+        ct_name = ct_set_name.replace("_set", "_")
+        case_type = env.create_case_type(
+            root_user, ct_name, "disease_1", "etiological_agent_1"
+        )
+        assert case_type is not None, f"Failed to create case type '{ct_name}'"
+        env.create_case_type_set(root_user, ct_set_name, [case_type.id], "category_1")
 
     env.create_data_collection(root_user, "data_collection1")
 
