@@ -462,7 +462,7 @@ class SeqdbTestClient(TestClient):
             command.SampleCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Sample(  # type: ignore[arg-type]
+                objs=model.Sample(  # type: ignore[call-arg]
                     code=code,
                     props=props,
                     created_in_data_collection_id=created_in_data_collection_id,
@@ -524,7 +524,7 @@ class SeqdbTestClient(TestClient):
         if isinstance(file_format, Enum) and not isinstance(
             file_format, enum.ReadsFileFormat
         ):
-            file_format = enum.ReadsFileFormat(file_format.value)
+            file_format = enum.ReadsFileFormat(file_format.value)  # type: ignore[assignment]
         fwd_reads_hash: UUID | None
         if isinstance(fwd_reads_hash, str):
             fwd_reads_hash = UUID(fwd_reads_hash)
@@ -535,7 +535,7 @@ class SeqdbTestClient(TestClient):
             command.ReadSetCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.ReadSet(
+                objs=model.ReadSet(  # type: ignore[call-arg]
                     sample_id=sample_id,
                     sequencing_protocol_id=sequencing_protocol_id,
                     fwd_uri=fwd_uri,
@@ -558,7 +558,7 @@ class SeqdbTestClient(TestClient):
         assert read_set.rev_file_id == rev_file_id
         assert read_set.fwd_uri == fwd_uri
         assert read_set.rev_uri == rev_uri
-        return self._set_obj(read_set)
+        return self._set_obj(read_set)  # type: ignore[return-value]
 
     def create_seq(
         self,
@@ -588,7 +588,7 @@ class SeqdbTestClient(TestClient):
             command.SeqCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Seq(
+                objs=model.Seq(  # type: ignore[call-arg]
                     sample_id=sample_id,
                     read_set_id=read_set_id,
                     read_set2_id=read_set2_id,
@@ -611,7 +611,6 @@ class SeqdbTestClient(TestClient):
         **kwargs: Any,
     ) -> model.Model:
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
-        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         crud_command_class = self.app.domain.get_crud_command_for_model(protocol_class)
         protocol = self.app.handle(
             crud_command_class(
@@ -620,7 +619,7 @@ class SeqdbTestClient(TestClient):
                 objs=protocol_class(code=code, name=name if name else code, **kwargs),  # type: ignore
             )
         )
-        return self._set_obj(protocol)  # type: ignore[return-value]
+        return self._set_obj(protocol)
 
     def _get_obj_id(
         self,
@@ -640,7 +639,7 @@ class SeqdbTestClient(TestClient):
                 )
             obj_id = (  # type: ignore[union-attr]
                 self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
-            ).id  # type: ignore[assignment]
+            ).id
         return obj_id
 
     @staticmethod
@@ -724,19 +723,22 @@ class SeqdbTestClient(TestClient):
                     * settings.locus_length
                 ]
                 if set(allele_seq) != {"-"}:
+                    # Define a 'clean' seq to prevent two seq entries in alleles producing same hash-based id but with same id
+                    clean_allele_seq = "".join(x for x in allele_seq if x != "-")
                     if (
-                        allele_seq in alleles  # type: ignore[comparison-overlap]
-                        and alleles[allele_seq].locus_id != locus_id  # type: ignore[index]
+                        clean_allele_seq in alleles
+                        and alleles[clean_allele_seq].locus_id != locus_id
                     ):
                         raise AssertionError(
                             "Allele sequence already exists for a different locus"
                         )
-                    alleles[allele_seq] = model.AlleleForUpload(  # type: ignore[index]
-                        seq="".join(x for x in allele_seq if x != "-"),
-                        seq_format=enum.SeqFormat.STR_DNA,
-                        locus_id=locus_id,
-                    )
-                    allele_ids[locus_idx] = alleles[allele_seq].id  # type: ignore[assignment,index]
+                    if clean_allele_seq not in alleles:
+                        alleles[clean_allele_seq] = model.AlleleForUpload(
+                            seq=clean_allele_seq,
+                            seq_format=enum.SeqFormat.STR_DNA,
+                            locus_id=locus_id,
+                        )
+                    allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
             allele_profile_for_upload = model.AlleleProfileForUpload(
                 locus_set_id=locus_set_id,
                 locus_detection_protocol_id=locus_detection_protocol_id,
