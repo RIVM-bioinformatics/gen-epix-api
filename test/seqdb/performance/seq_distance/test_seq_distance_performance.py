@@ -1,17 +1,6 @@
 import logging
 import pickle
 from pathlib import Path
-from test.seqdb.performance.create_demo_seq_distances import (
-    create_seq_distance_database,
-)
-from test.seqdb.performance.seq_distance.base import (
-    DEV_REPOSITORY_CONFIG,
-    ENTITIES,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from time import perf_counter
 from uuid import UUID
 
@@ -26,6 +15,17 @@ from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
+from test.seqdb.performance.create_demo_seq_distances import (
+    create_seq_distance_database,
+)
+from test.seqdb.performance.seq_distance.base import (
+    DEV_REPOSITORY_CONFIG,
+    ENTITIES,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
+from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -200,6 +200,7 @@ class BaseSeqDistancePerformance:
         print("Demo data for 100, 200, 500 created and persisted")
 
 
+@pytest.mark.scenario_ids("TC-PERF-10-01")
 class TestSeqDistancePerformance(BaseSeqDistancePerformance):
 
     dict_repositories: list[TestRepositoryPerformance] = []

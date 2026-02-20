@@ -16,7 +16,7 @@ from test.seqdb.integration.sample_batch_uploader.base import (
     TEST_TYPE,
     VERBOSE,
 )
-from test.seqdb.integration.sample_batch_uploader.create_demo_data import (
+from test.seqdb.integration.sample_batch_uploader.generate_demo_seqdb_models import (
     generate_demo_seqdb_models,
 )
 from test.seqdb.performance.seq_distance.test_seq_distance_performance import (
@@ -98,6 +98,7 @@ def _build_upload_command(
     )
 
 
+@pytest.mark.scenario_ids("TC-PERF-10-01")
 class TestSampleBatchUploader:
 
     dbs: list[dict[type, dict[UUID, Any]]]

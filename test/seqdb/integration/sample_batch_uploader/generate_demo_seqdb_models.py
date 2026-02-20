@@ -11,16 +11,19 @@ def generate_demo_seqdb_models(
     n_loci: int, n_to_create: int
 ) -> dict[type, dict[UUID, Any]]:
 
-    db: dict[type, dict[UUID, Any]] = {}
-    db[model.LocusDetectionProtocol] = {}
-    db[model.AssemblyProtocol] = {}
-    db[model.Locus] = {}
-    db[model.LocusSet] = {}
-    db[model.LocusCodeMap] = {}
-    db[model.SeqDistanceProtocol] = {}
-    db[model.AlleleProfile] = {}
-    db[model.SeqDistance] = {}
-    db[model.Sample] = {}
+    model_types = [
+        model.LocusDetectionProtocol,
+        model.AssemblyProtocol,
+        model.Locus,
+        model.LocusSet,
+        model.LocusCodeMap,
+        model.SeqDistanceProtocol,
+        model.AlleleProfile,
+        model.SeqDistance,
+        model.Sample,
+    ]
+
+    db: dict[type, dict[UUID, Any]] = {x: {} for x in model_types}
 
     for i in range(1, n_to_create + 1):
 
@@ -98,22 +101,26 @@ def generate_demo_seqdb_models(
             )
         )
 
-        seq_distance1 = model.SeqDistance(  # type: ignore[call-arg]
-            seq_distance_protocol_id=seq_distance_protocol.id,
-            profile_id=allele_profile.id,
+        seq_distance = model.SeqDistance(  # type: ignore[call-arg]
+            seq_distance_protocol_id=seq_distance_protocol.id,  # type: ignore[arg-type]
+            profile_id=allele_profile.id,  # type: ignore[arg-type]
             distance_format=enum.SeqDistanceFormat.PROFILE_DISTANCE_MAP,
             distances="{}",
             sample_id=allele_profile.sample_id,
         )
 
-        db[model.LocusDetectionProtocol].update({locus_detection_protocol.id: locus_detection_protocol})  # type: ignore[dict-item]
-        db[model.AssemblyProtocol].update({assembly_protocol.id: assembly_protocol})  # type: ignore[dict-item]
-        db[model.Locus].update({locus.id: locus for locus in loci if locus.id is not None})
-        db[model.LocusSet].update({locus_set.id: locus_set})  # type: ignore[dict-item]
-        db[model.LocusCodeMap].update({locus_code_map.id: locus_code_map})  # type: ignore[dict-item]
-        db[model.SeqDistanceProtocol].update({seq_distance_protocol.id: seq_distance_protocol})  # type: ignore[dict-item]
-        db[model.AlleleProfile].update({allele_profile.id: allele_profile})  # type: ignore[dict-item]
-        db[model.SeqDistance].update({seq_distance1.id: seq_distance1})  # type: ignore[dict-item]
-        db[model.Sample].update({sample.id: sample})  # type: ignore[dict-item]
+        new_objects: list[Any] = [
+            locus_detection_protocol,
+            assembly_protocol,
+            *loci,
+            locus_set,
+            locus_code_map,
+            seq_distance_protocol,
+            allele_profile,
+            seq_distance,
+            sample,
+        ]
+        for obj in new_objects:
+            db[type(obj)][obj.id] = obj
 
     return db

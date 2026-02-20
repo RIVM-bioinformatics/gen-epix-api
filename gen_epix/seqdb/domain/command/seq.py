@@ -42,6 +42,34 @@ class UploadSamplesCommand(Command, UploadBatchCommandMixin):
     )
 
 
+class CalculateSeqDistancesForNewProfilesCommand(Command):
+    """
+    Calculate sequence distances between the given new profiles and all existing
+    profiles based on the given sequence distance protocol, and store the calculated
+    distances in the database. This command is intended to be used after new profiles
+    have been added to the database, in order to calculate and store the distances
+    between the new profiles and all existing profiles for later retrieval (e.g. for
+    similarity search).
+    """
+
+    allele_profiles: list[model.AlleleProfile] | None = Field(
+        default=None,
+        description="List of new allele profiles to calculate distances for.",
+    )
+    snp_profiles: list[model.SnpProfile] | None = Field(
+        default=None,
+        description="List of new SNP profiles to calculate distances for.",
+    )
+    mlva_profiles: list[model.MlvaProfile] | None = Field(
+        default=None,
+        description="List of new MLVA profiles to calculate distances for.",
+    )
+    kmer_profiles: list[model.KmerProfile] | None = Field(
+        default=None,
+        description="List of new k-mer profiles to calculate distances for.",
+    )
+
+
 class GenerateMultipleAlignmentCommand(Command):
     pass
 
@@ -125,33 +153,6 @@ class RetrieveSimilarProfilesCommand(Command):
     )
     max_distance: float = Field(
         description="Maximum distance threshold for considering profiles as similar.",
-    )
-
-class CalculateSeqDistancesForNewProfilesCommand(Command):
-    """
-    Calculate sequence distances between the given new profiles and all existing
-    profiles based on the given sequence distance protocol, and store the calculated
-    distances in the database. This command is intended to be used after new profiles
-    have been added to the database, in order to calculate and store the distances
-    between the new profiles and all existing profiles for later retrieval (e.g. for
-    similarity search).
-    """
-
-    allele_profiles: list[model.AlleleProfile] | None = Field(
-        default=None,
-        description="List of new allele profiles to calculate distances for.",
-    )
-    snp_profiles: list[model.SnpProfile] | None = Field(
-        default=None,
-        description="List of new SNP profiles to calculate distances for.",
-    )
-    mlva_profiles: list[model.MlvaProfile] | None = Field(
-        default=None,
-        description="List of new MLVA profiles to calculate distances for.",
-    )
-    kmer_profiles: list[model.KmerProfile] | None = Field(
-        default=None,
-        description="List of new k-mer profiles to calculate distances for.",
     )
 
 
