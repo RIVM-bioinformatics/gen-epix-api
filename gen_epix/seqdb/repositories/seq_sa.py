@@ -23,8 +23,8 @@ class SeqSARepository(SARepository, BaseSeqRepository):
         mapper = self.get_mapper(model.Seq)
         stmt = sa.select(sa_model.Seq).where(sa_model.Seq.id.in_(seq_ids))
         result = uow.session.execute(stmt)
-        for sa_seq in result:
-            seq: model.Seq = mapper.load(sa_seq)  # type: ignore[assignment]
+        for row in result:
+            seq: model.Seq = mapper.load(row[0])  # type: ignore[assignment]
             contig_list: list[tuple[UUID, str]] = []
             for contig in seq.contigs:
                 if contig.seq_format != enum.SeqFormat.STR_DNA:
