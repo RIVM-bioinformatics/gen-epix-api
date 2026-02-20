@@ -22,31 +22,6 @@ from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
 
-HEX_DIGITS: set[str] = {
-    "e",
-    "a",
-    "f",
-    "C",
-    "E",
-    "7",
-    "A",
-    "9",
-    "5",
-    "d",
-    "3",
-    "1",
-    "6",
-    "0",
-    "c",
-    "8",
-    "D",
-    "2",
-    "4",
-    "B",
-    "F",
-    "b",
-}
-
 
 class IsNewIdMixin:
     """
@@ -95,15 +70,6 @@ class UploadLogItem(BaseModel):
     severity: LogLevel = Field(
         description="The severity level of the log item.",
     )
-
-    @model_validator(mode="after")
-    def _validate_code(self) -> Self:
-        """Validate that the code a 8-minimum length hexadecimal string."""
-        if len(self.code) < 8:
-            raise ValueError("Log item code must be at least 8 characters long.")
-        if not set(self.code).issubset(HEX_DIGITS):
-            raise ValueError("code must be hexadecimal")
-        return self
 
 
 class UploadResult(Model):

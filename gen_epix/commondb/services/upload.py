@@ -1018,7 +1018,6 @@ class BatchUploader:
                     if (
                         child.id is not None
                         and child.id != NULL_ID
-                        and not getattr(child, 'is_new_id', False)
                         and child_result.status == UploadStatus.PENDING
                     ):
                         # Set parent ID link in child, which is known for certain at this point
