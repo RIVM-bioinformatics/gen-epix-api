@@ -433,9 +433,10 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].seq_distance_profile_id, self.new_profile_id)
-        self.assertEqual(results[0].status, UploadStatus.CREATED)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[1].seq_distance_profile_id, self.new_profile_id)
+        self.assertEqual(results[0].status, UploadStatus.UPDATED)
+        self.assertEqual(results[1].status, UploadStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
         updated_distances: dict[str, float] = json.loads(recorder.updated[0].distances)
@@ -576,8 +577,9 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             seq_service_calculate_seq_distances_for_new_profiles(self.service, cmd)
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].status, UploadStatus.CREATED)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].status, UploadStatus.UPDATED)
+        self.assertEqual(results[1].status, UploadStatus.CREATED)
 
         self.assertEqual(len(recorder.updated), 1)
         updated_map: dict[str, float] = json.loads(recorder.updated[0].distances)
@@ -915,8 +917,8 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
         )
 
         # Correct number of results
-        self.assertEqual(len(results), 3)
-        result_ids = {x.seq_distance_profile_id for x in results}
+        self.assertEqual(len(results), 5)
+        result_ids = {x.seq_distance_profile_id for x in results if x.status == UploadStatus.CREATED}
         self.assertEqual(result_ids, {n1_id, n2_id, n3_id})
 
         # Build {profile_id: distances_dict} from created records

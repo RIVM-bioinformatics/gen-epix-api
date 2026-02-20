@@ -714,7 +714,9 @@ class SampleBatchForUpload(BaseBatchForUpload):
 
 class CalculateSeqDistancesResult(UploadResult):
     """
-    The result of calculating distances between sequences.
+    Represents the result of calculating distances between existing profiles and new profiles or
+    between new profiles themselves, as part of the upload process.
+    The seq_distance_profile_id refers to the sequence distance profile (i.e., AlleleProfile or MlvaProfile).
     """
 
     ENTITY: ClassVar = Entity(persistable=False)

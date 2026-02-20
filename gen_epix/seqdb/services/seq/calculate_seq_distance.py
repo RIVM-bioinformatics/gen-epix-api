@@ -236,6 +236,16 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                         None,
                         CrudOperation.UPDATE_SOME,
                     )
+                results.extend(
+                    [
+                        model.CalculateSeqDistancesResult(
+                            id=updated_seq_distance.id,
+                            status=UploadStatus.UPDATED,
+                            seq_distance_profile_id=updated_seq_distance.profile_id,
+                        )
+                        for updated_seq_distance in modified_existing_seq_distances
+                    ]
+                )
 
             # Create all new SeqDistances objects and store them
             new_seq_distances: list[model.SeqDistance] = [
