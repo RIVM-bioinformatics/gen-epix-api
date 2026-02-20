@@ -212,22 +212,6 @@ class CasedbTestClient(TestClient):
             **kwargs,
         )
 
-    def get_user(self, user_name: str) -> model.User:
-        """
-        helper method to retrieve a user by name.
-        This method uses the root user to perform a lookup in the database for a user with the specified name
-        and returns the user object if found.
-        """
-
-        # Note: this should be implemented like the other methods
-        root_user = self.get_root_user()
-
-        fetched_user = self.read_one_by_property(
-            root_user, model.User, "name", user_name
-        )
-
-        return fetched_user
-
     def create_concept(
         self,
         user_or_str: str | model.User,

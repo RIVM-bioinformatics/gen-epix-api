@@ -10,7 +10,7 @@ from test.casedb.integration.case_access.base_edge_cases import (
 )
 
 import logging
-from gen_epix.casedb.domain import enum
+from gen_epix.casedb.domain import model, enum
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -57,6 +57,10 @@ class TestCasedbEdgeCasesAccess:
         """Auto-inject the env fixture into the class."""
         self.env = env
 
+    def get_user(self, user_name: str) -> model.User:
+        """Helper method to retrieve a user by name from the test client environment."""
+        return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+
     # -------------------------------------------------------------------------
     # Read access edge cases
     # -------------------------------------------------------------------------
@@ -67,7 +71,7 @@ class TestCasedbEdgeCasesAccess:
 
         # This test is just to verify that the org user created in the setup can be retrieved successfully.
         # It's a sanity check to ensure that the user setup is correct before we run access tests.
-        org_user = self.env.get_user("org_user1_1")
+        org_user = self.get_user("org_user1_1")
 
         assert org_user is not None
         assert org_user.name == "org_user1_1"

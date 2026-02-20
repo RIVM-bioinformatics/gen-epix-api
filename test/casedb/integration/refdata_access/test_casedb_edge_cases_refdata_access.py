@@ -8,7 +8,7 @@ from test.casedb.integration.refdata_access.base_empty import (
 )
 
 import logging
-from gen_epix.casedb.domain import enum
+from gen_epix.casedb.domain import enum, model
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -45,79 +45,6 @@ def get_test_client() -> Env:
     )
 
 
-# The test_data fixture needs to declare a dependency on base_setup
-# to ensure it runs after the user is properly set up.
-# => properly setting up the root user and organization before the case test data creation begins.
-@pytest.fixture(scope="module")
-def setup_case_type_data(env: Env, setup_test_users_and_organizations: None) -> None:
-    """
-    Create reference data (diseases, etiological agents, case types and share policies) for tests.
-    Objects are automatically stored in env.db by create methods.
-    """
-    root_user = env.get_root_user()
-
-    env.create_disease(root_user, "disease_1")
-    env.create_disease(root_user, "disease_2")
-
-    env.create_etiological_agent(root_user, "etiological_agent_1")
-    env.create_etiological_agent(root_user, "etiological_agent_2")
-
-    # Create case type using pre-created reference data from env.db
-    # This case type should only be accessible to users with proper ABAC policies
-    case_type_1 = env.create_case_type(
-        root_user, "case_type_1", "disease_1", "etiological_agent_1"
-    )
-    assert case_type_1 is not None
-
-    # case type 2 is created to test that users with access to case type 1 do not automatically
-    # get access to case type 2 (i.e. no over-permissioning)
-    # It will also be used for user policy access tests
-    # (user policy should be commpletely ignored for reference data access,
-    # but we want to verify that in the tests)
-    case_type_2 = env.create_case_type(
-        root_user, "case_type_2", "disease_1", "etiological_agent_1"
-    )
-
-    # Create case type set category
-    env.create_case_type_set_category(root_user, "category_1", 0)
-
-    # Create case type sets
-    env.create_case_type_set(
-        root_user, "case_type_set1", [case_type_1.id], "category_1"
-    )
-    env.create_case_type_set(
-        root_user, "case_type_set2", [case_type_2.id], "category_1"
-    )
-    # Create data collection
-    env.create_data_collection(root_user, "data_collection1")
-
-    # Create organization access policy for the case type 1 through case type set 1 for org1
-    # This policy should grant access to org users for the case type
-    env.create_organization_access_case_policy(
-        root_user, "org_case_policy1_1", "case_type_set1"
-    )
-
-    # org2 should not have any org policies to test that users in org2 do not have access to case types since there are no org policies granting access to their org
-
-    # for org_user1_2 we will create both org and user policies to test that user policy does not grant additional access beyond org policy for reference data access
-    # there is already an org policy that grants access to case_type_1, so we will create a user policy that grants access to case_type_2
-    # and verify that it does not grant access to case_type_2 since case types are shared at org level for reference data access
-    env.create_user_access_case_policy(
-        root_user, "org_user1_2", "data_collection1", "case_type_set2"
-    )
-
-    # for org_user1_3 we will create both org and user policies that grant access to the same case type set
-    # to verify that it does not cause any issues and user still has access to the case type via the org policy
-    env.create_user_access_case_policy(
-        root_user, "org_user1_3", "data_collection1", "case_type_set1"
-    )
-
-    # for org_user2_2 we will create a user policy that grants access to case_type_1 but no org policy to verify that user policies do not grant access to case types for reference data access since case types are shared at org level
-    env.create_user_access_case_policy(
-        root_user, "org_user2_2", "data_collection1", "case_type_set1"
-    )
-
-
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
     """Test edge cases for ABAC filtering on reference data access.
@@ -135,11 +62,15 @@ class TestCaseDBEdgeCasesRefDataAccess:
         """Auto-inject the env fixture into the class."""
         self.env = env
 
+    def get_user(self, user_name: str) -> model.User:
+        """Helper method to retrieve a user by name from the test client environment."""
+        return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
+
     def test_org_user_1_exists(self, setup_test_users_and_organizations: None) -> None:
         """Test to verify org user 1 exists and can be retrieved."""
         # This test is just to verify that the org user created in the setup can be retrieved successfully.
         # It's a sanity check to ensure that the user setup is correct before we run access tests.
-        org_user = self.env.get_user("org_user1_1")
+        org_user = self.get_user("org_user1_1")
 
         assert org_user is not None
         assert org_user.name == "org_user1_1"
@@ -171,7 +102,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         # Note: ORG_USER has RBAC permission to read case types,
         # but needs ABAC policies for actual access to specific case types
 
-        org_user = self.env.get_user("org_user2_1")
+        org_user = self.get_user("org_user2_1")
 
         # TEST
         # Try to get case types as org user with no ABAC policies
@@ -198,7 +129,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         # I want to retrieve user by name not by key
         # Verify user was created and can be retrieved by name
-        org_user = self.env.get_user("org_user1_1")
+        org_user = self.get_user("org_user1_1")
         # TEST
         # Try to get case types as org user with no ABAC policies
         get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
@@ -224,7 +155,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     ) -> None:
         """User with both org and user policies should only access types shared with the org."""
         # TODO: Implement test with proper ABAC policy setup
-        org_user_plus_user_policy = self.env.get_user("org_user1_2")
+        org_user_plus_user_policy = self.get_user("org_user1_2")
 
         get_cmd = CaseTypeCrudCommand(
             user=org_user_plus_user_policy, operation=CrudOperation.READ_ALL
@@ -249,7 +180,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         """
         User with both org and user policies on the same case type set should have access to org-shared case types.
         """
-        org_user_plus_user_policy_same_set = self.env.get_user("org_user1_3")
+        org_user_plus_user_policy_same_set = self.get_user("org_user1_3")
 
         get_cmd = CaseTypeCrudCommand(
             user=org_user_plus_user_policy_same_set, operation=CrudOperation.READ_ALL
@@ -266,7 +197,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, setup_case_type_data: None
     ) -> None:
         """User with only user policies should have no access to case types, since case types are shared at org level."""
-        user_with_only_user_policy = self.env.get_user("org_user2_2")
+        user_with_only_user_policy = self.get_user("org_user2_2")
 
         get_cmd = CaseTypeCrudCommand(
             user=user_with_only_user_policy, operation=CrudOperation.READ_ALL
