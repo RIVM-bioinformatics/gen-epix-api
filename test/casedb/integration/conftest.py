@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pytest
 
 from test.casedb.casedb_test_client import CasedbTestClient as Env
@@ -7,20 +9,110 @@ from gen_epix.casedb.domain import model
 # to avoid duplication and ensure consistent setup of test users, organizations, and reference data for all tests.
 
 
+@dataclass
+class EdgeCaseSpec:
+    """
+    Declarative specification for a single ABAC edge case.
+
+    Captures all relevant dimensions for a user-based access control test scenario:
+    - user_name / org_name: identity and organizational membership
+    - org_policy_sets: case type sets shared at org level with this user's org
+    - user_policy_sets: case type sets granted directly to this user via user-level policies
+    - expected_case_types: expected accessible case type names given the above combination
+
+    Both setup fixtures iterate EDGE_CASES to drive user/org creation and policy setup.
+    Adding a new edge case is a single entry in EDGE_CASES below.
+    Tests can use EDGE_CASE_BY_USER[user_name].expected_case_types for assertions
+    and .description for human-readable output.
+    """
+
+    user_name: str
+    org_name: str
+    label: str
+    org_policy_sets: list[str]
+    user_policy_sets: list[str]
+    expected_case_types: list[str]
+
+    @property
+    def description(self) -> str:
+        org_p = ", ".join(self.org_policy_sets) if self.org_policy_sets else "∅"
+        usr_p = ", ".join(self.user_policy_sets) if self.user_policy_sets else "∅"
+        exp = ", ".join(self.expected_case_types) if self.expected_case_types else "∅"
+        return (
+            f"[{self.user_name}@{self.org_name}] {self.label}\n"
+            f"  org_policies=[{org_p}], user_policies=[{usr_p}] → expected=[{exp}]"
+        )
+
+
+# Declarative edge case table. Each entry fully specifies one user's org membership,
+# the org-level policies for their org, user-level policies for this specific user,
+# and the resulting expected case type access.
+#
+# To add a new edge case: append an EdgeCaseSpec here. Both fixtures will automatically
+# create the necessary users, orgs, and policies.
+#
+# To generate cases programmatically, replace this list with a Cartesian product over
+# ORG_POLICY_COMBOS × USER_POLICY_COMBOS using itertools.product.
+EDGE_CASES: list[EdgeCaseSpec] = [
+    EdgeCaseSpec(
+        user_name="org_user1_1",
+        org_name="org1",
+        label="org policy only — should access org-shared case types, nothing more",
+        org_policy_sets=["case_type_set1"],
+        user_policy_sets=[],
+        expected_case_types=["case_type_1"],
+    ),
+    EdgeCaseSpec(
+        user_name="org_user1_2",
+        org_name="org1",
+        label="org + user policy on different sets — user policy must not grant access beyond the org policy",
+        org_policy_sets=["case_type_set1"],
+        user_policy_sets=["case_type_set2"],
+        expected_case_types=["case_type_1"],
+    ),
+    EdgeCaseSpec(
+        user_name="org_user1_3",
+        org_name="org1",
+        label="org + user policy on the same set — overlap must not cause issues, org access preserved",
+        org_policy_sets=["case_type_set1"],
+        user_policy_sets=["case_type_set1"],
+        expected_case_types=["case_type_1"],
+    ),
+    EdgeCaseSpec(
+        user_name="org_user2_1",
+        org_name="org2",
+        label="no policies at all — should have no access to any case types",
+        org_policy_sets=[],
+        user_policy_sets=[],
+        expected_case_types=[],
+    ),
+    EdgeCaseSpec(
+        user_name="org_user2_2",
+        org_name="org2",
+        label="user policy only, no org policy — case types are shared at org level so user policy must not grant access",
+        org_policy_sets=[],
+        user_policy_sets=["case_type_set1"],
+        expected_case_types=[],
+    ),
+]
+
+# Lookup by user_name for use in tests:
+#   EDGE_CASE_BY_USER["org_user1_2"].expected_case_types
+#   EDGE_CASE_BY_USER["org_user1_2"].description
+EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES}
+
+
 @pytest.fixture(scope="module")
 def setup_test_users_and_organizations(env: Env) -> None:
     """
-    Set up common test users and organizations used across integration test modules.
+    Set up common test users and organizations driven by EDGE_CASES.
 
     Creates:
     - root user (bootstrapped into env.db)
     - org1 (bootstrapped into env.db, pre-configured as the root organization)
-    - org2 (created fresh)
-    - org_user1_1: user in org1 with no user policy (org policy access only)
-    - org_user1_2: user in org1 with both org and user policy on different case type sets
-    - org_user1_3: user in org1 with both org and user policy on the same case type set
-    - org_user2_1: user in org2 with no policies at all
-    - org_user2_2: user in org2 with a user policy but no org policy
+    - any additional orgs referenced in EDGE_CASES (e.g. org2), in order of first appearance
+    - one user per EdgeCaseSpec; role and org membership are derived from
+      the user_name naming convention by invite_and_register_user
     """
     root_user = env.get_root_user()
     env._set_obj(root_user)
@@ -28,32 +120,33 @@ def setup_test_users_and_organizations(env: Env) -> None:
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
     env._set_obj(org1)
 
-    env.create_organization(root_user, "org2")
+    # Create orgs not already bootstrapped (org1 is pre-configured as the root org)
+    created_orgs: set[str] = {"org1"}
+    for spec in EDGE_CASES:
+        if spec.org_name not in created_orgs:
+            env.create_organization(root_user, spec.org_name)
+            created_orgs.add(spec.org_name)
 
-    # User with org policy but no user policy (should have access to case types shared with org)
-    env.invite_and_register_user(root_user, "org_user1_1")
-
-    # User with both org and user policies (should only have access to org-shared case types)
-    env.invite_and_register_user(root_user, "org_user1_2")
-
-    # User with both org and user policies on the same case type set (should have access to org-shared case types)
-    env.invite_and_register_user(root_user, "org_user1_3")
-
-    # User with no policies (should have no access to case types)
-    env.invite_and_register_user(root_user, "org_user2_1")
-
-    # User with user policy but no org policy (should have no access to case types, since case types are shared at org level)
-    env.invite_and_register_user(root_user, "org_user2_2")
+    # Create users; role and org membership are derived from user_name by invite_and_register_user
+    for spec in EDGE_CASES:
+        env.invite_and_register_user(root_user, spec.user_name)
 
 
-# The test_data fixture needs to declare a dependency on setup_test_users_and_organizations
-# to ensure it runs after the user is properly set up.
-# => properly setting up the root user and organization before the case test data creation begins.
+# setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
+# organizations are created before policies reference them. The parameter is intentionally
+# unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
-def setup_case_type_data(env: Env, setup_test_users_and_organizations: None) -> None:
+def setup_case_type_data(
+    env: Env, setup_test_users_and_organizations: None
+) -> None:  # noqa: ARG001
     """
-    Create reference data (diseases, etiological agents, case types and share policies) for tests.
+    Create reference data (diseases, etiological agents, case types, and access policies) for tests.
     Objects are automatically stored in env.db by create methods.
+
+    Policy creation is driven by EDGE_CASES:
+    - Org-level access policies: one per unique (org, case_type_set) pair across all specs.
+      Policy name convention: "org_case_policy{org_num}_1" (data_collection1 implied).
+    - User-level access policies: one per (user, case_type_set) entry in user_policy_sets.
     """
     root_user = env.get_root_user()
 
@@ -63,57 +156,49 @@ def setup_case_type_data(env: Env, setup_test_users_and_organizations: None) -> 
     env.create_etiological_agent(root_user, "etiological_agent_1")
     env.create_etiological_agent(root_user, "etiological_agent_2")
 
-    # Create case type using pre-created reference data from env.db
-    # This case type should only be accessible to users with proper ABAC policies
+    # Create case types using pre-created reference data from env.db.
+    # case_type_1 is the primary case type shared via org policies.
+    # case_type_2 tests that access to case_type_1 does not imply access to case_type_2
+    # (no over-permissioning) and is used for user policy access tests.
     case_type_1 = env.create_case_type(
         root_user, "case_type_1", "disease_1", "etiological_agent_1"
     )
     assert case_type_1 is not None
 
-    # case type 2 is created to test that users with access to case type 1 do not automatically
-    # get access to case type 2 (i.e. no over-permissioning)
-    # It will also be used for user policy access tests
-    # (user policy should be commpletely ignored for reference data access,
-    # but we want to verify that in the tests)
     case_type_2 = env.create_case_type(
         root_user, "case_type_2", "disease_1", "etiological_agent_1"
     )
 
-    # Create case type set category
     env.create_case_type_set_category(root_user, "category_1", 0)
 
-    # Create case type sets
     env.create_case_type_set(
         root_user, "case_type_set1", [case_type_1.id], "category_1"
     )
     env.create_case_type_set(
         root_user, "case_type_set2", [case_type_2.id], "category_1"
     )
-    # Create data collection
+
     env.create_data_collection(root_user, "data_collection1")
 
-    # Create organization access policy for the case type 1 through case type set 1 for org1
-    # This policy should grant access to org users for the case type
-    env.create_organization_access_case_policy(
-        root_user, "org_case_policy1_1", "case_type_set1"
-    )
+    # Create one org-level access policy per unique (org, case_type_set) combination.
+    # Orgs with an empty org_policy_sets (e.g. org2) intentionally receive no org policy.
+    created_org_policies: set[tuple[str, str]] = set()
+    for spec in EDGE_CASES:
+        for ct_set in spec.org_policy_sets:
+            key = (spec.org_name, ct_set)
+            if key not in created_org_policies:
+                org_num = spec.org_name[len("org") :]
+                policy_name = f"org_case_policy{org_num}_1"
+                env.create_organization_access_case_policy(
+                    root_user, policy_name, ct_set
+                )
+                created_org_policies.add(key)
 
-    # org2 should not have any org policies to test that users in org2 do not have access to case types since there are no org policies granting access to their org
-
-    # for org_user1_2 we will create both org and user policies to test that user policy does not grant additional access beyond org policy for reference data access
-    # there is already an org policy that grants access to case_type_1, so we will create a user policy that grants access to case_type_2
-    # and verify that it does not grant access to case_type_2 since case types are shared at org level for reference data access
-    env.create_user_access_case_policy(
-        root_user, "org_user1_2", "data_collection1", "case_type_set2"
-    )
-
-    # for org_user1_3 we will create both org and user policies that grant access to the same case type set
-    # to verify that it does not cause any issues and user still has access to the case type via the org policy
-    env.create_user_access_case_policy(
-        root_user, "org_user1_3", "data_collection1", "case_type_set1"
-    )
-
-    # for org_user2_2 we will create a user policy that grants access to case_type_1 but no org policy to verify that user policies do not grant access to case types for reference data access since case types are shared at org level
-    env.create_user_access_case_policy(
-        root_user, "org_user2_2", "data_collection1", "case_type_set1"
-    )
+    # Create user-level access policies for each user's declared user_policy_sets.
+    # Note: user policies are intentionally ignored for reference data (case type) access —
+    # the tests verify this behaviour explicitly.
+    for spec in EDGE_CASES:
+        for ct_set in spec.user_policy_sets:
+            env.create_user_access_case_policy(
+                root_user, spec.user_name, "data_collection1", ct_set
+            )

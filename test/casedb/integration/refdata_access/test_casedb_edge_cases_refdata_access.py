@@ -1,19 +1,21 @@
+import logging
+
 import pytest
+
+from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain.command import CaseTypeCrudCommand
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.fastapp import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
+from test.casedb.integration.conftest import EDGE_CASES, EdgeCaseSpec
 from test.casedb.integration.refdata_access.base_empty import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
-
-import logging
-from gen_epix.casedb.domain import enum, model
-from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp import CrudOperation
-from gen_epix.seqdb.domain import enum as seqdb_enum
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand
 
 
 SEQDB_APP_CFGS = get_app_cfgs(
@@ -47,14 +49,13 @@ def get_test_client() -> Env:
 
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
-    """Test edge cases for ABAC filtering on reference data access.
+    """Test ABAC filtering on reference data (case type) access across all edge cases.
 
-    This test class is designed to test various ABAC policy scenarios:
-    - User with no policies (should have no access)
-    - User with only org policies (should have access to case types shared with org)
-    - User with only user policies (should have no access to case types shared with user)
-    - User with both org and user policies (should have access to only case types shared with org, since case types are shared at org level)
-    - User with policies that do not match any case types (should have no access)
+    Each user in EDGE_CASES represents one combination of org membership, org-level policies,
+    and user-level policies. A single parametrized test iterates all specs and asserts that
+    the accessible case types exactly match the expected set declared in EdgeCaseSpec.
+
+    The root user is tested separately as a superuser baseline (not an ABAC edge case).
     """
 
     @pytest.fixture(autouse=True)
@@ -66,146 +67,48 @@ class TestCaseDBEdgeCasesRefDataAccess:
         """Helper method to retrieve a user by name from the test client environment."""
         return self.env._get_obj(model.User, user_name)  # type: ignore[return-value]
 
-    def test_org_user_1_exists(self, setup_test_users_and_organizations: None) -> None:
-        """Test to verify org user 1 exists and can be retrieved."""
-        # This test is just to verify that the org user created in the setup can be retrieved successfully.
-        # It's a sanity check to ensure that the user setup is correct before we run access tests.
-        org_user = self.get_user("org_user1_1")
-
-        assert org_user is not None
-        assert org_user.name == "org_user1_1"
-        print(f"Retrieved user: {org_user.id} with name: {org_user.name}")
-
     def test_root_user_has_access_to_all_case_types(
         self, setup_case_type_data: None
     ) -> None:
-        """
-        Root user should have access to all case types regardless of policies, since they are the superuser.
-        (Also basic test to verify case type access works.)
-        """
+        """Root user should have access to all case types regardless of policies (superuser baseline)."""
         root_user = self.env.get_root_user()
 
-        # Try to get case types as root user (should have access)
         get_cmd = CaseTypeCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        # Root user should have access to case types
         assert isinstance(result, list)
         assert len(result) >= 2, "Root user should have access to all case types"
 
-    def test_organization_user_with_no_policies_has_no_access(
-        self, setup_case_type_data: None
-    ) -> None:
-        """Organization user with no policies should have no access to any case types."""
-        # SETUP
-        # Create org user with no ABAC policies
-        # Note: ORG_USER has RBAC permission to read case types,
-        # but needs ABAC policies for actual access to specific case types
-
-        org_user = self.get_user("org_user2_1")
-
-        # TEST
-        # Try to get case types as org user with no ABAC policies
-        get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
-        result = self.env.app.handle(get_cmd)
-
-        # ASSERT
-        # User with no ABAC policies should have no access to case types
-        assert isinstance(result, list)
-        assert (
-            len(result) == 0
-        ), "User with no policies should not have access to any case types"
-
-    def test_user_with_only_org_policies_has_org_access(
-        self, setup_case_type_data: None
-    ) -> None:
-        """User with only org policies should access org-shared case types."""
-        # TODO: Implement test with proper ABAC policy setup
-
-        # SETUP
-        # Create org user with no ABAC policies
-        # Note: ORG_USER has RBAC permission to read case types,
-        # but needs ABAC policies for actual access to specific case types
-
-        # I want to retrieve user by name not by key
-        # Verify user was created and can be retrieved by name
-        org_user = self.get_user("org_user1_1")
-        # TEST
-        # Try to get case types as org user with no ABAC policies
-        get_cmd = CaseTypeCrudCommand(user=org_user, operation=CrudOperation.READ_ALL)
-        result = self.env.app.handle(get_cmd)
-
-        # ASSERT
-        # assert that the first case type in result has the expected name (the one we created in the test data setup)
-
-        case_type_names = [ct.name for ct in result]
-
-        # assert that the user has access to the first case type which is shared with the org via the org policy
-        assert (
-            "case_type_1" in case_type_names
-        ), "User with org policy should have access to org-shared case type"
-
-        # Also assert that the user does not have access to the second case type which is not shared with the org
-        assert (
-            "case_type_2" not in case_type_names
-        ), "User with org policy should not have access to case types not shared with org"
-
-    def test_user_with_both_org_and_user_policies_has_only_org_access(
-        self, setup_case_type_data: None
-    ) -> None:
-        """User with both org and user policies should only access types shared with the org."""
-        # TODO: Implement test with proper ABAC policy setup
-        org_user_plus_user_policy = self.get_user("org_user1_2")
-
-        get_cmd = CaseTypeCrudCommand(
-            user=org_user_plus_user_policy, operation=CrudOperation.READ_ALL
-        )
-        result = self.env.app.handle(get_cmd)
-
-        case_type_names = [ct.name for ct in result]
-        # assert that the user has access to the first case type which is shared with the org via the org policy
-        assert (
-            "case_type_1" in case_type_names
-        ), "User with org policy should have access to org-shared case type"
-
-        # assert that the user does not have access to the second case type which is not shared with the org and only shared with the user via user policy
-        assert (
-            "case_type_2" not in case_type_names
-        ), "User with org and user policy should not have access to case types not shared with org"
-
-    # Add a test for user org_user1_3 who has both org and user policies on the same case type set to verify that it does not cause any issues and user still has access to the case type via the org policy
-    def test_user_with_org_and_user_policies_on_same_case_type_set_has_org_access(
-        self, setup_case_type_data: None
+    @pytest.mark.parametrize(
+        "spec",
+        EDGE_CASES,
+        ids=[s.user_name for s in EDGE_CASES],
+    )
+    def test_case_type_access_matches_expected(
+        self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        User with both org and user policies on the same case type set should have access to org-shared case types.
+        For each edge case, assert that the set of accessible case types exactly matches
+        the expected set declared in EdgeCaseSpec — neither more nor less.
+
+        Failure output includes the full edge case description so the cause is immediately clear:
+          [org_user1_2@org1] org_policies=[case_type_set1], user_policies=[case_type_set2] → expected=[case_type_1]
+          Missing access:    ∅
+          Unexpected access: ['case_type_2']
         """
-        org_user_plus_user_policy_same_set = self.get_user("org_user1_3")
+        user = self.get_user(spec.user_name)
 
-        get_cmd = CaseTypeCrudCommand(
-            user=org_user_plus_user_policy_same_set, operation=CrudOperation.READ_ALL
-        )
+        get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        case_type_names = [ct.name for ct in result]
-        # assert that the user has access to the first case type which is shared with the org via the org policy
-        assert (
-            "case_type_1" in case_type_names
-        ), "User with org policy should have access to org-shared case type"
+        actual = {ct.name for ct in result}
+        expected = set(spec.expected_case_types)
 
-    def test_user_with_only_user_policies_has_no_access(
-        self, setup_case_type_data: None
-    ) -> None:
-        """User with only user policies should have no access to case types, since case types are shared at org level."""
-        user_with_only_user_policy = self.get_user("org_user2_2")
+        missing = expected - actual
+        unexpected = actual - expected
 
-        get_cmd = CaseTypeCrudCommand(
-            user=user_with_only_user_policy, operation=CrudOperation.READ_ALL
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
-        result = self.env.app.handle(get_cmd)
-
-        case_type_names = [ct.name for ct in result]
-        # assert that the user has no access to any case types
-        assert (
-            not case_type_names
-        ), "User with only user policies should have no access to case types"
