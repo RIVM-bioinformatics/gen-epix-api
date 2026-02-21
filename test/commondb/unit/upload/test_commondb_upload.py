@@ -87,6 +87,7 @@ combinations thereof:
 
 from test.commondb.unit.upload.model import (
     Child1ForUpload,
+    Child2,
     Child2ForUpload,
     Parent,
     ParentBatchForUpload,
@@ -1197,7 +1198,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         """Test 6.2.3.1: Multiple external IDs, some existing for same parent - should succeed."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
-            external_id="ext_id_1"
+            external_id="ext_id_1", identifier_issuer_id=self.identifier_issuer_id
         )
         external_identifier2 = self.create_external_identifier_for_upload(
             external_id="ext_id_2",
@@ -1401,6 +1402,434 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
 
+    def test_8_2_1_1_existing_external_id_null_child2_sets_id(self) -> None:
+        """Test 8.2.1.1: Existing external identifier with NULL child2 ID - should set child2 ID."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id
+        )
+        existing_child2_id = self.random_ids[0]
+        existing_external_identifier = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier, internal_id=existing_child2_id
+            )
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[1]
+        existing_child = Child2(
+            id=existing_child2_id,
+            parent_id=created_parent_id,
+            ref2_id=None,
+            a="test_a",
+            b=[],
+            c={},
+            x=None,
+            y=None,
+            z=None,
+        )
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [existing_external_identifier],  # The existing external identifiers
+        ]
+        self.service.repository.crud.side_effect = [
+            [True],  # Child exists
+            [created_parent_id],  # Create parent
+            [existing_child],  # Existing child for update check
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(existing_child2_id, created_parent_id)],
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
+        self.assertEqual(batch_result.parents[0].children2[0].id, existing_child2_id)  # type: ignore[index]
+
+    def test_8_2_1_2_1_existing_external_id_same_child2_succeeds(self) -> None:
+        """Test 8.2.1.2.1: Existing external identifier with same child2 ID - should succeed."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id
+        )
+        existing_child2_id = self.random_ids[0]
+        existing_external_identifier = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier, internal_id=existing_child2_id
+            )
+        )
+        child2 = self.create_child2_for_upload(
+            child_id=existing_child2_id,
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[1]
+        existing_child = Child2(
+            id=existing_child2_id,
+            parent_id=created_parent_id,
+            ref2_id=None,
+            a="test_a",
+            b=[],
+            c={},
+            x=None,
+            y=None,
+            z=None,
+        )
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [existing_external_identifier],  # The existing external identifiers
+        ]
+        self.service.repository.crud.side_effect = [
+            [True],  # Child exists
+            [created_parent_id],  # Create parent
+            [existing_child],  # Existing child for update check
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(existing_child2_id, created_parent_id)],
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
+
+    def test_8_2_1_2_2_existing_external_id_different_child2_fails(self) -> None:
+        """Test 8.2.1.2.2: Existing external identifier with different child2 ID - should fail."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id
+        )
+        other_child2_id = self.random_ids[0]
+        existing_child2_id = self.random_ids[1]
+        existing_external_identifier = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier, internal_id=other_child2_id
+            )
+        )
+        child2 = self.create_child2_for_upload(
+            child_id=existing_child2_id,
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[2]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [existing_external_identifier],  # The existing external identifiers
+        ]
+        self.service.repository.crud.side_effect = [
+            [True],  # Child exists
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(existing_child2_id, created_parent_id)],
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+
+    def test_8_2_2_new_external_id_new_child2(self) -> None:
+        """Test 8.2.2: New external identifier for new child2 - should succeed."""
+        # Create upload batch
+        external_identifier_for_upload = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id
+        )
+        created_parent_id = self.random_ids[0]
+        created_child2_id = self.random_ids[1]
+        created_external_identifier_id = self.random_ids[2]
+        child2 = self.create_child2_for_upload(
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier_for_upload],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer],  # The identifier issuers in the external IDs
+            [],  # The existing external identifiers before creation
+        ]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+            created_child2_id,  # ID of the newly created child2
+            created_external_identifier_id,  # ID for child external identifier
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parent
+            [created_child2_id],  # Create child2
+            [created_external_identifier_id],  # Create child external identifier
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=3)
+        self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
+        self.assertEqual(batch_result.parents[0].children2[0].external_identifiers[0].id, created_external_identifier_id)  # type: ignore[index]
+
+    def test_8_2_3_1_multiple_external_ids_some_existing_same_child2(self) -> None:
+        """Test 8.2.3.1: Multiple external IDs, some existing for same child2 - should succeed."""
+        # Create upload batch
+        external_identifier1 = self.create_external_identifier_for_upload(
+            external_id="ext_id_1"
+        )
+        external_identifier2 = self.create_external_identifier_for_upload(
+            external_id="ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
+        )
+        child2 = self.create_child2_for_upload(
+            child_id=self.child2_id,
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier1, external_identifier2],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        existing_external_identifier1 = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier1,
+                self.child2_id,  # type: ignore[arg-type]
+            )
+        )
+        created_external_identifier2 = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier2,
+                self.child2_id,  # type: ignore[arg-type]
+            )
+        )
+        # Set up mocks
+        self.service.app.handle.side_effect = [
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
+            [existing_external_identifier1],
+        ]
+        created_parent_id = self.random_ids[0]
+        created_external_identifier2_id = self.random_ids[1]
+        existing_child = Child2(
+            id=self.child2_id,
+            parent_id=created_parent_id,
+            ref2_id=None,
+            a="test_a",
+            b=[],
+            c={},
+            x=None,
+            y=None,
+            z=None,
+        )
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+            created_external_identifier2_id,  # ID for child external identifier
+            self.random_ids[
+                2
+            ],  # Spare ID in case another external identifier is created
+        ]
+        self.service.repository.crud.side_effect = [
+            [True],  # Child exists
+            [created_parent_id],  # Create parent
+            [created_external_identifier2_id],  # Create child external identifier
+            [existing_child],  # Existing child for update check
+        ]
+        self.service.repository.read_fields.side_effect = [
+            [(self.child2_id, created_parent_id)],
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=2, n_skipped=1, n_pending=1)
+
+    def test_8_2_3_1_multiple_external_ids_some_existing_different_child2(self) -> None:
+        """Test 8.2.3.1: Multiple external IDs, some existing for different child2 - should fail."""
+        # Create upload batch
+        external_identifier1 = self.create_external_identifier_for_upload(
+            external_id="ext_id_1", identifier_issuer_id=self.random_ids[2]
+        )
+        external_identifier2 = self.create_external_identifier_for_upload(
+            external_id="ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier1, external_identifier2],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        different_id = self.random_ids[0]
+        existing_external_identifier1 = (
+            self.get_child2_external_identifier_from_for_upload(
+                external_identifier1,
+                different_id,  # Different child2 ID
+            )
+        )
+        # Set up mocks
+        self.service.app.handle.side_effect = [
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
+            [existing_external_identifier1],  # The existing external identifiers
+        ]
+        self.service.repository.crud.side_effect = [
+            [False],  # Child does not exist
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1, n_pending=3)
+
+    def test_8_2_3_2_multiple_external_ids_all_new_same_issuer(self) -> None:
+        """Test 8.2.3.2: Multiple external IDs all new but same issuer - should fail."""
+        # Create upload batch
+        external_identifier1 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
+        )
+        external_identifier2 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_2", identifier_issuer_id=self.identifier_issuer_id
+        )
+        with pytest.raises(ValueError):
+            self.create_child2_for_upload(
+                ref2_id=None,
+                ref2_code=None,
+                external_identifiers=[external_identifier1, external_identifier2],
+            )
+
+    def test_8_2_3_2_multiple_external_ids_all_new_different_issuer(self) -> None:
+        """Test 8.2.3.2: Multiple external IDs all new and different issuer - should succeed."""
+        # Create upload batch
+        external_identifier1 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
+        )
+        external_identifier2 = self.create_external_identifier_for_upload(
+            external_id="new_ext_id_2",
+            identifier_issuer_id=self.identifier_issuer_id2,
+            identifier_issuer_code=self.identifier_issuer_code2,
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None,
+            ref2_code=None,
+            external_identifiers=[external_identifier1, external_identifier2],
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        created_parent_id = self.random_ids[0]
+        created_child2_id = self.random_ids[1]
+        created_external_identifier1_id = self.random_ids[2]
+        created_external_identifier2_id = self.random_ids[3]
+        self.service.generate_id.side_effect = [
+            created_parent_id,
+            created_child2_id,
+            created_external_identifier1_id,
+            created_external_identifier2_id,
+        ]
+        self.service.repository.crud.side_effect = [
+            [created_parent_id],  # Create parent
+            [created_child2_id],  # Create child2
+            [
+                created_external_identifier1_id,
+                created_external_identifier2_id,
+            ],  # Create child external identifiers
+        ]
+        # Set up mocks
+        self.service.app.handle.side_effect = [
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
+            [],
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=4)
+
+    def test_8_3_1_identifier_issuer_id_not_found(self) -> None:
+        """Test 8.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.random_ids[0]
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[1]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [],  # No identifier issuer found
+            [],  # No existing external identifiers
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+
+    def test_8_3_2_identifier_issuer_code_not_found(self) -> None:
+        """Test 8.3.2: Identifier issuer code provided and not found - should fail."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=NULL_ID, identifier_issuer_code="nonexistent_code"
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[0]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [],  # No identifier issuer found for code
+            [],  # No existing external identifiers
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+
+    def test_8_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
+        """Test 8.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
+        # Create upload batch
+        external_identifier = self.create_external_identifier_for_upload(
+            identifier_issuer_id=self.identifier_issuer_id,
+            identifier_issuer_code=self.identifier_issuer_code2,
+        )
+        child2 = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
+        )
+        parent = self.create_parent_for_upload(children2=[child2])
+        # Set up mocks
+        created_parent_id = self.random_ids[0]
+        self.service.generate_id.side_effect = [
+            created_parent_id,  # ID of the newly created parent
+        ]
+        self.service.app.handle.side_effect = [
+            [self.identifier_issuer, self.identifier_issuer2],  # Mismatched ID/code
+            [],  # No existing external identifiers
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(parent)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
+
 
 # Combined scenario tests
 @pytest.mark.scenario_ids("TC-SEC-30-03")
@@ -1547,31 +1976,25 @@ class TestCombinedScenarios(BaseUploadTestCase):
             created_parent_id,  # Parent
             created_child1_id,  # Child1
             created_child2_id,  # Child2
+            created_child2_ext_id,  # Child2 external identifier
         ]
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parent
             [created_child1_id],  # Create child1
             [created_child2_id],  # Create child2
+            [created_child2_ext_id],  # Create child2 external identifier
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1
         ]
-        # Resolve identifier issuer and create external identifier for Child2
-        child2_external_identifier = (
-            self.get_child2_external_identifier_from_for_upload(
-                child2_ext_id,
-                id=created_child2_ext_id,
-                internal_id=created_child2_id,
-            )
-        )
+        # Resolve identifier issuer and check for existing external identifiers
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer by code
             [],  # No existing ExternalIdentifiers for Child2
-            [child2_external_identifier],  # Created ExternalIdentifier for Child2
         ]
 
         # Perform upload and verify result
         batch_result = self.upload_batch(parent)
         self.assertBatchProcessed(batch_result)
-        # Result: 1 parent + 1 child1 + 1 child2 = 3 created (child2 external ID is created but not counted separately)
-        self.assertStatusCount(batch_result, n_created=3)
+        # Result: 1 parent + 1 child1 + 1 child2 + 1 child2 external identifier
+        self.assertStatusCount(batch_result, n_created=4)

@@ -255,7 +255,7 @@ class BatchUploader:
                         child_results.append(
                             UploadResultWithExternalIdentifiers(
                                 status=UploadStatus.PENDING,
-                                external_identifier_results=external_identifier_results,
+                                external_identifiers=external_identifier_results,
                             )
                         )
                 else:
@@ -289,6 +289,8 @@ class BatchUploader:
         success = True
         # Verify external identifiers first to fill in any missing parent IDs
         success &= self.verify_parents_external_identifiers(cmd, batch_result, uow)
+        # Verify external identifiers for child models to fill in any missing child IDs
+        success &= self.verify_child_external_identifiers(cmd, batch_result, uow)
         success &= self.verify_parents(cmd, batch_result, uow)
         success &= self.verify_children(cmd, batch_result, uow)
         # Verify reference data last since it may depend on parent and children verification
@@ -406,7 +408,7 @@ class BatchUploader:
                 cmd.user,
                 model_for_upload_class.EXTERNAL_IDENTIFIER_TYPE,
             )
-            return success
+        return success
 
     def verify_parents(
         self,
@@ -762,10 +764,9 @@ class BatchUploader:
         """
         assert isinstance(cmd, command.Command)
         user_id = cmd.user.id if cmd.user else None
-        success = False
+        success = True
 
         # Create each child model for each parent
-        to_create_external_identifier_pairs = []
         for model_class, children_field_name in self.children_field_name_map.items():
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
@@ -774,8 +775,9 @@ class BatchUploader:
             has_external_identifiers = issubclass(
                 model_for_upload_class, ExternalIdentifiersMixin
             )
+
             # Determine which objects need to be created
-            to_create_child_result_pairs = []
+            to_create_child_result_pairs: list[tuple[model.Model, UploadResult]] = []
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
                 children: list[model.Model] | None = getattr(
                     parent, children_field_name
@@ -797,7 +799,41 @@ class BatchUploader:
                             )
                         else:
                             to_create_child_result_pairs.append((child, child_result))
-                    if has_external_identifiers:
+
+            if to_create_child_result_pairs:
+                self.create_objects(
+                    uow,
+                    user_id,
+                    to_create_child_result_pairs,
+                )
+
+            # Fill in any missing child IDs from results (needed before creating external identifiers)
+            for parent, parent_result in self.parent_result_items(cmd, batch_result):
+                children: list[model.Model] | None = getattr(
+                    parent, children_field_name
+                )
+                child_results: list[UploadResult] | None = getattr(
+                    parent_result, children_field_name
+                )
+                for child, child_result in zip(children or [], child_results or []):
+                    if (child.id is None or child.id == NULL_ID) and child_result.id:
+                        child.id = child_result.id
+
+            # Create the external identifiers for the child objects
+            if has_external_identifiers:
+                to_create_external_identifier_pairs: list[
+                    tuple[model.ExternalIdentifier, UploadResult]
+                ] = []
+                for parent, parent_result in self.parent_result_items(
+                    cmd, batch_result
+                ):
+                    children: list[model.Model] | None = getattr(
+                        parent, children_field_name
+                    )
+                    child_results: list[UploadResult] | None = getattr(
+                        parent_result, children_field_name
+                    )
+                    for child, child_result in zip(children or [], child_results or []):
                         for external_identifier, external_identifier_result in zip(
                             getattr(child, "external_identifiers", []) or [],
                             getattr(child_result, "external_identifiers", []) or [],
@@ -806,6 +842,9 @@ class BatchUploader:
                                 external_identifier_result.status
                                 != UploadStatus.PENDING
                             ):
+                                continue
+                            if child.id is None or child.id == NULL_ID:
+                                # Child ID not available; skip creation here
                                 continue
                             to_create_external_identifier_pairs.append(
                                 (
@@ -817,25 +856,13 @@ class BatchUploader:
                                     external_identifier_result,
                                 )
                             )
-            if not to_create_child_result_pairs:
-                continue
+                if to_create_external_identifier_pairs:
+                    self.create_objects(
+                        uow,
+                        user_id,
+                        to_create_external_identifier_pairs,
+                    )
 
-            # Create the child objects
-            self.create_objects(
-                uow,
-                user_id,
-                to_create_child_result_pairs,
-            )
-
-            # Create the external identifiers for the child objects
-            if to_create_external_identifier_pairs:
-                self.create_objects(
-                    uow,
-                    user_id,
-                    to_create_external_identifier_pairs,
-                )
-
-        success = True
         return success
 
     def update_children(
@@ -856,6 +883,7 @@ class BatchUploader:
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
             ]
+            model_for_upload_class = self.child_for_upload_class_map[model_class]
             # Determine which children need to be updated
             to_update_child_result_pairs = []
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
@@ -874,7 +902,13 @@ class BatchUploader:
                         # Set parent ID link in child, which is known for certain at this point
                         setattr(child, parent_id_field_name, parent.id)
                         # Collect for update
-                        to_update_child_result_pairs.append((child, child_result))
+                        if isinstance(child, model_for_upload_class):
+                            actual_child = model_class(**child.model_dump())
+                            to_update_child_result_pairs.append(
+                                (actual_child, child_result)
+                            )
+                        else:
+                            to_update_child_result_pairs.append((child, child_result))
             if not to_update_child_result_pairs:
                 continue
 
