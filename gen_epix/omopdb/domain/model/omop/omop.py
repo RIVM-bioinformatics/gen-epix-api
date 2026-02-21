@@ -1,3 +1,4 @@
+import hashlib
 from datetime import date, datetime
 from typing import ClassVar
 from uuid import UUID
@@ -316,6 +317,11 @@ class Concept(Model):
         description="User guidance:\nReason the Concept was invalidated.\r\nPossible values are D (deleted), U\r\n(replaced with an update) or NULL when\r\nvalid_end_date has the default value.\nETL conventions:\nNone",
         max_length=1,
     )
+
+    @staticmethod
+    def get_concept_id_from_int_id(int_id: int) -> UUID:
+        """Utility method to generate a UUID for a Concept from an integer ID by hashing it"""
+        return UUID(hashlib.sha256(str(int_id).encode("utf-8")).digest()[:16].hex())
 
 
 class Relationship(Model):

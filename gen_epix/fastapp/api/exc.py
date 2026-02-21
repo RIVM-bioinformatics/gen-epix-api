@@ -76,13 +76,10 @@ class MethodNotAllowed405HTTPException(HTTPException):
 
 
 class ResourceConflict409HTTPException(HTTPException):
+
     def __init__(
         self,
-        detail: str = (
-            "Resource already exists: "
-            "The request could not be completed due to a conflict "
-            "with the current state of the target resource"
-        ),
+        detail: str = "Conflict with current resource state",
         headers: dict[str, str] | None = None,
     ):
         super().__init__(
@@ -91,11 +88,10 @@ class ResourceConflict409HTTPException(HTTPException):
 
 
 class ForeignKeyConstraint409HTTPException(HTTPException):
+
     def __init__(
         self,
-        detail: str = (
-            "Conflict: Cannot delete resource as it is referenced by another resource (foreign key constraint)"
-        ),
+        detail: str = "Resource cannot be deleted due to dependent entities",
         headers: dict[str, str] | None = None,
     ):
         super().__init__(
