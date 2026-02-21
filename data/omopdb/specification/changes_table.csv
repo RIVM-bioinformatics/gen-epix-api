@@ -1,0 +1,2 @@
+cdmTableName,schema,isRequired,conceptPrefix,measurePersonCompleteness,measurePersonCompletenessThreshold,validation,tableDescription,userGuidance,etlConventions
+measurement_relation,CDM,No,NA,NA,NA,NA,Not part of OMOP CDM. The MEASUREMENT_RELATION table contains a directed acyclic graph of Measurements that expresses how they were derived from one another so that this information can be used further.,NA,NA

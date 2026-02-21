@@ -65,6 +65,9 @@ from gen_epix.omopdb.domain.model.omop import (
     MeasurementForUpload as MeasurementForUpload,
 )
 from gen_epix.omopdb.domain.model.omop import MeasurementRelation as MeasurementRelation
+from gen_epix.omopdb.domain.model.omop import (
+    MeasurementRelationForUpload as MeasurementRelationForUpload,
+)
 from gen_epix.omopdb.domain.model.omop import Metadata as Metadata
 from gen_epix.omopdb.domain.model.omop import Note as Note
 from gen_epix.omopdb.domain.model.omop import NoteNlp as NoteNlp
@@ -173,6 +176,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             # Upload
             SpecimenForUpload,
             MeasurementForUpload,
+            MeasurementRelationForUpload,
             ObservationForUpload,
             PersonForUpload,
             PersonUploadResult,

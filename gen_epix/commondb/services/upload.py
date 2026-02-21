@@ -1,7 +1,6 @@
 from typing import Generator
 from uuid import UUID
 
-import gen_epix.fastapp.model
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, enum, exc, model
 from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
@@ -14,14 +13,14 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResult,
     UploadResultWithExternalIdentifiers,
 )
-from gen_epix.fastapp.enum import CrudOperation
-from gen_epix.fastapp.service import BaseService
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter.composite import CompositeFilter
-from gen_epix.filter.enum import LogicalOperator
-from gen_epix.filter.equals_number import EqualsNumberFilter
-from gen_epix.filter.string_set import StringSetFilter
-from gen_epix.filter.uuid_set import UuidSetFilter
+from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
+from gen_epix.filter import (
+    CompositeFilter,
+    EqualsNumberFilter,
+    LogicalOperator,
+    StringSetFilter,
+    UuidSetFilter,
+)
 
 
 class BatchUploader:
@@ -32,9 +31,7 @@ class BatchUploader:
     def __init__(
         self,
         upload_batch_command_class: type[command.UploadBatchCommandMixin],
-        stored_model_field_props: dict[
-            type[model.Model], dict[str, gen_epix.fastapp.model.ModelFieldProps]
-        ],
+        stored_model_field_props: dict[type[Model], dict[str, fastapp.ModelFieldProps]],
         service: BaseService,
     ):
         self.upload_batch_command_class = upload_batch_command_class
@@ -221,7 +218,7 @@ class BatchUploader:
             parent_result.external_identifiers = external_identifier_results
             # Initialize child results
             for children_field_name in self.children_field_name_map.values():
-                children: list[model.Model] | None = getattr(
+                children: list[Model] | None = getattr(
                     parent_for_upload, children_field_name
                 )
                 child_results: list[UploadResult] | None = None
@@ -511,7 +508,7 @@ class BatchUploader:
             parent_id_field_name = self.child_model_parent_id_field_name_map[
                 model_class
             ]
-            children_for_upload: list[model.Model] = [
+            children_for_upload: list[Model] = [
                 y
                 for x in parents_for_upload
                 for y in (getattr(x, children_field_name) or [])
@@ -568,7 +565,7 @@ class BatchUploader:
 
             # Process all children (both with and without IDs)
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
-                children_for_upload: list[model.Model] = (
+                children_for_upload: list[Model] = (
                     getattr(parent, children_field_name) or []
                 )
                 child_results: list[UploadResult] = (
@@ -683,7 +680,7 @@ class BatchUploader:
 
         # Determine which parents need to be created
         to_create_parent_result_tuples: list[
-            tuple[model.ParentForUpload, model.Model, model.UploadResult]
+            tuple[model.ParentForUpload, Model, model.UploadResult]
         ] = [  # type: ignore[assignment]
             (x, x.get_parent(), y)
             for x, y in self.parent_result_items(cmd, batch_result)
@@ -724,7 +721,7 @@ class BatchUploader:
 
         # Determine which parents need to be updated
         to_update_parent_result_tuples: list[
-            tuple[model.ParentForUpload, model.Model, model.UploadResult]
+            tuple[model.ParentForUpload, Model, model.UploadResult]
         ] = [
             (x, x.get_parent(), y)  # type: ignore[arg-type]
             for x, y in self.parent_result_items(cmd, batch_result)
@@ -777,11 +774,9 @@ class BatchUploader:
             )
 
             # Determine which objects need to be created
-            to_create_child_result_pairs: list[tuple[model.Model, UploadResult]] = []
+            to_create_child_result_pairs: list[tuple[Model, UploadResult]] = []
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
-                children: list[model.Model] | None = getattr(
-                    parent, children_field_name
-                )
+                children: list[Model] | None = getattr(parent, children_field_name)
                 child_results: list[UploadResult] | None = getattr(
                     parent_result, children_field_name
                 )
@@ -809,9 +804,7 @@ class BatchUploader:
 
             # Fill in any missing child IDs from results (needed before creating external identifiers)
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
-                children: list[model.Model] | None = getattr(
-                    parent, children_field_name
-                )
+                children: list[Model] | None = getattr(parent, children_field_name)
                 child_results: list[UploadResult] | None = getattr(
                     parent_result, children_field_name
                 )
@@ -827,9 +820,7 @@ class BatchUploader:
                 for parent, parent_result in self.parent_result_items(
                     cmd, batch_result
                 ):
-                    children: list[model.Model] | None = getattr(
-                        parent, children_field_name
-                    )
+                    children: list[Model] | None = getattr(parent, children_field_name)
                     child_results: list[UploadResult] | None = getattr(
                         parent_result, children_field_name
                     )
@@ -887,9 +878,7 @@ class BatchUploader:
             # Determine which children need to be updated
             to_update_child_result_pairs = []
             for parent, parent_result in self.parent_result_items(cmd, batch_result):
-                children: list[model.Model] | None = getattr(
-                    parent, children_field_name
-                )
+                children: list[Model] | None = getattr(parent, children_field_name)
                 child_results: list[UploadResult] | None = getattr(
                     parent_result, children_field_name
                 )
@@ -1105,13 +1094,13 @@ class BatchUploader:
 
     def verify_link_id(
         self,
-        parent_result_pairs: list[tuple[model.Model, model.UploadResult]],
+        parent_result_pairs: list[tuple[Model, model.UploadResult]],
         uow: fastapp.BaseUnitOfWork,
         user: model.User | None,
         child_field_name: str,
         link_id_field_name: str,
         link_code_field_name: str,
-        linked_model_class: type[model.Model],
+        linked_model_class: type[Model],
         linked_model_id_field_name: str = "id",
         linked_model_code_field_name: str = "code",
         is_same_service: bool = True,
@@ -1165,7 +1154,7 @@ class BatchUploader:
             crud_command_class = self.service.app.domain.get_crud_command_for_model(
                 linked_model_class
             )
-            link_objs: list[model.Model] = self.service.app.handle(
+            link_objs: list[Model] = self.service.app.handle(
                 crud_command_class(
                     user=user,
                     operation=CrudOperation.READ_ALL,
@@ -1198,7 +1187,7 @@ class BatchUploader:
 
         # Verify links
         for parent, parent_result in parent_result_pairs:
-            children: list[model.Model] = getattr(parent, child_field_name) or []
+            children: list[Model] = getattr(parent, child_field_name) or []
             child_results: list[UploadResult] = (
                 getattr(parent_result, child_field_name) or []
             )
@@ -1283,7 +1272,7 @@ class BatchUploader:
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
-        to_create_obj_result_pairs: list[tuple[model.Model, UploadResult]],
+        to_create_obj_result_pairs: list[tuple[Model, UploadResult]],
     ) -> bool:
         """
         Create any new objects and update the corresponding UploadResults.
@@ -1325,7 +1314,7 @@ class BatchUploader:
         self,
         uow: BaseUnitOfWork,
         user_id: UUID | None,
-        to_update_obj_result_pairs: list[tuple[model.Model, UploadResult]],
+        to_update_obj_result_pairs: list[tuple[Model, UploadResult]],
     ) -> bool:
         """
         Update any existing objects and update the corresponding UploadResults.
@@ -1344,7 +1333,7 @@ class BatchUploader:
         stored_model_field_props = self.stored_model_field_props[model_class]
 
         # Retrieve existing objects
-        existing_objs: list[model.Model] = (
+        existing_objs: list[Model] = (
             self.service.repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
@@ -1356,7 +1345,7 @@ class BatchUploader:
         )
 
         # Determine which objects actually need to be updated instead of having identical data
-        to_update_objs: list[model.Model] = []
+        to_update_objs: list[Model] = []
         to_update_obj_results: list[model.UploadResult] = []
         for (obj, obj_result), existing_obj in zip(
             to_update_obj_result_pairs, existing_objs

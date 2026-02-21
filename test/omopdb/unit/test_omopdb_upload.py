@@ -81,15 +81,16 @@ from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.omopdb.domain.command.omop import UploadPersonsCommand
-from gen_epix.omopdb.domain.model.omop.omop import Person, Specimen
-from gen_epix.omopdb.domain.model.omop.upload import (
+from gen_epix.omopdb.domain.command import UploadPersonsCommand
+from gen_epix.omopdb.domain.model import (
     MeasurementForUpload,
     MeasurementRelationForUpload,
     ObservationForUpload,
+    Person,
     PersonBatchForUpload,
     PersonBatchUploadResult,
     PersonForUpload,
+    Specimen,
     SpecimenForUpload,
 )
 from gen_epix.omopdb.services.omop.base import BaseOmopService
@@ -1405,4 +1406,9 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         ]
         batch_result = self.upload_batch([person1, person2, person3])
         self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=7)
+        self.assertStatusCount(batch_result, n_created=7)
+        self.assertStatusCount(batch_result, n_created=7)
+        self.assertStatusCount(batch_result, n_created=7)
+        self.assertStatusCount(batch_result, n_created=7)
         self.assertStatusCount(batch_result, n_created=7)

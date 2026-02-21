@@ -16,7 +16,7 @@ from gen_epix.commondb.domain.model.upload import (
     UploadResult,
 )
 from gen_epix.fastapp.domain import Entity
-from gen_epix.omopdb.domain.model.omop.omop import (
+from gen_epix.omopdb.domain.model.omop.clinical_data import (
     Measurement,
     MeasurementRelation,
     Observation,
