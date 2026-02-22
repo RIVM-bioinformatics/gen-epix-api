@@ -113,6 +113,7 @@ from gen_epix.omopdb.domain.command.omop import (
     ConditionOccurrenceCrudCommand as ConditionOccurrenceCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import CostCrudCommand as CostCrudCommand
+from gen_epix.omopdb.domain.command.omop import DeathCrudCommand as DeathCrudCommand
 from gen_epix.omopdb.domain.command.omop import (
     DeviceExposureCrudCommand as DeviceExposureCrudCommand,
 )
@@ -125,14 +126,15 @@ from gen_epix.omopdb.domain.command.omop import (
 from gen_epix.omopdb.domain.command.omop import (
     DrugStrengthCrudCommand as DrugStrengthCrudCommand,
 )
+from gen_epix.omopdb.domain.command.omop import EpisodeCrudCommand as EpisodeCrudCommand
+from gen_epix.omopdb.domain.command.omop import (
+    EpisodeEventCrudCommand as EpisodeEventCrudCommand,
+)
 from gen_epix.omopdb.domain.command.omop import (
     FactRelationshipCrudCommand as FactRelationshipCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     LocationCrudCommand as LocationCrudCommand,
-)
-from gen_epix.omopdb.domain.command.omop import (
-    LocationHistoryCrudCommand as LocationHistoryCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
     MeasurementCrudCommand as MeasurementCrudCommand,
@@ -171,9 +173,6 @@ from gen_epix.omopdb.domain.command.omop import (
     SpecimenCrudCommand as SpecimenCrudCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
-    SurveyConductCrudCommand as SurveyConductCrudCommand,
-)
-from gen_epix.omopdb.domain.command.omop import (
     UploadPersonsCommand as UploadPersonsCommand,
 )
 from gen_epix.omopdb.domain.command.omop import (
@@ -206,15 +205,17 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         ConditionEraCrudCommand,
         ConditionOccurrenceCrudCommand,
         CostCrudCommand,
+        DeathCrudCommand,
         DeviceExposureCrudCommand,
         DomainCrudCommand,
         DoseEraCrudCommand,
         DrugEraCrudCommand,
         DrugExposureCrudCommand,
         DrugStrengthCrudCommand,
+        EpisodeCrudCommand,
+        EpisodeEventCrudCommand,
         FactRelationshipCrudCommand,
         LocationCrudCommand,
-        LocationHistoryCrudCommand,
         MeasurementCrudCommand,
         MeasurementRelationCrudCommand,
         MetadataCrudCommand,
@@ -229,7 +230,6 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RelationshipCrudCommand,
         SourceToConceptMapCrudCommand,
         SpecimenCrudCommand,
-        SurveyConductCrudCommand,
         UploadPersonsCommand,
         VisitDetailCrudCommand,
         VisitOccurrenceCrudCommand,

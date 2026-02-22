@@ -5,15 +5,13 @@ from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin as DataLinea
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ConditionOccurrence as ConditionOccurrence,
 )
+from gen_epix.omopdb.domain.model.omop.clinical_data import Death as Death
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     DeviceExposure as DeviceExposure,
 )
 from gen_epix.omopdb.domain.model.omop.clinical_data import DrugExposure as DrugExposure
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     FactRelationship as FactRelationship,
-)
-from gen_epix.omopdb.domain.model.omop.clinical_data import (
-    LocationHistory as LocationHistory,
 )
 from gen_epix.omopdb.domain.model.omop.clinical_data import Measurement as Measurement
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
@@ -30,9 +28,6 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
     ProcedureOccurrence as ProcedureOccurrence,
 )
 from gen_epix.omopdb.domain.model.omop.clinical_data import Specimen as Specimen
-from gen_epix.omopdb.domain.model.omop.clinical_data import (
-    SurveyConduct as SurveyConduct,
-)
 from gen_epix.omopdb.domain.model.omop.clinical_data import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     VisitOccurrence as VisitOccurrence,
@@ -47,6 +42,8 @@ from gen_epix.omopdb.domain.model.omop.derived import (
 from gen_epix.omopdb.domain.model.omop.derived import ConditionEra as ConditionEra
 from gen_epix.omopdb.domain.model.omop.derived import DoseEra as DoseEra
 from gen_epix.omopdb.domain.model.omop.derived import DrugEra as DrugEra
+from gen_epix.omopdb.domain.model.omop.derived import Episode as Episode
+from gen_epix.omopdb.domain.model.omop.derived import EpisodeEvent as EpisodeEvent
 
 # Health economics domain imports
 from gen_epix.omopdb.domain.model.omop.health_economics import Cost as Cost
@@ -105,15 +102,3 @@ from gen_epix.omopdb.domain.model.omop.upload import (
 from gen_epix.omopdb.domain.model.omop.upload import (
     SpecimenForUpload as SpecimenForUpload,
 )
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject
-
-# from gen_epix.omopdb.domain.model.omop.upload import Subject as Subject

@@ -51,15 +51,17 @@ from gen_epix.omopdb.domain.model.omop import ConditionEra as ConditionEra
 from gen_epix.omopdb.domain.model.omop import ConditionOccurrence as ConditionOccurrence
 from gen_epix.omopdb.domain.model.omop import Cost as Cost
 from gen_epix.omopdb.domain.model.omop import DataLineageMixin as DataLineageMixin
+from gen_epix.omopdb.domain.model.omop import Death as Death
 from gen_epix.omopdb.domain.model.omop import DeviceExposure as DeviceExposure
 from gen_epix.omopdb.domain.model.omop import Domain as Domain
 from gen_epix.omopdb.domain.model.omop import DoseEra as DoseEra
 from gen_epix.omopdb.domain.model.omop import DrugEra as DrugEra
 from gen_epix.omopdb.domain.model.omop import DrugExposure as DrugExposure
 from gen_epix.omopdb.domain.model.omop import DrugStrength as DrugStrength
+from gen_epix.omopdb.domain.model.omop import Episode as Episode
+from gen_epix.omopdb.domain.model.omop import EpisodeEvent as EpisodeEvent
 from gen_epix.omopdb.domain.model.omop import FactRelationship as FactRelationship
 from gen_epix.omopdb.domain.model.omop import Location as Location
-from gen_epix.omopdb.domain.model.omop import LocationHistory as LocationHistory
 from gen_epix.omopdb.domain.model.omop import Measurement as Measurement
 from gen_epix.omopdb.domain.model.omop import (
     MeasurementForUpload as MeasurementForUpload,
@@ -93,7 +95,6 @@ from gen_epix.omopdb.domain.model.omop import Relationship as Relationship
 from gen_epix.omopdb.domain.model.omop import SourceToConceptMap as SourceToConceptMap
 from gen_epix.omopdb.domain.model.omop import Specimen as Specimen
 from gen_epix.omopdb.domain.model.omop import SpecimenForUpload as SpecimenForUpload
-from gen_epix.omopdb.domain.model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
@@ -124,36 +125,29 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         + [],
         enum.ServiceType.OMOP: [
             # Ordered topologically based on foreign key dependencies
-            # Foundation tables (no dependencies)
-            Location,
-            CohortDefinition,
-            Cohort,
-            CdmSource,
-            # Vocabulary system (circular dependencies resolved logically)
+            # Ontology
             Vocabulary,
             Domain,
             ConceptClass,
             Concept,
             Relationship,
-            # Concept relationships (depend on concept and relationship)
             ConceptRelationship,
             ConceptAncestor,
             ConceptSynonym,
-            # Reference/mapping tables
-            DrugStrength,
             SourceToConceptMap,
-            Metadata,
-            # Care infrastructure
+            DrugStrength,
+            # Health system
+            Location,
             CareSite,
             Provider,
-            # Person and observations
+            # Metadata
+            CdmSource,
+            Metadata,
+            # Clinical data
             Person,
             ObservationPeriod,
-            PayerPlanPeriod,
-            # Visits (depend on person, care_site, provider, concept)
             VisitOccurrence,
             VisitDetail,
-            # Clinical events (depend on person, visits, providers, concepts)
             ConditionOccurrence,
             ProcedureOccurrence,
             DrugExposure,
@@ -162,17 +156,21 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             Observation,
             Specimen,
             Note,
-            # Other tables depending at least on person
+            NoteNlp,
+            FactRelationship,
+            Death,
+            MeasurementRelation,
+            # Health economics
+            PayerPlanPeriod,
+            Cost,
+            # Derived
             ConditionEra,
             DrugEra,
             DoseEra,
-            NoteNlp,
-            Cost,
-            LocationHistory,
-            SurveyConduct,
-            # General relationships
-            FactRelationship,
-            MeasurementRelation,
+            CohortDefinition,
+            Cohort,
+            Episode,
+            EpisodeEvent,
             # Upload
             SpecimenForUpload,
             MeasurementForUpload,
@@ -182,8 +180,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             PersonUploadResult,
             PersonBatchForUpload,
             PersonBatchUploadResult,
-            # Download
-            # Subject,
         ],
     }
 )

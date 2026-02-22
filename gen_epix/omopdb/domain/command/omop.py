@@ -81,6 +81,10 @@ class DeviceExposureCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DeviceExposure
 
 
+class DeathCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Death
+
+
 class DomainCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Domain
 
@@ -101,16 +105,20 @@ class DrugStrengthCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.DrugStrength
 
 
+class EpisodeCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.Episode
+
+
+class EpisodeEventCrudCommand(CrudCommand):
+    MODEL_CLASS: ClassVar = model.EpisodeEvent
+
+
 class FactRelationshipCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.FactRelationship
 
 
 class LocationCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Location
-
-
-class LocationHistoryCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.LocationHistory
 
 
 class MeasurementCrudCommand(CrudCommand):
@@ -167,10 +175,6 @@ class SourceToConceptMapCrudCommand(CrudCommand):
 
 class SpecimenCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.Specimen
-
-
-class SurveyConductCrudCommand(CrudCommand):
-    MODEL_CLASS: ClassVar = model.SurveyConduct
 
 
 class VisitDetailCrudCommand(CrudCommand):

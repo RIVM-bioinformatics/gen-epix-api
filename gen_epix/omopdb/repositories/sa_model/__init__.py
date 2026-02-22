@@ -52,19 +52,19 @@ from gen_epix.omopdb.repositories.sa_model.omop import (
     ConditionOccurrence as ConditionOccurrence,
 )
 from gen_epix.omopdb.repositories.sa_model.omop import Cost as Cost
+from gen_epix.omopdb.repositories.sa_model.omop import Death as Death
 from gen_epix.omopdb.repositories.sa_model.omop import DeviceExposure as DeviceExposure
 from gen_epix.omopdb.repositories.sa_model.omop import Domain as Domain
 from gen_epix.omopdb.repositories.sa_model.omop import DoseEra as DoseEra
 from gen_epix.omopdb.repositories.sa_model.omop import DrugEra as DrugEra
 from gen_epix.omopdb.repositories.sa_model.omop import DrugExposure as DrugExposure
 from gen_epix.omopdb.repositories.sa_model.omop import DrugStrength as DrugStrength
+from gen_epix.omopdb.repositories.sa_model.omop import Episode as Episode
+from gen_epix.omopdb.repositories.sa_model.omop import EpisodeEvent as EpisodeEvent
 from gen_epix.omopdb.repositories.sa_model.omop import (
     FactRelationship as FactRelationship,
 )
 from gen_epix.omopdb.repositories.sa_model.omop import Location as Location
-from gen_epix.omopdb.repositories.sa_model.omop import (
-    LocationHistory as LocationHistory,
-)
 from gen_epix.omopdb.repositories.sa_model.omop import Measurement as Measurement
 from gen_epix.omopdb.repositories.sa_model.omop import (
     MeasurementRelation as MeasurementRelation,
@@ -89,7 +89,6 @@ from gen_epix.omopdb.repositories.sa_model.omop import (
     SourceToConceptMap as SourceToConceptMap,
 )
 from gen_epix.omopdb.repositories.sa_model.omop import Specimen as Specimen
-from gen_epix.omopdb.repositories.sa_model.omop import SurveyConduct as SurveyConduct
 from gen_epix.omopdb.repositories.sa_model.omop import VisitDetail as VisitDetail
 from gen_epix.omopdb.repositories.sa_model.omop import (
     VisitOccurrence as VisitOccurrence,
@@ -131,15 +130,17 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.ConditionEra: ConditionEra,
         model.ConditionOccurrence: ConditionOccurrence,
         model.Cost: Cost,
+        model.Death: Death,
         model.DeviceExposure: DeviceExposure,
         model.Domain: Domain,
         model.DoseEra: DoseEra,
         model.DrugEra: DrugEra,
         model.DrugExposure: DrugExposure,
         model.DrugStrength: DrugStrength,
+        model.Episode: Episode,
+        model.EpisodeEvent: EpisodeEvent,
         model.FactRelationship: FactRelationship,
         model.Location: Location,
-        model.LocationHistory: LocationHistory,
         model.Measurement: Measurement,
         model.MeasurementRelation: MeasurementRelation,
         model.Metadata: Metadata,
@@ -154,7 +155,6 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.Relationship: Relationship,
         model.SourceToConceptMap: SourceToConceptMap,
         model.Specimen: Specimen,
-        model.SurveyConduct: SurveyConduct,
         model.VisitDetail: VisitDetail,
         model.VisitOccurrence: VisitOccurrence,
         model.Vocabulary: Vocabulary,

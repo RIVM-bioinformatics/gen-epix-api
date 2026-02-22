@@ -5,140 +5,17 @@ import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.commondb.repositories.sa_model import (
-    NoIdRowMetadataMixin,
     create_mapped_column,
     create_table_args,
 )
+from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
 from gen_epix.omopdb.domain import DOMAIN, enum, model
 from gen_epix.omopdb.repositories.sa_model.base import DataLineageMixin
 
 Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 
-class Location(Base, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.Location)
-
-    location_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Location, "location_id"
-    )
-    address_1: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Location, "address_1"
-    )
-    address_2: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Location, "address_2"
-    )
-    city: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "city")
-    state: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "state")
-    zip: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "zip")
-    county: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "county")
-    location_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Location, "location_source_value"
-    )
-    latitude: Mapped[float | None] = create_mapped_column(
-        DOMAIN, model.Location, "latitude"
-    )
-    longitude: Mapped[float | None] = create_mapped_column(
-        DOMAIN, model.Location, "longitude"
-    )
-
-
-class CohortDefinition(Base, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
-
-    cohort_definition_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "cohort_definition_id"
-    )
-    cohort_definition_name: Mapped[str] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "cohort_definition_name"
-    )
-    cohort_definition_description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "cohort_definition_description"
-    )
-    definition_type_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "definition_type_concept_id"
-    )
-    cohort_definition_syntax: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "cohort_definition_syntax"
-    )
-    subject_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "subject_concept_id"
-    )
-    cohort_initiation_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.CohortDefinition, "cohort_initiation_date"
-    )
-
-
-class Cohort(Base, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.Cohort)
-
-    cohort_definition_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cohort, "cohort_definition_id"
-    )
-    subject_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "subject_id")
-    cohort_start_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.Cohort, "cohort_start_date"
-    )
-    cohort_end_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.Cohort, "cohort_end_date"
-    )
-    cohort_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "cohort_id")
-
-
-class CdmSource(Base, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.CdmSource)
-
-    cdm_source_name: Mapped[str] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_source_name"
-    )
-    cdm_source_abbreviation: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_source_abbreviation"
-    )
-    cdm_holder: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_holder"
-    )
-    source_description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "source_description"
-    )
-    source_documentation_reference: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "source_documentation_reference"
-    )
-    cdm_etl_reference: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_etl_reference"
-    )
-    source_release_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "source_release_date"
-    )
-    cdm_release_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_release_date"
-    )
-    cdm_version: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_version"
-    )
-    vocabulary_version: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.CdmSource, "vocabulary_version"
-    )
-    cdm_source_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.CdmSource, "cdm_source_id"
-    )
-
-
-class Vocabulary(Base, NoIdRowMetadataMixin):
+class Vocabulary(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -151,7 +28,7 @@ class Vocabulary(Base, NoIdRowMetadataMixin):
     vocabulary_name: Mapped[str] = create_mapped_column(
         DOMAIN, model.Vocabulary, "vocabulary_name"
     )
-    vocabulary_reference: Mapped[str] = create_mapped_column(
+    vocabulary_reference: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Vocabulary, "vocabulary_reference"
     )
     vocabulary_version: Mapped[str | None] = create_mapped_column(
@@ -162,7 +39,7 @@ class Vocabulary(Base, NoIdRowMetadataMixin):
     )
 
 
-class Domain(Base, NoIdRowMetadataMixin):
+class Domain(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -176,7 +53,7 @@ class Domain(Base, NoIdRowMetadataMixin):
     )
 
 
-class ConceptClass(Base, NoIdRowMetadataMixin):
+class ConceptClass(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -194,7 +71,7 @@ class ConceptClass(Base, NoIdRowMetadataMixin):
     )
 
 
-class Concept(Base, NoIdRowMetadataMixin):
+class Concept(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -229,7 +106,7 @@ class Concept(Base, NoIdRowMetadataMixin):
     )
 
 
-class Relationship(Base, NoIdRowMetadataMixin):
+class Relationship(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -256,7 +133,7 @@ class Relationship(Base, NoIdRowMetadataMixin):
     )
 
 
-class ConceptRelationship(Base, NoIdRowMetadataMixin):
+class ConceptRelationship(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -286,7 +163,7 @@ class ConceptRelationship(Base, NoIdRowMetadataMixin):
     )
 
 
-class ConceptAncestor(Base, NoIdRowMetadataMixin):
+class ConceptAncestor(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -310,7 +187,7 @@ class ConceptAncestor(Base, NoIdRowMetadataMixin):
     )
 
 
-class ConceptSynonym(Base, NoIdRowMetadataMixin):
+class ConceptSynonym(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -331,7 +208,46 @@ class ConceptSynonym(Base, NoIdRowMetadataMixin):
     )
 
 
-class DrugStrength(Base, NoIdRowMetadataMixin):
+class SourceToConceptMap(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
+
+    source_code: Mapped[str] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "source_code"
+    )
+    source_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "source_concept_id"
+    )
+    source_vocabulary_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "source_vocabulary_id"
+    )
+    source_code_description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "source_code_description"
+    )
+    target_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "target_concept_id"
+    )
+    target_vocabulary_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "target_vocabulary_id"
+    )
+    valid_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "valid_start_date"
+    )
+    valid_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "valid_end_date"
+    )
+    invalid_reason: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "invalid_reason"
+    )
+    source_to_concept_map_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.SourceToConceptMap, "source_to_concept_map_id"
+    )
+
+
+class DrugStrength(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -379,77 +295,44 @@ class DrugStrength(Base, NoIdRowMetadataMixin):
     )
 
 
-class SourceToConceptMap(Base, NoIdRowMetadataMixin):
+class Location(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.SourceToConceptMap)
+    __tablename__, __table_args__ = create_table_args(model.Location)
 
-    source_code: Mapped[str] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "source_code"
+    location_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Location, "location_id"
     )
-    source_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "source_concept_id"
+    address_1: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "address_1"
     )
-    source_vocabulary_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "source_vocabulary_id"
+    address_2: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "address_2"
     )
-    source_code_description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "source_code_description"
+    city: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "city")
+    state: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "state")
+    zip: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "zip")
+    county: Mapped[str | None] = create_mapped_column(DOMAIN, model.Location, "county")
+    location_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "location_source_value"
     )
-    target_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "target_concept_id"
+    country_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Location, "country_concept_id"
     )
-    target_vocabulary_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "target_vocabulary_id"
+    country_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Location, "country_source_value"
     )
-    valid_start_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "valid_start_date"
+    latitude: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Location, "latitude"
     )
-    valid_end_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "valid_end_date"
-    )
-    invalid_reason: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "invalid_reason"
-    )
-    source_to_concept_map_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SourceToConceptMap, "source_to_concept_map_id"
+    longitude: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Location, "longitude"
     )
 
 
-class Metadata(Base, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.Metadata)
-
-    metadata_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Metadata, "metadata_concept_id"
-    )
-    metadata_type_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Metadata, "metadata_type_concept_id"
-    )
-    name: Mapped[str] = create_mapped_column(DOMAIN, model.Metadata, "name")
-    value_as_string: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Metadata, "value_as_string"
-    )
-    value_as_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Metadata, "value_as_concept_id"
-    )
-    metadata_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Metadata, "metadata_date"
-    )
-    metadata_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.Metadata, "metadata_datetime"
-    )
-    metadata_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Metadata, "metadata_id"
-    )
-
-
-class CareSite(Base, NoIdRowMetadataMixin):
+class CareSite(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -462,7 +345,7 @@ class CareSite(Base, NoIdRowMetadataMixin):
     care_site_name: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CareSite, "care_site_name"
     )
-    place_of_service_concept_id: Mapped[UUID] = create_mapped_column(
+    place_of_service_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.CareSite, "place_of_service_concept_id"
     )
     location_id: Mapped[UUID | None] = create_mapped_column(
@@ -479,7 +362,7 @@ class CareSite(Base, NoIdRowMetadataMixin):
     )
 
 
-class Provider(Base, NoIdRowMetadataMixin):
+class Provider(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -494,7 +377,7 @@ class Provider(Base, NoIdRowMetadataMixin):
     )
     npi: Mapped[str | None] = create_mapped_column(DOMAIN, model.Provider, "npi")
     dea: Mapped[str | None] = create_mapped_column(DOMAIN, model.Provider, "dea")
-    specialty_concept_id: Mapped[UUID] = create_mapped_column(
+    specialty_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Provider, "specialty_concept_id"
     )
     care_site_id: Mapped[UUID | None] = create_mapped_column(
@@ -503,7 +386,7 @@ class Provider(Base, NoIdRowMetadataMixin):
     year_of_birth: Mapped[int | None] = create_mapped_column(
         DOMAIN, model.Provider, "year_of_birth"
     )
-    gender_concept_id: Mapped[UUID] = create_mapped_column(
+    gender_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Provider, "gender_concept_id"
     )
     provider_source_value: Mapped[str | None] = create_mapped_column(
@@ -512,18 +395,97 @@ class Provider(Base, NoIdRowMetadataMixin):
     specialty_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Provider, "specialty_source_value"
     )
-    specialty_source_concept_id: Mapped[UUID] = create_mapped_column(
+    specialty_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Provider, "specialty_source_concept_id"
     )
     gender_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Provider, "gender_source_value"
     )
-    gender_source_concept_id: Mapped[UUID] = create_mapped_column(
+    gender_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Provider, "gender_source_concept_id"
     )
 
 
-class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class CdmSource(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.CdmSource)
+
+    cdm_source_name: Mapped[str] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_source_name"
+    )
+    cdm_source_abbreviation: Mapped[str] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_source_abbreviation"
+    )
+    cdm_holder: Mapped[str] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_holder"
+    )
+    source_description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CdmSource, "source_description"
+    )
+    source_documentation_reference: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CdmSource, "source_documentation_reference"
+    )
+    cdm_etl_reference: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_etl_reference"
+    )
+    source_release_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.CdmSource, "source_release_date"
+    )
+    cdm_release_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_release_date"
+    )
+    cdm_version: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_version"
+    )
+    cdm_version_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_version_concept_id"
+    )
+    vocabulary_version: Mapped[str] = create_mapped_column(
+        DOMAIN, model.CdmSource, "vocabulary_version"
+    )
+    cdm_source_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CdmSource, "cdm_source_id"
+    )
+
+
+class Metadata(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Metadata)
+
+    metadata_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Metadata, "metadata_id"
+    )
+    metadata_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Metadata, "metadata_concept_id"
+    )
+    metadata_type_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Metadata, "metadata_type_concept_id"
+    )
+    name: Mapped[str] = create_mapped_column(DOMAIN, model.Metadata, "name")
+    value_as_string: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Metadata, "value_as_string"
+    )
+    value_as_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Metadata, "value_as_concept_id"
+    )
+    value_as_number: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Metadata, "value_as_number"
+    )
+    metadata_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Metadata, "metadata_date"
+    )
+    metadata_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Metadata, "metadata_datetime"
+    )
+
+
+class Person(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -546,9 +508,6 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     birth_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.Person, "birth_datetime"
     )
-    death_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.Person, "death_datetime"
-    )
     race_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Person, "race_concept_id"
     )
@@ -570,19 +529,19 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     gender_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Person, "gender_source_value"
     )
-    gender_source_concept_id: Mapped[UUID] = create_mapped_column(
+    gender_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Person, "gender_source_concept_id"
     )
     race_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Person, "race_source_value"
     )
-    race_source_concept_id: Mapped[UUID] = create_mapped_column(
+    race_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Person, "race_source_concept_id"
     )
     ethnicity_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Person, "ethnicity_source_value"
     )
-    ethnicity_source_concept_id: Mapped[UUID] = create_mapped_column(
+    ethnicity_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Person, "ethnicity_source_concept_id"
     )
     provided_by_organization_id: Mapped[UUID] = create_mapped_column(
@@ -593,7 +552,7 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class ObservationPeriod(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -623,79 +582,7 @@ class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
-
-    payer_plan_period_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_id"
-    )
-    person_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "person_id"
-    )
-    contract_person_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "contract_person_id"
-    )
-    payer_plan_period_start_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_start_date"
-    )
-    payer_plan_period_end_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_end_date"
-    )
-    payer_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_concept_id"
-    )
-    payer_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_source_value"
-    )
-    payer_source_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "payer_source_concept_id"
-    )
-    plan_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "plan_concept_id"
-    )
-    plan_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "plan_source_value"
-    )
-    plan_source_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "plan_source_concept_id"
-    )
-    contract_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "contract_concept_id"
-    )
-    contract_source_value: Mapped[str] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "contract_source_value"
-    )
-    contract_source_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "contract_source_concept_id"
-    )
-    sponsor_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "sponsor_concept_id"
-    )
-    sponsor_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "sponsor_source_value"
-    )
-    sponsor_source_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "sponsor_source_concept_id"
-    )
-    family_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "family_source_value"
-    )
-    stop_reason_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "stop_reason_concept_id"
-    )
-    stop_reason_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_value"
-    )
-    stop_reason_source_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_concept_id"
-    )
-
-
-class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class VisitOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -711,16 +598,16 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     visit_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_concept_id"
     )
-    visit_start_date: Mapped[date | None] = create_mapped_column(
+    visit_start_date: Mapped[date] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_start_date"
     )
-    visit_start_datetime: Mapped[datetime] = create_mapped_column(
+    visit_start_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_start_datetime"
     )
-    visit_end_date: Mapped[date | None] = create_mapped_column(
+    visit_end_date: Mapped[date] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_end_date"
     )
-    visit_end_datetime: Mapped[datetime] = create_mapped_column(
+    visit_end_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_end_datetime"
     )
     visit_type_concept_id: Mapped[UUID] = create_mapped_column(
@@ -735,27 +622,27 @@ class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     visit_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_source_value"
     )
-    visit_source_concept_id: Mapped[UUID] = create_mapped_column(
+    visit_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "visit_source_concept_id"
     )
-    admitted_from_concept_id: Mapped[UUID] = create_mapped_column(
+    admitted_from_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "admitted_from_concept_id"
     )
     admitted_from_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "admitted_from_source_value"
     )
-    discharge_to_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.VisitOccurrence, "discharge_to_concept_id"
+    discharged_to_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitOccurrence, "discharged_to_concept_id"
     )
-    discharge_to_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.VisitOccurrence, "discharge_to_source_value"
+    discharged_to_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.VisitOccurrence, "discharged_to_source_value"
     )
     preceding_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitOccurrence, "preceding_visit_occurrence_id"
     )
 
 
-class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class VisitDetail(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -795,33 +682,33 @@ class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     visit_detail_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.VisitDetail, "visit_detail_source_value"
     )
-    visit_detail_source_concept_id: Mapped[UUID] = create_mapped_column(
+    visit_detail_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitDetail, "visit_detail_source_concept_id"
+    )
+    admitted_from_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "admitted_from_concept_id"
     )
     admitted_from_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.VisitDetail, "admitted_from_source_value"
     )
-    admitted_from_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.VisitDetail, "admitted_from_concept_id"
+    discharged_to_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "discharged_to_source_value"
     )
-    discharge_to_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.VisitDetail, "discharge_to_source_value"
-    )
-    discharge_to_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.VisitDetail, "discharge_to_concept_id"
+    discharged_to_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "discharged_to_concept_id"
     )
     preceding_visit_detail_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.VisitDetail, "preceding_visit_detail_id"
     )
-    visit_detail_parent_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.VisitDetail, "visit_detail_parent_id"
+    parent_visit_detail_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.VisitDetail, "parent_visit_detail_id"
     )
     visit_occurrence_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.VisitDetail, "visit_occurrence_id"
     )
 
 
-class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class ConditionOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -852,7 +739,7 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     condition_type_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ConditionOccurrence, "condition_type_concept_id"
     )
-    condition_status_concept_id: Mapped[UUID] = create_mapped_column(
+    condition_status_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.ConditionOccurrence, "condition_status_concept_id"
     )
     stop_reason: Mapped[str | None] = create_mapped_column(
@@ -870,7 +757,7 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     condition_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ConditionOccurrence, "condition_source_value"
     )
-    condition_source_concept_id: Mapped[UUID] = create_mapped_column(
+    condition_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.ConditionOccurrence, "condition_source_concept_id"
     )
     condition_status_source_value: Mapped[str | None] = create_mapped_column(
@@ -884,7 +771,7 @@ class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class ProcedureOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -900,11 +787,17 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     procedure_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_concept_id"
     )
-    procedure_date: Mapped[date | None] = create_mapped_column(
+    procedure_date: Mapped[date] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_date"
     )
-    procedure_datetime: Mapped[datetime] = create_mapped_column(
+    procedure_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_datetime"
+    )
+    procedure_end_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.ProcedureOccurrence, "procedure_end_date"
+    )
+    procedure_end_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.ProcedureOccurrence, "procedure_end_datetime"
     )
     procedure_type_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_type_concept_id"
@@ -927,7 +820,7 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     procedure_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_source_value"
     )
-    procedure_source_concept_id: Mapped[UUID] = create_mapped_column(
+    procedure_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.ProcedureOccurrence, "procedure_source_concept_id"
     )
     modifier_source_value: Mapped[str | None] = create_mapped_column(
@@ -938,7 +831,7 @@ class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class DrugExposure(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1003,7 +896,7 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     drug_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DrugExposure, "drug_source_value"
     )
-    drug_source_concept_id: Mapped[UUID] = create_mapped_column(
+    drug_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.DrugExposure, "drug_source_concept_id"
     )
     route_source_value: Mapped[str | None] = create_mapped_column(
@@ -1020,7 +913,7 @@ class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class DeviceExposure(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1054,6 +947,9 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     unique_device_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "unique_device_id"
     )
+    production_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "production_id"
+    )
     quantity: Mapped[int | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "quantity"
     )
@@ -1069,8 +965,17 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     device_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "device_source_value"
     )
-    device_source_concept_id: Mapped[UUID] = create_mapped_column(
+    device_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "device_source_concept_id"
+    )
+    unit_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "unit_concept_id"
+    )
+    unit_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "unit_source_value"
+    )
+    unit_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.DeviceExposure, "unit_source_concept_id"
     )
     device_exposure_start_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.DeviceExposure, "device_exposure_start_iso_interval"
@@ -1080,7 +985,7 @@ class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class Measurement(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1138,14 +1043,23 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     measurement_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Measurement, "measurement_source_value"
     )
-    measurement_source_concept_id: Mapped[UUID] = create_mapped_column(
+    measurement_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Measurement, "measurement_source_concept_id"
     )
     unit_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Measurement, "unit_source_value"
     )
+    unit_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Measurement, "unit_source_concept_id"
+    )
     value_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Measurement, "value_source_value"
+    )
+    measurement_event_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Measurement, "measurement_event_id"
+    )
+    meas_event_field_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Measurement, "meas_event_field_concept_id"
     )
     measurement_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Measurement, "measurement_iso_interval"
@@ -1155,7 +1069,7 @@ class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class Observation(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1171,10 +1085,10 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     observation_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Observation, "observation_concept_id"
     )
-    observation_date: Mapped[date | None] = create_mapped_column(
+    observation_date: Mapped[date] = create_mapped_column(
         DOMAIN, model.Observation, "observation_date"
     )
-    observation_datetime: Mapped[datetime] = create_mapped_column(
+    observation_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.Observation, "observation_datetime"
     )
     observation_type_concept_id: Mapped[UUID] = create_mapped_column(
@@ -1207,7 +1121,7 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     observation_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Observation, "observation_source_value"
     )
-    observation_source_concept_id: Mapped[UUID] = create_mapped_column(
+    observation_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Observation, "observation_source_concept_id"
     )
     unit_source_value: Mapped[str | None] = create_mapped_column(
@@ -1216,14 +1130,14 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     qualifier_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Observation, "qualifier_source_value"
     )
+    value_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Observation, "value_source_value"
+    )
     observation_event_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Observation, "observation_event_id"
     )
     obs_event_field_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Observation, "obs_event_field_concept_id"
-    )
-    value_as_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.Observation, "value_as_datetime"
     )
     observation_iso_interval: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Observation, "observation_iso_interval"
@@ -1233,7 +1147,7 @@ class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class Specimen(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1294,7 +1208,7 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class Note(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1303,12 +1217,6 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
 
     note_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "note_id")
     person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Note, "person_id")
-    note_event_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Note, "note_event_id"
-    )
-    note_event_field_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Note, "note_event_field_concept_id"
-    )
     note_date: Mapped[date] = create_mapped_column(DOMAIN, model.Note, "note_date")
     note_datetime: Mapped[datetime | None] = create_mapped_column(
         DOMAIN, model.Note, "note_datetime"
@@ -1341,98 +1249,15 @@ class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     note_source_value: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Note, "note_source_value"
     )
-
-
-class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.ConditionEra)
-
-    condition_era_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "condition_era_id"
+    note_event_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Note, "note_event_id"
     )
-    person_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "person_id"
-    )
-    condition_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "condition_concept_id"
-    )
-    condition_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "condition_era_start_datetime"
-    )
-    condition_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "condition_era_end_datetime"
-    )
-    condition_occurrence_count: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.ConditionEra, "condition_occurrence_count"
+    note_event_field_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Note, "note_event_field_concept_id"
     )
 
 
-class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.DrugEra)
-
-    drug_era_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_era_id"
-    )
-    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DrugEra, "person_id")
-    drug_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_concept_id"
-    )
-    drug_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_era_start_datetime"
-    )
-    drug_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_era_end_datetime"
-    )
-    drug_exposure_count: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_exposure_count"
-    )
-    gap_days: Mapped[int | None] = create_mapped_column(
-        DOMAIN, model.DrugEra, "gap_days"
-    )
-    drug_era_start_iso_interval: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_era_start_iso_interval"
-    )
-    drug_era_end_iso_interval: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.DrugEra, "drug_era_end_iso_interval"
-    )
-
-
-class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.DoseEra)
-
-    dose_era_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.DoseEra, "dose_era_id"
-    )
-    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DoseEra, "person_id")
-    drug_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.DoseEra, "drug_concept_id"
-    )
-    unit_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.DoseEra, "unit_concept_id"
-    )
-    dose_value: Mapped[float] = create_mapped_column(
-        DOMAIN, model.DoseEra, "dose_value"
-    )
-    dose_era_start_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.DoseEra, "dose_era_start_datetime"
-    )
-    dose_era_end_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.DoseEra, "dose_era_end_datetime"
-    )
-
-
-class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
+class NoteNlp(Base, DataLineageMixin, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1475,181 +1300,7 @@ class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     )
 
 
-class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.Cost)
-
-    cost_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "cost_id")
-    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "person_id")
-    cost_event_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_event_id"
-    )
-    cost_event_field_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_event_field_concept_id"
-    )
-    cost_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_concept_id"
-    )
-    cost_type_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_type_concept_id"
-    )
-    cost_source_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_source_concept_id"
-    )
-    cost_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Cost, "cost_source_value"
-    )
-    currency_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "currency_concept_id"
-    )
-    cost: Mapped[float | None] = create_mapped_column(DOMAIN, model.Cost, "cost")
-    incurred_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Cost, "incurred_date"
-    )
-    billed_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Cost, "billed_date"
-    )
-    paid_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.Cost, "paid_date"
-    )
-    revenue_code_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "revenue_code_concept_id"
-    )
-    drg_concept_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "drg_concept_id"
-    )
-    revenue_code_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Cost, "revenue_code_source_value"
-    )
-    drg_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Cost, "drg_source_value"
-    )
-    payer_plan_period_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Cost, "payer_plan_period_id"
-    )
-
-
-class LocationHistory(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.LocationHistory)
-
-    location_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "location_id"
-    )
-    relationship_type_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "relationship_type_concept_id"
-    )
-    domain_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "domain_id"
-    )
-    entity_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "entity_id"
-    )
-    start_date: Mapped[date] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "start_date"
-    )
-    end_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "end_date"
-    )
-    start_iso_interval: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "start_iso_interval"
-    )
-    end_iso_interval: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "end_iso_interval"
-    )
-    location_history_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.LocationHistory, "location_history_id"
-    )
-
-
-class SurveyConduct(Base, DataLineageMixin, NoIdRowMetadataMixin):
-    """
-    SQLAlchemy model for the corresponding persistable domain model.
-    """
-
-    __tablename__, __table_args__ = create_table_args(model.SurveyConduct)
-
-    survey_conduct_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_conduct_id"
-    )
-    person_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "person_id"
-    )
-    survey_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_concept_id"
-    )
-    survey_start_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_start_date"
-    )
-    survey_start_datetime: Mapped[datetime | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_start_datetime"
-    )
-    survey_end_date: Mapped[date | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_end_date"
-    )
-    survey_end_datetime: Mapped[datetime] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_end_datetime"
-    )
-    provider_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "provider_id"
-    )
-    assisted_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "assisted_concept_id"
-    )
-    respondent_type_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "respondent_type_concept_id"
-    )
-    timing_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "timing_concept_id"
-    )
-    collection_method_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "collection_method_concept_id"
-    )
-    assisted_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "assisted_source_value"
-    )
-    respondent_type_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "respondent_type_source_value"
-    )
-    timing_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "timing_source_value"
-    )
-    collection_method_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "collection_method_source_value"
-    )
-    survey_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_source_value"
-    )
-    survey_source_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_source_concept_id"
-    )
-    survey_source_identifier: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_source_identifier"
-    )
-    validated_survey_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "validated_survey_concept_id"
-    )
-    validated_survey_source_value: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "validated_survey_source_value"
-    )
-    survey_version_number: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "survey_version_number"
-    )
-    visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "visit_occurrence_id"
-    )
-    response_visit_occurrence_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.SurveyConduct, "response_visit_occurrence_id"
-    )
-
-
-class FactRelationship(Base, NoIdRowMetadataMixin):
+class FactRelationship(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1676,7 +1327,33 @@ class FactRelationship(Base, NoIdRowMetadataMixin):
     )
 
 
-class MeasurementRelation(Base, NoIdRowMetadataMixin):
+class Death(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Death)
+
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Death, "person_id")
+    death_date: Mapped[date] = create_mapped_column(DOMAIN, model.Death, "death_date")
+    death_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Death, "death_datetime"
+    )
+    death_type_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Death, "death_type_concept_id"
+    )
+    cause_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Death, "cause_concept_id"
+    )
+    cause_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Death, "cause_source_value"
+    )
+    cause_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Death, "cause_source_concept_id"
+    )
+
+
+class MeasurementRelation(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1695,6 +1372,343 @@ class MeasurementRelation(Base, NoIdRowMetadataMixin):
     to_measurement_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.MeasurementRelation, "to_measurement_id"
     )
-    measurement_relation_concept_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.MeasurementRelation, "relationship_concept_id"
+    measurement_relation_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.MeasurementRelation, "measurement_relation_concept_id"
+    )
+
+
+class PayerPlanPeriod(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.PayerPlanPeriod)
+
+    payer_plan_period_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_id"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "person_id"
+    )
+    payer_plan_period_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_start_date"
+    )
+    payer_plan_period_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_plan_period_end_date"
+    )
+    payer_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_concept_id"
+    )
+    payer_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_source_value"
+    )
+    payer_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "payer_source_concept_id"
+    )
+    plan_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "plan_concept_id"
+    )
+    plan_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "plan_source_value"
+    )
+    plan_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "plan_source_concept_id"
+    )
+    sponsor_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "sponsor_concept_id"
+    )
+    sponsor_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "sponsor_source_value"
+    )
+    sponsor_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "sponsor_source_concept_id"
+    )
+    family_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "family_source_value"
+    )
+    stop_reason_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_concept_id"
+    )
+    stop_reason_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_value"
+    )
+    stop_reason_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.PayerPlanPeriod, "stop_reason_source_concept_id"
+    )
+
+
+class Cost(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Cost)
+
+    cost_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cost, "cost_id")
+    cost_event_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Cost, "cost_event_id"
+    )
+    cost_domain_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Cost, "cost_domain_id"
+    )
+    cost_type_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Cost, "cost_type_concept_id"
+    )
+    currency_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Cost, "currency_concept_id"
+    )
+    total_charge: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "total_charge"
+    )
+    total_cost: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "total_cost"
+    )
+    total_paid: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "total_paid"
+    )
+    paid_by_payer: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_by_payer"
+    )
+    paid_by_patient: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_by_patient"
+    )
+    paid_patient_copay: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_patient_copay"
+    )
+    paid_patient_coinsurance: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_patient_coinsurance"
+    )
+    paid_patient_deductible: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_patient_deductible"
+    )
+    paid_by_primary: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_by_primary"
+    )
+    paid_ingredient_cost: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_ingredient_cost"
+    )
+    paid_dispensing_fee: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "paid_dispensing_fee"
+    )
+    payer_plan_period_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Cost, "payer_plan_period_id"
+    )
+    amount_allowed: Mapped[float | None] = create_mapped_column(
+        DOMAIN, model.Cost, "amount_allowed"
+    )
+    revenue_code_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Cost, "revenue_code_concept_id"
+    )
+    revenue_code_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Cost, "revenue_code_source_value"
+    )
+    drg_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Cost, "drg_concept_id"
+    )
+    drg_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Cost, "drg_source_value"
+    )
+
+
+class ConditionEra(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.ConditionEra)
+
+    condition_era_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "condition_era_id"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "person_id"
+    )
+    condition_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "condition_concept_id"
+    )
+    condition_era_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "condition_era_start_date"
+    )
+    condition_era_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "condition_era_end_date"
+    )
+    condition_occurrence_count: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.ConditionEra, "condition_occurrence_count"
+    )
+
+
+class DrugEra(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.DrugEra)
+
+    drug_era_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_id"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DrugEra, "person_id")
+    drug_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_concept_id"
+    )
+    drug_era_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_start_date"
+    )
+    drug_era_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_end_date"
+    )
+    drug_exposure_count: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_exposure_count"
+    )
+    gap_days: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.DrugEra, "gap_days"
+    )
+    drug_era_start_iso_interval: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_start_iso_interval"
+    )
+    drug_era_end_iso_interval: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.DrugEra, "drug_era_end_iso_interval"
+    )
+
+
+class DoseEra(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.DoseEra)
+
+    dose_era_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_era_id"
+    )
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.DoseEra, "person_id")
+    drug_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DoseEra, "drug_concept_id"
+    )
+    unit_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.DoseEra, "unit_concept_id"
+    )
+    dose_value: Mapped[float] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_value"
+    )
+    dose_era_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_era_start_date"
+    )
+    dose_era_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.DoseEra, "dose_era_end_date"
+    )
+
+
+class CohortDefinition(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.CohortDefinition)
+
+    cohort_definition_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "cohort_definition_id"
+    )
+    cohort_definition_name: Mapped[str] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "cohort_definition_name"
+    )
+    cohort_definition_description: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "cohort_definition_description"
+    )
+    definition_type_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "definition_type_concept_id"
+    )
+    cohort_definition_syntax: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "cohort_definition_syntax"
+    )
+    subject_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "subject_concept_id"
+    )
+    cohort_initiation_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.CohortDefinition, "cohort_initiation_date"
+    )
+
+
+class Cohort(Base, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Cohort)
+
+    cohort_definition_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Cohort, "cohort_definition_id"
+    )
+    subject_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "subject_id")
+    cohort_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Cohort, "cohort_start_date"
+    )
+    cohort_end_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Cohort, "cohort_end_date"
+    )
+    cohort_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "cohort_id")
+
+
+class Episode(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.Episode)
+
+    episode_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Episode, "episode_id")
+    person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Episode, "person_id")
+    episode_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_concept_id"
+    )
+    episode_start_date: Mapped[date] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_start_date"
+    )
+    episode_start_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_start_datetime"
+    )
+    episode_end_date: Mapped[date | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_end_date"
+    )
+    episode_end_datetime: Mapped[datetime | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_end_datetime"
+    )
+    episode_parent_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_parent_id"
+    )
+    episode_number: Mapped[int | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_number"
+    )
+    episode_object_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_object_concept_id"
+    )
+    episode_type_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_type_concept_id"
+    )
+    episode_source_value: Mapped[str | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_source_value"
+    )
+    episode_source_concept_id: Mapped[UUID | None] = create_mapped_column(
+        DOMAIN, model.Episode, "episode_source_concept_id"
+    )
+
+
+class EpisodeEvent(Base, DataLineageMixin, RowMetadataMixin):
+    """
+    SQLAlchemy model for the corresponding persistable domain model.
+    """
+
+    __tablename__, __table_args__ = create_table_args(model.EpisodeEvent)
+
+    episode_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.EpisodeEvent, "episode_id"
+    )
+    event_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.EpisodeEvent, "event_id"
+    )
+    episode_event_field_concept_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.EpisodeEvent, "episode_event_field_concept_id"
+    )
+    episode_event_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.EpisodeEvent, "episode_event_id"
     )

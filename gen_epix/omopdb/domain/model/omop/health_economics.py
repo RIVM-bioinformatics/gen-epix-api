@@ -18,7 +18,7 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
-from gen_epix.omopdb.domain.model.omop.ontology import Concept
+from gen_epix.omopdb.domain.model.omop.ontology import Concept, Domain
 
 
 class PayerPlanPeriod(Model, DataLineageMixin):
@@ -32,17 +32,14 @@ class PayerPlanPeriod(Model, DataLineageMixin):
         links=create_links(
             {
                 1: ("person_id", Person, None),
-                2: ("contract_person_id", Person, None),
-                3: ("payer_concept_id", Concept, None),
-                4: ("payer_source_concept_id", Concept, None),
-                5: ("plan_concept_id", Concept, None),
-                6: ("plan_source_concept_id", Concept, None),
-                7: ("contract_concept_id", Concept, None),
-                8: ("contract_source_concept_id", Concept, None),
-                9: ("sponsor_concept_id", Concept, None),
-                10: ("sponsor_source_concept_id", Concept, None),
-                11: ("stop_reason_concept_id", Concept, None),
-                12: ("stop_reason_source_concept_id", Concept, None),
+                2: ("payer_concept_id", Concept, None),
+                3: ("payer_source_concept_id", Concept, None),
+                4: ("plan_concept_id", Concept, None),
+                5: ("plan_source_concept_id", Concept, None),
+                6: ("sponsor_concept_id", Concept, None),
+                7: ("sponsor_source_concept_id", Concept, None),
+                8: ("stop_reason_concept_id", Concept, None),
+                9: ("stop_reason_source_concept_id", Concept, None),
             }
         ),
     )
@@ -52,50 +49,41 @@ class PayerPlanPeriod(Model, DataLineageMixin):
     person_id: UUID = Field(
         description="User guidance:\nThe Person covered by the Plan.\nETL conventions:\nA single Person can have multiple, overlapping, PAYER_PLAN_PERIOD records"
     )
-    contract_person_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nThe Person who is the primary subscriber/contract owner for Plan.\nETL conventions:\nThis may or may not be the same as the PERSON_ID. For example, if a mother has her son on her plan and the PAYER_PLAN_PERIOD record is the for son, the sons's PERSON_ID would go in PAYER_PLAN_PERIOD.PERSON_ID and the mother's PERSON_ID would go in PAYER_PLAN_PERIOD.CONTRACT_PERSON_ID.",
-    )
     payer_plan_period_start_date: date = Field(
         description="User guidance:\nStart date of Plan coverage.\nETL conventions:\nNone"
     )
     payer_plan_period_end_date: date = Field(
         description="User guidance:\nEnd date of Plan coverage.\nETL conventions:\nNone"
     )
-    payer_concept_id: UUID = Field(
-        description="User guidance:\nThis field represents the organization who reimburses the provider which administers care to the Person.\nETL conventions:\nMap the Payer directly to a standard CONCEPT_ID. If one does not exists please contact the vocabulary team. There is no global controlled vocabulary available for this information. The point is to stratify on this information and identify if Persons have the same payer, though the name of the Payer is not necessary. If not available, set to 0. [Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Payer&standardConcept=Standard&page=1&pageSize=15&query=)."
+    payer_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThis field represents the organization who reimburses the provider which administers care to the Person.\nETL conventions:\nMap the payer directly to a standard CONCEPT_ID with the domain_id of 'Payer' ([Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Payer&standardConcept=Standard&page=1&pageSize=15&query=)). This vocabulary is not exhaustive so if there is a value missing, please see the [custom concepts](https://ohdsi.github.io/CommonDataModel/customConcepts.html) page.",
     )
     payer_source_value: str | None = Field(
         default=None,
         description="User guidance:\nThis is the Payer as it appears in the source data.\nETL conventions:\nNone",
         max_length=50,
     )
-    payer_source_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nIf the source data codes the Payer in an OMOP supported vocabulary store the concept_id here. If not available, set to 0."
+    payer_source_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nIf the source data codes the Payer in an OMOP supported vocabulary store the concept_id here.",
     )
-    plan_concept_id: UUID = Field(
-        description="User guidance:\nThis field represents the specific health benefit Plan the Person is enrolled in.\nETL conventions:\nMap the Plan directly to a standard CONCEPT_ID. If one does not exists please contact the vocabulary team. There is no global controlled vocabulary available for this information. The point is to stratify on this information and identify if Persons have the same health benefit Plan though the name of the Plan is not necessary. If not available, set to 0. [Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Plan&standardConcept=Standard&page=1&pageSize=15&query=)."
+    plan_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThis field represents the specific health benefit Plan the Person is enrolled in.\nETL conventions:\nMap the Plan directly to a standard CONCEPT_ID in the 'Plan' vocabulary ([Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Plan&standardConcept=Standard&page=1&pageSize=15&query=)). This vocabulary is not exhaustive so if there is a value missing, please see the [custom concepts](https://ohdsi.github.io/CommonDataModel/customConcepts.html) page.",
     )
     plan_source_value: str | None = Field(
         default=None,
         description="User guidance:\nThis is the health benefit Plan of the Person as it appears in the source data.\nETL conventions:\nNone",
         max_length=50,
     )
-    plan_source_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nIf the source data codes the Plan in an OMOP supported vocabulary store the concept_id here. If not available, set to 0."
+    plan_source_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNone\nETL conventions:\nIf the source data codes the Plan in an OMOP supported vocabulary store the concept_id here.",
     )
-    contract_concept_id: UUID = Field(
-        description="User guidance:\nThis field represents the relationship between the PERSON_ID and CONTRACT_PERSON_ID. It should be read as PERSON_ID is the *CONTRACT_CONCEPT_ID* of the CONTRACT_PERSON_ID. So if CONTRACT_CONCEPT_ID represents the relationship 'Stepdaughter' then the Person for whom PAYER_PLAN_PERIOD record was recorded is the stepdaughter of the CONTRACT_PERSON_ID.\nETL conventions:\nIf available, use this field to represent the relationship between the PERSON_ID and the CONTRACT_PERSON_ID. If the Person for whom the PAYER_PLAN_PERIOD record was recorded is the stepdaughter of the CONTRACT_PERSON_ID then CONTRACT_CONCEPT_ID would be [4330864](https://athena.ohdsi.org/search-terms/terms/4330864). If not available, set to 0. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?standardConcept=Standard&domain=Relationship&page=12&pageSize=15&query=)."
-    )
-    contract_source_value: str = Field(
-        description="User guidance:\nThis is the relationship of the PERSON_ID to CONTRACT_PERSON_ID as it appears in the source data.\nETL conventions:\nNone",
-        max_length=50,
-    )
-    contract_source_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nIf the source data codes the relationship between the PERSON_ID and CONTRACT_PERSON_ID in an OMOP supported vocabulary store the concept_id here. If not available, set to 0."
-    )
-    sponsor_concept_id: UUID = Field(
-        description="User guidance:\nThis field represents the sponsor of the Plan who finances the Plan. This includes self-insured, small group health plan and large group health plan.\nETL conventions:\nMap the sponsor directly to a standard CONCEPT_ID. If one does not exists please contact the vocabulary team. There is no global controlled vocabulary available for this information. The point is to stratify on this information and identify if Persons have the same sponsor though the name of the sponsor is not necessary. If not available, set to 0. [Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Sponsor&standardConcept=Standard&page=1&pageSize=15&query=)."
+    sponsor_concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThis field represents the sponsor of the Plan who finances the Plan. This includes self-insured, small group health plan and large group health plan.\nETL conventions:\nMap the sponsor directly to a standard CONCEPT_ID with the domain_id of 'Sponsor' ([Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?domain=Sponsor&standardConcept=Standard&page=1&pageSize=15&query=)). This vocabulary is not exhaustive so if there is a value missing, please see the [custom concepts](https://ohdsi.github.io/CommonDataModel/customConcepts.html) page.",
     )
     sponsor_source_value: str | None = Field(
         default=None,
@@ -113,7 +101,7 @@ class PayerPlanPeriod(Model, DataLineageMixin):
     )
     stop_reason_concept_id: UUID | None = Field(
         default=None,
-        description="User guidance:\nThis field represents the reason the Person left the Plan, if known.\nETL conventions:\nMap the stop reason directly to a standard CONCEPT_ID. If one does not exists please contact the vocabulary team. There is no global controlled vocabulary available for this information. [Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Plan+Stop+Reason&standardConcept=Standard&page=1&pageSize=15&query=).",
+        description="User guidance:\nThis field represents the reason the Person left the Plan, if known.\nETL conventions:\nMap the stop reason directly to a standard CONCEPT_ID with a domain of 'Plan Stop Reason' ([Accepted Concepts](http://athena.ohdsi.org/search-terms/terms?domain=Plan+Stop+Reason&standardConcept=Standard&page=1&pageSize=15&query=)). If one does not exist visit the [Custom Concepts](https://ohdsi.github.io/CommonDataModel/customConcepts.html) pate for more information.",
     )
     stop_reason_source_value: str | None = Field(
         default=None,
@@ -123,6 +111,12 @@ class PayerPlanPeriod(Model, DataLineageMixin):
     stop_reason_source_concept_id: UUID | None = Field(
         default=None,
         description="User guidance:\nNone\nETL conventions:\nIf the source data codes the stop reason in an OMOP supported vocabulary store the concept_id here.",
+    )
+    contract_person_id: str | None = Field(default=None, description="TO_ADJUST")
+    contract_concept_id: str | None = Field(default=None, description="TO_ADJUST")
+    contract_source_value: str | None = Field(default=None, description="TO_ADJUST")
+    contract_source_concept_id: str | None = Field(
+        default=None, description="TO_ADJUST"
     )
 
 
@@ -139,84 +133,90 @@ class Cost(Model, DataLineageMixin):
         id_field_name="cost_id",
         links=create_links(
             {
-                1: ("person_id", Person, None),
-                2: ("cost_event_field_concept_id", Concept, None),
-                3: ("cost_concept_id", Concept, None),
-                4: ("cost_type_concept_id", Concept, None),
-                5: ("cost_source_concept_id", Concept, None),
-                6: ("currency_concept_id", Concept, None),
-                7: ("revenue_code_concept_id", Concept, None),
-                8: ("drg_concept_id", Concept, None),
-                9: ("payer_plan_period_id", PayerPlanPeriod, None),
+                1: ("cost_domain_id", Domain, None),
+                2: ("cost_type_concept_id", Concept, None),
+                3: ("currency_concept_id", Concept, None),
+                4: ("revenue_code_concept_id", Concept, None),
+                5: ("drg_concept_id", Concept, None),
             }
         ),
     )
-    cost_id: UUID = Field(
-        description="User guidance:\nA unique identifier for each COST record.\nETL conventions:\nNone"
-    )
-    person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    cost_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     cost_event_id: UUID = Field(
-        description="User guidance:\nIf the Cost record is related to another record in the database, this field is the primary key of the linked record.\nETL conventions:\nPut the primary key of the linked record, if applicable, here."
+        description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    cost_event_field_concept_id: UUID = Field(
-        description="User guidance:\nIf the Cost record is related to another record in the database, this field is the CONCEPT_ID that identifies which table the primary key of the linked record came from.\nETL conventions:\nPut the CONCEPT_ID that identifies which table and field the COST_EVENT_ID came from."
+    cost_domain_id: UUID = Field(
+        description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    cost_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key that refers to a Standard Cost Concept identifier in the Standardized Vocabularies belonging to the 'Cost' vocabulary.\nETL conventions:\nNone",
-    )
-    cost_type_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key identifier to a concept in the CONCEPT table for the provenance or the source of the COST data and belonging to the 'Type Concept' vocabulary\nETL conventions:\nNone",
-    )
-    cost_source_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key to a Cost Concept that refers to the code used in the source.\nETL conventions:\nNone",
-    )
-    cost_source_value: str | None = Field(
-        default=None,
-        description="User guidance:\nThe source value for the cost as it appears in the source data\nETL conventions:\nNone",
-        max_length=50,
+    cost_type_concept_id: UUID = Field(
+        description="User guidance:\nNone\nETL conventions:\nNone"
     )
     currency_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key identifier to the concept representing the 3-letter code used to delineate international currencies, such as USD for US Dollar. These belong to the 'Currency' vocabulary\nETL conventions:\nNone",
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    cost: float | None = Field(
-        default=None,
-        description="User guidance:\nThe actual financial cost amount\nETL conventions:\nNone",
+    total_charge: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    incurred_date: date | None = Field(
-        default=None,
-        description="User guidance:\nThe first date of service of the clinical event corresponding to the cost as in table capturing the information (e.g. date of visit, date of procedure, date of condition, date of drug etc).\nETL conventions:\nNone",
+    total_cost: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    billed_date: date | None = Field(
-        default=None,
-        description="User guidance:\nThe date a bill was generated for a service or encounter\nETL conventions:\nNone",
+    total_paid: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    paid_date: date | None = Field(
-        default=None,
-        description="User guidance:\nThe date payment was received for a service or encounter\nETL conventions:\nNone",
+    paid_by_payer: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_by_patient: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_patient_copay: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_patient_coinsurance: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_patient_deductible: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_by_primary: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_ingredient_cost: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    paid_dispensing_fee: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    payer_plan_period_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
+    amount_allowed: float | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     revenue_code_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key referring to a Standard Concept ID in the Standardized Vocabularies for Revenue codes belonging to the 'Revenue Code' vocabulary.\nETL conventions:\nNone",
-    )
-    drg_concept_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key referring to a Standard Concept ID in the Standardized Vocabularies for DRG codes belonging to the 'DRG' vocabulary.\nETL conventions:\nNone",
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     revenue_code_source_value: str | None = Field(
         default=None,
-        description="User guidance:\nThe source value for the Revenue code as it appears in the source data, stored here for reference.\nETL conventions:\nNone",
+        description="User guidance:\nRevenue codes are a method to charge for a class of procedures and conditions in the U.S. hospital system.\nETL conventions:\nNone",
         max_length=50,
+    )
+    drg_concept_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     drg_source_value: str | None = Field(
         default=None,
-        description="User guidance:\nThe source value for the 3-digit DRG source code as it appears in the source data, stored here for reference.\nETL conventions:\nNone",
-        max_length=50,
+        description="User guidance:\nDiagnosis Related Groups are US codes used to classify hospital cases into one of approximately 500 groups.\nETL conventions:\nNone",
+        max_length=3,
     )
-    payer_plan_period_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nA foreign key to the PAYER_PLAN_PERIOD table, where the details of the Payer, Plan and Family are stored. Record the payer_plan_id that relates to the payer who contributed to the paid_by_payer field.\nETL conventions:\nNone",
+    person_id: str | None = Field(default=None, description="TO_ADJUST")
+    cost_event_field_concept_id: str | None = Field(
+        default=None, description="TO_ADJUST"
     )
+    cost_concept_id: str | None = Field(default=None, description="TO_ADJUST")
+    cost_source_concept_id: str | None = Field(default=None, description="TO_ADJUST")
+    cost_source_value: str | None = Field(default=None, description="TO_ADJUST")
+    cost: str | None = Field(default=None, description="TO_ADJUST")
+    incurred_date: str | None = Field(default=None, description="TO_ADJUST")
+    billed_date: str | None = Field(default=None, description="TO_ADJUST")
+    paid_date: str | None = Field(default=None, description="TO_ADJUST")

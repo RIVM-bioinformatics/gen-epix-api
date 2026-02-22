@@ -18,7 +18,6 @@ Classes:
 - SourceToConceptMap: Legacy table for source-to-standard concept mappings
 """
 
-import hashlib
 from datetime import date
 from typing import ClassVar
 from uuid import UUID
@@ -30,23 +29,23 @@ from gen_epix.fastapp.domain import Entity, create_links
 
 
 class Vocabulary(Model):
-    """The VOCABULARY table includes a list of the Vocabularies collected from various sources or created de novo by the OMOP community. This reference table is populated with a single record for each Vocabulary source and includes a descriptive name and other associated attributes for the Vocabulary."""
+    """The VOCABULARY table includes a list of the Vocabularies integrated from various sources or created de novo in OMOP CDM. This reference table contains a single record for each Vocabulary and includes a descriptive name and other associated attributes for the Vocabulary."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Vocabularys",
         table_name="vocabulary",
         persistable=True,
         id_field_name="vocabulary_id",
-        # links=create_links({1: ("vocabulary_concept_id", Concept, None)}), # Circular reference, not allowed
     )
     vocabulary_id: UUID = Field(
         description="User guidance:\nA unique identifier for each Vocabulary, such\r\nas ICD9CM, SNOMED, Visit.\nETL conventions:\nNone"
     )
     vocabulary_name: str = Field(
-        description="User guidance:\nThe name describing the vocabulary, for\r\nexample International Classification of\r\nDiseases, Ninth Revision, Clinical\r\nModification, Volume 1 and 2 (NCHS) etc.\nETL conventions:\nNone",
+        description="User guidance:\nThe name describing the vocabulary, for\r\nexample, International Classification of\r\nDiseases, Ninth Revision, Clinical\r\nModification, Volume 1 and 2 (NCHS) etc.\nETL conventions:\nNone",
         max_length=255,
     )
-    vocabulary_reference: str = Field(
+    vocabulary_reference: str | None = Field(
+        default=None,
         description="User guidance:\nExternal reference to documentation or\r\navailable download of the about the\r\nvocabulary.\nETL conventions:\nNone",
         max_length=255,
     )
@@ -61,14 +60,13 @@ class Vocabulary(Model):
 
 
 class Domain(Model):
-    """The DOMAIN table includes a list of OMOP-defined Domains the Concepts of the Standardized Vocabularies can belong to. A Domain defines the set of allowable Concepts for the standardized fields in the CDM tables. For example, the "Condition" Domain contains Concepts that describe a condition of a patient, and these Concepts can only be stored in the condition_concept_id field of the CONDITION_OCCURRENCE and CONDITION_ERA tables. This reference table is populated with a single record for each Domain and includes a descriptive name for the Domain."""
+    """The DOMAIN table includes a list of OMOP-defined Domains to which the Concepts of the Standardized Vocabularies can belong. A Domain represents a clinical definition whereby we assign matching Concepts for the standardized fields in the CDM tables. For example, the Condition Domain contains Concepts that describe a patient condition, and these Concepts can only be used in the condition_concept_id field of the CONDITION_OCCURRENCE and CONDITION_ERA tables. This reference table is populated with a single record for each Domain, including a Domain ID and a descriptive name for every Domain."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Domains",
         table_name="domain",
         persistable=True,
         id_field_name="domain_id",
-        # links=create_links({1: ("domain_concept_id", Concept, None)}), # Circular reference, not allowed
     )
     domain_id: UUID = Field(
         description="User guidance:\nA unique key for each domain.\nETL conventions:\nNone"
@@ -83,14 +81,13 @@ class Domain(Model):
 
 
 class ConceptClass(Model):
-    """The CONCEPT_CLASS table is a reference table, which includes a list of the classifications used to differentiate Concepts within a given Vocabulary. This reference table is populated with a single record for each Concept Class."""
+    """The CONCEPT_CLASS table includes semantic categories that reference the source structure of each Vocabulary. Concept Classes represent so-called horizontal (e.g. MedDRA, RxNorm) or vertical levels (e.g. SNOMED) of the vocabulary structure. Vocabularies without any Concept Classes, such as HCPCS, use the vocabulary_id as the Concept Class. This reference table is populated with a single record for each Concept Class, which includes a Concept Class ID and a fully specified Concept Class name."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptClasss",
         table_name="concept_class",
         persistable=True,
         id_field_name="concept_class_id",
-        # links=create_links({1: ("concept_class_concept_id", Concept, None)}), # Circular reference, not allowed
     )
     concept_class_id: UUID = Field(
         description="User guidance:\nA unique key for each class.\nETL conventions:\nNone"
@@ -105,12 +102,7 @@ class ConceptClass(Model):
 
 
 class Concept(Model):
-    """The Standardized Vocabularies contains records, or Concepts, that uniquely identify each fundamental unit of meaning used to express clinical information in all domain tables of the CDM. Concepts are derived from vocabularies, which represent clinical information across a domain (e.g. conditions, drugs, procedures) through the use of codes and associated descriptions. Some Concepts are designated Standard Concepts, meaning these Concepts can be used as normative expressions of a clinical entity within the OMOP Common Data Model and within standardized analytics. Each Standard Concept belongs to one domain, which defines the location where the Concept would be expected to occur within data tables of the CDM.
-
-    Concepts can represent broad categories (like 'Cardiovascular disease'), detailed clinical elements ('Myocardial infarction of the anterolateral wall') or modifying characteristics and attributes that define Concepts at various levels of detail (severity of a disease, associated morphology, etc.).
-
-    Records in the Standardized Vocabularies tables are derived from national or international vocabularies such as SNOMED-CT, RxNorm, and LOINC, or custom Concepts defined to cover various aspects of observational data analysis.
-    """
+    """The Standardized Vocabularies contains records, or Concepts, that uniquely identify each fundamental unit of meaning used to express clinical information in all domain tables of the CDM. Concepts are derived from vocabularies, which represent clinical information across a domain (e.g. conditions, drugs, procedures) through the use of codes and associated descriptions. Some Concepts are designated Standard Concepts, meaning these Concepts can be used as normative expressions of a clinical entity within the OMOP Common Data Model and standardized analytics. Each Standard Concept belongs to one Domain, which defines the location where the Concept would be expected to occur within the data tables of the CDM. Concepts can represent broad categories ('Cardiovascular disease'), detailed clinical elements ('Myocardial infarction of the anterolateral wall'), or modifying characteristics and attributes that define Concepts at various levels of detail (severity of a disease, associated morphology, etc.). Records in the Standardized Vocabularies tables are derived from national or international vocabularies such as SNOMED-CT, RxNorm, and LOINC, or custom OMOP Concepts defined to cover various aspects of observational data analysis."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="Concepts",
@@ -133,10 +125,10 @@ class Concept(Model):
         max_length=255,
     )
     domain_id: UUID = Field(
-        description="User guidance:\nA foreign key to the [DOMAIN](https://ohdsi.github.io/CommonDataModel/cdm60.html#domain) table the Concept belongs to.\nETL conventions:\nNone"
+        description="User guidance:\nA foreign key to the [DOMAIN](https://ohdsi.github.io/CommonDataModel/cdm54.html#domain) table the Concept belongs to.\nETL conventions:\nNone"
     )
     vocabulary_id: UUID = Field(
-        description="User guidance:\nA foreign key to the [VOCABULARY](https://ohdsi.github.io/CommonDataModel/cdm60.html#vocabulary)\r\ntable indicating from which source the\r\nConcept has been adapted.\nETL conventions:\nNone"
+        description="User guidance:\nA foreign key to the [VOCABULARY](https://ohdsi.github.io/CommonDataModel/cdm54.html#vocabulary)\r\ntable indicating from which source the\r\nConcept has been adapted.\nETL conventions:\nNone"
     )
     concept_class_id: UUID = Field(
         description="User guidance:\nThe attribute or concept class of the\r\nConcept. Examples are 'Clinical Drug',\r\n'Ingredient', 'Clinical Finding' etc.\nETL conventions:\nNone"
@@ -162,11 +154,6 @@ class Concept(Model):
         max_length=1,
     )
 
-    @staticmethod
-    def get_concept_id_from_int_id(int_id: int) -> UUID:
-        """Utility method to generate a UUID for a Concept from an integer ID by hashing it"""
-        return UUID(hashlib.sha256(str(int_id).encode("utf-8")).digest()[:16].hex())
-
 
 class Relationship(Model):
     """The RELATIONSHIP table provides a reference list of all types of relationships that can be used to associate any two Concepts in the CONCEPT_RELATIONSHIP table, the respective reverse relationships, and their hierarchical characteristics. Note, that Concepts representing relationships between the clinical facts, used for filling in the FACT_RELATIONSHIP table are stored in the CONCEPT table and belong to the Relationship Domain."""
@@ -179,27 +166,29 @@ class Relationship(Model):
         links=create_links({1: ("relationship_concept_id", Concept, None)}),
     )
     relationship_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+        description="User guidance:\nThe type of relationship captured by the\r\nrelationship record.\nETL conventions:\nNone"
     )
     relationship_name: str = Field(
         description="User guidance:\nNone\nETL conventions:\nNone", max_length=255
     )
     is_hierarchical: str = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone", max_length=1
+        description="User guidance:\nDefines whether a relationship defines\r\nconcepts into classes or hierarchies. Values\r\nare 1 for hierarchical relationship or 0 if not.\nETL conventions:\nNone",
+        max_length=1,
     )
     defines_ancestry: str = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone", max_length=1
+        description="User guidance:\nDefines whether a hierarchical relationship\r\ncontributes to the concept_ancestor table.\r\nThese are subsets of the hierarchical\r\nrelationships. Valid values are 1 or 0.\nETL conventions:\nNone",
+        max_length=1,
     )
     reverse_relationship_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+        description="User guidance:\nThe identifier for the relationship used to\r\ndefine the reverse relationship between two\r\nconcepts.\nETL conventions:\nNone"
     )
     relationship_concept_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+        description="User guidance:\nA foreign key that refers to an identifier in\r\nthe [CONCEPT](https://ohdsi.github.io/CommonDataModel/cdm54.html#concept) table for the unique\r\nrelationship concept.\nETL conventions:\nNone"
     )
 
 
 class ConceptRelationship(Model):
-    """The CONCEPT_RELATIONSHIP table contains records that define direct relationships between any two Concepts and the nature or type of the relationship. Each type of a relationship is defined in the RELATIONSHIP table."""
+    """The CONCEPT_RELATIONSHIP table contains records that define relationships between any two Concepts and the nature or type of the relationship. This table captures various types of relationships, including hierarchical, associative, and other semantic connections, enabling comprehensive analysis and interpretation of clinical concepts. Every kind of relationship is defined in the RELATIONSHIP table."""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="ConceptRelationships",
@@ -367,7 +356,7 @@ class DrugStrength(Model):
 
 
 class SourceToConceptMap(Model):
-    """The source to concept map table is a legacy data structure within the OMOP Common Data Model, recommended for use in ETL processes to maintain local source codes which are not available as Concepts in the Standardized Vocabularies, and to establish mappings for each source code into a Standard Concept as target_concept_ids that can be used to populate the Common Data Model tables. The SOURCE_TO_CONCEPT_MAP table is no longer populated with content within the Standardized Vocabularies published to the OMOP community."""
+    """The source to concept map table is recommended for use in ETL processes to maintain local source codes which are not available as Concepts in the Standardized Vocabularies, and to establish mappings for each source code into a Standard Concept as target_concept_ids that can be used to populate the Common Data Model tables. The SOURCE_TO_CONCEPT_MAP table is no longer populated with content within the Standardized Vocabularies published to the OMOP community. **There are OHDSI tools to help you populate this table; [Usagi](https://github.com/OHDSI/Usagi) and [Perseus](https://github.com/ohdsi/Perseus). You can read more about OMOP vocabulary mapping in [The Book of OHDSI Chapter 6.3](https://ohdsi.github.io/TheBookOfOhdsi/ExtractTransformLoad.html#step-2-create-the-code-mappings).**"""
 
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="SourceToConceptMaps",
@@ -411,7 +400,7 @@ class SourceToConceptMap(Model):
     )
     invalid_reason: str | None = Field(
         default=None,
-        description="User guidance:\nReason the mapping instance was\r\ninvalidated. Possible values are D\r\n(deleted), U (replaced with an\r\nupdate) or NULL when\r\nvalid_end_date has the default\r\nvalue.\nETL conventions:\nNone",
+        description="User guidance:\nReason the mapping instance was invalidated. Possible values are D (deleted), U (replaced with an update) or NULL when valid_end_date has the default value.\nETL conventions:\nNone",
         max_length=1,
     )
     source_to_concept_map_id: UUID = Field(

@@ -653,6 +653,16 @@ class Run:
             ]
         )
 
+    def test_omopdb_unit_domain(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/domain",
+            ]
+        )
+
     def test_omopdb_integration(self) -> None:
         import pytest
 

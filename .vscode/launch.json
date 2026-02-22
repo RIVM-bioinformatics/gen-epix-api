@@ -659,6 +659,17 @@
             "justMyCode": true
         },
         {
+            "name": "test.omopdb.unit.domain",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_omopdb_unit_domain"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "test.omopdb.integration",
             "type": "debugpy",
             "request": "launch",
