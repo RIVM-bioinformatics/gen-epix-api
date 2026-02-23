@@ -57,12 +57,6 @@ class ConditionEra(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nThe number of individual Condition\r\nOccurrences used to construct the\r\ncondition era.\nETL conventions:\nNone",
     )
-    condition_era_start_datetime: str | None = Field(
-        default=None, description="TO_ADJUST"
-    )
-    condition_era_end_datetime: str | None = Field(
-        default=None, description="TO_ADJUST"
-    )
 
 
 class DrugEra(Model, DataLineageMixin):
@@ -108,8 +102,6 @@ class DrugEra(Model, DataLineageMixin):
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
     )
-    drug_era_start_datetime: str | None = Field(default=None, description="TO_ADJUST")
-    drug_era_end_datetime: str | None = Field(default=None, description="TO_ADJUST")
 
 
 class DoseEra(Model, DataLineageMixin):
@@ -147,11 +139,9 @@ class DoseEra(Model, DataLineageMixin):
     dose_era_end_date: date = Field(
         description="User guidance:\nNone\nETL conventions:\nThe date the Person was no longer exposed to the dosage of the specific drug ingredient. An era is ended if there are 31 days or more between dosage records."
     )
-    dose_era_start_datetime: str | None = Field(default=None, description="TO_ADJUST")
-    dose_era_end_datetime: str | None = Field(default=None, description="TO_ADJUST")
 
 
-class CohortDefinition(Model, DataLineageMixin):
+class CohortDefinition(Model):
     """The COHORT_DEFINITION table contains records defining a Cohort derived from the data through the associated description and syntax and upon instantiation (execution of the algorithm) placed into the COHORT table. Cohorts are a set of subjects that satisfy a given combination of inclusion criteria for a duration of time. The COHORT_DEFINITION table provides a standardized structure for maintaining the rules governing the inclusion of a subject into a cohort, and can store operational programming code to instantiate the cohort within the OMOP Common Data Model."""
 
     ENTITY: ClassVar = Entity(
@@ -187,7 +177,7 @@ class CohortDefinition(Model, DataLineageMixin):
     )
 
 
-class Cohort(Model, DataLineageMixin):
+class Cohort(Model):
     """The subject of a cohort can have multiple, discrete records in the cohort table per cohort_definition_id, subject_id, and non-overlapping time periods. The definition of the cohort is contained within the COHORT_DEFINITION table. It is listed as part of the RESULTS schema because it is a table that users of the database as well as tools such as ATLAS need to be able to write to. The CDM and Vocabulary tables are all read-only so it is suggested that the COHORT and COHORT_DEFINTION tables are kept in a separate schema to alleviate confusion."""
 
     ENTITY: ClassVar = Entity(
@@ -305,5 +295,3 @@ class EpisodeEvent(Model, DataLineageMixin):
     episode_event_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
     )
-    event_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    event_date: str | None = Field(default=None, description="TO_ADJUST")

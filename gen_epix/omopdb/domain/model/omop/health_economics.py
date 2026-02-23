@@ -112,12 +112,6 @@ class PayerPlanPeriod(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNone\nETL conventions:\nIf the source data codes the stop reason in an OMOP supported vocabulary store the concept_id here.",
     )
-    contract_person_id: str | None = Field(default=None, description="TO_ADJUST")
-    contract_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    contract_source_value: str | None = Field(default=None, description="TO_ADJUST")
-    contract_source_concept_id: str | None = Field(
-        default=None, description="TO_ADJUST"
-    )
 
 
 class Cost(Model, DataLineageMixin):
@@ -209,14 +203,3 @@ class Cost(Model, DataLineageMixin):
         description="User guidance:\nDiagnosis Related Groups are US codes used to classify hospital cases into one of approximately 500 groups.\nETL conventions:\nNone",
         max_length=3,
     )
-    person_id: str | None = Field(default=None, description="TO_ADJUST")
-    cost_event_field_concept_id: str | None = Field(
-        default=None, description="TO_ADJUST"
-    )
-    cost_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    cost_source_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    cost_source_value: str | None = Field(default=None, description="TO_ADJUST")
-    cost: str | None = Field(default=None, description="TO_ADJUST")
-    incurred_date: str | None = Field(default=None, description="TO_ADJUST")
-    billed_date: str | None = Field(default=None, description="TO_ADJUST")
-    paid_date: str | None = Field(default=None, description="TO_ADJUST")

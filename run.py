@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -187,16 +188,34 @@ class Run:
         ]
 
         subprocess.run(
-            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "run",
+                "--source=gen_epix",
+                "-m",
+                "pytest",
+            ]
+            + pytest_args,
             check=False,
         )
         # Generate HTML report
         subprocess.run(
-            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "html",
+                "-d",
+                "test/output/coverage.html",
+            ],
+            check=True,
         )
         # Generate XML report
         subprocess.run(
-            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
+            [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
+            check=True,
         )
 
     def test_all_incl_performance(self) -> None:

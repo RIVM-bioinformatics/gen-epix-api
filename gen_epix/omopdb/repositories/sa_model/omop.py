@@ -8,14 +8,16 @@ from gen_epix.commondb.repositories.sa_model import (
     create_mapped_column,
     create_table_args,
 )
-from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
 from gen_epix.omopdb.domain import DOMAIN, enum, model
-from gen_epix.omopdb.repositories.sa_model.base import DataLineageMixin
+from gen_epix.omopdb.repositories.sa_model.base import (
+    DataLineageMixin,
+    NoIdRowMetadataMixin,
+)
 
 Base: type = orm.declarative_base(name=enum.ServiceType.OMOP.value)
 
 
-class Vocabulary(Base, RowMetadataMixin):
+class Vocabulary(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -39,7 +41,7 @@ class Vocabulary(Base, RowMetadataMixin):
     )
 
 
-class Domain(Base, RowMetadataMixin):
+class Domain(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -53,7 +55,7 @@ class Domain(Base, RowMetadataMixin):
     )
 
 
-class ConceptClass(Base, RowMetadataMixin):
+class ConceptClass(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -71,7 +73,7 @@ class ConceptClass(Base, RowMetadataMixin):
     )
 
 
-class Concept(Base, RowMetadataMixin):
+class Concept(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -106,7 +108,7 @@ class Concept(Base, RowMetadataMixin):
     )
 
 
-class Relationship(Base, RowMetadataMixin):
+class Relationship(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -133,7 +135,7 @@ class Relationship(Base, RowMetadataMixin):
     )
 
 
-class ConceptRelationship(Base, RowMetadataMixin):
+class ConceptRelationship(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -163,7 +165,7 @@ class ConceptRelationship(Base, RowMetadataMixin):
     )
 
 
-class ConceptAncestor(Base, RowMetadataMixin):
+class ConceptAncestor(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -187,7 +189,7 @@ class ConceptAncestor(Base, RowMetadataMixin):
     )
 
 
-class ConceptSynonym(Base, RowMetadataMixin):
+class ConceptSynonym(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -208,7 +210,7 @@ class ConceptSynonym(Base, RowMetadataMixin):
     )
 
 
-class SourceToConceptMap(Base, RowMetadataMixin):
+class SourceToConceptMap(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -247,7 +249,7 @@ class SourceToConceptMap(Base, RowMetadataMixin):
     )
 
 
-class DrugStrength(Base, RowMetadataMixin):
+class DrugStrength(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -295,7 +297,7 @@ class DrugStrength(Base, RowMetadataMixin):
     )
 
 
-class Location(Base, RowMetadataMixin):
+class Location(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -332,7 +334,7 @@ class Location(Base, RowMetadataMixin):
     )
 
 
-class CareSite(Base, RowMetadataMixin):
+class CareSite(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -362,7 +364,7 @@ class CareSite(Base, RowMetadataMixin):
     )
 
 
-class Provider(Base, RowMetadataMixin):
+class Provider(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -406,7 +408,7 @@ class Provider(Base, RowMetadataMixin):
     )
 
 
-class CdmSource(Base, RowMetadataMixin):
+class CdmSource(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -451,7 +453,7 @@ class CdmSource(Base, RowMetadataMixin):
     )
 
 
-class Metadata(Base, RowMetadataMixin):
+class Metadata(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -485,7 +487,7 @@ class Metadata(Base, RowMetadataMixin):
     )
 
 
-class Person(Base, DataLineageMixin, RowMetadataMixin):
+class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -552,7 +554,7 @@ class Person(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ObservationPeriod(Base, DataLineageMixin, RowMetadataMixin):
+class ObservationPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -582,7 +584,7 @@ class ObservationPeriod(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class VisitOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class VisitOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -642,7 +644,7 @@ class VisitOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class VisitDetail(Base, DataLineageMixin, RowMetadataMixin):
+class VisitDetail(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -708,7 +710,7 @@ class VisitDetail(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ConditionOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class ConditionOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -771,7 +773,7 @@ class ConditionOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ProcedureOccurrence(Base, DataLineageMixin, RowMetadataMixin):
+class ProcedureOccurrence(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -831,7 +833,7 @@ class ProcedureOccurrence(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DrugExposure(Base, DataLineageMixin, RowMetadataMixin):
+class DrugExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -913,7 +915,7 @@ class DrugExposure(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DeviceExposure(Base, DataLineageMixin, RowMetadataMixin):
+class DeviceExposure(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -985,7 +987,7 @@ class DeviceExposure(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Measurement(Base, DataLineageMixin, RowMetadataMixin):
+class Measurement(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1069,7 +1071,7 @@ class Measurement(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Observation(Base, DataLineageMixin, RowMetadataMixin):
+class Observation(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1147,7 +1149,7 @@ class Observation(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Specimen(Base, DataLineageMixin, RowMetadataMixin):
+class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1208,7 +1210,7 @@ class Specimen(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Note(Base, DataLineageMixin, RowMetadataMixin):
+class Note(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1257,7 +1259,7 @@ class Note(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class NoteNlp(Base, DataLineageMixin, RowMetadataMixin):
+class NoteNlp(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1300,7 +1302,7 @@ class NoteNlp(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class FactRelationship(Base, RowMetadataMixin):
+class FactRelationship(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1327,13 +1329,14 @@ class FactRelationship(Base, RowMetadataMixin):
     )
 
 
-class Death(Base, DataLineageMixin, RowMetadataMixin):
+class Death(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
     __tablename__, __table_args__ = create_table_args(model.Death)
 
+    death_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Death, "death_id")
     person_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Death, "person_id")
     death_date: Mapped[date] = create_mapped_column(DOMAIN, model.Death, "death_date")
     death_datetime: Mapped[datetime | None] = create_mapped_column(
@@ -1353,7 +1356,7 @@ class Death(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class MeasurementRelation(Base, RowMetadataMixin):
+class MeasurementRelation(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1377,7 +1380,7 @@ class MeasurementRelation(Base, RowMetadataMixin):
     )
 
 
-class PayerPlanPeriod(Base, DataLineageMixin, RowMetadataMixin):
+class PayerPlanPeriod(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1437,7 +1440,7 @@ class PayerPlanPeriod(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class Cost(Base, DataLineageMixin, RowMetadataMixin):
+class Cost(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1510,7 +1513,7 @@ class Cost(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class ConditionEra(Base, DataLineageMixin, RowMetadataMixin):
+class ConditionEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1537,7 +1540,7 @@ class ConditionEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DrugEra(Base, DataLineageMixin, RowMetadataMixin):
+class DrugEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1571,7 +1574,7 @@ class DrugEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class DoseEra(Base, DataLineageMixin, RowMetadataMixin):
+class DoseEra(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1599,7 +1602,7 @@ class DoseEra(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class CohortDefinition(Base, RowMetadataMixin):
+class CohortDefinition(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1629,7 +1632,7 @@ class CohortDefinition(Base, RowMetadataMixin):
     )
 
 
-class Cohort(Base, RowMetadataMixin):
+class Cohort(Base, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1649,7 +1652,7 @@ class Cohort(Base, RowMetadataMixin):
     cohort_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Cohort, "cohort_id")
 
 
-class Episode(Base, DataLineageMixin, RowMetadataMixin):
+class Episode(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
@@ -1693,7 +1696,7 @@ class Episode(Base, DataLineageMixin, RowMetadataMixin):
     )
 
 
-class EpisodeEvent(Base, DataLineageMixin, RowMetadataMixin):
+class EpisodeEvent(Base, DataLineageMixin, NoIdRowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """

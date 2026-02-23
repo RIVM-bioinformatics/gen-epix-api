@@ -10,7 +10,7 @@ from gen_epix.omopdb.domain.model.base import Model
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
 
 WRITE_MODELS: bool = (
-    True  # Set to True to write models out to file, to facilitate debugging
+    False  # Set to True to write models out to file, to facilitate debugging
 )
 
 TABLE_METADATA_FILE = (

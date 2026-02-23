@@ -238,7 +238,7 @@ class BaseUploadTestCase(TestCase):
         """Get the Parent model contained in a ParentForUpload model, with optional overrides."""
         parent = parent_for_upload.parent
         return Parent(
-            id=id or parent.id if parent else None,
+            id=id or parent.parent_id if parent else None,
             a=a or parent.a if parent else None,  # type: ignore[arg-type]
             b=b or parent.b if parent else None,  # type: ignore[arg-type]
             c=c
@@ -273,7 +273,7 @@ class BaseUploadTestCase(TestCase):
     ) -> Child1ForUpload:
         """Create a test child1 for upload."""
         return Child1ForUpload(
-            id=child_id or NULL_ID,
+            child1_id=child_id or NULL_ID,
             is_new_id=is_new_id,  # type: ignore[call-arg]
             parent_id=parent_id,
             ref1_id=ref1_id,
@@ -303,7 +303,7 @@ class BaseUploadTestCase(TestCase):
     ) -> Child2ForUpload:
         """Create a test child2 for upload."""
         return Child2ForUpload(
-            id=child_id or NULL_ID,
+            child2_id=child_id or NULL_ID,
             is_new_id=is_new_id,  # type: ignore[call-arg]
             parent_id=parent_id,
             ref2_id=ref2_id,
@@ -496,28 +496,32 @@ class Test1ObjectExistence(BaseUploadTestCase):
     def test_1_2_1_parent_id_provided_new_id_but_not_exists_succeeds(self) -> None:
         """Test 1.2.1: Object with this ID and is_new_id does not exist - should succeed."""
         # Create upload batch
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, is_new_id=True)
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, is_new_id=True
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [False],  # Parents exist
-            [parent.id],  # Create parents returned IDs
+            [parent_for_upload.id],  # Create parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
-        self.assertEqual(batch_result.parents[0].id, parent.id)
+        self.assertEqual(batch_result.parents[0].id, parent_for_upload.id)
 
     def test_1_2_2_parent_id_provided_new_id_and_exists_fails(self) -> None:
         """Test 1.2.2: Object with this ID and is_new_id=True exists - should fail."""
         # Create upload batch
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, is_new_id=True)
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, is_new_id=True
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
 
@@ -530,7 +534,7 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
     def test_2_1_parent_without_children(self) -> None:
         """Test 2.1: Parent without any Child1 or Child2 objects."""
         # Create upload batch
-        parent = self.create_parent_for_upload()
+        parent_for_upload = self.create_parent_for_upload()
         # Set up mocks
         created_parent_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
@@ -540,7 +544,7 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
             [created_parent_id],  # Create parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -549,8 +553,8 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         """Test 2.2: Parent with Child1 objects only."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
-        child1 = self.create_child1_for_upload(ref1_code=existing_ref1.code)
-        parent = self.create_parent_for_upload(children1=[child1])
+        child1_for_upload = self.create_child1_for_upload(ref1_code=existing_ref1.code)
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -566,7 +570,7 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -576,8 +580,8 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         """Test 2.3: Parent with Child2 objects only."""
         # Create upload batch
         existing_ref2 = self.create_ref2(self.ref2_id, "test_ref2_code")
-        child2 = self.create_child2_for_upload(ref2_code=existing_ref2.code)
-        parent = self.create_parent_for_upload(children2=[child2])
+        child2_for_upload = self.create_child2_for_upload(ref2_code=existing_ref2.code)
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child2_id = self.random_ids[1]
@@ -593,7 +597,7 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
             [existing_ref2],  # Existing Ref2 objects
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -604,9 +608,11 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
         existing_ref2 = self.create_ref2(self.ref2_id, "test_ref2_code")
-        child1 = self.create_child1_for_upload(ref1_code=existing_ref1.code)
-        child2 = self.create_child2_for_upload(ref2_code=existing_ref2.code)
-        parent = self.create_parent_for_upload(children1=[child1], children2=[child2])
+        child1_for_upload = self.create_child1_for_upload(ref1_code=existing_ref1.code)
+        child2_for_upload = self.create_child2_for_upload(ref2_code=existing_ref2.code)
+        parent_for_upload = self.create_parent_for_upload(
+            children1=[child1_for_upload], children2=[child2_for_upload]
+        )
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -628,7 +634,7 @@ class Test2ChildObjectProvision(BaseUploadTestCase):
             [existing_ref2],  # Existing Ref2 objects
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=3)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -644,16 +650,16 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
     def test_3_1_1_ref_id_provided_not_found_fails(self) -> None:
         """Test 3.1.1: Reference model ID not found - should fail."""
         # Create upload batch
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             ref1_id=self.random_ids[0], ref1_code=None
         )
-        parent = self.create_parent_for_upload(children1=[child1])
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         self.service.repository.read_fields.side_effect = [
             [],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
 
@@ -661,8 +667,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         """Test 3.1.2: Reference model ID found - should succeed."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=None)  # type: ignore[arg-type]
-        parent = self.create_parent_for_upload(children1=[child1])
+        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=None)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -678,7 +684,7 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -687,16 +693,16 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
     def test_3_2_1_ref_code_provided_not_found_fails(self) -> None:
         """Test 3.2.1: Reference model code not found - should fail."""
         # Create upload batch
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             ref1_id=NULL_ID, ref1_code="non_existent_code"
         )
-        parent = self.create_parent_for_upload(children1=[child1])
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         self.service.repository.read_fields.side_effect = [
             [],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
 
@@ -704,10 +710,10 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         """Test 3.2.2: Reference model code found - should succeed (and set reference model ID)."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             ref1_id=NULL_ID, ref1_code=existing_ref1.code
         )
-        parent = self.create_parent_for_upload(children1=[child1])
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -723,12 +729,12 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
         self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
-        self.assertEqual(child1.ref1_id, self.ref1_id)
+        self.assertEqual(child1_for_upload.ref1_id, self.ref1_id)
 
     def test_3_3_1_ref_id_and_code_mismatch_fails(self) -> None:
         """Test 3.3.1: Reference model ID and code do not match but both exist - should fail."""
@@ -737,8 +743,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         other_existing_ref1 = self.create_ref1(
             self.random_ids[0], "other_existing_code"
         )
-        child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=other_existing_ref1.code)  # type: ignore[arg-type]
-        parent = self.create_parent_for_upload(children1=[child1])
+        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=other_existing_ref1.code)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         self.service.repository.read_fields.side_effect = [
             [
@@ -747,7 +753,7 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
             ],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
 
@@ -755,8 +761,8 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
         """Test 3.3.2: Reference model ID and code match - should succeed."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=existing_ref1.code)  # type: ignore[arg-type]
-        parent = self.create_parent_for_upload(children1=[child1])
+        child1_for_upload = self.create_child1_for_upload(ref1_id=existing_ref1.id, ref1_code=existing_ref1.code)  # type: ignore[arg-type]
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -772,26 +778,28 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
 
     def test_3_4_1_child2_null_id_no_code_provided_fails(self) -> None:
         """Test 3.4.1: Child2 with ref ID NULL_ID and no code provided - should fail since eventual reference ID cannot be NULL_ID."""
         # Create upload batch
-        child2 = self.create_child2_for_upload(ref2_id=NULL_ID, ref2_code=None)
-        parent = self.create_parent_for_upload(children2=[child2])
+        child2_for_upload = self.create_child2_for_upload(
+            ref2_id=NULL_ID, ref2_code=None
+        )
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
 
     def test_3_4_2_child2_no_id_or_code_succeeds(self) -> None:
         """Test 3.4.2: Child2 with no ID or code - should succeed (reference is optional)."""
         # Create upload batch
-        child2 = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
-        parent = self.create_parent_for_upload(children2=[child2])
+        child2_for_upload = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child2_id = self.random_ids[1]
@@ -804,10 +812,10 @@ class Test3ReferenceDataLinks(BaseUploadTestCase):
             [created_child2_id],  # Create children2 returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(parent.children2[0].ref2_id, None)  # type: ignore[index]
+        self.assertEqual(parent_for_upload.children2[0].ref2_id, None)  # type: ignore[index]
 
 
 # Test Scenario 4: Parent link in child objects
@@ -819,10 +827,10 @@ class Test4ParentLinks(BaseUploadTestCase):
         """Test 4.1: NULL_ID parent - should be set during upload."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             parent_id=NULL_ID, ref1_id=existing_ref1.id  # type: ignore[arg-type]
         )
-        parent = self.create_parent_for_upload(children1=[child1])
+        parent_for_upload = self.create_parent_for_upload(children1=[child1_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child1_id = self.random_ids[1]
@@ -838,22 +846,22 @@ class Test4ParentLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
-        self.assertEqual(parent.children1[0].parent_id, created_parent_id)  # type: ignore[index]
+        self.assertEqual(parent_for_upload.children1[0].parent_id, created_parent_id)  # type: ignore[index]
 
     def test_4_2_1_child_parent_id_parent_not_exists_fails(self) -> None:
         """Test 4.2.1: Parent does not exist or has different ID - should fail."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
         )
-        parent = self.create_parent_for_upload(
-            parent_id=self.parent_id, is_new_id=True, children1=[child1]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, is_new_id=True, children1=[child1_for_upload]
         )
-        parent.id = self.random_ids[1]  # Different ID than child's parent_id
+        parent_for_upload.id = self.random_ids[1]  # Different ID than child's parent_id
         # Set up mocks
         created_child1_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
@@ -868,7 +876,7 @@ class Test4ParentLinks(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
-            parent, validate_command=False
+            parent_for_upload, validate_command=False
         )  # Skip command validation to allow inconsistent IDs
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_pending=1, n_failed=1)
@@ -877,15 +885,15 @@ class Test4ParentLinks(BaseUploadTestCase):
         """Test 4.2.2: Parent exists with matching ID - should succeed."""
         # Create upload batch
         existing_ref1 = self.create_ref1(self.ref1_id, "existing_code")
-        child1 = self.create_child1_for_upload(
+        child1_for_upload = self.create_child1_for_upload(
             parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
         )
-        parent = self.create_parent_for_upload(
-            parent_id=self.parent_id, children1=[child1]
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, children1=[child1_for_upload]
         )
-        existing_parent = self.get_parent_from_for_upload(parent)
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload)
         # Set up mocks
-        created_parent_id = parent.id
+        created_parent_id = parent_for_upload.id
         created_child1_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
             created_child1_id,  # ID of the newly created child1
@@ -899,10 +907,10 @@ class Test4ParentLinks(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1 (ID, code) pairs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1, n_created=1)
-        self.assertEqual(parent.id, created_parent_id)
+        self.assertEqual(parent_for_upload.id, created_parent_id)
         self.assertEqual(batch_result.parents[0].children1[0].id, created_child1_id)  # type: ignore[index]
 
 
@@ -917,16 +925,20 @@ class Test5FieldMutability(BaseUploadTestCase):
         existing_value = "value"
         new_value = "new_value"
         resulting_value = new_value
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, a=new_value)
-        existing_parent = self.get_parent_from_for_upload(parent, a=existing_value)
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, a=new_value
+        )
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, a=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
         self.assertEqual(existing_parent.a, resulting_value)
@@ -937,16 +949,20 @@ class Test5FieldMutability(BaseUploadTestCase):
         existing_value = ["value1", "value2"]
         new_value = ["new_value1", "new_value2", "new_value3"]
         resulting_value = new_value
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, b=new_value)
-        existing_parent = self.get_parent_from_for_upload(parent, b=existing_value)
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, b=new_value
+        )
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, b=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
         self.assertEqual(existing_parent.b, resulting_value)
@@ -958,16 +974,18 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key3": "value3"}
         resulting_value = existing_value.copy()
         resulting_value.update(new_value)
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
-        existing_parent = self.get_parent_from_for_upload(parent, c=existing_value)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, c=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
         self.assertEqual(existing_parent.c, resulting_value)
@@ -978,16 +996,18 @@ class Test5FieldMutability(BaseUploadTestCase):
         existing_value = {"key1": "value1", "key2": "value2"}
         new_value = {"key3": None}
         resulting_value = existing_value
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
-        existing_parent = self.get_parent_from_for_upload(parent, c=existing_value)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, c=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
         self.assertEqual(existing_parent.c, resulting_value)
@@ -999,16 +1019,18 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key1": "new_value1"}
         resulting_value = existing_value.copy()
         resulting_value.update(new_value)
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
-        existing_parent = self.get_parent_from_for_upload(parent, c=existing_value)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, c=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
         self.assertEqual(existing_parent.c, resulting_value)
@@ -1020,16 +1042,18 @@ class Test5FieldMutability(BaseUploadTestCase):
         new_value = {"key1": None}
         resulting_value = existing_value.copy()
         resulting_value.pop("key1")
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
-        existing_parent = self.get_parent_from_for_upload(parent, c=existing_value)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id, c=new_value)  # type: ignore[arg-type]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, c=existing_value
+        )
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [True],  # Parents exist
             [existing_parent],  # Existing parents
-            [existing_parent.id],  # Updated parents returned IDs
+            [existing_parent.parent_id],  # Updated parents returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
         self.assertEqual(existing_parent.c, resulting_value)
@@ -1059,9 +1083,9 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
     def test_6_1_no_external_ids_provided(self) -> None:
         """Test 6.1: No external identifiers provided - should succeed."""
         # Create upload batch
-        parent = self.create_parent_for_upload(external_identifiers=None)
+        parent_for_upload = self.create_parent_for_upload(external_identifiers=None)
         # Set up mocks
-        created_parent_id = parent.id
+        created_parent_id = parent_for_upload.id
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
         ]
@@ -1069,7 +1093,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             [created_parent_id],  # Create children1 returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
 
@@ -1083,10 +1107,12 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=existing_parent_id
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[external_identifier]
         )
-        existing_parent = self.get_parent_from_for_upload(parent, id=existing_parent_id)
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, id=existing_parent_id
+        )
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
@@ -1097,7 +1123,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=2)
         self.assertEqual(batch_result.parents[0].id, existing_parent_id)  # type
@@ -1112,10 +1138,10 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=existing_parent_id
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             parent_id=existing_parent_id, external_identifiers=[external_identifier]
         )
-        existing_parent = self.get_parent_from_for_upload(parent)
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload)
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
@@ -1126,7 +1152,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=2)
 
@@ -1141,10 +1167,10 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         existing_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier, internal_id=other_parent_id
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             parent_id=existing_parent_id, external_identifiers=[external_identifier]
         )
-        existing_parent = self.get_parent_from_for_upload(parent)
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload)
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
@@ -1155,7 +1181,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             [existing_parent],  # Existing parents
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=1)
 
@@ -1167,7 +1193,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         )
         created_external_identifier_id = self.random_ids[0]
         created_parent_id = self.random_ids[1]
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[external_identifier_for_upload]
         )
         external_identifier = self.get_external_identifier_from_for_upload(
@@ -1192,7 +1218,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             ],  # Create external identifiers returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
@@ -1209,7 +1235,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             parent_id=self.parent_id,
             external_identifiers=[
                 external_identifier_for_upload1,
@@ -1218,11 +1244,11 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         )
         existing_external_identifier1 = self.get_external_identifier_from_for_upload(
             external_identifier_for_upload1,
-            parent.id,  # type: ignore[arg-type]
+            parent_for_upload.id,  # type: ignore[arg-type]
         )
         created_external_identifier2 = self.get_external_identifier_from_for_upload(
             external_identifier_for_upload2,
-            parent.id,  # type: ignore[arg-type]
+            parent_for_upload.id,  # type: ignore[arg-type]
         )
         # Set up mocks
         self.service.app.handle.side_effect = [
@@ -1235,7 +1261,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             ],  # The existing external identifiers before creation
             [created_external_identifier2],
         ]
-        existing_parent = self.get_parent_from_for_upload(parent)
+        existing_parent = self.get_parent_from_for_upload(parent_for_upload)
         self.service.repository.crud.side_effect = [
             [True],  # Parent exists
             [existing_parent],  # Return the existing parent object
@@ -1245,7 +1271,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         ]
 
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
 
@@ -1260,7 +1286,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[external_identifier1, external_identifier2]
         )
         different_id = self.random_ids[0]
@@ -1278,7 +1304,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         ]
 
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
@@ -1292,7 +1318,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             external_id="new_ext_id_2", identifier_issuer_id=self.identifier_issuer_id
         )
         with pytest.raises(ValueError):
-            parent = self.create_parent_for_upload(
+            parent_for_upload = self.create_parent_for_upload(
                 external_identifiers=[external_identifier1, external_identifier2]
             )
 
@@ -1307,7 +1333,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        parent = self.create_parent_for_upload(
+        parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[
                 external_identifier_for_upload1,
                 external_identifier_for_upload2,
@@ -1347,7 +1373,7 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             [created_external_identifier1, created_external_identifier2],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=3)
 
@@ -1362,37 +1388,45 @@ class Test7OnExistsActions(BaseUploadTestCase):
     def test_7_1_on_exists_error_with_existing_object_fails(self) -> None:
         """Test 7.1: on_exists=ERROR with existing object - should fail."""
         # Create upload batch
-        parent = self.create_parent_for_upload(parent_id=self.parent_id)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
         existing_parent = Parent(id=self.parent_id, a="existing")
         self.service.repository.crud.return_value = [existing_parent]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent, on_exists=OnExistsUploadAction.ERROR)
+        batch_result = self.upload_batch(
+            parent_for_upload, on_exists=OnExistsUploadAction.ERROR
+        )
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
 
     def test_7_2_on_exists_skip_with_existing_object_skips(self) -> None:
         """Test 7.2: on_exists=SKIP with existing object - should skip."""
         # Create upload batch
-        parent = self.create_parent_for_upload(parent_id=self.parent_id)
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
         # Mock existing parent
         existing_parent = Parent(id=self.parent_id, a="existing")
         self.service.repository.crud.return_value = [existing_parent]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent, on_exists=OnExistsUploadAction.SKIP)
+        batch_result = self.upload_batch(
+            parent_for_upload, on_exists=OnExistsUploadAction.SKIP
+        )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
     def test_7_3_on_exists_update_with_existing_object_updates(self) -> None:
         """Test 7.3: on_exists=UPDATE with existing object - should update."""
         # Create upload batch
-        parent = self.create_parent_for_upload(parent_id=self.parent_id, a="new_value")
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, a="new_value"
+        )
         # Set up mocks
         existing_parent = Parent(id=self.parent_id, a="old_value")
         self.service.repository.crud.return_value = [existing_parent]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent, on_exists=OnExistsUploadAction.UPDATE)
+        batch_result = self.upload_batch(
+            parent_for_upload, on_exists=OnExistsUploadAction.UPDATE
+        )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
 
@@ -1405,10 +1439,10 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
     def test_8_1_no_external_ids_provided(self) -> None:
         """Test 8.1: No external identifiers provided for Child2 - should succeed."""
         # Create upload batch with Child2 that has no external identifiers
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=None
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         created_child2_id = self.random_ids[1]
@@ -1421,7 +1455,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [created_child2_id],  # Create children2 returned IDs
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
 
@@ -1437,10 +1471,10 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
                 external_identifier, internal_id=existing_child2_id
             )
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[1]
         existing_child = Child2(
@@ -1470,7 +1504,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [(existing_child2_id, created_parent_id)],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
         self.assertEqual(batch_result.parents[0].children2[0].id, existing_child2_id)  # type: ignore[index]
@@ -1487,13 +1521,13 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
                 external_identifier, internal_id=existing_child2_id
             )
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             child_id=existing_child2_id,
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[1]
         existing_child = Child2(
@@ -1523,7 +1557,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [(existing_child2_id, created_parent_id)],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
 
@@ -1540,13 +1574,13 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
                 external_identifier, internal_id=other_child2_id
             )
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             child_id=existing_child2_id,
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[2]
         self.service.generate_id.side_effect = [
@@ -1563,7 +1597,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [(existing_child2_id, created_parent_id)],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
@@ -1576,12 +1610,12 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         created_parent_id = self.random_ids[0]
         created_child2_id = self.random_ids[1]
         created_external_identifier_id = self.random_ids[2]
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier_for_upload],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
@@ -1598,7 +1632,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [created_external_identifier_id],  # Create child external identifier
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=3)
         self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
@@ -1615,13 +1649,13 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             child_id=self.child2_id,
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier1, external_identifier2],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         existing_external_identifier1 = (
             self.get_child2_external_identifier_from_for_upload(
                 external_identifier1,
@@ -1672,7 +1706,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [(self.child2_id, created_parent_id)],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2, n_skipped=1, n_pending=1)
 
@@ -1687,12 +1721,12 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier1, external_identifier2],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         different_id = self.random_ids[0]
         existing_external_identifier1 = (
             self.get_child2_external_identifier_from_for_upload(
@@ -1712,7 +1746,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [False],  # Child does not exist
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=3)
 
@@ -1743,12 +1777,12 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None,
             ref2_code=None,
             external_identifiers=[external_identifier1, external_identifier2],
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         created_parent_id = self.random_ids[0]
         created_child2_id = self.random_ids[1]
         created_external_identifier1_id = self.random_ids[2]
@@ -1776,7 +1810,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=4)
 
@@ -1786,10 +1820,10 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.random_ids[0]
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[1]
         self.service.generate_id.side_effect = [
@@ -1800,7 +1834,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [],  # No existing external identifiers
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
@@ -1810,10 +1844,10 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=NULL_ID, identifier_issuer_code="nonexistent_code"
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
@@ -1824,7 +1858,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [],  # No existing external identifiers
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
@@ -1835,10 +1869,10 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=[external_identifier]
         )
-        parent = self.create_parent_for_upload(children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(children2=[child2_for_upload])
         # Set up mocks
         created_parent_id = self.random_ids[0]
         self.service.generate_id.side_effect = [
@@ -1849,7 +1883,7 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [],  # No existing external identifiers
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
@@ -1864,13 +1898,13 @@ class TestCombinedScenarios(BaseUploadTestCase):
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload()
         external_identifier_id = self.random_ids[0]
-        child1 = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        child1_for_upload = self.create_child1_for_upload(ref1_id=self.ref1_id)
         # Optional reference for Child2: use None (not NULL_ID) to avoid resolution error
-        child2 = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
-        parent = self.create_parent_for_upload(
+        child2_for_upload = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
+        parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[external_identifier],
-            children1=[child1],
-            children2=[child2],
+            children1=[child1_for_upload],
+            children2=[child2_for_upload],
         )
         # Set up mocks
         # Resolve Ref1 for Child1
@@ -1908,16 +1942,16 @@ class TestCombinedScenarios(BaseUploadTestCase):
             [created_external_identifier],  # Created ExternalIdentifier
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=4)
 
     def test_update_existing_parent_with_new_children(self) -> None:
         """Test updating an existing parent with new child objects."""
         # Create upload batch
-        child1 = self.create_child1_for_upload(ref1_id=self.ref1_id)
-        parent = self.create_parent_for_upload(
-            parent_id=self.parent_id, children1=[child1]
+        child1_for_upload = self.create_child1_for_upload(ref1_id=self.ref1_id)
+        parent_for_upload = self.create_parent_for_upload(
+            parent_id=self.parent_id, children1=[child1_for_upload]
         )
         # Set up mocks
         # Mock existing parent without children
@@ -1928,7 +1962,9 @@ class TestCombinedScenarios(BaseUploadTestCase):
             [(existing_ref1.id, existing_ref1.code)],
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent, on_exists=OnExistsUploadAction.UPDATE)
+        batch_result = self.upload_batch(
+            parent_for_upload, on_exists=OnExistsUploadAction.UPDATE
+        )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1, n_created=1)
 
@@ -1936,19 +1972,25 @@ class TestCombinedScenarios(BaseUploadTestCase):
         """Test complex reference data resolution across multiple children."""
         # Create upload batch
         # Create children with various reference patterns
-        child1_with_id = self.create_child1_for_upload(
+        child1_for_upload_with_id = self.create_child1_for_upload(
             ref1_id=self.ref1_id, ref1_code=None
         )
-        child1_with_code = self.create_child1_for_upload(
+        child1_for_upload_with_code = self.create_child1_for_upload(
             ref1_id=NULL_ID, ref1_code="ref_code"
         )
-        child1_with_both = self.create_child1_for_upload(
+        child1_for_upload_with_both = self.create_child1_for_upload(
             ref1_id=self.ref1_id, ref1_code="ref_code"
         )
-        child2_optional = self.create_child2_for_upload(ref2_id=None, ref2_code=None)
-        parent = self.create_parent_for_upload(
-            children1=[child1_with_id, child1_with_code, child1_with_both],
-            children2=[child2_optional],
+        child2_for_upload_optional = self.create_child2_for_upload(
+            ref2_id=None, ref2_code=None
+        )
+        parent_for_upload = self.create_parent_for_upload(
+            children1=[
+                child1_for_upload_with_id,
+                child1_for_upload_with_code,
+                child1_for_upload_with_both,
+            ],
+            children2=[child2_for_upload_optional],
         )
         # Set up mocks
         # Resolve Ref1 by id and code for Child1 references
@@ -1971,7 +2013,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
             [created_child2_id],  # Create 1 Child2
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=5)
 
@@ -1983,14 +2025,16 @@ class TestCombinedScenarios(BaseUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id
         )
         # Child2 with external identifier
-        child2 = self.create_child2_for_upload(
+        child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=[child2_ext_id]
         )
         # Child1 with reference data
         existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
-        child1 = self.create_child1_for_upload(ref1_code=existing_ref1.code)
+        child1_for_upload = self.create_child1_for_upload(ref1_code=existing_ref1.code)
         # Parent with both children
-        parent = self.create_parent_for_upload(children1=[child1], children2=[child2])
+        parent_for_upload = self.create_parent_for_upload(
+            children1=[child1_for_upload], children2=[child2_for_upload]
+        )
 
         # Set up mocks
         created_parent_id = self.random_ids[0]
@@ -2020,7 +2064,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
         ]
 
         # Perform upload and verify result
-        batch_result = self.upload_batch(parent)
+        batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         # Result: 1 parent + 1 child1 + 1 child2 + 1 child2 external identifier
         self.assertStatusCount(batch_result, n_created=4)

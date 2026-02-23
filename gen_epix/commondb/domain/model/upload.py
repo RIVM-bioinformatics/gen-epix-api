@@ -257,6 +257,9 @@ class UploadResultWithExternalIdentifiers(UploadResult):
     identifiers, mirroring a for upload class that has external identifiers.
     """
 
+    ENTITY: ClassVar = UploadResult.ENTITY.model_copy()
+    NAME: ClassVar = "UploadResultWithExternalIdentifiers"
+
     external_identifiers: list[UploadResult] | None = Field(
         default=None,
         description="The upload results for the external identifiers associated with the model, if any.",
@@ -294,6 +297,8 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
       id.
     """
 
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
+
     # Must be set in child class
     # The type of identifier for external identifiers (inherited from mixin)
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = None  # type: ignore[assignment]
@@ -320,7 +325,7 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
 
     id: UUID | None = Field(
         default=None,
-        description="The unique identifier for the Parent object. If NULL_ID is provided, it will be set to None.",
+        description="The unique identifier for the Parent object. If NULL_ID is provided, it will be set to None. The id must match that of the contained Parent model, if provided, and be consistent with the parent ID in the child models, if provided. The contained Parent model may have a different ID field than 'id', but this class uses 'id' instead.",
     )
 
     @field_validator("id", mode="before")
@@ -338,22 +343,25 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
         parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         if parent is None:
             return self
-        if parent.id == NULL_ID:
-            parent.id = None
+        id_field_name = self.PARENT_CLASS.ENTITY.get_id_field_name()
+        parent_id = getattr(parent, id_field_name)
+        if parent_id == NULL_ID:
+            setattr(parent, id_field_name, None)
+            parent_id = None
         has_for_upload_id = self.id is not None
-        has_id = parent.id is not None
+        has_id = parent_id is not None
         if has_for_upload_id:
             if has_id:
-                if parent.id != self.id:
+                if parent_id != self.id:
                     raise ValueError(
-                        "The id of ParentForUpload must match the id of the contained Parent model."
+                        f"ParentForUpload.id={self.id} does not match Parent.{id_field_name}={parent_id} of the contained Parent model."
                     )
             else:
                 # Set the parent id to match the ForUpload id
-                parent.id = self.id
+                setattr(parent, id_field_name, self.id)
         elif has_id:
             # Set the ForUpload id to match the parent id
-            self.id = parent.id
+            self.id = parent_id
         return self
 
     @model_validator(mode="after")
@@ -367,6 +375,9 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
             child_model_class,
             children_field_name,
         ) in self.CHILDREN_FIELD_NAME_MAP.items():
+            child_id_field_name = self.CHILD_FOR_UPLOAD_CLASS_MAP[
+                child_model_class
+            ].ENTITY.get_id_field_name()
             parent_id_field_name = self.CHILD_PARENT_ID_FIELD_NAME_MAP[
                 child_model_class
             ]
@@ -376,12 +387,13 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
             seen_child_ids = set()
             for i, child in enumerate(children):
                 # Check for duplicate child IDs
-                if child.id and child.id != NULL_ID:
-                    if child.id in seen_child_ids:
+                child_id = getattr(child, child_id_field_name)
+                if child_id and child_id != NULL_ID:
+                    if child_id in seen_child_ids:
                         raise ValueError(
-                            f"Duplicate ID {child.id} found in {children_field_name}."
+                            f"Duplicate ID {child_id_field_name}={child_id} found in {children_field_name}."
                         )
-                    seen_child_ids.add(child.id)
+                    seen_child_ids.add(child_id)
                 # Check child parent ID consistency
                 if not has_id:
                     continue
@@ -414,7 +426,7 @@ class ParentUploadResult(UploadResultWithExternalIdentifiers):
     subclassed analogous to the ParentForUpload model it corresponds to.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = UploadResultWithExternalIdentifiers.ENTITY.model_copy()
     NAME: ClassVar = "ParentUploadResult"
 
     # Must be set in child class
@@ -510,6 +522,8 @@ class BaseBatchForUpload(Model):
     - All ParentForUpload objects must have unique external identifiers
     """
 
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
+
     # Must be set in child class
     # The ParentForUpload model class contained in this batch
     PARENT_FOR_UPLOAD_CLASS: ClassVar[type[ParentForUpload]] = None  # type: ignore[assignment]
@@ -586,6 +600,9 @@ class BaseBatchUploadResult(UploadResult):
     uploaded. The names of the fields in any child class must be exactly identical to
     those in the corresponding BaseBatchForUpload child class.
     """
+
+    ENTITY: ClassVar = UploadResult.ENTITY.model_copy()
+    NAME: ClassVar = "BaseBatchUploadResult"
 
     # Must be overridden in child class
     # The BaseBatchForUpload child class corresponding to this result class

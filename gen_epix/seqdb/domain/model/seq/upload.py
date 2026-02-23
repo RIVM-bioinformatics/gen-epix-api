@@ -39,7 +39,7 @@ class ReadSetForUpload(ReadSet, IsNewIdMixin):
     A read set intended for upload.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ReadSet.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "ReadSetForUpload"
 
     sample_id: UUID = Field(
@@ -71,7 +71,7 @@ class SeqForUpload(Seq, IsNewIdMixin):
     A sequence intended for upload.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Seq.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "SeqForUpload"
 
     sample_id: UUID = Field(
@@ -104,7 +104,9 @@ class SnpProfileForUpload(SnpProfile):
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    ENTITY: ClassVar[Entity] = SnpProfile.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "SnpProfileForUpload"
 
     sample_id: UUID = Field(
@@ -183,7 +185,7 @@ class AlleleForUpload(Allele):
     additional variables.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Allele.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "AlleleForUpload"
 
     locus_id: UUID = Field(
@@ -198,7 +200,9 @@ class AlleleProfileForUpload(AlleleProfile):
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    ENTITY: ClassVar[Entity] = AlleleProfile.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "AlleleProfileForUpload"
 
     sample_id: UUID = Field(
@@ -337,7 +341,9 @@ class MlvaProfileForUpload(MlvaProfile):
     additional variables.
     """
 
-    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    ENTITY: ClassVar[Entity] = MlvaProfile.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "MlvaProfileForUpload"
 
     sample_id: UUID = Field(
@@ -463,7 +469,7 @@ class SampleForUpload(ParentForUpload):
     A sample intended for upload, together with any relevant associated data.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy()
     NAME = "SampleForUpload"
 
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
@@ -562,7 +568,7 @@ class SampleUploadResult(ParentUploadResult):
     the associated data match those in SampleForUpload to facilitate processing.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
     NAME: ClassVar = "SampleUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload  # type: ignore[assignment]
@@ -623,7 +629,7 @@ class SampleBatchForUpload(BaseBatchForUpload):
     for the storage of these data.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = SampleForUpload.ENTITY.model_copy()
     NAME: ClassVar = "SampleBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = SampleForUpload
@@ -727,7 +733,7 @@ class SampleBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of cases.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = SampleBatchForUpload.ENTITY.model_copy()
     NAME: ClassVar = "SampleBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = SampleBatchForUpload  # type: ignore[assignment]

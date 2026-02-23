@@ -15,7 +15,6 @@ from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult,
     UploadResult,
 )
-from gen_epix.fastapp.domain import Entity
 from gen_epix.omopdb.domain.model.omop.clinical_data import (
     Measurement,
     MeasurementRelation,
@@ -48,7 +47,7 @@ class MeasurementForUpload(Measurement, IsNewIdMixin, ConceptFieldsForUploadMixi
     or integer ID to facilitate the upload operation where applicable.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Measurement.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "MeasurementForUpload"
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
         ("measurement_concept_id", "measurement_concept_int_id"),
@@ -121,7 +120,7 @@ class ObservationForUpload(Observation, IsNewIdMixin, ConceptFieldsForUploadMixi
     or integer ID to facilitate the upload operation where applicable.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Observation.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "ObservationForUpload"
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
         ("observation_concept_id", "observation_concept_int_id"),
@@ -189,7 +188,7 @@ class SpecimenForUpload(
     or integer ID to facilitate the upload operation where applicable.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Specimen.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "SpecimenForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
@@ -256,7 +255,9 @@ class MeasurementRelationForUpload(
     additional variables.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = MeasurementRelation.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "MeasurementRelationForUpload"
     CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
         (
@@ -292,7 +293,7 @@ class PersonForUpload(ParentForUpload):
     A person, together with any relevant associated data, intended for upload.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "PersonForUpload"
 
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
@@ -349,7 +350,7 @@ class PersonUploadResult(ParentUploadResult):
     The result of uploading a single person.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
     NAME: ClassVar = "PersonUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload
@@ -382,7 +383,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
     for the storage of these data.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy()
     NAME: ClassVar = "PersonBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
@@ -433,7 +434,7 @@ class PersonBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of persons.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy()
     NAME: ClassVar = "PersonBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = PersonBatchForUpload  # type: ignore[assignment]

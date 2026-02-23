@@ -6,6 +6,7 @@ from pydantic import Field
 
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
+from gen_epix.fastapp.domain.util import create_keys
 from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
 from gen_epix.omopdb.domain.model.omop.health_system import CareSite, Location, Provider
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
@@ -111,7 +112,6 @@ class Person(Model, DataLineageMixin):
     person_type_concept_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The conceptual type of Person under study, e.g. human, animal or environment, since data from non-human origin are also in scope.\nETL conventions:\nNone"
     )
-    death_datetime: str | None = Field(default=None, description="TO_ADJUST")
 
 
 class ObservationPeriod(Model, DataLineageMixin):
@@ -240,8 +240,6 @@ class VisitOccurrence(Model, DataLineageMixin):
         default=None,
         description='User guidance:\nUse this field to find the visit that occurred for the person prior to the given visit. There could be a few days or a few years in between.\nETL conventions:\nThis field can be used to link a visit immediately preceding the current visit. Note this is not symmetrical, and there is no such thing as a "following_visit_id".',
     )
-    discharge_to_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    discharge_to_source_value: str | None = Field(default=None, description="TO_ADJUST")
 
 
 class VisitDetail(Model, DataLineageMixin):
@@ -336,9 +334,6 @@ class VisitDetail(Model, DataLineageMixin):
     visit_occurrence_id: UUID = Field(
         description="User guidance:\nUse this field to link the VISIT_DETAIL record to its VISIT_OCCURRENCE.\nETL conventions:\nPut the VISIT_OCCURRENCE_ID that subsumes the VISIT_DETAIL record here."
     )
-    discharge_to_source_value: str | None = Field(default=None, description="TO_ADJUST")
-    discharge_to_concept_id: str | None = Field(default=None, description="TO_ADJUST")
-    visit_detail_parent_id: str | None = Field(default=None, description="TO_ADJUST")
 
 
 class ConditionOccurrence(Model, DataLineageMixin):
@@ -999,7 +994,6 @@ class Observation(Model, DataLineageMixin):
         description="User guidance:\nNot part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.\nETL conventions:\nNone",
         max_length=55,
     )
-    value_as_datetime: str | None = Field(default=None, description="TO_ADJUST")
 
 
 class Specimen(Model, DataLineageMixin):
@@ -1327,7 +1321,12 @@ class Death(Model, DataLineageMixin):
         snake_case_plural_name="Deaths",
         table_name="death",
         persistable=True,
-        id_field_name="person_id",
+        id_field_name="death_id",
+        keys=create_keys(
+            {
+                1: ("person_id"),
+            }
+        ),
         links=create_links(
             {
                 1: ("person_id", Person, None),
@@ -1336,6 +1335,10 @@ class Death(Model, DataLineageMixin):
                 4: ("cause_source_concept_id", Concept, None),
             }
         ),
+    )
+    death_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
     person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     death_date: date = Field(
@@ -1362,4 +1365,3 @@ class Death(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nNone\nETL conventions:\nIf the cause of death was coded using a Vocabulary present in the OMOP Vocabularies (not necessarily a standard concept) put the CONCEPT_ID representing the cause of death here.",
     )
-    death_id: str | None = Field(default=None, description="TO_ADJUST")

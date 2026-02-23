@@ -5,7 +5,7 @@ from test.omopdb.integration.person_upload.base import (
     TEST_TYPE,
     VERBOSE,
 )
-from test.omopdb.omopdb_test_client import omopdbTestClient as Env
+from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
 
 import pytest
 
