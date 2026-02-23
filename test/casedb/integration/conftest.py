@@ -33,15 +33,24 @@ class EdgeCaseSpec:
     org_policy_sets: list[str]
     user_policy_sets: list[str]
     expected_case_types: list[str]
+    expected_case_type_sets: list[str]
 
     @property
     def description(self) -> str:
         org_p = ", ".join(self.org_policy_sets) if self.org_policy_sets else "∅"
         usr_p = ", ".join(self.user_policy_sets) if self.user_policy_sets else "∅"
-        exp = ", ".join(self.expected_case_types) if self.expected_case_types else "∅"
+        exp_ct = (
+            ", ".join(self.expected_case_types) if self.expected_case_types else "∅"
+        )
+        exp_cts = (
+            ", ".join(self.expected_case_type_sets)
+            if self.expected_case_type_sets
+            else "∅"
+        )
         return (
             f"[{self.user_name}@{self.org_name}] {self.label}\n"
-            f"  org_policies=[{org_p}], user_policies=[{usr_p}] → expected=[{exp}]"
+            f"  org_policies=[{org_p}], user_policies=[{usr_p}]\n"
+            f"  → expected_case_types=[{exp_ct}], expected_case_type_sets=[{exp_cts}]"
         )
 
 
@@ -76,6 +85,12 @@ def _compute_expected_case_types(org_policy_sets: list[str]) -> list[str]:
     return [s.replace("_set", "_") for s in org_policy_sets]
 
 
+def _compute_expected_case_type_sets(org_policy_sets: list[str]) -> list[str]:
+    """Only the case type sets referenced in org-level policies are accessible.
+    User policies are intentionally ignored — tests verify this explicitly."""
+    return list(org_policy_sets)
+
+
 def _generate_label(org_policy_sets: list[str], user_policy_sets: list[str]) -> str:
     has_org = bool(org_policy_sets)
     has_usr = bool(user_policy_sets)
@@ -101,6 +116,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         org_policy_sets=org_policies,
         user_policy_sets=user_policies,
         expected_case_types=_compute_expected_case_types(org_policies),
+        expected_case_type_sets=_compute_expected_case_type_sets(org_policies),
     )
     for (org_idx, org_policies), (usr_idx, user_policies) in product(
         enumerate(_ORG_POLICY_COMBOS), enumerate(_USER_POLICY_COMBOS)
@@ -120,6 +136,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         org_policy_sets=["case_type_set1"],
 #         user_policy_sets=[],
 #         expected_case_types=["case_type_1"],
+#         expected_case_type_sets=["case_type_set1"],
 #     ),
 #     EdgeCaseSpec(
 #         user_name="org_user1_2",
@@ -128,6 +145,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         org_policy_sets=["case_type_set1"],
 #         user_policy_sets=["case_type_set2"],
 #         expected_case_types=["case_type_1"],
+#         expected_case_type_sets=["case_type_set1"],
 #     ),
 #     EdgeCaseSpec(
 #         user_name="org_user1_3",
@@ -136,6 +154,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         org_policy_sets=["case_type_set1"],
 #         user_policy_sets=["case_type_set1"],
 #         expected_case_types=["case_type_1"],
+#         expected_case_type_sets=["case_type_set1"],
 #     ),
 #     EdgeCaseSpec(
 #         user_name="org_user2_1",
@@ -144,6 +163,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         org_policy_sets=[],
 #         user_policy_sets=[],
 #         expected_case_types=[],
+#         expected_case_type_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name="org_user2_2",
@@ -152,6 +172,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         org_policy_sets=[],
 #         user_policy_sets=["case_type_set1"],
 #         expected_case_types=[],
+#         expected_case_type_sets=[],
 #     ),
 # ]
 

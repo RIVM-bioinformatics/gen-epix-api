@@ -4,7 +4,7 @@ import pytest
 
 from rich import print as rich_print
 from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand
+from gen_epix.casedb.domain.command import CaseTypeCrudCommand, CaseTypeSetCrudCommand
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -63,6 +63,12 @@ class TestCaseDBEdgeCasesRefDataAccess:
     The root user is tested separately as a superuser baseline (not an ABAC edge case).
     """
 
+    @pytest.fixture(autouse=True, scope="class")
+    def print_edge_cases(self) -> None:
+        """Print the active edge cases once per class run when VERBOSE is enabled."""
+        if VERBOSE:
+            rich_print(EDGE_CASES)
+
     @pytest.fixture(autouse=True)
     def setup(self, env: Env) -> None:
         """Auto-inject the env fixture into the class."""
@@ -102,8 +108,6 @@ class TestCaseDBEdgeCasesRefDataAccess:
           Unexpected access: ['case_type_2']
         """
 
-        rich_print(EDGE_CASES)  # Debug print to verify the test cases being run
-
         user = self.get_user(spec.user_name)
 
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
@@ -111,6 +115,38 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         actual = {ct.name for ct in result}
         expected = set(spec.expected_case_types)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
+
+    @pytest.mark.parametrize(
+        "spec",
+        EDGE_CASES,
+        ids=[s.user_name for s in EDGE_CASES],
+    )
+    def test_case_type_set_access_matches_expected(
+        self, spec: EdgeCaseSpec, setup_case_type_data: None
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible case type sets exactly matches
+        the expected set declared in EdgeCaseSpec.expected_case_type_sets — neither more nor less.
+
+        Only case type sets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional case type sets.
+        """
+        user = self.get_user(spec.user_name)
+
+        get_cmd = CaseTypeSetCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        result = self.env.app.handle(get_cmd)
+
+        actual = {cts.name for cts in result}
+        expected = set(spec.expected_case_type_sets)
 
         missing = expected - actual
         unexpected = actual - expected
