@@ -15,6 +15,7 @@ from gen_epix.fastapp.service import BaseService
 
 
 class Ref1(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Ref1"
     code: str = Field(description="A unique code")
     a: str = Field(
@@ -24,6 +25,7 @@ class Ref1(commondb_model.Model):
 
 
 class Ref2(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Ref2"
     code: str = Field(description="A unique code")
     a: str = Field(
@@ -33,6 +35,7 @@ class Ref2(commondb_model.Model):
 
 
 class Parent(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Parent"
     a: str = Field(
         default="",
@@ -61,6 +64,7 @@ class Parent(commondb_model.Model):
 
 
 class Child1(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Child1"
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref1_id: UUID = Field(description="The ID of the Ref1 model.")
@@ -91,6 +95,7 @@ class Child1(commondb_model.Model):
 
 
 class Child2(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Child2"
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
@@ -121,6 +126,7 @@ class Child2(commondb_model.Model):
 
 
 class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
+    ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "Child1ForUpload"
     parent_id: UUID = Field(
         default=NULL_ID,
@@ -150,6 +156,7 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
 class Child2ForUpload(
     Child2, commondb_model.IsNewIdMixin, commondb_model.ExternalIdentifiersMixin
 ):
+    ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "Child2ForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
     parent_id: UUID = Field(
@@ -163,6 +170,7 @@ class Child2ForUpload(
 
 
 class ParentForUpload(commondb_model.ParentForUpload):
+    ENTITY: ClassVar = Entity(persistable=False)
     NAME: ClassVar = "ParentForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Parent
@@ -370,3 +378,15 @@ class ParentBatchUploader(BatchUploader):
         )
 
         return success
+
+
+# Set model class in entities
+for model_class in [
+    Parent,
+    Child1,
+    Child2,
+    Child1ForUpload,
+    Child2ForUpload,
+    ParentForUpload,
+]:
+    model_class.ENTITY.set_model_class(model_class)
