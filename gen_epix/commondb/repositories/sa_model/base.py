@@ -36,8 +36,8 @@ class NoIdRowMetadataMixin:
     """
     SQLAlchemy model mixin for adding a number of standard fields.
     """
+    id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=False)
 
-    id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
     _created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
