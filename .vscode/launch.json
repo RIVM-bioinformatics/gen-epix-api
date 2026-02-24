@@ -800,7 +800,7 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
-        }
+        },
         {
             "name": "test.fastapp.unit.services",
             "type": "debugpy",

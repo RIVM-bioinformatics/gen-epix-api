@@ -904,6 +904,17 @@ class CasedbTestClient(TestClient):
         read_case_set: bool = True,
         write_case_set: bool = True,
     ) -> model.OrganizationAccessCasePolicy:
+        """
+        Create an organization access case policy with the given parameters.
+        The name should be in the format "PREFIX_Y_Z" where PREFIX can be any string,
+        Y is the organization number, and Z is the data collection number,
+        e.g. "policy1_2_3" for org2 and data_collection3,
+        or "org_case_policy1_1" for org1 and data_collection1.
+
+        Note: it assumes that the organization and data collection with the given numbers already exist, and will raise an error if not.
+        This is to ensure that the created policy is linked to valid objects.
+
+        """
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]

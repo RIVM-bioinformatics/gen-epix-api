@@ -23,9 +23,9 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.129.0",
-    "gunicorn==25.1.*",
-    "starlette==0.52.*",
+    "fastapi[standard]==0.128.0",
+    "gunicorn==24.1.*",
+    "starlette==0.52.1",  # NOTE: FastAPI 0.128.0 supports starlette <= 0.50.0
     "httpx==0.28.1",
     "pyjwt==2.11.0",
     "urllib3==2.6.3",
