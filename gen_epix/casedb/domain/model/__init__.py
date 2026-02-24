@@ -18,6 +18,7 @@ from gen_epix.casedb.domain.model.abac import (
 )
 from gen_epix.casedb.domain.model.abac import UserShareCasePolicy as UserShareCasePolicy
 from gen_epix.casedb.domain.model.case import BaseCaseRights as BaseCaseRights
+from gen_epix.casedb.domain.model.case import ReadableReferenceData as ReadableReferenceData
 from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchForUpload
 from gen_epix.casedb.domain.model.case import (
@@ -176,6 +177,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseSetMember,
             CaseDataCollectionLink,
             CaseSetDataCollectionLink,
+            ReadableReferenceData,
             ReadSetForUpload,
             SeqForUpload,
             CaseForUpload,

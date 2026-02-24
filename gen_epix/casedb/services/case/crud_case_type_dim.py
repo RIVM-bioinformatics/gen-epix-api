@@ -6,6 +6,7 @@ from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     crud_with_access_filter,
     get_case_abac_from_command,
+    get_readable_reference_data_from_command,
     is_metadata_admin_or_above,
 )
 from gen_epix.fastapp import CrudOperation, CrudOperationSet
@@ -278,23 +279,19 @@ def _crud_case_type_dim_with_abac(
     | None
 ):
     """CaseTypeDim user command handling, ABAC applied."""
-    # @ABAC: get case abac
-    case_abac = get_case_abac_from_command(cmd)
-
     # Special case: no policy, allows for internal commands to retrieve all
-    if not case_abac:
-        # No policy: allows for internal commands to retrieve all
+    if not get_case_abac_from_command(cmd):
         return self.crud(cmd)  # type: ignore[return-value]
 
-    # Initialize some
     is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-
     if not is_read:
         # Only read operations are allowed for metadata commands for these
         # users
         raise AssertionError("Unexpected operation")
 
-    # Allow reading settings only for case types the user has any rights to
-    valid_case_type_ids = case_abac.get_case_types_with_any_rights()
-    access_filter = self._compose_id_filter(("case_type_id", valid_case_type_ids))
+    readable_reference_data = get_readable_reference_data_from_command(cmd)
+    assert readable_reference_data is not None
+    access_filter = self._compose_id_filter(
+        ("id", readable_reference_data.case_type_dim_ids)
+    )
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
