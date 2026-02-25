@@ -667,9 +667,7 @@ class AbacService(BaseAbacService):
     def _get_readable_reference_data_cached(
         self, user_id: UUID, organization_id: UUID
     ) -> model.ReadableReferenceData:
-        # Retrieve user to pass as context to internal app.handle calls.
-        # Internal handle calls have no policies in cmd._policies (is_initial_command=False),
-        # so ABAC filtering is not applied — they return unfiltered data.
+        # user is required to retrieve the objects through ...CrudCommand
         user = self._get_user_by_id_cached(user_id)
 
         org_filter = CompositeFilter(
