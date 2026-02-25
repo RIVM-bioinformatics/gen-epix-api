@@ -67,7 +67,7 @@ from gen_epix.commondb.domain.command.organization import (
     RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
-    RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
+    RetrieveOrganizationContactsCommand as RetrieveOrganizationContactsCommand,
 )
 from gen_epix.commondb.domain.command.organization import (
     SiteCrudCommand as SiteCrudCommand,
@@ -128,7 +128,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, frozenset[type[fastapp.Command]
             RegisterInvitedUserCommand,
             RetrieveInviteUserConstraintsCommand,
             RetrieveOrganizationAdminNameEmailsCommand,
-            RetrieveOrganizationContactCommand,
+            RetrieveOrganizationContactsCommand,
             SiteCrudCommand,
             UpdateUserCommand,
             UpdateUserOwnOrganizationCommand,
