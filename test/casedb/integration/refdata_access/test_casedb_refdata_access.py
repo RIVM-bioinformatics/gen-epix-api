@@ -208,13 +208,6 @@ class TestRefdataAccess:
             assert dims == all_dims
 
     @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_col(self, env: Env) -> None:
-        all_cols = self._read_all(env, model.Col)
-        for user in self._get_all_users(env):
-            cols = self._read_all(env, model.Col, user=user)
-            assert cols == all_cols
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
     def test_case_type_set_category(self, env: Env) -> None:
         all_case_type_set_categories = self._read_all(env, model.CaseTypeSetCategory)
         for user in self._get_all_users(env):
@@ -230,7 +223,7 @@ class TestRefdataAccess:
             case_set_categories = self._read_all(env, model.CaseSetCategory, user=user)
             assert case_set_categories == all_case_set_categories
 
-    def get_expected_case_type_ids_for_reference_data(
+    def _get_expected_case_type_ids_for_reference_data(
         self,
         env: Env,
         user: model.User,
@@ -319,7 +312,7 @@ class TestRefdataAccess:
     # Note that this method is currently not used in the test, but it can be used for future more fine-grained tests that check ABAC filtering for operational data access,
     # instead of the current all-or-nothing approach for reference data access
     # It should test for access on case level, not just case type level, to verify that ABAC filtering is correctly applied for operational data access
-    def get_expected_case_type_ids_for_operational_data(
+    def _get_expected_case_type_ids_for_operational_data(
         self,
         env: Env,
         user: model.User,
@@ -517,9 +510,6 @@ class TestRefdataAccess:
 
             if VERBOSE:
                 print("-------------")
-                # print(user)
-
-                # print user name and organization name for debugging purposes
                 org_name = next(
                     (o.name for o in all_organizations if o.id == user.organization_id),
                     "Unknown",
@@ -533,7 +523,7 @@ class TestRefdataAccess:
             else:
                 # retrieve all unique case type IDs from the retrieved policies for the user in question
                 expected_case_type_ids = (
-                    self.get_expected_case_type_ids_for_reference_data(
+                    self._get_expected_case_type_ids_for_reference_data(
                         env,
                         user,
                     )
@@ -558,3 +548,92 @@ class TestRefdataAccess:
     # For testing with generated test data in another fixture:
     # Save all generated data as a pickle file
     # In case of stable set of data for testing => use pickle file instead of generating new data each time
+
+    @pytest.mark.skip(reason="Skipped while developing other tests")
+    def test_col(self, env: Env) -> None:
+        all_cols = self._read_all(env, model.Col)
+        for user in self._get_all_users(env):
+            cols = self._read_all(env, model.Col, user=user)
+            assert cols == all_cols
+
+    def _get_expected_case_type_col_set_ids_for_reference_data(
+        self,
+        env: Env,
+        user: model.User,
+    ) -> set[UUID]:
+        """
+        Get expected CaseTypeColSet IDs for reference data access for a user.
+
+        For reference data, the allowed CaseTypeColSet IDs are those referenced directly in the
+        organization access and share policies for the user's organization.
+        """
+        all_org_access_policies: list[model.OrganizationAccessCasePolicy] = (
+            self._get_all_organization_access_case_policies(env)
+        )
+        all_org_share_policies: list[model.OrganizationShareCasePolicy] = (
+            self._get_all_organization_share_case_policies(env)
+        )
+
+        org_access_col_set_ids = {
+            x.read_case_type_col_set_id
+            for x in all_org_access_policies
+            if x.organization_id == user.organization_id
+            and x.read_case_type_col_set_id is not None
+        }
+
+        # For share policies, collect all from_data_collection Data Collection IDs shared with the user's organization
+        org_share_data_collection_ids = {
+            x.from_data_collection_id
+            for x in all_org_share_policies
+            if x.organization_id == user.organization_id
+        }
+
+        # Only include read_case_type_col_set_id from share policies where from_data_collection_id is in org_share_data_collection_ids
+        org_share_col_set_ids = {
+            x.read_case_type_col_set_id
+            for x in all_org_access_policies
+            if x.data_collection_id in org_share_data_collection_ids
+            and x.read_case_type_col_set_id is not None
+        }
+
+        expected_case_type_col_set_ids = org_access_col_set_ids | org_share_col_set_ids
+
+        return expected_case_type_col_set_ids
+
+    # Note: test data do not currently include any reference data for case type columns set members
+    # but this test can be used when such data is added
+    def test_case_type_col_set(self, env: Env) -> None:
+
+        all_organizations = self._get_all_organizations(env)
+        all_col_set_ids: set[UUID] = self._read_all(env, model.CaseTypeColSet, return_id=True)  # type: ignore[assignment]
+
+        print(len(all_col_set_ids))
+
+        for user in self._get_all_users(env):
+
+            if VERBOSE:
+                print("-------------")
+                org_name = next(
+                    (o.name for o in all_organizations if o.id == user.organization_id),
+                    "Unknown",
+                )
+                print(f"user: {user.name}, organization_name: {org_name}")
+
+            if self._has_role(env, user, RoleSet.GE_REFDATA_ADMIN):
+
+                expected_case_type_col_set_ids: set[UUID] = all_col_set_ids
+            else:
+                expected_case_type_col_set_ids: set[UUID] = (
+                    self._get_expected_case_type_col_set_ids_for_reference_data(
+                        env, user
+                    )
+                )
+
+            actual_col_set_ids = self._read_all(env, model.CaseTypeColSet, user=user, return_id=True)  # type: ignore[assignment]
+
+            if VERBOSE:
+                print("expected col_sets:", len(expected_case_type_col_set_ids))
+                print("actual col_sets:", len(actual_col_set_ids))
+
+            # Optionally, assert that the user only sees the expected col sets
+            assert actual_col_set_ids == expected_case_type_col_set_ids  # type: ignore[comparison-overlap]

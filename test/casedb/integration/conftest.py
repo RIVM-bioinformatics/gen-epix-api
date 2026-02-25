@@ -3,6 +3,7 @@ from itertools import product
 
 import pytest
 
+from gen_epix.casedb.domain.model.case.reference_data import CaseType
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from gen_epix.casedb.domain import model
 
@@ -543,11 +544,11 @@ def setup_case_type_data(
     }
     for ct_set_name in sorted(all_ct_set_names):
         ct_name = ct_set_name.replace("_set", "_")
-        case_type = env.create_case_type(
+        case_type: CaseType = env.create_case_type(
             root_user, ct_name, "disease_1", "etiological_agent_1"
         )
         assert case_type is not None, f"Failed to create case type '{ct_name}'"
-        env.create_case_type_set(root_user, ct_set_name, [case_type.id], "category_1")
+        env.create_case_type_set(root_user, ct_set_name, [case_type], "category_1")
 
     # data_collection1: target collection referenced by all policies
     # data_collection2: source collection for share policies (from_data_collection)
