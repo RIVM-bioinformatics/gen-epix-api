@@ -11,7 +11,6 @@ from gen_epix.commondb.api.exc import handle_command
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
-from gen_epix.commondb.domain.model.organization import OrganizationContacts
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
@@ -329,9 +328,9 @@ def create_organization_endpoints(
     async def retrieve__organization_contacts(
         user: registered_user_dependency,  # type: ignore
         request_body: RetrieveOrganizationContactsRequestBody,
-    ) -> OrganizationContacts:
+    ) -> model.OrganizationContacts:
         return cast(
-            OrganizationContacts,
+            model.OrganizationContacts,
             handle_command(
                 app=app,
                 user=user,

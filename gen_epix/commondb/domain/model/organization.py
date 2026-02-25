@@ -495,6 +495,10 @@ class ExternalIdentifierForUpload(BaseModel, frozen=True):
 
 
 class OrganizationContacts(BaseModel):
-    organization: Organization
-    sites: list[Site]
-    contacts: list[Contact]
+    organization: Organization = Field(
+        description="The organization corresponding to the contacts"
+    )
+    sites: list[Site] = Field(description="The list of sites for the organization")
+    contacts: list[Contact] = Field(
+        description="The list of contacts for the organization"
+    )

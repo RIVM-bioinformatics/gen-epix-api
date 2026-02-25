@@ -5,7 +5,6 @@ from cachetools import TTLCache, cached
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.domain.model.organization import OrganizationContacts
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
 from gen_epix.fastapp.app import App
@@ -310,13 +309,13 @@ class OrganizationService(BaseOrganizationService):
     def retrieve_organization_contacts(
         self,
         cmd: command.RetrieveOrganizationContactsCommand,
-    ) -> OrganizationContacts:
+    ) -> model.OrganizationContacts:
         user, repository = self._get_user_and_repository(cmd)
 
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
-            organization = repository.crud(  # type: ignore[assignment]
+            organization: model.Organization = repository.crud(  # type: ignore[assignment]
                 uow,
                 user.id,
                 model.Organization,
@@ -346,7 +345,7 @@ class OrganizationService(BaseOrganizationService):
             site_ids = {x.id for x in sites}
             contacts = [x for x in contacts if x.site_id in site_ids]
 
-        return OrganizationContacts(
+        return model.OrganizationContacts(
             organization=organization,
             sites=sites,
             contacts=contacts,
