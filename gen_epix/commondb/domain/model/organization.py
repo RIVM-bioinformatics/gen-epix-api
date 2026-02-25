@@ -492,3 +492,9 @@ class ExternalIdentifierForUpload(BaseModel, frozen=True):
         return hash(
             (self.identifier_issuer_id, self.identifier_issuer_code, self.external_id)
         )
+
+
+class OrganizationContacts(BaseModel):
+    organization: Organization
+    sites: list[Site]
+    contacts: list[Contact]

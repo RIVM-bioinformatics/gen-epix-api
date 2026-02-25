@@ -11,6 +11,7 @@ from gen_epix.commondb.api.exc import handle_command
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
 from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
+from gen_epix.commondb.domain.model.organization import OrganizationContacts
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType
@@ -74,6 +75,11 @@ class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
         max_length=MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH,
     )
 
+
+class RetrieveOrganizationContactsRequestBody(PydanticBaseModel):
+    organization_id: UUID = Field(
+        description="The ID of the organization to retrieve contacts for."
+    )
 
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
@@ -310,6 +316,30 @@ def create_organization_endpoints(
                     obj_id1=organization_id,
                     association_objs=request_body.organization_identifier_issuer_links,
                     props={"return_id": False},
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/organization_contacts",
+        operation_id="retrieve__organization_contacts",
+        name="Retrieve organization contacts",
+        description=command.RetrieveOrganizationContactsCommand.__doc__,
+    )
+    async def retrieve__organization_contacts(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveOrganizationContactsRequestBody,
+    ) -> OrganizationContacts:
+        return cast(
+            OrganizationContacts,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b8172f62",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveOrganizationContactsCommand(
+                    user=user,
+                    organization_id=request_body.organization_id,
                 ),
             ),
         )
