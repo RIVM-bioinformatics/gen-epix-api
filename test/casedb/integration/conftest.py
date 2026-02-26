@@ -3,12 +3,15 @@ from itertools import product
 
 import pytest
 
-from gen_epix.casedb.domain.model.case.reference_data import CaseType
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from gen_epix.casedb.domain import model
+from gen_epix.casedb.domain import enum as casedb_enum
 
 # These fixtures are used across multiple test modules in the integration test suite, so they are defined in conftest.py
 # to avoid duplication and ensure consistent setup of test users, organizations, and reference data for all tests.
+
+
+VERBOSE = False
 
 
 @dataclass
@@ -24,8 +27,9 @@ class EdgeCaseSpec:
     - user_share_policy_sets: case type sets granted directly to this user via UserShareCasePolicy
     - expected_case_types: expected accessible case type names (union of org access + org share)
     - expected_case_type_sets: expected accessible case type set names (union of org access + org share)
+    - expected_case_type_col_sets: expected accessible case type column set names (union of org access + org share)
 
-    For reference data (case types / case type sets), only org-level policies determine access.
+    For reference data (case types / case type sets / case type col sets), only org-level policies determine access.
     User-level policies (both access and share) are intentionally ignored — tests verify this.
 
     Both setup fixtures iterate EDGE_CASES to drive user/org creation and policy setup.
@@ -43,6 +47,7 @@ class EdgeCaseSpec:
     user_share_policy_sets: list[str]
     expected_case_types: list[str]
     expected_case_type_sets: list[str]
+    expected_case_type_col_sets: list[str]
 
     @property
     def description(self) -> str:
@@ -56,7 +61,8 @@ class EdgeCaseSpec:
             f"  user_access=[{_fmt(self.user_access_policy_sets)}], "
             f"user_share=[{_fmt(self.user_share_policy_sets)}]\n"
             f"  → expected_case_types=[{_fmt(self.expected_case_types)}], "
-            f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}]"
+            f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}], "
+            f"expected_case_type_col_sets=[{_fmt(self.expected_case_type_col_sets)}]"
         )
 
 
@@ -115,7 +121,16 @@ def _compute_expected_case_type_sets(
 ) -> list[str]:
     """Only the case type sets referenced in org-level policies (access ∪ share) are accessible.
     User policies are intentionally ignored — tests verify this explicitly."""
+
     return sorted(set(org_access_sets) | set(org_share_sets))
+
+
+def _compute_expected_case_type_col_sets(
+    org_access_sets: list[str], org_share_sets: list[str]
+) -> list[str]:
+    # For demo: col set names are derived from set names (e.g. "case_type_set1" -> "colset1")
+    combined = sorted(set(org_access_sets) | set(org_share_sets))
+    return [s.replace("case_type_set", "colset") for s in combined]
 
 
 def _generate_label(
@@ -178,6 +193,9 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         user_share_policy_sets=user_share,
         expected_case_types=_compute_expected_case_types(org_access, org_share),
         expected_case_type_sets=_compute_expected_case_type_sets(org_access, org_share),
+        expected_case_type_col_sets=_compute_expected_case_type_col_sets(
+            org_access, org_share
+        ),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
     for usr_idx, ((_, user_access), (_, user_share)) in _user_combos
@@ -202,6 +220,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user1_2',
@@ -213,6 +232,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user1_3',
@@ -224,6 +244,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user1_4',
@@ -235,6 +256,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user1_5',
@@ -246,6 +268,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user1_6',
@@ -257,6 +280,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1'],
 #         expected_case_type_sets=['case_type_set1'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_1',
@@ -268,6 +292,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_2',
@@ -279,6 +304,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_3',
@@ -290,6 +316,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_4',
@@ -301,6 +328,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_5',
@@ -312,6 +340,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_6',
@@ -323,6 +352,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
+#         expected_case_type_col_sets=['colset1', 'colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_1',
@@ -334,6 +364,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_2',
@@ -345,6 +376,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_3',
@@ -356,6 +388,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_4',
@@ -367,6 +400,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_5',
@@ -378,6 +412,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_6',
@@ -389,6 +424,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=[],
 #         expected_case_type_sets=[],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_1',
@@ -400,6 +436,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_2',
@@ -411,6 +448,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_3',
@@ -422,6 +460,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_4',
@@ -433,6 +472,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_5',
@@ -444,6 +484,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_6',
@@ -455,6 +496,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
+#         expected_case_type_col_sets=['colset2'],
 #     ),
 # ]
 
@@ -478,10 +520,10 @@ def setup_test_users_and_organizations(env: Env) -> None:
       the user_name naming convention by invite_and_register_user
     """
     root_user = env.get_root_user()
-    env._set_obj(root_user)
+    env._set_obj(root_user)  # noqa: SLF001
 
     org1 = env.read_one_by_property(root_user, model.Organization, "name", "org1")
-    env._set_obj(org1)
+    env._set_obj(org1)  # noqa: SLF001
 
     # Create orgs not already bootstrapped (org1 is pre-configured as the root org)
     created_orgs: set[str] = {"org1"}
@@ -498,25 +540,25 @@ def setup_test_users_and_organizations(env: Env) -> None:
 # setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
 # organizations are created before policies reference them. The parameter is intentionally
 # unused in the body — its presence enforces fixture ordering.
+
+
 @pytest.fixture(scope="module")
 def setup_case_type_data(
-    env: Env, setup_test_users_and_organizations: None
+    env: Env, setup_test_users_and_organizations: None  # noqa: ARG001
 ) -> None:  # noqa: ARG001
     """
-    Create reference data (diseases, etiological agents, case types, and all four policy types) for tests.
+    Create reference data (diseases, etiological agents, case types, case type sets, case type col sets, and all four policy types) for tests.
     Objects are automatically stored in env.db by create methods.
 
     Policy creation is driven by EDGE_CASES:
-    - Org access policies: one per unique (org, case_type_set) from org_access_policy_sets.
-    - Org share policies: one per unique (org, case_type_set) from org_share_policy_sets.
-      These require a from_data_collection (data_collection2) to represent the sharing source.
-    - User access policies: one per (user, case_type_set) entry in user_access_policy_sets.
-    - User share policies: one per (user, case_type_set) entry in user_share_policy_sets.
-      These also require from_data_collection (data_collection2).
+    - Org access/share policies: one per unique (org, case_type_set) from org_access_policy_sets/org_share_policy_sets.
+    - User access/share policies: one per (user, case_type_set) entry in user_access_policy_sets/user_share_policy_sets.
+    - For col sets: same logic, but with col set names (e.g. colset1) and col set objects.
 
     Data collections:
     - data_collection1: the target collection referenced by all policies.
     - data_collection2: the source collection for share policies (from_data_collection).
+
     """
     root_user = env.get_root_user()
 
@@ -529,9 +571,11 @@ def setup_case_type_data(
     # Create case types using pre-created reference data from env.db.
     env.create_case_type_set_category(root_user, "category_1", 0)
 
+    # --- CASE TYPES & SETS ---
     # Derive case types and case type sets from all four policy dimensions in EDGE_CASES.
     # Assumption: each case type set contains exactly one case type.
     # Naming convention: case_type_set{N} → case_type_{N} (replace "_set" with "_").
+
     all_ct_set_names = {
         ct_set_name
         for spec in EDGE_CASES
@@ -543,71 +587,155 @@ def setup_case_type_data(
         )
     }
     for ct_set_name in sorted(all_ct_set_names):
-        ct_name = ct_set_name.replace("_set", "_")
-        case_type: CaseType = env.create_case_type(
+        ct_name = ct_set_name.replace("_set", "")
+        case_type = env.create_case_type(
             root_user, ct_name, "disease_1", "etiological_agent_1"
         )
         assert case_type is not None, f"Failed to create case type '{ct_name}'"
-        env.create_case_type_set(root_user, ct_set_name, [case_type], "category_1")
+        env.create_case_type_set(root_user, ct_set_name, {ct_name}, "category_1")
 
+    # --- CASE TYPE COLS & COL SETS ---
+    # For demo: create one col per set, and one col set per set (colset1, colset2, ...)
+    all_col_set_names = {s.replace("case_type_set", "colset") for s in all_ct_set_names}
+
+    col_ids_by_colset: dict[str, list] = {}
+
+    # For this demo, we create one dimension and one col per set, using the correct model and naming conventions.
+    # Naming: case_type_col_{ct_idx}_{dim_idx}_{occ_idx}_{col_idx}
+    # We'll use ct_idx = set index, dim_idx = 1, occ_idx = 1, col_idx = 1
+    # Note: we should also create a unique dim and col per set
+    for i, colset_name in enumerate(sorted(all_col_set_names), 1):
+        ct_idx = i
+        dim_idx = i
+        occ_idx = 1
+        col_idx = 1
+        col_code = f"col{dim_idx}_1"  # 1 is the ranking of the col within the dimension, for demo we have only one col per dim
+        dim_code = f"dim{dim_idx}"
+
+        # Ensure the dimension exists (TEXT type for demo)
+        env.create_dim(root_user, dim_code, casedb_enum.DimType.TEXT)
+        # Create the col (TEXT type for demo)
+        col = env.create_col(root_user, col_code, casedb_enum.ColType.TEXT)
+        assert col is not None, f"Failed to create col '{col_code}'"
+        # Create the col set and add the col as its only member
+
+        # Note: there is an error here, case_type_col_1_1_1_1 not found
+        # Col is not part of a col set, case_type_col is part of a case_type_col_set
+
+        # case_type_dim should be case_type_dim_1_2_3
+        # where 1 = ct_idx, 2 = dim_idx, 3 = occ_idx
+        case_type_dim_code = f"case_type_dim{ct_idx}_{dim_idx}_{occ_idx}"
+        env.create_case_type_dim(root_user, case_type_dim_code)
+
+        # case_type_dim1_1_1 not found error
+        case_type_col_code = f"case_type_col{ct_idx}_{dim_idx}_{occ_idx}_{col_idx}"
+        env.create_case_type_col(root_user, case_type_col_code, col.id)
+
+        if VERBOSE:
+            print(
+                f"Created col '{col_code}' (id={col.id}), case type dim '{case_type_dim_code}', and case type col '{case_type_col_code}' for col set '{colset_name}'"
+            )
+
+        # Note: case type col set members are automatically created
+        # when we create the case type col set with the col set name matching the case type set name
+        # (e.g. "colset1" for "case_type_set1") and passing the case type col code as a member.
+        ct_col_set: model.CaseTypeColSet = env.create_case_type_col_set(
+            root_user, colset_name, {case_type_col_code}
+        )
+        if VERBOSE:
+            print(
+                f"Created col set '{colset_name}' with col '{col_code}' (id={col.id}) and case type col '{case_type_col_code}')"
+            )
+
+        col_ids_by_colset[colset_name] = [col.id]
+
+    # --- DATA COLLECTIONS ---
     # data_collection1: target collection referenced by all policies
     # data_collection2: source collection for share policies (from_data_collection)
     env.create_data_collection(root_user, "data_collection1")
     env.create_data_collection(root_user, "data_collection2")
 
-    # --- Org access policies ---
+    # --- ORG ACCESS POLICIES (case type sets & col sets) ---
     # One per unique (org, case_type_set) from org_access_policy_sets.
     # Naming: "org_access_policy{org_num}_{dc_num}" e.g. "org_access_policy1_1"
+
     created_org_access: set[tuple[str, str]] = set()
     for spec in EDGE_CASES:
         for ct_set in spec.org_access_policy_sets:
             key = (spec.org_name, ct_set)
             if key not in created_org_access:
                 org_num = spec.org_name[len("org") :]
-                policy_name = f"org_access_policy{org_num}_1"
+
+                dc_num = 1  # for demo, all policies reference data_collection1
+                policy_name = f"org_access_policy{org_num}_{dc_num}"
+
+                # Note: we already created the col type sets and col sets with the same naming convention as the case type sets (e.g. "case_type_set1" → "colset1"),
+                # so we can pass the col set
+                # Also create col set access policy
+                colset_name = ct_set.replace("case_type_set", "colset")
+
                 env.create_organization_access_case_policy(
-                    root_user, policy_name, ct_set
+                    root_user,
+                    policy_name,
+                    ct_set,
+                    read_case_type_col_set=colset_name,
                 )
+
                 created_org_access.add(key)
 
-    # --- Org share policies ---
+    # --- ORG SHARE POLICIES (case type sets & col sets) ---
     # One per unique (org, case_type_set) from org_share_policy_sets.
     # Naming: "org_share_policy{org_num}_{dc_num}_{from_dc_num}" e.g. "org_share_policy1_1_2"
     # Shares from data_collection2 into data_collection1.
-    created_org_share: set[tuple[str, str]] = set()
 
+    created_org_share: set[tuple[str, str]] = set()
     for spec in EDGE_CASES:
         for ct_set in spec.org_share_policy_sets:
             key = (spec.org_name, ct_set)
             if key not in created_org_share:
                 org_num = spec.org_name[len("org") :]
-                policy_name = f"org_share_policy{org_num}_1_2"
+                # Naming: org_share_policy{org_num}_1_2 (should reference data collections)
+                # Convention: org_share_policy{org_num}_{target_dc_num}_{source_dc_num}
+                target_dc_num = 1
+                source_dc_num = 2
+                policy_name = (
+                    f"org_share_policy{org_num}_{target_dc_num}_{source_dc_num}"
+                )
                 env.create_organization_share_case_policy(
                     root_user, policy_name, ct_set
                 )
                 created_org_share.add(key)
 
-    # --- User access policies ---
+    # --- USER ACCESS POLICIES (case type sets & col sets) ---
     # One per (user, case_type_set) in user_access_policy_sets.
     # Note: user access policies are intentionally ignored for reference data access —
     # the tests verify this behaviour explicitly.
+
     for spec in EDGE_CASES:
         for ct_set in spec.user_access_policy_sets:
+            # Use variable for data collection name for clarity and consistency
+            target_data_collection = "data_collection1"
+            colset_name = ct_set.replace("case_type_set", "colset")
             env.create_user_access_case_policy(
-                root_user, spec.user_name, "data_collection1", ct_set
+                root_user,
+                spec.user_name,
+                target_data_collection,
+                ct_set,
+                read_case_type_col_set=colset_name,
             )
 
-    # --- User share policies ---
+    # --- USER SHARE POLICIES (case type sets & col sets) ---
     # One per (user, case_type_set) in user_share_policy_sets.
     # Shares from data_collection2 into data_collection1.
     # Note: user share policies are intentionally ignored for reference data access —
     # the tests verify this behaviour explicitly.
+
     for spec in EDGE_CASES:
         for ct_set in spec.user_share_policy_sets:
             env.create_user_share_case_policy(
                 root_user,
                 spec.user_name,
-                "data_collection1",
-                "data_collection2",
-                ct_set,
+                data_collection="data_collection1",
+                from_data_collection="data_collection2",
+                case_type_set=ct_set,
             )

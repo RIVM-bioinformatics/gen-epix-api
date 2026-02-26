@@ -4,6 +4,7 @@ import pytest
 
 from rich import print as rich_print
 from gen_epix.casedb.domain import enum, model
+from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.command import CaseTypeCrudCommand, CaseTypeSetCrudCommand
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
@@ -147,6 +148,40 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         actual = {cts.name for cts in result}
         expected = set(spec.expected_case_type_sets)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
+
+    @pytest.mark.parametrize(
+        "spec",
+        EDGE_CASES,
+        ids=[s.user_name for s in EDGE_CASES],
+    )
+    def test_case_type_col_set_access_matches_expected(
+        self, spec: EdgeCaseSpec, setup_case_type_data: None
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible case type col sets exactly matches
+        the expected set declared in EdgeCaseSpec.expected_case_type_col_sets — neither more nor less.
+
+        Only case type col sets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional case type col sets.
+        """
+        user = self.get_user(spec.user_name)
+
+        get_cmd = command.CaseTypeColSetCrudCommand(
+            user=user, operation=CrudOperation.READ_ALL
+        )
+        result = self.env.app.handle(get_cmd)
+
+        actual = {ctcs.name for ctcs in result}
+        expected = set(spec.expected_case_type_col_sets)
 
         missing = expected - actual
         unexpected = actual - expected
