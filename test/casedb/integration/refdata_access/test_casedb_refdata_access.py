@@ -605,7 +605,7 @@ class TestRefdataAccess:
     def test_case_type_col_set(self, env: Env) -> None:
 
         all_organizations = self._get_all_organizations(env)
-        all_col_set_ids: set[UUID] = self._read_all(env, model.CaseTypeColSet, return_id=True)  # type: ignore[assignment]
+        all_col_set_ids: list[UUID] = self._read_all(env, model.CaseTypeColSet, return_id=True)  # type: ignore[assignment]
 
         for user in self._get_all_users(env):
 
@@ -627,7 +627,7 @@ class TestRefdataAccess:
                     )
                 )
 
-            actual_col_set_ids: set[UUID] = self._read_all(env, model.CaseTypeColSet, user=user, return_id=True)  # type: ignore[assignment]
+            actual_col_set_ids: list[UUID] = self._read_all(env, model.CaseTypeColSet, user=user, return_id=True)  # type: ignore[assignment]
 
             if VERBOSE:
                 print("all col_set_ids:", len(all_col_set_ids))
