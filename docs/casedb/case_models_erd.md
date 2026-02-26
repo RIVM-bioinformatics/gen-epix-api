@@ -44,7 +44,6 @@ erDiagram
     CaseTypeSetMember }o--|| CaseTypeSet : "belongs to set"
     CaseTypeSet }o--|| CaseTypeSetCategory : "categorized by"
     
-    CaseType ||--o{ CaseTypeColSet : "has column sets"
     CaseTypeColSet ||--o{ CaseTypeColSetMember : "contains column members"
     CaseTypeColSetMember }o--|| CaseTypeCol : "references type column"
 ```
@@ -124,6 +123,58 @@ erDiagram
     CaseTypeColSet }o--|| UserAccessCasePolicy : "read column set"
     CaseTypeColSet }o--|| UserAccessCasePolicy : "write column set"
 ```
+
+
+## 7. Access Control Policies (ABAC) - SIMPLIFIED VIEW
+
+```mermaid
+erDiagram
+  
+    %% Principal level OMITTED for readability
+    
+    %% Second Level - Protected Resources
+    DataCollection ||--o{ OrganizationAccessCasePolicy : "data_collection_id"
+%%    DataCollection ||--o{ UserAccessCasePolicy : "data_collection_id"
+    DataCollection ||--o{ OrganizationShareCasePolicy : "data_collection_id"
+    DataCollection ||--o{ OrganizationShareCasePolicy : "from_data_collection_id"
+%%    DataCollection ||--o{ UserShareCasePolicy : "data_collection_id"
+%%    DataCollection ||--o{ UserShareCasePolicy : "from_data_collection_id"
+    
+    CaseTypeSet }o--|| OrganizationAccessCasePolicy : "applies to case types"
+    CaseTypeSet }o--|| OrganizationShareCasePolicy : "applies to case types"
+
+%%    CaseTypeSet }o--|| UserAccessCasePolicy : "applies to case types"
+%%    CaseTypeSet }o--|| UserShareCasePolicy : "applies to case types"
+    
+    CaseTypeColSet }o--|| OrganizationAccessCasePolicy : "read column set"
+    CaseTypeColSet }o--|| OrganizationAccessCasePolicy : "write column set"
+%%    CaseTypeColSet }o--|| UserAccessCasePolicy : "read column set"
+%%    CaseTypeColSet }o--|| UserAccessCasePolicy : "write column set"
+    
+    CaseType ||--o{ CaseTypeSetMember : "member of type sets"
+    CaseTypeSetMember }o--|| CaseTypeSet : "belongs to set"
+%%    CaseTypeSet }o--|| CaseTypeSetCategory : "categorized by"
+    
+    CaseTypeColSet ||--o{ CaseTypeColSetMember : "contains column members"
+    CaseTypeColSetMember }o--|| CaseTypeCol : "references type column"
+
+
+    %% Entities Definitions
+    OrganizationAccessCasePolicy {
+        UUID data_collection_id FK
+        UUID case_type_set_id FK
+        UUID read_case_type_col_set_id FK
+        UUID write_case_type_col_set_id FK
+    }
+    OrganizationShareCasePolicy {
+        UUID data_collection_id FK
+        UUID from_data_collection_id FK
+        UUID case_type_set_id FK
+    }
+    
+```
+
+
 
 ## Key Model Groups
 
