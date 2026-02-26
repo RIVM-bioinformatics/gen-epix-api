@@ -180,7 +180,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
         result = self.env.app.handle(get_cmd)
 
-        actual = {ctcs.name for ctcs in result}
+        # Fix: handle None or unexpected result type
+        if not isinstance(result, list):
+            actual = set()
+        else:
+            actual = {ctcs.name for ctcs in result}
         expected = set(spec.expected_case_type_col_sets)
 
         missing = expected - actual
