@@ -1,35 +1,44 @@
 version: 1
 disable_existing_loggers: false
+
 formatters:
-  simple:
-    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+  json:
+    "()": gen_epix.commondb.domain.json_logging.JsonFormatter
+    # optional: set explicit service/env; if omitted it reads SERVICE_NAME / ENVIRONMENT env vars
+    service: "commondb"
+    merge_message_json: true
+    extras_key: "props"
+
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
-    formatter: simple
+    # keep a fixed level; cfg.py set_log_level() will raise/lower levels at runtime anyway
+    level: INFO
+    formatter: json
     stream: ext://sys.stdout
+
 loggers:
   commondb.setup:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
   commondb.service:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
   commondb.app:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
   commondb.api:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
   commondb.external:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
+
 root:
   level: INFO
   handlers: [console]
