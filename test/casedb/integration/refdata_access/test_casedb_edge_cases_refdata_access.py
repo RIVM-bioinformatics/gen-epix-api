@@ -12,7 +12,7 @@ from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 
-from test.casedb.integration.define_edge_cases import (
+from test.casedb.integration.setup.define_edge_cases import (
     EDGE_CASES,
     EdgeCaseSpec,
 )

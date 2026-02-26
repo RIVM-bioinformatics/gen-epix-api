@@ -5,11 +5,11 @@
 # organizations are created before policies reference them. The parameter is intentionally
 # unused in the body — its presence enforces fixture ordering.
 
-from setup_test_users_and_organizations import (
+from test.casedb.integration.setup.setup_test_users_and_organizations import (
     setup_test_users_and_organizations,
-)  # noqa: F
-from setup_case_data import setup_case_type_data  # noqa: F401
-from setup_case_col_data import setup_case_col_data  # noqa: F401
+)  # noqa: F401
+from test.casedb.integration.setup.setup_case_data import setup_case_type_data  # noqa: F401
+from test.casedb.integration.setup.setup_case_col_data import setup_case_col_data  # noqa: F401
 
 
 # Note: prevents formatters and linters from removing the imports as unused since they are used implicitly as fixtures in the test modules. The actual test modules should import the specific fixtures they use directly from this conftest.py for clarity,

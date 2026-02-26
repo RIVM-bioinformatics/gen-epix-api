@@ -7,7 +7,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain import enum as casedb_enum
 
-from test.casedb.integration.define_edge_cases import EDGE_CASES
+from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
 
 VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
 

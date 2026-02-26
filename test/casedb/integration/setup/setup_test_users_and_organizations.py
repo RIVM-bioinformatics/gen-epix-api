@@ -1,4 +1,4 @@
-from test.casedb.integration.define_edge_cases import (
+from test.casedb.integration.setup.define_edge_cases import (
     EDGE_CASES,
 )
 

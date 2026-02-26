@@ -523,10 +523,7 @@ class TestRefdataAccess:
             else:
                 # retrieve all unique case type IDs from the retrieved policies for the user in question
                 expected_case_type_ids = (
-                    self._get_expected_case_type_ids_for_reference_data(
-                        env,
-                        user,
-                    )
+                    self._get_expected_case_type_ids_for_reference_data(env, user)
                 )
 
                 # get actual case type IDs from the returned case types
