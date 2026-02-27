@@ -1,5 +1,6 @@
 import datetime
 from collections.abc import Callable, Iterable
+from typing import ClassVar
 from uuid import UUID
 
 from cachetools import TTLCache, cached
@@ -100,6 +101,10 @@ from gen_epix.util import map_paired_elements
 
 class CaseService(BaseCaseService):
 
+    _retrieve_complete_case_type_cache: ClassVar[TTLCache] = TTLCache(
+        maxsize=1024, ttl=300
+    )
+
     def upload_cases(
         self, cmd: command.UploadCasesCommand
     ) -> model.CaseBatchUploadResult:
@@ -119,7 +124,7 @@ class CaseService(BaseCaseService):
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     @cached(
-        cache=TTLCache(maxsize=1024, ttl=300),
+        cache=_retrieve_complete_case_type_cache,
         key=lambda self, cmd: (cmd.case_type_id, cmd.user.id if cmd.user else None),
     )
     def retrieve_complete_case_type(
