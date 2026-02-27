@@ -38,6 +38,14 @@ loggers:
     level: INFO
     handlers: [console]
     propagate: false
+  uvicorn.error:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  uvicorn.access:
+    level: INFO
+    handlers: [console]
+    propagate: false
 
 root:
   level: INFO
