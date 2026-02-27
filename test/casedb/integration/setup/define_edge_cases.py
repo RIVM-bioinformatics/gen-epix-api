@@ -191,6 +191,11 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 ]
 
 
+# Lookup by user_name for use in tests:
+#   EDGE_CASE_BY_USER["org_user1_2"].expected_case_types
+#   EDGE_CASE_BY_USER["org_user1_2"].description
+EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES}
+
 # Hardcoded edge cases — kept as the reference for the current test suite.
 # Compare with EDGE_CASES above to verify the generation logic
 # produces the same combinations before switching over.
@@ -488,9 +493,3 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #         expected_case_type_col_sets=['colset2'],
 #     ),
 # ]
-
-
-# Lookup by user_name for use in tests:
-#   EDGE_CASE_BY_USER["org_user1_2"].expected_case_types
-#   EDGE_CASE_BY_USER["org_user1_2"].description
-EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES}
