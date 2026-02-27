@@ -99,3 +99,159 @@ def test_uses_env_when_constructor_values_missing(
 
     assert payload["service"] == "service-from-env"
     assert payload["environment"] == "env-from-env"
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 – non-serializable extras must still produce valid JSON
+# ---------------------------------------------------------------------------
+
+
+def test_non_serializable_extra_still_produces_valid_json() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(msg="hello", extra={"obj": object()})
+
+    result = formatter.format(record)
+
+    # Must not raise – i.e. output is always valid JSON even with exotic extras
+    payload = json.loads(result)
+    assert payload["message"] == "hello"
+    # The non-serializable value should have been coerced to a string
+    assert isinstance(payload["props"]["obj"], str)
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 – merged JSON dict must not override envelope fields
+# ---------------------------------------------------------------------------
+
+
+def test_merged_json_cannot_override_envelope_ts_level_logger() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"ts":"2000-01-01T00:00:00.000Z","level":"DEBUG","logger":"evil","event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    # Envelope fields must come from the LogRecord, not from the merged dict
+    assert not payload["ts"].startswith("2000-01-01")
+    assert payload["level"] == "INFO"
+    assert payload["logger"] == "test.logger"
+    # Other fields from the merged dict are still present
+    assert payload["event"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Fix 3 – sensitive key=value pairs are redacted
+# ---------------------------------------------------------------------------
+
+
+def test_sensitive_client_secret_is_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="POST /oauth/token client_secret=super-secret&grant_type=client_credentials"
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert "super-secret" not in payload["message"]
+    assert "client_secret=[REDACTED]" in payload["message"]
+
+
+def test_sensitive_password_is_redacted_in_plain_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(msg="login attempt password=hunter2 user=alice")
+
+    payload = json.loads(formatter.format(record))
+
+    assert "hunter2" not in payload["message"]
+    assert "password=[REDACTED]" in payload["message"]
+
+
+def test_sensitive_value_is_redacted_in_string_extras() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth request",
+        extra={"body": "client_secret=my-secret&grant_type=password"},
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    serialized = json.dumps(payload)
+    assert "my-secret" not in serialized
+    assert "client_secret=[REDACTED]" in serialized
+
+
+def test_non_sensitive_message_is_unchanged() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(msg="GET /api/cases HTTP/1.1 200 OK")
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "GET /api/cases HTTP/1.1 200 OK"
+
+
+# ---------------------------------------------------------------------------
+# Fix 4 – long stacktraces are truncated to stay within the max length
+# ---------------------------------------------------------------------------
+
+
+def test_stacktrace_truncated_when_max_stacktrace_length_set() -> None:
+    formatter = JsonFormatter(max_stacktrace_length=80)
+
+    try:
+        raise ValueError("deep boom")
+    except ValueError:
+        record = _make_record(
+            msg="failed", level=logging.ERROR, exc_info=sys.exc_info()
+        )
+
+    payload = json.loads(formatter.format(record))
+
+    assert "exception" in payload
+    stacktrace = payload["exception"]["stacktrace"]
+    assert len(stacktrace) <= 80 + len("…[truncated]")
+    assert stacktrace.endswith("…[truncated]")
+
+
+def test_stacktrace_not_truncated_below_threshold() -> None:
+    # With a generous limit the full traceback should be preserved
+    formatter = JsonFormatter(max_stacktrace_length=100_000)
+
+    try:
+        raise ValueError("small boom")
+    except ValueError:
+        record = _make_record(
+            msg="failed", level=logging.ERROR, exc_info=sys.exc_info()
+        )
+
+    payload = json.loads(formatter.format(record))
+
+    assert "…[truncated]" not in payload["exception"]["stacktrace"]
+
+
+# ---------------------------------------------------------------------------
+# Fix 5 – `content` field in merged JSON is normalised to `message`
+# ---------------------------------------------------------------------------
+
+
+def test_content_field_normalised_to_message_when_message_absent() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(msg='{"content":"HTTP Request: GET /cases","event":"http"}')
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload.get("message") == "HTTP Request: GET /cases"
+    assert "content" not in payload
+    assert payload["event"] == "http"
+
+
+def test_content_field_not_overriding_explicit_message() -> None:
+    # When the merged dict already has 'message', 'content' should not clobber it
+    formatter = JsonFormatter()
+    record = _make_record(msg='{"content":"secondary","message":"primary","event":"x"}')
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "primary"
+    # content should be dropped since message was already set
+    assert "content" not in payload
