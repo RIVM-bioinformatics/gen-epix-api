@@ -17,7 +17,7 @@ from gen_epix.fastapp.user_manager import BaseUserManager
 
 """Maximum number of items kept verbatim when a list field is serialised
 into a log payload. Lists longer than this are replaced with a compact summary
-dict to prevent the log line from exceeding Monitoring Platform's 384-byte limit."""
+dict to prevent the log line from exceeding Monitoring Platform's 16384-byte limit."""
 _MAX_LIST_ITEMS_IN_LOG: int = 10
 
 
@@ -28,7 +28,7 @@ def _summarise_command_object(
 ) -> dict[str, Any]:
     """Recursively walk *data* and replace any list longer than *max_items* with
     a compact ``{"_count": N, "_sample": [first_3_items]}`` dict so the
-    serialised log payload stays within the Monitoring Platform's 384-byte limit."""
+    serialised log payload stays within the Monitoring Platform's 16384-byte limit."""
 
     def _walk(obj: Any) -> Any:
         if isinstance(obj, dict):
@@ -505,7 +505,7 @@ class App:
                 content["command"] = kwargs.pop("command", {}) | {
                     "class": cmd.__class__.__name__,
                     # Summarise large list fields so the log line stays
-                    # under Monitoring Platform's 384-byte hard limit.
+                    # under Monitoring Platform's 16384-byte hard limit.
                     "object": _summarise_command_object(
                         json.loads(cmd.model_dump_json(exclude_none=True))
                     ),

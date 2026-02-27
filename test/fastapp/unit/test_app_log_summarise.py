@@ -1,6 +1,6 @@
 """
 TDD tests for _summarise_command_object() — the helper that prevents large list
-fields inside a serialised Command from blowing through Monitoring Platform's 384-byte
+fields inside a serialised Command from blowing through Monitoring Platform's 16384-byte
 hard limit on log-line length.
 
 Fix index:

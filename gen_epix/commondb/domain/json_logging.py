@@ -19,7 +19,7 @@ Fix index:
   3. Sensitive key=value pairs (client_secret, password, …) are redacted to
      [REDACTED] in both the message string and string-valued extras.
   4. Stacktraces longer than max_stacktrace_length are truncated before
-     serialisation, staying well under the Monitoring Platform 384-byte limit.
+     serialisation, staying well under the Monitoring Platform 16384-byte limit.
   5. A `content` field in a merged JSON message is normalised to `message`
      when `message` is absent, eliminating the content/message split in monitoring query engines.
   6. UvicornAccessLogFilter extracts HTTP fields (method/path/status/client/
@@ -124,7 +124,7 @@ class JsonFormatter(logging.Formatter):
         environment: str | None = None,
         merge_message_json: bool = True,
         extras_key: str = "props",
-        # Fix 4 – default keeps output well under the Monitoring Platform 384-byte
+        # Fix 4 – default keeps output well under the Monitoring Platform 16384-byte
         # hard limit; set to None to disable truncation entirely.
         max_stacktrace_length: int | None = 8000,
     ):
@@ -210,7 +210,7 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             stacktrace = self.formatException(record.exc_info)
             # Fix 4 – truncate long stacktraces before serialisation so the
-            # final JSON stays within the Monitoring Platform 384-byte limit.
+            # final JSON stays within the Monitoring Platform 16384-byte limit.
             if (
                 self.max_stacktrace_length is not None
                 and len(stacktrace) > self.max_stacktrace_length
