@@ -9,6 +9,10 @@ formatters:
     merge_message_json: true
     extras_key: "props"
 
+filters:
+  uvicorn_access_structured:
+    (): gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter
+
 handlers:
   console:
     class: logging.StreamHandler
@@ -45,8 +49,7 @@ loggers:
   uvicorn.access:
     level: INFO
     handlers: [console]
+    filters: [uvicorn_access_structured]
     propagate: false
-
-root:
   level: INFO
   handlers: [console]

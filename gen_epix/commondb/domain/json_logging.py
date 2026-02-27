@@ -21,7 +21,11 @@ Fix index:
   4. Stacktraces longer than max_stacktrace_length are truncated before
      serialisation, staying well under the Azure Monitor 16 384-byte limit.
   5. A `content` field in a merged JSON message is normalised to `message`
-     when `message` is absent, eliminating the content/message split in KQL.
+     when `message` is absent, eliminating the content/message split in monitoring query engines.
+  6. UvicornAccessLogFilter extracts HTTP fields (method/path/status/client/
+     version) from uvicorn.access records into a structured `http` dict that
+     JsonFormatter hoists to the top level, enabling monitoring query engines to filter/project
+     them directly without regex extraction.
 """
 
 _ISO8601_Z_RE = re.compile(r"\+00:00$")
@@ -32,6 +36,13 @@ _SENSITIVE_RE = re.compile(
     r"(?i)(client_secret|password|client_pwd|secret|api_key)=(\S+)"
 )
 _REDACTED = r"\1=[REDACTED]"
+
+# Fix 6 – regex fallback for when uvicorn access-log args have already been
+# evaluated into a single formatted string.
+_UVICORN_ACCESS_RE = re.compile(
+    r'^(?P<client>\S+) - "(?P<method>\w+) (?P<path>\S+) HTTP/(?P<version>[\d.]+)"'
+    r" (?P<status>\d+)"
+)
 
 
 def _utc_iso(ts: float) -> str:
@@ -54,6 +65,55 @@ def _safe_json_loads(s: str) -> Any:
 def _redact(value: str) -> str:
     """Replace sensitive key=value occurrences with key=[REDACTED]."""
     return _SENSITIVE_RE.sub(_REDACTED, value)
+
+
+class UvicornAccessLogFilter(logging.Filter):
+    """
+    Logging filter for the ``uvicorn.access`` logger.
+
+    Parses the structured args tuple that uvicorn emits
+    (``(client, method, path, http_version, status_code)``) and injects them
+    into ``record._json_fields`` as a nested ``http`` dict.  JsonFormatter
+    subsequently hoists ``_json_fields`` to the top level of the JSON output,
+    so monitoring query engines can project ``http.method``, ``http.path``, ``http.status``, etc.
+    directly without any regex extraction.
+
+    When the record args have already been interpolated (e.g. in tests or
+    certain uvicorn configurations) a regex fallback is used instead.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Priority 1: raw args tuple from uvicorn internals – most reliable.
+        if isinstance(record.args, tuple) and len(record.args) == 5:
+            client, method, path, version, status = record.args
+            record._json_fields = {  # type: ignore[attr-defined]
+                "http": {
+                    "client": str(client),
+                    "method": str(method),
+                    "path": str(path),
+                    "version": str(version),
+                    "status": int(status),
+                }
+            }
+            # Clear args so getMessage() returns the plain event key.
+            record.args = ()
+            record.msg = "http.access"
+        else:
+            # Priority 2: regex fallback for already-formatted strings.
+            m = _UVICORN_ACCESS_RE.match(record.getMessage())
+            if m:
+                record._json_fields = {  # type: ignore[attr-defined]
+                    "http": {
+                        "client": m.group("client"),
+                        "method": m.group("method"),
+                        "path": m.group("path"),
+                        "version": m.group("version"),
+                        "status": int(m.group("status")),
+                    }
+                }
+                record.args = ()
+                record.msg = "http.access"
+        return True
 
 
 class JsonFormatter(logging.Formatter):
@@ -117,6 +177,12 @@ class JsonFormatter(logging.Formatter):
         if self.environment:
             base["environment"] = self.environment
 
+        # Fix 6 – hoist any structured fields injected by a filter (e.g.
+        # UvicornAccessLogFilter) to the top level of the JSON payload.
+        json_fields = getattr(record, "_json_fields", None)
+        if isinstance(json_fields, dict):
+            base.update(json_fields)
+
         # Fix 3 – redact sensitive values before any further processing.
         message = _redact(record.getMessage())
 
@@ -130,7 +196,7 @@ class JsonFormatter(logging.Formatter):
                 base["level"] = record.levelname
                 base["logger"] = record.name
                 # Fix 5 – normalise `content` → `message` when `message` is
-                # absent (eliminates the content/message split seen in KQL).
+                # absent (eliminates the content/message split seen in monitoring query engines).
                 if "content" in base and "message" not in base:
                     base["message"] = base.pop("content")
                 elif "content" in base:

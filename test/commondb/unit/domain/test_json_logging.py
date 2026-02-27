@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from gen_epix.commondb.domain.json_logging import JsonFormatter
+from gen_epix.commondb.domain.json_logging import JsonFormatter, UvicornAccessLogFilter
 
 
 def _make_record(
@@ -255,3 +255,104 @@ def test_content_field_not_overriding_explicit_message() -> None:
     assert payload["message"] == "primary"
     # content should be dropped since message was already set
     assert "content" not in payload
+
+
+# ---------------------------------------------------------------------------
+# Fix 6 – UvicornAccessLogFilter: structured HTTP fields from access logs
+# ---------------------------------------------------------------------------
+
+
+def _make_uvicorn_access_record(
+    client: str = "127.0.0.1:12345",
+    method: str = "GET",
+    path: str = "/v1/cases",
+    version: str = "1.1",
+    status: int = 200,
+    *,
+    pre_format: bool = False,
+) -> logging.LogRecord:
+    """Build a LogRecord that mimics what uvicorn.access emits."""
+    logger = logging.getLogger("uvicorn.access")
+    if pre_format:
+        # Simulate a record where getMessage() has already been evaluated
+        msg = f'{client} - "{method} {path} HTTP/{version}" {status}'
+        record = logger.makeRecord(
+            name=logger.name,
+            level=logging.INFO,
+            fn="<uvicorn>",
+            lno=0,
+            msg=msg,
+            args=(),
+            exc_info=None,
+        )
+    else:
+        record = logger.makeRecord(
+            name=logger.name,
+            level=logging.INFO,
+            fn="<uvicorn>",
+            lno=0,
+            msg='%s - "%s %s HTTP/%s" %d',
+            args=(client, method, path, version, status),
+            exc_info=None,
+        )
+    return record
+
+
+def test_uvicorn_access_filter_parses_args_tuple() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    record = _make_uvicorn_access_record(method="POST", path="/v1/upload", status=201)
+
+    filt.filter(record)
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "http.access"
+    http = payload["http"]
+    assert http["method"] == "POST"
+    assert http["path"] == "/v1/upload"
+    assert http["status"] == 201
+    assert http["client"] == "127.0.0.1:12345"
+    assert http["version"] == "1.1"
+
+
+def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    record = _make_uvicorn_access_record(
+        method="DELETE", path="/v1/cases/abc", status=204, pre_format=True
+    )
+
+    filt.filter(record)
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "http.access"
+    http = payload["http"]
+    assert http["method"] == "DELETE"
+    assert http["path"] == "/v1/cases/abc"
+    assert http["status"] == 204
+
+
+def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    record = _make_record(msg="startup complete")
+
+    filt.filter(record)
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "startup complete"
+    assert "http" not in payload
+
+
+def test_json_fields_merged_to_top_level_not_into_props() -> None:
+    # _json_fields injected by a filter must appear at the top level of the
+    # JSON output, not nested under 'props'.
+    formatter = JsonFormatter()
+    record = _make_record(msg="synthesised")
+    record._json_fields = {"http": {"method": "GET", "status": 200}}  # type: ignore[attr-defined]
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["http"] == {"method": "GET", "status": 200}
+    # Must NOT also appear inside props
+    assert "http" not in payload.get("props", {})
