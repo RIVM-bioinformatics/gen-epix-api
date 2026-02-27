@@ -1,8 +1,5 @@
 import pytest
 
-
-import pytest
-
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain import enum as casedb_enum
@@ -12,6 +9,9 @@ from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
 VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
+# setup_case_type_data depends on setup_test_users_and_organizations to ensure that users and
+# organizations are created before policies reference them.
+# The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
 def setup_case_type_data(
     env: Env, setup_test_users_and_organizations: None  # noqa: ARG001

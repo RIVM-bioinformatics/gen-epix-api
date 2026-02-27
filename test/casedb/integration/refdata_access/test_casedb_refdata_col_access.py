@@ -99,12 +99,19 @@ class TestCaseDBRefDataColAccess:
         get_cmd = CaseTypeColSetCrudCommand(
             user=root_user, operation=CrudOperation.READ_ALL
         )
-        result = self.env.app.handle(get_cmd)
+        result: list[model.CaseTypeColSet] = self.env.app.handle(get_cmd)
+        expected = {x for x in self.env.db[model.CaseTypeColSet]}
 
-        assert isinstance(result, list)
-        assert len(result) == len(
-            self.env.db[model.CaseTypeColSet]
-        ), "Root user should have access to all case type column sets "
+        actual = {x.name for x in result}
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n  Root user should have access to all case type column sets"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
 
     @pytest.mark.parametrize(
         "spec",
@@ -127,12 +134,19 @@ class TestCaseDBRefDataColAccess:
         get_cmd_user = CaseTypeColSetCrudCommand(
             user=user, operation=CrudOperation.READ_ALL
         )
-        result = self.env.app.handle(get_cmd_user)
+        result: list[model.CaseTypeColSet] = self.env.app.handle(get_cmd_user)
 
-        assert isinstance(result, list)
-        assert len(result) == len(
-            spec.expected_case_type_col_sets
-        ), f"Expected number of accessible case type column sets does not match actual for user {spec.user_name}"
+        actual = {x.name for x in result}
+        expected = set(spec.expected_case_type_col_sets)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
 
     @pytest.mark.parametrize(
         "spec",
@@ -155,12 +169,19 @@ class TestCaseDBRefDataColAccess:
         get_cmd_user = CaseTypeColCrudCommand(
             user=user, operation=CrudOperation.READ_ALL
         )
-        result = self.env.app.handle(get_cmd_user)
+        result: list[model.CaseTypeCol] = self.env.app.handle(get_cmd_user)
 
-        assert isinstance(result, list)
-        assert len(result) == len(
-            spec.expected_case_type_cols
-        ), f"Expected number of accessible case type columns does not match actual for user {spec.user_name}"
+        actual = {x.code for x in result}
+        expected = set(spec.expected_case_type_cols)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
 
     @pytest.mark.parametrize(
         "spec",
@@ -181,12 +202,20 @@ class TestCaseDBRefDataColAccess:
 
         # get all columns accessible to org_user1_1 to confirm that at least some exist and root user has more access than a regular user
         get_cmd_user = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
-        result = self.env.app.handle(get_cmd_user)
 
-        assert isinstance(result, list)
-        assert len(result) == len(
-            spec.expected_cols
-        ), f"Expected number of accessible columns does not match actual for user {spec.user_name}"
+        result: list[model.Col] = self.env.app.handle(get_cmd_user)
+
+        actual = {x.code for x in result}
+        expected = set(spec.expected_cols)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
 
     @pytest.mark.parametrize(
         "spec",
@@ -208,7 +237,16 @@ class TestCaseDBRefDataColAccess:
         get_cmd_user = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd_user)
 
-        assert isinstance(result, list)
-        assert len(result) == len(
-            spec.expected_dims
-        ), f"Expected number of accessible dimensions does not match actual for user {spec.user_name}"
+        result: list[model.Dim] = self.env.app.handle(get_cmd_user)
+
+        actual = {x.code for x in result}
+        expected = set(spec.expected_dims)
+
+        missing = expected - actual
+        unexpected = actual - expected
+
+        assert not missing and not unexpected, (
+            f"\n{spec.description}"
+            f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
+            f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )

@@ -41,7 +41,7 @@ VERBOSE = True  # Set to True to enable detailed print statements during setup f
 @dataclass
 class CaseColSpec:
     user_name: str
-    org_name: str
+    description: str
     expected_case_type_col_sets: list[str]
     expected_case_type_cols: list[str]
     expected_cols: list[str]
@@ -51,7 +51,7 @@ class CaseColSpec:
 CASE_COL_SPECS = [
     CaseColSpec(
         user_name="org_user1_1",
-        org_name="org1",
+        description="User with org-level policies granting access to ctcs1 and ctcs2, but no user-level policies",
         expected_case_type_col_sets=["ctcs1", "ctcs2"],
         expected_case_type_cols=[
             "case_type_col1_1_1_1",
@@ -63,8 +63,7 @@ CASE_COL_SPECS = [
     ),
     CaseColSpec(
         user_name="org_user1_2",
-        org_name="org1",
-        # Complete overlap with org-level policies — user-level policies mirror oacp1, oacp2, uscp1.
+        description="User with the same org-level policies as org_user1_1 plus user-level policies that mirror the org-level policies",
         expected_case_type_col_sets=["ctcs1", "ctcs2"],
         expected_case_type_cols=[
             "case_type_col1_1_1_1",
@@ -77,6 +76,9 @@ CASE_COL_SPECS = [
 ]
 
 
+# setup_case_col_data depends on setup_test_users_and_organizations to ensure that users and
+# organizations are created before policies reference them.
+# The parameter is intentionally unused in the body — its presence enforces fixture ordering.
 @pytest.fixture(scope="module")
 def setup_case_col_data(
     env: Env, setup_test_users_and_organizations: None  # noqa: ARG001
