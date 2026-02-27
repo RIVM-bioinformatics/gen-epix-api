@@ -15,6 +15,32 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.pdp import PolicyDecisionPoint
 from gen_epix.fastapp.user_manager import BaseUserManager
 
+"""Maximum number of items kept verbatim when a list field is serialised
+into a log payload. Lists longer than this are replaced with a compact summary
+dict to prevent the log line from exceeding Monitoring Platform's 384-byte limit."""
+_MAX_LIST_ITEMS_IN_LOG: int = 10
+
+
+def _summarise_command_object(
+    data: dict[str, Any],
+    *,
+    max_items: int = _MAX_LIST_ITEMS_IN_LOG,
+) -> dict[str, Any]:
+    """Recursively walk *data* and replace any list longer than *max_items* with
+    a compact ``{"_count": N, "_sample": [first_3_items]}`` dict so the
+    serialised log payload stays within the Monitoring Platform's 384-byte limit."""
+
+    def _walk(obj: Any) -> Any:
+        if isinstance(obj, dict):
+            return {k: _walk(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            if len(obj) > max_items:
+                return {"_count": len(obj), "_sample": [_walk(x) for x in obj[:3]]}
+            return [_walk(x) for x in obj]
+        return obj
+
+    return _walk(data)  # type: ignore[return-value]
+
 
 class App:
     """
@@ -478,7 +504,11 @@ class App:
                 is_initial_command = len(self._command_stack) < 2
                 content["command"] = kwargs.pop("command", {}) | {
                     "class": cmd.__class__.__name__,
-                    "object": json.loads(cmd.model_dump_json(exclude_none=True)),
+                    # Summarise large list fields so the log line stays
+                    # under Monitoring Platform's 384-byte hard limit.
+                    "object": _summarise_command_object(
+                        json.loads(cmd.model_dump_json(exclude_none=True))
+                    ),
                     "parent_command_id": (
                         None if is_initial_command else f"{self._command_stack[-2].id}"
                     ),
