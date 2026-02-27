@@ -53,7 +53,7 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     )
 
     # The uvicorn.access logger must declare the structured access-log filter
-    # so HTTP fields (method/path/status) land as proper JSON keys in Azure Monitor.
+    # so HTTP fields (method/path/status) land as proper JSON keys in Monitoring Platform.
     filters = config.get("filters", {})
     assert "uvicorn_access_structured" in filters
     assert (

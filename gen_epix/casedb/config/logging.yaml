@@ -51,9 +51,9 @@ loggers:
     handlers: [console]
     filters: [uvicorn_access_structured]
     propagate: false
-  # Third-party loggers: route through JsonFormatter at WARNING to suppress
-  # routine INFO noise (SQL queries, pool events, HTTP details) while keeping
-  # errors visible. propagate: false prevents double-emission to root.
+  # Levels scale DEBUG(10) < INFO(20) < WARNING(30) < ERROR(40); each logger emits at its configured level and above.
+  # sqlalchemy.engine/pool → WARNING: INFO emits full SQL text on every query (verbose, PII risk, Monitoring Platform noise).
+  # httpx → INFO: redirects and auth events arrive at INFO and are operationally relevant; asyncio → WARNING: its INFO is pure event-loop infra.
   sqlalchemy.engine:
     level: WARNING
     handlers: [console]
@@ -63,7 +63,7 @@ loggers:
     handlers: [console]
     propagate: false
   httpx:
-    level: WARNING
+    level: INFO
     handlers: [console]
     propagate: false
   asyncio:

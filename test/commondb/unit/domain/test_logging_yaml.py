@@ -4,9 +4,10 @@ Contract tests for all production logging.yaml configuration files.
 These tests validate the structural requirements that must hold across every
 service's logging config:
   - root: block is present and routes through the console handler
-  - third-party loggers (sqlalchemy, httpx, asyncio) are explicitly silenced
-    at WARNING level with propagate: false so they emit valid JSON and don't
-    flood Grafana with INFO noise
+  - third-party loggers are explicitly configured with deliberate levels:
+      sqlalchemy.engine/pool -> WARNING (INFO emits full SQL text, PII risk)
+      httpx               -> INFO    (redirects/auth events are operationally relevant)
+      asyncio             -> WARNING (INFO is pure event-loop infra, not actionable)
   - uvicorn.access carries the structured access-log filter
   - the JSON formatter and UvicornAccessLogFilter class references are correct
 """
@@ -25,7 +26,14 @@ PRODUCTION_YAML_PATHS = [
     _REPO_ROOT / "gen_epix" / "commondb" / "config" / "logging.yaml",
 ]
 
-_THIRD_PARTY_LOGGERS = ["sqlalchemy.engine", "sqlalchemy.pool", "httpx", "asyncio"]
+# Maps each explicitly managed third-party logger to its intended minimum level.
+# Change here when the YAML changes so the contract stays in sync.
+_THIRD_PARTY_LOGGERS: dict[str, str] = {
+    "sqlalchemy.engine": "WARNING",  # INFO = full SQL text per query (verbose, PII risk)
+    "sqlalchemy.pool": "WARNING",  # INFO = connection checkout/checkin noise
+    "httpx": "INFO",  # redirects and auth events arrive at INFO
+    "asyncio": "WARNING",  # INFO/DEBUG is event-loop internals
+}
 
 
 @pytest.mark.parametrize(
@@ -48,7 +56,7 @@ def test_third_party_loggers_explicitly_configured(yaml_path: Path) -> None:
     config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
     loggers = config.get("loggers", {})
 
-    for name in _THIRD_PARTY_LOGGERS:
+    for name, expected_level in _THIRD_PARTY_LOGGERS.items():
         assert (
             name in loggers
         ), f"Third-party logger '{name}' not explicitly configured in {yaml_path.name}"
@@ -57,8 +65,8 @@ def test_third_party_loggers_explicitly_configured(yaml_path: Path) -> None:
             entry.get("propagate") is False
         ), f"Logger '{name}' must have propagate: false in {yaml_path.name}"
         assert (
-            entry.get("level") == "WARNING"
-        ), f"Logger '{name}' must be set to WARNING in {yaml_path.name}"
+            entry.get("level") == expected_level
+        ), f"Logger '{name}' must be set to {expected_level} in {yaml_path.name}"
         assert "console" in entry.get(
             "handlers", []
         ), f"Logger '{name}' must use the console handler in {yaml_path.name}"
