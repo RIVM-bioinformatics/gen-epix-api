@@ -4,7 +4,12 @@ import pytest
 from rich import print as rich_print
 
 from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.domain.command.case import CaseTypeColSetCrudCommand
+from gen_epix.casedb.domain.command.case import (
+    CaseTypeColCrudCommand,
+    CaseTypeColSetCrudCommand,
+    ColCrudCommand,
+    DimCrudCommand,
+)
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -64,6 +69,7 @@ class TestCaseDBRefDataColAccess:
         """Print the active edge cases once per class run when VERBOSE is enabled."""
         if VERBOSE:
             rich_print(env.db[model.User]["org_user1_1"])
+            rich_print(env.db[model.User]["org_user1_2"])
             rich_print(env.db[model.Organization])
             rich_print(env.db[model.OrganizationAccessCasePolicy])
             rich_print(env.db[model.CaseTypeColSet])
@@ -96,9 +102,9 @@ class TestCaseDBRefDataColAccess:
         result = self.env.app.handle(get_cmd)
 
         assert isinstance(result, list)
-        assert (
-            len(result) == 2
-        ), "Root user should have access to all case type column sets, expected at least 2"
+        assert len(result) == len(
+            self.env.db[model.CaseTypeColSet]
+        ), "Root user should have access to all case type column sets "
 
     @pytest.mark.parametrize(
         "spec",
@@ -109,11 +115,11 @@ class TestCaseDBRefDataColAccess:
         self, spec: CaseColSpec, setup_case_col_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible case type sets exactly matches
+        For each edge case, assert that the set of accessible case type col sets exactly matches
         the expected set declared in CaseColSpec.expected_case_type_col_sets — neither more nor less.
 
-        Only case type sets referenced in org-level policies should be accessible.
-        User policies must not grant access to additional case type sets.
+        Only case type col sets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional case type col sets.
         """
         user = self.get_user(spec.user_name)
 
@@ -127,3 +133,82 @@ class TestCaseDBRefDataColAccess:
         assert len(result) == len(
             spec.expected_case_type_col_sets
         ), f"Expected number of accessible case type column sets does not match actual for user {spec.user_name}"
+
+    @pytest.mark.parametrize(
+        "spec",
+        CASE_COL_SPECS,
+        ids=[s.user_name for s in CASE_COL_SPECS],
+    )
+    def test_case_type_col_access_matches_expected(
+        self, spec: CaseColSpec, setup_case_col_data: None
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible case type columns exactly matches
+        the expected set declared in CaseColSpec.expected_case_type_cols — neither more nor less.
+
+        Only case type columns referenced in org-level policies should be accessible.
+        User policies must not grant access to additional case type columns.
+        """
+        user = self.get_user(spec.user_name)
+
+        # get all case type col sets accessible to org_user1_1 to confirm that at least some exist and root user has more access than a regular user
+        get_cmd_user = CaseTypeColCrudCommand(
+            user=user, operation=CrudOperation.READ_ALL
+        )
+        result = self.env.app.handle(get_cmd_user)
+
+        assert isinstance(result, list)
+        assert len(result) == len(
+            spec.expected_case_type_cols
+        ), f"Expected number of accessible case type columns does not match actual for user {spec.user_name}"
+
+    @pytest.mark.parametrize(
+        "spec",
+        CASE_COL_SPECS,
+        ids=[s.user_name for s in CASE_COL_SPECS],
+    )
+    def test_col_access_matches_expected(
+        self, spec: CaseColSpec, setup_case_col_data: None
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible columns exactly matches
+        the expected set declared in CaseColSpec.expected_cols — neither more nor less.
+
+        Only columns referenced in org-level policies should be accessible.
+        User policies must not grant access to additional columns.
+        """
+        user = self.get_user(spec.user_name)
+
+        # get all columns accessible to org_user1_1 to confirm that at least some exist and root user has more access than a regular user
+        get_cmd_user = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        result = self.env.app.handle(get_cmd_user)
+
+        assert isinstance(result, list)
+        assert len(result) == len(
+            spec.expected_cols
+        ), f"Expected number of accessible columns does not match actual for user {spec.user_name}"
+
+    @pytest.mark.parametrize(
+        "spec",
+        CASE_COL_SPECS,
+        ids=[s.user_name for s in CASE_COL_SPECS],
+    )
+    def test_dim_access_matches_expected(
+        self, spec: CaseColSpec, setup_case_col_data: None  # noqa: ARG002
+    ) -> None:
+        """
+        For each edge case, assert that the set of accessible dimensions exactly matches
+        the expected set declared in CaseColSpec.expected_dims — neither more nor less.
+
+        Only dimensions referenced in org-level policies should be accessible.
+        User policies must not grant access to additional dimensions.
+        """
+        user = self.get_user(spec.user_name)
+
+        get_cmd_user = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        result = self.env.app.handle(get_cmd_user)
+
+        assert isinstance(result, list)
+        assert len(result) == len(
+            spec.expected_dims
+        ), f"Expected number of accessible dimensions does not match actual for user {spec.user_name}"
