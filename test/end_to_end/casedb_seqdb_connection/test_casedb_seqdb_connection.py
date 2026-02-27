@@ -9,6 +9,7 @@ from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
+import yaml
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command
@@ -25,6 +26,31 @@ from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
+
+
+def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
+    # Config-contract test: validating the E2E logging.yaml shape directly instead of booting servers
+    config_path = Path(__file__).with_name("logging.yaml")
+    with config_path.open("rt", encoding="utf-8") as handle:
+        config = yaml.safe_load(handle)
+
+    # Uvicorn logger names must be present so server logs use the same
+    # handler/formatter strategy as app logs in end-to-end runs.
+    loggers = config["loggers"]
+    assert "uvicorn.error" in loggers
+    assert "uvicorn.access" in loggers
+    assert loggers["uvicorn.error"]["handlers"] == ["console"]
+    assert loggers["uvicorn.access"]["handlers"] == ["console"]
+
+    # Console handler must route through the JSON formatter contract that emits
+    # the structured fields used downstream (ts/level/logger/etc.).
+    handlers = config["handlers"]
+    formatters = config["formatters"]
+    assert handlers["console"]["formatter"] == "json"
+    assert (
+        formatters["json"]["()"]
+        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+    )
 
 
 @pytest.fixture(scope="function")
