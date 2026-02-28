@@ -1204,25 +1204,21 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
-            [],  # The existing external identifiers before creation
-            [external_identifier],  # The external identifiers after creation
-        ]
-        self.service.generate_id.side_effect = [
-            created_parent_id,  # ID of the newly created parent
-            created_external_identifier_id,  # ID of the newly created external identifier
+            [],  # No existing external identifiers
+            [created_external_identifier_id],  # Created external identifier ID
         ]
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parents returned IDs
-            [
-                created_external_identifier_id
-            ],  # Create external identifiers returned IDs
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
-        self.assertEqual(batch_result.parents[0].external_identifiers[0].id, created_external_identifier_id)  # type: ignore[index]
+        self.assertEqual(
+            batch_result.parents[0].external_identifiers[0].id,  # type: ignore[index]
+            created_external_identifier_id,
+        )
 
     def test_6_2_3_1_multiple_external_ids_some_existing_same_parent(self) -> None:
         """Test 6.2.3.1: Multiple external IDs, some existing for same parent - should succeed."""
@@ -1265,9 +1261,6 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         self.service.repository.crud.side_effect = [
             [True],  # Parent exists
             [existing_parent],  # Return the existing parent object
-            [
-                existing_external_identifier1.id,
-            ],  # Existing external identifier returns ID (skipped)
         ]
 
         # Perform upload and verify result
@@ -1340,27 +1333,15 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
             ]
         )
         created_parent_id = self.random_ids[0]
-        created_external_identifier1 = self.get_external_identifier_from_for_upload(
-            external_identifier_for_upload1,
-            id=self.random_ids[1],
-            internal_id=created_parent_id,
-        )
-        created_external_identifier2 = self.get_external_identifier_from_for_upload(
-            external_identifier_for_upload2,
-            id=self.random_ids[2],
-            internal_id=created_parent_id,
-        )
+        created_external_identifier1_id = self.random_ids[1]
+        created_external_identifier2_id = self.random_ids[2]
         self.service.generate_id.side_effect = [
             created_parent_id,
-            created_external_identifier1.id,
-            created_external_identifier2.id,
+            created_external_identifier1_id,
+            created_external_identifier2_id,
         ]
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parents returned IDs
-            [
-                created_external_identifier1.id,
-                created_external_identifier2.id,
-            ],  # Create external identifiers returned IDs
         ]
 
         # Set up mocks
@@ -1369,8 +1350,11 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
                 self.identifier_issuer,
                 self.identifier_issuer2,
             ],  # The identifier issuers in the external IDs
-            [],
-            [created_external_identifier1, created_external_identifier2],
+            [],  # No existing external identifiers
+            [
+                created_external_identifier1_id,
+                created_external_identifier2_id,
+            ],  # Created external identifier IDs
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
@@ -1390,8 +1374,9 @@ class Test7OnExistsActions(BaseUploadTestCase):
         # Create upload batch
         parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
-        existing_parent = Parent(id=self.parent_id, a="existing")
-        self.service.repository.crud.return_value = [existing_parent]
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: parent exists
+        ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=OnExistsUploadAction.ERROR
@@ -1404,9 +1389,9 @@ class Test7OnExistsActions(BaseUploadTestCase):
         # Create upload batch
         parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
-        # Mock existing parent
-        existing_parent = Parent(id=self.parent_id, a="existing")
-        self.service.repository.crud.return_value = [existing_parent]
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: parent exists
+        ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=OnExistsUploadAction.SKIP
@@ -1421,8 +1406,14 @@ class Test7OnExistsActions(BaseUploadTestCase):
             parent_id=self.parent_id, a="new_value"
         )
         # Set up mocks
-        existing_parent = Parent(id=self.parent_id, a="old_value")
-        self.service.repository.crud.return_value = [existing_parent]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, a="old_value"
+        )
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: parent exists
+            [existing_parent],  # READ_SOME: retrieve existing parent for comparison
+            [self.parent_id],  # UPDATE_SOME: update returns ID
+        ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
             parent_for_upload, on_exists=OnExistsUploadAction.UPDATE
@@ -1619,7 +1610,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
-            [],  # The existing external identifiers before creation
+            [],  # No existing external identifiers
+            [created_external_identifier_id],  # Created external identifier ID
         ]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
@@ -1629,14 +1621,16 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parent
             [created_child2_id],  # Create child2
-            [created_external_identifier_id],  # Create child external identifier
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=3)
         self.assertEqual(batch_result.parents[0].children2[0].id, created_child2_id)  # type: ignore[index]
-        self.assertEqual(batch_result.parents[0].children2[0].external_identifiers[0].id, created_external_identifier_id)  # type: ignore[index]
+        self.assertEqual(
+            batch_result.parents[0].children2[0].external_identifiers[0].id,  # type: ignore[index]
+            created_external_identifier_id,
+        )
 
     def test_8_2_3_1_multiple_external_ids_some_existing_same_child2(self) -> None:
         """Test 8.2.3.1: Multiple external IDs, some existing for same child2 - should succeed."""
@@ -1669,13 +1663,6 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             )
         )
         # Set up mocks
-        self.service.app.handle.side_effect = [
-            [
-                self.identifier_issuer,
-                self.identifier_issuer2,
-            ],  # The identifier issuers in the external IDs
-            [existing_external_identifier1],
-        ]
         created_parent_id = self.random_ids[0]
         created_external_identifier2_id = self.random_ids[1]
         existing_child = Child2(
@@ -1689,6 +1676,14 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             y=None,
             z=None,
         )
+        self.service.app.handle.side_effect = [
+            [
+                self.identifier_issuer,
+                self.identifier_issuer2,
+            ],  # The identifier issuers in the external IDs
+            [existing_external_identifier1],  # Existing external identifiers
+            [created_external_identifier2_id],  # Created external identifier ID
+        ]
         self.service.generate_id.side_effect = [
             created_parent_id,  # ID of the newly created parent
             created_external_identifier2_id,  # ID for child external identifier
@@ -1700,7 +1695,6 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             [True],  # Child exists
             [created_parent_id],  # Create parent
             [existing_child],  # Existing child for update check
-            [created_external_identifier2_id],  # Create child external identifier
         ]
         self.service.repository.read_fields.side_effect = [
             [(self.child2_id, created_parent_id)],
@@ -1796,10 +1790,6 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.service.repository.crud.side_effect = [
             [created_parent_id],  # Create parent
             [created_child2_id],  # Create child2
-            [
-                created_external_identifier1_id,
-                created_external_identifier2_id,
-            ],  # Create child external identifiers
         ]
         # Set up mocks
         self.service.app.handle.side_effect = [
@@ -1807,7 +1797,11 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
                 self.identifier_issuer,
                 self.identifier_issuer2,
             ],  # The identifier issuers in the external IDs
-            [],
+            [],  # No existing external identifiers
+            [
+                created_external_identifier1_id,
+                created_external_identifier2_id,
+            ],  # Created external identifier IDs
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
@@ -1927,19 +1921,12 @@ class TestCombinedScenarios(BaseUploadTestCase):
             [created_parent_id],  # Create parent
             [created_child1_id],  # Create child1
             [created_child2_id],  # Create child2
-            [external_identifier_id],  # Create parent external identifier
         ]
         # External identifier: resolve issuer, no existing externals, then create
-        created_external_identifier = self.get_external_identifier_from_for_upload(
-            external_identifier,
-            internal_id=created_parent_id,
-            id=self.random_ids[3],
-            identifier_issuer_id=self.identifier_issuer_id,
-        )
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer by code
             [],  # No existing ExternalIdentifiers
-            [created_external_identifier],  # Created ExternalIdentifier
+            [external_identifier_id],  # Created ExternalIdentifier ID
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(parent_for_upload)
@@ -1954,10 +1941,17 @@ class TestCombinedScenarios(BaseUploadTestCase):
             parent_id=self.parent_id, children1=[child1_for_upload]
         )
         # Set up mocks
-        # Mock existing parent without children
-        existing_parent = Parent(id=self.parent_id, a="existing")
-        self.service.repository.crud.return_value = [existing_parent]
+        existing_parent = self.get_parent_from_for_upload(
+            parent_for_upload, a="existing"
+        )
         existing_ref1 = self.create_ref1(self.ref1_id, "test_ref1_code")
+        created_child1_id = self.random_ids[0]
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: parent exists
+            [existing_parent],  # READ_SOME: retrieve existing parent for comparison
+            [self.parent_id],  # UPDATE_SOME: update returns ID
+            [created_child1_id],  # CREATE_SOME: create child1
+        ]
         self.service.repository.read_fields.side_effect = [
             [(existing_ref1.id, existing_ref1.code)],
         ]
@@ -2052,7 +2046,6 @@ class TestCombinedScenarios(BaseUploadTestCase):
             [created_parent_id],  # Create parent
             [created_child1_id],  # Create child1
             [created_child2_id],  # Create child2
-            [created_child2_ext_id],  # Create child2 external identifier
         ]
         self.service.repository.read_fields.side_effect = [
             [(existing_ref1.id, existing_ref1.code)],  # Existing Ref1
@@ -2061,6 +2054,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Resolve IdentifierIssuer by code
             [],  # No existing ExternalIdentifiers for Child2
+            [created_child2_ext_id],  # Created child2 external identifier ID
         ]
 
         # Perform upload and verify result
