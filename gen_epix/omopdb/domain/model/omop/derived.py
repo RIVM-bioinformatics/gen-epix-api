@@ -11,14 +11,17 @@ Classes:
 """
 
 from datetime import date, datetime
-from typing import ClassVar
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
-from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
+from gen_epix.omopdb.domain.model.omop.base import (
+    DataLineageMixin,
+    validate_int_for_uuid_field,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
@@ -40,8 +43,8 @@ class ConditionEra(Model, DataLineageMixin):
             {1: ("person_id", Person, None), 2: ("condition_concept_id", Concept, None)}
         ),
     )
-    condition_era_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+    condition_era_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     condition_concept_id: UUID = Field(
@@ -58,6 +61,11 @@ class ConditionEra(Model, DataLineageMixin):
         description="User guidance:\nThe number of individual Condition\r\nOccurrences used to construct the\r\ncondition era.\nETL conventions:\nNone",
     )
 
+    @field_validator("condition_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class DrugEra(Model, DataLineageMixin):
     """A Drug Era is defined as a span of time when the Person is assumed to be exposed to a particular active ingredient. A Drug Era is not the same as a Drug Exposure: Exposures are individual records corresponding to the source when Drug was delivered to the Person, while successive periods of Drug Exposures are combined under certain rules to produce continuous Drug Eras. Every record in the DRUG_EXPOSURE table should be part of a drug era based on the dates of exposure."""
@@ -71,8 +79,8 @@ class DrugEra(Model, DataLineageMixin):
             {1: ("person_id", Person, None), 2: ("drug_concept_id", Concept, None)}
         ),
     )
-    drug_era_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+    drug_era_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     drug_concept_id: UUID = Field(
@@ -103,6 +111,11 @@ class DrugEra(Model, DataLineageMixin):
         max_length=55,
     )
 
+    @field_validator("drug_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class DoseEra(Model, DataLineageMixin):
     """A Dose Era is defined as a span of time when the Person is assumed to be exposed to a constant dose of a specific active ingredient."""
@@ -120,8 +133,8 @@ class DoseEra(Model, DataLineageMixin):
             }
         ),
     )
-    dose_era_id: UUID = Field(
-        description="User guidance:\nNone\nETL conventions:\nNone"
+    dose_era_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
     person_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     drug_concept_id: UUID = Field(
@@ -140,6 +153,11 @@ class DoseEra(Model, DataLineageMixin):
         description="User guidance:\nNone\nETL conventions:\nThe date the Person was no longer exposed to the dosage of the specific drug ingredient. An era is ended if there are 31 days or more between dosage records."
     )
 
+    @field_validator("drug_concept_id", "unit_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class CohortDefinition(Model):
     """The COHORT_DEFINITION table contains records defining a Cohort derived from the data through the associated description and syntax and upon instantiation (execution of the algorithm) placed into the COHORT table. Cohorts are a set of subjects that satisfy a given combination of inclusion criteria for a duration of time. The COHORT_DEFINITION table provides a standardized structure for maintaining the rules governing the inclusion of a subject into a cohort, and can store operational programming code to instantiate the cohort within the OMOP Common Data Model."""
@@ -150,8 +168,9 @@ class CohortDefinition(Model):
         persistable=True,
         id_field_name="cohort_definition_id",
     )
-    cohort_definition_id: UUID = Field(
-        description="User guidance:\nThis is the identifier given to the cohort, usually by the ATLAS application\nETL conventions:\nNone"
+    cohort_definition_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThis is the identifier given to the cohort, usually by the ATLAS application\nETL conventions:\nNone",
     )
     cohort_definition_name: str = Field(
         description="User guidance:\nA short description of the cohort\nETL conventions:\nNone",
@@ -176,6 +195,11 @@ class CohortDefinition(Model):
         description="User guidance:\nA date to indicate when the Cohort was initiated in the COHORT table.\nETL conventions:\nNone",
     )
 
+    @field_validator("definition_type_concept_id", "subject_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class Cohort(Model):
     """The subject of a cohort can have multiple, discrete records in the cohort table per cohort_definition_id, subject_id, and non-overlapping time periods. The definition of the cohort is contained within the COHORT_DEFINITION table. It is listed as part of the RESULTS schema because it is a table that users of the database as well as tools such as ATLAS need to be able to write to. The CDM and Vocabulary tables are all read-only so it is suggested that the COHORT and COHORT_DEFINTION tables are kept in a separate schema to alleviate confusion."""
@@ -196,8 +220,9 @@ class Cohort(Model):
     cohort_end_date: date = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    cohort_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+    cohort_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
 
 
@@ -219,8 +244,9 @@ class Episode(Model, DataLineageMixin):
             }
         ),
     )
-    episode_id: UUID = Field(
-        description="User guidance:\nA unique identifier for each Episode.\nETL conventions:\nNone"
+    episode_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nA unique identifier for each Episode.\nETL conventions:\nNone",
     )
     person_id: UUID = Field(
         description="User guidance:\nThe PERSON_ID of the PERSON for whom the episode is recorded.\nETL conventions:\nNone"
@@ -267,6 +293,17 @@ class Episode(Model, DataLineageMixin):
         description="User guidance:\nA foreign key to a Episode Concept that refers to the code used in the source.\nETL conventions:\nGiven that the Episodes are user-defined it is unlikely that there will be a Source Concept available. If that is the case then set this field to zero.",
     )
 
+    @field_validator(
+        "episode_concept_id",
+        "episode_object_concept_id",
+        "episode_type_concept_id",
+        "episode_source_concept_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class EpisodeEvent(Model, DataLineageMixin):
     """The EPISODE_EVENT table connects qualifying clinical events (such as CONDITION_OCCURRENCE, DRUG_EXPOSURE, PROCEDURE_OCCURRENCE, MEASUREMENT) to the appropriate EPISODE entry. For example, linking the precise location of the metastasis (cancer modifier in MEASUREMENT) to the disease episode."""
@@ -292,6 +329,12 @@ class EpisodeEvent(Model, DataLineageMixin):
     episode_event_field_concept_id: UUID = Field(
         description="User guidance:\nThis field is the CONCEPT_ID that identifies which table the primary key of the linked record came from.\nETL conventions:\nPut the CONCEPT_ID that identifies which table and field the EVENT_ID came from. [Accepted Concepts](https://athena.ohdsi.org/search-terms/terms?vocabulary=CDM&conceptClass=Field&page=1&pageSize=15&query=)"
     )
-    episode_event_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+    episode_event_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
+
+    @field_validator("episode_event_field_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)

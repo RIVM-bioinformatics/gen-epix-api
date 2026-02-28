@@ -298,7 +298,7 @@ class BatchUploader:
         # Verify external identifiers first to fill in any missing parent IDs
         success &= self.verify_parents_external_identifiers(cmd, batch_result, uow)
         # Verify external identifiers for child models to fill in any missing child IDs
-        success &= self.verify_child_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_children_external_identifiers(cmd, batch_result, uow)
         success &= self.verify_parents(cmd, batch_result, uow)
         success &= self.verify_children(cmd, batch_result, uow)
         # Verify reference data last since it may depend on parent and children verification
@@ -368,7 +368,7 @@ class BatchUploader:
 
         return success
 
-    def verify_child_external_identifiers(
+    def verify_children_external_identifiers(
         self,
         cmd: command.UploadBatchCommandMixin,
         batch_result: BaseBatchUploadResult,
@@ -436,16 +436,24 @@ class BatchUploader:
         user_id = cmd.user.id if cmd.user else None
         success = True
 
-        # Get parent IDs and check existence
-        parent_id_is_new_id_pairs = list(
-            {
-                (x.id, x.is_new_id)
-                for x in self.get_parents_for_upload(cmd)
-                if x.id is not None and x.id != NULL_ID
-            }
-        )
+        # Get parent IDs and set status when no parent
+        parent_id_is_new_id_pairs_set: set[tuple[UUID, bool]] = set()
+        for parent_for_upload, parent_result in self.parent_result_items(
+            cmd, batch_result
+        ):
+            parent_id = parent_for_upload.id
+            parent = parent_for_upload.get_parent()
+            if parent is None:
+                # Parent not given, set status to SKIPPED
+                parent_result.status = UploadStatus.SKIPPED
+                continue
+            if parent_id is None or parent_id == NULL_ID:
+                continue
+            parent_id_is_new_id_pairs_set.add((parent_id, parent_for_upload.is_new_id))
+
+        parent_id_is_new_id_pairs = list(parent_id_is_new_id_pairs_set)
         parent_ids = [x[0] for x in parent_id_is_new_id_pairs]
-        new_parent_ids = {x for x, is_new in parent_id_is_new_id_pairs if is_new}
+        new_parent_ids = {x for x, y in parent_id_is_new_id_pairs if y}
         if not parent_ids:
             return success
 
@@ -1065,11 +1073,12 @@ class BatchUploader:
                     and not obj_for_upload.is_new_id
                 ):
                     # Object already exists
+                    obj_result.id = obj_id
                     if existing_external_identifier.internal_id != obj_id:
                         success = False
                         external_identifier_result.add_error(
                             "f8a9b0c1",
-                            f"External identifier {external_identifier.external_id} refers tn {obj_for_upload.__class__.__name__}.{obj_id_field_name}={existing_external_identifier.internal_id}, which does not match uploaded {obj_for_upload.__class__.__name__}.{obj_id_field_name}={obj_id}",
+                            f"External identifier {external_identifier.external_id} refers to internal_id={existing_external_identifier.internal_id}, which does not match {model_class.NAME}.{obj_id_field_name}={obj_id}",
                         )
                 else:
                     # Object does not exist yet, fill in object ID
@@ -1179,6 +1188,8 @@ class BatchUploader:
             cmd.user.id if cmd.user else None,
             model.ExternalIdentifier,
             to_create_external_identifier_result_pairs,
+            is_same_service=False,
+            user=cmd.user,
         )
 
         return success
@@ -1381,6 +1392,8 @@ class BatchUploader:
         user_id: UUID | None,
         model_class: type[Model],
         to_create_obj_result_pairs: list[tuple[Model, UploadResult]],
+        is_same_service: bool = True,
+        user: model.User | None = None,
     ) -> bool:
         """
         Create any new objects and update the corresponding UploadResults.
@@ -1398,17 +1411,32 @@ class BatchUploader:
                 # Assign a new ID
                 obj_id = self.service.generate_id()
                 setattr(obj, obj_id_field_name, obj_id)  # type: ignore[assignment]
-        created_obj_ids: list[UUID] = (
-            self.service.repository.crud(  # type: ignore[assignment]
-                uow,
-                user_id,
-                model_class,
-                to_create_objs,
-                None,
-                operation=CrudOperation.CREATE_SOME,
-                return_id=True,  # Avoid returning the whole object list again
+        if is_same_service:
+            created_obj_ids: list[UUID] = (
+                self.service.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user_id,
+                    model_class,
+                    to_create_objs,
+                    None,
+                    operation=CrudOperation.CREATE_SOME,
+                    return_id=True,  # Avoid returning the whole object list again
+                )
             )
-        )
+        else:
+            crud_command_class = self.service.app.domain.get_crud_command_for_model(
+                model_class
+            )
+            created_obj_ids = self.service.app.handle(
+                crud_command_class(
+                    user=user,
+                    operation=CrudOperation.CREATE_SOME,
+                    objs=to_create_objs,
+                    props={
+                        "return_id": True
+                    },  # Avoid returning the whole object list again
+                )
+            )
 
         # Assign object ID and status to results
         for created_obj_id, (_, obj_result) in zip(

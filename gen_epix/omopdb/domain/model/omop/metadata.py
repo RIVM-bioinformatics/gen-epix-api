@@ -10,13 +10,14 @@ Classes:
 """
 
 from datetime import date, datetime
-from typing import ClassVar
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
+from gen_epix.omopdb.domain.model.omop.base import validate_int_for_uuid_field
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
 
@@ -73,9 +74,15 @@ class CdmSource(Model):
         description="User guidance:\nVersion of the OMOP standardised vocabularies loaded\nETL conventions:\nYou can find the version of your Vocabulary using the query: `SELECT vocabulary_version from vocabulary  where vocabulary_id = 'None'`",
         max_length=20,
     )
-    cdm_source_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+    cdm_source_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
+
+    @field_validator("cdm_version_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class Metadata(Model):
@@ -94,8 +101,9 @@ class Metadata(Model):
             }
         ),
     )
-    metadata_id: UUID = Field(
-        description="User guidance:\nThe unique key given to a Metadata record.\nETL conventions:\nAttribute value is auto-generated"
+    metadata_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThe unique key given to a Metadata record.\nETL conventions:\nAttribute value is auto-generated",
     )
     metadata_concept_id: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
@@ -124,3 +132,13 @@ class Metadata(Model):
     metadata_datetime: datetime | None = Field(
         default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
+
+    @field_validator(
+        "metadata_concept_id",
+        "metadata_type_concept_id",
+        "value_as_concept_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)

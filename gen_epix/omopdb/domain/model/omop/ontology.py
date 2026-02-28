@@ -19,13 +19,19 @@ Classes:
 """
 
 from datetime import date
-from typing import ClassVar
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
+from gen_epix.omopdb.domain.model.omop.base import (
+    validate_int_for_uuid_field,
+    validate_int_primary_key_args,
+    validate_str_for_uuid_field,
+    validate_str_primary_key_args,
+)
 
 
 class Vocabulary(Model):
@@ -37,8 +43,13 @@ class Vocabulary(Model):
         persistable=True,
         id_field_name="vocabulary_id",
     )
-    vocabulary_id: UUID = Field(
-        description="User guidance:\nA unique identifier for each Vocabulary, such\r\nas ICD9CM, SNOMED, Visit.\nETL conventions:\nNone"
+
+    vocabulary_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded vocabulary_str_id.\nETL conventions:\nNone",
+    )
+    vocabulary_str_id: str = Field(
+        description="User guidance:\nRenamed from CDM vocabulary_id. A unique identifier for each Vocabulary, such\r\nas ICD9CM, SNOMED, Visit.\nETL conventions:\nNone"
     )
     vocabulary_name: str = Field(
         description="User guidance:\nThe name describing the vocabulary, for\r\nexample, International Classification of\r\nDiseases, Ninth Revision, Clinical\r\nModification, Volume 1 and 2 (NCHS) etc.\nETL conventions:\nNone",
@@ -58,6 +69,17 @@ class Vocabulary(Model):
         description="User guidance:\nA Concept that represents the Vocabulary the VOCABULARY record belongs to.\nETL conventions:\nNone"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        validate_str_primary_key_args(data, "vocabulary_id", "vocabulary_str_id")
+        return data
+
+    @field_validator("vocabulary_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class Domain(Model):
     """The DOMAIN table includes a list of OMOP-defined Domains to which the Concepts of the Standardized Vocabularies can belong. A Domain represents a clinical definition whereby we assign matching Concepts for the standardized fields in the CDM tables. For example, the Condition Domain contains Concepts that describe a patient condition, and these Concepts can only be used in the condition_concept_id field of the CONDITION_OCCURRENCE and CONDITION_ERA tables. This reference table is populated with a single record for each Domain, including a Domain ID and a descriptive name for every Domain."""
@@ -68,8 +90,12 @@ class Domain(Model):
         persistable=True,
         id_field_name="domain_id",
     )
-    domain_id: UUID = Field(
-        description="User guidance:\nA unique key for each domain.\nETL conventions:\nNone"
+    domain_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded domain_str_id.\nETL conventions:\nNone",
+    )
+    domain_str_id: str = Field(
+        description="User guidance:\nRenamed from CDM domain_id. A unique key for each domain.\nETL conventions:\nNone"
     )
     domain_name: str = Field(
         description="User guidance:\nThe name describing the Domain, e.g.\r\nCondition, Procedure, Measurement\r\netc.\nETL conventions:\nNone",
@@ -78,6 +104,17 @@ class Domain(Model):
     domain_concept_id: UUID = Field(
         description="User guidance:\nA Concept representing the Domain Concept the DOMAIN record belongs to.\nETL conventions:\nNone"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        validate_str_primary_key_args(data, "domain_id", "domain_str_id")
+        return data
+
+    @field_validator("domain_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class ConceptClass(Model):
@@ -89,8 +126,12 @@ class ConceptClass(Model):
         persistable=True,
         id_field_name="concept_class_id",
     )
-    concept_class_id: UUID = Field(
-        description="User guidance:\nA unique key for each class.\nETL conventions:\nNone"
+    concept_class_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded concept_class_str_id.\nETL conventions:\nNone",
+    )
+    concept_class_str_id: str = Field(
+        description="User guidance:\nRenamed from CDM concept_class_id. A unique key for each class.\nETL conventions:\nNone"
     )
     concept_class_name: str = Field(
         description="User guidance:\nThe name describing the Concept Class, e.g.\r\nClinical Finding, Ingredient, etc.\nETL conventions:\nNone",
@@ -99,6 +140,17 @@ class ConceptClass(Model):
     concept_class_concept_id: UUID = Field(
         description="User guidance:\nA Concept that represents the Concept Class.\nETL conventions:\nNone"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        validate_str_primary_key_args(data, "concept_class_id", "concept_class_str_id")
+        return data
+
+    @field_validator("concept_class_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class Concept(Model):
@@ -117,8 +169,12 @@ class Concept(Model):
             }
         ),
     )
-    concept_id: UUID = Field(
-        description="User guidance:\nA unique identifier for each Concept across all domains.\nETL conventions:\nNone"
+    concept_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.\nETL conventions:\nNone",
+    )
+    concept_int_id: int = Field(
+        description="User guidance:\nRenamed from CDM concept_id. A unique identifier for each Concept across all domains.\nETL conventions:\nNone"
     )
     concept_name: str = Field(
         description="User guidance:\nAn unambiguous, meaningful and descriptive name for the Concept.\nETL conventions:\nNone",
@@ -154,6 +210,17 @@ class Concept(Model):
         max_length=1,
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_args(cls, data: Any) -> Any:
+        validate_int_primary_key_args(data, "concept_id", "concept_int_id")
+        return data
+
+    @field_validator("domain_id", "vocabulary_id", "concept_class_id", mode="before")
+    @classmethod
+    def _validate_str_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_str_for_uuid_field(value)
+
 
 class Relationship(Model):
     """The RELATIONSHIP table provides a reference list of all types of relationships that can be used to associate any two Concepts in the CONCEPT_RELATIONSHIP table, the respective reverse relationships, and their hierarchical characteristics. Note, that Concepts representing relationships between the clinical facts, used for filling in the FACT_RELATIONSHIP table are stored in the CONCEPT table and belong to the Relationship Domain."""
@@ -165,8 +232,9 @@ class Relationship(Model):
         id_field_name="relationship_id",
         links=create_links({1: ("relationship_concept_id", Concept, None)}),
     )
-    relationship_id: UUID = Field(
-        description="User guidance:\nThe type of relationship captured by the\r\nrelationship record.\nETL conventions:\nNone"
+    relationship_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nThe type of relationship captured by the\r\nrelationship record.\nETL conventions:\nNone",
     )
     relationship_name: str = Field(
         description="User guidance:\nNone\nETL conventions:\nNone", max_length=255
@@ -186,6 +254,11 @@ class Relationship(Model):
         description="User guidance:\nA foreign key that refers to an identifier in\r\nthe [CONCEPT](https://ohdsi.github.io/CommonDataModel/cdm54.html#concept) table for the unique\r\nrelationship concept.\nETL conventions:\nNone"
     )
 
+    @field_validator("relationship_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class ConceptRelationship(Model):
     """The CONCEPT_RELATIONSHIP table contains records that define relationships between any two Concepts and the nature or type of the relationship. This table captures various types of relationships, including hierarchical, associative, and other semantic connections, enabling comprehensive analysis and interpretation of clinical concepts. Every kind of relationship is defined in the RELATIONSHIP table."""
@@ -202,6 +275,10 @@ class ConceptRelationship(Model):
                 3: ("relationship_id", Relationship, None),
             }
         ),
+    )
+    concept_relationship_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
     concept_id_1: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
@@ -223,9 +300,11 @@ class ConceptRelationship(Model):
         description="User guidance:\nReason the relationship was invalidated. Possible values are 'D' (deleted), 'U' (updated) or NULL.\nETL conventions:\nNone",
         max_length=1,
     )
-    concept_relationship_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
-    )
+
+    @field_validator("concept_id_1", "concept_id_2", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class ConceptAncestor(Model):
@@ -243,6 +322,10 @@ class ConceptAncestor(Model):
             }
         ),
     )
+    concept_ancestor_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+    )
     ancestor_concept_id: UUID = Field(
         description="User guidance:\nThe Concept Id for the higher-level concept\r\nthat forms the ancestor in the relationship.\nETL conventions:\nNone"
     )
@@ -255,9 +338,11 @@ class ConceptAncestor(Model):
     max_levels_of_separation: int = Field(
         description="User guidance:\nThe maximum separation in number of\r\nlevels of hierarchy between ancestor and\r\ndescendant concepts. This is an attribute\r\nthat is used to simplify hierarchic analysis.\nETL conventions:\nNone"
     )
-    concept_ancestor_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
-    )
+
+    @field_validator("ancestor_concept_id", "descendant_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class ConceptSynonym(Model):
@@ -275,6 +360,10 @@ class ConceptSynonym(Model):
             }
         ),
     )
+    concept_synonym_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
+    )
     concept_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
     concept_synonym_name: str = Field(
         description="User guidance:\nNone\nETL conventions:\nNone", max_length=1000
@@ -282,9 +371,11 @@ class ConceptSynonym(Model):
     language_concept_id: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    concept_synonym_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
-    )
+
+    @field_validator("concept_id", "language_concept_id", mode="before")
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class DrugStrength(Model):
@@ -304,6 +395,10 @@ class DrugStrength(Model):
                 5: ("denominator_unit_concept_id", Concept, None),
             }
         ),
+    )
+    drug_strength_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
     drug_concept_id: UUID = Field(
         description="User guidance:\nThe Concept representing the Branded Drug or Clinical Drug Product.\nETL conventions:\nNone"
@@ -350,9 +445,18 @@ class DrugStrength(Model):
         description="User guidance:\nReason the concept was invalidated. Possible values are D (deleted), U (replaced with an update) or NULL when valid_end_date has the default value.\nETL conventions:\nNone",
         max_length=1,
     )
-    drug_strength_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+
+    @field_validator(
+        "drug_concept_id",
+        "ingredient_concept_id",
+        "amount_unit_concept_id",
+        "numerator_unit_concept_id",
+        "denominator_unit_concept_id",
+        mode="before",
     )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
 
 
 class SourceToConceptMap(Model):
@@ -370,6 +474,10 @@ class SourceToConceptMap(Model):
                 3: ("target_vocabulary_id", Vocabulary, None),
             }
         ),
+    )
+    source_to_concept_map_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone",
     )
     source_code: str = Field(
         description="User guidance:\nThe source code being translated\r\ninto a Standard Concept.\nETL conventions:\nNone",
@@ -403,6 +511,14 @@ class SourceToConceptMap(Model):
         description="User guidance:\nReason the mapping instance was invalidated. Possible values are D (deleted), U (replaced with an update) or NULL when valid_end_date has the default value.\nETL conventions:\nNone",
         max_length=1,
     )
-    source_to_concept_map_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The primary key for this table.\nETL conventions:\nNone"
+
+    @field_validator(
+        "source_concept_id",
+        "target_concept_id",
+        "source_vocabulary_id",
+        "target_vocabulary_id",
+        mode="before",
     )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)

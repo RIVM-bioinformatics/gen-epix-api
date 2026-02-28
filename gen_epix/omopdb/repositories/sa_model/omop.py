@@ -27,6 +27,9 @@ class Vocabulary(Base, NoIdRowMetadataMixin):
     vocabulary_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Vocabulary, "vocabulary_id"
     )
+    vocabulary_str_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Vocabulary, "vocabulary_str_id"
+    )
     vocabulary_name: Mapped[str] = create_mapped_column(
         DOMAIN, model.Vocabulary, "vocabulary_name"
     )
@@ -49,6 +52,9 @@ class Domain(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Domain)
 
     domain_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Domain, "domain_id")
+    domain_str_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.Domain, "domain_str_id"
+    )
     domain_name: Mapped[str] = create_mapped_column(DOMAIN, model.Domain, "domain_name")
     domain_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Domain, "domain_concept_id"
@@ -64,6 +70,9 @@ class ConceptClass(Base, NoIdRowMetadataMixin):
 
     concept_class_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.ConceptClass, "concept_class_id"
+    )
+    concept_class_str_id: Mapped[str] = create_mapped_column(
+        DOMAIN, model.ConceptClass, "concept_class_str_id"
     )
     concept_class_name: Mapped[str] = create_mapped_column(
         DOMAIN, model.ConceptClass, "concept_class_name"
@@ -81,6 +90,9 @@ class Concept(Base, NoIdRowMetadataMixin):
     __tablename__, __table_args__ = create_table_args(model.Concept)
 
     concept_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Concept, "concept_id")
+    concept_int_id: Mapped[int] = create_mapped_column(
+        DOMAIN, model.Concept, "concept_int_id"
+    )
     concept_name: Mapped[str] = create_mapped_column(
         DOMAIN, model.Concept, "concept_name"
     )

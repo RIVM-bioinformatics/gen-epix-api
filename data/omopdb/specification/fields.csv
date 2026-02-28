@@ -403,7 +403,6 @@ cdm_source,cdm_release_date,Yes,date,The date the ETL script was completed. Typi
 cdm_source,cdm_version,No,varchar(10),Version of the OMOP CDM used as string. e.g. v5.4,NA,No,No,NA,NA,NA,NA,NA
 cdm_source,cdm_version_concept_id,Yes,integer,The Concept Id representing the version of the CDM.,You can find all concepts that represent the CDM versions using the query: `SELECT * FROM CONCEPT WHERE   VOCABULARY_ID = 'CDM' AND CONCEPT_CLASS = 'CDM'`,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
 cdm_source,vocabulary_version,Yes,varchar(20),Version of the OMOP standardised vocabularies loaded,You can find the version of your Vocabulary using the query: `SELECT vocabulary_version from vocabulary  where vocabulary_id = 'None'`,No,No,NA,NA,NA,NA,NA
-concept,concept_id,Yes,integer,A unique identifier for each Concept across all domains.,NA,Yes,No,NA,NA,NA,NA,NA
 concept,concept_name,Yes,varchar(255),"An unambiguous, meaningful and descriptive name for the Concept.",NA,No,No,NA,NA,NA,NA,NA
 concept,domain_id,Yes,varchar(20),A foreign key to the [DOMAIN](https://ohdsi.github.io/CommonDataModel/cdm54.html#domain) table the Concept belongs to.,NA,No,Yes,DOMAIN,DOMAIN_ID,NA,NA,NA
 concept,vocabulary_id,Yes,varchar(20),"A foreign key to the [VOCABULARY](https://ohdsi.github.io/CommonDataModel/cdm54.html#vocabulary)
@@ -438,8 +437,6 @@ concept,invalid_reason,No,varchar(1),"Reason the Concept was invalidated.
 Possible values are D (deleted), U
 (replaced with an update) or NULL when
 valid_end_date has the default value.",NA,No,No,NA,NA,NA,NA,NA
-vocabulary,vocabulary_id,Yes,varchar(20),"A unique identifier for each Vocabulary, such
-as ICD9CM, SNOMED, Visit.",NA,Yes,No,NA,NA,NA,NA,NA
 vocabulary,vocabulary_name,Yes,varchar(255),"The name describing the vocabulary, for
 example, International Classification of
 Diseases, Ninth Revision, Clinical
@@ -450,12 +447,10 @@ vocabulary.",NA,No,No,NA,NA,NA,NA,NA
 vocabulary,vocabulary_version,No,varchar(255),"Version of the Vocabulary as indicated in
 the source.",NA,No,No,NA,NA,NA,NA,NA
 vocabulary,vocabulary_concept_id,Yes,integer,A Concept that represents the Vocabulary the VOCABULARY record belongs to.,NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
-domain,domain_id,Yes,varchar(20),A unique key for each domain.,NA,Yes,No,NA,NA,NA,NA,NA
 domain,domain_name,Yes,varchar(255),"The name describing the Domain, e.g.
 Condition, Procedure, Measurement
 etc.",NA,No,No,NA,NA,NA,NA,NA
 domain,domain_concept_id,Yes,integer,A Concept representing the Domain Concept the DOMAIN record belongs to.,NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
-concept_class,concept_class_id,Yes,varchar(20),A unique key for each class.,NA,Yes,No,NA,NA,NA,NA,NA
 concept_class,concept_class_name,Yes,varchar(255),"The name describing the Concept Class, e.g.
 Clinical Finding, Ingredient, etc.",NA,No,No,NA,NA,NA,NA,NA
 concept_class,concept_class_concept_id,Yes,integer,A Concept that represents the Concept Class.,NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
@@ -588,3 +583,12 @@ measurement_relation,person_id,Yes,integer,Not part of OMOP CDM. The PERSON_ID o
 measurement_relation,from_measurement_id,Yes,integer,Not part of OMOP CDM. The measurement from which the to measurement was derived.,NA,No,Yes,MEASUREMENT,MEASUREMENT_ID,NA,NA,NA
 measurement_relation,to_measurement_id,Yes,integer,Not part of OMOP CDM. The measurement that was derived.,NA,No,Yes,MEASUREMENT,MEASUREMENT_ID,NA,NA,NA
 measurement_relation,measurement_relation_concept_id,No,integer,Not part of OMOP CDM. The Concept Id that represents the relationship between the from and to measurement.,NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
+vocabulary,vocabulary_id,Yes,bigint,Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded vocabulary_str_id.,NA,Yes,No,NA,NA,NA,NA,NA
+vocabulary,vocabulary_str_id,Yes,varchar(20),"Renamed from CDM vocabulary_id. A unique identifier for each Vocabulary, such
+as ICD9CM, SNOMED, Visit.",NA,No,No,NA,NA,NA,NA,NA
+domain,domain_id,Yes,bigint,Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded domain_str_id.,NA,Yes,No,NA,NA,NA,NA,NA
+domain,domain_str_id,Yes,varchar(20),Renamed from CDM domain_id. A unique key for each domain.,NA,No,No,NA,NA,NA,NA,NA
+concept_class,concept_class_id,Yes,bigint,Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded concept_class_str_id.,NA,Yes,No,NA,NA,NA,NA,NA
+concept_class,concept_class_str_id,Yes,varchar(20),Renamed from CDM concept_class_id. A unique key for each class.,NA,No,No,NA,NA,NA,NA,NA
+concept,concept_id,Yes,bigint,"Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.",NA,Yes,No,NA,NA,NA,NA,NA
+concept,concept_int_id,Yes,integer,Renamed from CDM concept_id. A unique identifier for each Concept across all domains.,NA,No,No,NA,NA,NA,NA,NA

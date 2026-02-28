@@ -682,6 +682,16 @@ class Run:
             ]
         )
 
+    def test_omopdb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/upload",
+            ]
+        )
+
     def test_omopdb_integration(self) -> None:
         import pytest
 

@@ -9,14 +9,17 @@ Classes:
 """
 
 from datetime import date
-from typing import ClassVar
+from typing import Any, ClassVar
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
-from gen_epix.omopdb.domain.model.omop.base import DataLineageMixin
+from gen_epix.omopdb.domain.model.omop.base import (
+    DataLineageMixin,
+    validate_int_for_uuid_field,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
 from gen_epix.omopdb.domain.model.omop.ontology import Concept, Domain
 
@@ -43,8 +46,9 @@ class PayerPlanPeriod(Model, DataLineageMixin):
             }
         ),
     )
-    payer_plan_period_id: UUID = Field(
-        description="User guidance:\nA unique identifier for each unique combination of a Person, Payer, Plan, and Period of time.\nETL conventions:\nNone"
+    payer_plan_period_id: UUID | None = Field(
+        default=None,
+        description="User guidance:\nA unique identifier for each unique combination of a Person, Payer, Plan, and Period of time.\nETL conventions:\nNone",
     )
     person_id: UUID = Field(
         description="User guidance:\nThe Person covered by the Plan.\nETL conventions:\nA single Person can have multiple, overlapping, PAYER_PLAN_PERIOD records"
@@ -113,6 +117,21 @@ class PayerPlanPeriod(Model, DataLineageMixin):
         description="User guidance:\nNone\nETL conventions:\nIf the source data codes the stop reason in an OMOP supported vocabulary store the concept_id here.",
     )
 
+    @field_validator(
+        "payer_concept_id",
+        "payer_source_concept_id",
+        "plan_concept_id",
+        "plan_source_concept_id",
+        "sponsor_concept_id",
+        "sponsor_source_concept_id",
+        "stop_reason_concept_id",
+        "stop_reason_source_concept_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
+
 
 class Cost(Model, DataLineageMixin):
     """The COST table captures records containing the cost of any medical event recorded in one of the OMOP clinical event tables such as DRUG_EXPOSURE, PROCEDURE_OCCURRENCE, VISIT_OCCURRENCE, VISIT_DETAIL, DEVICE_OCCURRENCE, OBSERVATION or MEASUREMENT.
@@ -135,7 +154,9 @@ class Cost(Model, DataLineageMixin):
             }
         ),
     )
-    cost_id: UUID = Field(description="User guidance:\nNone\nETL conventions:\nNone")
+    cost_id: UUID | None = Field(
+        default=None, description="User guidance:\nNone\nETL conventions:\nNone"
+    )
     cost_event_id: UUID = Field(
         description="User guidance:\nNone\nETL conventions:\nNone"
     )
@@ -203,3 +224,14 @@ class Cost(Model, DataLineageMixin):
         description="User guidance:\nDiagnosis Related Groups are US codes used to classify hospital cases into one of approximately 500 groups.\nETL conventions:\nNone",
         max_length=3,
     )
+
+    @field_validator(
+        "cost_type_concept_id",
+        "currency_concept_id",
+        "revenue_code_concept_id",
+        "drg_concept_id",
+        mode="before",
+    )
+    @classmethod
+    def _validate_int_for_uuid(cls, value: Any | None) -> UUID | None:
+        return validate_int_for_uuid_field(value)
