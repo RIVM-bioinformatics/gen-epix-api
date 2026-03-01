@@ -56,4 +56,6 @@ where = ["."]
 include = ["gen_epix*"]
 exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert.*", "cicd", "cicd.*"]
 
+[tool.pytest-gremlins]
+paths = ["gen_epix"]
 
