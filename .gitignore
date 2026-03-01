@@ -168,4 +168,12 @@ test/output/*
 # Logs
 logs/*
 
+# Macbook specific files
+.DS_Store
+
+# Mutation Testing (gremlins)
+.gremlins_cache/
+.coveragerc.gremlins
+gremlin-report.html
+
 cert/*.pem
