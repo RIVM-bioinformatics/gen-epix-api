@@ -1,7 +1,7 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import Field, computed_field, field_serializer, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -25,38 +25,14 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 from gen_epix.util import copy_model_field
 
 
-class ConceptFieldsForUploadMixin:
-    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = []
-
-    @model_validator(mode="after")
-    def _validate_concept_fields_for_upload(self) -> Self:
-        for id_field, int_id_field in self.CONCEPT_FIELD_PAIRS:
-            id_value = getattr(self, id_field)
-            int_id_value = getattr(self, int_id_field)
-            if id_value in {None, NULL_ID} and int_id_value is None:
-                raise ValueError(
-                    f"Either {id_field} or {int_id_field} must be provided."
-                )
-        return self
-
-
-class MeasurementForUpload(Measurement, IsNewIdMixin, ConceptFieldsForUploadMixin):
+class MeasurementForUpload(Measurement, IsNewIdMixin):
     """
     An measurement record intended for upload. Equal to a Measurement, with
-    additional variables. The different concepts can be given either as their UUID
-    or integer ID to facilitate the upload operation where applicable.
+    additional variables.
     """
 
     ENTITY: ClassVar = Measurement.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "MeasurementForUpload"
-    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
-        ("measurement_concept_id", "measurement_concept_int_id"),
-        ("measurement_type_concept_id", "measurement_type_concept_int_id"),
-        ("operator_concept_id", "operator_concept_int_id"),
-        ("value_as_concept_id", "value_as_concept_int_id"),
-        ("unit_concept_id", "unit_concept_int_id"),
-        ("measurement_source_concept_id", "measurement_source_concept_int_id"),
-    ]
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -66,71 +42,16 @@ class MeasurementForUpload(Measurement, IsNewIdMixin, ConceptFieldsForUploadMixi
         default=NULL_ID,
         description="The id of the measurement.",
     )
-    measurement_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The concept ID of the measurement. If not available, it must be filled with the null ID.",
-    )
-    measurement_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the measurement_concept_id. Must be provided if the latter is not provided.",
-    )
-    measurement_type_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The type concept ID of the measurement. If not available, it must be filled with the null ID.",
-    )
-    measurement_type_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the measurement_type_concept_id. Must be provided if the latter is not provided.",
-    )
-    operator_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the operator_concept_id.",
-    )
-    value_as_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the value_as_concept_id.",
-    )
-    unit_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the unit_concept_id.",
-    )
-    measurement_source_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The source concept ID of the measurement. If not available, it must be filled with the null ID.",
-    )
-    measurement_source_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the measurement_source_concept_id.",
-    )
-    derived_from_specimen_id: UUID | None = Field(
-        default=None,
-        description="User guidance:\nNot part of OMOP CDM. The specimen from which this measurement was derived.\nETL conventions:\nNone",
-    )
-
-    @field_serializer(*[x[0] for x in CONCEPT_FIELD_PAIRS])
-    def _serialize_null_id(self, value: UUID | None) -> UUID | None:
-        """Serialize NULL_ID as None for concept ID fields."""
-        return None if value == NULL_ID else value
 
 
-class ObservationForUpload(Observation, IsNewIdMixin, ConceptFieldsForUploadMixin):
+class ObservationForUpload(Observation, IsNewIdMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
-    additional variables. The different concepts can be given either as their UUID
-    or integer ID to facilitate the upload operation where applicable.
+    additional variables.
     """
 
     ENTITY: ClassVar = Observation.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "ObservationForUpload"
-    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
-        ("observation_concept_id", "observation_concept_int_id"),
-        ("observation_type_concept_id", "observation_type_concept_int_id"),
-        ("value_as_concept_id", "value_as_concept_int_id"),
-        ("qualifier_concept_id", "qualifier_concept_int_id"),
-        ("unit_concept_id", "unit_concept_int_id"),
-        ("observation_source_concept_id", "observation_source_concept_int_id"),
-        ("obs_event_field_concept_id", "obs_event_field_concept_int_id"),
-    ]
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -140,65 +61,17 @@ class ObservationForUpload(Observation, IsNewIdMixin, ConceptFieldsForUploadMixi
         default=NULL_ID,
         description="The id of the observation.",
     )
-    observation_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The concept ID of the observation. If not available, it must be filled with the null ID.",
-    )
-    observation_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the observation_concept_id. Must be provided if the latter is not provided.",
-    )
-    observation_type_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the observation_type_concept_id. Must be provided if the latter is not provided.",
-    )
-    value_as_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the value_as_concept_id.",
-    )
-    qualifier_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the qualifier_concept_id.",
-    )
-    unit_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the unit_concept_id.",
-    )
-    observation_source_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the observation_source_concept_id.",
-    )
-    obs_event_field_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the obs_event_field_concept_id.",
-    )
-
-    @field_serializer(*[x[0] for x in CONCEPT_FIELD_PAIRS])
-    def _serialize_null_id(self, value: UUID | None) -> UUID | None:
-        """Serialize NULL_ID as None for concept ID fields."""
-        return None if value == NULL_ID else value
 
 
-class SpecimenForUpload(
-    Specimen, IsNewIdMixin, ExternalIdentifiersMixin, ConceptFieldsForUploadMixin
-):
+class SpecimenForUpload(Specimen, IsNewIdMixin, ExternalIdentifiersMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
-    additional variables. The different concepts can be given either as their UUID
-    or integer ID to facilitate the upload operation where applicable.
+    additional variables.
     """
 
     ENTITY: ClassVar = Specimen.ENTITY.model_copy(update={"persistable": False})
     NAME: ClassVar = "SpecimenForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
-    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
-        ("specimen_concept_id", "specimen_concept_int_id"),
-        ("specimen_type_concept_id", "specimen_type_concept_int_id"),
-        ("unit_concept_id", "unit_concept_int_id"),
-        ("anatomic_site_concept_id", "anatomic_site_concept_int_id"),
-        ("disease_status_concept_id", "disease_status_concept_int_id"),
-        ("derived_from_specimen_concept_id", "derived_from_specimen_concept_int_id"),
-    ]
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -208,48 +81,9 @@ class SpecimenForUpload(
         default=NULL_ID,
         description="The id of the specimen.",
     )
-    specimen_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The concept ID of the specimen. If not available, it must be filled with the null ID.",
-    )
-    specimen_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the specimen_concept_id. Must be provided if the latter is not provided.",
-    )
-    specimen_type_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The type concept ID of the specimen. If not available, it must be filled with the null ID.",
-    )
-    specimen_type_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the specimen_type_concept_id. Must be provided if the latter is not provided.",
-    )
-    unit_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the unit_concept_id.",
-    )
-    anatomic_site_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the anatomic_site_concept_id.",
-    )
-    disease_status_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the disease_status_concept_id.",
-    )
-    derived_from_specimen_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the derived_from_specimen_concept_id.",
-    )
-
-    @field_serializer(*[x[0] for x in CONCEPT_FIELD_PAIRS])
-    def _serialize_null_id(self, value: UUID | None) -> UUID | None:
-        """Serialize NULL_ID as None for concept ID fields."""
-        return None if value == NULL_ID else value
 
 
-class MeasurementRelationForUpload(
-    MeasurementRelation, IsNewIdMixin, ConceptFieldsForUploadMixin
-):
+class MeasurementRelationForUpload(MeasurementRelation, IsNewIdMixin):
     """
     A measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.
@@ -259,32 +93,10 @@ class MeasurementRelationForUpload(
         update={"persistable": False}
     )
     NAME: ClassVar = "MeasurementRelationForUpload"
-    CONCEPT_FIELD_PAIRS: ClassVar[list[tuple[str, str]]] = [
-        (
-            "measurement_relation_concept_id",
-            "measurement_relation_concept_int_id",
-        ),
-    ]
 
     measurement_relation_id: UUID = Field(
         default=NULL_ID,
         description="The id of the measurement relation. If not available, it must be filled with the null ID.",
-    )
-    from_measurement_id: UUID = Field(
-        default=NULL_ID,
-        description="The measurement from which the to measurement was derived. If not available, it must be filled with the null ID.",
-    )
-    to_measurement_id: UUID = Field(
-        default=NULL_ID,
-        description="The measurement that was derived. If not available, it must be filled with the null ID.",
-    )
-    measurement_relation_concept_id: UUID = Field(
-        default=NULL_ID,
-        description="The Concept Id that represents the relationship between the from and to measurement. If not available, it must be filled with the null ID.",
-    )
-    measurement_relation_concept_int_id: int | None = Field(
-        default=None,
-        description="The corresponding integer concept ID of the measurement_relation_concept_id. Must be provided if the latter is not provided.",
     )
 
 

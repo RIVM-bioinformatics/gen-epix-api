@@ -326,7 +326,7 @@ class Entity(BaseModel):
             if not field_type or x["type"] == field_type
         ]
 
-    def get_id_field_name(self, by_alias: bool = True) -> str | None:
+    def get_id_field_name(self, by_alias: bool = True) -> str:
         """
         Get the ID field name of the entity.
 

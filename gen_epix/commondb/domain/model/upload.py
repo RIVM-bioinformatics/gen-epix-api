@@ -15,8 +15,8 @@ from gen_epix.commondb.domain.enum import (
     UploadStatusSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.base import Model
 from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
