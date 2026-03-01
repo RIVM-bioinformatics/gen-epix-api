@@ -108,6 +108,7 @@ from gen_epix.seqdb.domain.model.seq.upload import (
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchUploadResult as SampleBatchUploadResult,
 )
+from gen_epix.seqdb.domain.model.seq.upload import SampleDataIssue as SampleDataIssue
 from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleUploadResult as SampleUploadResult,

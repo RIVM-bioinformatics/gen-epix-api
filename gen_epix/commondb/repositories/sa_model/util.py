@@ -7,8 +7,7 @@ from pydantic import BaseModel
 from pydantic.fields import ComputedFieldInfo, FieldInfo
 from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
-from gen_epix.commondb.domain.model import Model
-from gen_epix.fastapp import Domain, Entity
+from gen_epix.fastapp import Domain, Entity, Model
 from gen_epix.fastapp.repositories import create_sa_type_from_field_info
 from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_info
 

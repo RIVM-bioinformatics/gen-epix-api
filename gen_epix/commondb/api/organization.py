@@ -75,6 +75,12 @@ class UpdateOrganizationIdentifierIssuerLinksRequestBody(PydanticBaseModel):
     )
 
 
+class RetrieveOrganizationContactsRequestBody(PydanticBaseModel):
+    organization_id: UUID = Field(
+        description="The ID of the organization to retrieve contacts for."
+    )
+
+
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
     app: App,
@@ -310,6 +316,30 @@ def create_organization_endpoints(
                     obj_id1=organization_id,
                     association_objs=request_body.organization_identifier_issuer_links,
                     props={"return_id": False},
+                ),
+            ),
+        )
+
+    @router.post(
+        "/retrieve/organization_contacts",
+        operation_id="retrieve__organization_contacts",
+        name="Retrieve organization contacts",
+        description=command.RetrieveOrganizationContactsCommand.__doc__,
+    )
+    async def retrieve__organization_contacts(
+        user: registered_user_dependency,  # type: ignore
+        request_body: RetrieveOrganizationContactsRequestBody,
+    ) -> model.OrganizationContacts:
+        return cast(
+            model.OrganizationContacts,
+            handle_command(
+                app=app,
+                user=user,
+                exception_code="b8172f62",
+                input_handle_exception=handle_exception,
+                input_command=command.RetrieveOrganizationContactsCommand(
+                    user=user,
+                    organization_id=request_body.organization_id,
                 ),
             ),
         )

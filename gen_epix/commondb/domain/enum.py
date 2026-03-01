@@ -161,3 +161,33 @@ class UploadStatusSet(Enum):
             UploadStatus.PROCESSED,
         }
     )
+
+
+class DataIssueType(Enum):
+    MISSING = "MISSING"
+    INVALID = "INVALID"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    CONFLICT = "CONFLICT"
+    DERIVED = "DERIVED"
+    TRANSFORMED = "TRANSFORMED"
+
+
+class DataIssueTypeSet(Enum):
+    ERROR = frozenset(
+        {
+            DataIssueType.INVALID,
+            DataIssueType.UNAUTHORIZED,
+            DataIssueType.CONFLICT,
+        }
+    )
+    WARNING = frozenset(
+        {
+            DataIssueType.MISSING,
+        }
+    )
+    INFO = frozenset(
+        {
+            DataIssueType.DERIVED,
+            DataIssueType.TRANSFORMED,
+        }
+    )

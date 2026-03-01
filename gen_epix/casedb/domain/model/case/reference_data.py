@@ -476,6 +476,7 @@ class CaseTypeCol(Model):
         description=(
             "The NCBI taxid for the column, if the column is a genetic sequence"
         ),
+        # TODO: move to seqdb literal.py, variable NCBI_TAXID_PATTERN
         pattern=r"^NCBI:txid\d+$",
     )
     genetic_sequence_case_type_col_id: UUID | None = Field(

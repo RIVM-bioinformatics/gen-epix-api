@@ -11,6 +11,7 @@ import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.enum as seqdb_enum
+import gen_epix.seqdb.domain.model as seqdb_model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.create_seq import (
@@ -137,7 +138,7 @@ class TestCasedbCaseCreateSeq:
             mock_read_set.fwd_file_id = None
             mock_read_set.rev_file_id = None
 
-            created_file = Mock(spec=model.File)
+            created_file = Mock(spec=seqdb_model.File)
             created_file.id = uuid4()
 
             with patch(
@@ -160,7 +161,7 @@ class TestCasedbCaseCreateSeq:
                             else:  # UPDATE_ONE
                                 return mock_read_set
                         elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                            return created_file
+                            return created_file.id
                         return Mock()
 
                     mock_service.app.handle.side_effect = handle_side_effect
@@ -171,8 +172,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id  # type: ignore[attr-defined]
-                    assert mock_read_set.fwd_file_id.id == created_file.id  # type: ignore[attr-defined]
+                    assert result == created_file.id  # type: ignore[attr-defined]
+                    assert mock_read_set.fwd_file_id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
 
         def test_create_file_for_read_set_success_gzip_content(
@@ -202,7 +203,7 @@ class TestCasedbCaseCreateSeq:
             mock_read_set.fwd_file_id = None
             mock_read_set.rev_file_id = None
 
-            created_file = Mock(spec=model.File)
+            created_file = Mock(spec=seqdb_model.File)
             created_file.id = uuid4()
 
             with patch(
@@ -225,7 +226,7 @@ class TestCasedbCaseCreateSeq:
                             else:  # UPDATE_ONE
                                 return mock_read_set
                         elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                            return created_file
+                            return created_file.id
                         return Mock()
 
                     mock_service.app.handle.side_effect = handle_side_effect
@@ -236,8 +237,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id  # type: ignore[attr-defined]
-                    assert mock_read_set.fwd_file_id.id == created_file.id  # type: ignore[attr-defined]
+                    assert result == created_file.id  # type: ignore[attr-defined]
+                    assert mock_read_set.fwd_file_id == created_file.id  # type: ignore[attr-defined]
                     assert mock_read_set.fwd_reads_hash == expected_fwd_reads_hash
 
         def test_create_file_for_seq_success(
@@ -265,7 +266,7 @@ class TestCasedbCaseCreateSeq:
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
 
-            created_file = Mock(spec=model.File)
+            created_file = Mock(spec=seqdb_model.File)
             created_file.id = uuid4()
 
             with patch(
@@ -288,7 +289,7 @@ class TestCasedbCaseCreateSeq:
                             else:  # UPDATE_ONE
                                 return mock_seq
                         elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                            return created_file
+                            return created_file.id
                         return Mock()
 
                     mock_service.app.handle.side_effect = handle_side_effect
@@ -299,8 +300,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id  # type: ignore[attr-defined]
-                    assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
+                    assert result == created_file.id  # type: ignore[attr-defined]
+                    assert mock_seq.file_id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
         def test_create_file_for_seq_success_gzip_content(
@@ -328,7 +329,7 @@ class TestCasedbCaseCreateSeq:
             mock_seq = Mock(spec=model.SeqForUpload)
             mock_seq.file_id = None
 
-            created_file = Mock(spec=model.File)
+            created_file = Mock(spec=seqdb_model.File)
             created_file.id = uuid4()
 
             with patch(
@@ -351,7 +352,7 @@ class TestCasedbCaseCreateSeq:
                             else:  # UPDATE_ONE
                                 return mock_seq
                         elif isinstance(cmd_arg, seqdb_command.CreateFileCommand):
-                            return created_file
+                            return created_file.id
                         return Mock()
 
                     mock_service.app.handle.side_effect = handle_side_effect
@@ -362,8 +363,8 @@ class TestCasedbCaseCreateSeq:
                     )
 
                     # Verify results
-                    assert result.id == created_file.id  # type: ignore[attr-defined]
-                    assert mock_seq.file_id.id == created_file.id  # type: ignore[attr-defined]
+                    assert result == created_file.id  # type: ignore[attr-defined]
+                    assert mock_seq.file_id == created_file.id  # type: ignore[attr-defined]
                     assert mock_seq.file_hash == expected_file_hash
 
         def test_missing_case_content_raises_error(
