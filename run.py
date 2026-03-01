@@ -187,16 +187,19 @@ class Run:
         ]
 
         subprocess.run(
-            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            ["python", "-m", "coverage", "run", "--source=gen_epix", "-m", "pytest"]
+            + pytest_args,
             check=False,
         )
         # Generate HTML report
         subprocess.run(
-            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+            ["python", "-m", "coverage", "html", "-d", "test/output/coverage.html"],
+            check=True,
         )
         # Generate XML report
         subprocess.run(
-            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
+            ["python", "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
+            check=True,
         )
 
     def test_all_incl_performance(self) -> None:
@@ -632,24 +635,24 @@ class Run:
                 "test/seqdb/integration/content",
             ]
         )
-    
-    def test_seqdb_sample_batch_uploader(self) -> None:
+
+    def test_seqdb_performance_calculate_seq_distances(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/integration/sample_batch_uploader",
+                "test/seqdb/performance/calculate_seq_distances",
             ]
         )
 
-    def test_seqdb_performance(self) -> None:
+    def test_seqdb_performance_retrieve_similar_profiles(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/performance",
+                "test/seqdb/performance/retrieve_similar_profiles",
             ]
         )
 

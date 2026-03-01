@@ -1,4 +1,3 @@
-import base64
 from typing import Any
 from uuid import UUID
 
@@ -190,13 +189,13 @@ def _verify_batch_refdata_allele_profiles(
         if invalid_locus_allele_pairs:
             # Some invalid (locus ID, allele ID) pairs found
             success = False
-            _handle_locus_allele_pair_mistmatch(
+            _handle_locus_allele_pair_mismatch(
                 profile_result, invalid_locus_allele_pairs
             )
         # Convert to allele profile representation if not already the case
         if profile.allele_profile != "":
             continue
-        profile.allele_profile = _construct_allele_profile_for_pending_profile(
+        profile.allele_profile = model.AlleleProfile.get_sorted_allele_ids_profile(
             allele_ids
         )
         profile.allele_profile_format = enum.AlleleProfileFormat.SORTED_ALLELE_IDS
@@ -274,7 +273,7 @@ def _verify_batch_refdata_allele_profiles(
     return success
 
 
-def _handle_locus_allele_pair_mistmatch(
+def _handle_locus_allele_pair_mismatch(
     profile_result: UploadResult, invalid_locus_allele_pairs: list[tuple[UUID, UUID]]
 ) -> None:
     if len(invalid_locus_allele_pairs) <= 5:
@@ -298,62 +297,3 @@ def _handle_locus_allele_pair_mistmatch(
         "c9b8a7d6",
         f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
     )
-
-
-def _construct_allele_profile_for_pending_profile(allele_ids: list[UUID | None]) -> str:
-    """
-    Method that constructs the allele_profile field for model.AlleleProfile.
-    Concatenate, in locus order, the 16 raw bytes of each allele UUID (using NULL_ID.bytes for missing/no-calls),
-    base64-encode the resulting bytes, and return the ascii string
-    """
-    return base64.b64encode(
-        b"".join(NULL_ID.bytes if x is None else x.bytes for x in allele_ids)
-    ).decode("ascii")
-
-
-# def _retrieve_child_refdata(
-#     self: BaseService,
-#     cmd: command.Command,
-#     retval: BaseBatchUploadResult,
-#     uow: BaseUnitOfWork,
-#     parent_for_upload_model_class: type[model.Model],
-#     parents: list[model.Model],
-#     parent_results: list[UploadResult],
-#     child_model_class: type[model.Model],
-#     link_id_field_name: str,
-#     linked_model_class: type[model.Model],
-#     linked_model_id_field_name: str = "id",
-# ) -> dict[UUID, model.Model]:
-#     user_id = cmd.user.id if cmd.user else None
-#     link_ids: set[UUID] = set()
-
-#     # Get unique IDs from all samples
-#     for_upload_model_class = parent_for_upload_model_class.CHILD_FOR_UPLOAD_CLASS_MAP[ # type: ignore[attr-defined]
-#         child_model_class
-#     ]
-#     child_field_name = parent_for_upload_model_class.CHILDREN_FIELD_NAME_MAP[ # type: ignore[attr-defined]
-#         for_upload_model_class
-#     ]
-#     for parent, parent_result in zip(parents, parent_results):
-#         children: list[model.Model] = getattr(parent, child_field_name) or []
-#         child_results: list[UploadResult] = getattr(parent_result, child_field_name) or []
-#         for child, child_result in zip(children, child_results):
-#             link_id: UUID | None = getattr(child, link_id_field_name, None)
-#             if link_id is None or link_id == NULL_ID:
-#                 continue
-#             if child_result.status != UploadStatus.PENDING:
-#                 continue
-#             link_ids.add(link_id)
-
-#     # Retrieve corresponding objects
-#     link_objs: list[model.Model] = self.repository.crud(  # type: ignore[assignment]
-#         uow,
-#         user_id,
-#         linked_model_class,
-#         None,
-#         list(link_ids),
-#         CrudOperation.READ_SOME,
-#     )
-
-#     # Finalize output
-#     return {getattr(x, linked_model_id_field_name): x for x in link_objs}

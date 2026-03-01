@@ -67,6 +67,7 @@ from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
+from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import (
@@ -206,6 +207,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleProfileForUpload,
             SnpProfileForUpload,
             MlvaProfileForUpload,
+            KmerProfileForUpload,
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,

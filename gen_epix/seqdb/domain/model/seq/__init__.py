@@ -96,6 +96,9 @@ from gen_epix.seqdb.domain.model.seq.upload import (
     CalculateSeqDistancesResult as CalculateSeqDistancesResult,
 )
 from gen_epix.seqdb.domain.model.seq.upload import (
+    KmerProfileForUpload as KmerProfileForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.upload import (
     MlvaProfileForUpload as MlvaProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload

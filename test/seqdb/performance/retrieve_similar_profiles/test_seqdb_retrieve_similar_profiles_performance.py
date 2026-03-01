@@ -1,6 +1,20 @@
 import logging
-import pickle
 from pathlib import Path
+from test.seqdb.performance.common import (
+    create_dict_repository,
+    create_sqlite_repository,
+    fill_empty_sqlite_repository,
+    write_db_to_pickle,
+)
+from test.seqdb.performance.generate_seq_distances import create_seq_distance_database
+from test.seqdb.performance.retrieve_similar_profiles.base import (
+    DEV_REPOSITORY_CONFIG,
+    ENTITIES,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
+from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from time import perf_counter
 from uuid import UUID
 
@@ -10,22 +24,10 @@ from pydantic import BaseModel
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
-from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
 from gen_epix.seqdb.repositories.seq_sa import SeqSARepository
-from test.seqdb.performance.create_demo_seq_distances import (
-    create_seq_distance_database,
-)
-from test.seqdb.performance.seq_distance.base import (
-    DEV_REPOSITORY_CONFIG,
-    ENTITIES,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB,
@@ -35,34 +37,25 @@ SEQDB_APP_CFGS = get_app_cfgs(
 )
 
 CREATE_DEMO_DATA: bool = False
-BASE = Path(__file__).parent
+BASE_DIR = Path(__file__).parent
+N_LOCI = 10
 DATASETS: list[tuple[int, Path, Path]] = [
     (
         100,
-        BASE / "test_seq_distance_performance_100.pkl",
-        BASE / "test_seq_distance_performance_100.sqlite",
+        BASE_DIR / "test_seq_distance_performance_100.pkl",
+        BASE_DIR / "test_seq_distance_performance_100.sqlite",
     ),
     (
         200,
-        BASE / "test_seq_distance_performance_200.pkl",
-        BASE / "test_seq_distance_performance_200.sqlite",
+        BASE_DIR / "test_seq_distance_performance_200.pkl",
+        BASE_DIR / "test_seq_distance_performance_200.sqlite",
     ),
     (
         500,
-        BASE / "test_seq_distance_performance_500.pkl",
-        BASE / "test_seq_distance_performance_500.sqlite",
+        BASE_DIR / "test_seq_distance_performance_500.pkl",
+        BASE_DIR / "test_seq_distance_performance_500.sqlite",
     ),
 ]
-
-
-class TestRepositoryPerformance(BaseModel):
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    repository_type: seqdb_enum.RepositoryType
-    dataset_size: int
-    file: Path
-    repository: SeqDictRepository | SeqSARepository
 
 
 @pytest.fixture(scope="module", name="env")
@@ -76,11 +69,14 @@ def get_test_client() -> Env:
     )
 
 
-def write_db_to_pickle(
-    db: dict[type, dict[UUID, model.Model]], pickle_file: Path
-) -> None:
-    with open(pickle_file, "wb") as f:
-        pickle.dump(db, f)
+class TestRepositoryPerformance(BaseModel):
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    repository_type: seqdb_enum.RepositoryType
+    dataset_size: int
+    file: Path
+    repository: SeqDictRepository | SeqSARepository
 
 
 # def get_filtered_entities(
@@ -92,69 +88,6 @@ def write_db_to_pickle(
 #     )
 #     entities = [entity for entity in dag_entities if entity in entities]
 #     return entities
-
-
-def create_dict_repository(
-    pickle_file: Path | None,
-    db: dict[type, dict[UUID, model.Model]] | None,
-    entities: list[Entity],
-    missing_data: str = "ignore",
-) -> SeqDictRepository:
-
-    if pickle_file is not None:
-        with open(pickle_file, "rb") as f:
-            db = pickle.load(f)
-
-    return SeqDictRepository(
-        entities=entities,
-        db=db,
-        missing_data=missing_data,
-    )  # type: ignore[arg-type]
-
-
-def create_sqlite_repository(
-    empty_sa_sqlite_file: Path,
-    entities: list[Entity],
-    recreate_sqlite_file: bool = True,
-) -> SeqSARepository:
-    service_type = seqdb_enum.ServiceType.SEQ
-    return SeqSARepository.create_repository(  # type: ignore[return-value]
-        entities=entities,
-        file=empty_sa_sqlite_file,
-        name=service_type.value,
-        recreate_sqlite_file=recreate_sqlite_file,
-    )
-
-
-def fill_empty_sqlite_repository(
-    dict_repository: SeqDictRepository,
-    sqlite_repository: SeqSARepository,
-    entities: list[Entity],
-    user_id: UUID,
-) -> None:
-    with (
-        dict_repository.uow() as dict_uow,
-        sqlite_repository.uow() as sa_uow,
-    ):
-        for entity in entities:
-            model_class = entity.model_class
-            objs: list[model.Model] = dict_repository.crud(  # type: ignore[assignment]
-                dict_uow,
-                user_id,
-                model_class,
-                None,
-                None,
-                CrudOperation.READ_ALL,
-                return_copy=False,
-            )
-            sqlite_repository.crud(
-                sa_uow,
-                user_id,
-                model_class,
-                objs,
-                None,
-                CrudOperation.CREATE_SOME,
-            )
 
 
 def ensure_datasets_exist_and_valid() -> None:
@@ -183,7 +116,7 @@ class BaseSeqDistancePerformance:
         def create_and_persist(
             env: Env, n_seqs: int, pickle_path: Path, sqlite_path: Path
         ) -> None:
-            db = create_seq_distance_database(n_loci=10, n_seqs=n_seqs)
+            db = create_seq_distance_database(n_loci=N_LOCI, n_seqs=n_seqs)
             write_db_to_pickle(db, pickle_path)
             dict_repo = create_dict_repository(
                 db=db, pickle_file=None, entities=ENTITIES
@@ -197,7 +130,7 @@ class BaseSeqDistancePerformance:
 
         for n_seqs, pkl, sqlite in DATASETS:
             create_and_persist(env, n_seqs, pkl, sqlite)
-        print("Demo data for 100, 200, 500 created and persisted")
+        print("Demo data created and persisted")
 
 
 @pytest.mark.scenario_ids("TC-PERF-10-01")
@@ -294,6 +227,9 @@ class TestSeqDistancePerformance(BaseSeqDistancePerformance):
             expected_id = profile_ids[0]
             assert (expected_id in result_ids) or (str(expected_id) in result_ids)
             assert len(result_ids) > 1
+            print(
+                f"\n{test_repository_performance.repository_type} size={test_repository_performance.dataset_size} duration={duration:.4f}s"
+            )
             print(
                 f"\n{test_repository_performance.repository_type} size={test_repository_performance.dataset_size} duration={duration:.4f}s"
             )

@@ -2,6 +2,8 @@ import json
 from collections.abc import Sequence
 from uuid import UUID
 
+import numpy as np
+
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
@@ -10,37 +12,34 @@ from gen_epix.seqdb.domain.service import BaseSeqService
 
 
 def _calculate_profile_distance(
-    profile_type_name: str,
+    profile_model_class: (
+        type[model.SnpProfile]
+        | type[model.AlleleProfile]
+        | type[model.MlvaProfile]
+        | type[model.KmerProfile]
+    ),
     profile1: Sequence[
         model.SnpProfile | model.AlleleProfile | model.MlvaProfile | model.KmerProfile
     ],
     profile2: Sequence[
         model.SnpProfile | model.AlleleProfile | model.MlvaProfile | model.KmerProfile
     ],
+    ref_seq: model.RefSeq | None = None,
+    locus_set: model.LocusSet | None = None,
 ) -> float:
     """Return the distance between two profiles of the same type"""
-    if profile_type_name == "snp":
-        seq1: str = (
-            profile1.aligned_nucleotide_seq  # type: ignore[attr-defined]
-            if profile1.aligned_nucleotide_seq  # type: ignore[attr-defined]
-            else profile1.snp_profile  # type: ignore[attr-defined]
-        )
-        seq2: str = (
-            profile2.aligned_nucleotide_seq  # type: ignore[attr-defined]
-            if profile2.aligned_nucleotide_seq  # type: ignore[attr-defined]
-            else profile2.snp_profile  # type: ignore[attr-defined]
-        )
-        # TODO: check if calculation is ok for SNP profiles
-        min_len = min(len(seq1), len(seq2))
-        return float(
-            sum(1 for i in range(min_len) if seq1[i] != seq2[i])
-            + abs(len(seq1) - len(seq2))
-        )
-    elif profile_type_name == "allele":
+    if profile_model_class == model.SnpProfile:
+        assert isinstance(profile1, model.SnpProfile)
+        assert isinstance(profile2, model.SnpProfile)
+        # TODO: this implementation is not correct as the aligned sequences may contain different gaps in the reference sequence between both. Instead, the differences versus the reference sequence should be enumerated and compared.
+        seq1 = profile1.get_aligned_nucleotide_seq(ref_seq=ref_seq)
+        seq2 = profile2.get_aligned_nucleotide_seq(ref_seq=ref_seq)
+        return float(np.count_nonzero(np.array(list(seq1)) != np.array(list(seq2))))
+    elif profile_model_class == model.AlleleProfile:
         assert isinstance(profile1, model.AlleleProfile)
         assert isinstance(profile2, model.AlleleProfile)
-        ids1: list[UUID | None] = profile1.get_allele_ids()
-        ids2: list[UUID | None] = profile2.get_allele_ids()
+        ids1: list[UUID | None] = profile1.get_allele_ids(locus_set=locus_set)
+        ids2: list[UUID | None] = profile2.get_allele_ids(locus_set=locus_set)
         return float(
             sum(
                 1
@@ -48,31 +47,19 @@ def _calculate_profile_distance(
                 if x != y and x is not None and y is not None
             )
         )
-    elif profile_type_name == "mlva":
+    elif profile_model_class == model.MlvaProfile:
         assert isinstance(profile1, model.MlvaProfile)
         assert isinstance(profile2, model.MlvaProfile)
         # Parse MLVA profiles to get repeat numbers
-        if profile1.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
-            repeat_numbers1: list[int] = json.loads(profile1.mlva_profile)
-        else:
-            raise NotImplementedError("Unsupported MLVA profile format")
-        if profile2.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
-            repeat_numbers2: list[int] = json.loads(profile2.mlva_profile)
-        else:
-            raise NotImplementedError("Unsupported MLVA profile format")
+        repeat_numbers1 = profile1.get_repeat_numbers(locus_set=locus_set)
+        repeat_numbers2 = profile2.get_repeat_numbers(locus_set=locus_set)
         # Hamming distance: count loci where repeat numbers differ
         # Only count if both repeat numbers are present (not -1)
-        return float(
-            sum(
-                1
-                for x, y in zip(repeat_numbers1, repeat_numbers2)
-                if x != y
-                and x != MLVA_NO_LOCUS_REPEAT_NUMBER
-                and y != MLVA_NO_LOCUS_REPEAT_NUMBER
-            )
-        )
+        return float(sum(1 for x, y in zip(repeat_numbers1, repeat_numbers2) if x != y))
     else:
-        return 0.0
+        raise NotImplementedError(
+            f"Distance calculation not implemented for {profile_model_class.__name__}"
+        )
 
 
 def seq_service_calculate_seq_distances_for_new_profiles(
@@ -100,9 +87,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
         )
 
     # Define profile types with their model classes and matching attributes
-    profile_types: list[
+    profile_data: list[
         tuple[
-            str,
+            type,
             Sequence[
                 model.SnpProfile
                 | model.AlleleProfile
@@ -110,34 +97,33 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 | model.KmerProfile
             ]
             | None,
-            type,
         ]
     ] = [
-        ("snp", cmd.snp_profiles, model.SnpProfile),
-        ("allele", cmd.allele_profiles, model.AlleleProfile),
-        ("mlva", cmd.mlva_profiles, model.MlvaProfile),
-        ("kmer", cmd.kmer_profiles, model.KmerProfile),
+        (model.SnpProfile, cmd.snp_profiles),
+        (model.AlleleProfile, cmd.allele_profiles),
+        (model.MlvaProfile, cmd.mlva_profiles),
+        (model.KmerProfile, cmd.kmer_profiles),
     ]
 
     for (
-        profile_type_name,
-        new_profiles,
         profile_model_class,
-    ) in profile_types:
+        new_profiles,
+    ) in profile_data:
         if not new_profiles:
             continue
 
-        if profile_type_name == "kmer":
+        if profile_model_class == model.KmerProfile:
             raise NotImplementedError("K-mer distance calculation not implemented")
 
         for protocol in seq_distance_protocols:
             # Determine if protocol applies to this profile type
             applicable = False
-            if profile_type_name == "snp" and protocol.ref_seq_id is not None:
+            if profile_model_class == model.SnpProfile:
+                assert protocol.ref_seq_id is not None
                 if all(x.ref_seq_id == protocol.ref_seq_id for x in new_profiles):
                     applicable = True
             elif (
-                profile_type_name in ["allele", "mlva"]
+                profile_model_class in [model.AlleleProfile, model.MlvaProfile]
                 and protocol.locus_set_id is not None
             ):
                 if all(x.locus_set_id == protocol.locus_set_id for x in new_profiles):
@@ -154,6 +140,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
 
             # Retrieve existing SeqDistances (for protocol) and profiles
             with self.repository.uow() as uow:
+                # TODO: instead of reading all SeqDistances in memory first, stream through them and calculate
                 existing_seq_distances: list[model.SeqDistance] = list(
                     self.repository.iter_seq_distances(uow, protocol.id)  # type: ignore[attr-defined]
                 )
@@ -194,7 +181,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                 modified = False
                 for new_profile in new_profiles_list:
                     distance = _calculate_profile_distance(
-                        profile_type_name,
+                        profile_model_class,
                         existing_profile,
                         new_profile,
                     )
@@ -217,7 +204,7 @@ def seq_service_calculate_seq_distances_for_new_profiles(
                     n_i = new_profiles_list[i]
                     n_j = new_profiles_list[j]
                     distance = _calculate_profile_distance(
-                        profile_type_name,
+                        profile_model_class,
                         n_i,
                         n_j,
                     )

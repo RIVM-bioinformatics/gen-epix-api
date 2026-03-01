@@ -320,7 +320,7 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             sample_id=self.sample_id,
             seq_id=None,
             kmer_profile="",
-            kmer_profile_format=enum.KmerProfileFormat.KMER_PROFILE_FORMAT1,
+            kmer_profile_format=enum.KmerProfileFormat.KMER_FREQUENCY_MAP,
             kmer_profile_hash=uuid4(),
             qc_score=1.0,
             qc_result=enum.QualityControlResult.PASS,
@@ -918,7 +918,11 @@ class TestCalculateSeqDistancesBatchInvariant(BaseCalculateSeqDistanceTestCase):
 
         # Correct number of results
         self.assertEqual(len(results), 5)
-        result_ids = {x.seq_distance_profile_id for x in results if x.status == UploadStatus.CREATED}
+        result_ids = {
+            x.seq_distance_profile_id
+            for x in results
+            if x.status == UploadStatus.CREATED
+        }
         self.assertEqual(result_ids, {n1_id, n2_id, n3_id})
 
         # Build {profile_id: distances_dict} from created records

@@ -1,5 +1,21 @@
 import logging
 from pathlib import Path
+from test.seqdb.performance.calculate_seq_distances.base import (
+    DEV_REPOSITORY_CONFIG,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
+from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import (
+    generate_demo_seqdb_models,
+)
+from test.seqdb.performance.common import (
+    create_dict_repository,
+    set_service_repository,
+    write_db_to_pickle,
+)
+from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
+from test.seqdb.seqdb_test_client import SeqGenerationSettings
 from time import perf_counter
 from typing import Any
 from uuid import UUID
@@ -10,21 +26,6 @@ from gen_epix.commondb.domain.enum import AppType, UploadStatus
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.repositories.seq_dict import SeqDictRepository
-from test.seqdb.integration.sample_batch_uploader.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.seqdb.integration.sample_batch_uploader.generate_demo_seqdb_models import (
-    generate_demo_seqdb_models,
-)
-from test.seqdb.performance.seq_distance.test_seq_distance_performance import (
-    create_dict_repository,
-    write_db_to_pickle,
-)
-from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
-from test.seqdb.seqdb_test_client import SeqGenerationSettings
 
 # Set to True to regenerate demo data, False to load from existing pickle file
 CREATE_DEMO_DATA = True
@@ -51,12 +52,6 @@ def get_test_client() -> Env:
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,
     )
-
-
-def _set_service_repository(env: Env, repository: SeqDictRepository) -> None:
-    """Point the live SEQ service at the given repository."""
-    app = env.app.impl.services[enum.ServiceType.SEQ].app
-    app.impl.services[enum.ServiceType.SEQ].repository = repository
 
 
 def _build_upload_command(
@@ -111,7 +106,7 @@ class TestSampleBatchUploader:
         if CREATE_DEMO_DATA is True, create datasets of varying sizes
         else load from existing pickle file, and create repositories based on the datasets
         """
-        pickle_file = Path(__file__).parent / "test_sample_batch_uploader.pkl"
+        pickle_file = Path(__file__).parent / "test_sample_upload.pkl"
 
         # Configure root user
         user: model.User = env.retrieve_user_by_key("root1_1@org1.org")
@@ -151,7 +146,7 @@ class TestSampleBatchUploader:
     def test_sample_batch_for_upload_happy_flow(
         self, env: Env, dataset_idx: int
     ) -> None:
-        _set_service_repository(env, self.repositories[dataset_idx])
+        set_service_repository(env, self.repositories[dataset_idx])
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [

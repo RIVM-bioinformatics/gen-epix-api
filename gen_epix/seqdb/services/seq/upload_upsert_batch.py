@@ -49,6 +49,7 @@ def _update_profile_distances(
     allele_profiles: list[model.AlleleProfileForUpload] = []
     snp_profiles: list[model.SnpProfileForUpload] = []
     mlva_profiles: list[model.MlvaProfileForUpload] = []
+    kmer_profiles: list[model.KmerProfileForUpload] = []
 
     # Collect profiles with their assigned IDs from the upload result.
     # retval.samples is positionally aligned with cmd.sample_batch.samples.
@@ -74,14 +75,23 @@ def _update_profile_distances(
                 mlva_profiles.append(
                     profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
                 )
+        if sample_input.kmer_profiles and sample_result.kmer_profiles:
+            for profile, profile_result in zip(
+                sample_input.kmer_profiles, sample_result.kmer_profiles
+            ):
+                kmer_profiles.append(
+                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
+                )
 
     calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
         self.service.app.handle(
             command.CalculateSeqDistancesForNewProfilesCommand(
                 user=user,
+                # TODO: the models current being passed here are ForUpload models rather than regular models. They should be converted first.
                 allele_profiles=allele_profiles if allele_profiles else None,  # type: ignore[arg-type]
                 snp_profiles=snp_profiles if snp_profiles else None,  # type: ignore[arg-type]
                 mlva_profiles=mlva_profiles if mlva_profiles else None,  # type: ignore[arg-type]
+                kmer_profiles=kmer_profiles if kmer_profiles else None,  # type: ignore[arg-type]
             )
         )
     )

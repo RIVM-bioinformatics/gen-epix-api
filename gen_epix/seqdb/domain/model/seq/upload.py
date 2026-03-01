@@ -448,7 +448,83 @@ class MlvaProfileForUpload(MlvaProfile):
         return self
 
 
-# TODO: add KmerProfileForUpload and update SampleForUpload accordingly
+class KmerProfileForUpload(KmerProfile):
+    """
+    A k-mer profile record intended for upload. Equal to a KmerProfile, with
+    additional variables.
+    """
+
+    ENTITY: ClassVar[Entity] = Entity(persistable=False)
+    NAME: ClassVar = "KmerProfileForUpload"
+
+    sample_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the sample that the k-mer profile is associated with. If not available, the null ID is put.",
+    )
+    seq_id: UUID | None = Field(
+        default=None,
+        description="The UUID of the sequence that the k-mer profile was derived from, if available.",
+    )
+    kmer_detection_protocol_id: UUID = Field(
+        default=NULL_ID,
+        description="The UUID of the k-mer detection protocol, if available. If not available, the null ID is put. Must be present if kmer_detection_protocol_code is not present. The use of kmer_detection_protocol_id is preferred over kmer_detection_protocol_code since the latter may change.",
+    )
+    kmer_detection_protocol_code: str | None = Field(
+        default=None,
+        description="The code of the k-mer detection protocol. Must be present if kmer_detection_protocol_id is not present. The use of kmer_detection_protocol_code is meant for situations where the kmer_detection_protocol_id is not known, but the code is and/or improves human interpretation.",
+        max_length=255,
+    )
+    kmer_profile: str = Field(
+        default="",
+        description="String representation of the k-mer profile, with the format depending on kmer_profile_format. Must be present if kmer_frequency_map is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+    kmer_frequency_map: dict[str, float] | None = Field(
+        default=None,
+        description="A mapping from locus codes to repeat numbers for all detected loci, in any order and if available. Undetected loci must have None as repeat number or may be omitted. Must be present if kmer_profile is not provided: these 2 properties are different representations of the same data that can be chosen between.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Override parent validation for upload format to handle kmer_frequency_map.
+        """
+        n_representations = sum(
+            [
+                self.kmer_profile != "",
+                self.kmer_frequency_map is not None,
+            ]
+        )
+        if n_representations != 1:
+            raise ValueError(
+                "Exactly one of kmer_profile or kmer_frequency_map must be provided."
+            )
+
+        if self.kmer_profile != "":
+            # Use parent validation for kmer_profile string format
+            super()._validate_model()
+        elif self.kmer_frequency_map is not None:
+            # Set or verify kmer_profile_hash
+            computed_profile_hash = KmerProfile.get_kmer_profile_hash(
+                self.kmer_frequency_map
+            )  # Will raise ValueError if invalid
+            if self.kmer_profile_hash == NULL_ID:
+                self.kmer_profile_hash = computed_profile_hash
+            elif self.kmer_profile_hash != computed_profile_hash:
+                raise ValueError(
+                    "Provided k-mer profile hash does not match computed hash"
+                )
+
+        # Upload-specific validation
+        if (
+            not self.kmer_detection_protocol_code
+            and self.kmer_detection_protocol_id == NULL_ID
+        ):
+            raise ValueError(
+                "Either kmer_detection_protocol_code or kmer_detection_protocol_id must be provided."
+            )
+        return self
+
+
 # TODO: add PcrMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add AstMeasurementForUpload and update SampleForUpload accordingly
 # TODO: add SeqTaxonomyForUpload and update SampleForUpload accordingly
@@ -476,7 +552,7 @@ class SampleForUpload(ParentForUpload):
         AlleleProfile: AlleleProfileForUpload,
         SnpProfile: SnpProfileForUpload,
         MlvaProfile: MlvaProfileForUpload,
-        KmerProfile: KmerProfile,
+        KmerProfile: KmerProfileForUpload,
         PcrMeasurement: PcrMeasurement,
         AstMeasurement: AstMeasurement,
     }
@@ -536,7 +612,7 @@ class SampleForUpload(ParentForUpload):
         default=None,
         description="The MLVA profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
-    kmer_profiles: list[KmerProfile] | None = Field(
+    kmer_profiles: list[KmerProfileForUpload] | None = Field(
         default=None,
         description="The k-mer profiles associated with the sample. If None, this element is not taken into consideration during the upload.",
     )
