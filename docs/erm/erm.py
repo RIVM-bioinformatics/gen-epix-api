@@ -1,78 +1,41 @@
-import json
-import os
-import warnings
+"""
+Abstract base class for ERM diagram generators.
+
+Subclasses implement ``generate_erm_diagrams`` to produce diagrams in a
+specific format (Graphviz PNG, Mermaid Markdown, etc.).
+"""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
 from pathlib import Path
 
-# erdantic is used for generating ER diagrams but not added to dev-requirements.txt due to its dependency on pygraphviz which is hard to install on some systems
-# install erdantic manually if you need to regenerate the ER diagrams
-import erdantic as erd
-
-from docs.erm.erm_hash import DOMAINS, generate_hash_for_domain_models
+from docs.erm.erm_hash import DOMAINS
+from gen_epix.commondb.domain import DOMAIN as COMMONDB_DOMAIN
 from gen_epix.fastapp import Domain
 
-# Disable Graphviz Pango plugin warnings on Windows
-# This prevents "Could not load gvplugin_pango.dll" warnings
-os.environ.setdefault("GRAPHVIZ_DOT", "-Gfontname=Arial")
+ALL_DOMAINS: list[Domain] = [*DOMAINS, COMMONDB_DOMAIN]
 
 
-def generate_erm_diagrams(dir: Path) -> None:
+class ErmGenerator(ABC):
     """
-    Generates Entity-Relationship Model (ERM) diagrams for all domains and their services,
+    Base class for Entity-Relationship Model diagram generators.
+
+    Parameters
+    ----------
+    domains
+        The domains to generate diagrams for.  Defaults to *all* domains
+        (casedb, omopdb, seqdb, commondb).
     """
 
-    # Suppress Graphviz/Pango warnings that are common on Windows
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", category=RuntimeWarning, module="pygraphviz.*"
-        )
+    def __init__(self, domains: list[Domain] | None = None) -> None:
+        self._domains = domains if domains is not None else list(ALL_DOMAINS)
 
-        # Create directory if it does not exist
-        if not Path(dir).is_dir():
-            Path.mkdir(dir)
+    @property
+    def domains(self) -> list[Domain]:
+        return self._domains
 
-        # Generate ERM diagrams for each domain and its services
-        for domain in DOMAINS:
-            generate_erm_diagrams_for_domain(domain, dir)
-            generate_erm_diagrams_for_service(domain, dir)
-
-        # Generate and save hash for all model classes across domains
-        all_classes_hash = generate_hash_for_domain_models(DOMAINS, dir)
-        with open(dir / "erm.json", "wt") as handle:
-            json.dump({"models_hash": all_classes_hash}, handle)
-
-
-def generate_erm_diagrams_for_domain(domain: Domain, dir: Path) -> None:
-    """
-    Generates and saves an Entity-Relationship Model (ERM) diagram for the entire domain.
-    """
-    # Suppress Graphviz/Pango warnings
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", category=RuntimeWarning, module="pygraphviz.*"
-        )
-
-        sorted_model_classes = domain.get_dag_sorted_models(persistable=True)
-        erd.draw(
-            *sorted_model_classes,
-            out=dir / f"{domain.name.lower()}.png",
-            limit_search_models_to=[x.__name__ for x in sorted_model_classes],
-        )
-
-
-def generate_erm_diagrams_for_service(domain: Domain, dir: Path) -> None:
-    """
-    Generates and saves Entity-Relationship Model (ERM) diagrams for each service type within the domain.
-    """
-    # Suppress Graphviz/Pango warnings
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", category=RuntimeWarning, module="pygraphviz.*"
-        )
-
-        for service_type in domain.get_service_types():
-            model_classes = domain.get_models_for_service_type(service_type)
-            erd.draw(
-                *model_classes,
-                out=dir / f"{domain.name.lower()}.{service_type.value.lower()}.png",
-                limit_search_models_to=[x.__name__ for x in model_classes],
-            )
+    @abstractmethod
+    def generate_erm_diagrams(self, dir: Path) -> None:
+        """Generate ERM diagrams and write them into *dir*."""
+        ...

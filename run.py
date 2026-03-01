@@ -883,10 +883,12 @@ class Run:
         user_journey.to_pickle(out_user_journey_file)
 
     def other_general_generate_erm_diagrams(self) -> None:
-        from docs.erm.erm import generate_erm_diagrams
+        from docs.erm.erm_graphviz import GraphvizErmGenerator
+        from docs.erm.erm_mermaid import MermaidErmGenerator
 
         out_dir = Path(__file__).parent / "docs" / "erm"
-        generate_erm_diagrams(out_dir)
+        GraphvizErmGenerator().generate_erm_diagrams(out_dir)
+        MermaidErmGenerator().generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
 
