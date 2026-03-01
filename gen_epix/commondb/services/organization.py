@@ -68,7 +68,6 @@ class OrganizationService(BaseOrganizationService):
                 raise exc.UnauthorizedAuthError(
                     f"Root user may not delete {'self' if is_delete_user else 'own organization'}"
                 )
-            pass
 
         retval = super().crud(cmd)
         # Invalidate cache
@@ -307,65 +306,47 @@ class OrganizationService(BaseOrganizationService):
         self.retrieve_user_by_key.cache_clear()  # type: ignore[attr-defined]
         return updated_tgt_user
 
-    def retrieve_organization_contact(
+    def retrieve_organization_contacts(
         self,
-        cmd: command.RetrieveOrganizationContactCommand,
-    ) -> list[model.Contact]:
+        cmd: command.RetrieveOrganizationContactsCommand,
+    ) -> model.OrganizationContacts:
         user, repository = self._get_user_and_repository(cmd)
 
         sites: list[model.Site]
         contacts: list[model.Contact]
         with repository.uow() as uow:
-            if cmd.organization_ids:
-                sites = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Site,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                )
-                contacts = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Contact,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                )
-                organization_ids = set(cmd.organization_ids)
-                sites = [x for x in sites if x.organization_id in organization_ids]
-                site_ids = {x.id for x in sites}
-                contacts = [x for x in contacts if x.site_id in site_ids]
-            elif cmd.site_ids:
-                sites = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Site,
-                    None,
-                    cmd.site_ids,
-                    CrudOperation.READ_SOME,
-                )
-                contacts = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Contact,
-                    None,
-                    None,
-                    CrudOperation.READ_ALL,
-                )
-                site_ids = {x.id for x in sites}
-                contacts = [x for x in contacts if x.site_id in site_ids]
-            elif cmd.contact_ids:
-                contacts = repository.crud(  # type: ignore[assignment]
-                    uow,
-                    user.id,
-                    model.Contact,
-                    None,
-                    cmd.contact_ids,
-                    CrudOperation.READ_SOME,
-                )
-            else:
-                raise AssertionError
+            organization: model.Organization = repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Organization,
+                None,
+                cmd.organization_id,
+                CrudOperation.READ_ONE,
+            )
 
-        return contacts
+            sites = repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Site,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+            )
+            contacts = repository.crud(  # type: ignore[assignment]
+                uow,
+                user.id,
+                model.Contact,
+                None,
+                None,
+                CrudOperation.READ_ALL,
+            )
+            organization_id = cmd.organization_id
+            sites = [x for x in sites if x.organization_id == organization_id]
+            site_ids = {x.id for x in sites}
+            contacts = [x for x in contacts if x.site_id in site_ids]
+
+        return model.OrganizationContacts(
+            organization=organization,
+            sites=sites,
+            contacts=contacts,
+        )

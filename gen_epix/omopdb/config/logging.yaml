@@ -1,35 +1,76 @@
 version: 1
 disable_existing_loggers: false
+
 formatters:
-  simple:
-    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+  json:
+    "()": gen_epix.commondb.domain.json_logging.JsonFormatter
+    # optional: set explicit service/env; if omitted it reads SERVICE_NAME / ENVIRONMENT env vars
+    service: "omopdb"
+    merge_message_json: true
+    extras_key: "props"
+
+filters:
+  uvicorn_access_structured:
+    (): gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter
+
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
-    formatter: simple
+    # keep a fixed level; cfg.py set_log_level() will raise/lower levels at runtime anyway
+    level: INFO
+    formatter: json
     stream: ext://sys.stdout
+
 loggers:
-  omopdb.setup:
+  opomdb.setup:
     level: INFO
     handlers: [console]
-    propagate: no
-  omopdb.service:
+    propagate: false
+  opomdb.service:
     level: INFO
     handlers: [console]
-    propagate: no
-  omopdb.app:
+    propagate: false
+  opomdb.app:
     level: INFO
     handlers: [console]
-    propagate: no
-  omopdb.api:
+    propagate: false
+  opomdb.api:
     level: INFO
     handlers: [console]
-    propagate: no
-  omopdb.external:
+    propagate: false
+  opomdb.external:
     level: INFO
     handlers: [console]
-    propagate: no
+    propagate: false
+  uvicorn.error:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  uvicorn.access:
+    level: INFO
+    handlers: [console]
+    filters: [uvicorn_access_structured]
+    propagate: false
+  # Levels scale DEBUG(10) < INFO(20) < WARNING(30) < ERROR(40); each logger emits at its configured level and above.
+  # sqlalchemy.engine/pool → WARNING: INFO emits full SQL text on every query (verbose, PII risk, Monitoring Platform noise).
+  # httpx → INFO: redirects and auth events arrive at INFO and are operationally relevant; asyncio → WARNING: its INFO is pure event-loop infra.
+  sqlalchemy.engine:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  sqlalchemy.pool:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+  httpx:
+    level: INFO
+    handlers: [console]
+    propagate: false
+  asyncio:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
 root:
   level: INFO
   handlers: [console]
