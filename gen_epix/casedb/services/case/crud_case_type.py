@@ -29,8 +29,15 @@ def case_service_crud_case_type(
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
         if is_metadata_admin_or_above(self, cmd.user):
-            return _crud_case_type_without_abac(self, uow, cmd)
-        return _crud_case_type_with_abac(self, uow, cmd)
+            result = _crud_case_type_without_abac(self, uow, cmd)
+        else:
+            result = _crud_case_type_with_abac(self, uow, cmd)
+
+    if cmd.operation not in CrudOperationSet.READ_OR_EXISTS.value:
+        # Clear retrieve_complete_case_type cache as data has changed, to prevent stale data in subsequent calls
+        self._RETRIEVE_COMPLETE_CASE_TYPE_CACHE.clear()  # type: ignore[attr-defined]
+
+    return result
 
 
 def _crud_case_type_without_abac(

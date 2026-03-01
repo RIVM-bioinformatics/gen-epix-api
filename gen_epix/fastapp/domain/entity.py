@@ -326,7 +326,7 @@ class Entity(BaseModel):
             if not field_type or x["type"] == field_type
         ]
 
-    def get_id_field_name(self, by_alias: bool = True) -> str | None:
+    def get_id_field_name(self, by_alias: bool = True) -> str:
         """
         Get the ID field name of the entity.
 
@@ -623,10 +623,10 @@ class Entity(BaseModel):
                 f"Link field name {link.link_field_name} to {link.link_model_class} "
                 f"for model {model_class.__name__} is not a valid field name"
             )
-        if link.link_field_name == self.id_field_name:
-            raise ValueError(
-                f"Link field name is identical to id field name: {link.link_field_name}"
-            )
+        # if link.link_field_name == self.id_field_name:
+        #     raise ValueError(
+        #         f"Link field name is identical to id field name: {link.link_field_name}"
+        #     )
         if link.link_field_name in link_field_names:
             raise ValueError(
                 f"Link field name {link.link_field_name}"

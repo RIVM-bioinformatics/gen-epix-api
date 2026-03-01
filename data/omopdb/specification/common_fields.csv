@@ -1,3 +1,0 @@
-﻿trigger,field_name,bbDatatype
-provenance,provenance_id,uuid
-source_traceback,source_traceback,varchar(max)

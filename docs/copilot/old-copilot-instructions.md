@@ -4,7 +4,7 @@ Gen-EpiX is a **multi-service genomic epidemiology platform** with strict access
 
 ## Architecture Overview
 
-**Four Independent Services**: `casedb`, `seqdb`, `omopdb`, `commondb` - each runs as a separate FastAPI app on different ports with its own database, auth, and domain logic.
+**Four Independent Services**: `casedb`, `seqdb`, `omopdb`, `commondb` - each runs as a separate FastAPI app on different ports with its own database, auth, and domain logic. The `commondb` service provides shared models and auth infrastructure and is not meant for production.
 
 **Hexagonal Architecture**: Each service follows strict layering:
 - `domain/` - Pure business logic (models, commands, policies)  

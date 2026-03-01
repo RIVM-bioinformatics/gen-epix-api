@@ -25,8 +25,8 @@ class BaseOrganizationService(BaseService):
         ):
             f(command_class, self.update_association)
         f(
-            command.RetrieveOrganizationContactCommand,
-            self.retrieve_organization_contact,
+            command.RetrieveOrganizationContactsCommand,
+            self.retrieve_organization_contacts,
         )
         f(command.InviteUserCommand, self.invite_user)
         f(
@@ -37,10 +37,10 @@ class BaseOrganizationService(BaseService):
         f(command.UpdateUserCommand, self.update_user)
 
     @abc.abstractmethod
-    def retrieve_organization_contact(
+    def retrieve_organization_contacts(
         self,
-        cmd: command.RetrieveOrganizationContactCommand,
-    ) -> list[model.Contact]:
+        cmd: command.RetrieveOrganizationContactsCommand,
+    ) -> model.OrganizationContacts:
         raise NotImplementedError()
 
     @abc.abstractmethod

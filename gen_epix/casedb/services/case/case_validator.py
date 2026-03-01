@@ -9,13 +9,22 @@ from gen_epix.casedb.domain.enum import (
     ColType,
     ColTypeSet,
     ConceptRelationType,
-    DataIssueType,
     RegionRelationType,
 )
 from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
     case_service_get_case_date_case_type_col_mappers_from_cols,
+)
+from gen_epix.commondb.domain.enum import DataIssueType
+from gen_epix.commondb.domain.literal import (
+    DECIMAL_PATTERN,
+    ISODATE_PATTERN,
+    TIME_DAY_PATTERN,
+    TIME_MONTH_PATTERN,
+    TIME_QUARTER_PATTERN,
+    TIME_WEEK_PATTERN,
+    TIME_YEAR_PATTERN,
 )
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
@@ -40,52 +49,21 @@ class CaseValidator:
         ColType.DECIMAL_6: 6,
     }
 
-    FLOAT_PATTERN = re.compile(
-        r"^[+-]?("
-        r"(?:\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?"  # normal floats + scientific notation
-        r"|inf(?:inity)?"  # inf / infinity
-        r"|nan"  # nan
-        r")$",
-        re.IGNORECASE,
-    )
-
-    DECIMAL_PATTERN = re.compile(r"^[+-]?([0-9]*[.,])?[0-9]+$")
-
-    TIME_YEAR_PATTERN = re.compile(r"^\d{4}$")
-    TIME_QUARTER_PATTERN = re.compile(r"^\d{4}-Q[1-4]$")
-    TIME_MONTH_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-    TIME_WEEK_PATTERN = re.compile(r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$")
-    TIME_DAY_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
-    # !TODO: consider full and partial ISO 8601 pattern
-    ISODATE_PATTERN = re.compile(
-        r"^"
-        r"\d{4}"  # YYYY (year only)
-        r"|"
-        r"\d{4}-(0[1-9]|1[0-2])"  # YYYY-MM (year + month only)
-        r"|"
-        r"\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])"  # YYYY-MM-DD
-        r"|"
-        r"\d{4}-Q[1-4]"  # YYYY-QN (quarter)
-        r"|"
-        r"\d{4}-W(0[1-9]|[1-4]\d|5[0-3])"  # YYYY-WNN (week)
-        r"$"
-    )
-
     TIME_MATCHERS = {
         ColType.TIME_YEAR: lambda x: (
-            x if x is None or CaseValidator.TIME_YEAR_PATTERN.match(x) else NoReturn
+            x if x is None or TIME_YEAR_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_QUARTER: lambda x: (
-            x if x is None or CaseValidator.TIME_QUARTER_PATTERN.match(x) else NoReturn
+            x if x is None or TIME_QUARTER_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_MONTH: lambda x: (
-            x if x is None or CaseValidator.TIME_MONTH_PATTERN.match(x) else NoReturn
+            x if x is None or TIME_MONTH_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_WEEK: lambda x: (
-            x if x is None or CaseValidator.TIME_WEEK_PATTERN.match(x) else NoReturn
+            x if x is None or TIME_WEEK_PATTERN.match(x) else NoReturn
         ),
         ColType.TIME_DAY: lambda x: (
-            x if x is None or CaseValidator.TIME_DAY_PATTERN.match(x) else NoReturn
+            x if x is None or TIME_DAY_PATTERN.match(x) else NoReturn
         ),
     }
 
@@ -101,7 +79,7 @@ class CaseValidator:
     def _transform_decimal(value: str | None, n_decimals: int) -> str | None | NoReturn:
         if value is None:
             return None
-        if CaseValidator.DECIMAL_PATTERN.match(value) is None:
+        if DECIMAL_PATTERN.match(value) is None:
             return NoReturn
         try:
             num_value = round(Decimal(value), n_decimals)
@@ -176,8 +154,8 @@ class CaseValidator:
         list[list[model.CaseDataIssue] | None],
     ]:
         """
-        Get references to contents, updated_contents and data_issues_list for all
-        cases, as a convenience for easily updating these in-place.
+        Get references to contents, updated_contents and data_issues for all cases,
+        as a convenience for easily updating these in-place.
         """
         if cmd.case_type_id != self.complete_case_type.id:
             raise ValueError("Cases are not for the correct case type")
@@ -415,7 +393,7 @@ class CaseValidator:
                 iso_datetime_value: str | None = updated_content.get(case_type_col_id)
                 if iso_datetime_value is None:
                     continue
-                if not re.match(self.ISODATE_PATTERN, iso_datetime_value):
+                if not re.match(ISODATE_PATTERN, iso_datetime_value):
                     raise AssertionError(
                         f"Unexpected non-ISO datetime value {iso_datetime_value} for case date calculation"
                     )
