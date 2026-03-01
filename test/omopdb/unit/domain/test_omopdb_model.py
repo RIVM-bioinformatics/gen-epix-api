@@ -1,5 +1,6 @@
 import json
 from datetime import date, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -7,7 +8,6 @@ import pytest
 # Import the Pydantic models from omop.py
 from gen_epix.omopdb.domain.model.omop import (
     Location,
-    LocationHistory,
     Measurement,
     Observation,
     Person,
@@ -18,7 +18,7 @@ from gen_epix.omopdb.domain.model.omop import (
 # use an encoder to ensure consistent datetime format with pydantic (use ISO 8601 format, i.e. with 'T' separator)
 # and then take care of some other types as well
 class Encoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: object) -> str:
         if isinstance(obj, (datetime, date)):
             return obj.isoformat()
         if isinstance(obj, UUID):
@@ -27,7 +27,7 @@ class Encoder(json.JSONEncoder):
 
 
 @pytest.fixture
-def common_data():
+def common_data() -> dict[str, Any]:
     person_id = uuid4()
     provider_id = uuid4()
     location_id = uuid4()
@@ -46,7 +46,7 @@ def common_data():
 
 
 @pytest.fixture
-def person_data(common_data):
+def person_data(common_data: dict[str, Any]) -> dict[str, Any]:
     return {
         "person_id": common_data["person_id"],
         "gender_concept_id": 8507,
@@ -74,7 +74,9 @@ def person_data(common_data):
 
 
 @pytest.fixture
-def observation_data(common_data, person_data):
+def observation_data(
+    common_data: dict[str, Any], person_data: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "observation_id": uuid4(),
         "person_id": person_data["person_id"],
@@ -105,7 +107,7 @@ def observation_data(common_data, person_data):
 
 
 @pytest.fixture
-def location_data(common_data):
+def location_data(common_data: dict[str, Any]) -> dict[str, Any]:
     return {
         "location_id": common_data["location_id"],
         "address_1": "123 Main St",
@@ -121,23 +123,9 @@ def location_data(common_data):
 
 
 @pytest.fixture
-def location_history_data(common_data, person_data, location_data):
-    return {
-        "location_history_id": uuid4(),
-        "entity_id": person_data["person_id"],  # in this case, the entity is a person
-        "domain_id": "person",
-        "location_id": location_data["location_id"],
-        "relationship_type_concept_id": 44818987,
-        "start_date": date(2023, 1, 1),
-        "start_iso_interval": "2023-01-01/2023-01-01",
-        "end_iso_interval": None,
-        "provenance_id": common_data["provenance_id"],
-        "source_traceback": common_data["source_traceback"],
-    }
-
-
-@pytest.fixture
-def measurement_data(common_data, person_data):
+def measurement_data(
+    common_data: dict[str, Any], person_data: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "measurement_id": uuid4(),
         "person_id": person_data["person_id"],
@@ -163,7 +151,9 @@ def measurement_data(common_data, person_data):
 
 
 @pytest.fixture
-def specimen_data(common_data, person_data):
+def specimen_data(
+    common_data: dict[str, Any], person_data: dict[str, Any]
+) -> dict[str, Any]:
     return {
         "specimen_id": uuid4(),
         "person_id": person_data["person_id"],
@@ -190,17 +180,15 @@ def specimen_data(common_data, person_data):
 @pytest.mark.skip(reason="Skipping creation test for now")
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 def test_create_instances(
-    person_data,
-    observation_data,
-    location_data,
-    location_history_data,
-    measurement_data,
-    specimen_data,
-):
+    person_data: dict[str, Any],
+    observation_data: dict[str, Any],
+    location_data: dict[str, Any],
+    measurement_data: dict[str, Any],
+    specimen_data: dict[str, Any],
+) -> None:
     person = Person(**person_data)
     observation = Observation(**observation_data)
     location = Location(**location_data)
-    location_history = LocationHistory(**location_history_data)
     measurement = Measurement(**measurement_data)
     specimen = Specimen(**specimen_data)
 
@@ -208,17 +196,15 @@ def test_create_instances(
 @pytest.mark.skip(reason="Skipping serialization test for now")
 @pytest.mark.scenario_ids("TC-SEC-31-02")
 def test_serialize_instances(
-    person_data,
-    observation_data,
-    location_data,
-    location_history_data,
-    measurement_data,
-    specimen_data,
-):
+    person_data: dict[str, Any],
+    observation_data: dict[str, Any],
+    location_data: dict[str, Any],
+    measurement_data: dict[str, Any],
+    specimen_data: dict[str, Any],
+) -> None:
     person = Person(**person_data)
     observation = Observation(**observation_data)
     location = Location(**location_data)
-    location_history = LocationHistory(**location_history_data)
     measurement = Measurement(**measurement_data)
     specimen = Specimen(**specimen_data)
 
@@ -230,9 +216,6 @@ def test_serialize_instances(
         observation.model_dump(**model_dump_args), **dumps_args
     )
     location_json = json.dumps(location.model_dump(**model_dump_args), **dumps_args)
-    location_history_json = json.dumps(
-        location_history.model_dump(**model_dump_args), **dumps_args
-    )
     measurement_json = json.dumps(
         measurement.model_dump(**model_dump_args), **dumps_args
     )
@@ -242,7 +225,6 @@ def test_serialize_instances(
     expected_person_json = json.dumps(person_data, **dumps_args)
     expected_observation_json = json.dumps(observation_data, **dumps_args)
     expected_location_json = json.dumps(location_data, **dumps_args)
-    expected_location_history_json = json.dumps(location_history_data, **dumps_args)
     expected_measurement_json = json.dumps(measurement_data, **dumps_args)
     expected_specimen_json = json.dumps(specimen_data, **dumps_args)
 
@@ -250,6 +232,5 @@ def test_serialize_instances(
     assert person_json == expected_person_json
     assert observation_json == expected_observation_json
     assert location_json == expected_location_json
-    assert location_history_json == expected_location_history_json
     assert measurement_json == expected_measurement_json
     assert specimen_json == expected_specimen_json

@@ -44,5 +44,27 @@ If a proposed change violates these, explicitly explain why.
 3) Patch (only if requested): minimal diff-style snippet + where it goes
 4) Risks / assumptions (anything uncertain, stale, or not verified)
 
+**Code requirements:**
+- Follow existing code style and patterns from the codebase (naming, structure, imports).
+- Ensure all changes comply with architectural boundaries (api/domain/services/repositories layers).
+- Minimize dependencies and avoid circular imports.
+- Validate that changes maintain backward compatibility unless explicitly breaking.
+- There should be no linter issues (ruff/flake8 compliant).
+- Use type hints and docstrings for clarity.
+- For Python code, follow PEP 8 conventions and use the project's linting/formatting tools.
+- Use the full class name in lower snake case for variable names. Exception: use x, y, z as loop variable names inside comprehensions.
+
+**Testing requirements:**
+- Build up your own logical view of how the functionality that is to be tested should work, rather than merely producing tests that pass on the current codebase.
+- If you find discrepancies between the code and your logical view, explicitly call them out and propose whether to update code or docs.
+- For any behavioral changes, propose test cases that cover the modified logic in both DICT and SQL backends.
+- Include unit tests for commands, integration tests for routes, and repository tests for data access layer changes.
+- Cite existing test files as patterns (e.g., file paths + test function names) to ensure consistency with the codebase style.
+- Verify that tests pass in all security modes (IDPS, MOCK, NONE) if authentication/authorization is affected.
+- Do not propose tests that require external services; use mocks or fixtures aligned with repository practices.
+- Use pytest for tests. Use pytest parametrization where appropriate e.g. to test multiple batch sizes, test different valid data variations.
+- Avoid code duplication by creating reusable helper methods inside the test module and reusing fixtures where possible.
+- Avoid hard coding module paths in tests as strings for e.g. the patch function.
+
 **Task:**
 [PASTE TASK HERE]

@@ -388,19 +388,19 @@ class TestRead:
         )  # type: ignore[assignment]
 
         sites_by_id: dict[UUID, model.Site] = {x.id: x for x in all_sites if x.id}
-        contacts_ids_by_org: dict[UUID, set[UUID]] = {}
+        contact_ids_by_org: dict[UUID, set[UUID]] = {}
         site_ids_by_org: dict[UUID, set[UUID]] = {}
         for x in all_contacts:
             site = sites_by_id.get(x.site_id)
             if not site:
                 continue
-            contacts_ids_by_org.setdefault(site.organization_id, set()).add(x.id)
+            contact_ids_by_org.setdefault(site.organization_id, set()).add(x.id)
 
         for x in all_sites:
             site_ids_by_org.setdefault(x.organization_id, set()).add(x.id)
 
-        selected_org_id: UUID = list(contacts_ids_by_org.keys())[0]
-        expected_contact_ids: set[UUID] = contacts_ids_by_org[selected_org_id]
+        selected_org_id: UUID = list(contact_ids_by_org.keys())[0]
+        expected_contact_ids: set[UUID] = contact_ids_by_org[selected_org_id]
         expected_site_ids: set[UUID] = site_ids_by_org[selected_org_id]
 
         result: OrganizationContacts = env.app.handle(

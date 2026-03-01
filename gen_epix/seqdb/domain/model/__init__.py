@@ -97,6 +97,7 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.domain.model.seq import SampleDataIssue as SampleDataIssue
 from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
