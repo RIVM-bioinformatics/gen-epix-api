@@ -24,6 +24,9 @@ from gen_epix.commondb.domain.model.organization import (
 )
 from gen_epix.commondb.domain.model.organization import Organization as Organization
 from gen_epix.commondb.domain.model.organization import (
+    OrganizationContacts as OrganizationContacts,
+)
+from gen_epix.commondb.domain.model.organization import (
     OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
 )
 from gen_epix.commondb.domain.model.organization import (
@@ -47,12 +50,19 @@ from gen_epix.commondb.domain.model.upload import (
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult as BaseBatchUploadResult,
 )
+from gen_epix.commondb.domain.model.upload import DataIssue as DataIssue
+from gen_epix.commondb.domain.model.upload import (
+    ExternalIdentifiersMixin as ExternalIdentifiersMixin,
+)
 from gen_epix.commondb.domain.model.upload import IsNewIdMixin as IsNewIdMixin
 from gen_epix.commondb.domain.model.upload import ParentForUpload as ParentForUpload
 from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult as ParentUploadResult,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
+from gen_epix.commondb.domain.model.upload import (
+    UploadResultWithExternalIdentifiers as UploadResultWithExternalIdentifiers,
+)
 from gen_epix.commondb.domain.util import (
     complete_stored_model_field_props as complete_stored_model_field_props,
 )
@@ -90,5 +100,13 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}

@@ -1,7 +1,7 @@
-from typing import Any, ClassVar
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 import gen_epix.commondb.domain.model.organization as model
 from gen_epix.commondb.domain.command.base import (
@@ -92,7 +92,7 @@ class RegisterInvitedUserCommand(Command):
     token: str = copy_model_field(model.UserInvitation, "token")
 
 
-class RetrieveOrganizationContactCommand(Command):
+class RetrieveOrganizationContactsCommand(Command):
     """
     Retrieves {contact}s associated with organizations, sites, or specific contacts.
 
@@ -103,33 +103,9 @@ class RetrieveOrganizationContactCommand(Command):
 
     __doc__ = str(__doc__).format(contact=model.Contact.__name__)
 
-    organization_ids: list[UUID] | None = Field(
-        default=None, description="List of organization IDs to retrieve contacts for"
+    organization_id: UUID = Field(
+        description="The ID of the organization to retrieve contacts for"
     )
-    site_ids: list[UUID] | None = Field(
-        default=None, description="List of site IDs to retrieve contacts for"
-    )
-    contact_ids: list[UUID] | None = Field(
-        default=None, description="List of contact IDs to retrieve contacts for"
-    )
-
-    @model_validator(mode="after")
-    def check_one_of_fields(self) -> Any:
-        if (
-            sum(
-                [
-                    self.organization_ids is not None,
-                    self.site_ids is not None,
-                    self.contact_ids is not None,
-                ]
-            )
-            != 1
-        ):
-            raise ValueError(
-                "Exactly one of organization_ids, site_ids or contact_ids must be "
-                "provided"
-            )
-        return self
 
 
 class UpdateUserCommand(Command):

@@ -1,3 +1,5 @@
+import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -87,6 +89,7 @@ class Run:
         dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
         # Set environment variables
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
+        logging_file: str = os.environ[f"{app_type_enum.value.upper()}_LOG_CONFIG_FILE"]
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
         ssl_keyfile = (
@@ -104,6 +107,7 @@ class Run:
             reload=True,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
+            log_config=logging_file,
         )
 
     def api_platform_local_mock_dict_demo(self) -> None:
@@ -187,16 +191,34 @@ class Run:
         ]
 
         subprocess.run(
-            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "run",
+                "--source=gen_epix",
+                "-m",
+                "pytest",
+            ]
+            + pytest_args,
             check=False,
         )
         # Generate HTML report
         subprocess.run(
-            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "html",
+                "-d",
+                "test/output/coverage.html",
+            ],
+            check=True,
         )
         # Generate XML report
         subprocess.run(
-            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
+            [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
+            check=True,
         )
 
     def test_all_incl_performance(self) -> None:
@@ -650,6 +672,26 @@ class Run:
             Run.DEFAULT_PYTEST_ARGS
             + [
                 "test/omopdb/unit/",
+            ]
+        )
+
+    def test_omopdb_unit_domain(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/domain",
+            ]
+        )
+
+    def test_omopdb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/upload",
             ]
         )
 

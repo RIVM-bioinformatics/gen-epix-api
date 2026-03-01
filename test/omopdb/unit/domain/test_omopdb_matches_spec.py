@@ -14,53 +14,46 @@ WRITE_MODELS: bool = (
 )
 
 TABLE_METADATA_FILE = (
-    Path(__file__).parent.parent.parent.parent
+    Path(__file__).parent.parent.parent.parent.parent
     / "data"
     / "omopdb"
     / "specification"
-    / "OMOP_CDMv6.0_Table_Level.csv"
+    / "tables.csv"
 )
 
 FIELD_METADATA_FILE = (
-    Path(__file__).parent.parent.parent.parent
+    Path(__file__).parent.parent.parent.parent.parent
     / "data"
     / "omopdb"
     / "specification"
-    / "OMOP_CDMv6.0_Field_Level.csv"
+    / "fields.csv"
 )
 
 MODEL_BY_TABLE: dict[str, type[model.Model]] = {
     # Ordered topologically based on foreign key dependencies
-    # Foundation tables (no dependencies)
-    "location": model.Location,
-    "cohort_definition": model.CohortDefinition,
-    "cohort": model.Cohort,
-    "cdm_source": model.CdmSource,
-    # Vocabulary system (circular dependencies resolved logically)
+    # Ontology
     "vocabulary": model.Vocabulary,
     "domain": model.Domain,
     "concept_class": model.ConceptClass,
     "concept": model.Concept,
     "relationship": model.Relationship,
-    # Concept relationships (depend on concept and relationship)
     "concept_relationship": model.ConceptRelationship,
     "concept_ancestor": model.ConceptAncestor,
     "concept_synonym": model.ConceptSynonym,
-    # Reference/mapping tables
-    "drug_strength": model.DrugStrength,
     "source_to_concept_map": model.SourceToConceptMap,
-    "metadata": model.Metadata,
-    # Care infrastructure
+    "drug_strength": model.DrugStrength,
+    # Health system
+    "location": model.Location,
     "care_site": model.CareSite,
     "provider": model.Provider,
-    # Person and observations
+    # Metadata
+    "cdm_source": model.CdmSource,
+    "metadata": model.Metadata,
+    # Clinical data
     "person": model.Person,
     "observation_period": model.ObservationPeriod,
-    "payer_plan_period": model.PayerPlanPeriod,
-    # Visits (depend on person, care_site, provider, concept)
     "visit_occurrence": model.VisitOccurrence,
     "visit_detail": model.VisitDetail,
-    # Clinical events (depend on person, visits, providers, concepts)
     "condition_occurrence": model.ConditionOccurrence,
     "procedure_occurrence": model.ProcedureOccurrence,
     "drug_exposure": model.DrugExposure,
@@ -69,17 +62,21 @@ MODEL_BY_TABLE: dict[str, type[model.Model]] = {
     "observation": model.Observation,
     "specimen": model.Specimen,
     "note": model.Note,
-    # Other tables depending at least on person
+    "note_nlp": model.NoteNlp,
+    "fact_relationship": model.FactRelationship,
+    "death": model.Death,
+    "measurement_relation": model.MeasurementRelation,
+    # Health economics
+    "payer_plan_period": model.PayerPlanPeriod,
+    "cost": model.Cost,
+    # Derived
     "condition_era": model.ConditionEra,
     "drug_era": model.DrugEra,
     "dose_era": model.DoseEra,
-    "note_nlp": model.NoteNlp,
-    "cost": model.Cost,
-    "location_history": model.LocationHistory,
-    "survey_conduct": model.SurveyConduct,
-    # General relationships
-    "fact_relationship": model.FactRelationship,
-    "measurement_relation": model.MeasurementRelation,
+    "cohort_definition": model.CohortDefinition,
+    "cohort": model.Cohort,
+    "episode": model.Episode,
+    "episode_event": model.EpisodeEvent,
 }
 
 DATA_LINEAGE_TABLES = {
@@ -99,14 +96,15 @@ DATA_LINEAGE_TABLES = {
     "observation",
     "specimen",
     "note",
+    "death",
     # Other tables depending at least on person
     "condition_era",
     "drug_era",
     "dose_era",
     "note_nlp",
     "cost",
-    "location_history",
-    "survey_conduct",
+    "episode",
+    "episode_event",
 }
 
 OMOP_DATATYPE_STR_MAP = {
@@ -117,6 +115,7 @@ OMOP_DATATYPE_STR_MAP = {
     "integer": ("int", ""),
     "varchar(1)": ("str", ", max_length=1"),
     "varchar(2)": ("str", ", max_length=2"),
+    "varchar(3)": ("str", ", max_length=3"),
     "varchar(9)": ("str", ", max_length=9"),
     "varchar(10)": ("str", ", max_length=10"),
     "varchar(20)": ("str", ", max_length=20"),
@@ -124,6 +123,7 @@ OMOP_DATATYPE_STR_MAP = {
     "varchar(50)": ("str", ", max_length=50"),
     "varchar(55)": ("str", ", max_length=55"),
     "varchar(60)": ("str", ", max_length=60"),
+    "varchar(80)": ("str", ", max_length=80"),
     "varchar(100)": ("str", ", max_length=100"),
     "varchar(250)": ("str", ", max_length=250"),
     "varchar(255)": ("str", ", max_length=255"),
@@ -192,7 +192,7 @@ class TestOmopSpecification:
 
         # Parse specification and sort tables topologically
         table_df = pd.read_csv(TABLE_METADATA_FILE)
-        field_df = pd.read_csv(FIELD_METADATA_FILE)
+        field_df = pd.read_csv(FIELD_METADATA_FILE, on_bad_lines="error")
         sort_index_map = {x: i for i, x in enumerate(MODEL_BY_TABLE)}
         table_df["sort_index"] = table_df["cdmTableName"].map(_get_sort_index)
         table_df.sort_values(by="sort_index", inplace=True)
@@ -251,6 +251,9 @@ class TestOmopSpecification:
             assert entity is not None
             table_expected_description = table_row["tableDescription"]
             table_actual_description = model_class.__doc__
+            table_actual_description = re.sub(
+                r"PARENT CLASS DOCUMENTATION[\s\S]*", "", table_actual_description
+            )
             if re.sub(r"\s+", "", table_expected_description) != re.sub(
                 r"\s+", "", table_actual_description
             ):
@@ -324,6 +327,9 @@ class TestOmopSpecification:
                     f"class {model_class.__name__}(Base, RowMetadataMixin):"
                 )
             sa_code_lines.append(
+                f'    """\n    SQLAlchemy model for the corresponding persistable domain model.\n    """'
+            )
+            sa_code_lines.append(
                 f"    __tablename__, __table_args__ = create_table_args(model.{model_class.__name__})"
             )
             sa_code_lines.append("")
@@ -394,7 +400,7 @@ class TestOmopSpecification:
                 field_actual_description = re.sub(r"\s+", "", field_actual_description)
                 if field_expected_description != field_actual_description:
                     error_messages.append(
-                        f"Field description for {field_name} not found in model {model_class.__name__}."
+                        f"Field description for {field_name} differs in model {model_class.__name__}."
                     )
                     error_messages.append(
                         f"\tExpected description:\n{field_expected_description}"
@@ -417,12 +423,16 @@ class TestOmopSpecification:
             # Write single model to file
             if WRITE_MODELS:
                 output_file = (
-                    Path(__file__).parent.parent.parent / "output" / f"{table_name}.py"
+                    Path(__file__).parent.parent.parent.parent.parent
+                    / "test"
+                    / "output"
+                    / f"{table_name}.py"
                 )
                 with open(output_file, "w") as f:
                     f.write("\n".join([OMOP_MODULE_HEADER, *code_lines]))
                 sa_output_file = (
-                    Path(__file__).parent.parent.parent
+                    Path(__file__).parent.parent.parent.parent.parent
+                    / "test"
                     / "output"
                     / f"{table_name}.sa.py"
                 )
@@ -432,14 +442,16 @@ class TestOmopSpecification:
         # Write all models to single file
         if WRITE_MODELS:
             output_file = (
-                Path(__file__).parent.parent.parent
+                Path(__file__).parent.parent.parent.parent.parent
+                / "test"
                 / "output"
                 / "expected_omop_models.py"
             )
             with open(output_file, "w") as f:
                 f.write("\n".join([OMOP_MODULE_HEADER, *all_code_lines]))
             sa_output_file = (
-                Path(__file__).parent.parent.parent
+                Path(__file__).parent.parent.parent.parent.parent
+                / "test"
                 / "output"
                 / "expected_sa_omop_models.py"
             )

@@ -19,7 +19,7 @@ import pytest
 from pydantic import BaseModel
 
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.util import get_app_cfgs
+from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.seqdb.domain import enum as seqdb_enum

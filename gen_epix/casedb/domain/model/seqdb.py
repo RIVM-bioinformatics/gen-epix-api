@@ -13,7 +13,6 @@ from gen_epix.casedb.domain.model.case.reference_data import (
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity
-from gen_epix.seqdb.domain.model import File as SeqdbFile
 
 
 class PhylogeneticTree(Model):
@@ -51,11 +50,4 @@ class PhylogeneticTree(Model):
     )
     newick_repr: str = Field(
         description="The Newick representation of the phylogenetic tree."
-    )
-
-
-class File(SeqdbFile):
-    ENTITY: ClassVar = Entity(
-        snake_case_plural_name="files",
-        persistable=False,
     )

@@ -1,3 +1,4 @@
+import hashlib
 import tomllib
 import uuid
 from collections import defaultdict
@@ -5,6 +6,7 @@ from collections.abc import Hashable, Iterable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 import ulid
 from pydantic import BaseModel, Field
@@ -216,3 +218,24 @@ def add_parent_class_docs(
         doc = doc + "PARENT CLASS DOCUMENTATION\n\n\n" + "\n\n\n".join(parent_docs)
         cls.__doc__ = doc
     return doc
+
+
+def str_to_uuid(value: str) -> UUID:
+    """
+    Convert a string to a UUID by encoding it as UTF-8, then calculating the SHA256
+    hash from that and subsequently taking the first 16 bytes of the hash to construct
+    the UUID.
+    """
+    return UUID(hashlib.sha256(value.encode("utf-8")).digest()[:16].hex())
+
+
+def int_to_uuid(value: int) -> UUID:
+    """
+    Convert an integer to a UUID by representing it as 8 bytes, unsigned, big endian
+    byte order and constructing the UUID from that.
+    """
+    return UUID(
+        hashlib.sha256(value.to_bytes(length=8, byteorder="big", signed=False))
+        .digest()[:16]
+        .hex()
+    )

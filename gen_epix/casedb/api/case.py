@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, FastAPI, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, field_serializer, model_validator
+from pydantic import Field, field_serializer
 
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.api.exc import handle_command
@@ -41,39 +41,6 @@ class CreateCaseSetRequestBody(PydanticBaseModel):
     case_ids: set[UUID] | None = Field(
         default=None, description="The cases to be added to the case set, if any."
     )
-
-
-class RetrieveOrganizationContactRequestBody(PydanticBaseModel):
-    organization_ids: list[UUID] | None = Field(
-        default=None, description="The organization IDs to retrieve contacts for."
-    )
-    site_ids: list[UUID] | None = Field(
-        default=None, description="The site IDs to retrieve contacts for."
-    )
-    contact_ids: list[UUID] | None = Field(
-        default=None, description="The contact IDs to retrieve contacts for."
-    )
-    props: dict[str, Any] = Field(
-        default_factory=dict, description="Additional properties for the request."
-    )
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Any:
-        if (
-            sum(
-                [
-                    self.organization_ids is not None,
-                    self.site_ids is not None,
-                    self.contact_ids is not None,
-                ]
-            )
-            != 1
-        ):
-            raise ValueError(
-                "Exactly one of organization_ids, site_ids or contact_ids must be "
-                "provided"
-            )
-        return self
 
 
 class RetrieveCaseRightsRequestBody(PydanticBaseModel):
@@ -469,33 +436,6 @@ def create_case_endpoints(
                 input_command=command.RetrieveCaseSetRightsCommand(
                     user=user,
                     case_set_ids=request_body,
-                ),
-            ),
-        )
-
-    @router.post(
-        "/retrieve/organization_contact",
-        operation_id="retrieve__organization_contact",
-        name="Retrieve organization contact",
-        description=command.RetrieveOrganizationContactCommand.__doc__,
-    )
-    async def retrieve__organization_contact(
-        user: registered_user_dependency,  # type: ignore
-        request_body: RetrieveOrganizationContactRequestBody,
-    ) -> list[model.Contact]:
-        return cast(
-            list[model.Contact],
-            handle_command(
-                app=app,
-                user=user,
-                exception_code="b8172f62",
-                input_handle_exception=handle_exception,
-                input_command=command.RetrieveOrganizationContactCommand(
-                    user=user,
-                    organization_ids=request_body.organization_ids,
-                    site_ids=request_body.site_ids,
-                    contact_ids=request_body.contact_ids,
-                    props=request_body.props,
                 ),
             ),
         )

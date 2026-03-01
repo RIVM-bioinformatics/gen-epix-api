@@ -163,6 +163,7 @@ gen_epix/casedb/config/.ignore/*
 
 # Test output
 test/output/*
+.gremlins_cache
 
 # Logs
 logs/*
@@ -171,3 +172,8 @@ cert/*.pem
 
 # Macbook specific files
 .DS_Store
+
+# Mutation Testing (gremlins)
+.gremlins_cache/
+.coveragerc.gremlins
+gremlin-report.html

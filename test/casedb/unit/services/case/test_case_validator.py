@@ -23,6 +23,7 @@ from gen_epix.casedb.domain.model.case.reference_data import (
     Dim,
 )
 from gen_epix.casedb.services.case.case_validator import CaseValidator
+from gen_epix.commondb.domain.enum import DataIssueType
 from gen_epix.commondb.domain.model.organization import Organization
 
 
@@ -630,7 +631,7 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert len(data_issues_list[0]) == 1
         issue = data_issues_list[0][0]
         assert issue.case_type_col_id == unknown_col_id
-        assert issue.data_issue_type == enum.DataIssueType.UNAUTHORIZED
+        assert issue.data_issue_type == DataIssueType.UNAUTHORIZED
         assert issue.code == "a7b3f9d2"
 
 
