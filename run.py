@@ -1,3 +1,4 @@
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -88,6 +89,7 @@ class Run:
         dev_repository_config_enum = DevRepositoryConfig[dev_repository_config.upper()]
         # Set environment variables
         set_env_variables(app_type_enum, idp_config_enum, dev_repository_config_enum)
+        logging_file: str = os.environ[f"{app_type_enum.value.upper()}_LOG_CONFIG_FILE"]
         # Run app
         uri_cfg = Run.APP_URI[app_type_enum]
         ssl_keyfile = (
@@ -105,6 +107,7 @@ class Run:
             reload=True,
             ssl_keyfile=ssl_keyfile,
             ssl_certfile=ssl_certfile,
+            log_config=logging_file,
         )
 
     def api_platform_local_mock_dict_demo(self) -> None:

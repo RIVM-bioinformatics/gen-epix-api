@@ -168,3 +168,5 @@ test/output/*
 logs/*
 
 cert/*.pem
+.gremlins_cache/results.db
+gremlin-report.html

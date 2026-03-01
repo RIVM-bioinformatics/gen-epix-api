@@ -1,7 +1,9 @@
 from abc import abstractmethod
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID
+
+from cachetools import TTLCache
 
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
@@ -18,6 +20,10 @@ class BaseCaseService(DomainBaseCaseService):
     This additional base class allows splitting the implementation into
     multiple modules while maintaining linter support.
     """
+
+    _RETRIEVE_COMPLETE_CASE_TYPE_CACHE: ClassVar[TTLCache] = TTLCache(
+        maxsize=1024, ttl=300
+    )
 
     _VALUE_TO_STR = {
         enum.ColType.TIME_DAY: lambda x: None if not x else f"{x}",

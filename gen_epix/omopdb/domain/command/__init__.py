@@ -53,7 +53,7 @@ from gen_epix.commondb.domain.command import (
     RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
 )
 from gen_epix.commondb.domain.command import (
-    RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
+    RetrieveOrganizationContactsCommand as RetrieveOrganizationContactsCommand,
 )
 from gen_epix.commondb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,

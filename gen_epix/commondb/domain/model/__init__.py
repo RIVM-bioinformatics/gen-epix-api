@@ -24,6 +24,9 @@ from gen_epix.commondb.domain.model.organization import (
 )
 from gen_epix.commondb.domain.model.organization import Organization as Organization
 from gen_epix.commondb.domain.model.organization import (
+    OrganizationContacts as OrganizationContacts,
+)
+from gen_epix.commondb.domain.model.organization import (
     OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
 )
 from gen_epix.commondb.domain.model.organization import (

@@ -23,27 +23,27 @@ classifiers = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]==0.129.0",
+    "fastapi[standard]==0.134.0",
     "gunicorn==25.1.*",
     "starlette==0.52.*",
     "httpx==0.28.1",
     "pyjwt==2.11.0",
     "urllib3==2.6.3",
-    "sqlalchemy==2.0.46",
+    "sqlalchemy==2.0.47",
     "sqlalchemy_utils==0.42.1",
     "pydantic==2.12.5",
     "ulid-py==1.1.0",
     "fire==0.7.1",
     "dynaconf==3.2.12",
     "PyYAML==6.0.3",
-    "scipy==1.17.0",
+    "scipy==1.17.1",
     "numpy==2.4.2",
     "biopython==1.86",
     "cachetools==7.0.1",
     "slowapi==0.1.9",
     "python-dateutil==2.9.0.post0",
     "types-python-dateutil==2.9.*",
-    "types-setuptools==80.10.*",
+    "types-setuptools==82.0.*",
     "python-multipart==0.0.22",
 ]
 
