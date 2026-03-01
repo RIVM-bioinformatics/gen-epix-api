@@ -131,6 +131,9 @@ def _remove_timezone_from_datetime(test: list[dict[str, Any]]) -> None:
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     """custom pytest hook to perform actions at the end of the test session."""
+    # Mutation runs execute pytest repeatedly; skip XLSX generation to avoid heavy I/O.
+    if session.config.getoption("gremlins", default=False):
+        return
     # only create report if there is data to report
     if tests and scenario_ids and test_scenario_links:
         generate_excel_report(tests, "test/output/test_report.xlsx")

@@ -90,7 +90,7 @@ class RoleGenerator:
             (command.ContactCrudCommand, PermissionTypeSet.R),
             (command.SiteCrudCommand, PermissionTypeSet.R),
             (command.RetrieveOrganizationAdminNameEmailsCommand, PermissionTypeSet.E),
-            (command.RetrieveOrganizationContactCommand, PermissionTypeSet.E),
+            (command.RetrieveOrganizationContactsCommand, PermissionTypeSet.E),
             (command.UpdateUserOwnOrganizationCommand, PermissionTypeSet.E),
             (
                 command.OrganizationIdentifierIssuerLinkCrudCommand,
