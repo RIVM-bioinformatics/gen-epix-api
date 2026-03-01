@@ -12,7 +12,7 @@ import docs.erm.erm_hash
 class TestERM:
 
     TEST_DIR = get_test_output_dir(get_test_name(enum.TestType.DOCS_ERM))
-    HASH_FILE = Path.cwd() / "docs" / "assets" / "erm" / "erm.json"
+    HASH_FILE = Path.cwd() / "docs" / "erm" / "erm.json"
 
     def test_erm_images_updated(self) -> None:
         expected_hash = docs.erm.erm_hash.generate_hash_for_domain_models(
