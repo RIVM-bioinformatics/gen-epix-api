@@ -7,7 +7,7 @@ from pathlib import Path
 # install erdantic manually if you need to regenerate the ER diagrams
 import erdantic as erd
 
-from docs.erm_hash import DOMAINS, generate_hash_for_domain_models
+from docs.erm.erm_hash import DOMAINS, generate_hash_for_domain_models
 from gen_epix.fastapp import Domain
 
 # Disable Graphviz Pango plugin warnings on Windows
