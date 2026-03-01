@@ -34,8 +34,8 @@ def case_service_crud_case_type(
             result = _crud_case_type_with_abac(self, uow, cmd)
 
     if cmd.operation not in CrudOperationSet.READ_OR_EXISTS.value:
-        print("Clearing retrieve_complete_case_type cache")
-        self._retrieve_complete_case_type_cache.clear()  # type: ignore[attr-defined]
+        # Clear retrieve_complete_case_type cache as data has changed, to prevent stale data in subsequent calls
+        self._RETRIEVE_COMPLETE_CASE_TYPE_CACHE.clear()  # type: ignore[attr-defined]
 
     return result
 

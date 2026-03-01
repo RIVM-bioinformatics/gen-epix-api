@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -190,16 +191,34 @@ class Run:
         ]
 
         subprocess.run(
-            ["coverage", "run", "--source=gen_epix", "-m", "pytest"] + pytest_args,
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "run",
+                "--source=gen_epix",
+                "-m",
+                "pytest",
+            ]
+            + pytest_args,
             check=False,
         )
         # Generate HTML report
         subprocess.run(
-            ["coverage", "html", "-d", "test/output/coverage.html"], check=True
+            [
+                sys.executable,
+                "-m",
+                "coverage",
+                "html",
+                "-d",
+                "test/output/coverage.html",
+            ],
+            check=True,
         )
         # Generate XML report
         subprocess.run(
-            ["coverage", "xml", "-o", "test/output/coverage.xml"], check=True
+            [sys.executable, "-m", "coverage", "xml", "-o", "test/output/coverage.xml"],
+            check=True,
         )
 
     def test_all_incl_performance(self) -> None:
@@ -656,6 +675,26 @@ class Run:
             ]
         )
 
+    def test_omopdb_unit_domain(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/domain",
+            ]
+        )
+
+    def test_omopdb_unit_upload(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/omopdb/unit/upload",
+            ]
+        )
+
     def test_omopdb_integration(self) -> None:
         import pytest
 
@@ -844,10 +883,12 @@ class Run:
         user_journey.to_pickle(out_user_journey_file)
 
     def other_general_generate_erm_diagrams(self) -> None:
-        from docs.erm import generate_erm_diagrams
+        from docs.erm.erm_graphviz import GraphvizErmGenerator
+        from docs.erm.erm_mermaid import MermaidErmGenerator
 
-        out_dir = Path(__file__).parent / "docs" / "assets" / "erm"
-        generate_erm_diagrams(out_dir)
+        out_dir = Path(__file__).parent / "docs" / "erm"
+        GraphvizErmGenerator().generate_erm_diagrams(out_dir)
+        MermaidErmGenerator().generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
 

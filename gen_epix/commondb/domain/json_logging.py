@@ -1,10 +1,3 @@
-import json
-import logging
-import os
-import re
-from datetime import datetime, timezone
-from typing import Any
-
 """
 Central JSON logging formatter for all GenEpix container applications.
 Ensures every log entry is valid single-line JSON using json.dumps().
@@ -28,6 +21,13 @@ Fix index:
      them directly without regex extraction.
 """
 
+import json
+import logging
+import os
+import re
+from datetime import datetime, timezone
+from typing import Any
+
 _ISO8601_Z_RE = re.compile(r"\+00:00$")
 
 # Fix 3 – patterns whose values must be redacted wherever they appear as
@@ -43,6 +43,8 @@ _UVICORN_ACCESS_RE = re.compile(
     r'^(?P<client>\S+) - "(?P<method>\w+) (?P<path>\S+) HTTP/(?P<version>[\d.]+)"'
     r" (?P<status>\d+)"
 )
+
+_DEFAULT_MAX_STACKTRACE_LENGTH = 8000  # empirical value keeping typical stacktraces well under the 384-byte limit after JSON overhead
 
 
 def _utc_iso(ts: float) -> str:
@@ -126,7 +128,7 @@ class JsonFormatter(logging.Formatter):
         extras_key: str = "props",
         # Fix 4 – default keeps output well under the Monitoring Platform 16384-byte
         # hard limit; set to None to disable truncation entirely.
-        max_stacktrace_length: int | None = 8000,
+        max_stacktrace_length: int | None = _DEFAULT_MAX_STACKTRACE_LENGTH,
     ):
         super().__init__()
         self.service = (

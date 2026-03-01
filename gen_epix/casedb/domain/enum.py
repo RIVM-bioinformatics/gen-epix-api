@@ -372,33 +372,3 @@ class ColTypeOrder(Enum):
         ColType.TIME_QUARTER: 4,
         ColType.TIME_YEAR: 5,
     }
-
-
-class DataIssueType(Enum):
-    MISSING = "MISSING"
-    INVALID = "INVALID"
-    UNAUTHORIZED = "UNAUTHORIZED"
-    CONFLICT = "CONFLICT"
-    DERIVED = "DERIVED"
-    TRANSFORMED = "TRANSFORMED"
-
-
-class DataIssueTypeSet(Enum):
-    ERROR = frozenset(
-        {
-            DataIssueType.INVALID,
-            DataIssueType.UNAUTHORIZED,
-            DataIssueType.CONFLICT,
-        }
-    )
-    WARNING = frozenset(
-        {
-            DataIssueType.MISSING,
-        }
-    )
-    INFO = frozenset(
-        {
-            DataIssueType.DERIVED,
-            DataIssueType.TRANSFORMED,
-        }
-    )

@@ -2,12 +2,9 @@ import gzip
 import hashlib
 from uuid import UUID
 
-import gen_epix.casedb.domain.command as command
-import gen_epix.casedb.domain.enum as enum
-import gen_epix.casedb.domain.model as model
 import gen_epix.seqdb.domain.command as seqdb_command
 import gen_epix.seqdb.domain.model as seqdb_model
-from gen_epix.casedb.domain import exc
+from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import CrudOperation
@@ -231,16 +228,16 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
 def _create_file(
     self: BaseCaseService,
     cmd: command.CreateFileForReadSetCommand | command.CreateFileForSeqCommand,
-) -> model.File:
-    created_file: model.File = self.app.handle(
+) -> UUID:
+    created_file_id: UUID = self.app.handle(
         seqdb_command.CreateFileCommand(
             user=cmd.user,
-            file=model.File(content=cmd.file_content),
+            file=seqdb_model.File(content=cmd.file_content),
             format=seqdb_enum.FileFormat(cmd.file_format.value),
             compression=cmd.file_compression,
         )
     )
-    return created_file
+    return created_file_id
 
 
 def _get_hash_uuid(content: bytes, compression: seqdb_enum.FileCompression) -> UUID:

@@ -12,9 +12,7 @@ from gen_epix.seqdb.api import (
     RetrieveSeqFastaRequestBody,
     RetrieveSimilarProfilesRequestBody,
 )
-from gen_epix.seqdb.domain import DOMAIN
-from gen_epix.seqdb.domain import command as seqdb_command
-from gen_epix.seqdb.domain import model as seqdb_model
+from gen_epix.seqdb.domain import DOMAIN, command, model
 
 
 class SeqdbRemoteApp(CommondbRemoteApp):
@@ -24,52 +22,61 @@ class SeqdbRemoteApp(CommondbRemoteApp):
     DEFAULT_OAUTH_TOKEN_REFRESH_MARGIN = 60  # seconds
 
     ROUTE_MAP: dict[type[Command], str] = {
-        seqdb_command.RetrievePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
-        seqdb_command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
-        seqdb_command.CreateFileCommand: "/create/file",
-        seqdb_command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
+        command.RetrievePhylogeneticTreeCommand: "/retrieve/phylogenetic_tree",
+        command.RetrieveSeqFastaCommand: "/retrieve/seq_fasta",
+        command.CreateFileCommand: "/create/file",
+        command.RetrieveSimilarProfilesCommand: "/retrieve/similar_profiles",
+        command.UploadSamplesCommand: "/upload/samples",
     }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(DOMAIN, *args, **kwargs)
         # Register routes and handlers
         self.register_route(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
-            self.ROUTE_MAP[seqdb_command.RetrievePhylogeneticTreeCommand],
+            command.RetrievePhylogeneticTreeCommand,
+            self.ROUTE_MAP[command.RetrievePhylogeneticTreeCommand],
         )
         self.register_route(
-            seqdb_command.RetrieveSeqFastaCommand,
-            self.ROUTE_MAP[seqdb_command.RetrieveSeqFastaCommand],
+            command.RetrieveSeqFastaCommand,
+            self.ROUTE_MAP[command.RetrieveSeqFastaCommand],
         )
         self.register_route(
-            seqdb_command.CreateFileCommand,
-            self.ROUTE_MAP[seqdb_command.CreateFileCommand],
+            command.CreateFileCommand,
+            self.ROUTE_MAP[command.CreateFileCommand],
         )
         self.register_route(
-            seqdb_command.RetrieveSimilarProfilesCommand,
-            self.ROUTE_MAP[seqdb_command.RetrieveSimilarProfilesCommand],
+            command.RetrieveSimilarProfilesCommand,
+            self.ROUTE_MAP[command.RetrieveSimilarProfilesCommand],
+        )
+        self.register_route(
+            command.UploadSamplesCommand,
+            self.ROUTE_MAP[command.UploadSamplesCommand],
         )
         self.register_handler(
-            seqdb_command.RetrievePhylogeneticTreeCommand,
+            command.RetrievePhylogeneticTreeCommand,
             self.retrieve_phylogenetic_tree,
         )
         self.register_handler(
-            seqdb_command.RetrieveSeqFastaCommand,
+            command.RetrieveSeqFastaCommand,
             self.retrieve_genetic_sequence_fasta_by_id,
         )
         self.register_handler(
-            seqdb_command.CreateFileCommand,
+            command.CreateFileCommand,
             self.create_file,
         )
         self.register_handler(
-            seqdb_command.RetrieveSimilarProfilesCommand,
+            command.RetrieveSimilarProfilesCommand,
             self.retrieve_similar_profiles,
+        )
+        self.register_handler(
+            command.UploadSamplesCommand,
+            self.upload_samples,
         )
 
     def retrieve_phylogenetic_tree(
         self,
-        cmd: seqdb_command.RetrievePhylogeneticTreeCommand,
-    ) -> seqdb_model.PhylogeneticTree | None:
+        cmd: command.RetrievePhylogeneticTreeCommand,
+    ) -> model.PhylogeneticTree | None:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
 
@@ -90,11 +97,11 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             data = response.json()
         if not data:
             return None
-        return seqdb_model.PhylogeneticTree(**data)
+        return model.PhylogeneticTree(**data)
 
     def retrieve_genetic_sequence_fasta_by_id(
         self,
-        cmd: seqdb_command.RetrieveSeqFastaCommand,
+        cmd: command.RetrieveSeqFastaCommand,
     ) -> Iterable[str]:
         headers = self.get_headers(cmd)
 
@@ -121,7 +128,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     def create_file(
         self,
-        cmd: seqdb_command.CreateFileCommand,
+        cmd: command.CreateFileCommand,
     ) -> UUID:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
@@ -145,7 +152,7 @@ class SeqdbRemoteApp(CommondbRemoteApp):
 
     def retrieve_similar_profiles(
         self,
-        cmd: seqdb_command.RetrieveSimilarProfilesCommand,
+        cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
         headers = self.get_headers(cmd)
         route = self.get_route(cmd)
@@ -165,3 +172,22 @@ class SeqdbRemoteApp(CommondbRemoteApp):
             response.raise_for_status()
             data = response.json()
         return [UUID(profile_id) for profile_id in data]
+
+    def upload_samples(
+        self,
+        cmd: command.UploadSamplesCommand,
+    ) -> model.SampleBatchUploadResult:
+        headers = self.get_headers(cmd)
+        route = self.get_route(cmd)
+
+        request_body = cmd
+
+        with httpx.Client(verify=self.ssl_context) as client:
+            response = client.post(
+                route,
+                json=json.loads(request_body.model_dump_json()),
+                headers=headers,
+            )
+            response.raise_for_status()
+            data = response.json()
+        return model.SampleBatchUploadResult(**data)

@@ -80,6 +80,7 @@ class RetrieveOrganizationContactsRequestBody(PydanticBaseModel):
         description="The ID of the organization to retrieve contacts for."
     )
 
+
 def create_organization_endpoints(
     router: APIRouter | FastAPI,
     app: App,

@@ -1,9 +1,8 @@
 import datetime
 from collections.abc import Callable, Iterable
-from typing import ClassVar
 from uuid import UUID
 
-from cachetools import TTLCache, cached
+from cachetools import cached
 
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
@@ -88,7 +87,7 @@ from gen_epix.casedb.services.case.retrieve_similar_cases import (
 from gen_epix.casedb.services.case.retrieve_stats import (
     case_service_retrieve_case_stats,
 )
-from gen_epix.casedb.services.case.upload_case import case_service_upload_cases
+from gen_epix.casedb.services.case.upload import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
@@ -101,8 +100,8 @@ from gen_epix.util import map_paired_elements
 
 class CaseService(BaseCaseService):
 
-    _retrieve_complete_case_type_cache: ClassVar[TTLCache] = TTLCache(
-        maxsize=1024, ttl=300
+    _RETRIEVE_COMPLETE_CASE_TYPE_CACHE = (
+        BaseCaseService._RETRIEVE_COMPLETE_CASE_TYPE_CACHE
     )
 
     def upload_cases(
@@ -124,7 +123,7 @@ class CaseService(BaseCaseService):
         return case_service_create_file_for_read_set_or_seq(self, cmd)
 
     @cached(
-        cache=_retrieve_complete_case_type_cache,
+        cache=_RETRIEVE_COMPLETE_CASE_TYPE_CACHE,
         key=lambda self, cmd: (cmd.case_type_id, cmd.user.id if cmd.user else None),
     )
     def retrieve_complete_case_type(
@@ -361,7 +360,8 @@ class CaseService(BaseCaseService):
                     f"Invalid on_invalid_case_id: {on_invalid_case_set_id}"
                 )
         # Check if user has access to any of the data collections of the case set
-        data_collection_ids = set(case_set_data_collections.get(case_set.id, ()))
+        assert case_set.id is not None
+        data_collection_ids = case_set_data_collections.get(case_set.id, set())
         data_collection_ids.add(case_set.created_in_data_collection_id)
 
         if (
