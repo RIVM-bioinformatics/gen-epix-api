@@ -315,15 +315,14 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
         self.assertEqual(len(recorder.updated), 0)
 
     def test_kmer_profiles_raises_not_implemented(self) -> None:
-        kmer_profile: model.KmerProfile = model.KmerProfile.model_construct(
+        kmer_profile = model.KmerProfile(
             id=uuid4(),
             sample_id=self.sample_id,
             seq_id=None,
-            kmer_profile="",
+            kmer_detection_protocol_id=uuid4(),
+            kmer_profile="{}",
             kmer_profile_format=enum.KmerProfileFormat.KMER_FREQUENCY_MAP,
             kmer_profile_hash=uuid4(),
-            qc_score=1.0,
-            qc_result=enum.QualityControlResult.PASS,
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(

@@ -7,7 +7,6 @@ import numpy as np
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command, enum, model
-from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
 from gen_epix.seqdb.domain.service import BaseSeqService
 
 
@@ -72,6 +71,9 @@ def seq_service_calculate_seq_distances_for_new_profiles(
     between new profiles themselves using type-specific distance rules. It updates any modified existing SeqDistance records,
     creates SeqDistance records for the new profiles, and returns a list of results describing the created distance records.
     """
+
+    # TODO: to be refactored to lower both memory and computational complexity
+
     user_id = cmd.user.id if cmd.user else None
     results: list[model.CalculateSeqDistancesResult] = []
 

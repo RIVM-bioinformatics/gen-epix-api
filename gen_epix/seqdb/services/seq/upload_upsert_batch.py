@@ -33,14 +33,14 @@ def _create_sample_refdata(
 def _update_profile_distances(
     self: BatchUploader,
     cmd: command.UploadSamplesCommand,
-    retval: model.SampleBatchUploadResult,
+    batch_result: model.SampleBatchUploadResult,
     uow: BaseUnitOfWork,
 ) -> bool:
     """
     Update distances for any profiles that are affected by the sample batch upload.
 
     The ForUpload objects in cmd do not carry the IDs assigned during storage.
-    Those IDs are available in the UploadResult entries of retval, which are in
+    Those IDs are available in the UploadResult entries of batch_result, which are in
     the same positional order as the upload objects.  We zip the two to patch the
     correct ID onto each profile before dispatching the distance command.
     """
@@ -52,36 +52,34 @@ def _update_profile_distances(
     kmer_profiles: list[model.KmerProfileForUpload] = []
 
     # Collect profiles with their assigned IDs from the upload result.
-    # retval.samples is positionally aligned with cmd.sample_batch.samples.
-    for sample_input, sample_result in zip(cmd.sample_batch.samples, retval.samples):
-        if sample_input.allele_profiles and sample_result.allele_profiles:
-            for profile, profile_result in zip(
-                sample_input.allele_profiles, sample_result.allele_profiles
-            ):
-                allele_profiles.append(
-                    profile.model_copy(update={"id": profile_result.id})
-                )
-        if sample_input.snp_profiles and sample_result.snp_profiles:
-            for profile, profile_result in zip(
-                sample_input.snp_profiles, sample_result.snp_profiles
-            ):
-                snp_profiles.append(
-                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
-                )
-        if sample_input.mlva_profiles and sample_result.mlva_profiles:
-            for profile, profile_result in zip(
-                sample_input.mlva_profiles, sample_result.mlva_profiles
-            ):
-                mlva_profiles.append(
-                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
-                )
-        if sample_input.kmer_profiles and sample_result.kmer_profiles:
-            for profile, profile_result in zip(
-                sample_input.kmer_profiles, sample_result.kmer_profiles
-            ):
-                kmer_profiles.append(
-                    profile.model_copy(update={"id": profile_result.id})  # type: ignore[arg-type]
-                )
+    # batch_result.samples is positionally aligned with cmd.sample_batch.samples.
+    for sample_for_upload, sample_result in zip(
+        cmd.sample_batch.samples, batch_result.samples
+    ):
+        for allele_profile, allele_profile_result in zip(
+            sample_for_upload.allele_profiles or [], sample_result.allele_profiles or []
+        ):
+            allele_profiles.append(
+                allele_profile.model_copy(update={"id": allele_profile_result.id})
+            )
+        for snp_profile, snp_profile_result in zip(
+            sample_for_upload.snp_profiles or [], sample_result.snp_profiles or []
+        ):
+            snp_profiles.append(
+                snp_profile.model_copy(update={"id": snp_profile_result.id})  # type: ignore[arg-type]
+            )
+        for mlva_profile, mlva_profile_result in zip(
+            sample_for_upload.mlva_profiles or [], sample_result.mlva_profiles or []
+        ):
+            mlva_profiles.append(
+                mlva_profile.model_copy(update={"id": mlva_profile_result.id})  # type: ignore[arg-type]
+            )
+        for kmer_profile, kmer_profile_result in zip(
+            sample_for_upload.kmer_profiles or [], sample_result.kmer_profiles or []
+        ):
+            kmer_profiles.append(
+                kmer_profile.model_copy(update={"id": kmer_profile_result.id})  # type: ignore[arg-type]
+            )
 
     calculate_seq_distance_result: list[model.CalculateSeqDistancesResult] = (
         self.service.app.handle(
@@ -96,6 +94,6 @@ def _update_profile_distances(
         )
     )
 
-    retval.seq_distances = calculate_seq_distance_result
+    batch_result.seq_distances = calculate_seq_distance_result
 
     return success

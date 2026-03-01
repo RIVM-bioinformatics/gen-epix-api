@@ -533,7 +533,7 @@ class Entity(BaseModel):
             raise NotImplementedError(f"String casing {string_casing} not implemented")
         return name
 
-    def copy(self, update: Mapping[str, Any]) -> "Entity":
+    def clone(self, update: Mapping[str, Any] | None = None) -> "Entity":
         """
         Create a copy of the entity with the given keyword arguments replacing
         any of the existing values.
@@ -549,7 +549,8 @@ class Entity(BaseModel):
             A copy of the entity with updated attributes.
         """
         props = self.model_dump(exclude_unset=True, exclude_defaults=True)
-        props.update(update)
+        if update:
+            props.update(update)
         return Entity(**props)
 
     def _verify_and_parse_model_links(self, model_class: type[BaseModel]) -> Self:
