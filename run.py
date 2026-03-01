@@ -885,7 +885,7 @@ class Run:
     def other_general_generate_erm_diagrams(self) -> None:
         from docs.erm import generate_erm_diagrams
 
-        out_dir = Path(__file__).parent / "docs" / "assets" / "erm"
+        out_dir = Path(__file__).parent / "docs" / "erm"
         generate_erm_diagrams(out_dir)
 
     def other_oauth_server_start(self) -> None:
