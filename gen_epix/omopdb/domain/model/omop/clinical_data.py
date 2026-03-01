@@ -110,9 +110,6 @@ class Person(Model, DataLineageMixin):
         default=None,
         description="User guidance:\nDue to the small number of options, this tends to be zero.\nETL conventions:\nIf the source data codes ethnicity in an OMOP supported vocabulary, store the concept_id here.",
     )
-    provided_by_organization_id: UUID = Field(
-        description="User guidance:\nNot part of OMOP CDM. The id of the Organization that provided the data for this Person.\nETL conventions:\nNone"
-    )
     person_type_concept_id: UUID = Field(
         description="User guidance:\nNot part of OMOP CDM. The conceptual type of Person under study, e.g. human, animal or environment, since data from non-human origin are also in scope.\nETL conventions:\nNone"
     )
@@ -1180,9 +1177,10 @@ class Specimen(Model, DataLineageMixin):
     disease_status_concept_id: UUID | None = Field(
         default=None, description="User guidance:\nNone\nETL conventions:\nNone"
     )
-    specimen_source_id: UUID | None = Field(
+    specimen_source_id: str | None = Field(
         default=None,
         description="User guidance:\nThis is the identifier for the specimen from the source system.\nETL conventions:\nNone",
+        max_length=50,
     )
     specimen_source_value: str | None = Field(
         default=None,

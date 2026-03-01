@@ -173,8 +173,8 @@ class Concept(Model):
         default=None,
         description="User guidance:\nAltered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.\nETL conventions:\nNone",
     )
-    concept_int_id: int = Field(
-        description="User guidance:\nRenamed from CDM concept_id. A unique identifier for each Concept across all domains.\nETL conventions:\nNone"
+    concept_int_id: int | None = Field(
+        description="User guidance:\nRenamed from CDM concept_id. A unique identifier for each Concept across all domains. Can be None if the Concept is not yet assigned an integer ID.\nETL conventions:\nNone"
     )
     concept_name: str = Field(
         description="User guidance:\nAn unambiguous, meaningful and descriptive name for the Concept.\nETL conventions:\nNone",

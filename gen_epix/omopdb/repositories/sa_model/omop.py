@@ -558,9 +558,6 @@ class Person(Base, DataLineageMixin, NoIdRowMetadataMixin):
     ethnicity_source_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Person, "ethnicity_source_concept_id"
     )
-    provided_by_organization_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.Person, "provided_by_organization_id"
-    )
     person_type_concept_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.Person, "person_type_concept_id"
     )
@@ -1196,7 +1193,7 @@ class Specimen(Base, DataLineageMixin, NoIdRowMetadataMixin):
     disease_status_concept_id: Mapped[UUID | None] = create_mapped_column(
         DOMAIN, model.Specimen, "disease_status_concept_id"
     )
-    specimen_source_id: Mapped[UUID | None] = create_mapped_column(
+    specimen_source_id: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.Specimen, "specimen_source_id"
     )
     specimen_source_value: Mapped[str | None] = create_mapped_column(

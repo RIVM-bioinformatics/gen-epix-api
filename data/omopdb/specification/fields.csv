@@ -545,7 +545,6 @@ cohort_definition,cohort_definition_syntax,No,varchar(MAX),Syntax or code to ope
 cohort_definition,subject_concept_id,Yes,integer,"This field contains a Concept that represents the domain of the subjects that are members of the cohort (e.g., Person, Provider, Visit).",NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
 cohort_definition,cohort_initiation_date,No,date,A date to indicate when the Cohort was initiated in the COHORT table.,NA,No,No,NA,NA,NA,NA,NA
 care_site,site_id,No,bigint,Not part of OMOP CDM. The id of the Site corresponding to the CareSite.,NA,No,Yes,Site,id,ORGANIZATION,NA,NA
-person,provided_by_organization_id,Yes,integer,Not part of OMOP CDM. The id of the Organization that provided the data for this Person.,NA,No,Yes,Organization,id,ORGANIZATION,NA,NA
 person,person_type_concept_id,Yes,integer,"Not part of OMOP CDM. The conceptual type of Person under study, e.g. human, animal or environment, since data from non-human origin are also in scope.",NA,No,Yes,CONCEPT,CONCEPT_ID,NA,NA,NA
 death,death_id,Yes,integer,Not part of OMOP CDM. The primary key for this table.,NA,Yes,No,NA,NA,NA,NA,NA
 observation_period,observation_period_start_iso_interval,No,varchar(55),Not part of OMOP CDM. See corresponding date variable. Allows for more uncertainty on the time.,NA,No,No,NA,NA,NA,NA,NA
@@ -591,4 +590,4 @@ domain,domain_str_id,Yes,varchar(20),Renamed from CDM domain_id. A unique key fo
 concept_class,concept_class_id,Yes,bigint,Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the UTF-8 encoded concept_class_str_id.,NA,Yes,No,NA,NA,NA,NA,NA
 concept_class,concept_class_str_id,Yes,varchar(20),Renamed from CDM concept_class_id. A unique key for each class.,NA,No,No,NA,NA,NA,NA,NA
 concept,concept_id,Yes,bigint,"Altered from OMOP CDM. The primary key for this table. Equal to the first 16 bytes of the SHA256 hash of the concept_int_id represented as 8 bytes, unsigned, big endian order.",NA,Yes,No,NA,NA,NA,NA,NA
-concept,concept_int_id,Yes,integer,Renamed from CDM concept_id. A unique identifier for each Concept across all domains.,NA,No,No,NA,NA,NA,NA,NA
+concept,concept_int_id,Yes,integer,Renamed from CDM concept_id. A unique identifier for each Concept across all domains. Can be None if the Concept is not yet assigned an integer ID.,NA,No,No,NA,NA,NA,NA,NA

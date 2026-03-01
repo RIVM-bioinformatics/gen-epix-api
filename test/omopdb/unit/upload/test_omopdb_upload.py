@@ -184,7 +184,6 @@ class BasePersonUploadTestCase(TestCase):
         gender_concept_id: UUID | None = None,
         race_concept_id: UUID | None = None,
         ethnicity_concept_id: UUID | None = None,
-        provided_by_organization_id: UUID | None = None,
         person_type_concept_id: UUID | None = None,
         person_source_value: str | None = "src_person",
     ) -> Person:
@@ -195,7 +194,6 @@ class BasePersonUploadTestCase(TestCase):
             gender_concept_id=gender_concept_id or uuid4(),
             race_concept_id=race_concept_id or uuid4(),
             ethnicity_concept_id=ethnicity_concept_id or uuid4(),
-            provided_by_organization_id=provided_by_organization_id or uuid4(),
             person_type_concept_id=person_type_concept_id or uuid4(),
             person_source_value=person_source_value,
         )
@@ -233,7 +231,6 @@ class BasePersonUploadTestCase(TestCase):
         gender_concept_id: UUID | None = None,
         race_concept_id: UUID | None = None,
         ethnicity_concept_id: UUID | None = None,
-        provided_by_organization_id: UUID | None = None,
         person_type_concept_id: UUID | None = None,
         person_source_value: str | None = "src_person",
     ) -> Person:
@@ -250,11 +247,6 @@ class BasePersonUploadTestCase(TestCase):
             ),
             ethnicity_concept_id=(
                 ethnicity_concept_id or person.ethnicity_concept_id
-                if person
-                else uuid4()
-            ),
-            provided_by_organization_id=(
-                provided_by_organization_id or person.provided_by_organization_id
                 if person
                 else uuid4()
             ),
