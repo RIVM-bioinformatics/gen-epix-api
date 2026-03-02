@@ -1,3 +1,20 @@
+"""
+This module defines the EDGE_CASES data structure, both used
+1) to generate test data in setup_case_type_data and
+2) to drive the test scenarios in test_casedb_edge_cases_refdata_access.
+
+EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (case types, case type sets,
+and case type column sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
+along with the expected access results for that scenario.
+
+The expectations are defined based on the principle that for reference data access,
+only org-level policies (both access and share) should determine access,
+while user-level policies should not grant any additional access beyond what the org-level policies provide.
+(implementation: expectations are not derived from querying the created policies (set up in setup_case_type_data) directly,
+but from this principle and the org-level policies in each case).
+
+"""
+
 from dataclasses import dataclass
 from itertools import product
 
@@ -286,7 +303,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_2',
@@ -298,7 +315,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_3',
@@ -310,7 +327,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_4',
@@ -322,7 +339,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_5',
@@ -334,7 +351,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user2_6',
@@ -346,7 +363,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_1', 'case_type_2'],
 #         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1', 'colset2'],
+#         expected_case_type_col_sets=['colset1'],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user3_1',
@@ -430,7 +447,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_2',
@@ -442,7 +459,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_3',
@@ -454,7 +471,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=[],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_4',
@@ -466,7 +483,7 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
+#         expected_case_type_col_sets=[],
 #     ),
 #     EdgeCaseSpec(
 #         user_name='org_user4_5',
@@ -490,6 +507,6 @@ EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES
 #         user_share_policy_sets=['case_type_set1'],
 #         expected_case_types=['case_type_2'],
 #         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
+#         expected_case_type_col_sets=[],
 #     ),
 # ]

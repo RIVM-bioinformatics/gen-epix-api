@@ -1,3 +1,13 @@
+"""
+This module defines the setup_case_col_data fixture, which creates reference data
+(diseases, etiological agents, case types, case type sets, case type col sets
+and all four policy types) for tests.
+
+TODO: There is an assumption that you can get extra access to case type cols and dims
+through oasp (org access share policies) but this is not correctly implemented in the current access logic
+
+"""
+
 from dataclasses import dataclass
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 

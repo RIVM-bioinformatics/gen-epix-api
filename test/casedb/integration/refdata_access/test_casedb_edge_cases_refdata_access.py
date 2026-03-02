@@ -1,3 +1,14 @@
+"""
+This module contains integration tests for CaseDB reference data access edge cases.
+
+It uses
+
+- the definitions in EDGE_CASES from define_edge_cases.py
+- the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
+- and then tests that each user has access to exactly the expected case types.
+
+"""
+
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_empty import (

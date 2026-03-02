@@ -1,10 +1,16 @@
-import pytest
+"""
+This module defines the setup_case_type_data fixture, which creates reference data
+(diseases, etiological agents, case types, case type sets, case type col sets,
+and all four policy types) for tests.
+"""
 
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from gen_epix.casedb.domain import model
-from gen_epix.casedb.domain import enum as casedb_enum
-
 from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
+
+import pytest
+
+from gen_epix.casedb.domain import enum as casedb_enum
+from gen_epix.casedb.domain import model
 
 VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
 
@@ -209,7 +215,3 @@ def setup_case_type_data(
                 from_data_collection="data_collection2",
                 case_type_set=ct_set,
             )
-
-
-# Is it possibel to include another fixture here
-# that is defined in another file, e.g. setup_case_col_data.py
