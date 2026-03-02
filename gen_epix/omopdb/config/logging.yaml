@@ -8,6 +8,8 @@ formatters:
     service: "omopdb"
     merge_message_json: true
     extras_key: "props"
+    redacted_value: "[REDACTED]"
+    sensitive_keys: ["client_secret", "password", "client_pwd", "secret", "api_key"]
 
 filters:
   uvicorn_access_structured:

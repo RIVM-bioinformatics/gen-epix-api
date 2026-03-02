@@ -32,18 +32,14 @@ _ISO8601_Z_RE = re.compile(r"\+00:00$")
 
 # Fix 3 – patterns whose values must be redacted wherever they appear as
 # key=value pairs (query-string or space-separated form).
-_SENSITIVE_RE = re.compile(
-    r"(?i)(client_secret|password|client_pwd|secret|api_key)=(\S+)"
-)
-_REDACTED = r"\1=[REDACTED]"
-_REDACTED_VALUE = "[REDACTED]"
-_SENSITIVE_KEYS = {
+_DEFAULT_SENSITIVE_KEYS = (
     "client_secret",
     "password",
     "client_pwd",
     "secret",
     "api_key",
-}
+)
+_DEFAULT_REDACTED_VALUE = "[REDACTED]"
 
 # Fix 6 – regex fallback for when uvicorn access-log args have already been
 # evaluated into a single formatted string.
@@ -72,29 +68,22 @@ def _safe_json_loads(s: str) -> Any:
         return None
 
 
-def _redact(value: str) -> str:
-    """Replace sensitive key=value occurrences with key=[REDACTED]."""
-    return _SENSITIVE_RE.sub(_REDACTED, value)
+def _normalise_sensitive_keys(
+    sensitive_keys: list[str] | tuple[str, ...] | set[str] | None,
+) -> tuple[str, ...]:
+    if sensitive_keys is None:
+        return _DEFAULT_SENSITIVE_KEYS
+    deduped: list[str] = []
+    for key in sensitive_keys:
+        normalized = str(key).strip().lower()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return tuple(deduped) if deduped else _DEFAULT_SENSITIVE_KEYS
 
 
-def _redact_nested(value: Any, *, key_name: str | None = None) -> Any:
-    """Recursively redact sensitive values in nested dict/list payloads."""
-    if key_name is not None and key_name.lower() in _SENSITIVE_KEYS:
-        return _REDACTED_VALUE
-
-    if isinstance(value, str):
-        return _redact(value)
-
-    if isinstance(value, dict):
-        return {k: _redact_nested(v, key_name=str(k)) for k, v in value.items()}
-
-    if isinstance(value, list):
-        return [_redact_nested(v) for v in value]
-
-    if isinstance(value, tuple):
-        return tuple(_redact_nested(v) for v in value)
-
-    return value
+def _build_sensitive_re(sensitive_keys: tuple[str, ...]) -> re.Pattern[str]:
+    escaped = "|".join(re.escape(x) for x in sensitive_keys)
+    return re.compile(rf"(?i)({escaped})=(\S+)")
 
 
 class UvicornAccessLogFilter(logging.Filter):
@@ -154,6 +143,8 @@ class JsonFormatter(logging.Formatter):
         environment: str | None = None,
         merge_message_json: bool = True,
         extras_key: str = "props",
+        sensitive_keys: list[str] | tuple[str, ...] | set[str] | None = None,
+        redacted_value: str = _DEFAULT_REDACTED_VALUE,
         # Fix 4 – default keeps output well under the Monitoring Platform 16384-byte
         # hard limit; set to None to disable truncation entirely.
         max_stacktrace_length: int | None = _DEFAULT_MAX_STACKTRACE_LENGTH,
@@ -170,6 +161,11 @@ class JsonFormatter(logging.Formatter):
         )
         self.merge_message_json = merge_message_json
         self.extras_key = extras_key
+        self.sensitive_keys = _normalise_sensitive_keys(sensitive_keys)
+        self._sensitive_key_set = set(self.sensitive_keys)
+        self.redacted_value = redacted_value or _DEFAULT_REDACTED_VALUE
+        self._sensitive_re = _build_sensitive_re(self.sensitive_keys)
+        self._redacted_kv = rf"\1={self.redacted_value}"
         self.max_stacktrace_length = max_stacktrace_length
 
         self._reserved = {
@@ -196,6 +192,29 @@ class JsonFormatter(logging.Formatter):
             "message",
         }
 
+    def _redact(self, value: str) -> str:
+        """Replace sensitive key=value occurrences with key=[REDACTED]."""
+        return self._sensitive_re.sub(self._redacted_kv, value)
+
+    def _redact_nested(self, value: Any, *, key_name: str | None = None) -> Any:
+        """Recursively redact sensitive values in nested dict/list payloads."""
+        if key_name is not None and key_name.lower() in self._sensitive_key_set:
+            return self.redacted_value
+
+        if isinstance(value, str):
+            return self._redact(value)
+
+        if isinstance(value, dict):
+            return {k: self._redact_nested(v, key_name=str(k)) for k, v in value.items()}
+
+        if isinstance(value, list):
+            return [self._redact_nested(v) for v in value]
+
+        if isinstance(value, tuple):
+            return tuple(self._redact_nested(v) for v in value)
+
+        return value
+
     def format(self, record: logging.LogRecord) -> str:
         base: dict[str, Any] = {
             "ts": _utc_iso(record.created),
@@ -214,12 +233,12 @@ class JsonFormatter(logging.Formatter):
             base.update(json_fields)
 
         # Fix 3 – redact sensitive values before any further processing.
-        message = _redact(record.getMessage())
+        message = self._redact(record.getMessage())
 
         if self.merge_message_json:
             msg_obj = _safe_json_loads(message)
             if isinstance(msg_obj, dict):
-                msg_obj = _redact_nested(msg_obj)
+                msg_obj = self._redact_nested(msg_obj)
                 base.update(msg_obj)
                 # Fix 2 – re-enforce envelope fields so a merged payload can
                 # never silently override ts / level / logger.
@@ -265,7 +284,7 @@ class JsonFormatter(logging.Formatter):
             if k not in self._reserved and not k.startswith("_")
         }
         # Fix 3 – redact string values inside extras (e.g. request body dict).
-        extras = _redact_nested(extras)
+        extras = self._redact_nested(extras)
         if extras:
             base[self.extras_key] = extras
 
