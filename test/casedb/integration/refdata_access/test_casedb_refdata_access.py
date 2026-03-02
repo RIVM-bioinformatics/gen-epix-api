@@ -10,7 +10,6 @@ from uuid import UUID
 
 import pytest
 from cachetools import LRUCache, cached
-
 from rich import print
 
 from gen_epix.casedb.domain import enum, model

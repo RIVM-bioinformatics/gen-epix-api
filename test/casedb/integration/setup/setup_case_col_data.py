@@ -5,7 +5,6 @@ import pytest
 
 from gen_epix.casedb.domain import enum as casedb_enum
 
-
 VERBOSE = True  # Set to True to enable detailed print statements during setup for debugging purposes;
 
 
@@ -54,7 +53,7 @@ CASE_COL_SPECS = [
         description="User with org-level policies granting access to ctcs1 and ctcs2, but no user-level policies",
         expected_case_type_col_sets=["ctcs1", "ctcs2"],
         expected_case_type_cols=[
-            "case_type_col1_1_1_1",
+            "case_type_col1_1_1_1",  # (code: case_type_col{ct}_{dim}_{occ}_{col_rank})
             "case_type_col2_2_1_1",
             "case_type_col3_3_1_1",
         ],
