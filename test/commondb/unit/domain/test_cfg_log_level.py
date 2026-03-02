@@ -25,6 +25,7 @@ def test_set_log_level_preserves_pinned_third_party_loggers(
 ) -> None:
     app_cfg = AppCfg.__new__(AppCfg)
     app_cfg._envvar_prefix = "CASEDB_"
+    app_cfg._logger_prefix = "casedb"
     app_cfg._log_level_envvar = "LOG_LEVEL"
     app_cfg._log_setup = False
     app_cfg._cfg = {"log": {"level": "INFO"}}
@@ -44,6 +45,8 @@ def test_set_log_level_preserves_pinned_third_party_loggers(
     logger_map = {
         name: _DummyLogger() for name in app_cfg._logging_config_yaml["loggers"]
     }
+    logger_map["sqlalchemy.engine.Engine"] = _DummyLogger()
+    logger_map["sqlalchemy.pool.impl.QueuePool"] = _DummyLogger()
 
     original_get_logger = logging.getLogger
 
@@ -53,14 +56,24 @@ def test_set_log_level_preserves_pinned_third_party_loggers(
         return logger_map[name]
 
     monkeypatch.setattr(logging, "getLogger", _get_logger)
+    monkeypatch.setattr(
+        logging.root.manager,
+        "loggerDict",
+        {
+            "sqlalchemy.engine.Engine": object(),
+            "sqlalchemy.pool.impl.QueuePool": object(),
+        },
+    )
 
     app_cfg.set_log_level("DEBUG")
 
     assert app_cfg._cfg["log"]["level"] == "DEBUG"
-    assert logger_map["casedb.setup"].level == "DEBUG"
-    assert logger_map["casedb.service"].level == "DEBUG"
-    assert logger_map["casedb.app"].level == "DEBUG"
+    assert logger_map["casedb.setup"].level == "INFO"
+    assert logger_map["casedb.service"].level == "INFO"
+    assert logger_map["casedb.app"].level == "INFO"
     assert logger_map["sqlalchemy.engine"].level == "WARNING"
     assert logger_map["sqlalchemy.pool"].level == "WARNING"
+    assert logger_map["sqlalchemy.engine.Engine"].level == "WARNING"
+    assert logger_map["sqlalchemy.pool.impl.QueuePool"].level == "WARNING"
     assert logger_map["httpx"].level == "INFO"
     assert logger_map["asyncio"].level == "WARNING"
