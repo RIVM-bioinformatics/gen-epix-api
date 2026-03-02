@@ -4,6 +4,7 @@ from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest wa
 from typing import Iterable
 from uuid import UUID
 
+import pandas as pd
 import pytest
 
 from gen_epix import fastapp
@@ -14,13 +15,13 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
 TEST_TYPE = EnumTestType.CASEDB_INTEGRATION_CASE_ACCESS
 
-SKIP_ENDPOINTS = False
+SKIP_ENDPOINTS = True
 VERBOSE = False
 DEV_REPOSITORY_CONFIG = DevRepositoryConfig.DICT_DEMO
 # DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO
@@ -79,46 +80,87 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
+        # Get all users and permissions
+        users: list[model.User] = app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        permissions = app.domain.permissions
+
+        # Get org admin, org admin policies and corresponding org users
+        org_admin_policies = app.handle(
+            command.OrganizationAdminPolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        org_admin_user: model.User = [
+            x for x in users if x.id == org_admin_policies[0].user_id
+        ][0]
+        user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
+            command.UserAccessCasePolicyCrudCommand(
+                user=org_admin_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        org_users: list[model.User] = [
+            x
+            for x in users
+            if x.id in {y.user_id for y in user_access_case_policies}
+            and app_impl.role_map[CommonRole.ORG_USER] in x.roles
+            and len(x.roles) == 1
+        ]
+
         # # --------------------------------------------------------------------------------------
 
         # # Code for performance profiling of a code chunk
         # import pyinstrument
-
-        # users = app.handle(
-        #     command.UserCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_policies = app.handle(
-        #     command.OrganizationAdminPolicyCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_user: model.User = [
-        #     x for x in users if x.id == org_admin_policies[0].user_id
-        # ][0]
-        # user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
-        #     command.UserAccessCasePolicyCrudCommand(
-        #         user=org_admin_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_user: model.User = [
-        #     x
-        #     for x in users
-        #     if x.id in {y.user_id for y in user_access_case_policies}
-        #     and app_impl.role_map[CommonRole.ORG_USER] in x.roles
-        #     and len(x.roles) == 1
-        # ][0]
 
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
 
         # t0 = datetime.datetime.now()
 
-        # case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
+        organizations = app.handle(
+            command.OrganizationCrudCommand(
+                user=root_user, operation=CrudOperation.READ_ALL
+            )
+        )
+        organization_map = {x.id: x for x in organizations}
+        case_types = app.handle(
+            command.CaseTypeCrudCommand(
+                user=root_user, operation=CrudOperation.READ_ALL
+            )
+        )
+        case_type_map = {x.id: x for x in case_types}
+        rows = []
+        for user in users:
+            # if user.key != "lsppoc.rivm6@rivmnl.onmicrosoft.com":
+            #     continue
+            # case_type_ids = {UUID("0191707a-1d8a-9f1b-3eec-0ee50b6fcdab")}
+            try:
+                case_stats: list[model.CaseStats] = app.handle(
+                    command.RetrieveCaseStatsCommand(user=user, case_type_ids=None)
+                )
+            except:
+                continue
+            for x in case_stats:
+                rows.append(
+                    {
+                        "case_type": case_type_map[x.case_type_id].name,
+                        "user": user.key,
+                        "organization": organization_map[user.organization_id].name,
+                        "roles": ",".join(sorted(user.roles)),
+                    }
+                    | x.model_dump()
+                )
+        df = pd.DataFrame.from_records(rows)
+        df.sort_values(["case_type", "user"], inplace=True)
+        df.to_excel("test.xlsx")
+        return
+
         # case_sets: list[model.CaseSet] = app.handle(
         #     command.CaseSetCrudCommand(
         #         user=org_user,
@@ -145,15 +187,6 @@ class TestContent:
         # return
 
         # # --------------------------------------------------------------------------------------
-
-        # Get all users and permissions
-        users = app.handle(
-            command.UserCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        permissions = app.domain.permissions
 
         # Get organization level policies
         org_access_case_policies = app.handle(
