@@ -1,11 +1,7 @@
 """
 This module defines the setup_case_col_data fixture, which creates reference data
 (diseases, etiological agents, case types, case type sets, case type col sets
-and all four policy types) for tests.
-
-TODO: There is an assumption that you can get extra access to case type cols and dims
-through oasp (org access share policies) but this is not correctly implemented in the current access logic
-
+and org/user access case policies) for tests.
 """
 
 from dataclasses import dataclass
@@ -20,13 +16,13 @@ VERBOSE = True  # Set to True to enable detailed print statements during setup f
 
 # Test data setup for case type column access edge cases:
 # user 1
-# org_user1_1 -> org1 -> oscp1 (from dc1, to dc2) -> oacp1 (to dc1) -> ctcs1 -> {ctc1, ctc2}
+# org_user1_1 -> org1 -> oacp1 (to dc1) -> ctcs1 -> {ctc1, ctc2}
 # org1 -> oacp2 (to dc3) -> ctcs2 -> {ctc2, ctc3}
 # user 2
-# org_user_1_2 -> org1 # has the same org-level policies as org_user1_1 plus user-level policies
+# org_user1_2 -> org1 # has the same org-level policies as org_user1_1 plus user-level policies
 # so should have the same access to case type col sets and cols as org_user1_1
 # additionally:
-# org_user1_2 -> uscp1 (from dc1, to dc2) -> oacp1 (to dc1) -> ctcs1 -> {ctc1, ctc2}
+# org_user1_2 -> uacp1 (to dc1) -> ctcs1 -> {ctc1, ctc2}
 # org_user1_2 -> uacp2 (to dc3) -> ctcs2 -> {ctc2, ctc3}
 # ctc1 -> col1 -> dim1, ctc2 -> col2 -> dim2, ctc3 -> col3 -> dim3, etc
 #
@@ -35,9 +31,7 @@ VERBOSE = True  # Set to True to enable detailed print statements during setup f
 #
 # Abbreviations:
 #   oacp  = OrgAccessCasePolicy   (name format: {prefix}{org_num}_{dc_num})
-#   oscp  = OrgShareCasePolicy    (name format: {prefix}{org_num}_{to_dc_num}_{from_dc_num})
-#   uacp  = UserAccessCasePolicy
-#   uscp  = UserShareCasePolicy
+#   uacp  = UserAccessCasePolicy  (name format: {prefix}{user_name}_{dc_num})
 #   ctcs  = CaseTypeColSet
 #   cts   = CaseTypeSet
 #   ctc   = CaseTypeCol           (code: case_type_col{ct}_{dim}_{occ}_{col_rank})
@@ -112,7 +106,7 @@ def setup_case_col_data(
         )
 
     # --- CASE TYPE SETS ---
-    # col_case_type_set12: case_type1 + case_type2 — referenced by oacp1 and oscp1
+    # col_case_type_set12: case_type1 + case_type2 — referenced by oacp1
     # col_case_type_set23: case_type2 + case_type3 — referenced by oacp2
     env.create_case_type_set(
         root_user, "col_case_type_set12", {"case_type1", "case_type2"}, "category_col_1"
@@ -177,11 +171,9 @@ def setup_case_col_data(
         print("Created negative controls: dim4, col4_1, ctc4, ctcs3 (unlinked)")
 
     # --- DATA COLLECTIONS ---
-    # data_collection1: target for oacp1 and source for oscp1
-    # data_collection2: share destination for oscp1
+    # data_collection1: target for oacp1
     # data_collection3: target for oacp2
     env.create_data_collection(root_user, "data_collection1")
-    env.create_data_collection(root_user, "data_collection2")
     env.create_data_collection(root_user, "data_collection3")
 
     # --- ORG ACCESS POLICY 1 (oacp1): org1 → dc1, read ctcs1 ---
@@ -193,14 +185,6 @@ def setup_case_col_data(
         read_case_type_col_set="ctcs1",
     )
 
-    # --- ORG SHARE POLICY (oscp1): org1 shares from dc1 to dc2 ---
-    # Name format: {prefix}{org_num}_{to_dc_num}_{from_dc_num}
-    env.create_organization_share_case_policy(
-        root_user,
-        "org_share_col_policy1_2_1",
-        "col_case_type_set12",
-    )
-
     # --- ORG ACCESS POLICY 2 (oacp2): org1 → dc3, read ctcs2 ---
     env.create_organization_access_case_policy(
         root_user,
@@ -210,9 +194,7 @@ def setup_case_col_data(
     )
 
     if VERBOSE:
-        print(
-            "Created policies: oacp1 (org1→dc1/ctcs1), oscp1 (org1: dc1→dc2), oacp2 (org1→dc3/ctcs2)"
-        )
+        print("Created org policies: oacp1 (org1→dc1/ctcs1), oacp2 (org1→dc3/ctcs2)")
 
     # --- USER ACCESS POLICY 1 (uacp1): org_user1_2 → dc1, read ctcs1 — mirrors oacp1 ---
     env.create_user_access_case_policy(
@@ -221,15 +203,6 @@ def setup_case_col_data(
         "data_collection1",
         "col_case_type_set12",
         read_case_type_col_set="ctcs1",
-    )
-
-    # --- USER SHARE POLICY (uscp1): org_user1_2 shares from dc1 to dc2 — mirrors oscp1 ---
-    env.create_user_share_case_policy(
-        root_user,
-        "org_user1_2",
-        data_collection="data_collection2",
-        from_data_collection="data_collection1",
-        case_type_set="col_case_type_set12",
     )
 
     # --- USER ACCESS POLICY 2 (uacp2): org_user1_2 → dc3, read ctcs2 — mirrors oacp2 ---
@@ -243,5 +216,5 @@ def setup_case_col_data(
 
     if VERBOSE:
         print(
-            "Created user policies: uacp1 (org_user1_2→dc1/ctcs1), uscp1 (org_user1_2: dc1→dc2), uacp2 (org_user1_2→dc3/ctcs2)"
+            "Created user policies: uacp1 (org_user1_2→dc1/ctcs1), uacp2 (org_user1_2→dc3/ctcs2)"
         )

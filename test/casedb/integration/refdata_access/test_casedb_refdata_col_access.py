@@ -70,13 +70,13 @@ class TestCaseDBRefDataColAccess:
             rich_print(env.db[model.User]["org_user1_2"])
             rich_print(env.db[model.Organization])
             rich_print(env.db[model.OrganizationAccessCasePolicy])
+
             rich_print(env.db[model.CaseTypeColSet])
             rich_print(env.db[model.CaseTypeCol])
             rich_print(env.db[model.CaseTypeDim])
             rich_print(env.db[model.Col])
             rich_print(env.db[model.Dim])
 
-            rich_print(env.db[model.OrganizationShareCasePolicy])
             rich_print(env.db[model.DataCollection])
 
     @pytest.fixture(autouse=True)
@@ -98,7 +98,7 @@ class TestCaseDBRefDataColAccess:
             user=root_user, operation=CrudOperation.READ_ALL
         )
         result: list[model.CaseTypeColSet] = self.env.app.handle(get_cmd)
-        expected = {x for x in self.env.db[model.CaseTypeColSet]}
+        expected = set(self.env.db[model.CaseTypeColSet])
 
         actual = {x.name for x in result}
 
