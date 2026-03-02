@@ -1,10 +1,8 @@
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, computed_field, field_serializer, model_validator
 
-from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.operational_data import Case
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -14,6 +12,7 @@ from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpl
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
+    DataIssue,
     IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
@@ -36,7 +35,7 @@ class ReadSetForUpload(Model, IsNewIdMixin):
     given case type column.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
 
     case_id: UUID = Field(
         default=NULL_ID,
@@ -89,7 +88,7 @@ class SeqForUpload(Model, IsNewIdMixin):
     given case type column.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
 
     case_id: UUID = Field(
         default=NULL_ID,
@@ -136,10 +135,10 @@ class CaseForUpload(ParentForUpload):
     A case intended for upload, together with any relevant associated data.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy()
     NAME: ClassVar = "CaseForUpload"
 
-    PARENT_IDENTIFIER_TYPE: ClassVar = IdentifierType.CASE
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.CASE
     PARENT_CLASS: ClassVar = Case
     PARENT_FIELD_NAME: ClassVar = "case"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
@@ -217,17 +216,8 @@ class CaseForUpload(ParentForUpload):
                     sample_id_map[external_sample_id] = sample_id
 
 
-class CaseDataIssue(PydanticBaseModel):
+class CaseDataIssue(DataIssue):
     case_type_col_id: UUID = Field(description="The ID of the case type column")
-    original_value: str | None = Field(description="The value of the case type column")
-    updated_value: str | None = Field(
-        description="The new value of the case type column after potential resolution. If not resolved, this will be None.",
-    )
-    data_issue_type: enum.DataIssueType = Field(
-        description="The type of validation issue"
-    )
-    code: str = Field(description="The code of the data issue")
-    message: str | None = Field(description="The details of the data issue")
 
 
 class CaseUploadResult(ParentUploadResult):
@@ -236,7 +226,7 @@ class CaseUploadResult(ParentUploadResult):
     as the resulting cases are included as well.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
     NAME: ClassVar = "CaseUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -269,7 +259,9 @@ class CaseBatchForUpload(BaseBatchForUpload):
     A number of unique cases intended for upload.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "CaseBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -319,7 +311,9 @@ class CaseBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of cases.
     """
 
-    ENTITY: ClassVar = Entity(persistable=False)
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy(
+        update={"persistable": False}
+    )
     NAME: ClassVar = "CaseBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = CaseBatchForUpload

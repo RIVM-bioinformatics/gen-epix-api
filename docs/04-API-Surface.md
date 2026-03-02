@@ -1,0 +1,93 @@
+Creation Date: March 1, 2026
+
+# API Surface
+
+This chapter covers how the API contract is shaped, how endpoint families are generated, and how to interpret the OpenAPI surface.
+
+---
+
+## 1. API Surface Architecture Overview
+
+The endpoint surface is a FastAPI shell over a command-based application core. Routers are mounted under a versioned prefix (`/v1`), while the root path (`/`) redirects to the configured default route. Transport-level routing and command execution are intentionally separate concerns. (Source: `gen_epix/commondb/app_setup.py#L27-L35`; Source: `gen_epix/commondb/app_setup.py#L115-L126`)
+
+OpenAPI output is produced from the assembled app and enriched with app-specific schema metadata at startup, so the contract document reflects the runtime router composition for that app variant. (Source: `gen_epix/casedb/app.py#L11-L17`; Source: `gen_epix/commondb/app_setup.py#L129-L138`)
+
+```text
+HTTP request
+  -> FastAPI route (/v1/*)
+  -> endpoint function
+  -> app.handle(command)
+  -> response serialized by route schema/OpenAPI contract
+```
+
+Developer Note: many endpoints look repetitive in the OpenAPI document because much of the surface is generated from model permissions rather than handwritten route functions. (Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L759-L835`)
+
+---
+
+## 2. Contract Authority and Scope
+
+For casedb, `docs/openapi.json` is the contract authority. It identifies itself as `Gen-EpiX casedb` and contains tags for `auth`, `organization`, `system`, `ontology`, `geo`, `subject`, `case`, and `abac` — representing shared/common routes plus casedb-specific routes. (Source: `docs/openapi.json#L4-L4`; Source: `docs/openapi.json#L21-L23`)
+
+`SEQDB` and `OMOPDB` tags are not present in this artifact; endpoint coverage for those app surfaces is `<TBF elsewhere>` via their own OpenAPI artifacts.
+
+---
+
+## 3. How Endpoint Families Are Built
+
+Most resource endpoints follow a generated CRUD family pattern. The generator defines `/batch`, `/query`, `/query/ids`, and `/{object_id}` suffixes and emits operation IDs in a consistent `<resource>__<verb>` style. (Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L55-L58`; Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L702-L757`)
+
+The OpenAPI artifact shows this pattern for multiple families such as `users`, `case_types`, and `cases`. (Source: `docs/openapi.json#L8050-L8057`; Source: `docs/openapi.json#L28398-L28405`)
+
+Handwritten routes are used for explicit workflows that do not fit generic CRUD shape, such as provider listing, health/log, upload, and retrieval operations. (Source: `gen_epix/commondb/api/auth.py#L24-L36`; Source: `gen_epix/commondb/api/system.py#L60-L141`)
+
+---
+
+## 4. Security Contract Interpretation
+
+Security is expressed per operation in the contract. Protected operations include OIDC scopes (`openid`, `profile`) in their security requirements. (Source: `docs/openapi.json#L85-L92`)
+
+Some routes are intentionally outside that protected pattern:
+- `GET /identity_providers` — public listing command (`user=None`, `public=True`). (Source: `gen_epix/commondb/api/auth.py#L24-L33`)
+- `GET /` — redirect route, not a business API endpoint. (Source: `gen_epix/commondb/app_setup.py#L123-L126`)
+
+Security Note: endpoint-level security declarations in OpenAPI are necessary but not sufficient for full authorization reasoning; command-level policy enforcement remains downstream of route entry. (Source: `gen_epix/fastapp/app.py#L314-L418`)
+
+---
+
+## 5. Service Surface Map
+
+The casedb OpenAPI artifact mixes shared/common surfaces with casedb domain surfaces:
+
+**Common/platform-facing examples:**
+1. `/v1/identity_providers` (provider discovery)
+2. `/v1/invite_user` and constraints
+3. `/v1/health`, `/v1/log`, `/v1/retrieve/licenses`, `/v1/retrieve/outages`
+
+**Case-domain examples:**
+1. CRUD families under `/v1/cases`, `/v1/case_types`, `/v1/case_sets`
+2. Workflow endpoints: `/v1/upload/cases`, `/v1/create/case_set`, `/v1/retrieve/cases_by_ids`, `/v1/retrieve/genetic_sequence/fasta`
+3. ABAC policy resources under `/v1/organization_access_case_policies*`
+
+(Source: `docs/openapi.json#L19-L27`; Source: `docs/openapi.json#L28398-L28405`; Source: `docs/openapi.json#L33888-L33895`)
+
+---
+
+## 6. Operational Interpretation
+
+For contract governance, treat the OpenAPI file as the externally consumable boundary for that app variant's runtime plus shared common routes. Do not treat a single artifact as full platform coverage.
+
+When externally exposing the API, review which routes are intentionally public (`identity_providers`, root redirect) versus routes that declare OAuth scopes. That split is explicit in the contract and endpoint code. (Source: `docs/openapi.json#L19-L27`; Source: `docs/openapi.json#L85-L92`)
+
+Developer Note: automated endpoint inventory and consistency checks should key off operation ID and route-family conventions generated by `CrudEndpointGenerator`; this is more stable than ad hoc string matching over descriptions. (Source: `gen_epix/fastapp/api/crud_endpoint_generator.py#L55-L58`)
+
+---
+
+## Evidence Sources
+
+- `docs/openapi.json#L4-L36620`
+- `gen_epix/commondb/app_setup.py#L115-L138`
+- `gen_epix/commondb/api/auth.py#L24-L46`
+- `gen_epix/commondb/api/system.py#L47-L141`
+- `gen_epix/casedb/app.py#L11-L45`
+- `gen_epix/fastapp/api/crud_endpoint_generator.py#L55-L835`
+- `gen_epix/fastapp/app.py#L309-L418`

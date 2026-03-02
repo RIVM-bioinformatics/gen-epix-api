@@ -2,13 +2,11 @@ from collections.abc import Hashable, Iterable
 from typing import Any
 from uuid import UUID
 
-from gen_epix.casedb.domain import command
-from gen_epix.casedb.domain import enum as enum
-from gen_epix.casedb.domain import model
+from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.service import BaseSeqdbService
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.services import CommondbRemoteApp
-from gen_epix.fastapp import App, CrudCommand, Model
+from gen_epix.fastapp import App, Model
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import command as seqdb_command
 from gen_epix.seqdb.domain import enum as seqdb_enum
@@ -19,7 +17,7 @@ from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 class SeqdbService(BaseSeqdbService):
 
-    COMMAND_MAP: dict[type[command.Command], type[seqdb_command.Command]] = {
+    COMMAND_MAP: dict[type[command.Command], type[command.Command]] = {
         command.RetrievePhylogeneticTreeBySequencesCommand: seqdb_command.RetrievePhylogeneticTreeCommand,
         command.RetrieveSimilarCasesCommand: seqdb_command.RetrieveSimilarProfilesCommand,
     }
@@ -124,7 +122,7 @@ class SeqdbService(BaseSeqdbService):
         return result
 
     def crud(
-        self, cmd: CrudCommand
+        self, cmd: command.CrudCommand
     ) -> Hashable | list[Hashable] | Model | list[Model] | bool | list[bool] | None:
         """
         Generic CRUD operation handler that forwards the command to seqdb while
