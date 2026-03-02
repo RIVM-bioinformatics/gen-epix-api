@@ -4,7 +4,6 @@ from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest wa
 from typing import Iterable
 from uuid import UUID
 
-import pandas as pd
 import pytest
 
 from gen_epix import fastapp
@@ -15,7 +14,7 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import TypedStringSetFilter
+from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
@@ -99,19 +98,9 @@ class TestContent:
         org_admin_user: model.User = [
             x for x in users if x.id == org_admin_policies[0].user_id
         ][0]
-        user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
-            command.UserAccessCasePolicyCrudCommand(
-                user=org_admin_user,
-                operation=CrudOperation.READ_ALL,
-            )
+        org_admin_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
         )
-        org_users: list[model.User] = [
-            x
-            for x in users
-            if x.id in {y.user_id for y in user_access_case_policies}
-            and app_impl.role_map[CommonRole.ORG_USER] in x.roles
-            and len(x.roles) == 1
-        ]
 
         # # --------------------------------------------------------------------------------------
 
@@ -123,53 +112,10 @@ class TestContent:
 
         # t0 = datetime.datetime.now()
 
-        organizations = app.handle(
-            command.OrganizationCrudCommand(
-                user=root_user, operation=CrudOperation.READ_ALL
-            )
-        )
-        organization_map = {x.id: x for x in organizations}
-        case_types = app.handle(
-            command.CaseTypeCrudCommand(
-                user=root_user, operation=CrudOperation.READ_ALL
-            )
-        )
-        case_type_map = {x.id: x for x in case_types}
-        rows = []
-        for user in users:
-            # if user.key != "lsppoc.rivm6@rivmnl.onmicrosoft.com":
-            #     continue
-            # case_type_ids = {UUID("0191707a-1d8a-9f1b-3eec-0ee50b6fcdab")}
-            try:
-                case_stats: list[model.CaseStats] = app.handle(
-                    command.RetrieveCaseStatsCommand(user=user, case_type_ids=None)
-                )
-            except:
-                continue
-            for x in case_stats:
-                rows.append(
-                    {
-                        "case_type": case_type_map[x.case_type_id].name,
-                        "user": user.key,
-                        "organization": organization_map[user.organization_id].name,
-                        "roles": ",".join(sorted(user.roles)),
-                    }
-                    | x.model_dump()
-                )
-        df = pd.DataFrame.from_records(rows)
-        df.sort_values(["case_type", "user"], inplace=True)
-        df.to_excel("test.xlsx")
-        return
-
-        # case_sets: list[model.CaseSet] = app.handle(
-        #     command.CaseSetCrudCommand(
-        #         user=org_user,
-        #         operation=CrudOperation.READ_ALL,
+        # organizations = app.handle(
+        #     command.OrganizationCrudCommand(
+        #         user=root_user, operation=CrudOperation.READ_ALL
         #     )
-        # )
-        # case_set_ids: list[UUID] = [x.id for x in case_sets]  # type:ignore[assignment]
-        # case_set_stats = app.handle(
-        #     command.RetrieveCaseStatsCommand(user=org_user, case_set_ids=case_set_ids)
         # )
 
         # t1 = datetime.datetime.now()
@@ -202,20 +148,6 @@ class TestContent:
             )
         )
 
-        # Get org admin user
-        org_admin_policies = app.handle(
-            command.OrganizationAdminPolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        org_admin_user: model.User = [
-            x for x in users if x.id == org_admin_policies[0].user_id
-        ][0]
-        org_admin_permissions: set[Permission] = app.handle(
-            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
-        )
-
         # Get org user
         user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -223,13 +155,14 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
-        org_user: model.User = [
+        org_users: list[model.User] = [
             x
             for x in users
             if x.id in {y.user_id for y in user_access_case_policies}
             and app_impl.role_map[CommonRole.ORG_USER] in x.roles
             and len(x.roles) == 1
-        ][0]
+        ]
+        org_user = org_users[0]
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
         )
