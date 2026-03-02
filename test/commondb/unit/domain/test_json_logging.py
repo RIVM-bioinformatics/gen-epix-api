@@ -140,6 +140,19 @@ def test_merged_json_cannot_override_envelope_ts_level_logger() -> None:
     assert payload["event"] == "ok"
 
 
+def test_merged_json_cannot_override_service_and_environment() -> None:
+    formatter = JsonFormatter(service="svc-a", environment="prod")
+    record = _make_record(
+        msg='{"service":{"id":"not-allowed"},"environment":{"name":"shadow"},"event":"ok"}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["service"] == "svc-a"
+    assert payload["environment"] == "prod"
+    assert payload["event"] == "ok"
+
+
 # ---------------------------------------------------------------------------
 # Fix 3 – sensitive key=value pairs are redacted
 # ---------------------------------------------------------------------------
@@ -179,6 +192,38 @@ def test_sensitive_value_is_redacted_in_string_extras() -> None:
     serialized = json.dumps(payload)
     assert "my-secret" not in serialized
     assert "client_secret=[REDACTED]" in serialized
+
+
+def test_sensitive_keys_are_redacted_in_merged_json_payload() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"client_secret":"abc","nested":{"password":"hunter2"},"records":[{"api_key":"k-1"}]}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["client_secret"] == "[REDACTED]"
+    assert payload["nested"]["password"] == "[REDACTED]"
+    assert payload["records"][0]["api_key"] == "[REDACTED]"
+
+
+def test_sensitive_keys_are_redacted_in_nested_extras() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg="auth request",
+        extra={
+            "payload": {
+                "client_pwd": "abc",
+                "items": [{"secret": "s1"}, {"password": "s2"}],
+            }
+        },
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["props"]["payload"]["client_pwd"] == "[REDACTED]"
+    assert payload["props"]["payload"]["items"][0]["secret"] == "[REDACTED]"
+    assert payload["props"]["payload"]["items"][1]["password"] == "[REDACTED]"
 
 
 def test_non_sensitive_message_is_unchanged() -> None:

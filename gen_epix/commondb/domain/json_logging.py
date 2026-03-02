@@ -36,6 +36,14 @@ _SENSITIVE_RE = re.compile(
     r"(?i)(client_secret|password|client_pwd|secret|api_key)=(\S+)"
 )
 _REDACTED = r"\1=[REDACTED]"
+_REDACTED_VALUE = "[REDACTED]"
+_SENSITIVE_KEYS = {
+    "client_secret",
+    "password",
+    "client_pwd",
+    "secret",
+    "api_key",
+}
 
 # Fix 6 – regex fallback for when uvicorn access-log args have already been
 # evaluated into a single formatted string.
@@ -67,6 +75,26 @@ def _safe_json_loads(s: str) -> Any:
 def _redact(value: str) -> str:
     """Replace sensitive key=value occurrences with key=[REDACTED]."""
     return _SENSITIVE_RE.sub(_REDACTED, value)
+
+
+def _redact_nested(value: Any, *, key_name: str | None = None) -> Any:
+    """Recursively redact sensitive values in nested dict/list payloads."""
+    if key_name is not None and key_name.lower() in _SENSITIVE_KEYS:
+        return _REDACTED_VALUE
+
+    if isinstance(value, str):
+        return _redact(value)
+
+    if isinstance(value, dict):
+        return {k: _redact_nested(v, key_name=str(k)) for k, v in value.items()}
+
+    if isinstance(value, list):
+        return [_redact_nested(v) for v in value]
+
+    if isinstance(value, tuple):
+        return tuple(_redact_nested(v) for v in value)
+
+    return value
 
 
 class UvicornAccessLogFilter(logging.Filter):
@@ -191,12 +219,17 @@ class JsonFormatter(logging.Formatter):
         if self.merge_message_json:
             msg_obj = _safe_json_loads(message)
             if isinstance(msg_obj, dict):
+                msg_obj = _redact_nested(msg_obj)
                 base.update(msg_obj)
                 # Fix 2 – re-enforce envelope fields so a merged payload can
                 # never silently override ts / level / logger.
                 base["ts"] = _utc_iso(record.created)
                 base["level"] = record.levelname
                 base["logger"] = record.name
+                if self.service is not None:
+                    base["service"] = self.service
+                if self.environment is not None:
+                    base["environment"] = self.environment
                 # Fix 5 – normalise `content` → `message` when `message` is
                 # absent (eliminates the content/message split seen in monitoring query engines).
                 if "content" in base and "message" not in base:
@@ -232,7 +265,7 @@ class JsonFormatter(logging.Formatter):
             if k not in self._reserved and not k.startswith("_")
         }
         # Fix 3 – redact string values inside extras (e.g. request body dict).
-        extras = {k: _redact(v) if isinstance(v, str) else v for k, v in extras.items()}
+        extras = _redact_nested(extras)
         if extras:
             base[self.extras_key] = extras
 
