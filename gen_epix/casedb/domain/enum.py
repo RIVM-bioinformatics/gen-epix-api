@@ -365,6 +365,7 @@ class DimColTypeSet(Enum):
 
 
 class ColTypeOrder(Enum):
+    # Relies on dict order guaranteed
     TIME_RESOLUTION_DESC = {
         ColType.TIME_DAY: 1,
         ColType.TIME_WEEK: 2,
@@ -372,33 +373,3 @@ class ColTypeOrder(Enum):
         ColType.TIME_QUARTER: 4,
         ColType.TIME_YEAR: 5,
     }
-
-
-class DataIssueType(Enum):
-    MISSING = "MISSING"
-    INVALID = "INVALID"
-    UNAUTHORIZED = "UNAUTHORIZED"
-    CONFLICT = "CONFLICT"
-    DERIVED = "DERIVED"
-    TRANSFORMED = "TRANSFORMED"
-
-
-class DataIssueTypeSet(Enum):
-    ERROR = frozenset(
-        {
-            DataIssueType.INVALID,
-            DataIssueType.UNAUTHORIZED,
-            DataIssueType.CONFLICT,
-        }
-    )
-    WARNING = frozenset(
-        {
-            DataIssueType.MISSING,
-        }
-    )
-    INFO = frozenset(
-        {
-            DataIssueType.DERIVED,
-            DataIssueType.TRANSFORMED,
-        }
-    )

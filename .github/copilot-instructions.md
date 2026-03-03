@@ -1,132 +1,194 @@
-# Gen-EpiX AI Agent Instructions
+# Gen-EpiX --- Copilot Architectural Invariants
 
-Gen-EpiX is a **multi-service genomic epidemiology platform** with strict access controls and a sophisticated architectural pattern. Understanding these core patterns will make you immediately productive.
+This file defines architectural constraints and security invariants.
 
-## Architecture Overview
+The canonical golden prompt (evidence + output format) lives in:
 
-**Four Independent Services**: `casedb`, `seqdb`, `omopdb`, `commondb` - each runs as a separate FastAPI app on different ports with its own database, auth, and domain logic.
+.github/ai/prompts/base_prompt.md
 
-**Hexagonal Architecture**: Each service follows strict layering:
-- `domain/` - Pure business logic (models, commands, policies)  
-- `services/` - Application layer (orchestration, CRUD operations)
-- `repositories/` - Data access (SQLAlchemy or in-memory dict implementations)
-- `api/` - FastAPI endpoints and HTTP concerns
+Both must be applied together.
 
-**Command-Query Pattern**: All operations flow through `Command` objects handled by the central `App` mediator. Never call services directly - always use `app.handle(SomeCommand(...))`.
+If they conflict: - The golden prompt defines procedural evidence
+requirements. - This file defines architecture and security rules.
 
-## Key Patterns
+------------------------------------------------------------------------
 
-### 1. Service/Repository/UnitOfWork Pattern
-```python
-# Always use Unit of Work for database transactions
-with self.repository.uow() as uow:
-    result = self.repository.crud(uow, user_id, Model, obj, None, CrudOperation.CREATE_ONE)
-```
+## 0) Evidence & Freshness (Hard Rules)
 
-### 2. Command-Driven Architecture
-```python
-# Commands are the only way to trigger operations
-from gen_epix.casedb.domain.command import CreateCaseCommand
-cmd = CreateCaseCommand(user=user, case_data=data)
-result = app.handle(cmd)  # Goes through policies, auth, logging
-```
+1.  **Docs guide, code decides.** If docs conflict with implementation:
+    \> "Docs say X, code shows Y." Then recommend updating docs or code.
 
-### 3. ABAC/RBAC Authorization
-- **RBAC**: Role-based (`ROOT`, `APP_ADMIN`, `ORG_ADMIN`, `ORG_USER`, `GUEST`)
-- **ABAC**: Attribute-based policies in `policies/` directories
-- Policies are automatically applied during command execution via the `PolicyDecisionPoint`
+2.  **Freshness hint.** Each doc starts with a creation date. Prefer
+    newer docs but always verify in code.
 
-### 4. Multi-Repository Support
-Each service supports both SQLAlchemy and in-memory dict repositories:
-```python
-# Configuration determines repository type
-enum.RepositoryType.SA_SQL  # SQLAlchemy + real database
-enum.RepositoryType.DICT    # In-memory for testing
-```
+3.  **No guessing.** Never invent:
 
-## Critical Development Commands
+    -   endpoints
+    -   ports
+    -   config keys
+    -   roles
+    -   module ownership
 
-### Starting Services
-```bash
-# New standardized format: SERVICE_NAME IDP_CONFIG REPOSITORY_CONFIG
-python run.py api CASEDB IDPS DICT_DEMO        # Production auth with demo data
-python run.py api CASEDB MOCK DICT_DEMO        # Mock auth for dev
-python run.py api SEQDB IDPS SA_SQLITE_DEMO    # SeqDB with SQLite and demo data
-python run.py api OMOPDB MOCK DICT_EMPTY       # OMOP with mock auth and empty data
+4.  **Stale-doc detection (required).** If a referenced
+    path/symbol/config cannot be found:
 
-# Services run on different ports:
-# - CASEDB: 8000
-# - SEQDB: 8001  
-# - OMOPDB: 8002
-```
+    -   Add a `### Suspected Stale Documentation` section
+    -   Cite search evidence
+    -   Do not invent replacements
 
-### Testing
-```bash
-python run.py test_all                    # Full test suite
-python run.py test_all_unit               # Unit tests only
-```
+5.  **No silent assumptions.** If evidence is missing:
 
-### Data Loading
-```bash
-python run.py etl_load_demo_data all     # Load demo data for all services
-python run.py etl_load_demo_data casedb  # Load demo data for casedb only
-```
+    -   Search workspace
+    -   Report findings
+    -   State assumptions explicitly
 
-## Project-Specific Conventions
+------------------------------------------------------------------------
 
-### File Organization
-- **Domain logic**: `gen_epix/{service}/domain/`
-- **Service implementations**: `gen_epix/{service}/services/`  
-- **Repository models**: `gen_epix/{service}/repositories/sa_model/`
-- **API endpoints**: `gen_epix/{service}/api/`
+## 1) Architectural Core
 
-### Configuration System
-**NEW: Dynaconf-based Configuration Management**
-- **Settings files**: `gen_epix/{service}/config/settings.toml` (TOML format)
-- **Secrets**: `gen_epix/{service}/config/.secrets.{component}.toml` (separate files by component)
-- **Auth configs**: `gen_epix/{service}/config/idp/` (IDP configurations)
-- **Repository configs**: Service-specific TOML files with connection strings, file paths, etc.
-- **Environment variables**: Auto-discovery via `set_env_variables()` function
-- **Dev configs**: Standardized patterns like `DICT_DEMO`, `SA_SQLITE_DEMO`, `SA_SQL`, etc.
+### 1.1 Command-First Rule (Non-Negotiable)
 
-Configuration structure example:
-```toml
-[service.auth.props.root.organization]
-id = "018d074d-ea0c-e942-07db-a3cc0ba1d653"
-name = "DUMMY"
-legal_entity_code = "DUMMY"
+Business logic must not live in API routes.
 
-[service.auth.props.root.user]
-key = "root@dummy.org"
-email = "root@dummy.org"
+Endpoints must: - Parse request - Construct a `Command` - Call
+`app.handle(command)` - Return result
 
-[repository.defaults]
-type = "DICT"
-[repository.defaults.props]
-dir = "./data/casedb/demo"
-```
+Do NOT: - Call repositories directly from routes - Enforce RBAC/ABAC in
+routes - Add domain rules in FastAPI handlers
 
-### Transform Framework
-The `gen_epix.transform` module provides stream-processing pipelines for data transformation:
-```python
-from gen_epix.transform import FieldTransformer, TransformerPipeline
-pipeline = TransformerPipeline([FieldTransformer("name", str.title)])
-```
+Exceptions (must justify): - tests - ETL/CLI - bootstrapping/migrations
 
-## Common Gotchas
+------------------------------------------------------------------------
 
-1. **Environment Variables**: Services auto-discover configs via `ConfigDiscovery.get_config_path()` - don't hardcode paths
-2. **Repository Registration**: Always call `repository.register_mappers()` before using SQLAlchemy repos
-3. **Service Dependencies**: `casedb` depends on `seqdb` - start `seqdb` when working with `casedb`
-4. **Command IDs**: All commands auto-generate UUIDs - don't manually set `id` fields
-5. **User Context**: Commands require a `user` parameter for authorization - use test fixtures for this
-5. **User Context**: Commands require a `user` parameter for authorization - use test fixtures for this
+### 1.2 Strict Layering
 
-## Integration Points
+    api/         → transport only
+    domain/      → domain objects, commands, permissions and base
+                   classes for services, policies, repositories
+    policies/    → implementations of policies (auth, validation, etc.)
+    services/    → implementations of services
+    repositories/→ implementations of repositories (persistence)
 
-- **Cross-service communication**: Services communicate via HTTP APIs, not direct imports
-- **Remote service support**: Services can connect to remote instances via `RemoteApp` pattern
-- **Shared models**: Common models in `gen_epix.commondb` (User, Organization, etc.)
-- **Auth tokens**: JWT tokens shared across services via `gen_epix.fastapp.services.auth`
+API must stay thin. Policies execute in command lifecycle (BEFORE /
+DURING / AFTER).
 
-Understanding these patterns means you can navigate between any service and immediately understand the flow from API → Command → Service → Repository → Database.
+------------------------------------------------------------------------
+
+### 1.3 Policy Enforcement Model
+
+Authorization is command-based.
+
+When changing behavior, explicitly state:
+
+1.  Which command is involved?
+2.  Required role(s)?
+3.  RBAC/ABAC impact?
+4.  BEFORE/DURING/AFTER implications?
+
+If this is not addressed, the answer is incomplete.
+
+------------------------------------------------------------------------
+
+## 2) Security Posture Constraints
+
+### 2.1 IDP Modes
+
+The system supports:
+
+-   `IDPS` (real OIDC)
+-   `MOCK`
+-   `NONE` (root fallback)
+
+`NONE` mode changes trust posture.
+
+If modifying: - auth dependencies - user resolution - IDP
+configuration - root behavior
+
+You must state: - NONE-mode implications - Root-user implications -
+Whether OIDC-only assumptions are introduced
+
+Never weaken security implicitly.
+
+------------------------------------------------------------------------
+
+## 3) Multi-Repository Guarantee (repository pattern)
+
+All behavior must work in:
+
+-   DICT
+-   SA_SQLITE
+-   SA_SQL
+
+If modifying repositories: - Update both DICT + SQL implementations -
+Keep domain behavior identical
+
+Do not introduce SQL-only logic without justification.
+
+------------------------------------------------------------------------
+
+## 4) Router & API Integrity
+
+When modifying routers:
+
+-   No duplicate router registrations
+-   Must mount under `/v1`
+-   OpenAPI must reflect change
+-   Endpoint must delegate to command
+
+------------------------------------------------------------------------
+
+## 5) Application Domains
+
+Four application domains:
+
+-   casedb
+
+-   seqdb
+
+-   omopdb
+
+-   commondb
+
+-   commondb provides shared models + cross-cutting services.
+
+-   Cross-application communication occurs via HTTP in production, not direct
+    imports.
+
+Before adding new HTTP patterns: - Search for existing client
+abstractions - Reuse precedent - Cite file paths + symbols - Label truly
+new patterns as such
+
+------------------------------------------------------------------------
+
+## 6) Configuration Constraints
+
+-   Config is Dynaconf-based.
+-   Settings auto-discovered via environment stack.
+-   Never hardcode config paths.
+-   Repository type is config-driven.
+
+------------------------------------------------------------------------
+
+## 7) Operational Commands (Reference)
+
+Startup:
+
+    python run.py api <APP> <IDP_MODE> <REPO_MODE>
+
+Testing:
+
+    python run.py test_all
+
+Data loading:
+
+    python run.py etl_load_demo_data <scope>
+
+Do not assume ports --- verify in config.
+
+------------------------------------------------------------------------
+
+## 8) Common Failure Points
+
+-   Repository mappers must be registered before SQL use.
+-   Commands require user context.
+-   casedb may depend on seqdb running.

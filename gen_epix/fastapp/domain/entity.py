@@ -326,7 +326,7 @@ class Entity(BaseModel):
             if not field_type or x["type"] == field_type
         ]
 
-    def get_id_field_name(self, by_alias: bool = True) -> str | None:
+    def get_id_field_name(self, by_alias: bool = True) -> str:
         """
         Get the ID field name of the entity.
 
@@ -533,7 +533,7 @@ class Entity(BaseModel):
             raise NotImplementedError(f"String casing {string_casing} not implemented")
         return name
 
-    def copy(self, update: Mapping[str, Any]) -> "Entity":
+    def clone(self, update: Mapping[str, Any] | None = None) -> "Entity":
         """
         Create a copy of the entity with the given keyword arguments replacing
         any of the existing values.
@@ -549,7 +549,8 @@ class Entity(BaseModel):
             A copy of the entity with updated attributes.
         """
         props = self.model_dump(exclude_unset=True, exclude_defaults=True)
-        props.update(update)
+        if update:
+            props.update(update)
         return Entity(**props)
 
     def _verify_and_parse_model_links(self, model_class: type[BaseModel]) -> Self:
@@ -623,10 +624,10 @@ class Entity(BaseModel):
                 f"Link field name {link.link_field_name} to {link.link_model_class} "
                 f"for model {model_class.__name__} is not a valid field name"
             )
-        if link.link_field_name == self.id_field_name:
-            raise ValueError(
-                f"Link field name is identical to id field name: {link.link_field_name}"
-            )
+        # if link.link_field_name == self.id_field_name:
+        #     raise ValueError(
+        #         f"Link field name is identical to id field name: {link.link_field_name}"
+        #     )
         if link.link_field_name in link_field_names:
             raise ValueError(
                 f"Link field name {link.link_field_name}"

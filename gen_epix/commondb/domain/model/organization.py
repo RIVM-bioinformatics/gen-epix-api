@@ -492,3 +492,13 @@ class ExternalIdentifierForUpload(BaseModel, frozen=True):
         return hash(
             (self.identifier_issuer_id, self.identifier_issuer_code, self.external_id)
         )
+
+
+class OrganizationContacts(BaseModel):
+    organization: Organization = Field(
+        description="The organization corresponding to the contacts"
+    )
+    sites: list[Site] = Field(description="The list of sites for the organization")
+    contacts: list[Contact] = Field(
+        description="The list of contacts for the organization"
+    )

@@ -18,6 +18,7 @@ from gen_epix.casedb.domain.model.abac import (
 )
 from gen_epix.casedb.domain.model.abac import UserShareCasePolicy as UserShareCasePolicy
 from gen_epix.casedb.domain.model.case import BaseCaseRights as BaseCaseRights
+from gen_epix.casedb.domain.model.case import ReadableReferenceData as ReadableReferenceData
 from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchForUpload
 from gen_epix.casedb.domain.model.case import (
@@ -75,7 +76,6 @@ from gen_epix.casedb.domain.model.ontology import ConceptSet as ConceptSet
 from gen_epix.casedb.domain.model.ontology import Disease as Disease
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent as EtiologicalAgent
 from gen_epix.casedb.domain.model.ontology import Etiology as Etiology
-from gen_epix.casedb.domain.model.seqdb import File as File
 from gen_epix.casedb.domain.model.seqdb import PhylogeneticTree as PhylogeneticTree
 from gen_epix.casedb.domain.model.subject import Subject as Subject
 from gen_epix.casedb.domain.model.subject import SubjectIdentifier as SubjectIdentifier
@@ -148,7 +148,6 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
         ],
         enum.ServiceType.SEQDB: [
             PhylogeneticTree,
-            File,
         ],
         enum.ServiceType.SUBJECT: [
             Subject,
@@ -176,6 +175,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseSetMember,
             CaseDataCollectionLink,
             CaseSetDataCollectionLink,
+            ReadableReferenceData,
             ReadSetForUpload,
             SeqForUpload,
             CaseForUpload,

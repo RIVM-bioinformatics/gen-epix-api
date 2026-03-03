@@ -9,6 +9,7 @@ from test.test_client.server_manager import ServerManager
 from uuid import UUID
 
 import pytest
+import yaml
 
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command
@@ -25,6 +26,41 @@ from gen_epix.seqdb.env import AppComposer as SeqdbAppComposer
 
 SSL_CERTFILE = Path("cert/cert.pem").absolute().as_posix()
 SSL_KEYFILE = Path("cert/key.pem").absolute().as_posix()
+
+
+def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
+    # Config-contract test: validating the E2E logging.yaml shape directly instead of booting servers
+    config_path = Path(__file__).with_name("logging.yaml")
+    with config_path.open("rt", encoding="utf-8") as handle:
+        config = yaml.safe_load(handle)
+
+    # Uvicorn logger names must be present so server logs use the same
+    # handler/formatter strategy as app logs in end-to-end runs.
+    loggers = config["loggers"]
+    assert "uvicorn.error" in loggers
+    assert "uvicorn.access" in loggers
+    assert loggers["uvicorn.error"]["handlers"] == ["console"]
+    assert loggers["uvicorn.access"]["handlers"] == ["console"]
+
+    # Console handler must route through the JSON formatter contract that emits
+    # the structured fields used downstream (ts/level/logger/etc.).
+    handlers = config["handlers"]
+    formatters = config["formatters"]
+    assert handlers["console"]["formatter"] == "json"
+    assert (
+        formatters["json"]["()"]
+        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+    )
+
+    # The uvicorn.access logger must declare the structured access-log filter
+    # so HTTP fields (method/path/status) land as proper JSON keys in Monitoring Platform.
+    filters = config.get("filters", {})
+    assert "uvicorn_access_structured" in filters
+    assert (
+        filters["uvicorn_access_structured"]["()"]
+        == "gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter"
+    )
+    assert loggers["uvicorn.access"].get("filters") == ["uvicorn_access_structured"]
 
 
 @pytest.fixture(scope="function")
@@ -75,7 +111,7 @@ def seqdb_server(
         app_id=seqdb_app_composer.app.generate_id(),
         setup_logger=seqdb_app_cfg.setup_logger,
         api_logger=seqdb_app_cfg.api_logger,
-        debug=False,
+        debug=True,
     )
 
     with ServerManager(
@@ -190,7 +226,7 @@ def test_casedb_seqdb_connection(
             case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
         )
         case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)  # type: ignore[assignment]
+            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
         ]
         if len(case_ids) < 2:
             continue
@@ -217,7 +253,8 @@ def test_casedb_seqdb_connection(
                         max_distance=5,
                     )
                 )
-                is_similar_cases_retrieved = True
+                if len(similar_case_ids) > 0:
+                    is_similar_cases_retrieved = True
                 break
         if is_phylogenetic_tree_retrieved and is_similar_cases_retrieved:
             break
@@ -225,6 +262,9 @@ def test_casedb_seqdb_connection(
     assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
+    assert any(
+        isinstance(case_id, UUID) for case_id in similar_case_ids
+    )
 
     genetic_sequence_case_type_cols = [
         x
@@ -234,7 +274,7 @@ def test_casedb_seqdb_connection(
     has_seq_case_ids: list[UUID] = []
     for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
         assert genetic_sequence_case_type_col.id is not None
-        has_seq_case_ids: list[UUID] = [  # type: ignore[assignment]
+        has_seq_case_ids: list[UUID] = [
             UUID(x.content[genetic_sequence_case_type_col.id])
             for x in cases
             if x.content.get(genetic_sequence_case_type_col.id)

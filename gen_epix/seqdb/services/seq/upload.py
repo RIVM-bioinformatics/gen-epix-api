@@ -3,7 +3,10 @@ from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
-from gen_epix.seqdb.services.seq.upload_upsert_batch import _create_sample_refdata
+from gen_epix.seqdb.services.seq.upload_upsert_batch import (
+    _create_sample_refdata,
+    _update_profile_distances,
+)
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
     _verify_sample_children,
     _verify_sample_refdata,
@@ -51,7 +54,7 @@ class SampleBatchUploader(BatchUploader):
     def verify_batch(
         self,
         cmd: command.UploadSamplesCommand,
-        retval: model.SampleBatchUploadResult,
+        batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -59,19 +62,19 @@ class SampleBatchUploader(BatchUploader):
         """
         success = True
 
-        success &= self.verify_external_identifiers(cmd, retval, uow)
-        success &= self.verify_parents(cmd, retval, uow)
+        success &= self.verify_parents_external_identifiers(cmd, batch_result, uow)
+        success &= self.verify_parents(cmd, batch_result, uow)
         # Verify existence and consistency of child models as needed
-        success &= _verify_sample_children(self, cmd, retval, uow)
+        success &= _verify_sample_children(self, cmd, batch_result, uow)
         # Verify reference data
-        success &= _verify_sample_refdata(self, cmd, retval, uow)
+        success &= _verify_sample_refdata(self, cmd, batch_result, uow)
 
         return success
 
     def upsert_batch(
         self,
         cmd: command.UploadSamplesCommand,
-        retval: model.SampleBatchUploadResult,
+        batch_result: model.SampleBatchUploadResult,
         uow: BaseUnitOfWork,
     ) -> bool:
         """
@@ -80,15 +83,16 @@ class SampleBatchUploader(BatchUploader):
         success = True
 
         # Add any new reference data
-        success &= _create_sample_refdata(self, cmd, retval, uow)
+        success &= _create_sample_refdata(self, cmd, batch_result, uow)
         # Upsert sample data
-        success &= self.create_parents(cmd, retval, uow)
-        success &= self.update_parents(cmd, retval, uow)
+        success &= self.create_parents(cmd, batch_result, uow)
+        success &= self.update_parents(cmd, batch_result, uow)
         # Upsert child models
-        success &= self.create_children(cmd, retval, uow)
-        success &= self.update_children(cmd, retval, uow)
+        success &= self.create_children(cmd, batch_result, uow)
+        success &= self.update_children(cmd, batch_result, uow)
+        success &= _update_profile_distances(self, cmd, batch_result, uow)
         # Create external identifiers
-        success &= self.create_external_identifiers(cmd, retval, uow)
+        success &= self.create_external_identifiers(cmd, batch_result, uow)
 
         return success
 
@@ -101,5 +105,7 @@ def seq_service_upload_samples(
     See command.UploadSamplesCommand for details.
     """
     sample_batch_uploader = SampleBatchUploader(self)
-    retval: model.SampleBatchUploadResult = sample_batch_uploader.upload_batch(cmd)
-    return retval
+    batch_result: model.SampleBatchUploadResult = sample_batch_uploader.upload_batch(
+        cmd
+    )
+    return batch_result

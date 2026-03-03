@@ -723,7 +723,6 @@ class SARepository(BaseRepository):
                 row_ids = [
                     x[0] for x in session.execute(select(get_row_id(row_class))).all()
                 ]
-            session.execute(delete(row_class))
 
             # # TODO: workaround for SQLite foreign key constraint issues. Remove ASAP.
             # # Check if this is SQLite and if we need to handle foreign key constraints
@@ -747,8 +746,8 @@ class SARepository(BaseRepository):
             # if needs_fk_workaround:
             #     session.execute(sa.text("PRAGMA foreign_keys=OFF"))
             #     session.flush()
-            # # Delete rows
-            # session.execute(delete(row_class))
+            # Delete rows
+            session.execute(delete(row_class))
             # # Re-enable foreign keys if we disabled them
             # if needs_fk_workaround:
             #     session.execute(sa.text("PRAGMA foreign_keys=ON"))

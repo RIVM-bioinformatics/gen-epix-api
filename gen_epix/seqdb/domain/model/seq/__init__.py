@@ -93,6 +93,12 @@ from gen_epix.seqdb.domain.model.seq.upload import (
     AlleleProfileForUpload as AlleleProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.upload import (
+    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
+)
+from gen_epix.seqdb.domain.model.seq.upload import (
+    KmerProfileForUpload as KmerProfileForUpload,
+)
+from gen_epix.seqdb.domain.model.seq.upload import (
     MlvaProfileForUpload as MlvaProfileForUpload,
 )
 from gen_epix.seqdb.domain.model.seq.upload import ReadSetForUpload as ReadSetForUpload
@@ -102,6 +108,7 @@ from gen_epix.seqdb.domain.model.seq.upload import (
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleBatchUploadResult as SampleBatchUploadResult,
 )
+from gen_epix.seqdb.domain.model.seq.upload import SampleDataIssue as SampleDataIssue
 from gen_epix.seqdb.domain.model.seq.upload import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq.upload import (
     SampleUploadResult as SampleUploadResult,
