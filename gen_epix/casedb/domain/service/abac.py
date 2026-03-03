@@ -74,8 +74,13 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveSimilarCasesCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseStatsCommand,
+        command.CaseTypeDimCrudCommand,
     }
 
     @abc.abstractmethod
     def get_case_abac(self, cmd: command.Command) -> model.CaseAbac:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_readable_reference_data(self, cmd: command.Command) -> model.ReadableReferenceData:
         raise NotImplementedError

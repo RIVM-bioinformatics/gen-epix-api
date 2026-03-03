@@ -12,7 +12,7 @@ Fix index:
   3. Sensitive key=value pairs (client_secret, password, …) are redacted to
      [REDACTED] in both the message string and string-valued extras.
   4. Stacktraces longer than max_stacktrace_length are truncated before
-     serialisation, staying well under the Monitoring Platform 16384-byte limit.
+     serialisation, e.g. to stay below a log monitoring platform limit.
   5. A `content` field in a merged JSON message is normalised to `message`
      when `message` is absent, eliminating the content/message split in monitoring query engines.
   6. UvicornAccessLogFilter extracts HTTP fields (method/path/status/client/
@@ -48,7 +48,7 @@ _UVICORN_ACCESS_RE = re.compile(
     r" (?P<status>\d+)"
 )
 
-_DEFAULT_MAX_STACKTRACE_LENGTH = 8000  # empirical value keeping typical stacktraces well under the 384-byte limit after JSON overhead
+_DEFAULT_MAX_STACKTRACE_LENGTH = 8000  # empirical value keeping typical stacktraces not too long for e.g. a log monitoring platform
 
 
 def _utc_iso(ts: float) -> str:
@@ -145,8 +145,6 @@ class JsonFormatter(logging.Formatter):
         extras_key: str = "props",
         sensitive_keys: list[str] | tuple[str, ...] | set[str] | None = None,
         redacted_value: str = _DEFAULT_REDACTED_VALUE,
-        # Fix 4 – default keeps output well under the Monitoring Platform 16384-byte
-        # hard limit; set to None to disable truncation entirely.
         max_stacktrace_length: int | None = _DEFAULT_MAX_STACKTRACE_LENGTH,
     ):
         super().__init__()
@@ -205,7 +203,9 @@ class JsonFormatter(logging.Formatter):
             return self._redact(value)
 
         if isinstance(value, dict):
-            return {k: self._redact_nested(v, key_name=str(k)) for k, v in value.items()}
+            return {
+                k: self._redact_nested(v, key_name=str(k)) for k, v in value.items()
+            }
 
         if isinstance(value, list):
             return [self._redact_nested(v) for v in value]
@@ -263,8 +263,6 @@ class JsonFormatter(logging.Formatter):
 
         if record.exc_info:
             stacktrace = self.formatException(record.exc_info)
-            # Fix 4 – truncate long stacktraces before serialisation so the
-            # final JSON stays within the Monitoring Platform 16384-byte limit.
             if (
                 self.max_stacktrace_length is not None
                 and len(stacktrace) > self.max_stacktrace_length

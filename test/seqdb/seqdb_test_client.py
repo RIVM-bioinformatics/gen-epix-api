@@ -6,8 +6,6 @@ import uuid
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
-from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
-from test.test_client.util import get_test_name, get_test_output_dir
 from typing import Any, Optional
 from uuid import UUID
 
@@ -24,10 +22,11 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
+from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
+from test.test_client.util import get_test_name, get_test_output_dir
 
 
 class SeqGenerationSettings(BaseModel):
-
     n_loci: int
     locus_length: int
     p_locus_deletion: float = 0.01
@@ -100,7 +99,6 @@ class SeqGenerationSettings(BaseModel):
 
 
 class DistanceMatrix(BaseModel):
-
     model_config = {"arbitrary_types_allowed": True}
 
     obj_ids: list[UUID]
@@ -454,9 +452,7 @@ class SeqdbTestClient(TestClient):
         props: dict[str, str | int | float | None] | None = None,
         set_dummy_created_in_data_collection: bool = False,
     ) -> model.Sample:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         created_in_data_collection_id = self._get_obj_id(
             model.DataCollection,
             created_in_data_collection_or_str,
@@ -466,7 +462,7 @@ class SeqdbTestClient(TestClient):
             command.SampleCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Sample(  # type: ignore[arg-type]
+                objs=model.Sample(  # type: ignore[call-arg]
                     code=code,
                     props=props,
                     created_in_data_collection_id=created_in_data_collection_id,
@@ -482,9 +478,7 @@ class SeqdbTestClient(TestClient):
         format: enum.FileFormat,
         compression: enum.FileCompression = enum.FileCompression.NONE,
     ) -> model.File:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         content: bytes
         if isinstance(content_or_str, str):
             content = content_or_str.encode()
@@ -501,9 +495,7 @@ class SeqdbTestClient(TestClient):
             )
         )
 
-        return self._set_obj(
-            model.File(id=file_id, content=content)
-        )  # type: ignore[return-value]
+        return self._set_obj(model.File(id=file_id, content=content))  # type: ignore[return-value]
 
     def create_read_set(
         self,
@@ -522,9 +514,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_sequencing_protocol: bool = False,
     ) -> model.ReadSet:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         sequencing_protocol_id = self._get_obj_id(
             model.SequencingProtocol,
@@ -534,7 +524,7 @@ class SeqdbTestClient(TestClient):
         if isinstance(file_format, Enum) and not isinstance(
             file_format, enum.ReadsFileFormat
         ):
-            file_format = enum.ReadsFileFormat(file_format.value)
+            file_format = enum.ReadsFileFormat(file_format.value)  # type: ignore[assignment]
         fwd_reads_hash: UUID | None
         if isinstance(fwd_reads_hash, str):
             fwd_reads_hash = UUID(fwd_reads_hash)
@@ -545,7 +535,7 @@ class SeqdbTestClient(TestClient):
             command.ReadSetCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.ReadSet(
+                objs=model.ReadSet(  # type: ignore[call-arg]
                     sample_id=sample_id,
                     sequencing_protocol_id=sequencing_protocol_id,
                     fwd_uri=fwd_uri,
@@ -568,7 +558,7 @@ class SeqdbTestClient(TestClient):
         assert read_set.rev_file_id == rev_file_id
         assert read_set.fwd_uri == fwd_uri
         assert read_set.rev_uri == rev_uri
-        return self._set_obj(read_set)
+        return self._set_obj(read_set)  # type: ignore[return-value]
 
     def create_seq(
         self,
@@ -583,9 +573,7 @@ class SeqdbTestClient(TestClient):
         set_dummy_sample: bool = False,
         set_dummy_assembly_protocol: bool = False,
     ) -> model.Seq:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         sample_id = self._get_obj_id(model.Sample, sample_or_str, set_dummy_sample)
         assembly_protocol_id = self._get_obj_id(
             model.AssemblyProtocol,
@@ -600,7 +588,7 @@ class SeqdbTestClient(TestClient):
             command.SeqCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Seq(
+                objs=model.Seq(  # type: ignore[call-arg]
                     sample_id=sample_id,
                     read_set_id=read_set_id,
                     read_set2_id=read_set2_id,
@@ -622,23 +610,16 @@ class SeqdbTestClient(TestClient):
         name: str | None = None,
         **kwargs: Any,
     ) -> model.Model:
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
-        user: model.User = self._get_obj(
-            self.user_class, user_or_str
-        )  # type: ignore[assignment]
+        user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
         crud_command_class = self.app.domain.get_crud_command_for_model(protocol_class)
         protocol = self.app.handle(
             crud_command_class(
                 operation=CrudOperation.CREATE_ONE,
                 user=user,
-                objs=protocol_class(
-                    code=code, name=name if name else code, **kwargs
-                ),  # type: ignore
+                objs=protocol_class(code=code, name=name if name else code, **kwargs),  # type: ignore
             )
         )
-        return self._set_obj(protocol)  # type: ignore[return-value]
+        return self._set_obj(protocol)
 
     def _get_obj_id(
         self,
@@ -658,7 +639,7 @@ class SeqdbTestClient(TestClient):
                 )
             obj_id = (  # type: ignore[union-attr]
                 self._get_obj(model_class, obj_or_str)  # type: ignore[assignment]
-            ).id  # type: ignore[assignment]
+            ).id
         return obj_id
 
     @staticmethod
@@ -668,6 +649,8 @@ class SeqdbTestClient(TestClient):
         assembly_protocol_id: UUID | None = None,
         locus_set_id: UUID | None = None,
         locus_detection_protocol_id: UUID | None = None,
+        locus_code_map_id: UUID | None = None,
+        locus_ids: list[UUID] | None = None,
     ) -> model.SampleBatchForUpload:
         # set IDs if not provided
         assembly_protocol_id = (
@@ -679,10 +662,22 @@ class SeqdbTestClient(TestClient):
             if locus_detection_protocol_id is not None
             else uuid.uuid4()
         )
+        locus_code_map_id = (
+            locus_code_map_id if locus_code_map_id is not None else uuid.uuid4()
+        )
         # local RNG to  ensure reproducibility with same seed
         rng = random.Random(settings.seed)
 
-        locus_ids: list[UUID] = [uuid.uuid4() for _ in range(settings.n_loci)]
+        # Use provided locus_ids or generate random ones
+        if locus_ids is None:
+            locus_ids = [uuid.uuid4() for _ in range(settings.n_loci)]
+        else:
+            # Validate that provided locus_ids match expected count
+            if len(locus_ids) != settings.n_loci:
+                raise ValueError(
+                    f"Provided locus_ids count ({len(locus_ids)}) does not match "
+                    f"settings.n_loci ({settings.n_loci})"
+                )
         sequence: list[str] = [
             rng.choice(["A", "C", "G", "T"]) for _ in range(settings.seq_length)
         ]
@@ -728,28 +723,31 @@ class SeqdbTestClient(TestClient):
                     * settings.locus_length
                 ]
                 if set(allele_seq) != {"-"}:
+                    # Define a 'clean' seq to prevent two seq entries in alleles producing same hash-based id but with same id
+                    clean_allele_seq = "".join(x for x in allele_seq if x != "-")
                     if (
-                        allele_seq in alleles  # type: ignore[comparison-overlap]
-                        and alleles[allele_seq].locus_id != locus_id  # type: ignore[index]
+                        clean_allele_seq in alleles
+                        and alleles[clean_allele_seq].locus_id != locus_id
                     ):
                         raise AssertionError(
                             "Allele sequence already exists for a different locus"
                         )
-                    alleles[allele_seq] = model.AlleleForUpload(  # type: ignore[index]
-                        seq="".join(x for x in allele_seq if x != "-"),
-                        seq_format=enum.SeqFormat.STR_DNA,
-                        locus_id=locus_id,
-                    )
-                    allele_ids[locus_idx] = alleles[allele_seq].id  # type: ignore[assignment,index]
+                    if clean_allele_seq not in alleles:
+                        alleles[clean_allele_seq] = model.AlleleForUpload(
+                            seq=clean_allele_seq,
+                            seq_format=enum.SeqFormat.STR_DNA,
+                            locus_id=locus_id,
+                        )
+                    allele_ids[locus_idx] = alleles[clean_allele_seq].id  # type: ignore[assignment]
             allele_profile_for_upload = model.AlleleProfileForUpload(
                 locus_set_id=locus_set_id,
                 locus_detection_protocol_id=locus_detection_protocol_id,
+                locus_code_map_id=locus_code_map_id,
                 allele_ids=allele_ids,  # type: ignore[arg-type]
                 allele_profile_format=enum.AlleleProfileFormat.SORTED_ALLELE_IDS,
                 seq_id=seq_id,
             )
             seq_for_upload = model.SeqForUpload(
-                id=seq_id,
                 contigs=[
                     model.Contig(
                         seq="".join(x for x in seq if x != "-"),
@@ -762,6 +760,7 @@ class SeqdbTestClient(TestClient):
                 model.SampleForUpload(
                     seqs=[seq_for_upload],
                     allele_profiles=[allele_profile_for_upload],
+                    sample=model.Sample(created_in_data_collection_id=uuid.uuid4()),
                 )
             )
         sample_batch_for_upload = model.SampleBatchForUpload(

@@ -34,6 +34,10 @@ class BaseSeqService(BaseService):
             command.RetrieveSimilarProfilesCommand,
             self.retrieve_similar_profiles,
         )
+        f(
+            command.CalculateSeqDistancesForNewProfilesCommand,
+            self.calculate_seq_distances_for_new_profiles,
+        )
 
     @abc.abstractmethod
     def retrieve_phylogenetic_tree(
@@ -71,4 +75,11 @@ class BaseSeqService(BaseService):
         self,
         cmd: command.RetrieveSimilarProfilesCommand,
     ) -> list[UUID]:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def calculate_seq_distances_for_new_profiles(
+        self,
+        cmd: command.CalculateSeqDistancesForNewProfilesCommand,
+    ) -> list[model.CalculateSeqDistancesResult]:
         raise NotImplementedError()

@@ -12,7 +12,9 @@ DEBUG_YAML_PATHS = [
 ]
 
 
-@pytest.mark.parametrize("yaml_path", DEBUG_YAML_PATHS, ids=lambda p: p.parent.parent.name)
+@pytest.mark.parametrize(
+    "yaml_path", DEBUG_YAML_PATHS, ids=lambda p: p.parent.parent.name
+)
 def test_debug_console_uses_json_formatter(yaml_path: Path) -> None:
     config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
     handlers = config.get("handlers", {})
@@ -20,9 +22,7 @@ def test_debug_console_uses_json_formatter(yaml_path: Path) -> None:
     json_formatter_cfg = formatters.get("json", {})
 
     assert handlers.get("console", {}).get("formatter") == "json"
-    assert (
-        handlers.get("file", {}).get("formatter") == "json"
-    )
+    assert handlers.get("file", {}).get("formatter") == "json"
     assert (
         json_formatter_cfg.get("()")
         == "gen_epix.commondb.domain.json_logging.JsonFormatter"

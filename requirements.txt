@@ -1,4 +1,4 @@
-# python 3.14
+# python 3.13.5
 
 # application server
 fastapi[standard]==0.135.1
@@ -9,7 +9,7 @@ urllib3==2.6.3
 pyjwt==2.11.0
 
 #database handling
-sqlalchemy==2.0.47
+sqlalchemy==2.0.48
 sqlalchemy_utils==0.42.1
 
 # Data models/handling
@@ -29,7 +29,7 @@ numpy==2.4.2
 biopython==1.86
 
 # other
-cachetools==7.0.1
+cachetools==7.0.2
 slowapi==0.1.9
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*

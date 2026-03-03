@@ -85,7 +85,7 @@ def test_uvicorn_access_has_structured_filter(yaml_path: Path) -> None:
     ), f"uvicorn_access_structured filter missing in {yaml_path.name}"
     assert (
         filters["uvicorn_access_structured"]["()"]
-        == "gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter"
+        == "gen_epix.commondb.config.json_logging.UvicornAccessLogFilter"
     )
     assert loggers.get("uvicorn.access", {}).get("filters") == [
         "uvicorn_access_structured"
@@ -104,7 +104,7 @@ def test_console_handler_uses_json_formatter(yaml_path: Path) -> None:
     assert handlers.get("console", {}).get("formatter") == "json"
     assert (
         json_formatter_cfg.get("()")
-        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+        == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
     assert json_formatter_cfg.get("redacted_value") == "[REDACTED]"
     sensitive_keys = json_formatter_cfg.get("sensitive_keys")

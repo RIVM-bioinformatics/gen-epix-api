@@ -477,17 +477,22 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
     def test_abac_read_filters_by_access(self) -> None:
         # 1. Input
         cmd = make_command(CrudOperation.READ_ALL, self.user_id)
-        allowed_ids: Set[UUID] = {uuid4(), uuid4()}
+        allowed_dim_ids: Set[UUID] = {uuid4(), uuid4()}
         expected: List[Any] = [object()]
 
         # 2. Mocks
         case_abac = Mock()
-        case_abac.get_case_types_with_any_rights.return_value = allowed_ids
+        readable_ref_data = Mock()
+        readable_ref_data.case_type_dim_ids = allowed_dim_ids
 
         with (
             patch(
                 "gen_epix.casedb.services.case.crud_case_type_dim.get_case_abac_from_command",
                 return_value=case_abac,
+            ),
+            patch(
+                "gen_epix.casedb.services.case.crud_case_type_dim.get_readable_reference_data_from_command",
+                return_value=readable_ref_data,
             ),
             patch(
                 "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
@@ -510,7 +515,10 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
 
             # 4. Verify
             self.assertEqual(retval, expected)
-            # Ensure filter composed with allowed IDs
+            # Filter must be composed from readable reference data case_type_dim_ids
+            self.service._compose_id_filter.assert_called_once_with(
+                ("id", allowed_dim_ids)
+            )
             caf.assert_called_once()
             called_args = caf.call_args[0]
             self.assertIs(called_args[0], self.service)

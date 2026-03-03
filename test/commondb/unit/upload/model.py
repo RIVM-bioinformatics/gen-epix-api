@@ -136,7 +136,7 @@ class Child2(fastapp.Model):
 
 
 class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
-    ENTITY: ClassVar = Child1.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Child1.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child1ForUpload"
     parent_id: UUID = Field(
         default=NULL_ID,
@@ -166,7 +166,7 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
 class Child2ForUpload(
     Child2, commondb_model.IsNewIdMixin, commondb_model.ExternalIdentifiersMixin
 ):
-    ENTITY: ClassVar = Child2.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Child2.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child2ForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
     parent_id: UUID = Field(
@@ -180,7 +180,7 @@ class Child2ForUpload(
 
 
 class ParentForUpload(commondb_model.ParentForUpload):
-    ENTITY: ClassVar = commondb_model.ParentForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = commondb_model.ParentForUpload.ENTITY.clone()
     NAME: ClassVar = "ParentForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Parent
@@ -215,12 +215,12 @@ class ParentForUpload(commondb_model.ParentForUpload):
 class Child1UploadResult(commondb_model.UploadResult):
     """Result for uploading a single Child1 object."""
 
-    ENTITY: ClassVar = commondb_model.UploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = commondb_model.UploadResult.ENTITY.clone()
     NAME: ClassVar = "Child1UploadResult"
 
 
 class ParentUploadResult(commondb_model.ParentUploadResult):
-    ENTITY: ClassVar = commondb_model.ParentUploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = commondb_model.ParentUploadResult.ENTITY.clone()
     NAME: ClassVar = "ParentUploadResult"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
 
@@ -236,7 +236,7 @@ class ParentUploadResult(commondb_model.ParentUploadResult):
 
 
 class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
-    ENTITY: ClassVar = commondb_model.BaseBatchForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = commondb_model.BaseBatchForUpload.ENTITY.clone()
     NAME: ClassVar = "ParentBatchForUpload"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
     PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "parents"
@@ -247,7 +247,7 @@ class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
 
 
 class ParentBatchUploadResult(commondb_model.BaseBatchUploadResult):
-    ENTITY: ClassVar = commondb_model.BaseBatchUploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = commondb_model.BaseBatchUploadResult.ENTITY.clone()
     BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload  # type: ignore[assignment]
     PARENT_RESULT_CLASS: ClassVar = ParentUploadResult
 

@@ -49,7 +49,7 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert handlers["console"]["formatter"] == "json"
     assert (
         formatters["json"]["()"]
-        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+        == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
     assert formatters["json"]["redacted_value"] == "[REDACTED]"
     assert "client_secret" in formatters["json"]["sensitive_keys"]
@@ -60,7 +60,7 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert "uvicorn_access_structured" in filters
     assert (
         filters["uvicorn_access_structured"]["()"]
-        == "gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter"
+        == "gen_epix.commondb.config.json_logging.UvicornAccessLogFilter"
     )
     assert loggers["uvicorn.access"].get("filters") == ["uvicorn_access_structured"]
 
@@ -113,7 +113,7 @@ def seqdb_server(
         app_id=seqdb_app_composer.app.generate_id(),
         setup_logger=seqdb_app_cfg.setup_logger,
         api_logger=seqdb_app_cfg.api_logger,
-        debug=False,
+        debug=True,
     )
 
     with ServerManager(
@@ -228,7 +228,7 @@ def test_casedb_seqdb_connection(
             case_type_col.genetic_sequence_case_type_col_id  # type: ignore[assignment]
         )
         case_ids: list[UUID] = [
-            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)  # type: ignore[assignment]
+            x.id for x in cases if x.content.get(genetic_sequence_case_type_col_id)
         ]
         if len(case_ids) < 2:
             continue
@@ -255,7 +255,8 @@ def test_casedb_seqdb_connection(
                         max_distance=5,
                     )
                 )
-                is_similar_cases_retrieved = True
+                if len(similar_case_ids) > 0:
+                    is_similar_cases_retrieved = True
                 break
         if is_phylogenetic_tree_retrieved and is_similar_cases_retrieved:
             break
@@ -263,6 +264,9 @@ def test_casedb_seqdb_connection(
     assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
+    assert any(
+        isinstance(case_id, UUID) for case_id in similar_case_ids
+    )
 
     genetic_sequence_case_type_cols = [
         x
@@ -272,7 +276,7 @@ def test_casedb_seqdb_connection(
     has_seq_case_ids: list[UUID] = []
     for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
         assert genetic_sequence_case_type_col.id is not None
-        has_seq_case_ids: list[UUID] = [  # type: ignore[assignment]
+        has_seq_case_ids: list[UUID] = [
             UUID(x.content[genetic_sequence_case_type_col.id])
             for x in cases
             if x.content.get(genetic_sequence_case_type_col.id)
