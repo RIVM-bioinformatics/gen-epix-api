@@ -77,6 +77,8 @@ class EdgeCaseSpec:
     expected_case_type_sets: list[str]
     expected_case_type_col_sets: list[str]
     expected_case_type_cols: list[str]
+    expected_cols: list[str]
+    expected_dims: list[str]
 
     @property
     def description(self) -> str:
@@ -95,7 +97,9 @@ class EdgeCaseSpec:
             f"  → expected_case_types=[{_fmt(self.expected_case_types)}], "
             f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}], "
             f"expected_case_type_col_sets=[{_fmt(self.expected_case_type_col_sets)}], "
-            f"expected_case_type_cols=[{_fmt(self.expected_case_type_cols)}]"
+            f"expected_case_type_cols=[{_fmt(self.expected_case_type_cols)}], "
+            f"expected_cols=[{_fmt(self.expected_cols)}], "
+            f"expected_dims=[{_fmt(self.expected_dims)}]"
         )
 
 
@@ -282,6 +286,31 @@ def _compute_expected_case_type_cols(
     return sorted(result)
 
 
+def _parse_case_type_col(col_code: str) -> tuple[str, str, str, str]:
+    """Parse case_type_col{ct}_{dim}_{occ}_{rank} → (ct, dim, occ, rank)."""
+    m = re.match(r"^case_type_col(\d+)_(\d+)_(\d+)_(\d+)$", col_code)
+    assert m, f"Cannot parse case_type_col code: '{col_code}'"
+    return m.group(1), m.group(2), m.group(3), m.group(4)
+
+
+def _compute_expected_cols(case_type_col_codes: list[str]) -> list[str]:
+    """Cols referenced by the accessible case type cols: col{dim}_{rank}."""
+    result: set[str] = set()
+    for code in case_type_col_codes:
+        _, dim, _, rank = _parse_case_type_col(code)
+        result.add(f"col{dim}_{rank}")
+    return sorted(result)
+
+
+def _compute_expected_dims(case_type_col_codes: list[str]) -> list[str]:
+    """Dims referenced by the accessible case type cols: dim{dim}."""
+    result: set[str] = set()
+    for code in case_type_col_codes:
+        _, dim, _, _ = _parse_case_type_col(code)
+        result.add(f"dim{dim}")
+    return sorted(result)
+
+
 EDGE_CASES: list[EdgeCaseSpec] = [
     EdgeCaseSpec(
         user_name=f"org_user{org_idx + 1}_{usr_idx + 1}",
@@ -295,6 +324,12 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         expected_case_type_sets=_compute_expected_case_type_sets(org_access, org_share),
         expected_case_type_col_sets=_compute_expected_case_type_col_sets(org_access),
         expected_case_type_cols=_compute_expected_case_type_cols(org_access, org_share),
+        expected_cols=_compute_expected_cols(
+            _compute_expected_case_type_cols(org_access, org_share)
+        ),
+        expected_dims=_compute_expected_dims(
+            _compute_expected_case_type_cols(org_access, org_share)
+        ),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
     for usr_idx, ((_, user_access), (_, user_share)) in _user_combos

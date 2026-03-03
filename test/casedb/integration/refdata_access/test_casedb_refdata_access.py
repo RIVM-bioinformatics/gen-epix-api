@@ -1,3 +1,10 @@
+"""
+This module contains integration tests for CaseDB reference data
+
+- it uses the existing demo data
+    - see DevRepositoryConfig.DICT_DEMO in base.py for configuration
+"""
+
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base import (
