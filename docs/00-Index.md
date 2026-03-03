@@ -23,6 +23,7 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 | 08 | [Extending the System](./08-Extending-the-System.md) | Adding modules, commands, RBAC rules, endpoints, IDP config |
 | 08a | [App Composition Walkthrough](./08a-App-Composition-Walkthrough.md) | Full COMMONDB assembly trace (top-down) |
 | 09 | [Constraints & Open Questions](./09-Constraints-and-Open-Questions.md) | All hard limits and consolidated `<TBF elsewhere>` items |
+| 10 | [Logging](./10-Logging.md) | Logging architecture, JSON formatter behavior, runtime level precedence, overwrite/debug modes |
 
 ---
 
@@ -33,10 +34,11 @@ Gen-EpiX is the backend of a genomic epidemiology platform. It includes four Fas
 3. **[Security](./03-Security.md)** — Trust boundaries and policy enforcement points.
 4. **[API Surface](./04-API-Surface.md)** — Map the exposed contract to architecture and security.
 5. **[Configuration & Runtime](./05-Configuration-and-Runtime.md)** — Settings model, modes, startup lifecycle.
-6. **[Development Guide](./06-Development-Guide.md)** — Local workflows, testing, linting.
-7. **[CI/CD & Release](./07-CI-CD-and-Release.md)** — Align with CI gates before opening a PR.
-8. **[Extending the System](./08-Extending-the-System.md)** — Use before adding modules, commands, RBAC rules, routers, or IDP config.
-9. **[Constraints & Open Questions](./09-Constraints-and-Open-Questions.md)** — Review hard limits and known documentation gaps.
+6. **[Logging](./10-Logging.md)** — Logging setup, JSON structure, and load/overwrite behavior.
+7. **[Development Guide](./06-Development-Guide.md)** — Local workflows, testing, linting.
+8. **[CI/CD & Release](./07-CI-CD-and-Release.md)** — Align with CI gates before opening a PR.
+9. **[Extending the System](./08-Extending-the-System.md)** — Use before adding modules, commands, RBAC rules, routers, or IDP config.
+10. **[Constraints & Open Questions](./09-Constraints-and-Open-Questions.md)** — Review hard limits and known documentation gaps.
 
 For framework internals, read [02a-Fastapp-Framework](./02a-Fastapp-Framework.md) after chapter 02.
 For a full app assembly walkthrough, read [08a-App-Composition-Walkthrough](./08a-App-Composition-Walkthrough.md) after chapter 08.

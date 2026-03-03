@@ -51,6 +51,8 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
         formatters["json"]["()"]
         == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
+    assert formatters["json"]["redacted_value"] == "[REDACTED]"
+    assert "client_secret" in formatters["json"]["sensitive_keys"]
 
     # The uvicorn.access logger must declare the structured access-log filter
     # so HTTP fields (method/path/status) land as proper JSON keys in Monitoring Platform.

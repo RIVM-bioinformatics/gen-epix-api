@@ -17,6 +17,25 @@ from gen_epix.commondb.config.factory import IdFactory, TimestampFactory
 from gen_epix.commondb.config.settings_manager import SettingsManager
 from gen_epix.fastapp import App
 
+_PINNED_THIRD_PARTY_LOGGERS = {
+    "sqlalchemy.engine",
+    "sqlalchemy.pool",
+    "httpx",
+    "asyncio",
+}
+_PINNED_LOCAL_LOGGER_SUFFIXES = {
+    "setup",
+    "service",
+    "app",
+    "api",
+    "external",
+}
+
+
+def _is_descendant_logger(logger_name: str, parent_logger_name: str) -> bool:
+    """Return True when logger_name is a child logger of parent_logger_name."""
+    return logger_name.startswith(f"{parent_logger_name}.")
+
 
 class BaseAppCfg(abc.ABC):
     """Abstract base class for application configuration."""
@@ -352,7 +371,12 @@ class AppCfg(BaseAppCfg):
         for handler in self._setup_logger.handlers:
             handler.setLevel(log_level)
         self._setup_logger.setLevel(log_level)
-        for logger_name in self._logging_config_yaml["loggers"]:
+        pinned_logger_names = set(_PINNED_THIRD_PARTY_LOGGERS)
+        pinned_logger_names.update(
+            AppCfg._prefix_logger(self._logger_prefix, suffix)
+            for suffix in _PINNED_LOCAL_LOGGER_SUFFIXES
+        )
+        for logger_name, logger_cfg in self._logging_config_yaml["loggers"].items():
             curr_logger = logging.getLogger(logger_name)
             if self._log_setup:
                 self.setup_logger.debug(
@@ -361,6 +385,21 @@ class AppCfg(BaseAppCfg):
                         f"Updated logger {logger_name} with level {log_level}",
                     )
                 )
+            effective_level = log_level
+            if logger_name in pinned_logger_names:
+                effective_level = logger_cfg.get("level", log_level)
             for handler in curr_logger.handlers:
-                handler.setLevel(log_level)
-            curr_logger.setLevel(log_level)
+                handler.setLevel(effective_level)
+            curr_logger.setLevel(effective_level)
+
+        # Keep runtime child loggers of pinned third-party namespaces pinned as well.
+        runtime_logger_names = sorted(logging.root.manager.loggerDict.keys())
+        for runtime_logger_name in runtime_logger_names:
+            for pinned_logger_name in _PINNED_THIRD_PARTY_LOGGERS:
+                if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
+                    continue
+                pinned_level = self._logging_config_yaml["loggers"].get(
+                    pinned_logger_name, {}
+                ).get("level", log_level)
+                logging.getLogger(runtime_logger_name).setLevel(pinned_level)
+                break

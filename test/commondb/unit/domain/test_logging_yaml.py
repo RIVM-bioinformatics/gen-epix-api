@@ -99,9 +99,14 @@ def test_console_handler_uses_json_formatter(yaml_path: Path) -> None:
     config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
     handlers = config.get("handlers", {})
     formatters = config.get("formatters", {})
+    json_formatter_cfg = formatters.get("json", {})
 
     assert handlers.get("console", {}).get("formatter") == "json"
     assert (
-        formatters.get("json", {}).get("()")
+        json_formatter_cfg.get("()")
         == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
+    assert json_formatter_cfg.get("redacted_value") == "[REDACTED]"
+    sensitive_keys = json_formatter_cfg.get("sensitive_keys")
+    assert isinstance(sensitive_keys, list)
+    assert "client_secret" in sensitive_keys
