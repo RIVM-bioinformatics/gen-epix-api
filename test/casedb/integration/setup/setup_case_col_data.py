@@ -39,6 +39,9 @@ VERBOSE = True  # Set to True to enable detailed print statements during setup f
 #   col   = Col                   (code: col{dim}_{rank})
 #   dim   = Dim
 #   dc    = DataCollection
+#   (unused in this setup):
+#   oscp  = OrgShareCasePolicy    (name format: {prefix}{org_num}_{to_dc_num}_{from_dc_num})
+#   uscp  = UserShareCasePolicy
 
 
 @dataclass

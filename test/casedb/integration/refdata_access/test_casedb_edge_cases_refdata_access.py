@@ -109,12 +109,15 @@ class TestCaseDBEdgeCasesRefDataAccess:
         the expected set declared in EdgeCaseSpec — neither more nor less.
 
         Failure output includes the full edge case description so the cause is immediately clear:
-          [org_user1_2@org1] org_policies=[case_type_set1], user_policies=[case_type_set2] → expected=[case_type_1]
+          [org_user1_2@org1] org_policies=[case_type_set1], user_policies=[case_type_set2] → expected=[case_type1]
           Missing access:    ∅
-          Unexpected access: ['case_type_2']
+          Unexpected access: ['case_type2']
         """
 
         user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
 
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)

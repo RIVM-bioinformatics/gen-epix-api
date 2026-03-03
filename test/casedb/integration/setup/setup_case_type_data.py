@@ -4,8 +4,13 @@ This module defines the setup_case_type_data fixture, which creates reference da
 and all four policy types) for tests.
 """
 
+import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
+from test.casedb.integration.setup.define_edge_cases import (
+    CASE_TYPE_COL_SETS,
+    CASE_TYPE_SETS,
+    EDGE_CASES,
+)
 
 import pytest
 
@@ -48,82 +53,73 @@ def setup_case_type_data(
     env.create_case_type_set_category(root_user, "category_1", 0)
 
     # --- CASE TYPES & SETS ---
-    # Derive case types and case type sets from all four policy dimensions in EDGE_CASES.
-    # Assumption: each case type set contains exactly one case type.
-    # Naming convention: case_type_set{N} → case_type_{N} (replace "_set" with "_").
-
-    all_ct_set_names = {
-        ct_set_name
-        for spec in EDGE_CASES
-        for ct_set_name in (
-            spec.org_access_policy_sets
-            + spec.org_share_policy_sets
-            + spec.user_access_policy_sets
-            + spec.user_share_policy_sets
-        )
-    }
-    for ct_set_name in sorted(all_ct_set_names):
-        ct_name = ct_set_name.replace("_set", "")
-        case_type = env.create_case_type(
-            root_user, ct_name, "disease_1", "etiological_agent_1"
-        )
-        assert case_type is not None, f"Failed to create case type '{ct_name}'"
-        env.create_case_type_set(root_user, ct_set_name, {ct_name}, "category_1")
+    # Use CASE_TYPE_SETS from define_edge_cases.py
+    created_case_types = set()
+    for ct_set_name, ct_names in CASE_TYPE_SETS.items():
+        # Create all case types for this set (if not already created)
+        for ct_name in ct_names:
+            if ct_name not in created_case_types:
+                case_type = env.create_case_type(
+                    root_user, ct_name, "disease_1", "etiological_agent_1"
+                )
+                assert case_type is not None, f"Failed to create case type '{ct_name}'"
+                created_case_types.add(ct_name)
+        # Create the case type set with all its case types
+        env.create_case_type_set(root_user, ct_set_name, set(ct_names), "category_1")
 
     # --- CASE TYPE COLS & COL SETS ---
-    # For demo: create one col per set, and one col set per set (colset1, colset2, ...)
-    all_col_set_names = {s.replace("case_type_set", "colset") for s in all_ct_set_names}
-
-    col_ids_by_colset: dict[str, list] = {}
-
-    # For this demo, we create one dimension and one col per set, using the correct model and naming conventions.
-    # Naming: case_type_col_{ct_idx}_{dim_idx}_{occ_idx}_{col_idx}
-    # We'll use ct_idx = set index, dim_idx = 1, occ_idx = 1, col_idx = 1
-    # Note: we should also create a unique dim and col per set
-    for i, colset_name in enumerate(sorted(all_col_set_names), 1):
-        ct_idx = i
-        dim_idx = i
-        occ_idx = 1
-        col_idx = 1
-        col_code = f"col{dim_idx}_1"  # 1 is the ranking of the col within the dimension, for demo we have only one col per dim
-        dim_code = f"dim{dim_idx}"
-
-        # Ensure the dimension exists (TEXT type for demo)
-        env.create_dim(root_user, dim_code, casedb_enum.DimType.TEXT)
-        # Create the col (TEXT type for demo)
-        col = env.create_col(root_user, col_code, casedb_enum.ColType.TEXT)
-        assert col is not None, f"Failed to create col '{col_code}'"
-        # Create the col set and add the col as its only member
-
-        # Note: there is an error here, case_type_col_1_1_1_1 not found
-        # Col is not part of a col set, case_type_col is part of a case_type_col_set
-
-        # case_type_dim should be case_type_dim_1_2_3
-        # where 1 = ct_idx, 2 = dim_idx, 3 = occ_idx
-        case_type_dim_code = f"case_type_dim{ct_idx}_{dim_idx}_{occ_idx}"
-        env.create_case_type_dim(root_user, case_type_dim_code)
-
-        # case_type_dim1_1_1 not found error
-        case_type_col_code = f"case_type_col{ct_idx}_{dim_idx}_{occ_idx}_{col_idx}"
-        env.create_case_type_col(root_user, case_type_col_code, col.id)
-
-        if VERBOSE:
-            print(
-                f"Created col '{col_code}' (id={col.id}), case type dim '{case_type_dim_code}', and case type col '{case_type_col_code}' for col set '{colset_name}'"
-            )
-
-        # Note: case type col set members are automatically created
-        # when we create the case type col set with the col set name matching the case type set name
-        # (e.g. "colset1" for "case_type_set1") and passing the case type col code as a member.
+    # Use CASE_TYPE_COL_SETS from define_edge_cases.py.
+    # Dims, cols, case_type_dims, and case_type_cols may be shared across col sets
+    # (e.g. colset3 reuses cols from colset1 and colset2) — create each only once.
+    col_ids_by_colset: dict[str, list[str]] = {}
+    created_dims: set[str] = set()
+    created_cols: set[str] = set()
+    created_case_type_dims: set[str] = set()
+    created_case_type_cols: set[str] = set()
+    for colset_name, case_type_col_codes in sorted(CASE_TYPE_COL_SETS.items()):
+        case_type_col_objs: set[str] = set()
+        col_codes: list[str] = []
+        for case_type_col_code in case_type_col_codes:
+            if case_type_col_code not in created_case_type_cols:
+                # Parse indices from naming convention: case_type_col{ct}_{dim}_{occ}_{col_rank}
+                m = re.match(
+                    r"^(.*?)(?P<ct>\d+)_(?P<dim>\d+)_(?P<occ>\d+)_(?P<rank>\d+)$",
+                    case_type_col_code.lower(),
+                )
+                assert m, f"Invalid case_type_col_code format: '{case_type_col_code}'"
+                ct_idx, dim_idx, occ_idx, col_rank = (
+                    m.group("ct"),
+                    m.group("dim"),
+                    m.group("occ"),
+                    m.group("rank"),
+                )
+                dim_code = f"dim{dim_idx}"
+                col_code = f"col{dim_idx}_{col_rank}"
+                case_type_dim_code = f"case_type_dim{ct_idx}_{dim_idx}_{occ_idx}"
+                if dim_code not in created_dims:
+                    env.create_dim(root_user, dim_code, casedb_enum.DimType.TEXT)
+                    created_dims.add(dim_code)
+                if col_code not in created_cols:
+                    col: model.Col = env.create_col(
+                        root_user, col_code, casedb_enum.ColType.TEXT
+                    )
+                    assert col is not None, f"Failed to create col '{col_code}'"
+                    created_cols.add(col_code)
+                    col_codes.append(col_code)
+                if case_type_dim_code not in created_case_type_dims:
+                    env.create_case_type_dim(root_user, case_type_dim_code)
+                    created_case_type_dims.add(case_type_dim_code)
+                env.create_case_type_col(root_user, case_type_col_code)
+                created_case_type_cols.add(case_type_col_code)
+            case_type_col_objs.add(case_type_col_code)
         ct_col_set: model.CaseTypeColSet = env.create_case_type_col_set(
-            root_user, colset_name, {case_type_col_code}
+            root_user, colset_name, case_type_col_objs
         )
         if VERBOSE:
             print(
-                f"Created col set '{colset_name}' with col '{col_code}' (id={col.id}) and case type col '{case_type_col_code}')"
+                f"Created col set '{colset_name}' with case type cols {sorted(case_type_col_objs)}"
             )
-
-        col_ids_by_colset[colset_name] = [col.id]
+        col_ids_by_colset[colset_name] = col_codes
 
     # --- DATA COLLECTIONS ---
     # data_collection1: target collection referenced by all policies
