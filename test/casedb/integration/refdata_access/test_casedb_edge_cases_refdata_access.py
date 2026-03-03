@@ -176,9 +176,6 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
-    # Note: This one uses the setup_case_type_data that is also used for the case type and case type set access tests
-    # we have to use an additional fixture with specific setup for the case type col sets
-    # because the logic is more complex and we want to keep the expected access sets in the EdgeCaseSpec for clarity and maintainability
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
