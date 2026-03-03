@@ -1,5 +1,7 @@
 import logging
 from pathlib import Path
+
+import pyinstrument
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -146,7 +148,11 @@ class TestSampleBatchUploader:
     def test_sample_batch_for_upload_happy_flow(
         self, env: Env, dataset_idx: int
     ) -> None:
+
         set_service_repository(env, self.repositories[dataset_idx])
+
+        # profiler = pyinstrument.Profiler(async_mode="enabled")
+        # profiler.start()
 
         n_entries = len(self.dbs[dataset_idx][model.LocusSet])
         commands_to_upload: list[command.UploadSamplesCommand] = [
@@ -168,3 +174,8 @@ class TestSampleBatchUploader:
         print(f"n_seqs_per_batch={N_SEQS_PER_BATCH}")
         print(f"total_time={total:.4f}s")
         print(f"avg_time_per_upload={avg:.4f}s\n")
+
+        # profiler.stop()
+        # profiler.write_html(
+        #     "./test/output/profile_calculate_seq_distances.html"
+        # )
