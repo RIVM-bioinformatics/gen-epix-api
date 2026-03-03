@@ -1,28 +1,33 @@
+"""
+This module contains integration tests for CaseDB reference data access edge cases.
+
+It uses
+
+- the definitions in EDGE_CASES from define_edge_cases.py
+- the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
+- and then tests that each user has access to exactly the expected case types.
+
+"""
+
 import logging
-
-import pytest
-
-from rich import print as rich_print
-from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.domain import command
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand, CaseTypeSetCrudCommand
-from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp import CrudOperation
-from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-
-from test.casedb.integration.conftest import (
-    EDGE_CASES,
-    EdgeCaseSpec,
-)
 from test.casedb.integration.refdata_access.base_empty import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,
     VERBOSE,
 )
+from test.casedb.integration.setup.define_edge_cases import EDGE_CASES, EdgeCaseSpec
 
+import pytest
+from rich import print as rich_print
+
+from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.command import CaseTypeCrudCommand, CaseTypeSetCrudCommand
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.fastapp import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE
@@ -104,12 +109,15 @@ class TestCaseDBEdgeCasesRefDataAccess:
         the expected set declared in EdgeCaseSpec — neither more nor less.
 
         Failure output includes the full edge case description so the cause is immediately clear:
-          [org_user1_2@org1] org_policies=[case_type_set1], user_policies=[case_type_set2] → expected=[case_type_1]
+          [org_user1_2@org1] org_policies=[case_type_set1], user_policies=[case_type_set2] → expected=[case_type1]
           Missing access:    ∅
-          Unexpected access: ['case_type_2']
+          Unexpected access: ['case_type2']
         """
 
         user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
 
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
@@ -158,6 +166,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
         )
 
+    # Note: This one uses the setup_case_type_data that is also used for the case type and case type set access tests
+    # we have to use an additional fixture with specific setup for the case type col sets
+    # because the logic is more complex and we want to keep the expected access sets in the EdgeCaseSpec for clarity and maintainability
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
@@ -180,7 +191,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         )
         result = self.env.app.handle(get_cmd)
 
-        actual = {ctcs.name for ctcs in result}
+        # Fix: handle None or unexpected result type
+        if not isinstance(result, list):
+            actual = set()
+        else:
+            actual = {ctcs.name for ctcs in result}
         expected = set(spec.expected_case_type_col_sets)
 
         missing = expected - actual
