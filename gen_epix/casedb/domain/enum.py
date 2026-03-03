@@ -365,6 +365,7 @@ class DimColTypeSet(Enum):
 
 
 class ColTypeOrder(Enum):
+    # Relies on dict order guaranteed
     TIME_RESOLUTION_DESC = {
         ColType.TIME_DAY: 1,
         ColType.TIME_WEEK: 2,

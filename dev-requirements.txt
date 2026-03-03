@@ -5,6 +5,7 @@ polars==1.38.1
 xlsxwriter==3.2.9
 pytest
 pytest-gremlins
+pytest-xdist
 pytest-mock==3.15.*
 pytest-dependency==0.6.*
 pyinstrument==5.1.*
