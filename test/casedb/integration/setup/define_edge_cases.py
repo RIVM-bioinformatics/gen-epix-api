@@ -308,6 +308,8 @@ def _compute_expected_dims(case_type_col_codes: list[str]) -> list[str]:
     return sorted(result)
 
 
+# 135 combinations — 5 org_access x
+#                 3 org_share x 3 user_access x 3 user_share (15 orgs x 9 users)
 EDGE_CASES: list[EdgeCaseSpec] = [
     EdgeCaseSpec(
         user_name=f"org_user{org_idx + 1}_{usr_idx + 1}",

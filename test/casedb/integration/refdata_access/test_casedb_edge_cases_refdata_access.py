@@ -1,12 +1,12 @@
 """
 This module contains integration tests for CaseDB reference data access edge cases.
 
-It uses
+It uses:
 
 - an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_empty.py for configuration
 - the definitions in EDGE_CASES from define_edge_cases.py
 - the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
-- and then tests that each user has access to exactly the expected case types.
+- and then tests that each user has access to exactly the expected case types or other reference data
 
 """
 
@@ -18,7 +18,11 @@ from test.casedb.integration.refdata_access.base_empty import (
     TEST_TYPE,
     VERBOSE,
 )
-from test.casedb.integration.setup.define_edge_cases import EDGE_CASES, EdgeCaseSpec
+from test.casedb.integration.setup.define_edge_cases import (
+    EDGE_CASE_BY_USER,
+    EDGE_CASES,
+    EdgeCaseSpec,
+)
 
 import pytest
 from rich import print as rich_print
@@ -26,10 +30,12 @@ from rich import print as rich_print
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.command import (
     CaseTypeCrudCommand,
+    CaseTypeSetCategoryCrudCommand,
     CaseTypeSetCrudCommand,
     ColCrudCommand,
     DimCrudCommand,
 )
+from gen_epix.casedb.repositories.sa_model.ontology import Disease
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
@@ -101,12 +107,13 @@ class TestCaseDBEdgeCasesRefDataAccess:
         result = self.env.app.handle(get_cmd)
 
         assert isinstance(result, list)
+
         assert len(result) >= 2, "Root user should have access to all case types"
 
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
-        ids=[s.user_name for s in EDGE_CASES],
+        ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
@@ -124,7 +131,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
-            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
         get_cmd = CaseTypeCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
@@ -144,7 +151,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
-        ids=[s.user_name for s in EDGE_CASES],
+        ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_set_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
@@ -159,12 +166,12 @@ class TestCaseDBEdgeCasesRefDataAccess:
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
-            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
         get_cmd = CaseTypeSetCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        actual = {cts.name for cts in result}
+        actual = {x.name for x in result}
         expected = set(spec.expected_case_type_sets)
 
         missing = expected - actual
@@ -179,7 +186,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
-        ids=[s.user_name for s in EDGE_CASES],
+        ids=[x.user_name for x in EDGE_CASES],
     )
     def test_case_type_col_set_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
@@ -194,7 +201,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
-            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
         get_cmd = command.CaseTypeColSetCrudCommand(
             user=user, operation=CrudOperation.READ_ALL
@@ -205,7 +212,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         if not isinstance(result, list):
             actual = set()
         else:
-            actual = {ctcs.name for ctcs in result}
+            actual = {x.name for x in result}
         expected = set(spec.expected_case_type_col_sets)
 
         missing = expected - actual
@@ -220,7 +227,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
-        ids=[s.user_name for s in EDGE_CASES],
+        ids=[x.user_name for x in EDGE_CASES],
     )
     def test_col_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
@@ -235,12 +242,12 @@ class TestCaseDBEdgeCasesRefDataAccess:
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
-            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
         get_cmd = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        actual = {col.code for col in result} if isinstance(result, list) else set()
+        actual = {x.code for x in result} if isinstance(result, list) else set()
         expected = set(spec.expected_cols)
 
         missing = expected - actual
@@ -255,7 +262,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     @pytest.mark.parametrize(
         "spec",
         EDGE_CASES,
-        ids=[s.user_name for s in EDGE_CASES],
+        ids=[x.user_name for x in EDGE_CASES],
     )
     def test_dim_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
@@ -270,7 +277,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
-            rich_print([s for s in EDGE_CASES if s.user_name == user.name])
+            rich_print([x for x in EDGE_CASES if x.user_name == user.name])
 
         get_cmd = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
@@ -285,4 +292,92 @@ class TestCaseDBEdgeCasesRefDataAccess:
             f"\n{spec.description}"
             f"\n  Missing access:    {sorted(missing) if missing else '∅'}"
             f"\n  Unexpected access: {sorted(unexpected) if unexpected else '∅'}"
+        )
+
+    def test_disease_access_matches_all(self, setup_case_type_data: None) -> None:
+        """
+        take first edge case spec as a representative case (since disease access is not expected to vary across cases in this setup)
+        and assert that the set of accessible diseases matches all diseases, get them from env.db since they are created there by setup_case_type_data
+        """
+
+        spec = EDGE_CASES[
+            0
+        ]  # Random spec since access is expected to be the same across cases for this reference data type
+        user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
+            rich_print(self.env.db[model.Disease])
+
+        get_cmd = command.DiseaseCrudCommand(
+            user=user, operation=CrudOperation.READ_ALL
+        )
+        result: list[Disease] = self.env.app.handle(get_cmd)
+        actual = {x.name for x in result}
+
+        # get all diseases from env.db since they are created there by setup_case_type_data
+        expected = {x.name for x in self.env.db[model.Disease].values()}
+
+        assert actual == expected, (
+            f"\n{spec.description}"
+            f"\n  Expected access to all diseases: {sorted(expected)}"
+            f"\n  Actual access: {sorted(actual) if actual else '∅'}"
+        )
+
+    def test_etiological_agent_access_matches_all(
+        self, setup_case_type_data: None
+    ) -> None:
+        """
+        similar to test_disease_access_matches_all but for etiological agents instead of diseases,
+         since both are created as reference data in setup_case_type_data and not expected to be filtered by access policies in this setup
+        """
+        spec = EDGE_CASES[
+            0
+        ]  # Random spec since access is expected to be the same across cases for this reference data type
+        user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
+            rich_print(self.env.db[model.EtiologicalAgent])
+
+        get_cmd = command.EtiologicalAgentCrudCommand(
+            user=user, operation=CrudOperation.READ_ALL
+        )
+        result: list[model.EtiologicalAgent] = self.env.app.handle(get_cmd)
+        actual = {ea.name for ea in result}
+        expected = {x.name for x in self.env.db[model.EtiologicalAgent].values()}
+
+        assert actual == expected, (
+            f"\n{spec.description}"
+            f"\n  Expected access to all etiological agents: {sorted(expected)}"
+            f"\n  Actual access: {sorted(actual) if actual else '∅'}"
+        )
+
+    def test_case_type_set_category_access_matches_all(
+        self, setup_case_type_data: None
+    ) -> None:
+        """
+        Assert that all created case type set categories are accessible to any user,
+        since category access is not filtered by access policies in this setup.
+        """
+        spec = EDGE_CASES[
+            0
+        ]  # Random spec since access is expected to be the same across cases for this reference data type
+        user = self.get_user(spec.user_name)
+
+        if VERBOSE:
+            rich_print(EDGE_CASE_BY_USER[spec.user_name])
+            rich_print(self.env.db[model.CaseTypeSetCategory])
+
+        get_cmd = CaseTypeSetCategoryCrudCommand(
+            user=user, operation=CrudOperation.READ_ALL
+        )
+        result: list[model.CaseTypeSetCategory] = self.env.app.handle(get_cmd)
+        actual = {x.name for x in result}
+        expected = {x.name for x in self.env.db[model.CaseTypeSetCategory].values()}
+
+        assert actual == expected, (
+            f"\n{spec.description}"
+            f"\n  Expected access to all case type set categories: {sorted(expected)}"
+            f"\n  Actual access: {sorted(actual) if actual else '\u2205'}"
         )
