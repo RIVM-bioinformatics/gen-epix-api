@@ -72,8 +72,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
     @pytest.fixture(autouse=True, scope="class")
     def print_edge_cases(self) -> None:
         """Print the active edge cases once per class run when VERBOSE is enabled."""
-        if VERBOSE:
-            rich_print(EDGE_CASES)
+        # if VERBOSE:
+        #     rich_print(EDGE_CASES)
+        pass
 
     @pytest.fixture(autouse=True)
     def setup(self, env: Env) -> None:

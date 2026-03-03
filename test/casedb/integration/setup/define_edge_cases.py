@@ -42,13 +42,13 @@ class EdgeCaseSpec:
 
     Captures all relevant dimensions for a user-based access control test scenario:
     - user_name / org_name: identity and organizational membership
-    - org_access_policy_sets: case type sets granted at org level via OrganizationAccessCasePolicy
+    - org_access_policies: (case_type_set, case_type_col_set) pairs granted at org level via OrganizationAccessCasePolicy
     - org_share_policy_sets: case type sets granted at org level via OrganizationShareCasePolicy
-    - user_access_policy_sets: case type sets granted directly to this user via UserAccessCasePolicy
+    - user_access_policies: (case_type_set, case_type_col_set) pairs granted directly to this user via UserAccessCasePolicy
     - user_share_policy_sets: case type sets granted directly to this user via UserShareCasePolicy
     - expected_case_types: expected accessible case type names (union of org access + org share)
     - expected_case_type_sets: expected accessible case type set names (union of org access + org share)
-    - expected_case_type_col_sets: expected accessible case type column set names (union of org access + org share)
+    - expected_case_type_col_sets: expected accessible col set names (from org access policies only — share policies do not grant col access)
 
     For reference data (case types / case type sets / case type col sets), only org-level policies determine access.
     User-level policies (both access and share) are intentionally ignored — tests verify this.
@@ -62,9 +62,13 @@ class EdgeCaseSpec:
     user_name: str
     org_name: str
     label: str
-    org_access_policy_sets: list[str]
+    org_access_policies: list[
+        tuple[str, str]
+    ]  # [(case_type_set, case_type_col_set), ...]
     org_share_policy_sets: list[str]
-    user_access_policy_sets: list[str]
+    user_access_policies: list[
+        tuple[str, str]
+    ]  # [(case_type_set, case_type_col_set), ...]
     user_share_policy_sets: list[str]
     expected_case_types: list[str]
     expected_case_type_sets: list[str]
@@ -76,11 +80,14 @@ class EdgeCaseSpec:
         def _fmt(items: list[str]) -> str:
             return ", ".join(items) if items else "∅"
 
+        def _fmt_access(policies: list[tuple[str, str]]) -> str:
+            return ", ".join(f"{ct}+{cs}" for ct, cs in policies) if policies else "∅"
+
         return (
             f"[{self.user_name}@{self.org_name}] {self.label}\n"
-            f"  org_access=[{_fmt(self.org_access_policy_sets)}], "
+            f"  org_access=[{_fmt_access(self.org_access_policies)}], "
             f"org_share=[{_fmt(self.org_share_policy_sets)}]\n"
-            f"  user_access=[{_fmt(self.user_access_policy_sets)}], "
+            f"  user_access=[{_fmt_access(self.user_access_policies)}], "
             f"user_share=[{_fmt(self.user_share_policy_sets)}]\n"
             f"  → expected_case_types=[{_fmt(self.expected_case_types)}], "
             f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}], "
@@ -103,33 +110,38 @@ class EdgeCaseSpec:
 #   OrganizationAccessCasePolicy ∪ OrganizationShareCasePolicy
 # User-level policies (both access and share) have NO influence.
 
-# Each entry is the list of case type sets granted at org level via OrganizationAccessCasePolicy.
-_ORG_ACCESS_COMBOS: list[list[str]] = [
-    ["case_type_set1"],  # org has direct access to case_type_set1
-    ["case_type_set3"],  # org has direct access to case_type_set3 (new)
-    [],  # org has no direct access
+# Each entry is a list of (case_type_set, case_type_col_set) tuples granted at org level via
+# OrganizationAccessCasePolicy. The col set is independent of the case type set, enabling tests
+# of inconsistent pairings (e.g. set1 with colset2).
+_ORG_ACCESS_COMBOS: list[list[tuple[str, str]]] = [
+    [],  # no org access policy
+    [("case_type_set1", "colset1")],  # set1 with matching colset1
+    [("case_type_set1", "colset2")],  # set1 with inconsistent colset2
+    [("case_type_set2", "colset1")],  # set2 with inconsistent colset1 (reversed)
+    [("case_type_set2", "colset3")],  # set2 with overlapping colset3
 ]
 
 # Each entry is the list of case type sets granted at org level via OrganizationShareCasePolicy.
+# Share policies do NOT grant col set access — only access policies determine col set access.
 _ORG_SHARE_COMBOS: list[list[str]] = [
-    [],  # org has no shared access
+    [],  # no org share policy
     ["case_type_set2"],  # org has shared access to case_type_set2
-    ["case_type_set3"],  # org has shared access to case_type_set3 (new)
+    ["case_type_set3"],  # org has shared access to case_type_set3
 ]
 
-# Each entry is the list of case type sets granted directly to one user via UserAccessCasePolicy.
-_USER_ACCESS_COMBOS: list[list[str]] = [
+# Each entry is a list of (case_type_set, case_type_col_set) tuples granted directly to one user
+# via UserAccessCasePolicy. User policies do NOT affect reference data access — tests verify this.
+_USER_ACCESS_COMBOS: list[list[tuple[str, str]]] = [
     [],  # no user-level access policy
-    ["case_type_set1"],  # user access policy on the same set as the org access policy
-    ["case_type_set2"],  # user access policy on a different set
-    ["case_type_set3"],  # user access policy on new set
+    [("case_type_set1", "colset1")],  # user access matching common org access
+    [("case_type_set2", "colset2")],  # user access on a different set/colset
 ]
 
 # Each entry is the list of case type sets granted directly to one user via UserShareCasePolicy.
 _USER_SHARE_COMBOS: list[list[str]] = [
     [],  # no user-level share policy
     ["case_type_set1"],  # user share policy on case_type_set1
-    ["case_type_set3"],  # user share policy on new set
+    ["case_type_set3"],  # user share policy on case_type_set3
 ]
 
 # Define case type set
@@ -155,35 +167,40 @@ CASE_TYPE_COL_SETS = {
 
 
 def _compute_expected_case_types(
-    org_access_sets: list[str], org_share_sets: list[str]
+    org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
     """For reference data access, only org-level policies determine access (union of access + share).
-    User policies are intentionally ignored — tests verify this explicitly."""
-    combined = sorted(set(org_access_sets) | set(org_share_sets))
-    return [s.replace("_set", "") for s in combined]
+    Case types are looked up from CASE_TYPE_SETS. User policies are intentionally ignored.
+    """
+    ct_sets = {ct_set for ct_set, _ in org_access_policies} | set(org_share_sets)
+    result: set[str] = set()
+    for s in ct_sets:
+        result.update(CASE_TYPE_SETS.get(s, []))
+    return sorted(result)
 
 
 def _compute_expected_case_type_sets(
-    org_access_sets: list[str], org_share_sets: list[str]
+    org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
     """Only the case type sets referenced in org-level policies (access ∪ share) are accessible.
     User policies are intentionally ignored — tests verify this explicitly."""
-
-    return sorted(set(org_access_sets) | set(org_share_sets))
+    ct_sets = {ct_set for ct_set, _ in org_access_policies} | set(org_share_sets)
+    return sorted(ct_sets)
 
 
 def _compute_expected_case_type_col_sets(
-    org_access_sets: list[str], org_share_sets: list[str]
+    org_access_policies: list[tuple[str, str]],
 ) -> list[str]:
-    # For demo: col set names are derived from set names (e.g. "case_type_set1" -> "colset1")
-    combined = sorted(set(org_access_sets) | set(org_share_sets))
-    return [s.replace("case_type_set", "colset") for s in combined]
+    """Col set access comes exclusively from org access policies — not from share policies and not
+    from user-level policies. The col set is taken directly from each access policy tuple and is
+    independent of the case type set, supporting inconsistent pairings."""
+    return sorted({col_set for _, col_set in org_access_policies})
 
 
 def _generate_label(
-    org_access: list[str],
+    org_access: list[tuple[str, str]],
     org_share: list[str],
-    user_access: list[str],
+    user_access: list[tuple[str, str]],
     user_share: list[str],
 ) -> str:
     has_org_access = bool(org_access)
@@ -230,17 +247,9 @@ _user_combos = list(
 )
 
 
-def _compute_expected_case_type_col_sets(
-    org_access_sets: list[str], org_share_sets: list[str]
-) -> list[str]:
-    # For demo: col set names are derived from set names (e.g. "case_type_set1" -> "colset1")
-    combined = sorted(set(org_access_sets) | set(org_share_sets))
-    return [s.replace("case_type_set", "colset") for s in combined]
-
-
 def _compute_expected_case_type_cols(col_set_names: list[str]) -> list[str]:
-    # Flatten all columns from the accessible col sets
-    cols = set()
+    """Flatten all case type cols from the accessible col sets."""
+    cols: set[str] = set()
     for colset in col_set_names:
         cols.update(CASE_TYPE_COL_SETS.get(colset, []))
     return sorted(cols)
@@ -251,17 +260,15 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         user_name=f"org_user{org_idx + 1}_{usr_idx + 1}",
         org_name=f"org{org_idx + 1}",
         label=_generate_label(org_access, org_share, user_access, user_share),
-        org_access_policy_sets=org_access,
+        org_access_policies=org_access,
         org_share_policy_sets=org_share,
-        user_access_policy_sets=user_access,
+        user_access_policies=user_access,
         user_share_policy_sets=user_share,
         expected_case_types=_compute_expected_case_types(org_access, org_share),
         expected_case_type_sets=_compute_expected_case_type_sets(org_access, org_share),
-        expected_case_type_col_sets=_compute_expected_case_type_col_sets(
-            org_access, org_share
-        ),
+        expected_case_type_col_sets=_compute_expected_case_type_col_sets(org_access),
         expected_case_type_cols=_compute_expected_case_type_cols(
-            _compute_expected_case_type_col_sets(org_access, org_share)
+            _compute_expected_case_type_col_sets(org_access)
         ),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
