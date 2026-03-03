@@ -81,7 +81,7 @@ def generate_excel_report(
         test_with_scenarios_df.group_by("scenario_id")
         .agg(
             [
-                pl.count().alias("n_total"),
+                pl.len().alias("n_total"),
                 (pl.col("outcome") == "PASS").sum().alias("n_passed"),
                 (pl.col("outcome") == "FAIL").sum().alias("n_failed"),
                 pl.sum("duration").alias("duration"),

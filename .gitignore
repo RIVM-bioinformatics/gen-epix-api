@@ -168,8 +168,6 @@ test/output/*
 # Logs
 logs/*
 
-cert/*.pem
-
 # Macbook specific files
 .DS_Store
 
@@ -177,3 +175,5 @@ cert/*.pem
 .gremlins_cache/
 .coveragerc.gremlins
 gremlin-report.html
+
+cert/*.pem
