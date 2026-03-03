@@ -1,7 +1,7 @@
 """
-This module defines the EDGE_CASES data structure, both used
-1) to generate test data in setup_case_type_data and
-2) to drive the test scenarios in test_casedb_edge_cases_refdata_access.
+This module defines the EDGE_CASES data structure, both used to:
+1) generate test data in setup_case_type_data and
+2) drive the test scenarios in test_casedb_edge_cases_refdata_access.
 
 EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (case types, case type sets,
 and case type column sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
@@ -10,23 +10,20 @@ along with the expected access results for that scenario.
 The expectations are defined based on the principle that for reference data access,
 only org-level policies (both access and share) should determine access,
 while user-level policies should not grant any additional access beyond what the org-level policies provide.
-(implementation: expectations are not derived from querying the created policies (set up in setup_case_type_data) directly,
+(implementation: expectations are *NOT* derived from querying the created policies (set up in setup_case_type_data) directly,
 but from this principle and the org-level policies in each case).
 
 
-TODO
 - case types can also be accessed by being referred to by a case type col
-    - so we have to configure what case types are referred to by case type cols in case type col sets
+    - so we configure what case types are referred to by case type cols in case type col sets
     - this is by naming convention (code: case_type_col{ct}_{dim}_{occ}_{col_rank}) where ct is the case type number (e.g. 1, 2, 3, 4)
 
-
+Method:
 - define case type col sets
     - with sets of case type cols that are partly overlapping
     between col sets to test that access is correctly determined at the col set level, not just the case type level
 - define case type cols, cols, and dims for each case type col set
 - add tests that user-level policies do not grant access to additional case type col sets, case type cols, cols, or dims beyond what org-level policies grant access to
-    - this is currently only tested at the case type and case type set level, but should be tested at the col set, col, and dim level as well
-
 
 
 """
