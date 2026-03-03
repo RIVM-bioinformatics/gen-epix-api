@@ -3,7 +3,7 @@ disable_existing_loggers: false
 
 formatters:
   json:
-    "()": gen_epix.commondb.domain.json_logging.JsonFormatter
+    "()": gen_epix.commondb.config.json_logging.JsonFormatter
     # optional: set explicit service/env; if omitted it reads SERVICE_NAME / ENVIRONMENT env vars
     service: "seqdb"
     merge_message_json: true
@@ -11,7 +11,7 @@ formatters:
 
 filters:
   uvicorn_access_structured:
-    (): gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter
+    (): gen_epix.commondb.config.json_logging.UvicornAccessLogFilter
 
 handlers:
   console:
