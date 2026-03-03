@@ -31,6 +31,7 @@ TODO
 
 """
 
+import re
 from dataclasses import dataclass
 from itertools import product
 
@@ -49,6 +50,8 @@ class EdgeCaseSpec:
     - expected_case_types: expected accessible case type names (union of org access + org share)
     - expected_case_type_sets: expected accessible case type set names (union of org access + org share)
     - expected_case_type_col_sets: expected accessible col set names (from org access policies only — share policies do not grant col access)
+    - expected_case_type_cols: expected accessible col codes — intersection of cols in accessible col sets
+      with the accessible case types (cols reference a case type via naming convention case_type_col{ct}_...)
 
     For reference data (case types / case type sets / case type col sets), only org-level policies determine access.
     User-level policies (both access and share) are intentionally ignored — tests verify this.
@@ -91,7 +94,8 @@ class EdgeCaseSpec:
             f"user_share=[{_fmt(self.user_share_policy_sets)}]\n"
             f"  → expected_case_types=[{_fmt(self.expected_case_types)}], "
             f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}], "
-            f"expected_case_type_col_sets=[{_fmt(self.expected_case_type_col_sets)}]"
+            f"expected_case_type_col_sets=[{_fmt(self.expected_case_type_col_sets)}], "
+            f"expected_case_type_cols=[{_fmt(self.expected_case_type_cols)}]"
         )
 
 
@@ -247,12 +251,35 @@ _user_combos = list(
 )
 
 
-def _compute_expected_case_type_cols(col_set_names: list[str]) -> list[str]:
-    """Flatten all case type cols from the accessible col sets."""
-    cols: set[str] = set()
-    for colset in col_set_names:
-        cols.update(CASE_TYPE_COL_SETS.get(colset, []))
-    return sorted(cols)
+def _get_case_type_from_col(col_code: str) -> str:
+    """Extract the case type name from a case_type_col code by naming convention:
+    case_type_col{ct}_{dim}_{occ}_{col_rank} → case_type{ct}"""
+    m = re.match(r"^case_type_col(\d+)_", col_code)
+    assert m, f"Cannot extract case type index from col code: '{col_code}'"
+    return f"case_type{m.group(1)}"
+
+
+def _compute_expected_case_type_cols(
+    org_access_policies: list[tuple[str, str]],
+    org_share_sets: list[str],
+) -> list[str]:
+    """Accessible cols = those in accessible col sets whose embedded case type is accessible.
+
+    Col set access = org access policies only (not share).
+    Accessible case types = org access policies + org share policies (union).
+    The intersection is restrictive: a col is only included if its referenced case type
+    (embedded in the col code as case_type_col{ct}_...) is in the accessible case types.
+    """
+    accessible_case_types = set(
+        _compute_expected_case_types(org_access_policies, org_share_sets)
+    )
+    accessible_col_sets = _compute_expected_case_type_col_sets(org_access_policies)
+    result: set[str] = set()
+    for colset in accessible_col_sets:
+        for col_code in CASE_TYPE_COL_SETS.get(colset, []):
+            if _get_case_type_from_col(col_code) in accessible_case_types:
+                result.add(col_code)
+    return sorted(result)
 
 
 EDGE_CASES: list[EdgeCaseSpec] = [
@@ -267,9 +294,7 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         expected_case_types=_compute_expected_case_types(org_access, org_share),
         expected_case_type_sets=_compute_expected_case_type_sets(org_access, org_share),
         expected_case_type_col_sets=_compute_expected_case_type_col_sets(org_access),
-        expected_case_type_cols=_compute_expected_case_type_cols(
-            _compute_expected_case_type_col_sets(org_access)
-        ),
+        expected_case_type_cols=_compute_expected_case_type_cols(org_access, org_share),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos
     for usr_idx, ((_, user_access), (_, user_share)) in _user_combos
@@ -280,301 +305,3 @@ EDGE_CASES: list[EdgeCaseSpec] = [
 #   EDGE_CASE_BY_USER["org_user1_2"].expected_case_types
 #   EDGE_CASE_BY_USER["org_user1_2"].description
 EDGE_CASE_BY_USER: dict[str, EdgeCaseSpec] = {s.user_name: s for s in EDGE_CASES}
-
-# Hardcoded edge cases — kept as the reference for the current test suite.
-# Compare with EDGE_CASES above to verify the generation logic
-# produces the same combinations before switching over.
-# Also we keep these as examples of manually specifying edge cases for clarity
-# and ease of debugging, and to allow for custom labels and expected results
-# if needed in the future.
-#
-# EDGE_CASES: list[EdgeCaseSpec] = [
-#     EdgeCaseSpec(
-#         user_name='org_user1_1',
-#         org_name='org1',
-#         label='org access only — should access org-level case types/sets',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user1_2',
-#         org_name='org1',
-#         label='org access only + user share only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user1_3',
-#         org_name='org1',
-#         label='org access only + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user1_4',
-#         org_name='org1',
-#         label='org access only + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user1_5',
-#         org_name='org1',
-#         label='org access only + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user1_6',
-#         org_name='org1',
-#         label='org access only + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1'],
-#         expected_case_type_sets=['case_type_set1'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_1',
-#         org_name='org2',
-#         label='org access + org share — should access org-level case types/sets',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_2',
-#         org_name='org2',
-#         label='org access + org share + user share only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_3',
-#         org_name='org2',
-#         label='org access + org share + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_4',
-#         org_name='org2',
-#         label='org access + org share + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_5',
-#         org_name='org2',
-#         label='org access + org share + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user2_6',
-#         org_name='org2',
-#         label='org access + org share + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=['case_type_set1'],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_1', 'case_type_2'],
-#         expected_case_type_sets=['case_type_set1', 'case_type_set2'],
-#         expected_case_type_col_sets=['colset1'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_1',
-#         org_name='org3',
-#         label='no policies at all — should have no access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=[],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_2',
-#         org_name='org3',
-#         label='user share only, no org policies — user policies must not grant ref data access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_3',
-#         org_name='org3',
-#         label='user access only, no org policies — user policies must not grant ref data access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=[],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_4',
-#         org_name='org3',
-#         label='user access + user share, no org policies — user policies must not grant ref data access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_5',
-#         org_name='org3',
-#         label='user access only, no org policies — user policies must not grant ref data access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=[],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user3_6',
-#         org_name='org3',
-#         label='user access + user share, no org policies — user policies must not grant ref data access',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=[],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=[],
-#         expected_case_type_sets=[],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_1',
-#         org_name='org4',
-#         label='org share only — should access org-level case types/sets',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_2',
-#         org_name='org4',
-#         label='org share only + user share only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=[],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_3',
-#         org_name='org4',
-#         label='org share only + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_4',
-#         org_name='org4',
-#         label='org share only + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set1'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=[],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_5',
-#         org_name='org4',
-#         label='org share only + user access only — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=[],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=['colset2'],
-#     ),
-#     EdgeCaseSpec(
-#         user_name='org_user4_6',
-#         org_name='org4',
-#         label='org share only + user access + user share — user policies must not extend ref data access beyond org',
-#         org_access_policy_sets=[],
-#         org_share_policy_sets=['case_type_set2'],
-#         user_access_policy_sets=['case_type_set2'],
-#         user_share_policy_sets=['case_type_set1'],
-#         expected_case_types=['case_type_2'],
-#         expected_case_type_sets=['case_type_set2'],
-#         expected_case_type_col_sets=[],
-#     ),
-# ]
