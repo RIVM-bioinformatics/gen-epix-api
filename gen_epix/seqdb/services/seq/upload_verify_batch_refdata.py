@@ -1,10 +1,9 @@
-import base64
 from typing import Any
 from uuid import UUID
 
-import gen_epix.commondb.domain.model.upload
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
+from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -27,9 +26,7 @@ def _verify_batch_refdata_allele_profiles(
 
     # Get all allele profiles that are to be processed
     allele_profiles: list[model.AlleleProfileForUpload] = []
-    allele_profile_results: list[gen_epix.commondb.domain.model.upload.UploadResult] = (
-        []
-    )
+    allele_profile_results: list[UploadResult] = []
     for i, (sample, sample_result) in enumerate(zip(samples, sample_results)):
         objs = sample.allele_profiles or []
         obj_results = sample_result.allele_profiles or []
@@ -192,35 +189,20 @@ def _verify_batch_refdata_allele_profiles(
         if invalid_locus_allele_pairs:
             # Some invalid (locus ID, allele ID) pairs found
             success = False
-            if len(invalid_locus_allele_pairs) <= 5:
-                invalid_pairs_str = ", ".join(
-                    [
-                        f"({locus_id},{allele_id})"
-                        for locus_id, allele_id in invalid_locus_allele_pairs
-                    ]
-                )
-            else:
-                invalid_pairs_str = (
-                    ", ".join(
-                        [
-                            f"({locus_id},{allele_id})"
-                            for locus_id, allele_id in invalid_locus_allele_pairs[:5]
-                        ]
-                    )
-                    + f", ... (and {len(invalid_locus_allele_pairs) - 5} more)"
-                )
-            profile_result.add_error(
-                "c9b8a7d6",
-                f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
+            _handle_locus_allele_pair_mismatch(
+                profile_result, invalid_locus_allele_pairs
             )
         # Convert to allele profile representation if not already the case
-        if profile.allele_profile is not None:
+        if profile.allele_profile != "":
             continue
-        profile.allele_profile = base64.b64encode(
-            b"".join(x.bytes if x is not None else b"\x00" * 16 for x in allele_ids)
-        ).decode("ascii")
+        profile.allele_profile = model.AlleleProfile.get_sorted_allele_ids_profile(
+            allele_ids
+        )
         profile.allele_profile_format = enum.AlleleProfileFormat.SORTED_ALLELE_IDS
         profile.allele_ids = None
+        # Reset n_loci to 0 so AlleleProfile validator will auto-compute it from the base64 string
+        # (n_loci in AlleleProfile means "detected loci count", not total loci in set)
+        profile.n_loci = 0
 
     # Verify that any new alleles have been provided and set their locus IDs from the alleles in the sample data
     if new_allele_locus_map:
@@ -246,7 +228,9 @@ def _verify_batch_refdata_allele_profiles(
                 f"Missing new alleles: {missing_alleles_str}",
             )
         # Determine if any extra alleles
-        extra_allele_ids: set[UUID] = provided_allele_ids - set(new_allele_locus_map.keys())  # type: ignore[assignment]
+        extra_allele_ids: set[UUID] = provided_allele_ids - set(
+            new_allele_locus_map.keys()
+        )  # type: ignore[assignment]
         if extra_allele_ids:
             # Some extra (superfluous) alleles provided
             extra_allele_ids_list = sorted(extra_allele_ids)
@@ -289,49 +273,27 @@ def _verify_batch_refdata_allele_profiles(
     return success
 
 
-# def _retrieve_child_refdata(
-#     self: BaseService,
-#     cmd: command.Command,
-#     retval: BaseBatchUploadResult,
-#     uow: BaseUnitOfWork,
-#     parent_for_upload_model_class: type[model.Model],
-#     parents: list[model.Model],
-#     parent_results: list[UploadResult],
-#     child_model_class: type[model.Model],
-#     link_id_field_name: str,
-#     linked_model_class: type[model.Model],
-#     linked_model_id_field_name: str = "id",
-# ) -> dict[UUID, model.Model]:
-#     user_id = cmd.user.id if cmd.user else None
-#     link_ids: set[UUID] = set()
-
-#     # Get unique IDs from all samples
-#     for_upload_model_class = parent_for_upload_model_class.CHILD_FOR_UPLOAD_CLASS_MAP[ # type: ignore[attr-defined]
-#         child_model_class
-#     ]
-#     child_field_name = parent_for_upload_model_class.CHILDREN_FIELD_NAME_MAP[ # type: ignore[attr-defined]
-#         for_upload_model_class
-#     ]
-#     for parent, parent_result in zip(parents, parent_results):
-#         children: list[model.Model] = getattr(parent, child_field_name) or []
-#         child_results: list[UploadResult] = getattr(parent_result, child_field_name) or []
-#         for child, child_result in zip(children, child_results):
-#             link_id: UUID | None = getattr(child, link_id_field_name, None)
-#             if link_id is None or link_id == NULL_ID:
-#                 continue
-#             if child_result.status != UploadStatus.PENDING:
-#                 continue
-#             link_ids.add(link_id)
-
-#     # Retrieve corresponding objects
-#     link_objs: list[model.Model] = self.repository.crud(  # type: ignore[assignment]
-#         uow,
-#         user_id,
-#         linked_model_class,
-#         None,
-#         list(link_ids),
-#         CrudOperation.READ_SOME,
-#     )
-
-#     # Finalize output
-#     return {getattr(x, linked_model_id_field_name): x for x in link_objs}
+def _handle_locus_allele_pair_mismatch(
+    profile_result: UploadResult, invalid_locus_allele_pairs: list[tuple[UUID, UUID]]
+) -> None:
+    if len(invalid_locus_allele_pairs) <= 5:
+        invalid_pairs_str = ", ".join(
+            [
+                f"({locus_id},{allele_id})"
+                for locus_id, allele_id in invalid_locus_allele_pairs
+            ]
+        )
+    else:
+        invalid_pairs_str = (
+            ", ".join(
+                [
+                    f"({locus_id},{allele_id})"
+                    for locus_id, allele_id in invalid_locus_allele_pairs[:5]
+                ]
+            )
+            + f", ... (and {len(invalid_locus_allele_pairs) - 5} more)"
+        )
+    profile_result.add_error(
+        "c9b8a7d6",
+        f"Invalid (locus ID, allele ID) pairs: {invalid_pairs_str}",
+    )

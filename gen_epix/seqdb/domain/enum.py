@@ -284,7 +284,7 @@ class MlvaProfileFormat(Enum):
 
 
 class KmerProfileFormat(Enum):
-    KMER_PROFILE_FORMAT1 = "KMER_PROFILE_FORMAT1"
+    KMER_FREQUENCY_MAP = "KMER_PROFILE_FORMAT1"
 
 
 class SeqClassificationFormat(Enum):

@@ -79,55 +79,43 @@ class TestContent:
             command.RetrieveOwnPermissionsCommand(user=root_user)
         )
 
+        # Get all users and permissions
+        users: list[model.User] = app.handle(
+            command.UserCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        permissions = app.domain.permissions
+
+        # Get org admin, org admin policies and corresponding org users
+        org_admin_policies = app.handle(
+            command.OrganizationAdminPolicyCrudCommand(
+                user=root_user,
+                operation=CrudOperation.READ_ALL,
+            )
+        )
+        org_admin_user: model.User = [
+            x for x in users if x.id == org_admin_policies[0].user_id
+        ][0]
+        org_admin_permissions: set[Permission] = app.handle(
+            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
+        )
+
         # # --------------------------------------------------------------------------------------
 
         # # Code for performance profiling of a code chunk
         # import pyinstrument
-
-        # users = app.handle(
-        #     command.UserCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_policies = app.handle(
-        #     command.OrganizationAdminPolicyCrudCommand(
-        #         user=root_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_admin_user: model.User = [
-        #     x for x in users if x.id == org_admin_policies[0].user_id
-        # ][0]
-        # user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
-        #     command.UserAccessCasePolicyCrudCommand(
-        #         user=org_admin_user,
-        #         operation=CrudOperation.READ_ALL,
-        #     )
-        # )
-        # org_user: model.User = [
-        #     x
-        #     for x in users
-        #     if x.id in {y.user_id for y in user_access_case_policies}
-        #     and app_impl.role_map[CommonRole.ORG_USER] in x.roles
-        #     and len(x.roles) == 1
-        # ][0]
 
         # profiler = pyinstrument.Profiler(async_mode="enabled")
         # profiler.start()
 
         # t0 = datetime.datetime.now()
 
-        # case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
-        # case_sets: list[model.CaseSet] = app.handle(
-        #     command.CaseSetCrudCommand(
-        #         user=org_user,
-        #         operation=CrudOperation.READ_ALL,
+        # organizations = app.handle(
+        #     command.OrganizationCrudCommand(
+        #         user=root_user, operation=CrudOperation.READ_ALL
         #     )
-        # )
-        # case_set_ids: list[UUID] = [x.id for x in case_sets]  # type:ignore[assignment]
-        # case_set_stats = app.handle(
-        #     command.RetrieveCaseStatsCommand(user=org_user, case_set_ids=case_set_ids)
         # )
 
         # t1 = datetime.datetime.now()
@@ -146,15 +134,6 @@ class TestContent:
 
         # # --------------------------------------------------------------------------------------
 
-        # Get all users and permissions
-        users = app.handle(
-            command.UserCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        permissions = app.domain.permissions
-
         # Get organization level policies
         org_access_case_policies = app.handle(
             command.OrganizationAccessCasePolicyCrudCommand(
@@ -169,20 +148,6 @@ class TestContent:
             )
         )
 
-        # Get org admin user
-        org_admin_policies = app.handle(
-            command.OrganizationAdminPolicyCrudCommand(
-                user=root_user,
-                operation=CrudOperation.READ_ALL,
-            )
-        )
-        org_admin_user: model.User = [
-            x for x in users if x.id == org_admin_policies[0].user_id
-        ][0]
-        org_admin_permissions: set[Permission] = app.handle(
-            command.RetrieveOwnPermissionsCommand(user=org_admin_user)
-        )
-
         # Get org user
         user_access_case_policies: list[model.UserAccessCasePolicy] = app.handle(
             command.UserAccessCasePolicyCrudCommand(
@@ -190,13 +155,14 @@ class TestContent:
                 operation=CrudOperation.READ_ALL,
             )
         )
-        org_user: model.User = [
+        org_users: list[model.User] = [
             x
             for x in users
             if x.id in {y.user_id for y in user_access_case_policies}
             and app_impl.role_map[CommonRole.ORG_USER] in x.roles
             and len(x.roles) == 1
-        ][0]
+        ]
+        org_user = org_users[0]
         org_user_permissions: set[Permission] = app.handle(
             command.RetrieveOwnPermissionsCommand(user=org_user)
         )

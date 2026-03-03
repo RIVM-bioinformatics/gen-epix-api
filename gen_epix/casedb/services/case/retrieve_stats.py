@@ -108,7 +108,7 @@ def case_service_retrieve_case_stats(
 
             # Get readable data collections by highest resolution time unit
             data_collections_by_time_unit: dict[enum.ColType, set[UUID]] = {}
-            is_handled_case_type_col_ids: set[UUID] = set()
+            is_handled_data_collection_ids: set[UUID] = set()
             for col_type in enum.ColTypeOrder.TIME_RESOLUTION_DESC.value:
                 case_type_col_id = complete_case_type.case_date_col_type_map.get(
                     col_type
@@ -123,13 +123,16 @@ def case_service_retrieve_case_stats(
                     read_case_type_col_ids = (
                         case_type_access_abac.read_case_type_col_ids
                     )
-                    if read_case_type_col_ids & is_handled_case_type_col_ids:
-                        # Case type column already handled at a higher resolution time unit
+                    if data_collection_id in is_handled_data_collection_ids:
+                        # Data collection also allows access to higher time resolution column, can be skipped here
+                        continue
+                    if case_type_col_id not in read_case_type_col_ids:
+                        # Case type column may not be read in this data collection
                         continue
                     data_collections_by_time_unit.setdefault(col_type, set()).add(
                         data_collection_id
                     )
-                    is_handled_case_type_col_ids.add(case_type_col_id)
+                    is_handled_data_collection_ids.add(data_collection_id)
 
             # Retrieve case stats by case set if applicable
             if is_by_case_set:
