@@ -180,6 +180,8 @@ python run.py api casedb none dict_demo
 
 See other examples in [.vscode/launch.json](.vscode/launch.json)
 
+See other examples in [.vscode/launch.json](.vscode/launch.json)
+
 | ![Example documentation screenshot](https://github.com/RIVM-bioinformatics/gen-epix-api/blob/main/docs/assets/example_docs.png?raw=true) |
 |:--:|
 
