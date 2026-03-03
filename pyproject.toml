@@ -29,7 +29,7 @@ dependencies = [
     "httpx==0.28.1",
     "pyjwt==2.11.0",
     "urllib3==2.6.3",
-    "sqlalchemy==2.0.47",
+    "sqlalchemy==2.0.48",
     "sqlalchemy_utils==0.42.1",
     "pydantic==2.12.5",
     "ulid-py==1.1.0",
