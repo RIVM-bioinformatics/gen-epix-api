@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from gen_epix.commondb.domain.json_logging import JsonFormatter, UvicornAccessLogFilter
+from gen_epix.commondb.config.json_logging import JsonFormatter, UvicornAccessLogFilter
 
 
 def _make_record(
