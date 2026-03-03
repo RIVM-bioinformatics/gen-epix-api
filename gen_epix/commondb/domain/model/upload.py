@@ -257,7 +257,7 @@ class UploadResultWithExternalIdentifiers(UploadResult):
     identifiers, mirroring a for upload class that has external identifiers.
     """
 
-    ENTITY: ClassVar = UploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = UploadResult.ENTITY.clone()
     NAME: ClassVar = "UploadResultWithExternalIdentifiers"
 
     external_identifiers: list[UploadResult] | None = Field(
@@ -426,7 +426,7 @@ class ParentUploadResult(UploadResultWithExternalIdentifiers):
     subclassed analogous to the ParentForUpload model it corresponds to.
     """
 
-    ENTITY: ClassVar = UploadResultWithExternalIdentifiers.ENTITY.model_copy()
+    ENTITY: ClassVar = UploadResultWithExternalIdentifiers.ENTITY.clone()
     NAME: ClassVar = "ParentUploadResult"
 
     # Must be set in child class
@@ -601,7 +601,7 @@ class BaseBatchUploadResult(UploadResult):
     those in the corresponding BaseBatchForUpload child class.
     """
 
-    ENTITY: ClassVar = UploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = UploadResult.ENTITY.clone()
     NAME: ClassVar = "BaseBatchUploadResult"
 
     # Must be overridden in child class

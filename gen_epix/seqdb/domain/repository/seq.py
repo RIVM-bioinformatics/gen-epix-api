@@ -6,7 +6,7 @@ from uuid import UUID
 
 from gen_epix.fastapp import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.seqdb.domain import enum
+from gen_epix.seqdb.domain import enum, model
 
 
 class BaseSeqRepository(BaseRepository):
@@ -46,3 +46,11 @@ class BaseSeqRepository(BaseRepository):
             for profile_id, distance in distance_dict.items():
                 if distance <= max_distance:
                     matching_profile_ids.add(UUID(profile_id))
+
+    @abc.abstractmethod
+    def iter_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+    ) -> Iterable[model.SeqDistance]:
+        raise NotImplementedError()

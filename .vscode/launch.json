@@ -637,12 +637,23 @@
             "justMyCode": true,
         },
         {
-            "name": "test.seqdb.performance",
+            "name": "test.seqdb.performance.calculate_seq_distances",
             "type": "debugpy",
             "request": "launch",
             "program": "run.py",
             "args": [
-                "test_seqdb_performance"
+                "test_seqdb_performance_calculate_seq_distances"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+        },
+        {
+            "name": "test.seqdb.performance.retrieve_similar_profiles",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_seqdb_performance_retrieve_similar_profiles"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
