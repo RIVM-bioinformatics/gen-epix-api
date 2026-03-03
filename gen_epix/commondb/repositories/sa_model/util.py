@@ -35,6 +35,38 @@ def create_table_args(
                 **kwargs,
             )
         )
+    # When the entity has a non-default id_field_name (e.g. "location_id" instead of
+    # "id"), SA models that use NoIdRowMetadataMixin end up with a composite primary key:
+    # the surrogate "id" column from the mixin plus the domain id column (also marked
+    # primary_key=True by create_mapped_column). SQLite requires that a FK parent column
+    # is either the sole primary key or covered by a standalone UNIQUE constraint — a
+    # column in a composite PK does not qualify. Adding a UniqueConstraint on the
+    # id_field_name satisfies this requirement without affecting SQL Server.
+    if (
+        entity.id_field_name
+        and entity.id_field_name != Entity.DEFAULT_ID_FIELD_NAME
+    ):
+        id_sa_field_name = (
+            field_name_map.get(entity.id_field_name, entity.id_field_name)
+            if field_name_map
+            else entity.id_field_name
+        )
+        covered = any(
+            id_sa_field_name
+            in (
+                [field_name_map.get(x, x) for x in fns]
+                if field_name_map
+                else list(fns)
+            )
+            for fns in entity.get_keys_field_names()
+        )
+        if not covered:
+            uq_constraints.append(
+                sa.UniqueConstraint(
+                    id_sa_field_name,
+                    name=f"uq_{entity.table_name}_{id_sa_field_name}",
+                )
+            )
     if entity.schema_name:
         return entity.table_name, tuple(
             [*uq_constraints, {"schema": entity.schema_name}]
