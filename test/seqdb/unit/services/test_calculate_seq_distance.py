@@ -388,7 +388,6 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             ref_seq_id=self.ref_seq_id,
             snp_detection_protocol_id=self.snp_detection_protocol_id,
             snp_profile="AACCT",
-            aligned_nucleotide_seq=existing_aln,
         )
         new_profile: model.SnpProfile = _make_snp_profile_for_upload(
             profile_id=self.new_profile_id,
@@ -396,7 +395,6 @@ class TestCalculateSeqDistancesForNewProfiles(BaseCalculateSeqDistanceTestCase):
             ref_seq_id=self.ref_seq_id,
             snp_detection_protocol_id=self.snp_detection_protocol_id,
             snp_profile="AATTT",
-            aligned_nucleotide_seq=new_aln,
         )
         cmd: command.CalculateSeqDistancesForNewProfilesCommand = (
             command.CalculateSeqDistancesForNewProfilesCommand(
