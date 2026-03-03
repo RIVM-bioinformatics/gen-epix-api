@@ -703,21 +703,21 @@ class AbacService(BaseAbacService):
             )
         all_policies: list[
             model.OrganizationAccessCasePolicy | model.OrganizationShareCasePolicy
-        ] = org_access_policies + org_share_policies
+        ] = (org_access_policies + org_share_policies)
 
         # 2. Collect set IDs from policies
-        case_type_set_ids: frozenset[UUID] = frozenset(
+        case_type_set_ids = {
             x.case_type_set_id for x in all_policies if x.case_type_set_id
-        )
-        case_type_col_set_ids: frozenset[UUID] = frozenset(
+        }
+        case_type_col_set_ids = {
             x.read_case_type_col_set_id
             for x in org_access_policies
             if x.read_case_type_col_set_id
-        ) | frozenset(
+        } | {
             x.write_case_type_col_set_id
             for x in org_access_policies
             if x.write_case_type_col_set_id
-        )
+        }
 
         # 3. Resolve CaseTypeSetMember -> case_type_ids
         # Uses app.handle so the request routes to CaseService's repository.
@@ -734,9 +734,7 @@ class AbacService(BaseAbacService):
                 ),
             )
         )
-        case_type_ids_from_sets: set[UUID] = {
-            x.case_type_id for x in case_type_set_members
-        }
+        case_type_ids: set[UUID] = {x.case_type_id for x in case_type_set_members}
 
         # 4. Resolve CaseTypeColSetMember -> case_type_col_ids
         case_type_col_set_members: list[model.CaseTypeColSetMember] = self.app.handle(
@@ -751,7 +749,7 @@ class AbacService(BaseAbacService):
                 ),
             )
         )
-        case_type_col_ids: set[UUID] = {
+        case_type_col_ids_from_sets: set[UUID] = {
             x.case_type_col_id for x in case_type_col_set_members
         }
 
@@ -759,14 +757,21 @@ class AbacService(BaseAbacService):
         case_type_cols: list[model.CaseTypeCol] = self.app.handle(
             command.CaseTypeColCrudCommand(
                 user=user,
-                objs=None,
-                obj_ids=list(case_type_col_ids),
-                operation=CrudOperation.READ_SOME,
+                operation=CrudOperation.READ_ALL,
+                query_filter=CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_type_id", members=case_type_ids),
+                        UuidSetFilter(key="id", members=case_type_col_ids_from_sets),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
             )
         )
-        case_type_ids_from_cols: set[UUID] = {x.case_type_id for x in case_type_cols}
-        case_type_dim_ids: set[UUID] = {x.case_type_dim_id for x in case_type_cols}
-        col_ids: set[UUID] = {x.col_id for x in case_type_cols}
+        case_type_col_ids: set[UUID] = {
+            x.id for x in case_type_cols if x.id is not None
+        }
+        case_type_dim_ids = {x.case_type_dim_id for x in case_type_cols}
+        col_ids = {x.col_id for x in case_type_cols}
 
         # 6. Load CaseTypeDims to derive dim_ids
         case_type_dims: list[model.CaseTypeDim] = self.app.handle(
@@ -777,16 +782,15 @@ class AbacService(BaseAbacService):
                 operation=CrudOperation.READ_SOME,
             )
         )
-        dim_ids: set[UUID] = {x.dim_id for x in case_type_dims}
+        dim_ids = {x.dim_id for x in case_type_dims}
 
         return model.ReadableReferenceData(
             organization_id=organization_id,
             case_type_set_ids=case_type_set_ids,
-            case_type_ids=case_type_ids_from_sets | case_type_ids_from_cols,
+            case_type_ids=case_type_ids,
             case_type_col_set_ids=case_type_col_set_ids,
             case_type_col_ids=case_type_col_ids,
             case_type_dim_ids=case_type_dim_ids,
             dim_ids=dim_ids,
             col_ids=col_ids,
         )
-
