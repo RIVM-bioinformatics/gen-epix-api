@@ -47,8 +47,7 @@ def _load_class(path: str) -> object:
 
 
 def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
-    script = textwrap.dedent(
-        """
+    script = textwrap.dedent("""
         import json
         import logging
         import logging.config
@@ -88,8 +87,7 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
             "1.1",
             204,
         )
-        """
-    )
+        """)
 
     proc = subprocess.run(
         [sys.executable, "-c", script, str(yaml_path)],
@@ -108,8 +106,12 @@ def _emit_access_payload_via_dictconfig(yaml_path: Path) -> dict:
     raise AssertionError(f"No JSON log line emitted for {yaml_path.name}")
 
 
-@pytest.mark.parametrize("yaml_path", _ALL_YAML_PATHS, ids=lambda p: p.parent.parent.name)
-def test_logging_yaml_formatter_and_filter_paths_are_importable(yaml_path: Path) -> None:
+@pytest.mark.parametrize(
+    "yaml_path", _ALL_YAML_PATHS, ids=lambda p: p.parent.parent.name
+)
+def test_logging_yaml_formatter_and_filter_paths_are_importable(
+    yaml_path: Path,
+) -> None:
     config = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
 
     for formatter_cfg in config.get("formatters", {}).values():

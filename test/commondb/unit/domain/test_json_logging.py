@@ -406,9 +406,7 @@ def test_uvicorn_access_message_is_request_specific_not_constant() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
     first = _make_uvicorn_access_record(method="GET", path="/v1/health", status=200)
-    second = _make_uvicorn_access_record(
-        method="PUT", path="/v1/cases/42", status=409
-    )
+    second = _make_uvicorn_access_record(method="PUT", path="/v1/cases/42", status=409)
 
     filt.filter(first)
     filt.filter(second)
