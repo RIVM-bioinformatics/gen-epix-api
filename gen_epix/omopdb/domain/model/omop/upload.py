@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Any, ClassVar, Self
 from uuid import UUID
 
 from pydantic import Field, computed_field, model_validator
@@ -237,6 +237,72 @@ class PersonBatchForUpload(BaseBatchForUpload):
         if len(all_external_identifiers) != len(set(all_external_identifiers)):
             raise ValueError("Persons must not contain duplicate external_identifiers.")
         return self
+
+    # to have some summary on created batch
+    @property
+    def total_persons(self) -> int:
+        """Total number of persons in the batch."""
+        return len(self.persons)
+
+    @property
+    def total_specimens(self) -> int:
+        """Total number of specimens across all persons."""
+        return sum(len(person.specimens or []) for person in self.persons)
+
+    @property
+    def total_observations(self) -> int:
+        """Total number of observations across all persons."""
+        return sum(len(person.observations or []) for person in self.persons)
+
+    @property
+    def total_measurements(self) -> int:
+        """Total number of measurements across all persons."""
+        return sum(len(person.measurements or []) for person in self.persons)
+
+    @property
+    def specimen_distribution(self) -> dict[int, int]:
+        """Distribution of specimen counts per person (specimen_count: number_of_persons)."""
+        distribution = {}
+        for person in self.persons:
+            specimen_count = len(person.specimens or [])
+            distribution[specimen_count] = distribution.get(specimen_count, 0) + 1
+        return distribution
+
+    def observation_distribution(self) -> dict[int, int]:
+        """Distribution of observation counts per person (observation_count: number_of_persons)."""
+        distribution = {}
+        for person in self.persons:
+            observation_count = len(person.observations or [])
+            distribution[observation_count] = distribution.get(observation_count, 0) + 1
+        return distribution
+
+    def measurement_distribution(self) -> dict[int, int]:
+        """Distribution of measurement counts per person (measurement_count: number_of_persons)."""
+        distribution = {}
+        for person in self.persons:
+            measurement_count = len(person.measurements or [])
+            distribution[measurement_count] = distribution.get(measurement_count, 0) + 1
+        return distribution
+
+    def upload_summary(self) -> dict[str, dict[str, Any]]:
+        """Comprehensive statistics about the uploaded batch.
+
+        Returns:
+            Dictionary with 'totals' (str keys) and 'distributions' (int keys) sections.
+        """
+        return {
+            "totals": {
+                "persons": self.total_persons,
+                "specimens": self.total_specimens,
+                "observations": self.total_observations,
+                "measurements": self.total_measurements,
+            },
+            "distributions": {
+                "specimens": self.specimen_distribution,
+                "observations": self.observation_distribution,
+                "measurements": self.measurement_distribution,
+            },
+        }
 
 
 class PersonBatchUploadResult(BaseBatchUploadResult):
