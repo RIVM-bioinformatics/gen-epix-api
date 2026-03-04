@@ -376,7 +376,7 @@ def test_uvicorn_access_filter_parses_args_tuple() -> None:
     filt.filter(record)
     payload = json.loads(formatter.format(record))
 
-    assert payload["message"] == "http.access"
+    assert payload["message"] == "http.access POST /v1/upload 201"
     http = payload["http"]
     assert http["method"] == "POST"
     assert http["path"] == "/v1/upload"
@@ -395,7 +395,7 @@ def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None
     filt.filter(record)
     payload = json.loads(formatter.format(record))
 
-    assert payload["message"] == "http.access"
+    assert payload["message"] == "http.access DELETE /v1/cases/abc 204"
     http = payload["http"]
     assert http["method"] == "DELETE"
     assert http["path"] == "/v1/cases/abc"
