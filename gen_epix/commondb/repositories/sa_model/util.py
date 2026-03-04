@@ -125,13 +125,12 @@ def create_field_metadata(
 ]:
     model_classes: frozenset[type[Model]] = domain.models  # type: ignore[assignment]
     service_metadata_fields: dict[type[Model], list[str]] = {
-        model_class: ["_modified_by"] for model_class in model_classes
+        model_class: ["modified_by"] for model_class in model_classes
     }
     db_metadata_fields: dict[type[Model], list[str]] = {
         model_class: [
-            "_created_at",
-            "_modified_at",
-            "_version",
+            "created_at",
+            "modified_at",
         ]
         for model_class in model_classes
     }
@@ -139,7 +138,7 @@ def create_field_metadata(
         type[Model], Callable[[Any, Any], dict[str, Any]]
     ] = {
         model_class: lambda x, y: {
-            "_modified_by": y,
+            "modified_by": y,
         }
         for model_class in model_classes
     }
@@ -186,6 +185,14 @@ def _validate_entity_fields(
     curr_field_name_map = field_name_map.get(model_class)
     if curr_field_name_map:
         field_names = {curr_field_name_map.get(x, x) for x in field_names}
+
+    # Note RG: Original design assumption: metadata fields are framework-level
+    # (from RowMetadataMixin), not per-entity schema contract.
+    # Why this matters now:
+    # After your rename, metadata names match domain names (created_at, modified_at, modified_by), but this function still ignores them,
+    # so missing/misaligned metadata columns would not be caught here.
+    # If you want stricter behavior, we can add a dedicated check that sa_metadata_field_names exist on each SA model (and optionally on the domain model) instead of excluding them silently.
+    field_names = field_names - sa_metadata_field_names
     sa_field_names: set[str] = (
         set(sa_model_class.__table__.columns.keys())  # type: ignore[attr-defined]
         - sa_metadata_field_names

@@ -8,24 +8,25 @@ from sqlalchemy_utils.types.uuid import UUIDType
 from gen_epix.fastapp.repositories.sa import ServerUtcCurrentTime
 
 
+# Note: Why not use the same base model as in commondb?
 @declarative_mixin
 class NoIdRowMetadataMixin:
     """
     SQLAlchemy model mixin for adding a number of standard fields.
     """
 
-    _created_at: Mapped[datetime.datetime] = mapped_column(
+    created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
-    _modified_at: Mapped[datetime.datetime] = mapped_column(
+    modified_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
         nullable=False,
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
     )
-    _modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
-    _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    __mapper_args__ = {"version_id_col": _version}
+    modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
+    # _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
+    # __mapper_args__ = {"version_id_col": _version}
 
 
 @declarative_mixin
@@ -36,5 +37,6 @@ class DataLineageMixin:
 
     provenance_id: Mapped[UUID | None] = mapped_column(UUIDType(), nullable=True)
     source_traceback: Mapped[str | None] = mapped_column(sa.Unicode(255), nullable=True)
-    provenance_id: Mapped[UUID | None] = mapped_column(UUIDType(), nullable=True)
-    source_traceback: Mapped[str | None] = mapped_column(sa.Unicode(255), nullable=True)
+    # Note: seems to be duplicated
+    # provenance_id: Mapped[UUID | None] = mapped_column(UUIDType(), nullable=True)
+    # source_traceback: Mapped[str | None] = mapped_column(sa.Unicode(255), nullable=True)

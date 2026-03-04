@@ -17,18 +17,19 @@ class RowMetadataMixin:
     """
 
     id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
-    _created_at: Mapped[datetime.datetime] = mapped_column(
+    created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
-    _modified_at: Mapped[datetime.datetime] = mapped_column(
+    modified_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
         nullable=False,
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
     )
-    _modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
-    _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    __mapper_args__ = {"version_id_col": _version}
+    modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
+    # Note: commented out to have consistency between repository implementations
+    # _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
+    # __mapper_args__ = {"version_id_col": _version}
 
 
 @declarative_mixin
@@ -40,18 +41,18 @@ class NoIdRowMetadataMixin:
 
     # id: Mapped[UUID] = mapped_column(UUIDType(), primary_key=True)
 
-    _created_at: Mapped[datetime.datetime] = mapped_column(
+    created_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime, nullable=False, server_default=ServerUtcCurrentTime()
     )
-    _modified_at: Mapped[datetime.datetime] = mapped_column(
+    modified_at: Mapped[datetime.datetime] = mapped_column(
         sa.DateTime,
         nullable=False,
         server_default=ServerUtcCurrentTime(),
         onupdate=ServerUtcCurrentTime(),
     )
-    _modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
-    _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    __mapper_args__ = {"version_id_col": _version}
+    modified_by: Mapped[UUID] = mapped_column(UUIDType(), nullable=True)
+    # _version: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
+    # __mapper_args__ = {"version_id_col": _version}
 
 
 SERVICE_METADATA_FIELDS, DB_METADATA_FIELDS, GENERATE_SERVICE_METADATA = (
