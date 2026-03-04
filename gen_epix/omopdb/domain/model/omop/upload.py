@@ -410,7 +410,6 @@ class PersonBatchForUpload(BaseBatchForUpload):
             distribution[specimen_count] = distribution.get(specimen_count, 0) + 1
         return distribution
 
-    @property
     def observation_distribution(self) -> dict[int, int]:
         """Distribution of observation counts per person (observation_count: number_of_persons)."""
         distribution = {}
@@ -419,7 +418,6 @@ class PersonBatchForUpload(BaseBatchForUpload):
             distribution[observation_count] = distribution.get(observation_count, 0) + 1
         return distribution
 
-    @property
     def measurement_distribution(self) -> dict[int, int]:
         """Distribution of measurement counts per person (measurement_count: number_of_persons)."""
         distribution = {}
@@ -428,7 +426,6 @@ class PersonBatchForUpload(BaseBatchForUpload):
             distribution[measurement_count] = distribution.get(measurement_count, 0) + 1
         return distribution
 
-    @property
     def upload_summary(self) -> dict[str, dict[str, Any]]:
         """Comprehensive statistics about the uploaded batch.
 
