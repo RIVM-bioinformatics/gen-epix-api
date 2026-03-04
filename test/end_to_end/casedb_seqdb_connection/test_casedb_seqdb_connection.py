@@ -264,9 +264,7 @@ def test_casedb_seqdb_connection(
     assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
-    assert any(
-        isinstance(case_id, UUID) for case_id in similar_case_ids
-    )
+    assert any(isinstance(case_id, UUID) for case_id in similar_case_ids)
 
     genetic_sequence_case_type_cols = [
         x
