@@ -280,7 +280,7 @@ class UserManager(BaseUserManager):
                 for x in user_invitations
                 if x.invited_by_user_id == created_by_user_id
                 and x.token == token
-                and x.key == user.key
+                and (x.key is None or x.key == user.email)
                 and x.organization_id == user.organization_id
                 and x.expires_at > timestamp
             ]

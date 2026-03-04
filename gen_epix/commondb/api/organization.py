@@ -28,7 +28,7 @@ class ApiPermission(PydanticBaseModel, frozen=True):
 
 
 class UserInvitationRequestBody(PydanticBaseModel):
-    key: str = copy_model_field(model.UserInvitation, "key")
+    key: str | None = copy_model_field(model.UserInvitation, "key")
     roles: set[str] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 

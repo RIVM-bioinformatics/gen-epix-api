@@ -268,7 +268,9 @@ class TestClient:
                 obj_ids=None,
             )
         )
-        if any(x.key == tgt_user.key for x in remaining_invitations):
+        if tgt_user.key is not None and any(
+            x.key == tgt_user.key for x in remaining_invitations
+        ):
             raise ValueError(f"Some user invitations remaining for key {tgt_user.key}")
         retval: model.User = self._set_obj(tgt_user)  # type: ignore[assignment]
         return retval
