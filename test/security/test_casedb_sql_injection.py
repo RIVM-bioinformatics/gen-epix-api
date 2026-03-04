@@ -11,7 +11,7 @@ from gen_epix.commondb.repositories.sa_model.organization import User
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_upload.base import (
+from test.security.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
     TEST_TYPE,

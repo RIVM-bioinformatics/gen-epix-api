@@ -725,6 +725,13 @@ class Run:
             ]
         )
 
+    def test_security_sql_injection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS + ["test/security/test_casedb_sql_injection.py"]
+        )
+
     def test_general_docs(self) -> None:
         import pytest
 
