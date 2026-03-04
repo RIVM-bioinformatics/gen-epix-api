@@ -97,41 +97,55 @@ class UvicornAccessLogFilter(logging.Filter):
     so monitoring query engines can project ``http.method``, ``http.path``, ``http.status``, etc.
     directly without any regex extraction.
 
+    The filter also normalises the emitted event text by rewriting
+    ``record.msg`` to ``http.access <method> <path> <status>`` and clearing
+    ``record.args`` after extraction.
+
     When the record args have already been interpolated (e.g. in tests or
     certain uvicorn configurations) a regex fallback is used instead.
     """
+
+    @staticmethod
+    def _build_access_message(method: Any, path: Any, status: Any) -> str:
+        return f"http.access {method} {path} {status}"
 
     def filter(self, record: logging.LogRecord) -> bool:
         # Priority 1: raw args tuple from uvicorn internals – most reliable.
         if isinstance(record.args, tuple) and len(record.args) == 5:
             client, method, path, version, status = record.args
+            status_i = int(status)
             record._json_fields = {  # type: ignore[attr-defined]
                 "http": {
                     "client": str(client),
                     "method": str(method),
                     "path": str(path),
                     "version": str(version),
-                    "status": int(status),
+                    "status": status_i,
                 }
             }
             # Clear args so getMessage() returns the plain event key.
             record.args = ()
-            record.msg = "http.access"
+            record.msg = self._build_access_message(method, path, status_i)
         else:
             # Priority 2: regex fallback for already-formatted strings.
             m = _UVICORN_ACCESS_RE.match(record.getMessage())
             if m:
+                status_i = int(m.group("status"))
                 record._json_fields = {  # type: ignore[attr-defined]
                     "http": {
                         "client": m.group("client"),
                         "method": m.group("method"),
                         "path": m.group("path"),
                         "version": m.group("version"),
-                        "status": int(m.group("status")),
+                        "status": status_i,
                     }
                 }
                 record.args = ()
-                record.msg = "http.access"
+                record.msg = self._build_access_message(
+                    m.group("method"),
+                    m.group("path"),
+                    status_i,
+                )
         return True
 
 
