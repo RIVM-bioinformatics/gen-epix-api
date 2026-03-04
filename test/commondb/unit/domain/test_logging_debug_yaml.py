@@ -25,5 +25,5 @@ def test_debug_console_uses_json_formatter(yaml_path: Path) -> None:
     assert handlers.get("file", {}).get("formatter") == "json"
     assert (
         json_formatter_cfg.get("()")
-        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+        == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
