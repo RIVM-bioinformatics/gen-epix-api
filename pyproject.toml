@@ -59,3 +59,5 @@ exclude = ["tests", "tests.*", "docs", "docs.*", "data", "data.*", "cert", "cert
 [tool.pytest-gremlins]
 paths = ["gen_epix"]
 
+[tool.isort]
+profile = "black"
