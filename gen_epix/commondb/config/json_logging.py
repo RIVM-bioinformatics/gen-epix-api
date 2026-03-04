@@ -19,6 +19,9 @@ Fix index:
      version) from uvicorn.access records into a structured `http` dict that
      JsonFormatter hoists to the top level, enabling monitoring query engines to filter/project
      them directly without regex extraction.
+  7. UvicornAccessLogFilter hardens uvicorn.access handlers at runtime to use
+     JsonFormatter when a non-JSON formatter is detected, preventing regressions
+     where LogMessage contains plain `INFO ...` text instead of JSON lines.
 """
 
 import json
@@ -101,6 +104,13 @@ class UvicornAccessLogFilter(logging.Filter):
     ``record.msg`` to ``http.access <method> <path> <status>`` and clearing
     ``record.args`` after extraction.
 
+    In some runtime combinations (e.g. when another component re-attaches a
+    non-JSON formatter to ``uvicorn.access`` handlers), the structured fields
+    are still injected but output is rendered as plain text like
+    ``INFO http.access ...``. To keep downstream ContainerLog/Grafana parsing
+    stable, this filter also hardens ``uvicorn.access`` handlers back to
+    JsonFormatter on the fly.
+
     When the record args have already been interpolated (e.g. in tests or
     certain uvicorn configurations) a regex fallback is used instead.
     """
@@ -109,12 +119,58 @@ class UvicornAccessLogFilter(logging.Filter):
     def _build_access_message(method: Any, path: Any, status: Any) -> str:
         return f"http.access {method} {path} {status}"
 
+    @staticmethod
+    def _is_json_formatter(formatter: logging.Formatter | None) -> bool:
+        return isinstance(formatter, JsonFormatter)
+
+    @classmethod
+    def _discover_json_formatter(cls) -> logging.Formatter | None:
+        """Find an existing JsonFormatter instance from any configured logger."""
+        root_logger = logging.getLogger()
+        candidate_loggers: list[logging.Logger] = [root_logger]
+        for logger_name in logging.root.manager.loggerDict.keys():
+            logger = logging.getLogger(logger_name)
+            candidate_loggers.append(logger)
+
+        for logger in candidate_loggers:
+            for handler in logger.handlers:
+                if cls._is_json_formatter(handler.formatter):
+                    return handler.formatter
+        return None
+
+    @classmethod
+    def _ensure_uvicorn_access_json_formatter(cls, record: logging.LogRecord) -> None:
+        """Guarantee uvicorn.access handlers use JsonFormatter at emit time."""
+        logger = logging.getLogger(record.name)
+        if not logger.handlers:
+            return
+        if all(
+            cls._is_json_formatter(handler.formatter) for handler in logger.handlers
+        ):
+            return
+
+        json_formatter = cls._discover_json_formatter()
+        if json_formatter is None:
+            json_formatter = JsonFormatter()
+
+        for handler in logger.handlers:
+            if cls._is_json_formatter(handler.formatter):
+                continue
+            handler.setFormatter(json_formatter)
+
     def filter(self, record: logging.LogRecord) -> bool:
+        self._ensure_uvicorn_access_json_formatter(record)
+
         # Priority 1: raw args tuple from uvicorn internals – most reliable.
         if isinstance(record.args, tuple) and len(record.args) == 5:
-            client, method, path, version, status = record.args
-            status_i = int(status)
-            record._json_fields = {  # type: ignore[attr-defined]
+            client, method, path, version, status_raw = record.args
+            if not isinstance(status_raw, (int, str)):
+                return True
+            try:
+                status_i = int(status_raw)
+            except ValueError:
+                return True
+            record._json_fields = {
                 "http": {
                     "client": str(client),
                     "method": str(method),
@@ -130,8 +186,8 @@ class UvicornAccessLogFilter(logging.Filter):
             # Priority 2: regex fallback for already-formatted strings.
             m = _UVICORN_ACCESS_RE.match(record.getMessage())
             if m:
-                status_i = int(m.group("status"))
-                record._json_fields = {  # type: ignore[attr-defined]
+                status_i = int(str(m.group("status")))
+                record._json_fields = {
                     "http": {
                         "client": m.group("client"),
                         "method": m.group("method"),

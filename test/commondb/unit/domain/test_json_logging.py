@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from io import StringIO
 from typing import Any
 
 import pytest
@@ -444,3 +445,44 @@ def test_json_fields_merged_to_top_level_not_into_props() -> None:
     assert payload["http"] == {"method": "GET", "status": 200}
     # Must NOT also appear inside props
     assert "http" not in payload.get("props", {})
+
+
+def test_uvicorn_access_filter_hardens_plain_formatter_to_json_output() -> None:
+    logger = logging.getLogger("uvicorn.access")
+    original_handlers = list(logger.handlers)
+    original_filters = list(logger.filters)
+    original_level = logger.level
+    original_propagate = logger.propagate
+
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+    uvicorn_filter = UvicornAccessLogFilter()
+
+    try:
+        logger.handlers = [handler]
+        logger.filters = [uvicorn_filter]
+        logger.level = logging.INFO
+        logger.propagate = False
+
+        logger.info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:54321",
+            "GET",
+            "/v1/runtime-hardening",
+            "1.1",
+            200,
+        )
+    finally:
+        logger.handlers = original_handlers
+        logger.filters = original_filters
+        logger.level = original_level
+        logger.propagate = original_propagate
+
+    emitted_line = stream.getvalue().strip()
+    payload = json.loads(emitted_line)
+
+    assert payload["logger"] == "uvicorn.access"
+    assert payload["level"] == "INFO"
+    assert payload["message"] == "http.access GET /v1/runtime-hardening 200"
+    assert payload["http"]["path"] == "/v1/runtime-hardening"
