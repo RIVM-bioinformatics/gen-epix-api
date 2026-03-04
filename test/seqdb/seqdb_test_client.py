@@ -6,6 +6,8 @@ import uuid
 from enum import Enum
 from functools import cached_property
 from pathlib import Path
+from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
+from test.test_client.util import get_test_name, get_test_output_dir
 from typing import Any, Optional
 from uuid import UUID
 
@@ -22,8 +24,6 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.api.router import create_routers
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.env import AppComposer
-from test.seqdb.seqdb_endpoint_test_client import SeqdbEndpointTestClient
-from test.test_client.util import get_test_name, get_test_output_dir
 
 
 class SeqGenerationSettings(BaseModel):
