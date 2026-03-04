@@ -1,7 +1,5 @@
-import pytest
-
+import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-
 from test.casedb.integration.case_access.base_edge_cases import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -9,12 +7,12 @@ from test.casedb.integration.case_access.base_edge_cases import (
     VERBOSE,
 )
 
-import logging
-from gen_epix.casedb.domain import model, enum
+import pytest
+
+from gen_epix.casedb.domain import enum, model
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.seqdb.domain import enum as seqdb_enum
-
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE

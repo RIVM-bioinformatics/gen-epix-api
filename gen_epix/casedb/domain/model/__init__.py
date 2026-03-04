@@ -18,7 +18,6 @@ from gen_epix.casedb.domain.model.abac import (
 )
 from gen_epix.casedb.domain.model.abac import UserShareCasePolicy as UserShareCasePolicy
 from gen_epix.casedb.domain.model.case import BaseCaseRights as BaseCaseRights
-from gen_epix.casedb.domain.model.case import ReadableReferenceData as ReadableReferenceData
 from gen_epix.casedb.domain.model.case import Case as Case
 from gen_epix.casedb.domain.model.case import CaseBatchForUpload as CaseBatchForUpload
 from gen_epix.casedb.domain.model.case import (
@@ -57,6 +56,9 @@ from gen_epix.casedb.domain.model.case import Col as Col
 from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
+)
+from gen_epix.casedb.domain.model.case import (
+    ReadableReferenceData as ReadableReferenceData,
 )
 from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload

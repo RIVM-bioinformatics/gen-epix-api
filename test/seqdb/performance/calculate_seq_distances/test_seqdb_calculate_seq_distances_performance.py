@@ -1,7 +1,5 @@
 import logging
 from pathlib import Path
-
-import pyinstrument
 from test.seqdb.performance.calculate_seq_distances.base import (
     DEV_REPOSITORY_CONFIG,
     SKIP_ENDPOINTS,
@@ -22,6 +20,7 @@ from time import perf_counter
 from typing import Any
 from uuid import UUID
 
+import pyinstrument
 import pytest
 
 from gen_epix.commondb.domain.enum import AppType, UploadStatus
