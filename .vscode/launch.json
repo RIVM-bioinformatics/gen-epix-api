@@ -901,6 +901,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.security.sql_injection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_security_sql_injection"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "test.general.docs",
             "type": "debugpy",
             "request": "launch",
