@@ -1,14 +1,28 @@
 version: 1
 disable_existing_loggers: false
+
 formatters:
-  simple:
-    format: '{"ts":"%(asctime)s","logger":"%(name)s","level":"%(levelname)s","content":%(message)s}'
+  json:
+    "()": gen_epix.commondb.config.json_logging.JsonFormatter
+    # optional: set explicit service/env; if omitted it reads SERVICE_NAME / ENVIRONMENT env vars
+    service: "casedb"
+    merge_message_json: true
+    extras_key: "props"
+    redacted_value: "[REDACTED]"
+    sensitive_keys: ["client_secret", "password", "client_pwd", "secret", "api_key"]
+
+filters:
+  uvicorn_access_structured:
+    (): gen_epix.commondb.config.json_logging.UvicornAccessLogFilter
+
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
-    formatter: simple
+    # keep a fixed level; cfg.py set_log_level() will raise/lower levels at runtime anyway
+    level: INFO
+    formatter: json
     stream: ext://sys.stdout
+
 loggers:
   casedb.setup:
     level: INFO
@@ -69,6 +83,15 @@ loggers:
   omopdb.external:
     level: INFO
     handlers: [console]
+    propagate: no
+  uvicorn.error:
+    level: INFO
+    handlers: [console]
+    propagate: no
+  uvicorn.access:
+    level: INFO
+    handlers: [console]
+    filters: [uvicorn_access_structured]
     propagate: no
 root:
   level: INFO

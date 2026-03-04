@@ -53,7 +53,7 @@ from gen_epix.commondb.domain.command import (
     RetrieveOrganizationAdminNameEmailsCommand as RetrieveOrganizationAdminNameEmailsCommand,
 )
 from gen_epix.commondb.domain.command import (
-    RetrieveOrganizationContactCommand as RetrieveOrganizationContactCommand,
+    RetrieveOrganizationContactsCommand as RetrieveOrganizationContactsCommand,
 )
 from gen_epix.commondb.domain.command import (
     RetrieveOutagesCommand as RetrieveOutagesCommand,
@@ -106,6 +106,9 @@ from gen_epix.seqdb.domain.command.seq import (
 )
 from gen_epix.seqdb.domain.command.seq import (
     AstProtocolCrudCommand as AstProtocolCrudCommand,
+)
+from gen_epix.seqdb.domain.command.seq import (
+    CalculateSeqDistancesForNewProfilesCommand as CalculateSeqDistancesForNewProfilesCommand,
 )
 from gen_epix.seqdb.domain.command.seq import (
     GenerateMultipleAlignmentCommand as GenerateMultipleAlignmentCommand,
@@ -268,6 +271,7 @@ COMMANDS_BY_SERVICE_TYPE: dict[enum.ServiceType, set[type[fastapp.Command]]] = {
         RetrievePhylogeneticTreeCommand,
         RetrieveSeqFastaCommand,
         RetrieveSimilarProfilesCommand,
+        CalculateSeqDistancesForNewProfilesCommand,
         SampleCrudCommand,
         SampleDataCollectionLinkCrudCommand,
         SampleIdentifierCrudCommand,

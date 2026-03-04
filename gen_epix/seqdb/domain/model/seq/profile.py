@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import struct
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
@@ -322,6 +323,18 @@ class SnpProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
     def _serialize_snp_profile_format(self, value: enum.SnpProfileFormat) -> str:
         return value.value
 
+    def get_aligned_nucleotide_seq(self, **kwargs: Any) -> str:
+        """
+        Parse and return the aligned nucleotide sequence from the SNP profile based on
+        its format.
+        """
+        if self.snp_profile_format == enum.SnpProfileFormat.REF_ALN_SEQ:
+            return self.snp_profile
+        else:
+            raise NotImplementedError(
+                "Unable to parse aligned nucleotide sequence for this SNP profile format"
+            )
+
 
 class MlvaDetectionProtocol(Model, ProtocolMixin):
     ENTITY: ClassVar = Entity(
@@ -423,6 +436,17 @@ class MlvaProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
             return value.value
         return value
 
+    def get_repeat_numbers(self, **kwargs: Any) -> list[int]:
+        """
+        Parse and return the repeat numbers from the MLVA profile based on its format.
+        """
+        if self.mlva_profile_format == enum.MlvaProfileFormat.SORTED_REPEAT_NUMBERS:
+            return json.loads(self.mlva_profile)
+        else:
+            raise NotImplementedError(
+                "Unable to parse repeat numbers for this MLVA profile format"
+            )
+
     @staticmethod
     def get_sorted_repeat_numbers_profile(repeat_numbers: list[int | None]) -> str:
         """
@@ -496,13 +520,59 @@ class KmerProfile(Model, HasSampleMixin, HasSeqMixin, QualityMixin):
         description="The k-mers detected in the sequence and their frequency."
     )
     kmer_profile_format: enum.KmerProfileFormat = Field(
-        default=enum.KmerProfileFormat.KMER_PROFILE_FORMAT1,
+        default=enum.KmerProfileFormat.KMER_FREQUENCY_MAP,
         description="The representation format of the k-mers.",
     )
     kmer_profile_hash: UUID = Field(
-        description="The first 128 bits of the SHA256 hash of the ASCII sorted k-mers followed by their correspondingsorted frequencies as double precision floats.",
+        description="The first 128 bits of the SHA256 hash of the ASCII sorted k-mers followed by their corresponding sorted frequencies as double precision floats.",
     )
 
     @field_serializer("kmer_profile_hash")
     def _serialize_kmer_profile_hash(self, value: UUID) -> str:
         return str(value)
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Validate the k-mer profile and derive the k-mer profile hash if not provided.
+        """
+        profile_hash = self.kmer_profile_hash
+
+        # Parse k-mer profile and derive hash depending on kmer_profile_format
+        if self.kmer_profile_format == enum.KmerProfileFormat.KMER_FREQUENCY_MAP:
+            # Parse the k-mer profile from json object
+            kmer_frequency_map: dict[str, float] = json.loads(self.kmer_profile)
+            # Compute hash
+            computed_profile_hash = KmerProfile.get_kmer_profile_hash(
+                kmer_frequency_map
+            )
+        else:
+            if profile_hash == NULL_ID:
+                raise ValueError(
+                    "Unable to calculate k-mer profile hash for this format"
+                )
+            # Unable to compute profile hash but provided -> assume correct
+            computed_profile_hash = profile_hash
+        self.kmer_profile_hash = computed_profile_hash
+        return self
+
+    def get_kmer_frequency_map(self, **kwargs: Any) -> dict[str, float]:
+        """
+        Parse and return the k-mer frequency map from the k-mer profile based on its format.
+        """
+        if self.kmer_profile_format == enum.KmerProfileFormat.KMER_FREQUENCY_MAP:
+            retval: dict[str, float] = json.loads(self.kmer_profile)
+            return retval
+        else:
+            raise NotImplementedError(
+                "Unable to parse k-mer frequency map for this k-mer profile format"
+            )
+
+    @staticmethod
+    def get_kmer_profile_hash(kmer_frequency_map: dict[str, float]) -> UUID:
+        sha256 = hashlib.sha256()
+        for kmer in sorted(kmer_frequency_map.keys()):
+            freq = kmer_frequency_map[kmer]
+            sha256.update(kmer.encode("ascii"))
+            sha256.update(bytearray(struct.pack(">d", freq)))
+        return UUID(sha256.digest()[:16].hex())

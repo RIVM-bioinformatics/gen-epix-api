@@ -4,16 +4,19 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 import gen_epix.fastapp.model
+from gen_epix import fastapp
 from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
+from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.service import BaseService
 
 
 class Ref1(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Ref1"
     code: str = Field(description="A unique code")
     a: str = Field(
@@ -23,6 +26,7 @@ class Ref1(commondb_model.Model):
 
 
 class Ref2(commondb_model.Model):
+    ENTITY: ClassVar = Entity(persistable=True)
     NAME: ClassVar = "Ref2"
     code: str = Field(description="A unique code")
     a: str = Field(
@@ -31,8 +35,12 @@ class Ref2(commondb_model.Model):
     )
 
 
-class Parent(commondb_model.Model):
+class Parent(fastapp.Model):
+    ENTITY: ClassVar = Entity(persistable=True, id_field_name="parent_id")
     NAME: ClassVar = "Parent"
+    parent_id: UUID | None = Field(
+        default=None, description="The ID of the parent model."
+    )
     a: str = Field(
         default="",
         description="A single value that can always be mutated after first storage.",
@@ -59,8 +67,12 @@ class Parent(commondb_model.Model):
     )
 
 
-class Child1(commondb_model.Model):
+class Child1(fastapp.Model):
+    ENTITY: ClassVar = Entity(persistable=True, id_field_name="child1_id")
     NAME: ClassVar = "Child1"
+    child1_id: UUID | None = Field(
+        default=None, description="The ID of the child model."
+    )
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref1_id: UUID = Field(description="The ID of the Ref1 model.")
     a: str = Field(
@@ -89,8 +101,12 @@ class Child1(commondb_model.Model):
     )
 
 
-class Child2(commondb_model.Model):
+class Child2(fastapp.Model):
+    ENTITY: ClassVar = Entity(persistable=True, id_field_name="child2_id")
     NAME: ClassVar = "Child2"
+    child2_id: UUID | None = Field(
+        default=None, description="The ID of the child model."
+    )
     parent_id: UUID = Field(description="The ID of the parent model.")
     ref2_id: UUID | None = Field(description="The ID of the Ref2 model.")
     a: str = Field(
@@ -120,6 +136,7 @@ class Child2(commondb_model.Model):
 
 
 class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
+    ENTITY: ClassVar = Child1.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child1ForUpload"
     parent_id: UUID = Field(
         default=NULL_ID,
@@ -146,8 +163,12 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
         return self
 
 
-class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
+class Child2ForUpload(
+    Child2, commondb_model.IsNewIdMixin, commondb_model.ExternalIdentifiersMixin
+):
+    ENTITY: ClassVar = Child2.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child2ForUpload"
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -159,8 +180,9 @@ class Child2ForUpload(Child2, commondb_model.IsNewIdMixin):
 
 
 class ParentForUpload(commondb_model.ParentForUpload):
+    ENTITY: ClassVar = commondb_model.ParentForUpload.ENTITY.clone()
     NAME: ClassVar = "ParentForUpload"
-    PARENT_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
+    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Parent
     PARENT_FIELD_NAME: ClassVar = "parent"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
@@ -190,7 +212,16 @@ class ParentForUpload(commondb_model.ParentForUpload):
     )
 
 
+class Child1UploadResult(commondb_model.UploadResult):
+    """Result for uploading a single Child1 object."""
+
+    ENTITY: ClassVar = commondb_model.UploadResult.ENTITY.clone()
+    NAME: ClassVar = "Child1UploadResult"
+
+
 class ParentUploadResult(commondb_model.ParentUploadResult):
+    ENTITY: ClassVar = commondb_model.ParentUploadResult.ENTITY.clone()
+    NAME: ClassVar = "ParentUploadResult"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
 
     external_identifiers: list[UploadResult] | None = Field(
@@ -205,6 +236,7 @@ class ParentUploadResult(commondb_model.ParentUploadResult):
 
 
 class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
+    ENTITY: ClassVar = commondb_model.BaseBatchForUpload.ENTITY.clone()
     NAME: ClassVar = "ParentBatchForUpload"
     PARENT_FOR_UPLOAD_CLASS: ClassVar = ParentForUpload  # type: ignore[assignment]
     PARENTS_FOR_UPLOAD_FIELD_NAME: ClassVar = "parents"
@@ -215,6 +247,7 @@ class ParentBatchForUpload(commondb_model.BaseBatchForUpload):
 
 
 class ParentBatchUploadResult(commondb_model.BaseBatchUploadResult):
+    ENTITY: ClassVar = commondb_model.BaseBatchUploadResult.ENTITY.clone()
     BATCH_FOR_UPLOAD_CLASS: ClassVar = ParentBatchForUpload  # type: ignore[assignment]
     PARENT_RESULT_CLASS: ClassVar = ParentUploadResult
 
@@ -325,15 +358,18 @@ class ParentBatchUploader(BatchUploader):
         Verify and complete reference data for allele profiles.
         """
         success = True
-        user_id = cmd.user.id if cmd.user else None
+        user = cmd.user
         parents = cmd.parent_batch.parents
         parent_results = retval.parents
 
+        # Create parent-result pairs
+        parent_result_pairs = list(zip(parents, parent_results))
+
         # Verify all Child1.ref1_id
         success &= self.verify_link_id(
-            cmd,
-            retval,
+            parent_result_pairs,
             uow,
+            user,
             "children1",
             "ref1_id",
             "ref1_code",
@@ -344,9 +380,9 @@ class ParentBatchUploader(BatchUploader):
 
         # Verify all Child2.ref2_id
         success &= self.verify_link_id(
-            cmd,
-            retval,
+            parent_result_pairs,
             uow,
+            user,
             "children2",
             "ref2_id",
             "ref2_code",
@@ -356,3 +392,15 @@ class ParentBatchUploader(BatchUploader):
         )
 
         return success
+
+
+# Set model class in entities
+for model_class in [
+    Parent,
+    Child1,
+    Child2,
+    Child1ForUpload,
+    Child2ForUpload,
+    ParentForUpload,
+]:
+    model_class.ENTITY.set_model_class(model_class)

@@ -156,15 +156,24 @@ cython_debug/
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+.idea/
 
 # Ignore dynaconf secret files
 gen_epix/casedb/config/.ignore/*
 
 # Test output
 test/output/*
+.gremlins_cache
 
 # Logs
 logs/*
+
+# Macbook specific files
+.DS_Store
+
+# Mutation Testing (gremlins)
+.gremlins_cache/
+.coveragerc.gremlins
+gremlin-report.html
 
 cert/*.pem

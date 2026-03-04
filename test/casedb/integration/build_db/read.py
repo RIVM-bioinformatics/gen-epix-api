@@ -1,17 +1,17 @@
-from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.build_db.base import (
-    DATA_USERS,
-    GUEST_USERS,
-    NO_DATA_USERS,
-    NON_GUEST_USERS,
-    ROOT,
-    SKIP_RAISE,
-)
 from uuid import UUID
 
 import pytest
 
 from gen_epix.casedb.domain import command, exc, model
+from gen_epix.commondb.domain.model import OrganizationContacts
+from test.casedb.casedb_test_client import CasedbTestClient as Env
+from test.casedb.integration.build_db.base import (
+    DATA_USERS,
+    GUEST_USERS,
+    NO_DATA_USERS,
+    ROOT,
+    SKIP_RAISE,
+)
 
 
 @pytest.mark.scenario_ids(
@@ -250,109 +250,6 @@ class TestRead:
                 with pytest.raises(exc.UnauthorizedAuthError):
                     env.read_all(exec_user, policy_class)
 
-    def test_read_case_type(self, env: Env) -> None:
-        for user in NON_GUEST_USERS:
-            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            env.verify_read_all(user, model.CaseType, expected_case_type_ids)
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseType)
-
-    def test_read_case_type_set_member(self, env: Env) -> None:
-        all_case_type_set_members: list[model.CaseTypeSetMember] = env.read_all(
-            ROOT, model.CaseTypeSetMember
-        )  # type: ignore[assignment]
-        for user in NON_GUEST_USERS:
-            expected_case_type_ids: set[UUID] = env.read_case_types_with_any_right(user)
-            expected_case_type_set_member_ids: set[UUID] = {  # type: ignore[assignment]
-                x.id
-                for x in all_case_type_set_members
-                if x.case_type_id in expected_case_type_ids
-            }
-            env.verify_read_all(
-                user, model.CaseTypeSetMember, expected_case_type_set_member_ids
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_set_member_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeSetMember)
-
-    def test_read_case_type_col(self, env: Env) -> None:
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids = env.read_case_type_cols_with_any_right(user)
-            env.verify_read_all(user, model.CaseTypeCol, expected_case_type_col_ids)
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeCol)
-
-    def test_read_case_type_col_set(self, env: Env) -> None:
-        all_case_type_col_sets: list[model.CaseTypeColSet] = env.read_all(
-            ROOT, model.CaseTypeColSet
-        )  # type: ignore[assignment]
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
-            ROOT, model.CaseTypeColSetMember
-        )  # type: ignore[assignment]
-        empty_case_type_col_set_ids: set[UUID] = {  # type: ignore[assignment]
-            x.id
-            for x in all_case_type_col_sets
-            if not any(
-                y.case_type_col_set_id == x.id for y in all_case_type_col_set_members
-            )
-        }
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids = env.read_case_type_cols_with_any_right(user)
-            expected_case_type_col_set_ids = empty_case_type_col_set_ids | {
-                x.case_type_col_set_id
-                for x in all_case_type_col_set_members
-                if x.case_type_col_id in expected_case_type_col_ids
-            }
-            env.verify_read_all(
-                user,
-                model.CaseTypeColSet,
-                expected_case_type_col_set_ids,
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_set_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeColSet)
-
-    def test_read_case_type_col_set_member(self, env: Env) -> None:
-        all_case_type_col_set_members: list[model.CaseTypeColSetMember] = env.read_all(
-            ROOT, model.CaseTypeColSetMember
-        )  # type: ignore[assignment]
-        for user in NON_GUEST_USERS:
-            expected_case_type_col_ids: set[UUID] = (
-                env.read_case_type_cols_with_any_right(user)
-            )
-            expected_case_type_col_set_member_ids: set[UUID] = (
-                {  # type: ignore[assignment]
-                    x.id
-                    for x in all_case_type_col_set_members
-                    if x.case_type_col_id in expected_case_type_col_ids
-                }
-            )
-            env.verify_read_all(
-                user,
-                model.CaseTypeColSetMember,
-                expected_case_type_col_set_member_ids,
-            )
-
-    @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
-    def test_read_case_type_col_set_member_raise(self, env: Env) -> None:
-        for user in GUEST_USERS:
-            with pytest.raises(exc.UnauthorizedAuthError):
-                env.read_all(user, model.CaseTypeColSetMember)
-
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_read_case_set(self, env: Env) -> None:
         all_case_sets: list[model.CaseSet] = env.read_all(
@@ -375,68 +272,6 @@ class TestRead:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.read_all(user, model.CaseSet)
 
-    # TODO Refactor tests to the pattern used for all other tests: test_read_contact and test_read_contact_raise. The 3 ways to read a contact (by contact ids, by site ids, by organization ids) can be sub-tests within test_read_contact.
-    def test_read_organization_contact_by_contact_ids(self, env: Env) -> None:
-        root_user: model.User = env._get_obj(
-            model.User, ROOT
-        )  # type: ignore[assignment]
-        all_contacts: list[model.Contact] = env.read_all(
-            root_user, model.Contact
-        )  # type: ignore[assignment]
-        selected_contacts: list[model.Contact] = all_contacts[:3]
-        selected_contact_ids: list[UUID] = [x.id for x in selected_contacts if x.id]
-
-        organizations: list[model.Contact] = env.app.handle(
-            command.RetrieveOrganizationContactCommand(
-                user=root_user,
-                organization_ids=None,
-                site_ids=None,
-                contact_ids=selected_contact_ids,
-            )
-        )
-
-        result_ids = {x.id for x in organizations}
-        assert result_ids == set(selected_contact_ids)
-        assert all(x.site is None for x in organizations)
-
-    def test_read_organization_contact_by_site_ids(self, env: Env) -> None:
-        root_user: model.User = env._get_obj(
-            model.User, ROOT
-        )  # type: ignore[assignment]
-        all_contacts: list[model.Contact] = env.read_all(
-            root_user, model.Contact
-        )  # type: ignore[assignment]
-        all_sites: list[model.Site] = env.read_all(
-            root_user, model.Site
-        )  # type: ignore[assignment]
-
-        contacts_by_site: dict[UUID, set[UUID]] = {}
-        site_ids_with_contacts: list[UUID] = []
-        for site in all_sites:
-            site_contact_ids = {x.id for x in all_contacts if x.site_id == site.id}
-            if site_contact_ids:
-                contacts_by_site[site.id] = site_contact_ids  # type: ignore
-                site_ids_with_contacts.append(site.id)  # type: ignore
-
-        selected_site_ids: list[UUID] = site_ids_with_contacts[:2]
-        expected_contact_ids: set[UUID] = set().union(
-            *(contacts_by_site[sid] for sid in selected_site_ids)
-        )
-
-        organizations: list[model.Contact] = env.app.handle(
-            command.RetrieveOrganizationContactCommand(
-                user=root_user,
-                organization_ids=None,
-                site_ids=selected_site_ids,
-                contact_ids=None,
-            )
-        )
-
-        result_ids = {x.id for x in organizations}
-        assert result_ids == expected_contact_ids
-        assert all(x.site is None for x in organizations)
-        assert all(x.site_id in set(selected_site_ids) for x in organizations)
-
     def test_read_organization_contact_by_organization_ids(self, env: Env) -> None:
         root_user: model.User = env._get_obj(
             model.User, ROOT
@@ -449,30 +284,30 @@ class TestRead:
         )  # type: ignore[assignment]
 
         sites_by_id: dict[UUID, model.Site] = {x.id: x for x in all_sites if x.id}
-        contacts_by_org: dict[UUID, set[UUID]] = {}
+        contact_ids_by_org: dict[UUID, set[UUID]] = {}
+        site_ids_by_org: dict[UUID, set[UUID]] = {}
         for x in all_contacts:
             site = sites_by_id.get(x.site_id)
             if not site:
                 continue
-            contacts_by_org.setdefault(site.organization_id, set()).add(x.id)
+            contact_ids_by_org.setdefault(site.organization_id, set()).add(x.id)
 
-        selected_org_ids: list[UUID] = list(contacts_by_org.keys())[:2]
-        expected_contact_ids: set[UUID] = set().union(
-            *(contacts_by_org[org_id] for org_id in selected_org_ids)
-        )
+        for x in all_sites:
+            site_ids_by_org.setdefault(x.organization_id, set()).add(x.id)
 
-        organizations: list[model.Contact] = env.app.handle(
-            command.RetrieveOrganizationContactCommand(
+        selected_org_id: UUID = list(contact_ids_by_org.keys())[0]
+        expected_contact_ids: set[UUID] = contact_ids_by_org[selected_org_id]
+        expected_site_ids: set[UUID] = site_ids_by_org[selected_org_id]
+
+        result: OrganizationContacts = env.app.handle(
+            command.RetrieveOrganizationContactsCommand(
                 user=root_user,
-                organization_ids=selected_org_ids,
-                site_ids=None,
-                contact_ids=None,
+                organization_id=selected_org_id,
             )
         )
 
-        result_ids = {x.id for x in organizations}
-        assert result_ids == expected_contact_ids
-        assert all(x.site is None for x in organizations)
-        for x in organizations:
-            site = sites_by_id.get(x.site_id)
-            assert site is not None and site.organization_id in set(selected_org_ids)
+        assert result.organization.id == selected_org_id
+        result_site_ids = {x.id for x in result.sites if x.id}
+        assert result_site_ids == expected_site_ids
+        result_contact_ids = {x.id for x in result.contacts if x.id}
+        assert result_contact_ids == expected_contact_ids

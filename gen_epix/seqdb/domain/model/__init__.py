@@ -57,6 +57,9 @@ from gen_epix.seqdb.domain.model.seq import AstMeasurement as AstMeasurement
 from gen_epix.seqdb.domain.model.seq import AstPrediction as AstPrediction
 from gen_epix.seqdb.domain.model.seq import AstProtocol as AstProtocol
 from gen_epix.seqdb.domain.model.seq import BaseSeq as BaseSeq
+from gen_epix.seqdb.domain.model.seq import (
+    CalculateSeqDistancesResult as CalculateSeqDistancesResult,
+)
 from gen_epix.seqdb.domain.model.seq import CodeMixin as CodeMixin
 from gen_epix.seqdb.domain.model.seq import Contig as Contig
 from gen_epix.seqdb.domain.model.seq import ContigAlignment as ContigAlignment
@@ -64,6 +67,7 @@ from gen_epix.seqdb.domain.model.seq import (
     KmerDetectionProtocol as KmerDetectionProtocol,
 )
 from gen_epix.seqdb.domain.model.seq import KmerProfile as KmerProfile
+from gen_epix.seqdb.domain.model.seq import KmerProfileForUpload as KmerProfileForUpload
 from gen_epix.seqdb.domain.model.seq import Locus as Locus
 from gen_epix.seqdb.domain.model.seq import LocusCodeMap as LocusCodeMap
 from gen_epix.seqdb.domain.model.seq import (
@@ -97,6 +101,7 @@ from gen_epix.seqdb.domain.model.seq import (
 from gen_epix.seqdb.domain.model.seq import (
     SampleDataCollectionLink as SampleDataCollectionLink,
 )
+from gen_epix.seqdb.domain.model.seq import SampleDataIssue as SampleDataIssue
 from gen_epix.seqdb.domain.model.seq import SampleForUpload as SampleForUpload
 from gen_epix.seqdb.domain.model.seq import SampleIdentifier as SampleIdentifier
 from gen_epix.seqdb.domain.model.seq import SampleUploadResult as SampleUploadResult
@@ -203,9 +208,11 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             AlleleProfileForUpload,
             SnpProfileForUpload,
             MlvaProfileForUpload,
+            KmerProfileForUpload,
             SampleForUpload,
             SampleBatchForUpload,
             SampleUploadResult,
+            CalculateSeqDistancesResult,
             SampleBatchUploadResult,
         ],
         enum.ServiceType.FILE: [File],
