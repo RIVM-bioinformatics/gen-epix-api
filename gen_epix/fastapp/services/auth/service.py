@@ -1,6 +1,7 @@
 import logging
 import ssl
 import threading
+import time
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -75,6 +76,7 @@ class AuthService(BaseAuthService):
                             idp_client_id=idp_client.id,
                         )
                     )
+
                     return user
                 except exc.UnauthorizedAuthError:
                     continue
@@ -538,6 +540,7 @@ class AuthService(BaseAuthService):
         user_key = self._generate_user_key_from_claims(
             claims, request_userinfo, sub, user_manager
         )
+        user: model.User = None
         try:
             # Retrieve existing user
             user = user_manager.retrieve_user_by_key(user_key)
@@ -547,7 +550,7 @@ class AuthService(BaseAuthService):
                 if new_user_name:
                     updated_user = user_manager.update_user_name(user, new_user_name)
                     if updated_user:
-                        return updated_user
+                        user = updated_user
             except exc.DomainException as exception:
                 if self._logger:
                     self._logger.error(
@@ -560,6 +563,32 @@ class AuthService(BaseAuthService):
                             exception=exception,
                         )
                     )
+            user_manager = self.app.user_manager
+            token_time_to_live = (
+                self.app.cfg.get("service", {})
+                .get("auth", {})
+                .get("props", {})
+                .get("root", {})
+                .get("user", {})
+                .get("token_time_to_live")
+            )
+            if user_manager.is_root_user(user) and token_time_to_live:
+                # get token expiration and only allow if token lifetime is less than configured value,
+                # to mitigate risk of leaked root tokens being used by attackers
+                token_iat: int = claims.claims.get("iat", 0)
+                if token_iat and int(time.time()) - token_iat > token_time_to_live:
+                    if self._logger:
+                        self._logger.warning(
+                            self.create_log_message(
+                                "548f1e15",
+                                "Root token with long lifetime used, rejecting authentication",
+                                token_iat=token_iat,
+                            )
+                        )
+                    raise exc.UnauthorizedAuthError(
+                        f"Root tokens must have a lifetime of less than {token_time_to_live} seconds"
+                    )
+
             return user
 
         except exc.NoResultsError:
