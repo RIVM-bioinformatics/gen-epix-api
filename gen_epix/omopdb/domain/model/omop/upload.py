@@ -239,27 +239,23 @@ class PersonBatchForUpload(BaseBatchForUpload):
         return self
 
     # to have some summary on created batch
-    @property
+
     def total_persons(self) -> int:
         """Total number of persons in the batch."""
         return len(self.persons)
 
-    @property
     def total_specimens(self) -> int:
         """Total number of specimens across all persons."""
         return sum(len(person.specimens or []) for person in self.persons)
 
-    @property
     def total_observations(self) -> int:
         """Total number of observations across all persons."""
         return sum(len(person.observations or []) for person in self.persons)
 
-    @property
     def total_measurements(self) -> int:
         """Total number of measurements across all persons."""
         return sum(len(person.measurements or []) for person in self.persons)
 
-    @property
     def specimen_distribution(self) -> dict[int, int]:
         """Distribution of specimen counts per person (specimen_count: number_of_persons)."""
         distribution = {}
@@ -292,15 +288,15 @@ class PersonBatchForUpload(BaseBatchForUpload):
         """
         return {
             "totals": {
-                "persons": self.total_persons,
-                "specimens": self.total_specimens,
-                "observations": self.total_observations,
-                "measurements": self.total_measurements,
+                "persons": self.total_persons(),
+                "specimens": self.total_specimens(),
+                "observations": self.total_observations(),
+                "measurements": self.total_measurements(),
             },
             "distributions": {
-                "specimens": self.specimen_distribution,
-                "observations": self.observation_distribution,
-                "measurements": self.measurement_distribution,
+                "specimens": self.specimen_distribution(),
+                "observations": self.observation_distribution(),
+                "measurements": self.measurement_distribution(),
             },
         }
 
