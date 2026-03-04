@@ -402,6 +402,26 @@ def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None
     assert http["status"] == 204
 
 
+def test_uvicorn_access_message_is_request_specific_not_constant() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    first = _make_uvicorn_access_record(method="GET", path="/v1/health", status=200)
+    second = _make_uvicorn_access_record(
+        method="PUT", path="/v1/cases/42", status=409
+    )
+
+    filt.filter(first)
+    filt.filter(second)
+    first_payload = json.loads(formatter.format(first))
+    second_payload = json.loads(formatter.format(second))
+
+    assert first_payload["message"] == "http.access GET /v1/health 200"
+    assert second_payload["message"] == "http.access PUT /v1/cases/42 409"
+    assert first_payload["message"] != second_payload["message"]
+    assert first_payload["message"] != "http.access"
+    assert second_payload["message"] != "http.access"
+
+
 def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
     filt = UvicornAccessLogFilter()
     formatter = JsonFormatter()
