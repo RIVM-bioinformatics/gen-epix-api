@@ -14,7 +14,7 @@ The logging stack has three layers:
 2. `JsonFormatter` and `UvicornAccessLogFilter` convert records to structured, single-line JSON and normalize access logs.
 3. `AppCfg.set_log_level()` applies runtime level control with explicit pinned logger exceptions.
 
-(Source: `gen_epix/commondb/config/cfg.py#L203-L214`; Source: `gen_epix/commondb/domain/json_logging.py#L89-L294`; Source: `gen_epix/commondb/config/cfg.py#L352-L405`)
+(Source: `gen_epix/commondb/config/cfg.py#L203-L214`; Source: `gen_epix/commondb/config/json_logging.py#L89-L303`; Source: `gen_epix/commondb/config/cfg.py#L352-L405`)
 
 ---
 
@@ -51,7 +51,7 @@ sample_items = 3
 
 ## 3. JSON Formatter Behavior
 
-`gen_epix/commondb/domain/json_logging.py` provides the shared formatter and access-log filter used by all services.
+`gen_epix/commondb/config/json_logging.py` provides the shared formatter and access-log filter used by all services.
 
 ### Envelope and output guarantees
 
@@ -59,7 +59,7 @@ sample_items = 3
 - Always includes envelope fields (`ts`, `level`, `logger`), plus optional `service` and `environment`.
 - Uses `extras_key` (default `props`) for non-reserved extra fields.
 
-(Source: `gen_epix/commondb/domain/json_logging.py#L138-L169`; Source: `gen_epix/commondb/domain/json_logging.py#L218-L294`)
+(Source: `gen_epix/commondb/config/json_logging.py#L146-L177`; Source: `gen_epix/commondb/config/json_logging.py#L226-L303`)
 
 ### Message merge and normalization
 
@@ -67,7 +67,7 @@ sample_items = 3
 - Envelope fields are re-enforced after merge (cannot be silently overwritten by payload keys).
 - `content` is normalized into `message` when needed.
 
-(Source: `gen_epix/commondb/domain/json_logging.py#L238-L260`)
+(Source: `gen_epix/commondb/config/json_logging.py#L246-L269`)
 
 ### Sensitive data handling
 
@@ -76,21 +76,22 @@ sample_items = 3
   - nested dict/list payloads and extras by key name
 - Default redaction token is `[REDACTED]`.
 
-(Source: `gen_epix/commondb/domain/json_logging.py#L39-L87`; Source: `gen_epix/commondb/domain/json_logging.py#L146-L217`)
+(Source: `gen_epix/commondb/config/json_logging.py#L39-L87`; Source: `gen_epix/commondb/config/json_logging.py#L154-L225`)
 
 ### Exception handling
 
 - Adds structured `exception` object when `exc_info` exists.
 - Truncates overly long stack traces with a configurable limit (`max_stacktrace_length`, default 8000).
 
-(Source: `gen_epix/commondb/domain/json_logging.py#L147-L150`; Source: `gen_epix/commondb/domain/json_logging.py#L262-L276`)
+(Source: `gen_epix/commondb/config/json_logging.py#L155-L158`; Source: `gen_epix/commondb/config/json_logging.py#L271-L285`)
 
 ### Uvicorn access normalization
 
 - `UvicornAccessLogFilter` converts `uvicorn.access` records into structured `http` fields (`client`, `method`, `path`, `version`, `status`).
+- Access-log `message` is normalized to `http.access <METHOD> <PATH> <STATUS>` so Azure Monitor/Grafana `LogMessage` remains informative while structured `http.*` fields are still emitted.
 - Includes regex fallback when access logs are already interpolated text.
 
-(Source: `gen_epix/commondb/domain/json_logging.py#L89-L136`)
+(Source: `gen_epix/commondb/config/json_logging.py#L89-L143`)
 
 ---
 
@@ -237,7 +238,7 @@ When observed log levels do not match expectation, verify in this order:
 
 ## Evidence Sources
 
-- `gen_epix/commondb/domain/json_logging.py#L1-L294`
+- `gen_epix/commondb/config/json_logging.py#L1-L303`
 - `gen_epix/commondb/config/cfg.py#L20-L405`
 - `gen_epix/commondb/config/settings_manager.py#L27-L76`
 - `gen_epix/commondb/domain/util.py#L30-L119`
