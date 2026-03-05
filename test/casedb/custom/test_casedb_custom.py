@@ -1,4 +1,5 @@
 import logging
+from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 from uuid import UUID
 
 import pytest
@@ -13,7 +14,6 @@ from gen_epix.filter import (
     TypedCompositeFilter,
     TypedStringSetFilter,
 )
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
 
 
 @pytest.fixture(scope="module", name="env")
