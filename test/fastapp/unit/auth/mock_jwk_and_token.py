@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 
 class MockJWKAndToken:
-    def __init__(self, token_expiration_minutes: int):
+    def __init__(self, token_expiration_minutes: int, token_iat_minutes_ago: int = 0) -> None:
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
@@ -54,7 +54,9 @@ class MockJWKAndToken:
         self.payload = {
             "aud": "POv1bEMlzAunu6LD0BcmV4pvxInkNRXY",  # client id
             "iss": "https://idp1.org/issuer",  # authorization server
-            "iat": floor(now.timestamp()),
+            "iat": floor(
+                (now - timedelta(minutes=token_iat_minutes_ago)).timestamp()
+            ),  # issued at
             "nbf": floor(now.timestamp()),
             "exp": floor(
                 (now + timedelta(minutes=token_expiration_minutes)).timestamp()
