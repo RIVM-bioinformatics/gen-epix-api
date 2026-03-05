@@ -64,19 +64,21 @@ class AuthService(BaseAuthService):
         return list(self._idp_clients)
 
     async def get_existing_user_from_token(self, token: str) -> model.User | None:
+        """Get existing user based on provided token,
+        return None if token is invalid or user does not exist"""
         for idp_client in self._idp_clients:
             jwt_claims = await idp_client.get_claims_from_jwt(token)
             if jwt_claims:
                 try:
-                    user = await self.get_existing_user_from_claims(
-                        Claims(
-                            claims=jwt_claims,
-                            scheme="BEARER",
-                            token=token,
-                            idp_client_id=idp_client.id,
-                        )
+                    claims = Claims(
+                        claims=jwt_claims,
+                        scheme="BEARER",
+                        token=token,
+                        idp_client_id=idp_client.id,
                     )
+                    user = await self.get_existing_user_from_claims(claims)
 
+                    self._test_root_user_for_token_time_to_live(claims, user)
                     return user
                 except exc.UnauthorizedAuthError:
                     continue
@@ -531,6 +533,29 @@ class AuthService(BaseAuthService):
             new_user = model.User(**claims.claims)  # type: ignore
         return new_user
 
+    def _test_root_user_for_token_time_to_live(
+        self, claims: Claims, user: model.User
+    ) -> None:
+        user_manager = self.app.user_manager
+        root_user_cfg = self.app.cfg["service"]["auth"]["props"]["root"]["user"]
+        token_time_to_live = root_user_cfg.get("token_time_to_live", None)
+        if user_manager.is_root_user(user) and token_time_to_live:
+            # get token expiration and only allow if token lifetime is less than configured value,
+            # to mitigate risk of leaked root tokens being used by attackers
+            token_iat: int = claims.claims.get("iat", 0)
+            if token_iat and int(time.time()) - token_iat > token_time_to_live:
+                if self._logger:
+                    self._logger.warning(
+                        self.create_log_message(
+                            "548f1e15",
+                            "Root token with long lifetime used, rejecting authentication",
+                            token_iat=token_iat,
+                        )
+                    )
+                raise exc.UnauthorizedAuthError(
+                    f"Root tokens must have a lifetime of less than {token_time_to_live} seconds"
+                )
+
     async def get_existing_user_from_claims(
         self, claims: Claims, request_userinfo: bool = True
     ) -> model.User:
@@ -563,25 +588,7 @@ class AuthService(BaseAuthService):
                             exception=exception,
                         )
                     )
-            user_manager = self.app.user_manager
-            root_user_cfg=self.app.cfg["service"]["auth"]["props"]["root"]["user"]
-            token_time_to_live = root_user_cfg.get("token_time_to_live", None)
-            if user_manager.is_root_user(user) and token_time_to_live:
-                # get token expiration and only allow if token lifetime is less than configured value,
-                # to mitigate risk of leaked root tokens being used by attackers
-                token_iat: int = claims.claims.get("iat", 0)
-                if token_iat and int(time.time()) - token_iat > token_time_to_live:
-                    if self._logger:
-                        self._logger.warning(
-                            self.create_log_message(
-                                "548f1e15",
-                                "Root token with long lifetime used, rejecting authentication",
-                                token_iat=token_iat,
-                            )
-                        )
-                    raise exc.UnauthorizedAuthError(
-                        f"Root tokens must have a lifetime of less than {token_time_to_live} seconds"
-                    )
+            self._test_root_user_for_token_time_to_live(claims, user)
 
             return user
 
