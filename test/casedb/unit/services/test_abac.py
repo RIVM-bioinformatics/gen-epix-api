@@ -78,6 +78,7 @@ class BaseAbacTestCase(TestCase):
         # Domain with required methods
         domain = SimpleNamespace(
             register_service_type=Mock(),
+            get_service_types=Mock(return_value=[]),
             get_crud_commands_for_service_type=Mock(return_value=[]),
             get_model_links=Mock(return_value={}),
         )
