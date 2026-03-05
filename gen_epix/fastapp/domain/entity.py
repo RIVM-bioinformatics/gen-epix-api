@@ -6,8 +6,7 @@ from functools import partial
 from typing import Any, ClassVar, Self
 from uuid import UUID
 
-from pydantic import (BaseModel, ConfigDict, Field, field_validator,
-                      model_validator)
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from gen_epix.fastapp.domain.key import Key
 from gen_epix.fastapp.domain.link import Link

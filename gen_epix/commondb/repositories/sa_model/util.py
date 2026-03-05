@@ -9,8 +9,7 @@ from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from gen_epix.fastapp import Domain, Entity, Model
 from gen_epix.fastapp.repositories import create_sa_type_from_field_info
-from gen_epix.fastapp.repositories.sa.util import \
-    get_sa_type_kwargs_from_field_info
+from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_info
 
 
 def create_table_args(

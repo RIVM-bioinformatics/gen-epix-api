@@ -8,10 +8,10 @@ from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.fastapp.domain.util import create_keys
 from gen_epix.omopdb.domain.model.omop.base import (
-    DataLineageMixin, validate_int_for_uuid_field)
-from gen_epix.omopdb.domain.model.omop.health_system import (CareSite,
-                                                             Location,
-                                                             Provider)
+    DataLineageMixin,
+    validate_int_for_uuid_field,
+)
+from gen_epix.omopdb.domain.model.omop.health_system import CareSite, Location, Provider
 from gen_epix.omopdb.domain.model.omop.ontology import Concept
 
 

@@ -1,8 +1,11 @@
 import base64
 import hashlib
 import uuid
-from test.seqdb.seqdb_test_client import (DistanceMatrix, SeqdbTestClient,
-                                          SeqGenerationSettings)
+from test.seqdb.seqdb_test_client import (
+    DistanceMatrix,
+    SeqdbTestClient,
+    SeqGenerationSettings,
+)
 from typing import Any
 from uuid import UUID
 

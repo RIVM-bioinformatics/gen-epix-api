@@ -20,8 +20,9 @@ import json
 import logging
 import time
 from collections.abc import Generator
-from test.end_to_end.client_credential_flow.apps import \
-    RequestorApp  # pylint: disable=import-error
+from test.end_to_end.client_credential_flow.apps import (
+    RequestorApp,
+)  # pylint: disable=import-error
 from test.test_client.enum import ServerType
 from test.test_client.server_manager import ServerManager
 from typing import Any

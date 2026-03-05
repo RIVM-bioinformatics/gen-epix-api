@@ -17,8 +17,7 @@ import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from test.test_client.oauth.authorization_code_store import \
-    AuthorizationCodeStore
+from test.test_client.oauth.authorization_code_store import AuthorizationCodeStore
 from test.test_client.oauth.client_store import Client, ClientStore
 from test.test_client.oauth.jwks import JWKSManager
 from test.test_client.oauth.oidc_provider import OIDCProvider

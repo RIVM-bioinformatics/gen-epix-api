@@ -2,8 +2,7 @@ from enum import Enum
 from functools import cached_property
 from typing import TypeVar, overload
 
-from pydantic import (BaseModel, ConfigDict, Field, computed_field,
-                      field_validator)
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, enum, model

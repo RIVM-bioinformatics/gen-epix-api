@@ -1,8 +1,9 @@
 from collections.abc import Hashable, Iterable
 from typing import Any
 
-from gen_epix.commondb.repositories import \
-    OrganizationDictRepository as CommonOrganizationDictRepository
+from gen_epix.commondb.repositories import (
+    OrganizationDictRepository as CommonOrganizationDictRepository,
+)
 from gen_epix.fastapp import Entity
 from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.domain.model import Model

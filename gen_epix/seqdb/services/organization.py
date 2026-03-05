@@ -1,7 +1,6 @@
 from typing import Any
 
-from gen_epix.commondb.services import \
-    OrganizationService as CommonOrganizationService
+from gen_epix.commondb.services import OrganizationService as CommonOrganizationService
 from gen_epix.seqdb.domain import model
 
 

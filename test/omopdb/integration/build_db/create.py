@@ -1,5 +1,4 @@
-from test.omopdb.integration.build_db.base import (BELOW_APP_ADMIN_USERS,
-                                                   SKIP_RAISE)
+from test.omopdb.integration.build_db.base import BELOW_APP_ADMIN_USERS, SKIP_RAISE
 
 import pytest
 

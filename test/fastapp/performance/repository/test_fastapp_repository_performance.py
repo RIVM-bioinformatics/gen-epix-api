@@ -1,8 +1,7 @@
 import cProfile
 import pstats
 from test.fastapp.command import Model2_2CrudCommand
-from test.fastapp.enum import \
-    TestType as EnumTestType  # to avoid PyTest warning
+from test.fastapp.enum import TestType as EnumTestType  # to avoid PyTest warning
 from test.fastapp.model import DOMAIN, Model2_2
 from test.fastapp.service_test_client import ServiceTestClient as Env
 from test.fastapp.util import parse_stats

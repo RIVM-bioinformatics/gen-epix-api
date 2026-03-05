@@ -10,8 +10,7 @@ from pydantic import Field
 from gen_epix.commondb.api.exc import handle_command
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import DOMAIN, command, enum, model
-from gen_epix.commondb.domain.literal import \
-    MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
+from gen_epix.commondb.domain.literal import MAX_REQUEST_BODY_ITERABLE_FIELD_LENGTH
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.enum import PermissionType

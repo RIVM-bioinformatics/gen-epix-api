@@ -1,5 +1,4 @@
-from gen_epix.commondb.domain.service.organization import \
-    BaseOrganizationService
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.service.rbac import BaseRbacService
 from gen_epix.fastapp.user_manager import BaseUserManager as ServiceUserManager
 

@@ -5,8 +5,7 @@ from cachetools import TTLCache, cached
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, model
-from gen_epix.commondb.domain.service.organization import \
-    BaseOrganizationService
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperationSet

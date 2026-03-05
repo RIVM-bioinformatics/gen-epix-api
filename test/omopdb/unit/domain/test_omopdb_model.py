@@ -6,8 +6,13 @@ from uuid import UUID, uuid4
 import pytest
 
 # Import the Pydantic models from omop.py
-from gen_epix.omopdb.domain.model.omop import (Location, Measurement,
-                                               Observation, Person, Specimen)
+from gen_epix.omopdb.domain.model.omop import (
+    Location,
+    Measurement,
+    Observation,
+    Person,
+    Specimen,
+)
 
 
 # use an encoder to ensure consistent datetime format with pydantic (use ISO 8601 format, i.e. with 'T' separator)

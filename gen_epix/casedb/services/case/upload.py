@@ -12,8 +12,7 @@ from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import \
-    ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation

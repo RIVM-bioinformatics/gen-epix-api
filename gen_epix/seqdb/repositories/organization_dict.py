@@ -1,7 +1,8 @@
 from collections.abc import Hashable, Iterable
 
-from gen_epix.commondb.repositories import \
-    OrganizationDictRepository as CommonOrganizationDictRepository
+from gen_epix.commondb.repositories import (
+    OrganizationDictRepository as CommonOrganizationDictRepository,
+)
 from gen_epix.fastapp import Entity
 from gen_epix.seqdb.domain import model
 from gen_epix.seqdb.domain.model import Model

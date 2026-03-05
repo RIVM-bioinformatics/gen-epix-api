@@ -5,21 +5,29 @@ from pydantic import Field, computed_field, model_validator
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.upload import (BaseBatchForUpload,
-                                                   BaseBatchUploadResult,
-                                                   DataIssue, IsNewIdMixin,
-                                                   ParentForUpload,
-                                                   ParentUploadResult,
-                                                   UploadResult)
+from gen_epix.commondb.domain.model.upload import (
+    BaseBatchForUpload,
+    BaseBatchUploadResult,
+    DataIssue,
+    IsNewIdMixin,
+    ParentForUpload,
+    ParentUploadResult,
+    UploadResult,
+)
 from gen_epix.fastapp.domain import Entity
-from gen_epix.seqdb.domain.model.seq.classification import (SeqClassification,
-                                                            SeqTaxonomy)
+from gen_epix.seqdb.domain.model.seq.classification import (
+    SeqClassification,
+    SeqTaxonomy,
+)
 from gen_epix.seqdb.domain.model.seq.locus import Allele
-from gen_epix.seqdb.domain.model.seq.pheno import (AstMeasurement,
-                                                   PcrMeasurement)
-from gen_epix.seqdb.domain.model.seq.profile import (AlleleProfile,
-                                                     KmerProfile, LocusProfile,
-                                                     MlvaProfile, SnpProfile)
+from gen_epix.seqdb.domain.model.seq.pheno import AstMeasurement, PcrMeasurement
+from gen_epix.seqdb.domain.model.seq.profile import (
+    AlleleProfile,
+    KmerProfile,
+    LocusProfile,
+    MlvaProfile,
+    SnpProfile,
+)
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import Sample
 from gen_epix.seqdb.domain.model.seq.seq import Seq

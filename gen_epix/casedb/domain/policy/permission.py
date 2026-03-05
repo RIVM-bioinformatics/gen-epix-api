@@ -1,8 +1,7 @@
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.enum import Role
 from gen_epix.commondb.domain.enum import Role as CommonRole
-from gen_epix.commondb.domain.policy import \
-    RoleGenerator as CommonRoleGenerator
+from gen_epix.commondb.domain.policy import RoleGenerator as CommonRoleGenerator
 from gen_epix.fastapp import PermissionTypeSet
 from gen_epix.fastapp.services.rbac import BaseRbacService
 

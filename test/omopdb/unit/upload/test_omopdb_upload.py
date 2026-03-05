@@ -63,24 +63,36 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (IdentifierType,
-                                           OnExistsUploadAction, Role,
-                                           UploadStatus, UploadStatusSet)
+from gen_epix.commondb.domain.enum import (
+    IdentifierType,
+    OnExistsUploadAction,
+    Role,
+    UploadStatus,
+    UploadStatusSet,
+)
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifier, ExternalIdentifierForUpload, IdentifierIssuer, User)
+    ExternalIdentifier,
+    ExternalIdentifierForUpload,
+    IdentifierIssuer,
+    User,
+)
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import ModelFieldProps
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.omopdb.domain.command import UploadPersonsCommand
-from gen_epix.omopdb.domain.model import (MeasurementForUpload,
-                                          MeasurementRelationForUpload,
-                                          ObservationForUpload, Person,
-                                          PersonBatchForUpload,
-                                          PersonBatchUploadResult,
-                                          PersonForUpload, Specimen,
-                                          SpecimenForUpload)
+from gen_epix.omopdb.domain.model import (
+    MeasurementForUpload,
+    MeasurementRelationForUpload,
+    ObservationForUpload,
+    Person,
+    PersonBatchForUpload,
+    PersonBatchUploadResult,
+    PersonForUpload,
+    Specimen,
+    SpecimenForUpload,
+)
 from gen_epix.omopdb.services.omop.base import BaseOmopService
 from gen_epix.omopdb.services.omop.upload import PersonBatchUploader
 

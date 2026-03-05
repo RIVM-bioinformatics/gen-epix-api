@@ -4,11 +4,19 @@ from uuid import UUID
 from pydantic import Field, model_validator
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.abac.rights import (CaseTypeAccessAbac,
-                                                      CaseTypeShareAbac)
+from gen_epix.casedb.domain.model.abac.rights import (
+    CaseTypeAccessAbac,
+    CaseTypeShareAbac,
+)
 from gen_epix.casedb.domain.model.case.reference_data import (
-    CaseType, CaseTypeCol, CaseTypeDim, Col, Dim, GeneticDistanceProtocol,
-    TreeAlgorithm)
+    CaseType,
+    CaseTypeCol,
+    CaseTypeDim,
+    Col,
+    Dim,
+    GeneticDistanceProtocol,
+    TreeAlgorithm,
+)
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
 from gen_epix.fastapp.domain import Entity
 from gen_epix.util import copy_model_field

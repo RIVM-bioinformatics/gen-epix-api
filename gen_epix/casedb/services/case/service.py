@@ -9,63 +9,84 @@ from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
     case_service_calculate_case_date,
-    case_service_get_case_date_case_type_col_mappers)
-from gen_epix.casedb.services.case.create_case_set import \
-    case_service_create_case_set
-from gen_epix.casedb.services.case.create_seq import \
-    case_service_create_file_for_read_set_or_seq
+    case_service_get_case_date_case_type_col_mappers,
+)
+from gen_epix.casedb.services.case.create_case_set import case_service_create_case_set
+from gen_epix.casedb.services.case.create_seq import (
+    case_service_create_file_for_read_set_or_seq,
+)
 from gen_epix.casedb.services.case.crud_case import case_service_crud_case
-from gen_epix.casedb.services.case.crud_case_data_collection_link import \
-    case_service_crud_case_data_collection_link
-from gen_epix.casedb.services.case.crud_case_set import \
-    case_service_crud_case_set
-from gen_epix.casedb.services.case.crud_case_set_category import \
-    case_service_crud_case_set_category
-from gen_epix.casedb.services.case.crud_case_set_data_collection_link import \
-    case_service_crud_case_set_data_collection_link
-from gen_epix.casedb.services.case.crud_case_set_member import \
-    case_service_crud_case_set_member
-from gen_epix.casedb.services.case.crud_case_set_status import \
-    case_service_crud_case_set_status
-from gen_epix.casedb.services.case.crud_case_type import \
-    case_service_crud_case_type
-from gen_epix.casedb.services.case.crud_case_type_col import \
-    case_service_crud_case_type_col
-from gen_epix.casedb.services.case.crud_case_type_col_set import \
-    case_service_crud_case_type_col_set
-from gen_epix.casedb.services.case.crud_case_type_col_set_member import \
-    case_service_crud_case_type_col_set_member
-from gen_epix.casedb.services.case.crud_case_type_dim import \
-    case_service_crud_case_type_dim
-from gen_epix.casedb.services.case.crud_case_type_set import \
-    case_service_crud_case_type_set
-from gen_epix.casedb.services.case.crud_case_type_set_category import \
-    case_service_crud_case_type_set_category
-from gen_epix.casedb.services.case.crud_case_type_set_member import \
-    case_service_crud_case_type_set_member
+from gen_epix.casedb.services.case.crud_case_data_collection_link import (
+    case_service_crud_case_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set_category import (
+    case_service_crud_case_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_set_data_collection_link import (
+    case_service_crud_case_set_data_collection_link,
+)
+from gen_epix.casedb.services.case.crud_case_set_member import (
+    case_service_crud_case_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_set_status import (
+    case_service_crud_case_set_status,
+)
+from gen_epix.casedb.services.case.crud_case_type import case_service_crud_case_type
+from gen_epix.casedb.services.case.crud_case_type_col import (
+    case_service_crud_case_type_col,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set import (
+    case_service_crud_case_type_col_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_col_set_member import (
+    case_service_crud_case_type_col_set_member,
+)
+from gen_epix.casedb.services.case.crud_case_type_dim import (
+    case_service_crud_case_type_dim,
+)
+from gen_epix.casedb.services.case.crud_case_type_set import (
+    case_service_crud_case_type_set,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_category import (
+    case_service_crud_case_type_set_category,
+)
+from gen_epix.casedb.services.case.crud_case_type_set_member import (
+    case_service_crud_case_type_set_member,
+)
 from gen_epix.casedb.services.case.crud_col import case_service_crud_col
 from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
-from gen_epix.casedb.services.case.crud_genetic_distance_protocol import \
-    case_service_crud_genetic_distance_protocol
-from gen_epix.casedb.services.case.crud_tree_algorithm import \
-    case_service_crud_tree_algorithm
-from gen_epix.casedb.services.case.crud_tree_algorithm_class import \
-    case_service_crud_tree_algorithm_class
-from gen_epix.casedb.services.case.read_association_with_valid_ids import \
-    case_service_read_association_with_valid_ids
+from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
+    case_service_crud_genetic_distance_protocol,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm import (
+    case_service_crud_tree_algorithm,
+)
+from gen_epix.casedb.services.case.crud_tree_algorithm_class import (
+    case_service_crud_tree_algorithm_class,
+)
+from gen_epix.casedb.services.case.read_association_with_valid_ids import (
+    case_service_read_association_with_valid_ids,
+)
 from gen_epix.casedb.services.case.retrieve_case import (
-    case_service_retrieve_cases_by_id, case_service_retrieve_cases_by_query)
-from gen_epix.casedb.services.case.retrieve_complete_case_type import \
-    case_service_retrieve_complete_case_type
+    case_service_retrieve_cases_by_id,
+    case_service_retrieve_cases_by_query,
+)
+from gen_epix.casedb.services.case.retrieve_complete_case_type import (
+    case_service_retrieve_complete_case_type,
+)
 from gen_epix.casedb.services.case.retrieve_seq import (
     case_service_retrieve_assembly_protocols,
     case_service_retrieve_genetic_sequence_fasta_by_case,
     case_service_retrieve_phylogenetic_tree,
-    case_service_retrieve_sequencing_protocols)
-from gen_epix.casedb.services.case.retrieve_similar_cases import \
-    case_service_retrieve_similar_cases
-from gen_epix.casedb.services.case.retrieve_stats import \
-    case_service_retrieve_case_stats
+    case_service_retrieve_sequencing_protocols,
+)
+from gen_epix.casedb.services.case.retrieve_similar_cases import (
+    case_service_retrieve_similar_cases,
+)
+from gen_epix.casedb.services.case.retrieve_stats import (
+    case_service_retrieve_case_stats,
+)
 from gen_epix.casedb.services.case.upload import case_service_upload_cases
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
 from gen_epix.filter import Filter, LogicalOperator, UuidSetFilter

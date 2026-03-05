@@ -1,7 +1,11 @@
 from test.seqdb.integration.build_db.base import (
-    BELOW_APP_ADMIN_DATA_USERS, BELOW_APP_ADMIN_METADATA_USERS,
-    BELOW_APP_ADMIN_USERS, DATA_USERS, REFDATA_ADMIN_OR_ABOVE_USERS,
-    SKIP_RAISE)
+    BELOW_APP_ADMIN_DATA_USERS,
+    BELOW_APP_ADMIN_METADATA_USERS,
+    BELOW_APP_ADMIN_USERS,
+    DATA_USERS,
+    REFDATA_ADMIN_OR_ABOVE_USERS,
+    SKIP_RAISE,
+)
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 
 import pytest

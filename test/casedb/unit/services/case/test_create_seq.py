@@ -16,7 +16,8 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.create_seq import (
     _get_cases_for_create_file_for_read_sets_or_seqs,
-    case_service_create_file_for_read_set_or_seq)
+    case_service_create_file_for_read_set_or_seq,
+)
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 

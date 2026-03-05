@@ -1,7 +1,11 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.case_access.base_edge_cases import (
-    DEV_REPOSITORY_CONFIG, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
+    DEV_REPOSITORY_CONFIG,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
 
 import pytest
 

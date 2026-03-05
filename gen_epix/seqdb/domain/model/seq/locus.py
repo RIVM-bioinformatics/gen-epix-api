@@ -3,8 +3,13 @@ from functools import cached_property
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import (Field, computed_field, field_serializer, field_validator,
-                      model_validator)
+from pydantic import (
+    Field,
+    computed_field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix.commondb.domain.model import Model
 from gen_epix.commondb.domain.model.base import Model

@@ -8,8 +8,7 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 
 from gen_epix.casedb.domain import enum, exc
 from gen_epix.casedb.domain.model.geo import RegionSet
-from gen_epix.casedb.domain.model.ontology import (ConceptSet, Disease,
-                                                   EtiologicalAgent)
+from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, EtiologicalAgent
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum as seqdb_enum

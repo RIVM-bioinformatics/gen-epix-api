@@ -8,8 +8,7 @@ from cachetools import TTLCache
 import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
-from gen_epix.casedb.domain.service import \
-    BaseCaseService as DomainBaseCaseService
+from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.fastapp import BaseUnitOfWork
 from gen_epix.filter import DatetimeRangeFilter, Filter

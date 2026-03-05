@@ -5,8 +5,7 @@ from uuid import UUID
 from pydantic import Field, field_validator, model_validator
 
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.domain.model.organization import (DataCollection,
-                                                         IdentifierIssuer)
+from gen_epix.commondb.domain.model.organization import DataCollection, IdentifierIssuer
 from gen_epix.fastapp.domain import Entity, create_keys
 from gen_epix.fastapp.domain.util import create_links
 from gen_epix.seqdb.domain.model.seq.base import CodeMixin

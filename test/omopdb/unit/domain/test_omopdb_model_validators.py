@@ -14,9 +14,12 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.omopdb.domain.model.omop.base import (
-    DataLineageMixin, validate_int_for_uuid_field,
-    validate_int_primary_key_args, validate_str_for_uuid_field,
-    validate_str_primary_key_args)
+    DataLineageMixin,
+    validate_int_for_uuid_field,
+    validate_int_primary_key_args,
+    validate_str_for_uuid_field,
+    validate_str_primary_key_args,
+)
 from gen_epix.util import int_to_uuid, str_to_uuid
 
 # ---------------------------------------------------------------------------

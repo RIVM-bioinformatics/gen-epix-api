@@ -10,8 +10,9 @@ import gen_epix.casedb.domain.command as case_command
 import gen_epix.casedb.domain.enum as case_enum
 import gen_epix.casedb.domain.model as case_model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
-from gen_epix.casedb.services.case.retrieve_stats import \
-    case_service_retrieve_case_stats
+from gen_epix.casedb.services.case.retrieve_stats import (
+    case_service_retrieve_case_stats,
+)
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter

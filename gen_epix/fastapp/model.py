@@ -8,13 +8,22 @@ from typing import Any, ClassVar, Self
 
 from pydantic import BaseModel
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import (Field, PrivateAttr, computed_field, field_serializer,
-                      model_validator)
+from pydantic import (
+    Field,
+    PrivateAttr,
+    computed_field,
+    field_serializer,
+    model_validator,
+)
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import (CrudOperation, CrudOperationSet,
-                                   PermissionType, PermissionTypeSet)
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    CrudOperationSet,
+    PermissionType,
+    PermissionTypeSet,
+)
 from gen_epix.filter.base import Filter
 
 

@@ -5,8 +5,10 @@ from uuid import UUID
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
-from gen_epix.commondb.repositories.sa_model import (create_mapped_column,
-                                                     create_table_args)
+from gen_epix.commondb.repositories.sa_model import (
+    create_mapped_column,
+    create_table_args,
+)
 from gen_epix.seqdb.domain import DOMAIN, enum, model
 
 Base: type = orm.declarative_base(name=enum.ServiceType.FILE.value)

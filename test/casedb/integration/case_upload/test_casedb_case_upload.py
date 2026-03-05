@@ -2,9 +2,12 @@ import logging
 from collections.abc import Hashable
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.case_upload.base import (DEV_REPOSITORY_CONFIG,
-                                                      SKIP_ENDPOINTS,
-                                                      TEST_TYPE, VERBOSE)
+from test.casedb.integration.case_upload.base import (
+    DEV_REPOSITORY_CONFIG,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
 from test.commondb.util import retrieve_db_data_from_file
 from typing import Any
 from uuid import UUID
@@ -16,8 +19,7 @@ from gen_epix.casedb.domain import command, enum, model
 from gen_epix.commondb.domain import exc
 from gen_epix.commondb.domain import model as commondb_model
 from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.service.organization import \
-    BaseOrganizationService
+from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.env import App
 from gen_epix.fastapp.enum import CrudOperation

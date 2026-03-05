@@ -3,8 +3,9 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from test.end_to_end.casedb_seqdb_connection.envvar import \
-    set_envvar as set_environment_variables
+from test.end_to_end.casedb_seqdb_connection.envvar import (
+    set_envvar as set_environment_variables,
+)
 from test.test_client.enum import ServerType
 from test.test_client.server_manager import ServerManager
 

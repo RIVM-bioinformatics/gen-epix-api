@@ -1,5 +1,9 @@
-from test.seqdb.integration.build_db.base import (DATA_USERS, GUEST_USERS,
-                                                  NO_DATA_USERS, SKIP_RAISE)
+from test.seqdb.integration.build_db.base import (
+    DATA_USERS,
+    GUEST_USERS,
+    NO_DATA_USERS,
+    SKIP_RAISE,
+)
 from uuid import UUID
 
 import pytest

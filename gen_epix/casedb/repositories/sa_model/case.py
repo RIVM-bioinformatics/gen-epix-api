@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods
-from __future__ import \
-    annotations  # Resolves pylint not recognizing Mapped as subscriptable
+from __future__ import (
+    annotations,
+)  # Resolves pylint not recognizing Mapped as subscriptable
 
 from datetime import datetime
 from typing import Any
@@ -10,9 +11,11 @@ from sqlalchemy import orm
 from sqlalchemy.orm import Mapped, relationship
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
-from gen_epix.commondb.repositories.sa_model import (RowMetadataMixin,
-                                                     create_mapped_column,
-                                                     create_table_args)
+from gen_epix.commondb.repositories.sa_model import (
+    RowMetadataMixin,
+    create_mapped_column,
+    create_table_args,
+)
 from gen_epix.seqdb.domain import enum as seqdb_enum
 
 Base: type = orm.declarative_base(name=enum.ServiceType.CASE.value)

@@ -12,8 +12,12 @@ from gen_epix.fastapp.services.auth.base import BaseAuthService
 from gen_epix.fastapp.services.auth.command import GetIdentityProvidersCommand
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
 from gen_epix.fastapp.services.auth.mock_idp_client import MockIDPClient
-from gen_epix.fastapp.services.auth.model import (Claims, IdentityProvider,
-                                                  IDPUser, OidcServerCfg)
+from gen_epix.fastapp.services.auth.model import (
+    Claims,
+    IdentityProvider,
+    IDPUser,
+    OidcServerCfg,
+)
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
 from gen_epix.fastapp.user_manager import BaseUserManager
 

@@ -17,7 +17,9 @@ from pydantic import Field, field_validator
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity, create_links
 from gen_epix.omopdb.domain.model.omop.base import (
-    DataLineageMixin, validate_int_for_uuid_field)
+    DataLineageMixin,
+    validate_int_for_uuid_field,
+)
 from gen_epix.omopdb.domain.model.omop.clinical_data import Person
 from gen_epix.omopdb.domain.model.omop.ontology import Concept, Domain
 

@@ -4,8 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from gen_epix.casedb.domain.enum import CaseRight, CaseRightSet
-from gen_epix.casedb.domain.model.case.non_persistable import (CaseRights,
-                                                               CaseSetRights)
+from gen_epix.casedb.domain.model.case.non_persistable import CaseRights, CaseSetRights
 from gen_epix.fastapp import exc
 
 

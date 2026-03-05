@@ -16,10 +16,12 @@ from gen_epix.commondb.api.router import create_routers
 from gen_epix.fastapp import App
 from gen_epix.fastapp.api.openapi import create_custom_openapi_function
 from gen_epix.fastapp.middleware import limiter
-from gen_epix.fastapp.middleware.handle_auth_exception import \
-    HandleAuthExceptionMiddleware
-from gen_epix.fastapp.middleware.update_response_header import \
-    UpdateResponseHeaderMiddleware
+from gen_epix.fastapp.middleware.handle_auth_exception import (
+    HandleAuthExceptionMiddleware,
+)
+from gen_epix.fastapp.middleware.update_response_header import (
+    UpdateResponseHeaderMiddleware,
+)
 
 
 def create_fast_api(

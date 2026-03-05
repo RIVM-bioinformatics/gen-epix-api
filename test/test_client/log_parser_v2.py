@@ -4,16 +4,21 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from test.test_client.log_parser import (AzureColumn, LogCode, LogParser,
-                                         LogType)
+from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
 from test.test_client.user_journey_v2 import UserJourneyColumn, V2UserJourney
 from typing import Any
 from uuid import UUID
 
 import pandas as pd
 
-from gen_epix.filter import (CompositeFilter, Filter, LogicalOperator,
-                             NoFilter, RegexFilter, StringSetFilter)
+from gen_epix.filter import (
+    CompositeFilter,
+    Filter,
+    LogicalOperator,
+    NoFilter,
+    RegexFilter,
+    StringSetFilter,
+)
 
 
 class SourcePath(Enum):

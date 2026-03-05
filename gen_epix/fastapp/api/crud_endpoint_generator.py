@@ -11,18 +11,34 @@ from gen_epix.fastapp.api import exc as api_exc
 from gen_epix.fastapp.api.crud_endpoint_set import CrudEndpointSet
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import (CrudEndpointType, CrudOperation, HttpMethod,
-                                   PermissionType, PermissionTypeSet,
-                                   StringCasing)
+from gen_epix.fastapp.enum import (
+    CrudEndpointType,
+    CrudOperation,
+    HttpMethod,
+    PermissionType,
+    PermissionTypeSet,
+    StringCasing,
+)
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import (CompositeFilter, Filter, TypedCompositeFilter,
-                             TypedDateRangeFilter, TypedDatetimeRangeFilter,
-                             TypedEqualsBooleanFilter, TypedEqualsNumberFilter,
-                             TypedEqualsStringFilter, TypedEqualsUuidFilter,
-                             TypedExistsFilter, TypedNoFilter,
-                             TypedNumberRangeFilter, TypedNumberSetFilter,
-                             TypedPartialDateRangeFilter, TypedRegexFilter,
-                             TypedStringSetFilter, TypedUuidSetFilter)
+from gen_epix.filter import (
+    CompositeFilter,
+    Filter,
+    TypedCompositeFilter,
+    TypedDateRangeFilter,
+    TypedDatetimeRangeFilter,
+    TypedEqualsBooleanFilter,
+    TypedEqualsNumberFilter,
+    TypedEqualsStringFilter,
+    TypedEqualsUuidFilter,
+    TypedExistsFilter,
+    TypedNoFilter,
+    TypedNumberRangeFilter,
+    TypedNumberSetFilter,
+    TypedPartialDateRangeFilter,
+    TypedRegexFilter,
+    TypedStringSetFilter,
+    TypedUuidSetFilter,
+)
 
 
 def _default_validate_query_filter(

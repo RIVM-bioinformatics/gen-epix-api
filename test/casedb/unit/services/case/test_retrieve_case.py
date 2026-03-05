@@ -18,7 +18,9 @@ from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.retrieve_case import (
-    case_service_retrieve_cases_by_id, case_service_retrieve_cases_by_query)
+    case_service_retrieve_cases_by_id,
+    case_service_retrieve_cases_by_query,
+)
 from gen_epix.commondb.domain.enum import Role
 from gen_epix.filter.composite import TypedCompositeFilter
 from gen_epix.filter.enum import FilterType, LogicalOperator

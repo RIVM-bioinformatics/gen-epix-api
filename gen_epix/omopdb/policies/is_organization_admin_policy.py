@@ -1,8 +1,9 @@
 from typing import Any
 
 from gen_epix.commondb.domain.service import BaseAbacService
-from gen_epix.commondb.policies import \
-    IsOrganizationAdminPolicy as CommonIsOrganizationAdminPolicy
+from gen_epix.commondb.policies import (
+    IsOrganizationAdminPolicy as CommonIsOrganizationAdminPolicy,
+)
 from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.domain.policy import COMMON_ROLE_MAP
 

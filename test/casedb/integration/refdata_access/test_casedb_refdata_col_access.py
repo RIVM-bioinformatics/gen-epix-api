@@ -1,19 +1,27 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_empty import (
-    DEV_REPOSITORY_CONFIG, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
-from test.casedb.integration.setup.setup_case_col_data import (CASE_COL_SPECS,
-                                                               CaseColSpec)
+    DEV_REPOSITORY_CONFIG,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
+from test.casedb.integration.setup.setup_case_col_data import (
+    CASE_COL_SPECS,
+    CaseColSpec,
+)
 from test.test_client.enum import TestType
 
 import pytest
 from rich import print as rich_print
 
 from gen_epix.casedb.domain import enum, model
-from gen_epix.casedb.domain.command.case import (CaseTypeColCrudCommand,
-                                                 CaseTypeColSetCrudCommand,
-                                                 ColCrudCommand,
-                                                 DimCrudCommand)
+from gen_epix.casedb.domain.command.case import (
+    CaseTypeColCrudCommand,
+    CaseTypeColSetCrudCommand,
+    ColCrudCommand,
+    DimCrudCommand,
+)
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation

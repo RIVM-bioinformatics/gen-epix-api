@@ -4,8 +4,10 @@ from typing import Any, NoReturn
 from fastapi import APIRouter
 
 from gen_epix.commondb.api.auth import create_auth_endpoints
-from gen_epix.commondb.api.organization import (ApiPermission,
-                                                create_organization_endpoints)
+from gen_epix.commondb.api.organization import (
+    ApiPermission,
+    create_organization_endpoints,
+)
 from gen_epix.commondb.api.rbac import create_rbac_endpoints
 from gen_epix.commondb.api.system import create_system_endpoints
 from gen_epix.commondb.domain import enum

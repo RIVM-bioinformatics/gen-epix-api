@@ -25,8 +25,14 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.fastapp import (App, EventTiming, Permission, PermissionType,
-                              PermissionTypeSet, exc)
+from gen_epix.fastapp import (
+    App,
+    EventTiming,
+    Permission,
+    PermissionType,
+    PermissionTypeSet,
+    exc,
+)
 from gen_epix.fastapp.model import Command, User
 from gen_epix.fastapp.services.rbac.policy import RbacPolicy
 from gen_epix.fastapp.services.rbac.service import BaseRbacService

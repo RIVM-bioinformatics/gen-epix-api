@@ -4,8 +4,12 @@ from enum import Enum
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.domain.link import Link
-from gen_epix.fastapp.enum import (CrudOperation, ExceptionHandlingMode,
-                                   PermissionType, PermissionTypeSet)
+from gen_epix.fastapp.enum import (
+    CrudOperation,
+    ExceptionHandlingMode,
+    PermissionType,
+    PermissionTypeSet,
+)
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 

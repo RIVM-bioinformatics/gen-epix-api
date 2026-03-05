@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods
-from __future__ import \
-    annotations  # Resolves pylint not recognizing Mapped as subscriptable
+from __future__ import (
+    annotations,
+)  # Resolves pylint not recognizing Mapped as subscriptable
 
 from typing import Any
 from uuid import UUID
@@ -9,9 +10,11 @@ import sqlalchemy.orm as orm
 from sqlalchemy.orm import Mapped
 
 from gen_epix.casedb.domain import DOMAIN, enum, model
-from gen_epix.commondb.repositories.sa_model import (RowMetadataMixin,
-                                                     create_mapped_column,
-                                                     create_table_args)
+from gen_epix.commondb.repositories.sa_model import (
+    RowMetadataMixin,
+    create_mapped_column,
+    create_table_args,
+)
 
 Base: type = orm.declarative_base(name=enum.ServiceType.SUBJECT.value)
 

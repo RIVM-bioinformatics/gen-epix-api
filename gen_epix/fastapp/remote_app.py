@@ -13,8 +13,7 @@ from gen_epix.fastapp import exc, model
 from gen_epix.fastapp.api.crud_endpoint_generator import CrudEndpointGenerator
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.domain import Domain
-from gen_epix.fastapp.enum import (CrudOperation, EventTiming, HttpProtocol,
-                                   StringCasing)
+from gen_epix.fastapp.enum import CrudOperation, EventTiming, HttpProtocol, StringCasing
 from gen_epix.fastapp.exc import ServiceException
 from gen_epix.fastapp.model import Command, CrudCommand, Policy
 from gen_epix.fastapp.util import create_ssl_context

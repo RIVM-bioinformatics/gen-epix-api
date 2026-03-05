@@ -1,18 +1,27 @@
 from collections.abc import Hashable
 from pathlib import Path
-from test.fastapp.command import (Model1_1CrudCommand, Model1_2CrudCommand,
-                                  Model2_1CrudCommand, Model2_2CrudCommand)
+from test.fastapp.command import (
+    Model1_1CrudCommand,
+    Model1_2CrudCommand,
+    Model2_1CrudCommand,
+    Model2_2CrudCommand,
+)
 from test.fastapp.enum import ServiceType
-from test.fastapp.model import (Base1, Base2, Model1_1, Model1_2, Model2_1,
-                                Model2_2)
+from test.fastapp.model import Base1, Base2, Model1_1, Model1_2, Model2_1, Model2_2
 from test.fastapp.service import Service1, Service2
 from test.fastapp.user_manager import UserManager
 from test.test_client.util import get_test_name, get_test_root_output_dir
 from typing import Any
 from uuid import UUID
 
-from gen_epix.fastapp import (App, BaseRepository, BaseService, CrudOperation,
-                              Domain, model)
+from gen_epix.fastapp import (
+    App,
+    BaseRepository,
+    BaseService,
+    CrudOperation,
+    Domain,
+    model,
+)
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 

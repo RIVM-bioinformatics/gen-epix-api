@@ -8,8 +8,7 @@ from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import (CodeMixin, ProtocolMixin,
-                                                  QualityMixin)
+from gen_epix.seqdb.domain.model.seq.base import CodeMixin, ProtocolMixin, QualityMixin
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 
 

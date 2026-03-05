@@ -11,13 +11,19 @@ from Bio.Phylo.TreeConstruction import DistanceMatrix, DistanceTreeConstructor
 from scipy.cluster.hierarchy import ClusterNode
 
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, CrudOperationSet
-from gen_epix.filter import (CompositeFilter, EqualsUuidFilter, Filter,
-                             LogicalOperator, UuidSetFilter)
+from gen_epix.filter import (
+    CompositeFilter,
+    EqualsUuidFilter,
+    Filter,
+    LogicalOperator,
+    UuidSetFilter,
+)
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.repository import BaseSeqRepository
 from gen_epix.seqdb.domain.service import BaseSeqService
-from gen_epix.seqdb.services.seq.calculate_seq_distance import \
-    seq_service_calculate_seq_distances_for_new_profiles
+from gen_epix.seqdb.services.seq.calculate_seq_distance import (
+    seq_service_calculate_seq_distances_for_new_profiles,
+)
 from gen_epix.seqdb.services.seq.upload import seq_service_upload_samples
 
 

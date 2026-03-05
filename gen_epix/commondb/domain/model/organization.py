@@ -4,8 +4,13 @@ from enum import Enum
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import (BaseModel, Field, field_serializer, field_validator,
-                      model_validator)
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum

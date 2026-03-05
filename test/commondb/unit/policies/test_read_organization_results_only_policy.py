@@ -8,13 +8,14 @@ import pytest
 from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.service import BaseAbacService
-from gen_epix.commondb.policies.read_organization_results_only_policy import \
-    ReadOrganizationResultsOnlyPolicy
+from gen_epix.commondb.policies.read_organization_results_only_policy import (
+    ReadOrganizationResultsOnlyPolicy,
+)
 from gen_epix.fastapp import CrudOperation, exc
-from gen_epix.fastapp.services.rbac.service import \
-    BaseRbacService as FastBaseRbacService
-from gen_epix.fastapp.user_manager import \
-    BaseUserManager as FastBaseUserManager
+from gen_epix.fastapp.services.rbac.service import (
+    BaseRbacService as FastBaseRbacService,
+)
+from gen_epix.fastapp.user_manager import BaseUserManager as FastBaseUserManager
 
 
 class BasePolicyTestCase(TestCase):
