@@ -5,18 +5,19 @@ import pstats
 import re
 import sys
 from pathlib import Path
+
+import pandas as pd
+import pyinstrument
+import pytest
+
+import gen_epix.commondb.test.util as test_util
+from gen_epix.casedb.domain import enum
 from test.casedb.casedb_test_client import CasedbTestClient
 from test.test_client.enum import TestType as EnumTestType  # to avoid pytest warning
 from test.test_client.log_parser_v1 import V1LogParser
 from test.test_client.log_parser_v2 import V2LogParser
 from test.test_client.user_journey_v1 import UserJourneyColumn as V1UserJourneyColumn
 from test.test_client.user_journey_v2 import UserJourneyColumn as V2UserJourneyColumn
-
-import pandas as pd
-import pyinstrument
-
-import gen_epix.commondb.test.util as test_util
-from gen_epix.casedb.domain import enum
 
 PERFORMANCE_DF: list = []
 PERFORMANCE_HTML: dict = {}

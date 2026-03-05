@@ -63,7 +63,11 @@ def generate_excel_report(
     for test in tests:
         _remove_timezone_from_datetime(test)
 
-    test_df = pl.DataFrame(tests)
+    try:
+        test_df = pl.DataFrame(tests, infer_schema_length=len(tests))
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        print(f"Skipping Excel report: failed creating test DataFrame: {exc}")
+        return
     scenario_df = pl.DataFrame([{"id": x} for x in sorted(scenario_ids)])
     test_scenario_link_df = pl.DataFrame(test_scenario_links)
 
