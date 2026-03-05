@@ -1,6 +1,6 @@
-import datetime
 import logging
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from test.casedb.casedb_endpoint_test_client import CasedbEndpointTestClient
 from test.test_client.util import get_test_name, get_test_output_dir
@@ -565,6 +565,10 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(etiology)  # type: ignore[return-value]
 
+    # TODO: improve setting of dummy process metadata (created_at, modified_at, modified_by) in create_case_type and create_case_type_set, 
+    # which is currently only done to allow testing of the metadata policy in the test cases, but is a bit hacky. 
+    # Maybe we can add an optional parameter to the command handler to bypass the metadata policy for setting these fields, 
+    # or to set them to specific values for testing purposes, which would be cleaner than setting dummy values here and then overriding them in the test cases.
     def create_case_type(
         self,
         user_or_str: str | model.User,
@@ -582,6 +586,13 @@ class CasedbTestClient(TestClient):
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseType(
+                    # Note, we hard code dates here just for testing.
+                    # because the root user creates all these objects in the setup phase, 
+                    # and we want to have filled created_at and modified_at values, since the metadata policy only sets these for non-root users. 
+                    # This allows us to test the metadata policy in the test cases, while still having created_at and modified_at values set for the case types.
+                    created_at=datetime(2023, 1, 1, tzinfo=UTC),
+                    modified_at=datetime(2023, 6, 1, tzinfo=UTC),
+                    modified_by=user.id,
                     name=case_type_or_str,
                     disease_id=(
                         self.generate_id()
@@ -2214,21 +2225,21 @@ class CasedbTestClient(TestClient):
         return table[key] if not copy else table[key].model_copy()
 
     @staticmethod
-    def _convert_case_code_to_date(code: str) -> datetime.datetime:
+    def _convert_case_code_to_date(code: str) -> datetime:
         m = re.match(r"^([a-z_]*)(\d+)_(\d+)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_index = int(m.group(2))
         assert case_type_index < 13
         case_index = int(m.group(3))
-        return datetime.datetime(
+        return datetime(
             year=1900 + case_index,  # Store case_index in year
             month=case_type_index,  # Store case_type_index in month
             day=1,  # Fixed day value
         )
 
     @staticmethod
-    def _convert_case_date_to_code(case_date: datetime.datetime) -> str:
+    def _convert_case_date_to_code(case_date: datetime) -> str:
         case_type_index = int(case_date.month)  # Get case_type_index from month
         case_index = int(case_date.year - 1900)  # Get case_index from year offset
         return f"case{case_type_index}_{case_index}"

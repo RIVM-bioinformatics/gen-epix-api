@@ -21,6 +21,7 @@ _UPDATE_OPS = frozenset(
 )
 
 
+# TODO: rename to Processdata?
 class SetModelMetadataPolicy(Policy):
     """
     BEFORE policy that calls set_created or set_modified on ModelNoId objects
