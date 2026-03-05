@@ -5,3 +5,4 @@ legal_entity_code = "DUMMY"
 
 [service.auth.props.root.user]
 key = "root@dummy.org"
+# token_time_to_live = 900 # 15 minutes
