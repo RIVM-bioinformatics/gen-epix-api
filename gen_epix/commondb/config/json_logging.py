@@ -22,6 +22,10 @@ Fix index:
   7. UvicornAccessLogFilter hardens uvicorn.access handlers at runtime to use
      JsonFormatter when a non-JSON formatter is detected, preventing regressions
      where LogMessage contains plain `INFO ...` text instead of JSON lines.
+  8. App events are guaranteed to emit a top-level `message` by normalising from
+     `msg` or falling back to `event.<code>` when `msg` is null.
+  9. Operational aliases `app_id` and `command_id` are projected to top level
+     from nested payload fields for reliable query ergonomics in ContainerLogV2.
 """
 
 import json
@@ -285,6 +289,56 @@ class JsonFormatter(logging.Formatter):
 
         return value
 
+    @staticmethod
+    def _get_app_id(payload: dict[str, Any]) -> str | None:
+        app = payload.get("app")
+        if not isinstance(app, dict):
+            return None
+        app_id = app.get("id")
+        if app_id is None:
+            return None
+        return str(app_id)
+
+    @staticmethod
+    def _get_command_id(payload: dict[str, Any]) -> str | None:
+        command = payload.get("command")
+        if not isinstance(command, dict):
+            return None
+        command_id = command.get("id")
+        if command_id is None:
+            command_object = command.get("object")
+            if isinstance(command_object, dict):
+                command_id = command_object.get("id")
+        if command_id is None:
+            return None
+        return str(command_id)
+
+    @staticmethod
+    def _is_non_empty_string(value: Any) -> bool:
+        return isinstance(value, str) and value.strip() != ""
+
+    def _normalise_containerlogv2_fields(self, payload: dict[str, Any]) -> None:
+        # Ensure every app-style log event has a usable top-level message.
+        if "message" not in payload:
+            raw_msg = payload.get("msg")
+            if self._is_non_empty_string(raw_msg):
+                payload["message"] = raw_msg
+            else:
+                code = payload.get("code")
+                if self._is_non_empty_string(code):
+                    payload["message"] = f"event.{code}"
+
+        # Add top-level aliases for common operational IDs to simplify queries.
+        if "app_id" not in payload:
+            app_id = self._get_app_id(payload)
+            if app_id is not None:
+                payload["app_id"] = app_id
+
+        if "command_id" not in payload:
+            command_id = self._get_command_id(payload)
+            if command_id is not None:
+                payload["command_id"] = command_id
+
     def format(self, record: logging.LogRecord) -> str:
         base: dict[str, Any] = {
             "ts": _utc_iso(record.created),
@@ -330,6 +384,8 @@ class JsonFormatter(logging.Formatter):
                 base["message"] = message
         else:
             base["message"] = message
+
+        self._normalise_containerlogv2_fields(base)
 
         if record.exc_info:
             stacktrace = self.formatException(record.exc_info)
