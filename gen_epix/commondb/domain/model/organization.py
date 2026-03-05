@@ -92,7 +92,9 @@ class User(fastapp.User, Model):
 
     @field_validator("key", mode="before")
     @classmethod
-    def _validate_key(cls, value: str) -> str:
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return value.lower()
 
     def get_key(self) -> str:

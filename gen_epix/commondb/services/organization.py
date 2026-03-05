@@ -213,11 +213,15 @@ class OrganizationService(BaseOrganizationService):
 
             # Keep invitations that are not expired and either have no key
             # (open invites) or have a key matching the registering user.
-            filtered_user_invitations: list[model.UserInvitation] = [
-                x
-                for x in user_invitations
-                if x.expires_at > now and (x.key is None or x.key == new_user.key)
-            ]
+            filtered_user_invitations: list[model.UserInvitation] = []
+            for x in user_invitations:
+                if x.expires_at > now:
+                    if x.key is not None:
+                        if x.key == new_user.key:
+                            filtered_user_invitations.append(x)
+                    else:
+                        filtered_user_invitations.append(x)
+                    
 
             if not filtered_user_invitations:
                 raise exc.UnauthorizedAuthError(

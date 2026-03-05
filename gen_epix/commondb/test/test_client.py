@@ -203,6 +203,7 @@ class TestClient:
         user_name: str,
         set_dummy_organization: bool = False,
         set_dummy_token: bool = False,
+        set_key: bool = True,
     ) -> model.User:
         root_user: model.User = self.get_root_user()
         user: model.User = self._get_obj(self.user_class, user_or_str)  # type: ignore[assignment]
@@ -224,7 +225,7 @@ class TestClient:
         user_invitation: model.UserInvitation = self.handle(
             self.invite_user_command_class(
                 user=user,
-                key=f"{user_name}@{organization_name}.org",
+                key=f"{user_name}@{organization_name}.org" if set_key else None,
                 email=f"{user_name}@{organization_name}.org",
                 roles={role},
                 organization_id=organization_id,
@@ -235,7 +236,7 @@ class TestClient:
         tgt_user: model.User = self.handle(
             self.register_invited_user_command_class(
                 user=self.user_class(
-                    key=f"{user_name}@{organization_name}.org",
+                    key=f"{user_name}@{organization_name}.org" if set_key else None,
                     email=f"{user_name}@{organization_name}.org",
                     name=user_name,
                     organization_id=organization_id,

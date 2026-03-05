@@ -82,7 +82,7 @@ class InviteUserCommand(Command):
 
 class RegisterInvitedUserCommand(Command):
     """
-    Registers (creates) the user of the command. The key and token must match
+    Registers (creates) the user of the command. The token must match
     that of an existing {user_invitation}. The newly registered user is assigned
     the organization and roles from the invitation. The invitation is deleted.
     """
