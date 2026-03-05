@@ -329,6 +329,61 @@ def test_content_field_not_overriding_explicit_message() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Fix 8/9 – ContainerLogV2-friendly message + operational ID aliases
+# ---------------------------------------------------------------------------
+
+
+def test_starting_app_msg_is_promoted_and_app_id_alias_is_added() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"code":"e8aafcec","msg":"STARTING_APP","app":{"id":"app-123","name":"CASEDB"}}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "STARTING_APP"
+    assert payload["app"]["id"] == "app-123"
+    assert payload["app_id"] == "app-123"
+
+
+def test_started_command_info_has_command_id_alias() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","id":"cmd-123","user_id":"u-1"}}'
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "STARTED_COMMAND"
+    assert payload["command"]["id"] == "cmd-123"
+    assert payload["command_id"] == "cmd-123"
+
+
+def test_started_command_debug_derives_command_id_from_command_object() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(
+        msg='{"code":"e94cad9b","msg":"STARTED_COMMAND","command":{"class":"DemoCommand","object":{"id":"cmd-obj-123"},"parent_command_id":null}}',
+        level=logging.DEBUG,
+    )
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["message"] == "STARTED_COMMAND"
+    assert payload["command"]["object"]["id"] == "cmd-obj-123"
+    assert payload["command_id"] == "cmd-obj-123"
+
+
+def test_null_msg_with_code_gets_non_empty_fallback_message() -> None:
+    formatter = JsonFormatter()
+    record = _make_record(msg='{"code":"da1d8a32","msg":null}')
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["msg"] is None
+    assert payload["message"] == "event.da1d8a32"
+
+
+# ---------------------------------------------------------------------------
 # Fix 6 – UvicornAccessLogFilter: structured HTTP fields from access logs
 # ---------------------------------------------------------------------------
 
