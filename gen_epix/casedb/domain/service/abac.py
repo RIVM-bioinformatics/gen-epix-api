@@ -58,6 +58,8 @@ class BaseAbacService(CommonAbacService):
         command.CaseTypeColCrudCommand,
         command.CaseTypeColSetCrudCommand,
         command.CaseTypeColSetMemberCrudCommand,
+        command.ColCrudCommand,
+        command.DimCrudCommand,
         command.CaseCrudCommand,
         command.CreateFileForReadSetCommand,
         command.CreateFileForSeqCommand,
