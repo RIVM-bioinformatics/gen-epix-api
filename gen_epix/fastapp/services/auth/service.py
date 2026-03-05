@@ -564,14 +564,8 @@ class AuthService(BaseAuthService):
                         )
                     )
             user_manager = self.app.user_manager
-            token_time_to_live = (
-                self.app.cfg.get("service", {})
-                .get("auth", {})
-                .get("props", {})
-                .get("root", {})
-                .get("user", {})
-                .get("token_time_to_live")
-            )
+            root_user_cfg=self.app.cfg["service"]["auth"]["props"]["root"]["user"]
+            token_time_to_live = root_user_cfg.get("token_time_to_live", None)
             if user_manager.is_root_user(user) and token_time_to_live:
                 # get token expiration and only allow if token lifetime is less than configured value,
                 # to mitigate risk of leaked root tokens being used by attackers
