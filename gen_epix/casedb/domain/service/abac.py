@@ -82,5 +82,7 @@ class BaseAbacService(CommonAbacService):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_readable_reference_data(self, cmd: command.Command) -> model.ReadableReferenceData:
+    def get_readable_reference_data(
+        self, cmd: command.Command
+    ) -> model.ReadableReferenceData:
         raise NotImplementedError

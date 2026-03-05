@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from io import StringIO
 from typing import Any
 
 import pytest
@@ -376,7 +377,7 @@ def test_uvicorn_access_filter_parses_args_tuple() -> None:
     filt.filter(record)
     payload = json.loads(formatter.format(record))
 
-    assert payload["message"] == "http.access"
+    assert payload["message"] == "http.access POST /v1/upload 201"
     http = payload["http"]
     assert http["method"] == "POST"
     assert http["path"] == "/v1/upload"
@@ -395,11 +396,29 @@ def test_uvicorn_access_filter_falls_back_to_regex_on_formatted_string() -> None
     filt.filter(record)
     payload = json.loads(formatter.format(record))
 
-    assert payload["message"] == "http.access"
+    assert payload["message"] == "http.access DELETE /v1/cases/abc 204"
     http = payload["http"]
     assert http["method"] == "DELETE"
     assert http["path"] == "/v1/cases/abc"
     assert http["status"] == 204
+
+
+def test_uvicorn_access_message_is_request_specific_not_constant() -> None:
+    filt = UvicornAccessLogFilter()
+    formatter = JsonFormatter()
+    first = _make_uvicorn_access_record(method="GET", path="/v1/health", status=200)
+    second = _make_uvicorn_access_record(method="PUT", path="/v1/cases/42", status=409)
+
+    filt.filter(first)
+    filt.filter(second)
+    first_payload = json.loads(formatter.format(first))
+    second_payload = json.loads(formatter.format(second))
+
+    assert first_payload["message"] == "http.access GET /v1/health 200"
+    assert second_payload["message"] == "http.access PUT /v1/cases/42 409"
+    assert first_payload["message"] != second_payload["message"]
+    assert first_payload["message"] != "http.access"
+    assert second_payload["message"] != "http.access"
 
 
 def test_uvicorn_access_filter_passes_through_non_access_records() -> None:
@@ -426,3 +445,44 @@ def test_json_fields_merged_to_top_level_not_into_props() -> None:
     assert payload["http"] == {"method": "GET", "status": 200}
     # Must NOT also appear inside props
     assert "http" not in payload.get("props", {})
+
+
+def test_uvicorn_access_filter_hardens_plain_formatter_to_json_output() -> None:
+    logger = logging.getLogger("uvicorn.access")
+    original_handlers = list(logger.handlers)
+    original_filters = list(logger.filters)
+    original_level = logger.level
+    original_propagate = logger.propagate
+
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+    uvicorn_filter = UvicornAccessLogFilter()
+
+    try:
+        logger.handlers = [handler]
+        logger.filters = [uvicorn_filter]
+        logger.level = logging.INFO
+        logger.propagate = False
+
+        logger.info(
+            '%s - "%s %s HTTP/%s" %d',
+            "127.0.0.1:54321",
+            "GET",
+            "/v1/runtime-hardening",
+            "1.1",
+            200,
+        )
+    finally:
+        logger.handlers = original_handlers
+        logger.filters = original_filters
+        logger.level = original_level
+        logger.propagate = original_propagate
+
+    emitted_line = stream.getvalue().strip()
+    payload = json.loads(emitted_line)
+
+    assert payload["logger"] == "uvicorn.access"
+    assert payload["level"] == "INFO"
+    assert payload["message"] == "http.access GET /v1/runtime-hardening 200"
+    assert payload["http"]["path"] == "/v1/runtime-hardening"

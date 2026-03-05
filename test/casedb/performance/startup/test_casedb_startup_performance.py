@@ -22,8 +22,8 @@ class TestStartup:
 
         from test.test_client.app_test_client import ServiceTestClient
         from test.test_client.enum import (
-            TestType as EnumTestType,
-        )  # to avoid pytest warning
+            TestType as EnumTestType,  # to avoid pytest warning
+        )
 
         from gen_epix.casedb.domain import enum
         from gen_epix.casedb.domain.enum import RepositoryType
@@ -41,8 +41,8 @@ class TestStartup:
         with cProfile.Profile() as profiler:
             from test.test_client.app_test_client import ServiceTestClient
             from test.test_client.enum import (
-                TestType as EnumTestType,
-            )  # to avoid pytest warning
+                TestType as EnumTestType,  # to avoid pytest warning
+            )
 
             from gen_epix.casedb.domain.enum import RepositoryType
 
@@ -65,8 +65,8 @@ class TestStartup:
     def tearDownClass(cls) -> None:
         from test.test_client.app_test_client import ServiceTestClient
         from test.test_client.enum import (
-            TestType as EnumTestType,
-        )  # to avoid pytest warning
+            TestType as EnumTestType,  # to avoid pytest warning
+        )
 
         from gen_epix.casedb.domain.enum import RepositoryType
 
