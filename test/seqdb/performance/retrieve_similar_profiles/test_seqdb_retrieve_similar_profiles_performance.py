@@ -1,19 +1,13 @@
 import logging
 from pathlib import Path
-from test.seqdb.performance.common import (
-    create_dict_repository,
-    create_sqlite_repository,
-    fill_empty_sqlite_repository,
-    write_db_to_pickle,
-)
-from test.seqdb.performance.generate_seq_distances import create_seq_distance_database
+from test.seqdb.performance.common import (create_dict_repository,
+                                           create_sqlite_repository,
+                                           fill_empty_sqlite_repository,
+                                           write_db_to_pickle)
+from test.seqdb.performance.generate_seq_distances import \
+    create_seq_distance_database
 from test.seqdb.performance.retrieve_similar_profiles.base import (
-    DEV_REPOSITORY_CONFIG,
-    ENTITIES,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
+    DEV_REPOSITORY_CONFIG, ENTITIES, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from time import perf_counter
 from uuid import UUID

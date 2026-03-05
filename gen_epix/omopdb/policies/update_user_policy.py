@@ -1,6 +1,7 @@
 from typing import Any
 
-from gen_epix.commondb.policies import UpdateUserPolicy as CommonUpdateUserPolicy
+from gen_epix.commondb.policies import \
+    UpdateUserPolicy as CommonUpdateUserPolicy
 from gen_epix.omopdb.domain import model
 from gen_epix.omopdb.domain.policy import COMMON_ROLE_MAP
 from gen_epix.omopdb.domain.service import BaseAbacService

@@ -5,11 +5,8 @@ from pydantic import Field, field_validator, model_validator
 
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import enum
-from gen_epix.commondb.domain.command import (
-    Command,
-    CrudCommand,
-    UpdateAssociationCommand,
-)
+from gen_epix.commondb.domain.command import (Command, CrudCommand,
+                                              UpdateAssociationCommand)
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.filter.datetime_range import TypedDatetimeRangeFilter
 from gen_epix.seqdb.domain import enum as seqdb_enum

@@ -2,9 +2,8 @@ import pytest
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import TimeUnit
-from gen_epix.transform.enum import (
-    TimeUnitTransformStrategy as TimeUnitTransformStrategy,
-)
+from gen_epix.transform.enum import \
+    TimeUnitTransformStrategy as TimeUnitTransformStrategy
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
 
 

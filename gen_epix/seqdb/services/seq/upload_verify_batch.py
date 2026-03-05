@@ -7,9 +7,8 @@ from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
 from gen_epix.seqdb.domain import command, model
-from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import (
-    _verify_batch_refdata_allele_profiles,
-)
+from gen_epix.seqdb.services.seq.upload_verify_batch_refdata import \
+    _verify_batch_refdata_allele_profiles
 
 
 def _verify_sample_children(

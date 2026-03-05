@@ -10,13 +10,8 @@ from gen_epix.casedb.domain.service.abac import BaseAbacService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation, EventTiming
 from gen_epix.fastapp.model import Command
-from gen_epix.filter import (
-    CompositeFilter,
-    EqualsBooleanFilter,
-    EqualsUuidFilter,
-    LogicalOperator,
-    UuidSetFilter,
-)
+from gen_epix.filter import (CompositeFilter, EqualsBooleanFilter,
+                             EqualsUuidFilter, LogicalOperator, UuidSetFilter)
 from gen_epix.util import map_paired_elements
 
 

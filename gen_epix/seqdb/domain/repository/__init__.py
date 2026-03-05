@@ -1,12 +1,11 @@
 # pylint: disable=useless-import-alias
-from gen_epix.commondb.domain.repository import BaseAbacRepository as BaseAbacRepository
-from gen_epix.commondb.domain.repository import (
-    BaseOrganizationRepository as BaseOrganizationRepository,
-)
-from gen_epix.commondb.domain.repository import (
-    BaseSystemRepository as BaseSystemRepository,
-)
-from gen_epix.seqdb.domain.repository.file import (
-    BaseFileRepository as BaseFileRepository,
-)
-from gen_epix.seqdb.domain.repository.seq import BaseSeqRepository as BaseSeqRepository
+from gen_epix.commondb.domain.repository import \
+    BaseAbacRepository as BaseAbacRepository
+from gen_epix.commondb.domain.repository import \
+    BaseOrganizationRepository as BaseOrganizationRepository
+from gen_epix.commondb.domain.repository import \
+    BaseSystemRepository as BaseSystemRepository
+from gen_epix.seqdb.domain.repository.file import \
+    BaseFileRepository as BaseFileRepository
+from gen_epix.seqdb.domain.repository.seq import \
+    BaseSeqRepository as BaseSeqRepository

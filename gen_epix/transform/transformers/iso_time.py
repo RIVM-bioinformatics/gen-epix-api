@@ -7,9 +7,8 @@ from collections.abc import Callable
 
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import TimeUnit as TimeUnit
-from gen_epix.transform.enum import (
-    TimeUnitTransformStrategy as TimeUnitTransformStrategy,
-)
+from gen_epix.transform.enum import \
+    TimeUnitTransformStrategy as TimeUnitTransformStrategy
 from gen_epix.transform.transformer import Transformer
 
 

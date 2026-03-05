@@ -8,9 +8,8 @@ import pytest
 from gen_epix.casedb.domain import command, enum, exc, model
 from gen_epix.casedb.domain.policy.abac import BaseCaseAbacPolicy
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.retrieve_similar_cases import (
-    case_service_retrieve_similar_cases,
-)
+from gen_epix.casedb.services.case.retrieve_similar_cases import \
+    case_service_retrieve_similar_cases
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum

@@ -6,14 +6,14 @@ from typing import Any
 from uuid import UUID
 
 import jwt
-
 # import libraries
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
 from pydantic import BaseModel as PydanticBaseModel
 
-from gen_epix.commondb.api import UpdateUserRequestBody, UserInvitationRequestBody
+from gen_epix.commondb.api import (UpdateUserRequestBody,
+                                   UserInvitationRequestBody)
 from gen_epix.commondb.domain import command, model
 from gen_epix.fastapp import App, Command, CrudCommand, CrudOperation
 

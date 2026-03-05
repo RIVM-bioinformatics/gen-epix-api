@@ -5,35 +5,30 @@ from typing import NoReturn
 from uuid import UUID
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.enum import (
-    ColType,
-    ColTypeSet,
-    ConceptRelationType,
-    RegionRelationType,
-)
+from gen_epix.casedb.domain.enum import (ColType, ColTypeSet,
+                                         ConceptRelationType,
+                                         RegionRelationType)
 from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.case_date import (
-    case_service_get_case_date_case_type_col_mappers_from_cols,
-)
+from gen_epix.casedb.services.case.case_date import \
+    case_service_get_case_date_case_type_col_mappers_from_cols
 from gen_epix.commondb.domain.enum import DataIssueType
-from gen_epix.commondb.domain.literal import (
-    DECIMAL_PATTERN,
-    ISODATE_PATTERN,
-    TIME_DAY_PATTERN,
-    TIME_MONTH_PATTERN,
-    TIME_QUARTER_PATTERN,
-    TIME_WEEK_PATTERN,
-    TIME_YEAR_PATTERN,
-)
+from gen_epix.commondb.domain.literal import (DECIMAL_PATTERN, ISODATE_PATTERN,
+                                              TIME_DAY_PATTERN,
+                                              TIME_MONTH_PATTERN,
+                                              TIME_QUARTER_PATTERN,
+                                              TIME_WEEK_PATTERN,
+                                              TIME_YEAR_PATTERN)
 from gen_epix.fastapp import CrudOperation
 from gen_epix.filter import UuidSetFilter
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import NoMatchStrategy, TimeUnit, TimeUnitTransformStrategy
+from gen_epix.transform.enum import (NoMatchStrategy, TimeUnit,
+                                     TimeUnitTransformStrategy)
 from gen_epix.transform.transformers import IntervalTransformer
-from gen_epix.transform.transformers.interval import IntervalToIntervalTransformer
+from gen_epix.transform.transformers.interval import \
+    IntervalToIntervalTransformer
 from gen_epix.transform.transformers.iso_time import IsoTimeTransformer
 from gen_epix.util import map_paired_elements
 

@@ -1,17 +1,16 @@
 import logging
 from test.commondb.integration.build_db.base import (  # REPOSITORY_TYPE,
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-
+    DEV_REPOSITORY_CONFIG, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
 # Import test classes in order of dependency of execution
-from test.commondb.integration.build_db.create import TestCreate as ModuleTestCreate
-from test.commondb.integration.build_db.delete import TestDelete as ModuleTestDelete
+from test.commondb.integration.build_db.create import \
+    TestCreate as ModuleTestCreate
+from test.commondb.integration.build_db.delete import \
+    TestDelete as ModuleTestDelete
 from test.commondb.integration.build_db.read import TestRead as ModuleTestRead
-from test.commondb.integration.build_db.update import TestUpdate as ModuleTestUpdate
-from test.commondb.test_client.util import get_test_client as commondb_get_test_client
+from test.commondb.integration.build_db.update import \
+    TestUpdate as ModuleTestUpdate
+from test.commondb.test_client.util import \
+    get_test_client as commondb_get_test_client
 
 import pytest
 

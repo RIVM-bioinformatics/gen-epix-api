@@ -1,6 +1,5 @@
 import logging
 import traceback
-
 # pylint: disable=unused-import-alias
 from collections.abc import Callable, Iterable
 from enum import Enum

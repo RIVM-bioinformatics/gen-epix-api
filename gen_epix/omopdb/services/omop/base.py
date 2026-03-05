@@ -1,7 +1,8 @@
 from typing import Any
 
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.omopdb.domain.service import BaseOmopService as DomainBaseOmopService
+from gen_epix.omopdb.domain.service import \
+    BaseOmopService as DomainBaseOmopService
 
 
 class BaseOmopService(DomainBaseOmopService):

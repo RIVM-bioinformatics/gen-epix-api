@@ -398,8 +398,10 @@ class AppCfg(BaseAppCfg):
             for pinned_logger_name in _PINNED_THIRD_PARTY_LOGGERS:
                 if not _is_descendant_logger(runtime_logger_name, pinned_logger_name):
                     continue
-                pinned_level = self._logging_config_yaml["loggers"].get(
-                    pinned_logger_name, {}
-                ).get("level", log_level)
+                pinned_level = (
+                    self._logging_config_yaml["loggers"]
+                    .get(pinned_logger_name, {})
+                    .get("level", log_level)
+                )
                 logging.getLogger(runtime_logger_name).setLevel(pinned_level)
                 break

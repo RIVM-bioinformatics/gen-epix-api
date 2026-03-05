@@ -8,7 +8,8 @@ from gen_epix.casedb.domain import exc as case_exc
 from gen_epix.casedb.domain import model as case_model
 from gen_epix.casedb.domain.enum import CaseRight
 from gen_epix.casedb.services.case.base import BaseCaseService
-from gen_epix.casedb.services.case.crud_case_set import case_service_crud_case_set
+from gen_epix.casedb.services.case.crud_case_set import \
+    case_service_crud_case_set
 from gen_epix.commondb.domain.enum import Role
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.fastapp import CrudOperation

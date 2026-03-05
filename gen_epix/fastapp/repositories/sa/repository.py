@@ -20,25 +20,14 @@ from gen_epix.fastapp.repositories.sa.mapper import BaseSAMapper, SAMapper
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import (
-    ComparisonOperator,
-    CompositeFilter,
-    DateRangeFilter,
-    DatetimeRangeFilter,
-    EqualsBooleanFilter,
-    EqualsFilter,
-    EqualsNumberFilter,
-    EqualsStringFilter,
-    EqualsUuidFilter,
-    ExistsFilter,
-    Filter,
-    LogicalOperator,
-    NumberRangeFilter,
-    NumberSetFilter,
-    RangeFilter,
-    StringSetFilter,
-    UuidSetFilter,
-)
+from gen_epix.filter import (ComparisonOperator, CompositeFilter,
+                             DateRangeFilter, DatetimeRangeFilter,
+                             EqualsBooleanFilter, EqualsFilter,
+                             EqualsNumberFilter, EqualsStringFilter,
+                             EqualsUuidFilter, ExistsFilter, Filter,
+                             LogicalOperator, NumberRangeFilter,
+                             NumberSetFilter, RangeFilter, StringSetFilter,
+                             UuidSetFilter)
 
 
 class SARepository(BaseRepository):

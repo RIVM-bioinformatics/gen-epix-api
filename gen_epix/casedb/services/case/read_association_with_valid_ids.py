@@ -3,7 +3,8 @@ from uuid import UUID
 from gen_epix.casedb.domain import command, model
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation
-from gen_epix.filter import CompositeFilter, Filter, LogicalOperator, UuidSetFilter
+from gen_epix.filter import (CompositeFilter, Filter, LogicalOperator,
+                             UuidSetFilter)
 
 
 def case_service_read_association_with_valid_ids(

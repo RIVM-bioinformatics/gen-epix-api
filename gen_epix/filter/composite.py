@@ -11,19 +11,22 @@ from pydantic import BaseModel, Field, model_validator
 from gen_epix.filter import enum
 from gen_epix.filter.base import Filter
 from gen_epix.filter.date_range import DateRangeFilter, TypedDateRangeFilter
-from gen_epix.filter.datetime_range import DatetimeRangeFilter, TypedDatetimeRangeFilter
-from gen_epix.filter.equals_boolean import EqualsBooleanFilter, TypedEqualsBooleanFilter
-from gen_epix.filter.equals_number import EqualsNumberFilter, TypedEqualsNumberFilter
-from gen_epix.filter.equals_string import EqualsStringFilter, TypedEqualsStringFilter
+from gen_epix.filter.datetime_range import (DatetimeRangeFilter,
+                                            TypedDatetimeRangeFilter)
+from gen_epix.filter.equals_boolean import (EqualsBooleanFilter,
+                                            TypedEqualsBooleanFilter)
+from gen_epix.filter.equals_number import (EqualsNumberFilter,
+                                           TypedEqualsNumberFilter)
+from gen_epix.filter.equals_string import (EqualsStringFilter,
+                                           TypedEqualsStringFilter)
 from gen_epix.filter.equals_uuid import EqualsUuidFilter, TypedEqualsUuidFilter
 from gen_epix.filter.exists import ExistsFilter, TypedExistsFilter
 from gen_epix.filter.no_filter import NoFilter, TypedNoFilter
-from gen_epix.filter.number_range import NumberRangeFilter, TypedNumberRangeFilter
+from gen_epix.filter.number_range import (NumberRangeFilter,
+                                          TypedNumberRangeFilter)
 from gen_epix.filter.number_set import NumberSetFilter, TypedNumberSetFilter
-from gen_epix.filter.partial_date_range import (
-    PartialDateRangeFilter,
-    TypedPartialDateRangeFilter,
-)
+from gen_epix.filter.partial_date_range import (PartialDateRangeFilter,
+                                                TypedPartialDateRangeFilter)
 from gen_epix.filter.regex import RegexFilter, TypedRegexFilter
 from gen_epix.filter.string_set import StringSetFilter, TypedStringSetFilter
 from gen_epix.filter.uuid_set import TypedUuidSetFilter, UuidSetFilter

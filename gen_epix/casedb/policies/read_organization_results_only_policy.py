@@ -2,9 +2,9 @@ from typing import Any
 
 from gen_epix.casedb.domain import command
 from gen_epix.casedb.domain.service import BaseAbacService
-from gen_epix.commondb.policies import (
-    ReadOrganizationResultsOnlyPolicy as CommonReadOrganizationResultsOnlyPolicy,
-)
+from gen_epix.commondb.policies import \
+    ReadOrganizationResultsOnlyPolicy as \
+    CommonReadOrganizationResultsOnlyPolicy
 
 
 class ReadOrganizationResultsOnlyPolicy(CommonReadOrganizationResultsOnlyPolicy):

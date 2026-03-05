@@ -9,7 +9,8 @@ from sqlalchemy.orm import Mapped, MappedColumn, mapped_column
 
 from gen_epix.fastapp import Domain, Entity, Model
 from gen_epix.fastapp.repositories import create_sa_type_from_field_info
-from gen_epix.fastapp.repositories.sa.util import get_sa_type_kwargs_from_field_info
+from gen_epix.fastapp.repositories.sa.util import \
+    get_sa_type_kwargs_from_field_info
 
 
 def create_table_args(
@@ -41,10 +42,7 @@ def create_table_args(
     # is either the sole primary key or covered by a standalone UNIQUE constraint — a
     # column in a composite PK does not qualify. Adding a UniqueConstraint on the
     # id_field_name satisfies this requirement without affecting SQL Server.
-    if (
-        entity.id_field_name
-        and entity.id_field_name != Entity.DEFAULT_ID_FIELD_NAME
-    ):
+    if entity.id_field_name and entity.id_field_name != Entity.DEFAULT_ID_FIELD_NAME:
         id_sa_field_name = (
             field_name_map.get(entity.id_field_name, entity.id_field_name)
             if field_name_map
@@ -53,9 +51,7 @@ def create_table_args(
         covered = any(
             id_sa_field_name
             in (
-                [field_name_map.get(x, x) for x in fns]
-                if field_name_map
-                else list(fns)
+                [field_name_map.get(x, x) for x in fns] if field_name_map else list(fns)
             )
             for fns in entity.get_keys_field_names()
         )

@@ -8,11 +8,8 @@ import gen_epix.casedb.domain.command as command
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
-    _crud_cascade_delete,
-    crud_with_access_filter,
-    get_case_abac_from_command,
-    is_metadata_admin_or_above,
-)
+    _crud_cascade_delete, crud_with_access_filter, get_case_abac_from_command,
+    is_metadata_admin_or_above)
 from gen_epix.fastapp import CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 

@@ -1,17 +1,16 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.build_db.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-
+from test.casedb.integration.build_db.base import (DEV_REPOSITORY_CONFIG,
+                                                   SKIP_ENDPOINTS, TEST_TYPE,
+                                                   VERBOSE)
 # Import test classes in order of dependency of execution
-from test.casedb.integration.build_db.create import TestCreate as ModuleTestCreate
-from test.casedb.integration.build_db.delete import TestDelete as ModuleTestDelete
+from test.casedb.integration.build_db.create import \
+    TestCreate as ModuleTestCreate
+from test.casedb.integration.build_db.delete import \
+    TestDelete as ModuleTestDelete
 from test.casedb.integration.build_db.read import TestRead as ModuleTestRead
-from test.casedb.integration.build_db.update import TestUpdate as ModuleTestUpdate
+from test.casedb.integration.build_db.update import \
+    TestUpdate as ModuleTestUpdate
 
 import pytest
 

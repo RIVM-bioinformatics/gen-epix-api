@@ -4,15 +4,9 @@ Examples demonstrating usage of the transformer framework.
 
 from pydantic import BaseModel
 
-from gen_epix.transform import (
-    ConditionalTransformer,
-    FieldTransformer,
-    ObjectAdapter,
-    Pipeline,
-    StreamingPipeline,
-    ValidationTransformer,
-    register_transformer,
-)
+from gen_epix.transform import (ConditionalTransformer, FieldTransformer,
+                                ObjectAdapter, Pipeline, StreamingPipeline,
+                                ValidationTransformer, register_transformer)
 from gen_epix.transform.transformer import Transformer
 
 

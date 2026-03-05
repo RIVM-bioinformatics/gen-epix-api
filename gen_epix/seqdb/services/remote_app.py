@@ -7,11 +7,9 @@ import httpx
 
 from gen_epix.commondb.services.remote_app import CommondbRemoteApp
 from gen_epix.fastapp.model import Command
-from gen_epix.seqdb.api import (
-    RetrievePhylogeneticTreeRequestBody,
-    RetrieveSeqFastaRequestBody,
-    RetrieveSimilarProfilesRequestBody,
-)
+from gen_epix.seqdb.api import (RetrievePhylogeneticTreeRequestBody,
+                                RetrieveSeqFastaRequestBody,
+                                RetrieveSimilarProfilesRequestBody)
 from gen_epix.seqdb.domain import DOMAIN, command, model
 
 

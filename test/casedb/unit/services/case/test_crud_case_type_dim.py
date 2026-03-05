@@ -140,9 +140,8 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ) as cascade_delete,
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute
             retval = case_service_crud_case_type_dim(self.service, cmd)
@@ -207,9 +206,8 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute
             retval = case_service_crud_case_type_dim(self.service, cmd)
@@ -260,9 +258,8 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(exc.InvalidArgumentsError):
@@ -298,9 +295,8 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(exc.InvalidIdsError):
@@ -342,9 +338,8 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(exc.InvalidArgumentsError):
@@ -393,9 +388,8 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute
             retval = case_service_crud_case_type_dim(self.service, cmd)
@@ -436,9 +430,8 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute
             retval = case_service_crud_case_type_dim(self.service, cmd)
@@ -466,9 +459,8 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
                 "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
             ),
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(AssertionError):
@@ -506,9 +498,8 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
                 return_value=expected,
             ) as caf,
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute
             retval = case_service_crud_case_type_dim(self.service, cmd)
@@ -537,9 +528,8 @@ class TestPreconditions(BaseCaseTypeDimTestCase):
         with patch(
             "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(AssertionError):
@@ -555,9 +545,8 @@ class TestPreconditions(BaseCaseTypeDimTestCase):
         with patch(
             "gen_epix.casedb.services.case.crud_case_type_dim._crud_cascade_delete"
         ):
-            from gen_epix.casedb.services.case.crud_case_type_dim import (
-                case_service_crud_case_type_dim,
-            )
+            from gen_epix.casedb.services.case.crud_case_type_dim import \
+                case_service_crud_case_type_dim
 
             # 3. Execute + 4. Verify
             with pytest.raises(AssertionError):

@@ -31,16 +31,10 @@ import sys
 from pathlib import Path
 
 from gen_epix.commondb.config.cfg import AppCfg
-from gen_epix.commondb.domain.enum import (
-    AppType,
-    AppTypeSet,
-    DevIdpConfig,
-    DevRepositoryConfig,
-)
-from gen_epix.commondb.domain.util import (
-    create_demo_data_from_repository,
-    set_env_variables,
-)
+from gen_epix.commondb.domain.enum import (AppType, AppTypeSet, DevIdpConfig,
+                                           DevRepositoryConfig)
+from gen_epix.commondb.domain.util import (create_demo_data_from_repository,
+                                           set_env_variables)
 from gen_epix.fastapp.repositories.dict.repository import DictRepository
 from gen_epix.fastapp.repositories.sa.repository import SARepository
 

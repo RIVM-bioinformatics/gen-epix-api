@@ -13,9 +13,8 @@ from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, model
 from gen_epix.seqdb.domain.literal import MLVA_NO_LOCUS_REPEAT_NUMBER
-from gen_epix.seqdb.services.seq.calculate_seq_distance import (
-    seq_service_calculate_seq_distances_for_new_profiles,
-)
+from gen_epix.seqdb.services.seq.calculate_seq_distance import \
+    seq_service_calculate_seq_distances_for_new_profiles
 
 
 def _mock_uow() -> Mock:

@@ -7,7 +7,8 @@ import pytest
 from gen_epix.fastapp import ExceptionHandlingMode, exc
 from gen_epix.fastapp.domain.domain import Domain
 from gen_epix.fastapp.domain.entity import Entity
-from gen_epix.fastapp.enum import CrudOperation, PermissionType, PermissionTypeSet
+from gen_epix.fastapp.enum import (CrudOperation, PermissionType,
+                                   PermissionTypeSet)
 from gen_epix.fastapp.model import Command, CrudCommand, Model, Permission
 
 

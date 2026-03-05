@@ -2,9 +2,8 @@ from typing import Any
 
 from sqlalchemy import Engine
 
-from gen_epix.commondb.repositories import (
-    OrganizationSARepository as CommonOrganizationSARepository,
-)
+from gen_epix.commondb.repositories import \
+    OrganizationSARepository as CommonOrganizationSARepository
 from gen_epix.commondb.repositories import sa_model
 from gen_epix.seqdb.domain import model
 

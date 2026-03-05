@@ -5,12 +5,8 @@ from pathlib import Path
 
 import fire
 
-from gen_epix.commondb.domain.enum import (
-    AppType,
-    AppTypeSet,
-    DevIdpConfig,
-    DevRepositoryConfig,
-)
+from gen_epix.commondb.domain.enum import (AppType, AppTypeSet, DevIdpConfig,
+                                           DevRepositoryConfig)
 from gen_epix.commondb.domain.util import set_env_variables
 
 

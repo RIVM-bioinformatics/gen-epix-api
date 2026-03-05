@@ -8,7 +8,8 @@ from uuid import UUID
 from pydantic import Field
 
 from gen_epix.commondb.domain.model.base import Model
-from gen_epix.commondb.domain.model.organization import DataCollection, IdentifierIssuer
+from gen_epix.commondb.domain.model.organization import (DataCollection,
+                                                         IdentifierIssuer)
 from gen_epix.fastapp.domain import Entity, create_links
 
 

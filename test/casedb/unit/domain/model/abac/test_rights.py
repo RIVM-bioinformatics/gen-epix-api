@@ -4,11 +4,9 @@ from uuid import UUID, uuid4
 import pytest
 
 from gen_epix.casedb.domain.enum import CaseRight
-from gen_epix.casedb.domain.model.abac.rights import (
-    CaseAbac,
-    CaseTypeAccessAbac,
-    CaseTypeShareAbac,
-)
+from gen_epix.casedb.domain.model.abac.rights import (CaseAbac,
+                                                      CaseTypeAccessAbac,
+                                                      CaseTypeShareAbac)
 from gen_epix.fastapp import exc
 
 

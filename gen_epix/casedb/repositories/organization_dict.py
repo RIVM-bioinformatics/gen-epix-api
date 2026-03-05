@@ -3,9 +3,8 @@ from typing import Any
 
 from gen_epix.casedb.domain import model
 from gen_epix.casedb.domain.model import Model
-from gen_epix.commondb.repositories import (
-    OrganizationDictRepository as CommonOrganizationDictRepository,
-)
+from gen_epix.commondb.repositories import \
+    OrganizationDictRepository as CommonOrganizationDictRepository
 from gen_epix.fastapp import Entity
 
 

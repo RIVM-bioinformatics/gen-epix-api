@@ -3,7 +3,8 @@ import gen_epix.casedb.domain.enum as enum
 import gen_epix.casedb.domain.model as model
 from gen_epix.casedb.domain import exc
 from gen_epix.casedb.domain.policy import BaseCaseAbacPolicy
-from gen_epix.casedb.domain.service import BaseCaseService as DomainBaseCaseService
+from gen_epix.casedb.domain.service import \
+    BaseCaseService as DomainBaseCaseService
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.fastapp import CrudOperation
 

@@ -1,10 +1,7 @@
 import logging
-from test.omopdb.integration.person_upload.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
+from test.omopdb.integration.person_upload.base import (DEV_REPOSITORY_CONFIG,
+                                                        SKIP_ENDPOINTS,
+                                                        TEST_TYPE, VERBOSE)
 from test.omopdb.omopdb_test_client import OmopdbTestClient as Env
 
 import pytest

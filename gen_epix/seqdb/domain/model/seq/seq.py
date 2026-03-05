@@ -4,13 +4,8 @@ from functools import cached_property
 from typing import ClassVar, Self
 from uuid import UUID
 
-from pydantic import (
-    Field,
-    computed_field,
-    field_serializer,
-    field_validator,
-    model_validator,
-)
+from pydantic import (Field, computed_field, field_serializer, field_validator,
+                      model_validator)
 
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
@@ -19,12 +14,8 @@ from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum
 from gen_epix.seqdb.domain.model.file import File
-from gen_epix.seqdb.domain.model.seq.base import (
-    BaseSeq,
-    CodeMixin,
-    ProtocolMixin,
-    QualityMixin,
-)
+from gen_epix.seqdb.domain.model.seq.base import (BaseSeq, CodeMixin,
+                                                  ProtocolMixin, QualityMixin)
 from gen_epix.seqdb.domain.model.seq.reads import ReadSet
 from gen_epix.seqdb.domain.model.seq.sample import HasSampleMixin, Sample
 from gen_epix.seqdb.domain.model.seq.taxon import Taxon

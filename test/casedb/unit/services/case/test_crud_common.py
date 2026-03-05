@@ -16,7 +16,8 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.commondb.domain.enum import RoleSet as CommonRoleSet
 from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
-from gen_epix.filter import CompositeFilter, EqualsStringFilter, Filter, LogicalOperator
+from gen_epix.filter import (CompositeFilter, EqualsStringFilter, Filter,
+                             LogicalOperator)
 
 
 class DummyCmd:

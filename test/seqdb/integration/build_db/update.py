@@ -1,8 +1,6 @@
-from test.seqdb.integration.build_db.base import (
-    APP_ADMIN_OR_ABOVE_USERS,
-    BELOW_APP_ADMIN_USERS,
-    SKIP_RAISE,
-)
+from test.seqdb.integration.build_db.base import (APP_ADMIN_OR_ABOVE_USERS,
+                                                  BELOW_APP_ADMIN_USERS,
+                                                  SKIP_RAISE)
 
 import pydantic
 import pytest

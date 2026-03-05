@@ -2,14 +2,13 @@ import datetime
 from uuid import UUID
 
 import sqlalchemy.orm as orm
-from sqlalchemy.orm import Mapped, declarative_mixin, declared_attr, relationship
+from sqlalchemy.orm import (Mapped, declarative_mixin, declared_attr,
+                            relationship)
 
 from gen_epix.commondb.domain import DOMAIN, enum, model
 from gen_epix.commondb.repositories.sa_model.base import RowMetadataMixin
-from gen_epix.commondb.repositories.sa_model.util import (
-    create_mapped_column,
-    create_table_args,
-)
+from gen_epix.commondb.repositories.sa_model.util import (create_mapped_column,
+                                                          create_table_args)
 
 Base: type = orm.declarative_base(name=enum.ServiceType.ORGANIZATION.value)
 

@@ -10,9 +10,9 @@ from uuid import UUID
 import httpx
 import jwt
 from fastapi import Request
-from fastapi.openapi.models import OAuthFlowAuthorizationCode, OAuthFlows, SecurityBase
+from fastapi.openapi.models import (OAuthFlowAuthorizationCode, OAuthFlows,
+                                    SecurityBase)
 from fastapi.security import OAuth2
-
 # from fastapi.openapi.models import OAuth2, OAuthFlowAuthorizationCode, OAuthFlows
 from fastapi.security.open_id_connect_url import OpenIdConnect
 from fastapi.security.utils import get_authorization_scheme_param
@@ -21,10 +21,10 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
 from gen_epix.fastapp.log import BaseLogItem, LogItem
 from gen_epix.fastapp.services.auth.idp_client import IdpClient
-from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
-from gen_epix.fastapp.services.auth.token_introspection_manager import (
-    TokenIntrospectionManager,
-)
+from gen_epix.fastapp.services.auth.model import (Claims, IdentityProvider,
+                                                  OidcServerCfg)
+from gen_epix.fastapp.services.auth.token_introspection_manager import \
+    TokenIntrospectionManager
 
 
 class OauthIdpClient(IdpClient, OpenIdConnect):

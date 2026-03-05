@@ -6,7 +6,8 @@ This module provides a command-line interface for starting the ReceiverApp using
 
 import logging
 import sys
-from test.end_to_end.client_credential_flow.apps.receiver_app import ReceiverApp
+from test.end_to_end.client_credential_flow.apps.receiver_app import \
+    ReceiverApp
 
 import fire
 import uvicorn

@@ -1,8 +1,5 @@
-from test.seqdb.integration.build_db.base import (
-    BELOW_ROOT_USERS,
-    SKIP_RAISE,
-    USER_NAME_ROOTS,
-)
+from test.seqdb.integration.build_db.base import (BELOW_ROOT_USERS, SKIP_RAISE,
+                                                  USER_NAME_ROOTS)
 
 import pytest
 

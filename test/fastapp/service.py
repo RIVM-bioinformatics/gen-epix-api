@@ -1,9 +1,5 @@
-from test.fastapp.command import (
-    Model1_1CrudCommand,
-    Model1_2CrudCommand,
-    Model2_1CrudCommand,
-    Model2_2CrudCommand,
-)
+from test.fastapp.command import (Model1_1CrudCommand, Model1_2CrudCommand,
+                                  Model2_1CrudCommand, Model2_2CrudCommand)
 
 from gen_epix.fastapp.service import BaseService
 

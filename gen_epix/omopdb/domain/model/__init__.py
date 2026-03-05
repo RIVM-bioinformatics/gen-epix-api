@@ -1,36 +1,32 @@
 # pylint: disable=useless-import-alias
 from gen_epix import fastapp
 from gen_epix.commondb.domain import enum as common_enum
-from gen_epix.commondb.domain.model import (
-    SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
-)
+from gen_epix.commondb.domain.model import \
+    SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE
 from gen_epix.commondb.domain.model import Contact as Contact
 from gen_epix.commondb.domain.model import DataCollection as DataCollection
-from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
-from gen_epix.commondb.domain.model import (
-    DataCollectionSetMember as DataCollectionSetMember,
-)
-from gen_epix.commondb.domain.model import ExternalIdentifier as ExternalIdentifier
+from gen_epix.commondb.domain.model import \
+    DataCollectionSet as DataCollectionSet
+from gen_epix.commondb.domain.model import \
+    DataCollectionSetMember as DataCollectionSetMember
+from gen_epix.commondb.domain.model import \
+    ExternalIdentifier as ExternalIdentifier
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization
-from gen_epix.commondb.domain.model import (
-    OrganizationAdminPolicy as OrganizationAdminPolicy,
-)
-from gen_epix.commondb.domain.model import (
-    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink,
-)
+from gen_epix.commondb.domain.model import \
+    OrganizationAdminPolicy as OrganizationAdminPolicy
+from gen_epix.commondb.domain.model import \
+    OrganizationIdentifierIssuerLink as OrganizationIdentifierIssuerLink
 from gen_epix.commondb.domain.model import OrganizationSet as OrganizationSet
-from gen_epix.commondb.domain.model import (
-    OrganizationSetMember as OrganizationSetMember,
-)
+from gen_epix.commondb.domain.model import \
+    OrganizationSetMember as OrganizationSetMember
 from gen_epix.commondb.domain.model import Outage as Outage
 from gen_epix.commondb.domain.model import Site as Site
 from gen_epix.commondb.domain.model import User as User
 from gen_epix.commondb.domain.model import UserInvitation as UserInvitation
-from gen_epix.commondb.domain.model import (
-    UserInvitationConstraints as UserInvitationConstraints,
-)
+from gen_epix.commondb.domain.model import \
+    UserInvitationConstraints as UserInvitationConstraints
 from gen_epix.commondb.domain.model import UserNameEmail as UserNameEmail
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
 from gen_epix.commondb.domain.util import complete_stored_model_field_props
@@ -41,16 +37,21 @@ from gen_epix.omopdb.domain import enum
 from gen_epix.omopdb.domain.model.omop import CareSite as CareSite
 from gen_epix.omopdb.domain.model.omop import CdmSource as CdmSource
 from gen_epix.omopdb.domain.model.omop import Cohort as Cohort
-from gen_epix.omopdb.domain.model.omop import CohortDefinition as CohortDefinition
+from gen_epix.omopdb.domain.model.omop import \
+    CohortDefinition as CohortDefinition
 from gen_epix.omopdb.domain.model.omop import Concept as Concept
-from gen_epix.omopdb.domain.model.omop import ConceptAncestor as ConceptAncestor
+from gen_epix.omopdb.domain.model.omop import \
+    ConceptAncestor as ConceptAncestor
 from gen_epix.omopdb.domain.model.omop import ConceptClass as ConceptClass
-from gen_epix.omopdb.domain.model.omop import ConceptRelationship as ConceptRelationship
+from gen_epix.omopdb.domain.model.omop import \
+    ConceptRelationship as ConceptRelationship
 from gen_epix.omopdb.domain.model.omop import ConceptSynonym as ConceptSynonym
 from gen_epix.omopdb.domain.model.omop import ConditionEra as ConditionEra
-from gen_epix.omopdb.domain.model.omop import ConditionOccurrence as ConditionOccurrence
+from gen_epix.omopdb.domain.model.omop import \
+    ConditionOccurrence as ConditionOccurrence
 from gen_epix.omopdb.domain.model.omop import Cost as Cost
-from gen_epix.omopdb.domain.model.omop import DataLineageMixin as DataLineageMixin
+from gen_epix.omopdb.domain.model.omop import \
+    DataLineageMixin as DataLineageMixin
 from gen_epix.omopdb.domain.model.omop import Death as Death
 from gen_epix.omopdb.domain.model.omop import DeviceExposure as DeviceExposure
 from gen_epix.omopdb.domain.model.omop import Domain as Domain
@@ -60,43 +61,49 @@ from gen_epix.omopdb.domain.model.omop import DrugExposure as DrugExposure
 from gen_epix.omopdb.domain.model.omop import DrugStrength as DrugStrength
 from gen_epix.omopdb.domain.model.omop import Episode as Episode
 from gen_epix.omopdb.domain.model.omop import EpisodeEvent as EpisodeEvent
-from gen_epix.omopdb.domain.model.omop import FactRelationship as FactRelationship
+from gen_epix.omopdb.domain.model.omop import \
+    FactRelationship as FactRelationship
 from gen_epix.omopdb.domain.model.omop import Location as Location
 from gen_epix.omopdb.domain.model.omop import Measurement as Measurement
-from gen_epix.omopdb.domain.model.omop import (
-    MeasurementForUpload as MeasurementForUpload,
-)
-from gen_epix.omopdb.domain.model.omop import MeasurementRelation as MeasurementRelation
-from gen_epix.omopdb.domain.model.omop import (
-    MeasurementRelationForUpload as MeasurementRelationForUpload,
-)
+from gen_epix.omopdb.domain.model.omop import \
+    MeasurementForUpload as MeasurementForUpload
+from gen_epix.omopdb.domain.model.omop import \
+    MeasurementRelation as MeasurementRelation
+from gen_epix.omopdb.domain.model.omop import \
+    MeasurementRelationForUpload as MeasurementRelationForUpload
 from gen_epix.omopdb.domain.model.omop import Metadata as Metadata
 from gen_epix.omopdb.domain.model.omop import Note as Note
 from gen_epix.omopdb.domain.model.omop import NoteNlp as NoteNlp
 from gen_epix.omopdb.domain.model.omop import Observation as Observation
-from gen_epix.omopdb.domain.model.omop import (
-    ObservationForUpload as ObservationForUpload,
-)
-from gen_epix.omopdb.domain.model.omop import ObservationPeriod as ObservationPeriod
-from gen_epix.omopdb.domain.model.omop import PayerPlanPeriod as PayerPlanPeriod
+from gen_epix.omopdb.domain.model.omop import \
+    ObservationForUpload as ObservationForUpload
+from gen_epix.omopdb.domain.model.omop import \
+    ObservationPeriod as ObservationPeriod
+from gen_epix.omopdb.domain.model.omop import \
+    PayerPlanPeriod as PayerPlanPeriod
 from gen_epix.omopdb.domain.model.omop import Person as Person
-from gen_epix.omopdb.domain.model.omop import (
-    PersonBatchForUpload as PersonBatchForUpload,
-)
-from gen_epix.omopdb.domain.model.omop import (
-    PersonBatchUploadResult as PersonBatchUploadResult,
-)
-from gen_epix.omopdb.domain.model.omop import PersonDataIssue as PersonDataIssue
-from gen_epix.omopdb.domain.model.omop import PersonForUpload as PersonForUpload
-from gen_epix.omopdb.domain.model.omop import PersonUploadResult as PersonUploadResult
-from gen_epix.omopdb.domain.model.omop import ProcedureOccurrence as ProcedureOccurrence
+from gen_epix.omopdb.domain.model.omop import \
+    PersonBatchForUpload as PersonBatchForUpload
+from gen_epix.omopdb.domain.model.omop import \
+    PersonBatchUploadResult as PersonBatchUploadResult
+from gen_epix.omopdb.domain.model.omop import \
+    PersonDataIssue as PersonDataIssue
+from gen_epix.omopdb.domain.model.omop import \
+    PersonForUpload as PersonForUpload
+from gen_epix.omopdb.domain.model.omop import \
+    PersonUploadResult as PersonUploadResult
+from gen_epix.omopdb.domain.model.omop import \
+    ProcedureOccurrence as ProcedureOccurrence
 from gen_epix.omopdb.domain.model.omop import Provider as Provider
 from gen_epix.omopdb.domain.model.omop import Relationship as Relationship
-from gen_epix.omopdb.domain.model.omop import SourceToConceptMap as SourceToConceptMap
+from gen_epix.omopdb.domain.model.omop import \
+    SourceToConceptMap as SourceToConceptMap
 from gen_epix.omopdb.domain.model.omop import Specimen as Specimen
-from gen_epix.omopdb.domain.model.omop import SpecimenForUpload as SpecimenForUpload
+from gen_epix.omopdb.domain.model.omop import \
+    SpecimenForUpload as SpecimenForUpload
 from gen_epix.omopdb.domain.model.omop import VisitDetail as VisitDetail
-from gen_epix.omopdb.domain.model.omop import VisitOccurrence as VisitOccurrence
+from gen_epix.omopdb.domain.model.omop import \
+    VisitOccurrence as VisitOccurrence
 from gen_epix.omopdb.domain.model.omop import Vocabulary as Vocabulary
 from gen_epix.util import add_parent_class_docs
 

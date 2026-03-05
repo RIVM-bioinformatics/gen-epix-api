@@ -18,7 +18,8 @@ import pytest
 from pydantic import ValidationError
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import \
+    ExternalIdentifierForUpload
 from gen_epix.seqdb.domain import model
 
 

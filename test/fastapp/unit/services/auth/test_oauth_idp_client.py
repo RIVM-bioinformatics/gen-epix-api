@@ -12,11 +12,11 @@ import pytest
 
 from gen_epix.fastapp import exc
 from gen_epix.fastapp.enum import AuthProtocol, OAuthFlow
-from gen_epix.fastapp.services.auth.model import Claims, IdentityProvider, OidcServerCfg
+from gen_epix.fastapp.services.auth.model import (Claims, IdentityProvider,
+                                                  OidcServerCfg)
 from gen_epix.fastapp.services.auth.oauth_idp_client import OauthIdpClient
-from gen_epix.fastapp.services.auth.token_introspection_manager import (
-    TokenIntrospectionManager,
-)
+from gen_epix.fastapp.services.auth.token_introspection_manager import \
+    TokenIntrospectionManager
 
 
 class BaseOauthIdpClientTestCase(TestCase):

@@ -3,8 +3,10 @@ from typing import Any
 from sqlalchemy import Engine, select
 
 from gen_epix.commondb.domain import model
-from gen_epix.commondb.domain.repository.organization import BaseOrganizationRepository
-from gen_epix.commondb.repositories.sa_model.organization import User, UserInvitation
+from gen_epix.commondb.domain.repository.organization import \
+    BaseOrganizationRepository
+from gen_epix.commondb.repositories.sa_model.organization import (
+    User, UserInvitation)
 from gen_epix.fastapp import BaseUnitOfWork, CrudOperation, exc
 from gen_epix.fastapp.repositories import SARepository
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork

@@ -4,13 +4,9 @@ from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.seqdb.domain import command, enum, exc, model
 from gen_epix.seqdb.domain.service.seq import BaseSeqService
 from gen_epix.seqdb.services.seq.upload_upsert_batch import (
-    _create_sample_refdata,
-    _update_profile_distances,
-)
+    _create_sample_refdata, _update_profile_distances)
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
-    _verify_sample_children,
-    _verify_sample_refdata,
-)
+    _verify_sample_children, _verify_sample_refdata)
 
 
 class SampleBatchUploader(BatchUploader):

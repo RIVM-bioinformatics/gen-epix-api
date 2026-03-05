@@ -12,11 +12,8 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (
-    OnExistsUploadAction,
-    UploadStatus,
-    UploadStatusSet,
-)
+from gen_epix.commondb.domain.enum import (OnExistsUploadAction, UploadStatus,
+                                           UploadStatusSet)
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
 from gen_epix.fastapp.app import App
@@ -26,10 +23,8 @@ from gen_epix.seqdb.domain.enum import Role
 from gen_epix.seqdb.domain.service import BaseSeqService
 from gen_epix.seqdb.services.seq import SampleBatchUploader
 from gen_epix.seqdb.services.seq.upload_verify_batch import (
-    _verify_children_allele_profiles,
-    _verify_children_seqs,
-    _verify_sample_refdata,
-)
+    _verify_children_allele_profiles, _verify_children_seqs,
+    _verify_sample_refdata)
 
 
 def create_allele_profile_base64(num_alleles: int = 4) -> str:

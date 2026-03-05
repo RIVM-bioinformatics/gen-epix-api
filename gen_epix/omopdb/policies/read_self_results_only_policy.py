@@ -1,9 +1,8 @@
 from typing import Any
 
 from gen_epix.commondb.domain.service import BaseAbacService
-from gen_epix.commondb.policies import (
-    ReadSelfResultsOnlyPolicy as CommonReadSelfResultsOnlyPolicy,
-)
+from gen_epix.commondb.policies import \
+    ReadSelfResultsOnlyPolicy as CommonReadSelfResultsOnlyPolicy
 
 
 class ReadSelfResultsOnlyPolicy(CommonReadSelfResultsOnlyPolicy):

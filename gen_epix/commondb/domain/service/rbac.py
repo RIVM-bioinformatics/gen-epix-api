@@ -5,7 +5,8 @@ from typing import Any
 from gen_epix.commondb.domain import command, enum
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.model import Permission
-from gen_epix.fastapp.services.rbac import BaseRbacService as ServiceBaseRbacService
+from gen_epix.fastapp.services.rbac import \
+    BaseRbacService as ServiceBaseRbacService
 
 
 class BaseRbacService(ServiceBaseRbacService):

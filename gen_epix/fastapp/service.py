@@ -10,13 +10,8 @@ from gen_epix.fastapp import exc
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.domain.link import Link
 from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet, EventTiming
-from gen_epix.fastapp.model import (
-    Command,
-    CrudCommand,
-    Model,
-    UpdateAssociationCommand,
-    User,
-)
+from gen_epix.fastapp.model import (Command, CrudCommand, Model,
+                                    UpdateAssociationCommand, User)
 from gen_epix.fastapp.repository import BaseRepository
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 from gen_epix.filter import CompositeFilter, LogicalOperator

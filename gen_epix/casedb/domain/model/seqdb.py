@@ -7,9 +7,7 @@ from pydantic import Field
 
 from gen_epix.casedb.domain import enum
 from gen_epix.casedb.domain.model.case.reference_data import (
-    GeneticDistanceProtocol,
-    TreeAlgorithm,
-)
+    GeneticDistanceProtocol, TreeAlgorithm)
 from gen_epix.commondb.domain.model.base import Model
 from gen_epix.fastapp import Entity
 from gen_epix.fastapp.domain import Entity

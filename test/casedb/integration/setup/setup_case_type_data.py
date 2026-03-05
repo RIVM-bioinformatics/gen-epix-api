@@ -7,10 +7,7 @@ and all four policy types) for tests.
 import re
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.setup.define_edge_cases import (
-    CASE_TYPE_COL_SETS,
-    CASE_TYPE_SETS,
-    EDGE_CASES,
-)
+    CASE_TYPE_COL_SETS, CASE_TYPE_SETS, EDGE_CASES)
 
 import pytest
 

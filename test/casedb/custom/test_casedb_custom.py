@@ -1,6 +1,7 @@
 import logging
 from test.test_client.app_test_client import ServiceTestClient as Env
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import \
+    TestType as EnumTestType  # to avoid PyTest warning
 from uuid import UUID
 
 import pytest
@@ -8,12 +9,8 @@ import pytest
 import gen_epix.commondb.test.util as test_util
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import (
-    FilterType,
-    LogicalOperator,
-    TypedCompositeFilter,
-    TypedStringSetFilter,
-)
+from gen_epix.filter import (FilterType, LogicalOperator, TypedCompositeFilter,
+                             TypedStringSetFilter)
 
 
 @pytest.fixture(scope="module", name="env")

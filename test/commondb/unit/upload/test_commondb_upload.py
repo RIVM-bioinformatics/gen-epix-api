@@ -85,39 +85,25 @@ combinations thereof:
 8.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
-from test.commondb.unit.upload.model import (
-    Child1ForUpload,
-    Child2,
-    Child2ForUpload,
-    Parent,
-    ParentBatchForUpload,
-    ParentBatchUploader,
-    ParentBatchUploadResult,
-    ParentForUpload,
-    Ref1,
-    Ref2,
-    UploadParentsCommand,
-)
+from test.commondb.unit.upload.model import (Child1ForUpload, Child2,
+                                             Child2ForUpload, Parent,
+                                             ParentBatchForUpload,
+                                             ParentBatchUploader,
+                                             ParentBatchUploadResult,
+                                             ParentForUpload, Ref1, Ref2,
+                                             UploadParentsCommand)
 from unittest import TestCase
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (
-    IdentifierType,
-    OnExistsUploadAction,
-    Role,
-    UploadStatus,
-    UploadStatusSet,
-)
+from gen_epix.commondb.domain.enum import (IdentifierType,
+                                           OnExistsUploadAction, Role,
+                                           UploadStatus, UploadStatusSet)
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifier,
-    ExternalIdentifierForUpload,
-    IdentifierIssuer,
-    User,
-)
+    ExternalIdentifier, ExternalIdentifierForUpload, IdentifierIssuer, User)
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.service import BaseService

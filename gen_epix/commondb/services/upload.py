@@ -6,21 +6,11 @@ from gen_epix.commondb.domain import command, enum, exc, model
 from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
-    BaseBatchForUpload,
-    BaseBatchUploadResult,
-    ExternalIdentifiersMixin,
-    IsNewIdMixin,
-    UploadResult,
-    UploadResultWithExternalIdentifiers,
-)
+    BaseBatchForUpload, BaseBatchUploadResult, ExternalIdentifiersMixin,
+    IsNewIdMixin, UploadResult, UploadResultWithExternalIdentifiers)
 from gen_epix.fastapp import BaseService, BaseUnitOfWork, CrudOperation, Model
-from gen_epix.filter import (
-    CompositeFilter,
-    EqualsNumberFilter,
-    LogicalOperator,
-    StringSetFilter,
-    UuidSetFilter,
-)
+from gen_epix.filter import (CompositeFilter, EqualsNumberFilter,
+                             LogicalOperator, StringSetFilter, UuidSetFilter)
 
 
 class BatchUploader:

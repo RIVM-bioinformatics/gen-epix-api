@@ -17,7 +17,8 @@ from gen_epix.commondb.config import AppCfg, BaseAppCfg
 from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.test.test_client import TestClient
 from gen_epix.fastapp import CrudOperation
-from gen_epix.filter import FilterType, TypedEqualsUuidFilter, TypedUuidSetFilter
+from gen_epix.filter import (FilterType, TypedEqualsUuidFilter,
+                             TypedUuidSetFilter)
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.util import map_paired_elements
 

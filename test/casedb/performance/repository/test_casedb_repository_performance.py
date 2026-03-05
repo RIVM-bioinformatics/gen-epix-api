@@ -4,7 +4,8 @@ import pstats
 import sys
 from pathlib import Path
 from test.casedb.casedb_test_client import CasedbTestClient
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import \
+    TestType as EnumTestType  # to avoid PyTest warning
 
 import pandas as pd
 import pytest

@@ -9,11 +9,9 @@ from uuid import UUID
 from pydantic import Field, field_serializer
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.reference_data import (
-    CaseSetCategory,
-    CaseSetStatus,
-    CaseType,
-)
+from gen_epix.casedb.domain.model.case.reference_data import (CaseSetCategory,
+                                                              CaseSetStatus,
+                                                              CaseType)
 from gen_epix.casedb.domain.model.subject import Subject
 from gen_epix.commondb.domain.model import DataCollection, Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links

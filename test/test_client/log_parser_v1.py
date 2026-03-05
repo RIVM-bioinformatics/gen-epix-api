@@ -3,20 +3,15 @@ import json
 from collections.abc import Iterable
 from datetime import datetime
 from enum import Enum
-from test.test_client.log_parser import AzureColumn, LogCode, LogParser, LogType
+from test.test_client.log_parser import (AzureColumn, LogCode, LogParser,
+                                         LogType)
 from test.test_client.user_journey_v1 import UserJourneyColumn, V1UserJourney
 from typing import Any
 
 import pandas as pd
 
-from gen_epix.filter import (
-    CompositeFilter,
-    Filter,
-    LogicalOperator,
-    NoFilter,
-    RegexFilter,
-    StringSetFilter,
-)
+from gen_epix.filter import (CompositeFilter, Filter, LogicalOperator,
+                             NoFilter, RegexFilter, StringSetFilter)
 
 
 class LogSourceKey(Enum):

@@ -12,18 +12,16 @@ It uses
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_empty import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.casedb.integration.setup.define_edge_cases import EDGE_CASES, EdgeCaseSpec
+    DEV_REPOSITORY_CONFIG, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
+from test.casedb.integration.setup.define_edge_cases import (EDGE_CASES,
+                                                             EdgeCaseSpec)
 
 import pytest
 from rich import print as rich_print
 
 from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command import CaseTypeCrudCommand, CaseTypeSetCrudCommand
+from gen_epix.casedb.domain.command import (CaseTypeCrudCommand,
+                                            CaseTypeSetCrudCommand)
 from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation

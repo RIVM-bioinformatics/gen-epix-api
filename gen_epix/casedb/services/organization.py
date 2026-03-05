@@ -1,7 +1,8 @@
 from typing import Any
 
 from gen_epix.casedb.domain import model
-from gen_epix.commondb.services import OrganizationService as CommonOrganizationService
+from gen_epix.commondb.services import \
+    OrganizationService as CommonOrganizationService
 
 
 class OrganizationService(CommonOrganizationService):

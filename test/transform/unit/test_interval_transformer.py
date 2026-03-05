@@ -9,9 +9,7 @@ import pytest
 from gen_epix.transform.adapter import ObjectAdapter
 from gen_epix.transform.enum import NoMatchStrategy
 from gen_epix.transform.transformers.interval import (
-    IntervalToIntervalTransformer,
-    IntervalTransformer,
-)
+    IntervalToIntervalTransformer, IntervalTransformer)
 
 
 @pytest.mark.scenario_ids("TC-MAIN-12-01")

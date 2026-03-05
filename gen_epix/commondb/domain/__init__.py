@@ -1,8 +1,6 @@
 from gen_epix.commondb.domain.command import COMMANDS_BY_SERVICE_TYPE
-from gen_epix.commondb.domain.model import (
-    SORTED_MODELS_BY_SERVICE_TYPE,
-    SORTED_SERVICE_TYPES,
-)
+from gen_epix.commondb.domain.model import (SORTED_MODELS_BY_SERVICE_TYPE,
+                                            SORTED_SERVICE_TYPES)
 from gen_epix.commondb.domain.util import register_domain_entities
 from gen_epix.fastapp import Domain
 

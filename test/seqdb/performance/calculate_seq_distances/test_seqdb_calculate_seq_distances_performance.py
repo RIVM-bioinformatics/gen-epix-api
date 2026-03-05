@@ -1,27 +1,19 @@
 import logging
 from pathlib import Path
-
-import pyinstrument
 from test.seqdb.performance.calculate_seq_distances.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import (
-    generate_demo_seqdb_models,
-)
-from test.seqdb.performance.common import (
-    create_dict_repository,
-    set_service_repository,
-    write_db_to_pickle,
-)
+    DEV_REPOSITORY_CONFIG, SKIP_ENDPOINTS, TEST_TYPE, VERBOSE)
+from test.seqdb.performance.calculate_seq_distances.generate_seqdb_models import \
+    generate_demo_seqdb_models
+from test.seqdb.performance.common import (create_dict_repository,
+                                           set_service_repository,
+                                           write_db_to_pickle)
 from test.seqdb.seqdb_test_client import SeqdbTestClient as Env
 from test.seqdb.seqdb_test_client import SeqGenerationSettings
 from time import perf_counter
 from typing import Any
 from uuid import UUID
 
+import pyinstrument
 import pytest
 
 from gen_epix.commondb.domain.enum import AppType, UploadStatus

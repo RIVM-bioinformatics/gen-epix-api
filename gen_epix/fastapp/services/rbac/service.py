@@ -3,15 +3,8 @@ from collections.abc import Hashable
 from enum import Enum
 from typing import Any
 
-from gen_epix.fastapp import (
-    App,
-    BaseService,
-    EventTiming,
-    Permission,
-    PermissionType,
-    PermissionTypeSet,
-    exc,
-)
+from gen_epix.fastapp import (App, BaseService, EventTiming, Permission,
+                              PermissionType, PermissionTypeSet, exc)
 from gen_epix.fastapp.model import Command, User
 from gen_epix.fastapp.services.rbac.policy import RbacPolicy
 

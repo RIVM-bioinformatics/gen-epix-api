@@ -9,7 +9,8 @@ from gen_epix.fastapp.enum import CrudEndpointType as CrudEndpointType
 from gen_epix.fastapp.enum import CrudOperation as CrudOperation
 from gen_epix.fastapp.enum import CrudOperationSet as CrudOperationSet
 from gen_epix.fastapp.enum import EventTiming as EventTiming
-from gen_epix.fastapp.enum import ExceptionHandlingMode as ExceptionHandlingMode
+from gen_epix.fastapp.enum import \
+    ExceptionHandlingMode as ExceptionHandlingMode
 from gen_epix.fastapp.enum import FieldType as FieldType
 from gen_epix.fastapp.enum import FieldTypeSet as FieldTypeSet
 from gen_epix.fastapp.enum import HttpMethod as HttpMethod
@@ -28,7 +29,8 @@ from gen_epix.fastapp.model import ModelFieldProps as ModelFieldProps
 from gen_epix.fastapp.model import Permission as Permission
 from gen_epix.fastapp.model import Policy as Policy
 from gen_epix.fastapp.model import Role as Role
-from gen_epix.fastapp.model import UpdateAssociationCommand as UpdateAssociationCommand
+from gen_epix.fastapp.model import \
+    UpdateAssociationCommand as UpdateAssociationCommand
 from gen_epix.fastapp.model import User as User
 from gen_epix.fastapp.pdp import PolicyDecisionPoint as PolicyDecisionPoint
 from gen_epix.fastapp.remote_app import RemoteApp as RemoteApp

@@ -1,8 +1,8 @@
 from typing import Any
 
-from gen_epix.commondb.policies import (
-    ReadOrganizationResultsOnlyPolicy as CommonReadOrganizationResultsOnlyPolicy,
-)
+from gen_epix.commondb.policies import \
+    ReadOrganizationResultsOnlyPolicy as \
+    CommonReadOrganizationResultsOnlyPolicy
 from gen_epix.omopdb.domain.service import BaseAbacService
 
 

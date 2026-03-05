@@ -3,7 +3,8 @@ from uuid import UUID
 
 import gen_epix.casedb.domain.model.ontology as model
 from gen_epix.casedb.domain import enum
-from gen_epix.commondb.domain.command import CrudCommand, UpdateAssociationCommand
+from gen_epix.commondb.domain.command import (CrudCommand,
+                                              UpdateAssociationCommand)
 
 # Non-CRUD
 

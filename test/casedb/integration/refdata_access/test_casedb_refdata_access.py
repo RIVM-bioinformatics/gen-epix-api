@@ -1,11 +1,8 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.refdata_access.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
+from test.casedb.integration.refdata_access.base import (DEV_REPOSITORY_CONFIG,
+                                                         SKIP_ENDPOINTS,
+                                                         TEST_TYPE, VERBOSE)
 from uuid import UUID
 
 import pytest

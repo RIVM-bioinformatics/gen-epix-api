@@ -1,6 +1,7 @@
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.test_client.enum import TestType as EnumTestType  # to avoid PyTest warning
+from test.test_client.enum import \
+    TestType as EnumTestType  # to avoid PyTest warning
 from typing import Iterable
 from uuid import UUID
 
@@ -14,7 +15,8 @@ from gen_epix.commondb.domain.enum import Role as CommonRole
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation, PermissionType
 from gen_epix.fastapp.model import Permission
-from gen_epix.filter import LogicalOperator, TypedCompositeFilter, TypedStringSetFilter
+from gen_epix.filter import (LogicalOperator, TypedCompositeFilter,
+                             TypedStringSetFilter)
 from gen_epix.seqdb.domain import enum as seqdb_enum
 from gen_epix.seqdb.domain import model as seqdb_model
 
