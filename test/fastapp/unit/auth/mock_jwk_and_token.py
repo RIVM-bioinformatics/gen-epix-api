@@ -8,7 +8,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 
 class MockJWKAndToken:
-    def __init__(self, token_expiration_minutes: int, token_iat_minutes_ago: int = 0) -> None:
+    def __init__(
+        self, token_expiration_minutes: int, token_iat_minutes_ago: int = 0
+    ) -> None:
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,

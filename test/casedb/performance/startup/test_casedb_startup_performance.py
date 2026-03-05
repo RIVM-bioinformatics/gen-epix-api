@@ -22,12 +22,12 @@ class TestStartup:
         profiler.start()
 
         from test.test_client.app_test_client import ServiceTestClient
-
-        from gen_epix.casedb.domain import enum
-        from gen_epix.casedb.domain.enum import RepositoryType
         from test.test_client.enum import (
             TestType as EnumTestType,  # to avoid pytest warning
         )
+
+        from gen_epix.casedb.domain import enum
+        from gen_epix.casedb.domain.enum import RepositoryType
 
         repository_type = RepositoryType.DICT
         _ = ServiceTestClient.get_test_client(
@@ -41,11 +41,11 @@ class TestStartup:
     def test_startup_cprofile(self) -> None:
         with cProfile.Profile() as profiler:
             from test.test_client.app_test_client import ServiceTestClient
-
-            from gen_epix.casedb.domain.enum import RepositoryType
             from test.test_client.enum import (
                 TestType as EnumTestType,  # to avoid pytest warning
             )
+
+            from gen_epix.casedb.domain.enum import RepositoryType
 
             repository_type = RepositoryType.SA_SQLITE
             _ = ServiceTestClient.get_test_client(
@@ -65,11 +65,11 @@ class TestStartup:
     @classmethod
     def tearDownClass(cls) -> None:
         from test.test_client.app_test_client import ServiceTestClient
-
-        from gen_epix.casedb.domain.enum import RepositoryType
         from test.test_client.enum import (
             TestType as EnumTestType,  # to avoid pytest warning
         )
+
+        from gen_epix.casedb.domain.enum import RepositoryType
 
         test_dir = ServiceTestClient.get_test_client(
             test_type=EnumTestType.CASEDB_PERFORMANCE_STARTUP,
