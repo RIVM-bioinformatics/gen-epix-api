@@ -10,7 +10,6 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult,
     DataIssue,
     ExternalIdentifiersMixin,
-    IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -25,7 +24,7 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 from gen_epix.util import copy_model_field
 
 
-class MeasurementForUpload(Measurement, IsNewIdMixin):
+class MeasurementForUpload(Measurement):
     """
     An measurement record intended for upload. Equal to a Measurement, with
     additional variables.
@@ -44,7 +43,7 @@ class MeasurementForUpload(Measurement, IsNewIdMixin):
     )
 
 
-class ObservationForUpload(Observation, IsNewIdMixin):
+class ObservationForUpload(Observation):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables.
@@ -63,7 +62,7 @@ class ObservationForUpload(Observation, IsNewIdMixin):
     )
 
 
-class SpecimenForUpload(Specimen, IsNewIdMixin, ExternalIdentifiersMixin):
+class SpecimenForUpload(Specimen, ExternalIdentifiersMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables.
@@ -83,7 +82,7 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ExternalIdentifiersMixin):
     )
 
 
-class MeasurementRelationForUpload(MeasurementRelation, IsNewIdMixin):
+class MeasurementRelationForUpload(MeasurementRelation):
     """
     A measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.

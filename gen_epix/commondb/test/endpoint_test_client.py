@@ -219,7 +219,12 @@ class EndpointTestClient:
     def get_headers(self, cmd: Command, **kwargs: Any) -> dict[str, str] | None:
         if cmd.user:
             assert cmd.user is not None
-            headers = self.get_dummy_jwt_header(cmd.user.get_key())
+            key_or_email = cmd.user.get_key() or cmd.user.email  # type: ignore[attr-defined]
+            if not key_or_email:
+                raise ValueError(
+                    "Unable to build authorization header: user has neither key nor email"
+                )
+            headers = self.get_dummy_jwt_header(key_or_email)
         else:
             headers = None
         return headers

@@ -13,7 +13,6 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
-    IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -24,7 +23,7 @@ from gen_epix.seqdb.domain import model as seqdb_model
 from gen_epix.util import copy_model_field
 
 
-class ReadSetForUpload(Model, IsNewIdMixin):
+class ReadSetForUpload(Model):
     """
     A single read set to be uploaded and associated with both an existing case in
     casedb and a potentially existing sample in seqdb.
@@ -77,7 +76,7 @@ class ReadSetForUpload(Model, IsNewIdMixin):
         return str(value) if value is not None else None
 
 
-class SeqForUpload(Model, IsNewIdMixin):
+class SeqForUpload(Model):
     """
     A single sequence to be uploaded and associated with both an existing case in
     casedb and a potentially existing sample in seqdb.

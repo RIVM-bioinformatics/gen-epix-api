@@ -1,3 +1,8 @@
+from typing import Any
+
+import pytest
+
+from gen_epix.casedb.domain import enum, exc, model
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
@@ -9,11 +14,6 @@ from test.casedb.integration.build_db.base import (
     SKIP_RAISE,
 )
 from test.omopdb.integration.build_db.base import ROOT
-from typing import Any
-
-import pytest
-
-from gen_epix.casedb.domain import enum, exc, model
 
 
 @pytest.mark.scenario_ids(
@@ -53,11 +53,18 @@ class TestCreate:
 
     def test_create_user_additional_root(self, env: Env) -> None:
         # Create additional root user, including in a different organization
-        env.invite_and_register_user("root1_1", "root1_2")
+        assert (
+            env.invite_and_register_user("root1_1", "root1_2").key == "root1_2@org1.org"
+        )
         env.create_organization("root1_2", "org2")
         env.create_organization("root1_2", "org3")
-        env.invite_and_register_user("root1_2", "root2_1")
-        env.invite_and_register_user("root1_2", "root2_2")
+        keyless_user = env.invite_and_register_user("root1_2", "root2_1", set_key=False)
+        assert keyless_user.email == "root2_1@org2.org"
+        if env.use_endpoints:
+            assert keyless_user.key == "root2_1@org2.org"
+        else:
+            assert keyless_user.key is None
+        env.invite_and_register_user("root1_2", "root2_2", set_key=False)
 
     def test_create_user_app_admin(self, env: Env) -> None:
         # Create invitations for app_admin as root

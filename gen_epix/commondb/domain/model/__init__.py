@@ -54,7 +54,6 @@ from gen_epix.commondb.domain.model.upload import DataIssue as DataIssue
 from gen_epix.commondb.domain.model.upload import (
     ExternalIdentifiersMixin as ExternalIdentifiersMixin,
 )
-from gen_epix.commondb.domain.model.upload import IsNewIdMixin as IsNewIdMixin
 from gen_epix.commondb.domain.model.upload import ParentForUpload as ParentForUpload
 from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult as ParentUploadResult,

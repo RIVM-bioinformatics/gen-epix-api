@@ -2,7 +2,7 @@ from collections import defaultdict
 from uuid import UUID
 
 from gen_epix import fastapp
-from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
+from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.services import BatchUploader
 from gen_epix.filter.uuid_set import UuidSetFilter
@@ -87,6 +87,9 @@ def _verify_children_seqs(
             # Sample does not exist
             continue
         for seq, seq_result in zip(sample.seqs or [], sample_result.seqs or []):
+            if seq_result.status == UploadStatus.SKIPPED:
+                # Seq is already marked as skipped, no need to verify
+                continue
             existing_seq_data = key_map.get((sample.id, seq.seq_hash))
             if existing_seq_data is None:
                 # No existing seq with this hash for this sample
@@ -110,17 +113,6 @@ def _verify_children_seqs(
                         f"Seq with same hash ({seq.seq_hash}), read sets and assembly protocol already exists",
                     )
                     seq_result.status = UploadStatus.SKIPPED
-                    if cmd.on_exists == OnExistsUploadAction.ERROR:
-                        success = False
-                        seq_result.add_error(
-                            "b4c5d6e7",
-                            f"{seq.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
-                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
-                        seq_result.add_info(
-                            "7a9f4c2e",
-                            f"{seq.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
                     break
                 if seq.read_set_id is None and seq.read_set2_id is None:
                     # New seq with same hash but unknown read sets -> error since
@@ -213,6 +205,9 @@ def _verify_children_allele_profiles(
         for allele_profile, allele_profile_result in zip(
             sample.allele_profiles or [], sample_result.allele_profiles or []
         ):
+            if allele_profile_result.status == UploadStatus.SKIPPED:
+                # Allele profile is already marked as skipped, no need to verify
+                continue
             existing_allele_profile_data = key_map.get(
                 (sample.id, allele_profile.allele_profile_hash)
             )
@@ -244,17 +239,6 @@ def _verify_children_allele_profiles(
                         f"Allele profile with same hash ({allele_profile.allele_profile_hash}), seq and assembly protocol already exists",
                     )
                     allele_profile_result.status = UploadStatus.SKIPPED
-                    if cmd.on_exists == OnExistsUploadAction.ERROR:
-                        success = False
-                        allele_profile_result.add_error(
-                            "d8a3b7f4",
-                            f"{allele_profile.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
-                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
-                        allele_profile_result.add_info(
-                            "e4f2a1b3",
-                            f"{allele_profile.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
-                        )
                     break
                 if allele_profile.seq_id is None:
                     # New allele profile with same hash but unknown read sets -> error since

@@ -1,9 +1,3 @@
-from uuid import UUID
-
-import pytest
-
-from gen_epix.casedb.domain import command, exc, model
-from gen_epix.commondb.domain.model import OrganizationContacts
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     DATA_USERS,
@@ -12,6 +6,12 @@ from test.casedb.integration.build_db.base import (
     ROOT,
     SKIP_RAISE,
 )
+from uuid import UUID
+
+import pytest
+
+from gen_epix.casedb.domain import command, exc, model
+from gen_epix.commondb.domain.model import OrganizationContacts
 
 
 @pytest.mark.scenario_ids(

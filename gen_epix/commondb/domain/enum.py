@@ -67,9 +67,10 @@ class IdentifierType(IntEnum):
     GENETIC_SEQUENCE = 6
 
 
-class OnExistsUploadAction(Enum):
+class UploadAction(Enum):
     ERROR = "ERROR"
     UPDATE = "UPDATE"
+    CREATE = "CREATE"
     SKIP = "SKIP"
 
 
