@@ -8,9 +8,7 @@ The tests handle all of the following upload scenarios, as well as any relevant
 combinations thereof:
 1 Existence of parent and/or child objects in the repository
 1.1 ID not provided or NULL_ID: object does not exist and needs to be created
-1.2 ID provided and is_new_id=True
-1.2.1 Object with this ID does not exist: error
-1.2.2 Object with this ID exists: needs to be created with that ID
+1.2 ID provided by batch creator (new_id): object does not (yet) exist in the repository — create with that ID
 2 Provision of child objects (all need to be created/updated)
 2.1 Parent without any Child1 or Child2 objects
 2.2 Parent with Child1 objects only
@@ -19,7 +17,7 @@ combinations thereof:
 3 Links to reference data in child objects
 3.1 Child object with reference data model ID (any except NULL_ID) and no code
 3.1.1 Reference model ID not found: error
-3.1.1 Reference model ID found: no issue
+3.1.2 Reference model ID found: no issue
 3.2 Child object with reference data model code and no ID (or NULL_ID)
 3.2.1 Reference model code not found: error
 3.2.2 Reference model code found: set reference model ID in Child object
@@ -67,22 +65,25 @@ combinations thereof:
 7.1 ERROR: error if any existing object
 7.2 SKIP: skip any existing object, do not update
 7.3 UPDATE: update any existing object
-8 External identifiers for Child2 objects (use IdentifierType=SAMPLE for testing purposes)
-8.1 No external identifiers provided: no issue
-8.2 One external identifier provided
-8.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
-8.2.1.1 Child2 ID None or NULL_ID: set child2 ID in upload result
-8.2.1.2 Child2 ID provided
-8.2.1.2.1 Same as existing external identifiers' child2 ID: no issue
-8.2.1.2.2 Different from existing external identifiers' child2 ID: error
-8.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this child2: create new external identifier once child2 ID is known
-8.2.3 Multiple external identifiers provided
-8.2.3.1 Some existing external identifiers: must all point to the same child2 ID AND same restrictions as 8.2 per external identifier
-8.2.3.2 All new external identifiers: create new external identifiers once child2 ID is known
-8.3 Identifier issuer invalid
-8.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
-8.3.2 Identifier issuer code provided and not found: error
-8.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
+8 Parametrized batch sizes
+8.1 Batch of n new parent objects
+8.2 Parent with n child objects
+9 External identifiers for Child2 objects (use IdentifierType=SAMPLE for testing purposes)
+9.1 No external identifiers provided: no issue
+9.2 One external identifier provided
+9.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
+9.2.1.1 Child2 ID None or NULL_ID: set child2 ID in upload result
+9.2.1.2 Child2 ID provided
+9.2.1.2.1 Same as existing external identifiers' child2 ID: no issue
+9.2.1.2.2 Different from existing external identifiers' child2 ID: error
+9.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this child2: create new external identifier once child2 ID is known
+9.2.3 Multiple external identifiers provided
+9.2.3.1 Some existing external identifiers: must all point to the same child2 ID AND same restrictions as 9.2 per external identifier
+9.2.3.2 All new external identifiers: create new external identifiers once child2 ID is known
+9.3 Identifier issuer invalid
+9.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
+9.3.2 Identifier issuer code provided and not found: error
+9.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
 from test.commondb.unit.upload.model import (
@@ -487,12 +488,10 @@ class Test1ObjectExistence(BaseUploadTestCase):
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.parents[0].id, created_parent_id)
 
-    def test_1_2_1_parent_id_provided_new_id_but_not_exists_succeeds(self) -> None:
-        """Test 1.2.1: Object with this ID and is_new_id does not exist - should succeed."""
+    def test_1_2_parent_id_provided_as_new_id_succeeds(self) -> None:
+        """Test 1.2: ID provided by batch creator (new_id); object does not exist yet - should be created with that ID."""
         # Create upload batch
-        parent_for_upload = self.create_parent_for_upload(
-            parent_id=self.parent_id, is_new_id=True
-        )
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
         self.service.repository.crud.side_effect = [
             [False],  # Parents exist
@@ -503,21 +502,6 @@ class Test1ObjectExistence(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.parents[0].id, parent_for_upload.id)
-
-    def test_1_2_2_parent_id_provided_new_id_and_exists_fails(self) -> None:
-        """Test 1.2.2: Object with this ID and is_new_id=True exists - should fail."""
-        # Create upload batch
-        parent_for_upload = self.create_parent_for_upload(
-            parent_id=self.parent_id, is_new_id=True
-        )
-        # Set up mocks
-        self.service.repository.crud.side_effect = [
-            [True],  # Parents exist
-        ]
-        # Perform upload and verify result
-        batch_result = self.upload_batch(parent_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # Test Scenario 2: Provision of child objects
@@ -853,7 +837,7 @@ class Test4ParentLinks(BaseUploadTestCase):
             parent_id=self.parent_id, ref1_id=existing_ref1.id  # type: ignore[arg-type]
         )
         parent_for_upload = self.create_parent_for_upload(
-            parent_id=self.parent_id, is_new_id=True, children1=[child1_for_upload]
+            parent_id=self.parent_id, children1=[child1_for_upload]
         )
         parent_for_upload.id = self.random_ids[1]  # Different ID than child's parent_id
         # Set up mocks
@@ -1416,13 +1400,68 @@ class Test7OnExistsActions(BaseUploadTestCase):
         self.assertStatusCount(batch_result, n_updated=1)
 
 
-# Test Scenario 8: External identifiers for Child2 objects
+# Test Scenario 8: Parameterized batch sizes
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
+class Test8ParameterizedBatchSizes(BaseUploadTestCase):
+    """Test upload with varying batch sizes."""
+
+    def test_8_batch_of_n_new_parents(self) -> None:
+        """Test 8.1: Upload batch of n new parent objects."""
+        for n_parents in [1, 3, 5]:
+            with self.subTest(n_parents=n_parents):
+                self.setUp()  # Reset mocks for each subtest
+                parents_for_upload = [
+                    self.create_parent_for_upload() for _ in range(n_parents)
+                ]
+                created_ids = self.random_ids[:n_parents]
+                self.service.repository.crud.side_effect = [
+                    created_ids,  # CREATE_SOME: create parents returns IDs
+                ]
+                batch_result = self.upload_batch(parents_for_upload)
+                self.assertBatchProcessed(batch_result)
+                self.assertStatusCount(batch_result, n_created=n_parents)
+                for i, created_id in enumerate(created_ids):
+                    self.assertEqual(batch_result.parents[i].id, created_id)
+
+    def test_8_parent_with_n_children(self) -> None:
+        """Test 8.2: Upload parent with varying number of Child1 objects."""
+        ref1_code = "test_ref1_code"
+        for n_children in [0, 1, 3]:
+            with self.subTest(n_children=n_children):
+                self.setUp()  # Reset mocks for each subtest
+                children1 = [
+                    self.create_child1_for_upload(ref1_code=ref1_code)
+                    for _ in range(n_children)
+                ]
+                parent_for_upload = self.create_parent_for_upload(
+                    children1=children1 if children1 else None,
+                )
+                created_parent_id = self.random_ids[0]
+                created_child_ids = self.random_ids[1 : 1 + n_children]
+                crud_side_effects: list[list] = [
+                    [created_parent_id],  # CREATE_SOME: create parent returns ID
+                ]
+                if n_children > 0:
+                    crud_side_effects.append(
+                        created_child_ids
+                    )  # CREATE_SOME: create children returns IDs
+                self.service.repository.crud.side_effect = crud_side_effects
+                if n_children > 0:
+                    self.service.repository.read_fields.side_effect = [
+                        [(self.ref1_id, ref1_code)],  # Resolve Ref1 by code
+                    ]
+                batch_result = self.upload_batch(parent_for_upload)
+                self.assertBatchProcessed(batch_result)
+                self.assertStatusCount(batch_result, n_created=1 + n_children)
+
+
+# Test Scenario 9: External identifiers for Child2 objects
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class Test9Child2ExternalIdentifiers(BaseUploadTestCase):
     """Test scenarios related to external identifiers for Child2 objects."""
 
-    def test_8_1_no_external_ids_provided(self) -> None:
-        """Test 8.1: No external identifiers provided for Child2 - should succeed."""
+    def test_9_1_no_external_ids_provided(self) -> None:
+        """Test 9.1: No external identifiers provided for Child2 - should succeed."""
         # Create upload batch with Child2 that has no external identifiers
         child2_for_upload = self.create_child2_for_upload(
             ref2_id=None, ref2_code=None, external_identifiers=None
@@ -1444,8 +1483,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2)
 
-    def test_8_2_1_1_existing_external_id_null_child2_sets_id(self) -> None:
-        """Test 8.2.1.1: Existing external identifier with NULL child2 ID - should set child2 ID."""
+    def test_9_2_1_1_existing_external_id_null_child2_sets_id(self) -> None:
+        """Test 9.2.1.1: Existing external identifier with NULL child2 ID - should set child2 ID."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
@@ -1494,8 +1533,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
         self.assertEqual(batch_result.parents[0].children2[0].id, existing_child2_id)  # type: ignore[index]
 
-    def test_8_2_1_2_1_existing_external_id_same_child2_succeeds(self) -> None:
-        """Test 8.2.1.2.1: Existing external identifier with same child2 ID - should succeed."""
+    def test_9_2_1_2_1_existing_external_id_same_child2_succeeds(self) -> None:
+        """Test 9.2.1.2.1: Existing external identifier with same child2 ID - should succeed."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
@@ -1546,8 +1585,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1, n_skipped=2)
 
-    def test_8_2_1_2_2_existing_external_id_different_child2_fails(self) -> None:
-        """Test 8.2.1.2.2: Existing external identifier with different child2 ID - should fail."""
+    def test_9_2_1_2_2_existing_external_id_different_child2_fails(self) -> None:
+        """Test 9.2.1.2.2: Existing external identifier with different child2 ID - should fail."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
@@ -1586,8 +1625,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
-    def test_8_2_2_new_external_id_new_child2(self) -> None:
-        """Test 8.2.2: New external identifier for new child2 - should succeed."""
+    def test_9_2_2_new_external_id_new_child2(self) -> None:
+        """Test 9.2.2: New external identifier for new child2 - should succeed."""
         # Create upload batch
         external_identifier_for_upload = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
@@ -1626,8 +1665,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
             created_external_identifier_id,
         )
 
-    def test_8_2_3_1_multiple_external_ids_some_existing_same_child2(self) -> None:
-        """Test 8.2.3.1: Multiple external IDs, some existing for same child2 - should succeed."""
+    def test_9_2_3_1_multiple_external_ids_some_existing_same_child2(self) -> None:
+        """Test 9.2.3.1: Multiple external IDs, some existing for same child2 - should succeed."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
             external_id="ext_id_1"
@@ -1698,8 +1737,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=2, n_skipped=1, n_pending=1)
 
-    def test_8_2_3_1_multiple_external_ids_some_existing_different_child2(self) -> None:
-        """Test 8.2.3.1: Multiple external IDs, some existing for different child2 - should fail."""
+    def test_9_2_3_1_multiple_external_ids_some_existing_different_child2(self) -> None:
+        """Test 9.2.3.1: Multiple external IDs, some existing for different child2 - should fail."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
             external_id="ext_id_1", identifier_issuer_id=self.random_ids[2]
@@ -1738,8 +1777,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=3)
 
-    def test_8_2_3_2_multiple_external_ids_all_new_same_issuer(self) -> None:
-        """Test 8.2.3.2: Multiple external IDs all new but same issuer - should fail."""
+    def test_9_2_3_2_multiple_external_ids_all_new_same_issuer(self) -> None:
+        """Test 9.2.3.2: Multiple external IDs all new but same issuer - should fail."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
             external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
@@ -1754,8 +1793,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
                 external_identifiers=[external_identifier1, external_identifier2],
             )
 
-    def test_8_2_3_2_multiple_external_ids_all_new_different_issuer(self) -> None:
-        """Test 8.2.3.2: Multiple external IDs all new and different issuer - should succeed."""
+    def test_9_2_3_2_multiple_external_ids_all_new_different_issuer(self) -> None:
+        """Test 9.2.3.2: Multiple external IDs all new and different issuer - should succeed."""
         # Create upload batch
         external_identifier1 = self.create_external_identifier_for_upload(
             external_id="new_ext_id_1", identifier_issuer_id=self.identifier_issuer_id
@@ -1802,8 +1841,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=4)
 
-    def test_8_3_1_identifier_issuer_id_not_found(self) -> None:
-        """Test 8.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
+    def test_9_3_1_identifier_issuer_id_not_found(self) -> None:
+        """Test 9.3.1: Identifier issuer ID (any except NULL_ID) provided and not found - should fail."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.random_ids[0]
@@ -1826,8 +1865,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
-    def test_8_3_2_identifier_issuer_code_not_found(self) -> None:
-        """Test 8.3.2: Identifier issuer code provided and not found - should fail."""
+    def test_9_3_2_identifier_issuer_code_not_found(self) -> None:
+        """Test 9.3.2: Identifier issuer code provided and not found - should fail."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=NULL_ID, identifier_issuer_code="nonexistent_code"
@@ -1850,8 +1889,8 @@ class Test8Child2ExternalIdentifiers(BaseUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1, n_pending=2)
 
-    def test_8_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
-        """Test 8.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
+    def test_9_3_3_identifier_issuer_id_and_code_mismatch(self) -> None:
+        """Test 9.3.3: Both identifier issuer ID and code provided but do not match - should fail."""
         # Create upload batch
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,

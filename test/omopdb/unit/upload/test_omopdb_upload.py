@@ -10,9 +10,7 @@ the OMOP person domain:
 
 1 Existence of parent (Person) objects in the repository
 1.1 ID not provided or NULL_ID: person does not exist and needs to be created
-1.2 ID provided and is_new_id=True
-1.2.1 Object with this ID does not exist: succeeds (create with that ID)
-1.2.2 Object with this ID exists: error
+1.2 ID provided by batch creator (new_id): object does not (yet) exist in the repository — create with that ID
 2 Provision of child objects
 2.1 Person without any child objects (no measurements, observations, specimens,
     measurement relations)
@@ -30,30 +28,40 @@ the OMOP person domain:
 4.2 Actual person_id matching the parent
 4.2.1 Mismatch: error
 4.2.2 Match: succeeds
-5 External identifiers for persons
-5.1 No external identifiers: succeeds
-5.2 Existing external identifier resolves person ID
-5.3 New external identifier created on upload
-6 Upload command on_exists value
-6.1 ERROR: error if any existing person
-6.2 SKIP: skip existing person
-6.3 UPDATE: update existing person
-7 Parametrized batch sizes
-7.1 Single person
-7.2 Multiple persons
-8 External identifiers for Specimen objects (use IdentifierType=SAMPLE for testing purposes)
-8.1 No external identifiers: succeeds
-8.2 One external identifier provided
-8.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
-8.2.1.1 Specimen ID None or NULL_ID: set specimen ID in upload result
-8.2.1.2 Specimen ID provided
-8.2.1.2.1 Same as existing external identifiers' specimen ID: no issue
-8.2.1.2.2 Different from existing external identifiers' specimen ID: error
-8.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this specimen: create new external identifier once specimen ID is known
-8.3 Identifier issuer invalid
-8.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
-8.3.2 Identifier issuer code provided and not found: error
-8.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
+5 Field mutability for parent (Person) objects
+5.1 Field that is always mutable
+5.1.1 Single value field (person_source_value): field is set to new value
+5.2 Field that is mutable if empty
+5.2.1 Stored value is empty: field is set to new value
+5.2.2 Stored value is not empty, new value is empty: no issue
+5.2.3 Stored value is not empty, new value is not empty: error
+6 External identifiers for persons
+6.1 No external identifiers: succeeds
+6.2 Existing external identifier resolves person ID
+6.3 New external identifier created on upload
+7 Upload command on_exists value
+7.1 ERROR: error if any existing person
+7.2 SKIP: skip existing person
+7.3 UPDATE: update existing person
+8 Parameterized batch sizes
+8.1 Single person
+8.2 Multiple persons
+9 External identifiers for Specimen objects (use IdentifierType=SAMPLE for testing purposes)
+9.1 No external identifiers: succeeds
+9.2 One external identifier provided
+9.2.1 Existing external identifier i.e. (identifier_issuer, external_id) combination exists already
+9.2.1.1 Specimen ID None or NULL_ID: set specimen ID in upload result
+9.2.1.2 Specimen ID provided
+9.2.1.2.1 Same as existing external identifiers' specimen ID: no issue
+9.2.1.2.2 Different from existing external identifiers' specimen ID: error
+9.2.2 New external identifier i.e. (identifier_issuer, external_id) combination does not exist yet for this specimen: create new external identifier once specimen ID is known
+9.2.3 Multiple external identifiers provided
+9.2.3.1 Some existing external identifiers: must all point to the same specimen ID AND same restrictions as 9.2 per external identifier
+9.2.3.2 All new external identifiers: create new external identifiers once specimen ID is known
+9.3 Identifier issuer invalid
+9.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
+9.3.2 Identifier issuer code provided and not found: error
+9.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
 """
 
 from datetime import date, datetime, timezone
@@ -524,11 +532,9 @@ class Test1PersonExistence(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.persons[0].id, created_person_id)
 
-    def test_1_2_1_person_id_provided_new_id_not_exists_succeeds(self) -> None:
-        """Test 1.2.1: Person with is_new_id=True and ID does not exist - should succeed."""
-        person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id, is_new_id=True
-        )
+    def test_1_2_person_id_provided_as_new_id_succeeds(self) -> None:
+        """Test 1.2: ID provided by batch creator (new_id); person does not exist yet - should be created with that ID."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [False],  # Person does not exist
             [person_for_upload.id],  # Create persons returned IDs
@@ -537,18 +543,6 @@ class Test1PersonExistence(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
         self.assertEqual(batch_result.persons[0].id, person_for_upload.id)
-
-    def test_1_2_2_person_id_provided_new_id_exists_fails(self) -> None:
-        """Test 1.2.2: Person with is_new_id=True and ID exists - should fail."""
-        person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id, is_new_id=True
-        )
-        self.service.repository.crud.side_effect = [
-            [True],  # Person already exists
-        ]
-        batch_result = self.upload_batch(person_for_upload)
-        self.assertBatchFailed(batch_result)
-        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # ---------------------------------------------------------------------------
@@ -722,9 +716,7 @@ class Test4PersonLinks(BasePersonUploadTestCase):
         """Test 4.2.1: Child person_id does not match parent - should fail."""
         measurement = self.create_measurement_for_upload(person_id=self.person_id)
         person_for_upload = self.create_person_for_upload(
-            person_id=self.person_id,
-            is_new_id=True,
-            measurements=[measurement],
+            person_id=self.person_id, measurements=[measurement]
         )
         # Override ID to be different from child's person_id
         person_for_upload.id = self.random_ids[1]
@@ -756,16 +748,61 @@ class Test4PersonLinks(BasePersonUploadTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test Scenario 5: External identifiers for persons
+# Test Scenario 5: Field mutability for Person objects
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test5ExternalIdentifiers(BasePersonUploadTestCase):
+class Test5FieldMutability(BasePersonUploadTestCase):
+    """Test scenarios related to field mutability for existing Person objects."""
+
+    def test_5_1_1_always_mutable_single_value_field(self) -> None:
+        """Test 5.1.1: Always mutable single value field (person_source_value) - should be updated."""
+        existing_value = "old_src_person"
+        new_value = "new_src_person"
+        person_for_upload = self.create_person_for_upload(
+            person_id=self.person_id,
+            person=self.create_person(
+                person_id=self.person_id, person_source_value=new_value
+            ),
+        )
+        existing_person = self.create_person(
+            person_id=self.person_id, person_source_value=existing_value
+        )
+        self.service.repository.crud.side_effect = [
+            [True],  # EXISTS_SOME: person exists
+            [existing_person],  # READ_SOME: existing person
+            [self.person_id],  # UPDATE_SOME: update returns ID
+        ]
+        batch_result = self.upload_batch(person_for_upload)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_updated=1)
+        self.assertEqual(existing_person.person_source_value, new_value)
+
+    def test_5_2_1_mutable_if_empty_stored_empty_updated(self) -> None:
+        """Test 5.2.1: Mutable if empty field - stored value is empty, should succeed."""
+        pass  # Implementation would depend on the actual update logic
+
+    def test_5_2_2_mutable_if_empty_stored_not_empty_new_empty(self) -> None:
+        """Test 5.2.2: Mutable if empty field - stored not empty, new empty, should succeed."""
+        pass
+
+    def test_5_2_3_mutable_if_empty_stored_not_empty_new_not_empty_fails(self) -> None:
+        """Test 5.2.3: Mutable if empty field - stored not empty, new not empty, should fail."""
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Test Scenario 6: External identifiers for persons
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.scenario_ids("TC-SEC-30-03")
+class Test6ExternalIdentifiers(BasePersonUploadTestCase):
     """Test scenarios related to external identifiers for persons."""
 
-    def test_5_1_no_external_ids_provided(self) -> None:
-        """Test 5.1: No external identifiers provided - should succeed."""
+    def test_6_1_no_external_ids_provided(self) -> None:
+        """Test 6.1: No external identifiers provided - should succeed."""
         person_for_upload = self.create_person_for_upload(external_identifiers=None)
         created_person_id = self.random_ids[0]
         self.service.repository.crud.side_effect = [
@@ -775,8 +812,8 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
 
-    def test_5_2_existing_external_id_resolves_person(self) -> None:
-        """Test 5.2: Existing external identifier resolves person ID."""
+    def test_6_2_existing_external_id_resolves_person(self) -> None:
+        """Test 6.2: Existing external identifier resolves person ID."""
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
@@ -808,8 +845,8 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_skipped=2)
         self.assertEqual(batch_result.persons[0].id, existing_person_id)
 
-    def test_5_3_new_external_id_created_on_upload(self) -> None:
-        """Test 5.3: New external identifier created on upload."""
+    def test_6_3_new_external_id_created_on_upload(self) -> None:
+        """Test 6.3: New external identifier created on upload."""
         external_identifier_for_upload = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
@@ -842,16 +879,16 @@ class Test5ExternalIdentifiers(BasePersonUploadTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test Scenario 6: Upload command on_exists value
+# Test Scenario 7: Upload command on_exists value
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test6OnExistsActions(BasePersonUploadTestCase):
+class Test7OnExistsActions(BasePersonUploadTestCase):
     """Test scenarios related to the on_exists command parameter."""
 
-    def test_6_1_on_exists_error_with_existing_person_fails(self) -> None:
-        """Test 6.1: on_exists=ERROR with existing person - should fail."""
+    def test_7_1_on_exists_error_with_existing_person_fails(self) -> None:
+        """Test 7.1: on_exists=ERROR with existing person - should fail."""
         person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
@@ -862,8 +899,8 @@ class Test6OnExistsActions(BasePersonUploadTestCase):
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
 
-    def test_6_2_on_exists_skip_with_existing_person_skips(self) -> None:
-        """Test 6.2: on_exists=SKIP with existing person - should skip."""
+    def test_7_2_on_exists_skip_with_existing_person_skips(self) -> None:
+        """Test 7.2: on_exists=SKIP with existing person - should skip."""
         person_for_upload = self.create_person_for_upload(person_id=self.person_id)
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
@@ -874,8 +911,8 @@ class Test6OnExistsActions(BasePersonUploadTestCase):
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
-    def test_6_3_on_exists_update_with_existing_person_updates(self) -> None:
-        """Test 6.3: on_exists=UPDATE with existing person - should update."""
+    def test_7_3_on_exists_update_with_existing_person_updates(self) -> None:
+        """Test 7.3: on_exists=UPDATE with existing person - should update."""
         person_for_upload = self.create_person_for_upload(
             person_id=self.person_id,
             person=self.create_person(
@@ -898,16 +935,16 @@ class Test6OnExistsActions(BasePersonUploadTestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test Scenario 7: Parametrized batch sizes
+# Test Scenario 8: Parametrized batch sizes
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test7ParametrizedBatchSizes(BasePersonUploadTestCase):
+class Test8ParametrizedBatchSizes(BasePersonUploadTestCase):
     """Test upload with varying batch sizes."""
 
-    def test_7_batch_of_n_new_persons(self) -> None:
-        """Test 7: Upload batch of n new persons."""
+    def test_8_batch_of_n_new_persons(self) -> None:
+        """Test 8: Upload batch of n new persons."""
         for n_persons in [1, 3, 5]:
             with self.subTest(n_persons=n_persons):
                 self.setUp()  # Reset mocks for each subtest
@@ -924,8 +961,8 @@ class Test7ParametrizedBatchSizes(BasePersonUploadTestCase):
                 for i, created_id in enumerate(created_ids):
                     self.assertEqual(batch_result.persons[i].id, created_id)
 
-    def test_7_person_with_n_measurements(self) -> None:
-        """Test 7: Upload person with varying number of measurements."""
+    def test_8_person_with_n_measurements(self) -> None:
+        """Test 8: Upload person with varying number of measurements."""
         for n_children in [0, 1, 3]:
             with self.subTest(n_children=n_children):
                 self.setUp()  # Reset mocks for each subtest

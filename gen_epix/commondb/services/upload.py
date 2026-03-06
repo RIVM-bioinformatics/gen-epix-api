@@ -452,6 +452,8 @@ class BatchUploader:
                 parent_result.status = UploadStatus.SKIPPED
                 continue
             if self.is_null(parent_id):
+                # Parent given but ID not given while external identifiers already verified, will need to be created
+                parent_result.is_new = True
                 continue
             parent_ids[i] = parent_id
             has_parent_ids = True
@@ -1315,7 +1317,7 @@ class BatchUploader:
         objs_exist = [False] * len(obj_ids)
         # Determine which indices are actually IDs
         is_id_indices = [
-            i for x, i in enumerate(obj_ids) if x is not None and x != NULL_ID
+            i for i, x in enumerate(obj_ids) if x is not None and x != NULL_ID
         ]
         if len(is_id_indices) == 0:
             return objs_exist

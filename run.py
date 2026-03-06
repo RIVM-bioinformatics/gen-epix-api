@@ -605,13 +605,13 @@ class Run:
             ]
         )
 
-    def test_seqdb_unit_sample_upload(self) -> None:
+    def test_seqdb_unit_upload(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/unit/sample_upload",
+                "test/seqdb/unit/upload",
             ]
         )
 
