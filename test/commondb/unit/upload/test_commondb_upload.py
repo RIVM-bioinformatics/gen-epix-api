@@ -196,7 +196,6 @@ class BaseUploadTestCase(TestCase):
     def create_parent_for_upload(
         self,
         parent_id: UUID | None = None,
-        is_new_id: bool = False,
         a: str = "a",
         b: list[str] | None = None,
         c: dict[str, str | None] | None = None,
@@ -210,7 +209,6 @@ class BaseUploadTestCase(TestCase):
         """Create a test parent for upload."""
         return ParentForUpload(
             id=parent_id or NULL_ID,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             external_identifiers=external_identifiers,
             children1=children1,
             children2=children2,
@@ -260,7 +258,6 @@ class BaseUploadTestCase(TestCase):
     def create_child1_for_upload(
         self,
         child_id: UUID | None = None,
-        is_new_id: bool = False,
         parent_id: UUID = NULL_ID,
         ref1_id: UUID = NULL_ID,
         ref1_code: str | None = None,
@@ -274,7 +271,6 @@ class BaseUploadTestCase(TestCase):
         """Create a test child1 for upload."""
         return Child1ForUpload(
             child1_id=child_id or NULL_ID,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             parent_id=parent_id,
             ref1_id=ref1_id,
             ref1_code=ref1_code,
@@ -289,7 +285,6 @@ class BaseUploadTestCase(TestCase):
     def create_child2_for_upload(
         self,
         child_id: UUID | None = None,
-        is_new_id: bool = False,
         parent_id: UUID = NULL_ID,
         ref2_id: UUID | None = NULL_ID,
         ref2_code: str | None = None,
@@ -304,7 +299,6 @@ class BaseUploadTestCase(TestCase):
         """Create a test child2 for upload."""
         return Child2ForUpload(
             child2_id=child_id or NULL_ID,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             parent_id=parent_id,
             ref2_id=ref2_id,
             ref2_code=ref2_code,

@@ -75,3 +75,8 @@ class UploadBatchCommandMixin:
             self, self.BATCH_FOR_UPLOAD_FIELD_NAME
         )
         return batch_for_upload
+
+    def get_n_parents(self) -> int:
+        """Get the number of parents in the batch for upload."""
+        batch_for_upload = self.get_batch_for_upload()
+        return batch_for_upload.get_n_parents()

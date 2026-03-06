@@ -201,7 +201,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_person_for_upload(
         self,
         person_id: UUID | None = None,
-        is_new_id: bool = False,
         person: Person | None | object = "_DEFAULT",
         external_identifiers: list[ExternalIdentifierForUpload] | None = None,
         measurements: list[MeasurementForUpload] | None = None,
@@ -214,7 +213,6 @@ class BasePersonUploadTestCase(TestCase):
             person = self.create_person(person_id=person_id or None)
         return PersonForUpload(
             id=person_id or NULL_ID,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person=person,  # type: ignore[arg-type]
             external_identifiers=external_identifiers,
             measurements=measurements,
@@ -263,7 +261,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_measurement_for_upload(
         self,
         measurement_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         measurement_concept_int_id: int = 3004249,
         measurement_type_concept_int_id: int = 32817,
@@ -276,7 +273,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return MeasurementForUpload(
             measurement_id=measurement_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             measurement_concept_id=uuid4(),
             measurement_concept_int_id=measurement_concept_int_id,
@@ -293,7 +289,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_observation_for_upload(
         self,
         observation_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         observation_concept_int_id: int = 4083587,
         observation_type_concept_int_id: int = 32817,
@@ -307,7 +302,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return ObservationForUpload(  # type: ignore[call-arg]
             observation_id=observation_id,
-            is_new_id=is_new_id,
             person_id=person_id,
             observation_concept_id=uuid4(),
             observation_concept_int_id=observation_concept_int_id,
@@ -327,7 +321,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_specimen_for_upload(
         self,
         specimen_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         specimen_concept_int_id: int = 4001225,
         specimen_type_concept_int_id: int = 32817,
@@ -341,7 +334,6 @@ class BasePersonUploadTestCase(TestCase):
         """
         return SpecimenForUpload(
             specimen_id=specimen_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             specimen_concept_id=uuid4(),
             specimen_concept_int_id=specimen_concept_int_id,
@@ -358,7 +350,6 @@ class BasePersonUploadTestCase(TestCase):
     def create_measurement_relation_for_upload(
         self,
         measurement_relation_id: UUID = NULL_ID,
-        is_new_id: bool = False,
         person_id: UUID = NULL_ID,
         from_measurement_id: UUID = NULL_ID,
         to_measurement_id: UUID = NULL_ID,
@@ -367,7 +358,6 @@ class BasePersonUploadTestCase(TestCase):
         """Create a test MeasurementRelationForUpload."""
         return MeasurementRelationForUpload(
             measurement_relation_id=measurement_relation_id,
-            is_new_id=is_new_id,  # type: ignore[call-arg]
             person_id=person_id,
             from_measurement_id=from_measurement_id,
             to_measurement_id=to_measurement_id,
