@@ -46,6 +46,11 @@ v1 = "/v1"
 [log]
 level = "INFO"
 
+[log.command_object_summarization]
+enabled = true
+max_list_items = 10
+sample_items = 3
+
 
 [service]
 

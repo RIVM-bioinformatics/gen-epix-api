@@ -171,3 +171,26 @@ class CaseQueryResult(Model):
     is_max_results_exceeded: bool = Field(
         description="Whether the number of results was limited."
     )
+
+
+class ReadableReferenceData(Model):
+    ENTITY: ClassVar = Entity(
+        snake_case_plural_name="readable_reference_data",
+        persistable=False,
+    )
+    organization_id: UUID = Field(description="The ID of the organization")
+    case_type_set_ids: set[UUID] = Field(
+        description="The IDs of the allowed case type sets."
+    )
+    case_type_ids: set[UUID] = Field(description="The IDs of the allowed case types.")
+    case_type_col_set_ids: set[UUID] = Field(
+        description="The IDs of the allowed case type column sets."
+    )
+    case_type_col_ids: set[UUID] = Field(
+        description="The IDs of the allowed case type columns."
+    )
+    case_type_dim_ids: set[UUID] = Field(
+        description="The IDs of the allowed case type dimensions."
+    )
+    dim_ids: set[UUID] = Field(description="The IDs of the allowed dimensions.")
+    col_ids: set[UUID] = Field(description="The IDs of the allowed columns.")

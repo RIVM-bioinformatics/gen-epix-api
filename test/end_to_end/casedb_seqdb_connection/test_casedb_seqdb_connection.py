@@ -49,8 +49,10 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert handlers["console"]["formatter"] == "json"
     assert (
         formatters["json"]["()"]
-        == "gen_epix.commondb.domain.json_logging.JsonFormatter"
+        == "gen_epix.commondb.config.json_logging.JsonFormatter"
     )
+    assert formatters["json"]["redacted_value"] == "[REDACTED]"
+    assert "client_secret" in formatters["json"]["sensitive_keys"]
 
     # The uvicorn.access logger must declare the structured access-log filter
     # so HTTP fields (method/path/status) land as proper JSON keys in Monitoring Platform.
@@ -58,7 +60,7 @@ def test_logging_config_contract_includes_uvicorn_json_loggers() -> None:
     assert "uvicorn_access_structured" in filters
     assert (
         filters["uvicorn_access_structured"]["()"]
-        == "gen_epix.commondb.domain.json_logging.UvicornAccessLogFilter"
+        == "gen_epix.commondb.config.json_logging.UvicornAccessLogFilter"
     )
     assert loggers["uvicorn.access"].get("filters") == ["uvicorn_access_structured"]
 
@@ -262,9 +264,7 @@ def test_casedb_seqdb_connection(
     assert isinstance(phylogenetic_tree, model.PhylogeneticTree)
     assert isinstance(similar_case_ids, list)
     assert len(similar_case_ids) > 0
-    assert any(
-        isinstance(case_id, UUID) for case_id in similar_case_ids
-    )
+    assert any(isinstance(case_id, UUID) for case_id in similar_case_ids)
 
     genetic_sequence_case_type_cols = [
         x

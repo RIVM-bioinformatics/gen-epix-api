@@ -174,3 +174,9 @@ def _get_linked_model_classes(
 
     assert link_model_classes is not None
     return link_model_classes
+
+
+def get_readable_reference_data_from_command(
+    cmd: command.CrudCommand,
+) -> model.ReadableReferenceData | None:
+    return BaseCaseAbacPolicy.get_readable_reference_data_from_command(cmd)

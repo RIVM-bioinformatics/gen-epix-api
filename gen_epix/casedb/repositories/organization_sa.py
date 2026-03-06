@@ -6,7 +6,9 @@ from gen_epix.casedb.domain import model
 from gen_epix.commondb.repositories import (
     OrganizationSARepository as CommonOrganizationSARepository,
 )
-from gen_epix.commondb.repositories import sa_model
+from gen_epix.commondb.repositories import (
+    sa_model,
+)
 
 
 class OrganizationSARepository(CommonOrganizationSARepository):

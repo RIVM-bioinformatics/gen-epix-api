@@ -662,13 +662,23 @@ class Run:
             ]
         )
 
-    def test_seqdb_performance(self) -> None:
+    def test_seqdb_performance_calculate_seq_distances(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/seqdb/performance",
+                "test/seqdb/performance/calculate_seq_distances",
+            ]
+        )
+
+    def test_seqdb_performance_retrieve_similar_profiles(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS
+            + [
+                "test/seqdb/performance/retrieve_similar_profiles",
             ]
         )
 

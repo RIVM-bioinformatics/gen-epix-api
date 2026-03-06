@@ -123,6 +123,32 @@ Logging is JSON-formatted to stdout via `logging.StreamHandler`:
 
 Root default level is `INFO`. (Source: `gen_epix/commondb/config/logging.yaml#L1-L35`)
 
+### Command Object Summarization
+
+Command payloads can contain very large list fields. To keep structured log
+records bounded for downstream sinks, command-object list summarization is
+configurable under `[log.command_object_summarization]` in each app's
+`settings.toml`:
+
+- `enabled` (bool): turns summarization on/off.
+- `max_list_items` (int): lists with more than this many items are summarized.
+- `sample_items` (int): number of list elements copied into `_sample`.
+
+Current defaults in app settings are:
+
+```toml
+[log.command_object_summarization]
+enabled = true
+max_list_items = 10
+sample_items = 3
+```
+
+Environment overrides follow the standard Dynaconf `__` convention. Example:
+
+```bash
+COMMONDB__LOG__COMMAND_OBJECT_SUMMARIZATION__MAX_LIST_ITEMS=20
+```
+
 The most operationally useful logs mark phase transitions or control points:
 - IDP initialization/retry (trust anchors available vs degraded)
 - User-verification warnings (auth dependency failures)

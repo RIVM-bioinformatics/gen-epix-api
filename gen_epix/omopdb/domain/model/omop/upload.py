@@ -31,7 +31,7 @@ class MeasurementForUpload(Measurement, IsNewIdMixin):
     additional variables.
     """
 
-    ENTITY: ClassVar = Measurement.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Measurement.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "MeasurementForUpload"
 
     person_id: UUID = Field(
@@ -50,7 +50,7 @@ class ObservationForUpload(Observation, IsNewIdMixin):
     additional variables.
     """
 
-    ENTITY: ClassVar = Observation.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Observation.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "ObservationForUpload"
 
     person_id: UUID = Field(
@@ -69,7 +69,7 @@ class SpecimenForUpload(Specimen, IsNewIdMixin, ExternalIdentifiersMixin):
     additional variables.
     """
 
-    ENTITY: ClassVar = Specimen.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = Specimen.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "SpecimenForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
 
@@ -89,9 +89,7 @@ class MeasurementRelationForUpload(MeasurementRelation, IsNewIdMixin):
     additional variables.
     """
 
-    ENTITY: ClassVar = MeasurementRelation.ENTITY.model_copy(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = MeasurementRelation.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "MeasurementRelationForUpload"
 
     measurement_relation_id: UUID = Field(
@@ -105,7 +103,7 @@ class PersonForUpload(ParentForUpload):
     A person, together with any relevant associated data, intended for upload.
     """
 
-    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy(update={"persistable": False})
+    ENTITY: ClassVar = ParentForUpload.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "PersonForUpload"
 
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
@@ -162,7 +160,7 @@ class PersonUploadResult(ParentUploadResult):
     The result of uploading a single person.
     """
 
-    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = ParentUploadResult.ENTITY.clone()
     NAME: ClassVar = "PersonUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload
@@ -195,7 +193,7 @@ class PersonBatchForUpload(BaseBatchForUpload):
     for the storage of these data.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone()
     NAME: ClassVar = "PersonBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = PersonForUpload  # type: ignore[assignment]
@@ -246,7 +244,7 @@ class PersonBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of persons.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone()
     NAME: ClassVar = "PersonBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = PersonBatchForUpload  # type: ignore[assignment]
