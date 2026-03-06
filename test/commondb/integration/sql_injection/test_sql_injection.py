@@ -4,41 +4,36 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from gen_epix.casedb.domain import enum
-from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain import enum
+from gen_epix.commondb.domain.enum import AppType, DevRepositoryConfig
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.commondb.repositories.sa_model.organization import User
+from gen_epix.commondb.test.test_client import TestClient as Env
 from gen_epix.fastapp.repositories.sa.unit_of_work import SAUnitOfWork
-from gen_epix.seqdb.domain import enum as seqdb_enum
-from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.security.base import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
+from test.commondb.test_client.util import get_test_client as commondb_get_test_client
+from test.test_client.enum import TestType
 
-SEQDB_APP_CFGS = get_app_cfgs(
-    AppType.SEQDB,
-    seqdb_enum.ServiceType,
-    seqdb_enum.RepositoryType,
-    TEST_TYPE,
-)
+TEST_TYPE = TestType.COMMONDB_INTEGRATION_SQL_INJECTION
+SKIP_ENDPOINTS = False
+SKIP_RAISE = False
+SKIP_CREATE_DATA = False
+VERBOSE = False
+DEV_REPOSITORY_CONFIG = DevRepositoryConfig.SA_SQLITE_DEMO
 
-CASEDB_APP_CFGS = get_app_cfgs(
-    AppType.CASEDB,
+
+APP_CFGS = get_app_cfgs(
+    AppType.COMMONDB,
     enum.ServiceType,
     enum.RepositoryType,
     TEST_TYPE,
-    seqdb_app_cfgs=SEQDB_APP_CFGS,
 )
 
 
 @pytest.fixture(scope="module", name="env")
 def get_test_client() -> Env:
-    return Env.get_test_client(  # type: ignore[return-value]
+    return commondb_get_test_client(
         test_type=TEST_TYPE.value,
-        app_cfg=CASEDB_APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
+        app_cfg=APP_CFGS[f"{TEST_TYPE.value}__{DEV_REPOSITORY_CONFIG.value}"],
         verbose=VERBOSE,
         log_level=logging.ERROR,
         use_endpoints=not SKIP_ENDPOINTS,

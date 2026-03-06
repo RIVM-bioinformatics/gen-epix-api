@@ -427,6 +427,13 @@ class Run:
             ]
         )
 
+    def test_commondb_integration_sql_injection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS + ["test/commondb/integration/sql_injection"]
+        )
+
     def test_casedb_unit(self) -> None:
         import pytest
 
@@ -713,13 +720,6 @@ class Run:
             + [
                 "test/omopdb/integration/build_db",
             ]
-        )
-
-    def test_security_sql_injection(self) -> None:
-        import pytest
-
-        pytest.main(
-            Run.DEFAULT_PYTEST_ARGS + ["test/security/test_casedb_sql_injection.py"]
         )
 
     def test_general_docs(self) -> None:
