@@ -418,13 +418,11 @@ class BasePersonUploadTestCase(TestCase):
         self,
         external_identifier_for_upload: ExternalIdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
     ) -> ExternalIdentifier:
         """Get an ExternalIdentifier from an ExternalIdentifierForUpload, with optional overrides."""
         return ExternalIdentifier(
-            id=id or uuid4(),
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -436,13 +434,11 @@ class BasePersonUploadTestCase(TestCase):
         self,
         external_identifier_for_upload: ExternalIdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
     ) -> ExternalIdentifier:
         """Get the ExternalIdentifier model for Specimen, corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
         return ExternalIdentifier(
-            id=id or uuid4(),
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -859,16 +855,15 @@ class Test6ExternalIdentifiers(BasePersonUploadTestCase):
         external_identifier_for_upload = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        created_external_identifier_id = self.random_ids[0]
         created_person_id = self.random_ids[1]
         person_for_upload = self.create_person_for_upload(
             external_identifiers=[external_identifier_for_upload],
         )
         external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier_for_upload,
-            id=created_external_identifier_id,
             internal_id=created_person_id,
         )
+        created_external_identifier_id = external_identifier.id
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # Identifier issuers
             [],  # No existing external identifiers
@@ -1055,15 +1050,14 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
         existing_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier,
                 internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
             )
         )
+        existing_external_identifier_id = existing_external_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=NULL_ID, external_identifiers=[external_identifier]
         )
@@ -1094,15 +1088,14 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
         existing_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier,
                 internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
             )
         )
+        existing_external_identifier_id = existing_external_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id, external_identifiers=[external_identifier]
         )
@@ -1133,16 +1126,15 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
         non_existing_specimen_id = self.random_ids[2]
         existing_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier,
                 internal_id=non_existing_specimen_id,
-                id=existing_external_identifier_id,
             )
         )
+        existing_external_identifier_id = existing_external_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id, external_identifiers=[external_identifier]
         )
@@ -1173,15 +1165,14 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
         external_identifier = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id,
         )
-        created_external_identifier_id = self.random_ids[0]
         created_specimen_id = self.random_ids[1]
         created_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier,
                 internal_id=created_specimen_id,
-                id=created_external_identifier_id,
             )
         )
+        created_external_identifier_id = created_external_identifier.id
         created_specimen = self.create_specimen_for_upload(
             specimen_id=NULL_ID, external_identifiers=[external_identifier]
         )
@@ -1225,23 +1216,21 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        existing_external_identifier_id = self.random_ids[0]
         existing_specimen_id = self.random_ids[1]
         existing_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier1,
                 internal_id=existing_specimen_id,
-                id=existing_external_identifier_id,
             )
         )
-        created_external_identifier_id = self.random_ids[1]
+        existing_external_identifier_id = existing_external_identifier.id
         created_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier2,
                 self.specimen_id,
-                id=created_external_identifier_id,
             )
         )
+        created_external_identifier_id = created_external_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id,
             external_identifiers=[external_identifier1, external_identifier2],
@@ -1284,24 +1273,22 @@ class Test8SpecimenExternalIdentifiers(BasePersonUploadTestCase):
             identifier_issuer_id=self.identifier_issuer_id2,
             identifier_issuer_code=self.identifier_issuer_code2,
         )
-        existing_external_identifier_id = self.random_ids[0]
         non_existing_specimen_id = self.random_ids[2]
         existing_specimen_id = self.random_ids[1]
         existing_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier1,
                 internal_id=non_existing_specimen_id,
-                id=existing_external_identifier_id,
             )
         )
-        created_external_identifier_id = self.random_ids[1]
+        existing_external_identifier_id = existing_external_identifier.id
         created_external_identifier = (
             self.get_specimen_external_identifier_from_for_upload(
                 external_identifier2,
                 self.specimen_id,
-                id=created_external_identifier_id,
             )
         )
+        created_external_identifier_id = created_external_identifier.id
         existing_specimen = self.create_specimen_for_upload(
             specimen_id=existing_specimen_id,
             external_identifiers=[external_identifier1, external_identifier2],
@@ -1485,7 +1472,6 @@ class TestCombinedScenarios(BasePersonUploadTestCase):
         created_external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier,
             internal_id=created_person_id,
-            id=self.random_ids[5],
             identifier_issuer_id=self.identifier_issuer_id,
         )
         self.service.app.handle.side_effect = [

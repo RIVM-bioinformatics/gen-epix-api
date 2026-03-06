@@ -175,6 +175,10 @@ class BaseUploadTestCase(TestCase):
             UUID("550e8400-e29b-41d4-a716-446655440018"),
             UUID("550e8400-e29b-41d4-a716-446655440019"),
         ]
+        self.identifier_issuer_code_id_map = {
+            self.identifier_issuer_code: self.identifier_issuer_id,
+            self.identifier_issuer_code2: self.identifier_issuer_id2,
+        }
 
         # Mock service
         self.service = Mock(spec=BaseService)
@@ -364,13 +368,11 @@ class BaseUploadTestCase(TestCase):
         self,
         external_identifier_for_upload: ExternalIdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
     ) -> ExternalIdentifier:
         """Get the ExternalIdentifier model corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
         return ExternalIdentifier(
-            id=id or uuid4(),
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -382,13 +384,11 @@ class BaseUploadTestCase(TestCase):
         self,
         external_identifier_for_upload: ExternalIdentifierForUpload,
         internal_id: UUID,
-        id: UUID | None = None,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
     ) -> ExternalIdentifier:
         """Get the ExternalIdentifier model for Child2, corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
         return ExternalIdentifier(
-            id=id or uuid4(),
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -1178,16 +1178,15 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
         external_identifier_for_upload = self.create_external_identifier_for_upload(
             identifier_issuer_id=self.identifier_issuer_id
         )
-        created_external_identifier_id = self.random_ids[0]
         created_parent_id = self.random_ids[1]
         parent_for_upload = self.create_parent_for_upload(
             external_identifiers=[external_identifier_for_upload]
         )
         external_identifier = self.get_external_identifier_from_for_upload(
             external_identifier_for_upload,
-            id=created_external_identifier_id,
             internal_id=created_parent_id,
         )
+        created_external_identifier_id = external_identifier.id
         # Set up mocks
         self.service.app.handle.side_effect = [
             [self.identifier_issuer],  # The identifier issuers in the external IDs
@@ -1412,13 +1411,11 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
         parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
         # Set up mocks
         self.service.repository.crud.side_effect = [
-            [False],           # EXISTS_SOME: parent does not exist
+            [False],  # EXISTS_SOME: parent does not exist
             [self.parent_id],  # CREATE_SOME: create returns provided ID
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(
-            parent_for_upload, on_new=UploadAction.CREATE
-        )
+        batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.CREATE)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_created=1)
 
@@ -1431,9 +1428,7 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
             [False],  # EXISTS_SOME: parent does not exist
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(
-            parent_for_upload, on_new=UploadAction.SKIP
-        )
+        batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.SKIP)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
@@ -1446,9 +1441,7 @@ class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
             [False],  # EXISTS_SOME: parent does not exist
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(
-            parent_for_upload, on_new=UploadAction.ERROR
-        )
+        batch_result = self.upload_batch(parent_for_upload, on_new=UploadAction.ERROR)
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
 
