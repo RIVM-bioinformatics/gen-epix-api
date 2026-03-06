@@ -29,7 +29,7 @@ numpy==2.4.2
 biopython==1.86
 
 # other
-cachetools==7.0.2
+cachetools==7.0.3
 slowapi==0.1.9
 python-dateutil==2.9.0.post0
 types-python-dateutil==2.9.*
