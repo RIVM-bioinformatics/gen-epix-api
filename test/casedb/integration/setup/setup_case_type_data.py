@@ -128,29 +128,24 @@ def setup_case_type_data(
     env.create_data_collection(root_user, "data_collection2")
 
     # --- ORG ACCESS POLICIES (case type sets & col sets) ---
-    # One per unique (org, case_type_set) from org_access_policy_sets.
+    # One per unique (org, case_type_set, case_type_col_set) from org_access_policies.
     # Naming: "org_access_policy{org_num}_{dc_num}" e.g. "org_access_policy1_1"
 
-    created_org_access: set[tuple[str, str]] = set()
+    created_org_access: set[tuple[str, str, str]] = set()
     for spec in EDGE_CASES:
-        for ct_set in spec.org_access_policy_sets:
-            key = (spec.org_name, ct_set)
+        for ct_set, col_set in spec.org_access_policies:
+            key = (spec.org_name, ct_set, col_set)
             if key not in created_org_access:
                 org_num = spec.org_name[len("org") :]
 
                 dc_num = 1  # for demo, all policies reference data_collection1
                 policy_name = f"org_access_policy{org_num}_{dc_num}"
 
-                # Note: we already created the col type sets and col sets with the same naming convention as the case type sets (e.g. "case_type_set1" → "colset1"),
-                # so we can pass the col set
-                # Also create col set access policy
-                colset_name = ct_set.replace("case_type_set", "colset")
-
                 env.create_organization_access_case_policy(
                     root_user,
                     policy_name,
                     ct_set,
-                    read_case_type_col_set=colset_name,
+                    read_case_type_col_set=col_set,
                 )
 
                 created_org_access.add(key)
@@ -179,21 +174,20 @@ def setup_case_type_data(
                 created_org_share.add(key)
 
     # --- USER ACCESS POLICIES (case type sets & col sets) ---
-    # One per (user, case_type_set) in user_access_policy_sets.
+    # One per (user, case_type_set, case_type_col_set) in user_access_policies.
     # Note: user access policies are intentionally ignored for reference data access —
     # the tests verify this behaviour explicitly.
 
     for spec in EDGE_CASES:
-        for ct_set in spec.user_access_policy_sets:
+        for ct_set, col_set in spec.user_access_policies:
             # Use variable for data collection name for clarity and consistency
             target_data_collection = "data_collection1"
-            colset_name = ct_set.replace("case_type_set", "colset")
             env.create_user_access_case_policy(
                 root_user,
                 spec.user_name,
                 target_data_collection,
                 ct_set,
-                read_case_type_col_set=colset_name,
+                read_case_type_col_set=col_set,
             )
 
     # --- USER SHARE POLICIES (case type sets & col sets) ---

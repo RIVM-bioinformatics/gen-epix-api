@@ -1,11 +1,7 @@
-from test.casedb.integration.setup.define_edge_cases import (
-    EDGE_CASES,
-)
-
-
 from test.casedb.casedb_test_client import CasedbTestClient as Env
-import pytest
+from test.casedb.integration.setup.define_edge_cases import EDGE_CASES
 
+import pytest
 
 from gen_epix.casedb.domain import model
 

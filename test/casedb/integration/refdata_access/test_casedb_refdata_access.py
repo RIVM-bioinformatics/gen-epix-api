@@ -1,3 +1,18 @@
+"""
+This module contains integration tests for CaseDB reference data
+
+- it uses the existing demo data
+    - see DevRepositoryConfig.DICT_DEMO in base.py for configuration
+
+For now all tests are skipped, because edge case tests with generated data in test_casedb_edge_cases_refdata_access.py already cover the relevant access control logic for reference data,
+and the existing demo data does not have enough coverage of different edge cases to add value beyond the edge case tests.
+
+We keep it for future reference.
+
+Because the helper methods contain useful logic for determining expected reference data access based on policies.
+
+"""
+
 import logging
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base import (
@@ -158,20 +173,6 @@ class TestRefdataAccess:
         return retval
 
     @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_disease(self, env: Env) -> None:
-        all_diseases = self._read_all(env, model.Disease)
-        for user in self._get_all_users(env):
-            diseases = self._read_all(env, model.Disease, user=user)
-            assert diseases == all_diseases
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_etiology(self, env: Env) -> None:
-        all_etiologies = self._read_all(env, model.Etiology)
-        for user in self._get_all_users(env):
-            etiologies = self._read_all(env, model.Etiology, user=user)
-            assert etiologies == all_etiologies
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
     def test_concept(self, env: Env) -> None:
         all_concepts = self._read_all(env, model.Concept)
         for user in self._get_all_users(env):
@@ -198,29 +199,6 @@ class TestRefdataAccess:
         for user in self._get_all_users(env):
             region_sets = self._read_all(env, model.RegionSet, user=user)
             assert region_sets == all_region_sets
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_dim(self, env: Env) -> None:
-        all_dims = self._read_all(env, model.Dim)
-        for user in self._get_all_users(env):
-            dims = self._read_all(env, model.Dim, user=user)
-            assert dims == all_dims
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_case_type_set_category(self, env: Env) -> None:
-        all_case_type_set_categories = self._read_all(env, model.CaseTypeSetCategory)
-        for user in self._get_all_users(env):
-            case_type_set_categories = self._read_all(
-                env, model.CaseTypeSetCategory, user=user
-            )
-            assert case_type_set_categories == all_case_type_set_categories
-
-    @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_case_set_category(self, env: Env) -> None:
-        all_case_set_categories = self._read_all(env, model.CaseSetCategory)
-        for user in self._get_all_users(env):
-            case_set_categories = self._read_all(env, model.CaseSetCategory, user=user)
-            assert case_set_categories == all_case_set_categories
 
     def _get_expected_case_type_ids_for_reference_data(
         self,
@@ -311,6 +289,9 @@ class TestRefdataAccess:
     # Note that this method is currently not used in the test, but it can be used for future more fine-grained tests that check ABAC filtering for operational data access,
     # instead of the current all-or-nothing approach for reference data access
     # It should test for access on case level, not just case type level, to verify that ABAC filtering is correctly applied for operational data access
+    @pytest.mark.skip(
+        reason="Skipped, but kept for future reference when implementing more fine-grained tests for operational data access with ABAC filtering"
+    )
     def _get_expected_case_type_ids_for_operational_data(
         self,
         env: Env,
@@ -474,7 +455,9 @@ class TestRefdataAccess:
 
         return expected_case_type_ids
 
-    ## Add more fine-grained tests for case type access, e.g. with ABAC filtering, and not just all-or-nothing as in the current test
+    @pytest.mark.skip(
+        reason="Skipped, but kept for future reference when implementing more fine-grained tests for operational data access with ABAC filtering"
+    )
     def test_case_type(self, env: Env) -> None:
         """
         Test that case type access is correctly controlled by ABAC policies for reference data.
@@ -545,13 +528,6 @@ class TestRefdataAccess:
     # Save all generated data as a pickle file
     # In case of stable set of data for testing => use pickle file instead of generating new data each time
 
-    @pytest.mark.skip(reason="Skipped while developing other tests")
-    def test_col(self, env: Env) -> None:
-        all_cols = self._read_all(env, model.Col)
-        for user in self._get_all_users(env):
-            cols = self._read_all(env, model.Col, user=user)
-            assert cols == all_cols
-
     def _get_expected_case_type_col_set_ids_for_reference_data(
         self,
         env: Env,
@@ -598,6 +574,9 @@ class TestRefdataAccess:
 
     # Note: test data do not currently include any reference data for case type columns set members
     # but this test can be used when such data is added
+    @pytest.mark.skip(
+        reason="Skipped, but kept for future reference when implementing more fine-grained tests for operational data access with ABAC filtering"
+    )
     def test_case_type_col_set(self, env: Env) -> None:
 
         all_organizations = self._get_all_organizations(env)

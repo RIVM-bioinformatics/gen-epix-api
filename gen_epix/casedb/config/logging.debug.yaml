@@ -2,7 +2,7 @@ version: 1
 disable_existing_loggers: false
 formatters:
   json:
-    "()": gen_epix.commondb.domain.json_logging.JsonFormatter
+    "()": gen_epix.commondb.config.json_logging.JsonFormatter
     service: "casedb"
     merge_message_json: true
     extras_key: "props"

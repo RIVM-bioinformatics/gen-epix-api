@@ -19,7 +19,6 @@ from gen_epix.fastapp.app import _summarise_command_object
 from gen_epix.fastapp.log import LogItem
 from gen_epix.fastapp.model import Command, User
 
-
 # ---------------------------------------------------------------------------
 # Minimal Command subclass that mirrors the real RetrieveCasesByIdCommand shape
 # ---------------------------------------------------------------------------
@@ -77,9 +76,7 @@ def test_nested_long_list_is_summarised() -> None:
 def test_long_list_respects_configured_sample_items() -> None:
     """Configured sample_items controls the number of sampled list elements."""
     long_list = [str(uuid.uuid4()) for _ in range(50)]
-    result = _summarise_command_object(
-        {"ids": long_list}, max_items=5, sample_items=1
-    )
+    result = _summarise_command_object({"ids": long_list}, max_items=5, sample_items=1)
     summary = result["ids"]
     assert summary["_count"] == 50
     assert summary["_sample"] == long_list[:1]
