@@ -15,6 +15,64 @@ from gen_epix.fastapp.model import Command, CrudCommand, Model, Policy
 from gen_epix.fastapp.pdp import PolicyDecisionPoint
 from gen_epix.fastapp.user_manager import BaseUserManager
 
+"""Default settings for command-object log summarization.
+
+Large lists can make log payloads too large for downstream log sinks. The
+summarization behavior is configurable through ``cfg.log.command_object_summarization``
+and falls back to these defaults when config is absent or invalid.
+"""
+_DEFAULT_LOG_SUMMARIZATION_ENABLED: bool = True
+_DEFAULT_MAX_LIST_ITEMS_IN_LOG: int = 10
+_DEFAULT_SAMPLE_ITEMS_IN_LOG: int = 3
+
+# Backward-compatible alias used as default argument in tests and helper calls.
+_MAX_LIST_ITEMS_IN_LOG: int = _DEFAULT_MAX_LIST_ITEMS_IN_LOG
+
+
+def _coerce_bool(value: Any, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return default
+
+
+def _coerce_int(value: Any, default: int, minimum: int = 0) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= minimum else default
+
+
+def _summarise_command_object(
+    data: dict[str, Any],
+    *,
+    max_items: int = _MAX_LIST_ITEMS_IN_LOG,
+    sample_items: int = _DEFAULT_SAMPLE_ITEMS_IN_LOG,
+) -> dict[str, Any]:
+    """Recursively walk *data* and replace any list longer than *max_items* with
+    a compact ``{"_count": N, "_sample": [...]}`` dict so the serialised log
+    payload stays within downstream log-sink size constraints."""
+
+    def _walk(obj: Any) -> Any:
+        if isinstance(obj, dict):
+            return {k: _walk(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            if len(obj) > max_items:
+                return {
+                    "_count": len(obj),
+                    "_sample": [_walk(x) for x in obj[:sample_items]],
+                }
+            return [_walk(x) for x in obj]
+        return obj
+
+    return _walk(data)  # type: ignore[return-value]
+
 
 class App:
     """
@@ -460,6 +518,53 @@ class App:
         retval = cast(Any, handler(cmd))
         return retval
 
+    def _get_command_object_summarization_settings(self) -> tuple[bool, int, int]:
+        enabled = _DEFAULT_LOG_SUMMARIZATION_ENABLED
+        max_list_items = _DEFAULT_MAX_LIST_ITEMS_IN_LOG
+        sample_items = _DEFAULT_SAMPLE_ITEMS_IN_LOG
+
+        cfg = self._cfg
+        if cfg is None:
+            return enabled, max_list_items, sample_items
+
+        try:
+            log_cfg = cfg.get("log")  # type: ignore[attr-defined]
+        except Exception:
+            log_cfg = None
+        if log_cfg is None:
+            return enabled, max_list_items, sample_items
+
+        try:
+            summarization_cfg = log_cfg.get("command_object_summarization")  # type: ignore[attr-defined]
+        except Exception:
+            summarization_cfg = None
+        if not summarization_cfg:
+            return enabled, max_list_items, sample_items
+
+        try:
+            enabled = _coerce_bool(
+                summarization_cfg.get("enabled"),  # type: ignore[attr-defined]
+                enabled,
+            )
+            max_list_items = _coerce_int(
+                summarization_cfg.get("max_list_items"),  # type: ignore[attr-defined]
+                max_list_items,
+                minimum=0,
+            )
+            sample_items = _coerce_int(
+                summarization_cfg.get("sample_items"),  # type: ignore[attr-defined]
+                sample_items,
+                minimum=0,
+            )
+        except Exception:
+            return (
+                _DEFAULT_LOG_SUMMARIZATION_ENABLED,
+                _DEFAULT_MAX_LIST_ITEMS_IN_LOG,
+                _DEFAULT_SAMPLE_ITEMS_IN_LOG,
+            )
+
+        return enabled, max_list_items, sample_items
+
     def create_log_message(
         self,
         code: str,
@@ -476,9 +581,22 @@ class App:
             }
             if cmd:
                 is_initial_command = len(self._command_stack) < 2
+                cmd_object = json.loads(cmd.model_dump_json(exclude_none=True))
+                (
+                    summarization_enabled,
+                    max_list_items,
+                    sample_items,
+                ) = self._get_command_object_summarization_settings()
+                if summarization_enabled:
+                    cmd_object = _summarise_command_object(
+                        cmd_object,
+                        max_items=max_list_items,
+                        sample_items=sample_items,
+                    )
                 content["command"] = kwargs.pop("command", {}) | {
                     "class": cmd.__class__.__name__,
-                    "object": json.loads(cmd.model_dump_json(exclude_none=True)),
+                    # Optionally summarize large list fields based on config.
+                    "object": cmd_object,
                     "parent_command_id": (
                         None if is_initial_command else f"{self._command_stack[-2].id}"
                     ),

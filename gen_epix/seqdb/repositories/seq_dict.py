@@ -61,3 +61,15 @@ class SeqDictRepository(DictRepository, BaseSeqRepository):
             )
 
         return list(matching_profile_ids - profile_id_set)
+
+    def iter_seq_distances(
+        self,
+        uow: BaseUnitOfWork,
+        seq_distance_protocol_id: UUID,
+    ) -> Iterable[model.SeqDistance]:
+        table: dict[UUID, model.SeqDistance] = self.db[  # type: ignore[assignment]
+            model.SeqDistance
+        ]
+        for seq_distance in table.values():
+            if seq_distance.seq_distance_protocol_id == seq_distance_protocol_id:
+                yield seq_distance

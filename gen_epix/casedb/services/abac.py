@@ -203,6 +203,7 @@ class AbacService(BaseAbacService):
         # TODO: develop general system for caching and cache invalidation
         self._get_user_by_id_cached.cache_clear()  # type: ignore[attr-defined]
         self._get_case_abac_cached.cache_clear()  # type: ignore[attr-defined]
+        self._get_readable_reference_data_cached.cache_clear()  # type: ignore[attr-defined]
 
         return user
 
@@ -598,3 +599,198 @@ class AbacService(BaseAbacService):
             for data_collection_id in to_pop_data_collection_ids:
                 dict3[case_type_id].pop(data_collection_id)
         return dict3
+
+    def get_readable_reference_data(
+        self, cmd: command.Command
+    ) -> model.ReadableReferenceData:
+        user = cmd.user
+        assert user is not None and user.id is not None
+        assert user.organization_id is not None
+
+        # Own org always included
+        organization_ids: set[UUID] = {user.organization_id}
+
+        # ORG_ADMIN: add all administered orgs
+        if not self.role_set_map[CommonRoleSet.GE_APP_ADMIN].isdisjoint(user.roles):
+            # APP_ADMIN has full access, return unrestricted
+            # (the is_full_access check in individual handlers will handle this)
+            pass
+        elif not self.role_set_map[CommonRoleSet.GE_ORG_ADMIN].isdisjoint(user.roles):
+            # Fetch additional orgs this user admins
+            with self.repository.uow() as uow:
+                admin_policies = self.repository.crud(
+                    uow,
+                    user.id,
+                    self.organization_admin_policy_model_class,
+                    None,
+                    None,
+                    CrudOperation.READ_ALL,
+                    filter=CompositeFilter(
+                        operator=LogicalOperator.AND,
+                        filters=[
+                            EqualsUuidFilter(key="user_id", value=user.id),
+                            EqualsBooleanFilter(key="is_active", value=True),
+                        ],
+                    ),
+                )
+            organization_ids |= {x.organization_id for x in admin_policies}  # type: ignore[union-attr]
+
+        # Load and union
+        all_readable_reference_data = [
+            self._get_readable_reference_data_cached(user.id, org_id)
+            for org_id in organization_ids
+        ]
+        if len(all_readable_reference_data) == 1:
+            return all_readable_reference_data[0]  # type: ignore[no-any-return]
+        return model.ReadableReferenceData(
+            organization_id=user.organization_id,
+            case_type_set_ids=set().union(
+                *(x.case_type_set_ids for x in all_readable_reference_data)
+            ),
+            case_type_ids=set().union(
+                *(x.case_type_ids for x in all_readable_reference_data)
+            ),
+            case_type_col_set_ids=set().union(
+                *(x.case_type_col_set_ids for x in all_readable_reference_data)
+            ),
+            case_type_col_ids=set().union(
+                *(x.case_type_col_ids for x in all_readable_reference_data)
+            ),
+            case_type_dim_ids=set().union(
+                *(x.case_type_dim_ids for x in all_readable_reference_data)
+            ),
+            dim_ids=set().union(*(x.dim_ids for x in all_readable_reference_data)),
+            col_ids=set().union(*(x.col_ids for x in all_readable_reference_data)),
+        )
+
+    @cached(cache=TTLCache(maxsize=1024, ttl=300))
+    def _get_readable_reference_data_cached(
+        self, user_id: UUID, organization_id: UUID
+    ) -> model.ReadableReferenceData:
+        # user is required to retrieve the objects through ...CrudCommand
+        user = self._get_user_by_id_cached(user_id)
+
+        org_filter = CompositeFilter(
+            filters=[
+                EqualsBooleanFilter(key="is_active", value=True),
+                EqualsUuidFilter(key="organization_id", value=organization_id),
+            ],
+            operator=LogicalOperator.AND,
+        )
+        with self.repository.uow() as uow:
+            # 1. Fetch org-level policies — these live in AbacService's own repository
+            org_access_policies: list[model.OrganizationAccessCasePolicy] = (
+                self.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user_id=None,
+                    model_class=model.OrganizationAccessCasePolicy,
+                    objs=None,
+                    obj_ids=None,
+                    operation=CrudOperation.READ_ALL,
+                    filter=org_filter,
+                )
+            )
+            org_share_policies: list[model.OrganizationShareCasePolicy] = (
+                self.repository.crud(  # type: ignore[assignment]
+                    uow,
+                    user_id=None,
+                    model_class=model.OrganizationShareCasePolicy,
+                    objs=None,
+                    obj_ids=None,
+                    operation=CrudOperation.READ_ALL,
+                    filter=org_filter,
+                )
+            )
+        all_policies: list[
+            model.OrganizationAccessCasePolicy | model.OrganizationShareCasePolicy
+        ] = (org_access_policies + org_share_policies)
+
+        # 2. Collect set IDs from policies
+        case_type_set_ids = {
+            x.case_type_set_id for x in all_policies if x.case_type_set_id
+        }
+        case_type_col_set_ids = {
+            x.read_case_type_col_set_id
+            for x in org_access_policies
+            if x.read_case_type_col_set_id
+        } | {
+            x.write_case_type_col_set_id
+            for x in org_access_policies
+            if x.write_case_type_col_set_id
+        }
+
+        # 3. Resolve CaseTypeSetMember -> case_type_ids
+        # Uses app.handle so the request routes to CaseService's repository.
+        # Internal calls have no policies attached → handler returns all without ABAC.
+        case_type_set_members: list[model.CaseTypeSetMember] = self.app.handle(
+            command.CaseTypeSetMemberCrudCommand(
+                user=user,
+                objs=None,
+                obj_ids=None,
+                operation=CrudOperation.READ_ALL,
+                query_filter=UuidSetFilter(
+                    key="case_type_set_id",
+                    members=case_type_set_ids,
+                ),
+            )
+        )
+        case_type_ids: set[UUID] = {x.case_type_id for x in case_type_set_members}
+
+        # 4. Resolve CaseTypeColSetMember -> case_type_col_ids
+        case_type_col_set_members: list[model.CaseTypeColSetMember] = self.app.handle(
+            command.CaseTypeColSetMemberCrudCommand(
+                user=user,
+                objs=None,
+                obj_ids=None,
+                operation=CrudOperation.READ_ALL,
+                query_filter=UuidSetFilter(
+                    key="case_type_col_set_id",
+                    members=case_type_col_set_ids,
+                ),
+            )
+        )
+        case_type_col_ids_from_sets: set[UUID] = {
+            x.case_type_col_id for x in case_type_col_set_members
+        }
+
+        # 5. Load CaseTypeCols to derive case_type_ids, case_type_dim_ids, col_ids
+        case_type_cols: list[model.CaseTypeCol] = self.app.handle(
+            command.CaseTypeColCrudCommand(
+                user=user,
+                operation=CrudOperation.READ_ALL,
+                query_filter=CompositeFilter(
+                    filters=[
+                        UuidSetFilter(key="case_type_id", members=case_type_ids),
+                        UuidSetFilter(key="id", members=case_type_col_ids_from_sets),
+                    ],
+                    operator=LogicalOperator.AND,
+                ),
+            )
+        )
+        case_type_col_ids: set[UUID] = {
+            x.id for x in case_type_cols if x.id is not None
+        }
+        case_type_dim_ids = {x.case_type_dim_id for x in case_type_cols}
+        col_ids = {x.col_id for x in case_type_cols}
+
+        # 6. Load CaseTypeDims to derive dim_ids
+        case_type_dims: list[model.CaseTypeDim] = self.app.handle(
+            command.CaseTypeDimCrudCommand(
+                user=user,
+                objs=None,
+                obj_ids=list(case_type_dim_ids),
+                operation=CrudOperation.READ_SOME,
+            )
+        )
+        dim_ids = {x.dim_id for x in case_type_dims}
+
+        return model.ReadableReferenceData(
+            organization_id=organization_id,
+            case_type_set_ids=case_type_set_ids,
+            case_type_ids=case_type_ids,
+            case_type_col_set_ids=case_type_col_set_ids,
+            case_type_col_ids=case_type_col_ids,
+            case_type_dim_ids=case_type_dim_ids,
+            dim_ids=dim_ids,
+            col_ids=col_ids,
+        )

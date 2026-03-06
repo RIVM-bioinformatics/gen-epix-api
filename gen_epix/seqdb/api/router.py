@@ -57,10 +57,6 @@ def create_routers(
             "name": "file",
             "create_endpoints_fn": create_file_endpoints,
         },
-        {
-            "name": "file",
-            "create_endpoints_fn": create_file_endpoints,
-        },
     ]
     routers: list[APIRouter] = []
     for curr_router_data in router_data:

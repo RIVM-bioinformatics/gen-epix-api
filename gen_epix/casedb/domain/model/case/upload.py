@@ -135,7 +135,7 @@ class CaseForUpload(ParentForUpload):
     A case intended for upload, together with any relevant associated data.
     """
 
-    ENTITY: ClassVar = ParentForUpload.ENTITY.model_copy()
+    ENTITY: ClassVar = ParentForUpload.ENTITY.clone()
     NAME: ClassVar = "CaseForUpload"
 
     EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.CASE
@@ -226,7 +226,7 @@ class CaseUploadResult(ParentUploadResult):
     as the resulting cases are included as well.
     """
 
-    ENTITY: ClassVar = ParentUploadResult.ENTITY.model_copy()
+    ENTITY: ClassVar = ParentUploadResult.ENTITY.clone()
     NAME: ClassVar = "CaseUploadResult"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -259,9 +259,7 @@ class CaseBatchForUpload(BaseBatchForUpload):
     A number of unique cases intended for upload.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "CaseBatchForUpload"
 
     PARENT_FOR_UPLOAD_CLASS: ClassVar = CaseForUpload
@@ -311,9 +309,7 @@ class CaseBatchUploadResult(BaseBatchUploadResult):
     The result of uploading a batch of cases.
     """
 
-    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.model_copy(
-        update={"persistable": False}
-    )
+    ENTITY: ClassVar = BaseBatchForUpload.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "CaseBatchUploadResult"
 
     BATCH_FOR_UPLOAD_CLASS: ClassVar = CaseBatchForUpload

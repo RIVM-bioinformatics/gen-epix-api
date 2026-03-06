@@ -1,7 +1,9 @@
 import pytest
 
 from gen_epix.transform.adapter import ObjectAdapter
-from gen_epix.transform.enum import TimeUnit
+from gen_epix.transform.enum import (
+    TimeUnit,
+)
 from gen_epix.transform.enum import (
     TimeUnitTransformStrategy as TimeUnitTransformStrategy,
 )
