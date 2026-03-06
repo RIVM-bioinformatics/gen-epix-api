@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 from enum import Enum
 from typing import ClassVar, Self
@@ -435,6 +436,10 @@ class ExternalIdentifier(Model):
             }
         ),
     )
+    id: UUID | None = Field(
+        default=None,
+        description="The ID of the external identifier. Computed as the UUID of the first 16 bytes of the SHA-256 hash of the concatenated identifier_issuer_id bytes and the external_id encoded as UTF-8. PRIMARY KEY",
+    )
     identifier_type: enum.IdentifierType = Field(
         description="The type of external identifier"
     )
@@ -448,6 +453,25 @@ class ExternalIdentifier(Model):
     internal_id: UUID = Field(
         description="The internal identifier. This identifier is not guaranteed to still exist, so operations using it should check this first."
     )
+
+    @model_validator(mode="after")
+    def _validate_model(self) -> Self:
+        """
+        Derive the id, if not provided, or otherwise verify that it is
+        correctly derived if possible.
+        """
+        seq_id = self.id
+        computed_id = UUID(
+            hashlib.sha256(
+                self.identifier_issuer_id.bytes + self.external_id.encode("utf-8")
+            ).hexdigest()[:32]
+        )
+        # Set or verify seq_hash
+        if seq_id is None:
+            self.id = computed_id
+        elif seq_id != computed_id:
+            raise ValueError("Provided id does not match computed id")
+        return self
 
 
 class ExternalIdentifierForUpload(BaseModel, frozen=True):

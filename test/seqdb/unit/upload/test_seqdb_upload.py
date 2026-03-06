@@ -12,11 +12,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from gen_epix.commondb.domain.enum import (
-    OnExistsUploadAction,
-    UploadStatus,
-    UploadStatusSet,
-)
+from gen_epix.commondb.domain.enum import UploadAction, UploadStatus, UploadStatusSet
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import UploadResult, User
 from gen_epix.fastapp.app import App
@@ -171,7 +167,8 @@ class BaseUploadTestCase(TestCase):
     def create_command_and_result_for_samples(
         self,
         samples: list[model.SampleForUpload] | model.SampleForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         batch_id: UUID | None = None,
         alleles: list[model.AlleleForUpload] | None = None,
     ) -> tuple[command.UploadSamplesCommand, model.SampleBatchUploadResult]:
@@ -183,6 +180,7 @@ class BaseUploadTestCase(TestCase):
             user=self.user,
             sample_batch=sample_batch,
             on_exists=on_exists,  # type: ignore[call-arg]
+            on_new=on_new,  # type: ignore[call-arg]
         )
         retval = self.batch_uploader.init_batch_upload_result(cmd)
         return cmd, retval
@@ -385,8 +383,8 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         self.assertTrue(retval.samples[0].seqs[0].has_errors())
         self.assertTrue(retval.samples[0].seqs[0].has_log_code("b9e4f8a1"))
 
-    def test_seqs_exist_with_error_on_exists(self) -> None:
-        """Test error when seqs exist and on_exists=ERROR."""
+    def test_seqs_exist_with_same_signature(self) -> None:
+        """Test error when seqs exist with same hash, read set and protocol."""
         # Create input and output
         seq = self.create_seq_for_upload(
             sample_id=self.sample_id,
@@ -397,9 +395,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
             seqs=[seq],
         )
         seq_hash = sample.seqs[0].seq_hash
-        cmd, retval = self.create_command_and_result_for_samples(
-            sample, on_exists=OnExistsUploadAction.ERROR
-        )
+        cmd, retval = self.create_command_and_result_for_samples(sample)
 
         # Prepare mocks
         self.service.repository.read_fields.return_value = [
@@ -420,7 +416,7 @@ class TestVerifyBatchSeqs(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to retval (code is passed as message in upload.py)
         self.assertTrue(retval.samples[0].seqs[0].has_errors())  # type: ignore[index]
-        self.assertTrue(retval.samples[0].seqs[0].has_log_code("b4c5d6e7"))  # type: ignore[index]
+        self.assertTrue(retval.samples[0].seqs[0].has_log_code("a2b3c4d5"))  # type: ignore[index]
 
 
 @pytest.mark.scenario_ids("TC-11-13-01")
@@ -635,7 +631,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
             allele_profiles=[allele_profile],
         )
         cmd, retval = self.create_command_and_result_for_samples(
-            sample, on_exists=OnExistsUploadAction.ERROR
+            sample, on_exists=UploadAction.ERROR
         )
 
         # Prepare mocks
@@ -665,7 +661,7 @@ class TestVerifyBatchAlleleProfiles(BaseUploadTestCase):
         self.assertFalse(success)
         # Check that error was added to retval
         self.assertTrue(retval.samples[0].allele_profiles[0].has_errors())  # type: ignore[index]
-        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("d8a3b7f4"))  # type: ignore[index]
+        self.assertTrue(retval.samples[0].allele_profiles[0].has_log_code("c7d8e9f0"))  # type: ignore[index]
 
     def test_locus_code_map_id_does_not_exist(self) -> None:
         """Test error when locus code map ID does not exist."""

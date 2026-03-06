@@ -9,7 +9,6 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
-    IsNewIdMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -34,7 +33,7 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq
 from gen_epix.util import copy_model_field
 
 
-class ReadSetForUpload(ReadSet, IsNewIdMixin):
+class ReadSetForUpload(ReadSet):
     """
     A read set intended for upload.
     """
@@ -66,7 +65,7 @@ class ReadSetForUpload(ReadSet, IsNewIdMixin):
         return self
 
 
-class SeqForUpload(Seq, IsNewIdMixin):
+class SeqForUpload(Seq):
     """
     A sequence intended for upload.
     """

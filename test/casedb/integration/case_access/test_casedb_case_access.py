@@ -145,7 +145,6 @@ class TestCaseAccess(CaseAccessSetup):
             if for_upload:
                 return model.CaseForUpload(
                     id=row["case.id"],
-                    is_new_id=is_create,
                     case=model.Case(
                         case_type_id=row["case.case_type_id"],
                         created_in_data_collection_id=row[
