@@ -17,6 +17,7 @@ from gen_epix.commondb.domain.model import SORTED_SERVICE_TYPES
 from gen_epix.commondb.domain.policy.permission import RoleGenerator
 from gen_epix.commondb.services import AuthService, RbacService
 from gen_epix.commondb.services.abac import AbacService
+from gen_epix.commondb.util import register_set_model_metadata_policy
 from gen_epix.commondb.services.organization import OrganizationService
 from gen_epix.commondb.services.system import SystemService
 from gen_epix.commondb.services.user_manager import UserManager
@@ -175,6 +176,9 @@ class AppComposer(BaseAppComposer):
             system_service.register_policies()
             rbac_service.register_policies()
             abac_service.register_policies()
+            privileged_roles = app_impl.role_set_map[enum.RoleSet.GE_APP_ADMIN]
+            register_set_model_metadata_policy(app, privileged_roles)
+            self._register_extra_policies(app, privileged_roles)
 
             # Finalise process
             if self._log_setup and setup_logger:
@@ -203,6 +207,11 @@ class AppComposer(BaseAppComposer):
             "new_user_dependency": app_impl.new_user_dependency,
             "idp_user_dependency": app_impl.idp_user_dependency,
         }
+
+    def _register_extra_policies(
+        self, app: App, privileged_roles: frozenset[str]
+    ) -> None:
+        """Hook for subclasses to register additional policies after base registration."""
 
     def _get_services(
         self, app_impl: AppImplDetails

@@ -9,7 +9,6 @@ from cachetools import TTLCache, cached
 from gen_epix.commondb import policies
 from gen_epix.commondb import policies as policies
 from gen_epix.commondb.app_impl_details import AppImplDetails
-from gen_epix.commondb.util import register_model_metadata_policies
 from gen_epix.commondb.domain import command, enum, exc, model, policy
 from gen_epix.commondb.domain.policy import BaseReadOrganizationResultsOnlyPolicy
 from gen_epix.commondb.domain.repository.abac import BaseAbacRepository
@@ -115,10 +114,6 @@ class AbacService(BaseAbacService):
         policy = self.read_self_results_only_policy_class(self)
         for command_class in read_self_results_only_commands:
             f(command_class, policy, EventTiming.AFTER)
-        register_model_metadata_policies(
-            self.app,
-            self.role_set_map[enum.RoleSet.GE_APP_ADMIN],
-        )
 
     def retrieve_organizations_under_admin(
         self, cmd: command.RetrieveOrganizationsUnderAdminCommand
