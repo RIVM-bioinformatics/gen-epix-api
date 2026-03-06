@@ -24,23 +24,23 @@ handlers:
     stream: ext://sys.stdout
 
 loggers:
-  opomdb.setup:
+  omopdb.setup:
     level: INFO
     handlers: [console]
     propagate: false
-  opomdb.service:
+  omopdb.service:
     level: INFO
     handlers: [console]
     propagate: false
-  opomdb.app:
+  omopdb.app:
     level: INFO
     handlers: [console]
     propagate: false
-  opomdb.api:
+  omopdb.api:
     level: INFO
     handlers: [console]
     propagate: false
-  opomdb.external:
+  omopdb.external:
     level: INFO
     handlers: [console]
     propagate: false
