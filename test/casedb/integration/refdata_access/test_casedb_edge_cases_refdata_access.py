@@ -11,18 +11,6 @@ It uses:
 """
 
 import logging
-from test.casedb.casedb_test_client import CasedbTestClient as Env
-from test.casedb.integration.refdata_access.base_empty import (
-    DEV_REPOSITORY_CONFIG,
-    SKIP_ENDPOINTS,
-    TEST_TYPE,
-    VERBOSE,
-)
-from test.casedb.integration.setup.define_edge_cases import (
-    EDGE_CASE_BY_USER,
-    EDGE_CASES,
-    EdgeCaseSpec,
-)
 
 import pytest
 from rich import print as rich_print
@@ -40,6 +28,18 @@ from gen_epix.commondb.domain.enum import AppType
 from gen_epix.commondb.domain.util import get_app_cfgs
 from gen_epix.fastapp import CrudOperation
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from test.casedb.casedb_test_client import CasedbTestClient as Env
+from test.casedb.integration.refdata_access.base_empty import (
+    DEV_REPOSITORY_CONFIG,
+    SKIP_ENDPOINTS,
+    TEST_TYPE,
+    VERBOSE,
+)
+from test.casedb.integration.setup.define_edge_cases import (
+    EDGE_CASE_BY_USER,
+    EDGE_CASES,
+    EdgeCaseSpec,
+)
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE
