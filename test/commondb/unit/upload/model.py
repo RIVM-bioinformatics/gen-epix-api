@@ -135,7 +135,7 @@ class Child2(fastapp.Model):
     )
 
 
-class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
+class Child1ForUpload(Child1):
     ENTITY: ClassVar = Child1.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child1ForUpload"
     parent_id: UUID = Field(
@@ -163,9 +163,7 @@ class Child1ForUpload(Child1, commondb_model.IsNewIdMixin):
         return self
 
 
-class Child2ForUpload(
-    Child2, commondb_model.IsNewIdMixin, commondb_model.ExternalIdentifiersMixin
-):
+class Child2ForUpload(Child2, commondb_model.ExternalIdentifiersMixin):
     ENTITY: ClassVar = Child2.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child2ForUpload"
     EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE

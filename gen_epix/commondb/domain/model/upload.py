@@ -22,34 +22,6 @@ from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
 
 
-class IsNewIdMixin:
-    """
-    Mixin that adds an is_new_id field to indicate whether the model instance is new
-    and has an externally assigned ID rather than one assigned by the system.
-    Assumes that the inheriting model also has an 'id' field.
-
-    Additional validation:
-    - If is_new_id is True, the model id field field may not be None or NULL_ID.
-    """
-
-    is_new_id: bool = Field(
-        default=False,
-        description="Indicates whether the model instance is both new (not yet stored) and its ID is assigned outside the system, e.g. for having the same IDs between different environments.",
-    )
-
-    @model_validator(mode="after")
-    def _validate_for_upload(self) -> Self:
-        """
-        Validate ForUploadMixin consistency. Assumes that the inheriting model also has an 'id' field.
-        """
-        if not hasattr(self, "id"):
-            return self
-        id_value = getattr(self, "id")
-        if self.is_new_id and (id_value is None or id_value == NULL_ID):
-            raise ValueError("is_new_id cannot be True when id is None or NULL_ID.")
-        return self
-
-
 class ExternalIdentifiersMixin:
     """
     Mixin that adds external identifiers fields and validation. Assumes that the
@@ -148,7 +120,8 @@ class DataIssue(PydanticBaseModel):
 
 class UploadResult(Model):
     """
-    Represents the result of an upload operation, including upload status and logs.
+    Represents the result of an upload operation for a particular object, including
+    upload status and logs.
 
     Additional validation:
     - If the status is successful (NOT_FAILED), there must be no error log items.
@@ -164,6 +137,10 @@ class UploadResult(Model):
     status: UploadStatus = Field(
         default=UploadStatus.PENDING,
         description="The status of the upload operation. If not successful, error information must be provided in the logs.",
+    )
+    is_new: bool = Field(
+        default=False,
+        description="Indicates whether the object did not exist before start of the upload. False in case upload failed before this could be determined.",
     )
     logs: list[UploadLogItem] = Field(
         default_factory=list,
@@ -272,7 +249,7 @@ class UploadResultWithExternalIdentifiers(UploadResult):
         return self.external_identifiers
 
 
-class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
+class ParentForUpload(Model, ExternalIdentifiersMixin):
     """
     Represents a parent model for upload, where the term "parent" refers to a model
     that can have child models associated with it through a link. External identifiers
@@ -316,8 +293,8 @@ class ParentForUpload(Model, IsNewIdMixin, ExternalIdentifiersMixin):
     CHILDREN_FIELD_NAME_MAP: ClassVar[dict[type[Model], str]] = {}
 
     # Must be set in child class
-    # Mapping from child model classes to their corresponding ForUploadMixin classes
-    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[dict[type[Model], type[IsNewIdMixin]]] = {}
+    # Mapping from child model classes to their corresponding ForUpload classes
+    CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar[dict[type[Model], type[Model]]] = {}
 
     # Must be set in child class
     # Mapping from child model classes to the names of the fields in the child models that refer back to the parent ID
@@ -555,7 +532,7 @@ class BaseBatchForUpload(Model):
         Validate that all parents for upload in the batch have unique IDs and external
         identifiers.
         """
-        # Verify duplicate IDs
+        # Verify duplicate parent IDs
         parents_for_upload = self.get_parents_for_upload()
         parent_ids = [
             x.id for x in parents_for_upload if x.id is not None and x.id != NULL_ID
@@ -568,6 +545,34 @@ class BaseBatchForUpload(Model):
             raise ValueError(
                 f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
             )
+        # Verify duplicate child IDs across all types of children
+        child_ids = []
+        for (
+            child_model_class,
+            children_field_name,
+        ) in self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP.items():
+            # Get all children
+            child_id_field_name = child_model_class.ENTITY.get_id_field_name()
+            child_parent_id_field_name = (
+                self.PARENT_FOR_UPLOAD_CLASS.CHILD_PARENT_ID_FIELD_NAME_MAP[
+                    child_model_class
+                ]
+            )
+            children_for_upload: list[Model] = [
+                y
+                for x in parents_for_upload
+                for y in (getattr(x, children_field_name) or [])
+            ]
+            # Add all IDs
+            for child_for_upload in children_for_upload:
+                child_id = getattr(child_for_upload, child_parent_id_field_name)
+                if child_id is None or child_id == NULL_ID:
+                    continue
+                child_ids.append(child_id)
+        if len(child_ids) != len(set(child_ids)):
+            duplicate_ids = sorted(set(x for x in child_ids if child_ids.count(x) > 1))
+            duplicate_ids_str = ", ".join(str(x) for x in duplicate_ids)
+            raise ValueError(f"Duplicate child IDs found in batch: {duplicate_ids_str}")
         # Verify duplicate external identifiers
         all_external_identifiers = []
         for parent_for_upload in parents_for_upload:
@@ -585,6 +590,9 @@ class BaseBatchForUpload(Model):
             self, self.PARENTS_FOR_UPLOAD_FIELD_NAME
         )
         return parents_for_upload
+
+    def get_n_parents(self) -> int:
+        return len(self.get_parents_for_upload())
 
     @classmethod
     def get_parent_class(cls) -> type[ParentForUpload]:
