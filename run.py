@@ -427,6 +427,13 @@ class Run:
             ]
         )
 
+    def test_commondb_integration_sql_injection(self) -> None:
+        import pytest
+
+        pytest.main(
+            Run.DEFAULT_PYTEST_ARGS + ["test/commondb/integration/sql_injection"]
+        )
+
     def test_casedb_unit(self) -> None:
         import pytest
 

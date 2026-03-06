@@ -780,6 +780,17 @@
             "justMyCode": true,
         },
         {
+            "name": "test.commondb.integration.sql_injection",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "run.py",
+            "args": [
+                "test_commondb_integration_sql_injection"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "test.filter.unit",
             "type": "debugpy",
             "request": "launch",
