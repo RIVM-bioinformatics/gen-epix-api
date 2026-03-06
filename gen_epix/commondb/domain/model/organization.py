@@ -67,8 +67,8 @@ class User(fastapp.User, Model):
     id: UUID | None = Field(
         default=None, description="The ID of the user"
     )  # pyright: ignore[reportIncompatibleVariableOverride]
-    key: str = Field(
-        description="The key of the user, lowercase, UNIQUE", max_length=320
+    key: str | None = Field(
+        description="The key of the user, lowercase, UNIQUE", max_length=320, default=None
     )
     email: str | None = Field(
         default=None, description="The email of the user", max_length=320
@@ -92,7 +92,9 @@ class User(fastapp.User, Model):
 
     @field_validator("key", mode="before")
     @classmethod
-    def _validate_key(cls, value: str) -> str:
+    def _validate_key(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return value.lower()
 
     def get_key(self) -> str:
@@ -313,7 +315,9 @@ class UserInvitation(Model):
         ),
     )
     ROLE_ENUM: ClassVar[type[Enum]] = enum.Role
-    key: str = copy_model_field(User, "key")
+    key: str | None = Field(
+        description="The key of the user, lowercase, UNIQUE", max_length=320, default=None
+    )
     email: str | None = copy_model_field(User, "email")
     name: str | None = copy_model_field(User, "name")
     token: str = Field(description="The token of the invitation", max_length=255)

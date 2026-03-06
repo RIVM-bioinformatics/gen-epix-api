@@ -28,7 +28,7 @@ class ApiPermission(PydanticBaseModel, frozen=True):
 
 
 class UserInvitationRequestBody(PydanticBaseModel):
-    key: str = copy_model_field(model.UserInvitation, "key")
+    key: str | None = copy_model_field(model.UserInvitation, "key")
     roles: set[str] = copy_model_field(model.UserInvitation, "roles")
     organization_id: UUID = copy_model_field(model.UserInvitation, "organization_id")
 
@@ -122,7 +122,7 @@ def create_organization_endpoints(
             retval: user_invitation_class = app.handle(  # type: ignore[valid-type] # Dynamic type annotation
                 invite_user_command_class(
                     user=user,
-                    key=user_invitation.key,
+                    key=user_invitation.key if user_invitation.key is not None else None,
                     roles=user_invitation.roles,
                     organization_id=user_invitation.organization_id,
                 )
@@ -154,7 +154,7 @@ def create_organization_endpoints(
     @router.post(
         "/user_registrations/{token}",
         operation_id="user_registrations__post_one",
-        name="RegisterInvitedUser",
+        name="Register InvitedUser",
         description=command.RegisterInvitedUserCommand.__doc__,
     )
     async def user_registrations__post_one(

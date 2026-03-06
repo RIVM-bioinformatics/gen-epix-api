@@ -203,7 +203,7 @@ class UserInvitationMixin(RowMetadataMixin):
     created under a different declarative base.
     """
 
-    key: Mapped[str] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
+    key: Mapped[str | None] = create_mapped_column(DOMAIN, model.UserInvitation, "key")
     email: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.UserInvitation, "email"
     )
