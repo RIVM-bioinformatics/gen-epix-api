@@ -39,10 +39,13 @@ the OMOP person domain:
 6.1 No external identifiers: succeeds
 6.2 Existing external identifier resolves person ID
 6.3 New external identifier created on upload
-7 Upload command on_exists value
-7.1 ERROR: error if any existing person
-7.2 SKIP: skip existing person
-7.3 UPDATE: update existing person
+7 Upload command on_exists and on_new values
+7.1 on_exists=ERROR: error if any existing person
+7.2 on_exists=SKIP: skip existing person
+7.3 on_exists=UPDATE: update existing person
+7.4 on_new=CREATE: create any new person with provided ID (default)
+7.5 on_new=SKIP: skip any new person, do not create
+7.6 on_new=ERROR: error if any new person
 8 Parameterized batch sizes
 8.1 Single person
 8.2 Multiple persons
@@ -890,8 +893,8 @@ class Test6ExternalIdentifiers(BasePersonUploadTestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test7OnExistsActions(BasePersonUploadTestCase):
-    """Test scenarios related to the on_exists command parameter."""
+class Test7OnExistsAndOnNewActions(BasePersonUploadTestCase):
+    """Test scenarios related to the on_exists and on_new command parameters."""
 
     def test_7_1_on_exists_error_with_existing_person_fails(self) -> None:
         """Test 7.1: on_exists=ERROR with existing person - should fail."""
@@ -936,6 +939,37 @@ class Test7OnExistsActions(BasePersonUploadTestCase):
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
+
+    def test_7_4_on_new_create_with_new_id_creates(self) -> None:
+        """Test 7.4: on_new=CREATE with new person having provided ID - should create."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+            [self.person_id],  # CREATE_SOME: create returns provided ID
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.CREATE)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+
+    def test_7_5_on_new_skip_with_new_id_skips(self) -> None:
+        """Test 7.5: on_new=SKIP with new person having provided ID - should skip."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.SKIP)
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
+
+    def test_7_6_on_new_error_with_new_id_fails(self) -> None:
+        """Test 7.6: on_new=ERROR with new person having provided ID - should fail."""
+        person_for_upload = self.create_person_for_upload(person_id=self.person_id)
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: person does not exist
+        ]
+        batch_result = self.upload_batch(person_for_upload, on_new=UploadAction.ERROR)
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # ---------------------------------------------------------------------------

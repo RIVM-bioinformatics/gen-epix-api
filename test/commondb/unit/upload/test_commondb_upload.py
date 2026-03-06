@@ -61,10 +61,13 @@ combinations thereof:
 6.3.1 Identifier issuer ID (any except NULL_ID) provided and not found: error
 6.3.2 Identifier issuer code provided and not found: error
 6.3.3 Both identifier issuer ID (any except NULL_ID) and code provided and do not match: error
-7 Upload command on_exists value
-7.1 ERROR: error if any existing object
-7.2 SKIP: skip any existing object, do not update
-7.3 UPDATE: update any existing object
+7 Upload command on_exists and on_new values
+7.1 on_exists=ERROR: error if any existing object
+7.2 on_exists=SKIP: skip any existing object, do not update
+7.3 on_exists=UPDATE: update any existing object
+7.4 on_new=CREATE: create any new object with provided ID (default)
+7.5 on_new=SKIP: skip any new object, do not create
+7.6 on_new=ERROR: error if any new object
 8 Parametrized batch sizes
 8.1 Batch of n new parent objects
 8.2 Parent with n child objects
@@ -1348,10 +1351,10 @@ class Test6ExternalIdentifiers(BaseUploadTestCase):
     # TODO: create tests for scenarios 6.3 on invalid identifier issuer
 
 
-# Test Scenario 7: Upload command on_exists value
+# Test Scenario 7: Upload command on_exists and on_new values
 @pytest.mark.scenario_ids("TC-SEC-30-03")
-class Test7OnExistsActions(BaseUploadTestCase):
-    """Test scenarios related to the on_exists command parameter."""
+class Test7OnExistsAndOnNewActions(BaseUploadTestCase):
+    """Test scenarios related to the on_exists and on_new command parameters."""
 
     def test_7_1_on_exists_error_with_existing_object_fails(self) -> None:
         """Test 7.1: on_exists=ERROR with existing object - should fail."""
@@ -1402,6 +1405,52 @@ class Test7OnExistsActions(BaseUploadTestCase):
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
+
+    def test_7_4_on_new_create_with_new_id_creates(self) -> None:
+        """Test 7.4: on_new=CREATE with new object having provided ID - should create."""
+        # Create upload batch with explicit ID that does not yet exist
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        # Set up mocks
+        self.service.repository.crud.side_effect = [
+            [False],           # EXISTS_SOME: parent does not exist
+            [self.parent_id],  # CREATE_SOME: create returns provided ID
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(
+            parent_for_upload, on_new=UploadAction.CREATE
+        )
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_created=1)
+
+    def test_7_5_on_new_skip_with_new_id_skips(self) -> None:
+        """Test 7.5: on_new=SKIP with new object having provided ID - should skip."""
+        # Create upload batch with explicit ID that does not yet exist
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        # Set up mocks
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: parent does not exist
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(
+            parent_for_upload, on_new=UploadAction.SKIP
+        )
+        self.assertBatchProcessed(batch_result)
+        self.assertStatusCount(batch_result, n_skipped=1)
+
+    def test_7_6_on_new_error_with_new_id_fails(self) -> None:
+        """Test 7.6: on_new=ERROR with new object having provided ID - should fail."""
+        # Create upload batch with explicit ID that does not yet exist
+        parent_for_upload = self.create_parent_for_upload(parent_id=self.parent_id)
+        # Set up mocks
+        self.service.repository.crud.side_effect = [
+            [False],  # EXISTS_SOME: parent does not exist
+        ]
+        # Perform upload and verify result
+        batch_result = self.upload_batch(
+            parent_for_upload, on_new=UploadAction.ERROR
+        )
+        self.assertBatchFailed(batch_result)
+        self.assertStatusCount(batch_result, n_failed=1)
 
 
 # Test Scenario 8: Parameterized batch sizes
