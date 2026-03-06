@@ -73,8 +73,8 @@ import pytest
 
 from gen_epix.commondb.domain.enum import (
     IdentifierType,
-    OnExistsUploadAction,
     Role,
+    UploadAction,
     UploadStatus,
     UploadStatusSet,
 )
@@ -377,7 +377,8 @@ class BasePersonUploadTestCase(TestCase):
     def create_command_for_persons(
         self,
         persons: list[PersonForUpload] | PersonForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> UploadPersonsCommand:
         """Create a test UploadPersonsCommand."""
@@ -393,6 +394,7 @@ class BasePersonUploadTestCase(TestCase):
             user=self.user,
             person_batch=person_batch,
             on_exists=on_exists,  # type: ignore[call-arg]
+            on_new=on_new,  # type: ignore[call-arg]
         )
         return cmd
 
@@ -450,7 +452,8 @@ class BasePersonUploadTestCase(TestCase):
     def upload_batch(
         self,
         cmd: UploadPersonsCommand | list[PersonForUpload] | PersonForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> PersonBatchUploadResult:
         """Upload a batch of persons and return the upload result."""
@@ -458,7 +461,10 @@ class BasePersonUploadTestCase(TestCase):
             pass
         else:
             cmd = self.create_command_for_persons(
-                cmd, on_exists, validate_command=validate_command
+                cmd,
+                on_exists=on_exists,
+                on_new=on_new,
+                validate_command=validate_command,
             )
         batch_result = self.batch_uploader.upload_batch(cmd)
         return batch_result  # type: ignore[return-value]
@@ -894,7 +900,7 @@ class Test7OnExistsActions(BasePersonUploadTestCase):
             [True],  # EXISTS_SOME: person exists
         ]
         batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.ERROR
+            person_for_upload, on_exists=UploadAction.ERROR
         )
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
@@ -905,9 +911,7 @@ class Test7OnExistsActions(BasePersonUploadTestCase):
         self.service.repository.crud.side_effect = [
             [True],  # EXISTS_SOME: person exists
         ]
-        batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.SKIP
-        )
+        batch_result = self.upload_batch(person_for_upload, on_exists=UploadAction.SKIP)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
@@ -928,7 +932,7 @@ class Test7OnExistsActions(BasePersonUploadTestCase):
             [self.person_id],  # UPDATE_SOME: update returns ID
         ]
         batch_result = self.upload_batch(
-            person_for_upload, on_exists=OnExistsUploadAction.UPDATE
+            person_for_upload, on_exists=UploadAction.UPDATE
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)

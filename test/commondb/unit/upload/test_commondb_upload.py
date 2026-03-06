@@ -107,8 +107,8 @@ import pytest
 
 from gen_epix.commondb.domain.enum import (
     IdentifierType,
-    OnExistsUploadAction,
     Role,
+    UploadAction,
     UploadStatus,
     UploadStatusSet,
 )
@@ -315,7 +315,8 @@ class BaseUploadTestCase(TestCase):
     def create_command_for_parents(
         self,
         parents: list[ParentForUpload] | ParentForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> UploadParentsCommand:
         """Create a test upload command."""
@@ -331,6 +332,7 @@ class BaseUploadTestCase(TestCase):
             user=self.user,
             parent_batch=parent_batch,
             on_exists=on_exists,  # type: ignore[call-arg]
+            on_new=on_new,  # type: ignore[call-arg]
         )
         return cmd
 
@@ -394,7 +396,8 @@ class BaseUploadTestCase(TestCase):
     def upload_batch(
         self,
         cmd: UploadParentsCommand | list[ParentForUpload] | ParentForUpload,
-        on_exists: OnExistsUploadAction = OnExistsUploadAction.UPDATE,
+        on_exists: UploadAction = UploadAction.UPDATE,
+        on_new: UploadAction = UploadAction.CREATE,
         validate_command: bool = True,
     ) -> ParentBatchUploadResult:
         """Upload a batch of parents and return the upload result."""
@@ -402,7 +405,10 @@ class BaseUploadTestCase(TestCase):
             pass
         else:
             cmd = self.create_command_for_parents(
-                cmd, on_exists, validate_command=validate_command
+                cmd,
+                on_exists=on_exists,
+                on_new=on_new,
+                validate_command=validate_command,
             )
         batch_result = self.batch_uploader.upload_batch(
             cmd,
@@ -1357,7 +1363,7 @@ class Test7OnExistsActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
-            parent_for_upload, on_exists=OnExistsUploadAction.ERROR
+            parent_for_upload, on_exists=UploadAction.ERROR
         )
         self.assertBatchFailed(batch_result)
         self.assertStatusCount(batch_result, n_failed=1)
@@ -1371,9 +1377,7 @@ class Test7OnExistsActions(BaseUploadTestCase):
             [True],  # EXISTS_SOME: parent exists
         ]
         # Perform upload and verify result
-        batch_result = self.upload_batch(
-            parent_for_upload, on_exists=OnExistsUploadAction.SKIP
-        )
+        batch_result = self.upload_batch(parent_for_upload, on_exists=UploadAction.SKIP)
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_skipped=1)
 
@@ -1394,7 +1398,7 @@ class Test7OnExistsActions(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
-            parent_for_upload, on_exists=OnExistsUploadAction.UPDATE
+            parent_for_upload, on_exists=UploadAction.UPDATE
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1)
@@ -1990,7 +1994,7 @@ class TestCombinedScenarios(BaseUploadTestCase):
         ]
         # Perform upload and verify result
         batch_result = self.upload_batch(
-            parent_for_upload, on_exists=OnExistsUploadAction.UPDATE
+            parent_for_upload, on_exists=UploadAction.UPDATE
         )
         self.assertBatchProcessed(batch_result)
         self.assertStatusCount(batch_result, n_updated=1, n_created=1)

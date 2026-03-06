@@ -3,7 +3,7 @@ from uuid import UUID
 
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command, enum, exc, model
-from gen_epix.commondb.domain.enum import OnExistsUploadAction, UploadStatus
+from gen_epix.commondb.domain.enum import UploadAction, UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
@@ -469,13 +469,13 @@ class BatchUploader:
         ):
             if parent_exists:
                 parent_result.id = parent_for_upload.id
-                if cmd.on_exists == OnExistsUploadAction.ERROR:
+                if cmd.on_exists == UploadAction.ERROR:
                     success = False
                     parent_result.add_error(
                         "d3f5b6a1",
                         f"{self.parent_class.NAME} already exists and on_exists={cmd.on_exists.value}.",
                     )
-                elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                elif cmd.on_exists == UploadAction.SKIP:
                     # Existing parent and on_exists=SKIP: do not update
                     parent_result.status = UploadStatus.SKIPPED
                     parent_result.add_info(
@@ -484,8 +484,31 @@ class BatchUploader:
                     )
             else:
                 parent_result.is_new = True
-                # TODO: handle cmd.on_new
-                pass
+                if cmd.on_new == UploadAction.ERROR:
+                    success = False
+                    parent_result.add_error(
+                        "e5a6c7b2",
+                        f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                    )
+                elif cmd.on_new == UploadAction.SKIP:
+                    # New parent and on_new=SKIP: do not create
+                    parent_result.status = UploadStatus.SKIPPED
+                    parent_result.add_info(
+                        "b6d7e8f3",
+                        f"{self.parent_class.NAME} does not exist and on_new={cmd.on_new.value}.",
+                    )
+                elif cmd.on_new == UploadAction.CREATE:
+                    # New parent and on_new=CREATE: will be created, nothing left to check for this parent
+                    if self.is_null(parent_for_upload.id):
+                        parent_result.add_info(
+                            "c8f9a0b4",
+                            f"{self.parent_class.NAME} will be created with generated ID",
+                        )
+                    else:
+                        parent_result.add_info(
+                            "9b5d4e32",
+                            f"{self.parent_class.NAME} will be created with provided ID",
+                        )
         return success
 
     def verify_children(
@@ -591,24 +614,16 @@ class BatchUploader:
                     else:
                         # Neither parent ID nor child parent ID given
                         pass
-                # Continue with child ID
-                if child_id == NULL_ID:
-                    # Set child ID to None if NULL_ID
-                    setattr(child_for_upload, child_id_field_name, None)
-                    child_id = None
-                if child_id is None:
-                    # Child does not exist yet and no ID given, nothing left to check for this child
-                    continue
                 # Child ID given
                 if child_exists:
                     # Child already exists
-                    if cmd.on_exists == OnExistsUploadAction.ERROR:
+                    if cmd.on_exists == UploadAction.ERROR:
                         success = False
                         child_result.add_error(
                             "c6e7f8a0",
                             f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
-                    elif cmd.on_exists == OnExistsUploadAction.SKIP:
+                    elif cmd.on_exists == UploadAction.SKIP:
                         # Existing child and on_exists=SKIP: do not update
                         child_result.status = UploadStatus.SKIPPED
                         child_result.add_info(
@@ -616,13 +631,32 @@ class BatchUploader:
                             f"{child_for_upload.__class__.NAME} already exists and on_exists={cmd.on_exists.value}",
                         )
                 else:
-                    # Child does not exist yet but ID given
-                    child_result.add_info(
-                        "9b5d4e32",
-                        f"{child_for_upload.__class__.NAME} does not exist and will be created with provided ID",
-                    )
-                    # TODO: handle cmd.on_new
-                    pass
+                    # Child does not exist yet
+                    if cmd.on_new == UploadAction.ERROR:
+                        success = False
+                        child_result.add_error(
+                            "d5a6b7c2",
+                            f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
+                        )
+                    elif cmd.on_new == UploadAction.SKIP:
+                        # New child and on_new=SKIP: do not create
+                        child_result.status = UploadStatus.SKIPPED
+                        child_result.add_info(
+                            "8b7c6d3f",
+                            f"{child_for_upload.__class__.NAME} does not exist and on_new={cmd.on_new.value}",
+                        )
+                    elif cmd.on_new == UploadAction.CREATE:
+                        # New child and on_new=CREATE: will be created
+                        if self.is_null(child_id):
+                            child_result.add_info(
+                                "c8f9a0b4",
+                                f"{child_for_upload.__class__.NAME} will be created with generated ID",
+                            )
+                        else:
+                            child_result.add_info(
+                                "9b5d4e32",
+                                f"{child_for_upload.__class__.NAME} will be created with provided ID",
+                            )
         return success
 
     def verify_refdata(
