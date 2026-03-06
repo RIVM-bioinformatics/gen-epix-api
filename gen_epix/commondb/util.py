@@ -1,6 +1,6 @@
 from gen_epix.commondb.policies.model_metadata_policy import (
-    MaskModelMetadataPolicy,
-    SetModelMetadataPolicy,
+    MaskModelProcessMetadataPolicy,
+    SetModelProcessMetadataPolicy,
 )
 from gen_epix.fastapp.app import App
 from gen_epix.fastapp.enum import EventTiming
@@ -17,8 +17,8 @@ def register_model_metadata_policies(
     - Returned ModelNoId objects have their metadata fields nulled out for
       non-privileged users.
     """
-    set_policy = SetModelMetadataPolicy(privileged_roles)
-    mask_policy = MaskModelMetadataPolicy(privileged_roles)
+    set_policy = SetModelProcessMetadataPolicy(privileged_roles)
+    mask_policy = MaskModelProcessMetadataPolicy(privileged_roles)
     crud_command_classes = set()
     for service_type in app.domain.get_service_types():
         crud_command_classes.update(

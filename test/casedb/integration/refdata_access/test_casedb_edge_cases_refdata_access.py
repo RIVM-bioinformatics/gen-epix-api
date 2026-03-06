@@ -420,7 +420,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
             assert ct.modified_at is not None
             assert ct.modified_by is not None
 
-    # TODO: This would be better on operational data (cases) rather than reference data (case types),
+    # Note: This would be better on operational data (cases) rather than reference data (case types),
     # since metadata is more relevant there, but we can at least test that metadata is masked for org users on case types
     # as a proof of concept that the policy is working in this integration setup.
     def test_case_type_should_not_contain_metadata_for_org_users(

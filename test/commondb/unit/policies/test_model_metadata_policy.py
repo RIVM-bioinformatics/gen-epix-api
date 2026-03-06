@@ -1,7 +1,7 @@
 """
-Unit tests for SetModelMetadataPolicy and MaskModelMetadataPolicy.
+Unit tests for SetModelProcessMetadataPolicy and MaskModelProcessMetadataPolicy.
 
-SetModelMetadataPolicy (BEFORE):
+SetModelProcessMetadataPolicy (BEFORE):
 - Calls set_created on ModelNoId objects for CREATE/UPSERT operations.
 - Calls set_modified on ModelNoId objects for UPDATE operations.
 - Skips non-ModelNoId objects.
@@ -9,7 +9,7 @@ SetModelMetadataPolicy (BEFORE):
 - Skips when user is None or has a privileged role.
 - Always returns True.
 
-MaskModelMetadataPolicy (AFTER):
+MaskModelProcessMetadataPolicy (AFTER):
 - Nulls created_at, modified_at, modified_by on returned ModelNoId objects
   for non-privileged users.
 - Passes through unchanged for privileged users (APP_ADMIN / ROOT).
@@ -34,8 +34,8 @@ from gen_epix.commondb.domain.enum import Role
 from gen_epix.commondb.domain.model.base import ModelNoId
 from gen_epix.commondb.domain.model.organization import User
 from gen_epix.commondb.policies.model_metadata_policy import (
-    MaskModelMetadataPolicy,
-    SetModelMetadataPolicy,
+    MaskModelProcessMetadataPolicy,
+    SetModelProcessMetadataPolicy,
 )
 from gen_epix.fastapp.enum import CrudOperation
 
@@ -69,10 +69,10 @@ def _make_cmd(
 
 
 @pytest.mark.scenario_ids("TC-SEC-META-01")
-class TestSetModelMetadataPolicy(TestCase):
+class TestSetModelProcessMetadataPolicy(TestCase):
 
     def setUp(self) -> None:
-        self.policy = SetModelMetadataPolicy(_PRIVILEGED_ROLES)
+        self.policy = SetModelProcessMetadataPolicy(_PRIVILEGED_ROLES)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})
 
@@ -197,10 +197,10 @@ class TestSetModelMetadataPolicy(TestCase):
 
 
 @pytest.mark.scenario_ids("TC-SEC-META-02")
-class TestMaskModelMetadataPolicy(TestCase):
+class TestMaskModelProcessMetadataPolicy(TestCase):
 
     def setUp(self) -> None:
-        self.policy = MaskModelMetadataPolicy(_PRIVILEGED_ROLES)
+        self.policy = MaskModelProcessMetadataPolicy(_PRIVILEGED_ROLES)
         self.regular_user = _make_user({Role.ORG_USER.value})
         self.admin_user = _make_user({Role.APP_ADMIN.value})
         self.root_user = _make_user({Role.ROOT.value})
