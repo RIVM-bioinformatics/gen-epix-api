@@ -12,20 +12,35 @@ from gen_epix.casedb.domain import exc
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     crud_with_access_filter,
-    get_readable_reference_data_from_command,
+    get_ref_data_access_from_command,
 )
-from gen_epix.fastapp import CrudOperation, CrudOperationSet
+from gen_epix.fastapp import CrudOperation
 
 
 def case_service_crud_col(
     self: BaseCaseService, cmd: command.ColCrudCommand
 ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
     """Handle CRUD operations for Col entities."""
-    # Col entities have no ABAC restrictions, but need some validation on CREATE/UPDATE
     assert cmd.user is not None and cmd.user.id is not None
+
+    if cmd.is_read():
+        ref_data_access = get_ref_data_access_from_command(cmd)
+        if ref_data_access is None or ref_data_access.is_full_access:
+            # Special case: no policy (implies full access) or explicit full access
+            return self.crud(cmd)  # type: ignore[return-value]
+        access_filter = ref_data_access.get_col_filter("id")
+        # No cascade delete to force conscious decision to delete from other models
+        with self.repository.uow() as uow:
+            retval = crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
+        return retval
+
+    if cmd.is_delete():
+        return self.crud(cmd)  # type: ignore[return-value]
+
+    # Perform some validation on CREATE/UPDATE
     cols: list[model.Col] = cmd.get_objs()  # type: ignore[assignment]
-    with self.repository.uow() as uow:
-        if cmd.operation in CrudOperationSet.CREATE.value:
+    if cmd.is_create():
+        with self.repository.uow() as uow:
             # Get dims
             dim_ids = list({x.dim_id for x in cols})
             dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
@@ -53,7 +68,10 @@ def case_service_crud_col(
                     "col_type must correspond to Dim.dim_type",
                     ids=invalid_cols_ids,
                 )
-        if cmd.operation in CrudOperationSet.UPDATE.value:
+        return self.crud(cmd)  # type: ignore[return-value]
+
+    if cmd.is_update():
+        with self.repository.uow() as uow:
             existing_cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,
@@ -78,14 +96,6 @@ def case_service_crud_col(
                 raise exc.InvalidArgumentsError(
                     "col_type is immutable and cannot be updated", ids=invalid_cols
                 )
-        retval = self.crud(cmd)
+        return self.crud(cmd)  # type: ignore[return-value]
 
-        if cmd.operation in CrudOperationSet.READ.value:
-            readable_reference_data = get_readable_reference_data_from_command(cmd)
-            assert readable_reference_data is not None
-            valid_col_ids = readable_reference_data.col_ids
-            access_filter = self._compose_id_filter(("id", valid_col_ids))
-            # No cascade delete to force conscious decision to delete from other models
-            return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
-
-    return retval  # type: ignore[return-value]
+    raise exc.InvalidArgumentsError(f"Unsupported operation: {cmd.operation}")

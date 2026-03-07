@@ -6,7 +6,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseIsOrganizationAdminPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
-from gen_epix.fastapp import CrudOperation, CrudOperationSet, exc
+from gen_epix.fastapp import CrudOperation, exc
 
 
 class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
@@ -37,10 +37,7 @@ class IsOrganizationAdminPolicy(BaseIsOrganizationAdminPolicy):
             return True
 
         # Policy only applies to write operations for crud commands
-        if (
-            isinstance(cmd, command.CrudCommand)
-            and cmd.operation not in CrudOperationSet.WRITE.value
-        ):
+        if isinstance(cmd, command.CrudCommand) and not cmd.is_write():
             return True
 
         organization_ids = self.retrieve_organization_ids(cmd)

@@ -1,8 +1,3 @@
-from typing import Any
-
-import pytest
-
-from gen_epix.casedb.domain import enum, exc, model
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
@@ -14,6 +9,11 @@ from test.casedb.integration.build_db.base import (
     SKIP_RAISE,
 )
 from test.omopdb.integration.build_db.base import ROOT
+from typing import Any
+
+import pytest
+
+from gen_epix.casedb.domain import enum, exc, model
 
 
 @pytest.mark.scenario_ids(
@@ -58,12 +58,9 @@ class TestCreate:
         )
         env.create_organization("root1_2", "org2")
         env.create_organization("root1_2", "org3")
-        keyless_user = env.invite_and_register_user("root1_2", "root2_1", set_key=False)
-        assert keyless_user.email == "root2_1@org2.org"
-        if env.use_endpoints:
-            assert keyless_user.key == "root2_1@org2.org"
-        else:
-            assert keyless_user.key is None
+        # Invite without setting key in invitation
+        user = env.invite_and_register_user("root1_2", "root2_1", set_key=False)
+        assert user.key == "root2_1@org2.org"
         env.invite_and_register_user("root1_2", "root2_2", set_key=False)
 
     def test_create_user_app_admin(self, env: Env) -> None:
@@ -434,6 +431,7 @@ class TestCreate:
                     region_set=region_set,
                     genetic_distance_protocol=genetic_distance_protocol,
                 )
+                cols = env.read_all("root1_1", model.Col)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"

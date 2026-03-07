@@ -165,7 +165,7 @@ class CrudCommand(Command):
         description="Optional filter to apply object-level access control. For a read or delete all operation, it filters the results just as the query_filter does and when both are provided only object that match both filters will be returned or deleted. For any other operation, an unauthorized exception is raised if the provided objects do not match the filter.",
     )
     props: dict[str, Any] = Field(
-        default={},
+        default_factory=dict,
         description="Additional properties to pass to the command and which can be used by custom implementations.",
     )
 
@@ -264,6 +264,65 @@ class CrudCommand(Command):
             return self.objs if isinstance(self.objs, list) else [self.objs]
         return None
 
+    def is_create(self) -> bool:
+        """Whether the command is a create operation."""
+        return self.operation in CrudOperationSet.CREATE.value
+
+    def is_read(self, exclude_exists: bool = False) -> bool:
+        """
+        Whether the command is a read or exists operation. Exists also requires read
+        operation and is included by default. If exclude_exists is True, only read
+        operations are included.
+        """
+        if exclude_exists:
+            return self.operation in CrudOperationSet.READ.value
+        return self.operation in CrudOperationSet.READ_OR_EXISTS.value
+
+    def is_read_all(self) -> bool:
+        """Whether the command is a read all operation."""
+        return self.operation == CrudOperation.READ_ALL
+
+    def is_read_one(self) -> bool:
+        """Whether the command is a read one operation."""
+        return self.operation == CrudOperation.READ_ONE
+
+    def is_update(self) -> bool:
+        """Whether the command is an update operation."""
+        return self.operation in CrudOperationSet.UPDATE.value
+
+    def is_delete(self) -> bool:
+        """Whether the command is a delete operation."""
+        return self.operation in CrudOperationSet.DELETE.value
+
+    def is_delete_all(self) -> bool:
+        """Whether the command is a delete all operation."""
+        return self.operation == CrudOperation.DELETE_ALL
+
+    def is_exists(self) -> bool:
+        """Whether the command is an exists operation."""
+        return self.operation in CrudOperationSet.EXISTS.value
+
+    def is_write(self) -> bool:
+        """
+        Whether the command is a write operation, i.e. a create, update or upsert
+        operation.
+        """
+        return self.operation in CrudOperationSet.WRITE.value
+
+    def is_crud_one(self) -> bool:
+        """
+        Whether the command is any one operation, i.e. a create one, read one, update
+        one, delete one or exists one operation.
+        """
+        return self.operation in CrudOperationSet.ANY_ONE.value
+
+    def is_crud_all(self) -> bool:
+        """
+        Whether the command is any all operation, i.e. a read all or delete all
+        operation.
+        """
+        return self.operation in CrudOperationSet.ANY_ALL.value
+
 
 class UpdateAssociationCommand(Command):
     ASSOCIATION_CLASS: ClassVar[type[Model]] = Model
@@ -279,7 +338,7 @@ class UpdateAssociationCommand(Command):
         description="The ID of the instance of the second entity in the many-to-many association.",
     )
     association_objs: list[Model] = Field(
-        default=[],
+        default_factory=list,
         description="The association objects, linking the first (field LINK_FIELD_NAME1) to the second (field LINK_FIELD_NAME2) instance.",
     )
     props: dict[str, Any] = {}

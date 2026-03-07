@@ -6,7 +6,7 @@ from gen_epix.commondb.domain import command, exc, model
 from gen_epix.commondb.domain.policy import BaseReadUserPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
 from gen_epix.fastapp import Command
-from gen_epix.fastapp.enum import CrudOperation, CrudOperationSet
+from gen_epix.fastapp.enum import CrudOperation
 from gen_epix.filter.composite import CompositeFilter
 from gen_epix.filter.enum import LogicalOperator
 from gen_epix.filter.equals_boolean import EqualsBooleanFilter
@@ -84,7 +84,7 @@ class ReadUserPolicy(BaseReadUserPolicy):
             raise NotImplementedError(
                 "Unsupported command type: {cmd.__class__.__name__}"
             )
-        if cmd.operation not in CrudOperationSet.READ.value:
+        if not cmd.is_read():
             # Not applicable
             early_return = True
         if user is None or user.id is None:

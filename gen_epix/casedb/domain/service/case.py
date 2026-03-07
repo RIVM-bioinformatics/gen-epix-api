@@ -29,7 +29,7 @@ class BaseCaseService(BaseService):
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
     }
-    ABAC_METADATA_COMMAND_CLASSES: set[type[command.Command]] = {
+    ABAC_REFDATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,

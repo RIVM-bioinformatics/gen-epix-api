@@ -11,11 +11,10 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     crud_with_access_filter,
-    get_case_abac_from_command,
-    get_readable_reference_data_from_command,
-    is_metadata_admin_or_above,
+    get_ref_data_access_from_command,
+    is_refdata_admin_or_above,
 )
-from gen_epix.fastapp import CrudOperation, CrudOperationSet
+from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -36,7 +35,7 @@ def case_service_crud_case_type_col(
     with self.repository.uow() as uow:
         assert cmd.user is not None and cmd.user.id is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_metadata_admin_or_above(self, cmd.user):
+        if is_refdata_admin_or_above(self, cmd.user):
             return _crud_case_type_col_without_abac(self, uow, cmd)
         return _crud_case_type_col_with_abac(self, uow, cmd)
 
@@ -74,21 +73,12 @@ def _crud_case_type_col_with_abac(
     | None
 ):
     """CaseTypeCol user command handling, ABAC applied."""
-    # Special case: no policy, allows for internal commands to retrieve all
-    if not get_case_abac_from_command(cmd):
+    ref_data_access = get_ref_data_access_from_command(cmd)
+    if ref_data_access is None or ref_data_access.is_full_access:
+        # Special case: no policy (implies full access) or explicit full access
         return self.crud(cmd)  # type: ignore[return-value]
-
-    is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-    if not is_read:
-        # Only read operations are allowed for metadata commands for these
-        # users
-        raise AssertionError("Unexpected operation")
-
-    readable_reference_data = get_readable_reference_data_from_command(cmd)
-    assert readable_reference_data is not None
-    access_filter = self._compose_id_filter(
-        ("id", readable_reference_data.case_type_col_ids)
-    )
+    access_filter = ref_data_access.get_case_type_col_filter("id")
+    # No cascade delete to force conscious decision to delete from other models
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
 
 
@@ -99,7 +89,7 @@ def _validate_case_type_cols(
 ) -> None:
     """Validate CaseTypeCol entities before creation or update."""
 
-    if cmd.operation in CrudOperationSet.WRITE.value:
+    if cmd.is_write():
         user = cmd.user
         assert user is not None and user.id is not None
         case_type_cols: list[model.CaseTypeCol] = cmd.get_objs()  # type: ignore[assignment]

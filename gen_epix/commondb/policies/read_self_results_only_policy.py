@@ -4,7 +4,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, exc
 from gen_epix.commondb.domain.policy import BaseReadSelfResultsOnlyPolicy
 from gen_epix.commondb.domain.service.abac import BaseAbacService
-from gen_epix.fastapp import Command, CrudOperation, CrudOperationSet
+from gen_epix.fastapp import Command, CrudOperation
 
 
 class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
@@ -27,7 +27,7 @@ class ReadSelfResultsOnlyPolicy(BaseReadSelfResultsOnlyPolicy):
         # TODO: replace filter for AFTER with injecting a filter DURING for efficiency
         if not isinstance(cmd, command.CrudCommand):
             raise NotImplementedError
-        if cmd.operation not in CrudOperationSet.READ_OR_EXISTS.value:
+        if not cmd.is_read():
             # Policy only applies to read or exists operations
             return retval
 

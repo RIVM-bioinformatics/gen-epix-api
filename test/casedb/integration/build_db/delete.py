@@ -2,7 +2,7 @@ from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.build_db.base import (
     APP_ADMIN_OR_ABOVE_USERS,
     BELOW_APP_ADMIN_DATA_USERS,
-    BELOW_APP_ADMIN_METADATA_USERS,
+    BELOW_APP_ADMIN_REFDATA_USERS,
     BELOW_APP_ADMIN_USERS,
     BELOW_ORG_ADMIN_USERS,
     BELOW_ROOT_USERS,
@@ -85,7 +85,7 @@ class TestDelete:
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_case_type_raise(self, env: Env) -> None:
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
-        for user in BELOW_APP_ADMIN_METADATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_APP_ADMIN_REFDATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.CaseType, "case_type99")
         env.delete_object(ROOT, model.CaseType, "case_type99")
@@ -199,7 +199,7 @@ class TestDelete:
             {"case_type99"},
             "case_type_set_category1",
         )
-        for user in BELOW_APP_ADMIN_METADATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
+        for user in BELOW_APP_ADMIN_REFDATA_USERS + BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.delete_object(user, model.CaseTypeSet, case_type_set)
         env.delete_object(ROOT, model.CaseTypeSet, case_type_set)
