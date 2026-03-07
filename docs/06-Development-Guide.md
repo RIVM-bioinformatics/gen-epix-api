@@ -94,6 +94,12 @@ python run.py other_general_run_pylint <error_code>
 python run.py other_general_run_mypy
 ```
 
+Equivalent direct CI command:
+
+```
+mypy --config-file mypy.ini ./
+```
+
 Gen-EpiX uses `mypy` to protect architecture boundaries, catch defects earlier, and improve refactoring safety. The goal is pragmatic typing, not full static coverage.
 
 Typing strictness is layered:
@@ -109,7 +115,7 @@ Guidelines:
 - Prefer explicit domain types (`BaseModel`, `TypedDict`, dataclasses).
 - Use `# type: ignore[...]` only when necessary, and keep ignores minimal.
 
-CI also runs `mypy` as a required quality gate. (Source: `.github/workflows/main.yml#L136-L140`; Source: `mypy.ini#L1-L80`)
+CI runs the same `mypy.ini`-driven policy as a required quality gate. (Source: `.github/workflows/main.yml#L136-L140`; Source: `mypy.ini#L1-L80`; Source: `run.py#L855-L871`; Source: `test/test_client/linter.py#L50-L58`)
 
 ### All linters at once
 
@@ -149,6 +155,7 @@ Operator Note: `CASEDB` env setup also sets `SEQDB` env variables, so multi-app 
 - `run.py#L15-L887`
 - `.github/workflows/main.yml#L73-L197`
 - `mypy.ini#L1-L80`
+- `test/test_client/linter.py#L50-L58`
 - `gen_epix/commondb/util.py#L61-L119`
 - `gen_epix/commondb/config/settings_manager.py#L43-L67`
 - `gen_epix/commondb/env.py#L185-L197`

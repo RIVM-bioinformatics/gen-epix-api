@@ -50,19 +50,9 @@ class Linter:
     PRESETS = {
         "mypy": [
             "mypy",
-            "--no-incremental",
-            "--disallow-untyped-defs",
-            "--disallow-untyped-calls",
-            "--disallow-incomplete-defs",
-            "--disallow-untyped-decorators",
-            "--strict-equality",
-            "--warn-redundant-casts",
-            "--warn-unused-ignores",
-            "--warn-return-any",
-            "--warn-unreachable",
-            "--show-error-codes",
-            "gen_epix/",
-            # "test/",
+            "--config-file",
+            "mypy.ini",
+            "./",
         ],
         "pylint": [
             "pylint",
@@ -115,14 +105,14 @@ class Linter:
         self.run(cmd, file=file)
         if filter_on_codes:
             lines = self.parse_mypy_for_issue_lines(file, filter_on_codes)
-            file.write_text("\n".join(lines))
+            file.write_text("\n".join(lines), encoding="utf-8")
 
     def parse_pylint_for_issue_lines(
         self, file: Path | str, filter_on_codes: set[str] | None = None
     ) -> list[str]:
         if isinstance(file, str):
             file = Path(file)
-        with open(file, "rt") as handle:
+        with open(file, "rt", encoding="utf-8", errors="replace") as handle:
             lines = handle.readlines()
         pattern = self.PYLINT_CODE_PATTERN
         issue_lines = [
@@ -140,7 +130,7 @@ class Linter:
     ) -> list[str]:
         if isinstance(file, str):
             file = Path(file)
-        with open(file, "rt") as handle:
+        with open(file, "rt", encoding="utf-8", errors="replace") as handle:
             lines = handle.readlines()
         location_pattern = self.MYPY_LOCATION_PATTERN
         issue_code_pattern = self.MYPY_ISSUE_CODE_PATTERN
@@ -213,16 +203,16 @@ class Linter:
             retval = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
             if verbose:
                 print(f"{cmd[2]} passed")
-            output = retval.decode("utf-8")
+            output = retval.decode("utf-8", errors="replace")
         except subprocess.CalledProcessError as e:
-            output = e.output.decode("utf-8")
+            output = e.output.decode("utf-8", errors="replace")
             if verbose:
                 print(f"Failed running {cmd[2]}, here is the output:")
                 print(output)
         if file:
             if isinstance(file, str):
                 file = Path(file)
-            file.write_text(output)
+            file.write_text(output, encoding="utf-8")
         return output
 
     def run_all(self, file_basename: Path | str | None = None) -> None:
@@ -251,15 +241,15 @@ class Linter:
                 file2 = None
             output = self.run(value, file=file)
             if file2:
-                file2.write_text(file.read_text())
+                file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
             if output:
                 outputs.append(output)
         if file_basename:
             file = Path(f"{file_basename}.txt")
             file2 = Path(f"{file_basename}.{now_str}.txt")
-            with open(file, "wt") as handle:
+            with open(file, "wt", encoding="utf-8") as handle:
                 handle.write("\n".join(outputs))
-            file2.write_text(file.read_text())
+            file2.write_text(file.read_text(encoding="utf-8"), encoding="utf-8")
 
     def analyse_pylint_code_impact(self, verbose: bool = True) -> None:
         output_dir = get_test_root_output_dir()
