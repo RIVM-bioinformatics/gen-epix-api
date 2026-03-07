@@ -20,7 +20,7 @@ def case_service_retrieve_complete_case_type(
     user_id: UUID | None = None if user is None else user.id
 
     with repository.uow() as uow:
-        # Get case type
+        # Get CaseType
         case_type_id = cmd.case_type_id
         case_type: model.CaseType = self.repository.crud(  # type: ignore[assignment]
             uow,
@@ -32,12 +32,12 @@ def case_service_retrieve_complete_case_type(
         )
 
         # @ABAC
-        # Get allowed case type columns with any CRUD permission
+        # Get allowed Cols with any CRUD permission
         case_abac: model.CaseAbac | None
         case_type_access_abacs: dict[UUID, model.CaseTypeAccessAbac]
         case_type_share_abacs: dict[UUID, model.CaseTypeShareAbac]
-        abac_case_type_col_ids: set[UUID]
-        abac_read_case_type_col_ids: set[UUID]
+        abac_col_ids: set[UUID]
+        abac_read_col_ids: set[UUID]
         if cmd.user is None:
             # Special case: no user -> treated as full access (actual ABAC still applies, which will require a valid user later)
             case_abac = model.CaseAbac(
@@ -50,14 +50,14 @@ def case_service_retrieve_complete_case_type(
             assert case_abac is not None
         if case_abac.is_full_access:
             # Special case: full access -> all rights for all data collections for
-            # this case type
+            # this CaseType
             # TODO: consider if it should be limited to the union of all the
             # organization rights instead. A root user e.g. may then still have
             # full access by using the CRUD methods
-            abac_case_type_col_ids = repository.crud(  # type: ignore[assignment]
+            abac_col_ids = repository.crud(  # type: ignore[assignment]
                 uow,
                 user_id,
-                model.CaseTypeCol,
+                model.Col,
                 None,
                 None,
                 CrudOperation.READ_ALL,
@@ -67,7 +67,7 @@ def case_service_retrieve_complete_case_type(
                 ),
                 return_id=True,
             )
-            abac_read_case_type_col_ids = abac_case_type_col_ids
+            abac_read_col_ids = abac_col_ids
             data_collection_ids: list[UUID] = self.app.handle(
                 command.DataCollectionCrudCommand(
                     user=user,
@@ -83,8 +83,8 @@ def case_service_retrieve_complete_case_type(
                     is_private=True,
                     add_case=True,
                     remove_case=True,
-                    read_case_type_col_ids=abac_case_type_col_ids,
-                    write_case_type_col_ids=abac_case_type_col_ids,
+                    read_col_ids=abac_col_ids,
+                    write_col_ids=abac_col_ids,
                     add_case_set=True,
                     remove_case_set=True,
                     read_case_set=True,
@@ -102,12 +102,12 @@ def case_service_retrieve_complete_case_type(
             case_type_share_abacs = case_abac.case_type_share_abacs.get(
                 case_type_id, {}
             )
-            abac_case_type_col_ids = set()
-            abac_read_case_type_col_ids = set()
+            abac_col_ids = set()
+            abac_read_col_ids = set()
             for x in case_type_access_abacs.values():
-                abac_read_case_type_col_ids.update(x.read_case_type_col_ids)
-                abac_case_type_col_ids.update(x.write_case_type_col_ids)
-            abac_case_type_col_ids.update(abac_read_case_type_col_ids)
+                abac_read_col_ids.update(x.read_col_ids)
+                abac_col_ids.update(x.write_col_ids)
+            abac_col_ids.update(abac_read_col_ids)
 
         # Get etiologies
         if case_type.disease_id:
@@ -139,39 +139,32 @@ def case_service_retrieve_complete_case_type(
         else:
             etiological_agents = {}
 
-        # Get allowed case_type_cols
-        case_type_col_ids = list(abac_case_type_col_ids)
-        case_type_cols: list[model.CaseTypeCol] = repository.crud(  # type: ignore[assignment]
+        # Get allowed Cols
+        col_ids = list(abac_col_ids)
+        cols: list[model.Col] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
-            model.CaseTypeCol,
+            model.Col,
             None,
-            case_type_col_ids,
+            col_ids,
             CrudOperation.READ_SOME,
         )
-        case_type_col_map: dict[UUID, model.CaseTypeCol] = {
-            x.id: x for x in case_type_cols  # type: ignore[misc]
-        }
+        col_map: dict[UUID, model.Col] = {x.id: x for x in cols}  # type: ignore[misc]
 
-        # Get allowed case_type_dims as the case_type_dims used by the allowed
-        # case_type_cols
-        case_type_dim_ids: list[UUID] = list(
-            {x.case_type_dim_id for x in case_type_cols}
-        )
-        case_type_dims: list[model.CaseTypeDim] = repository.crud(  # type: ignore[assignment]
+        # Get allowed Dims as the Dims used by the allowed Cols
+        dim_ids: list[UUID] = list({x.dim_id for x in cols})
+        dims: list[model.Dim] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
-            model.CaseTypeDim,
+            model.Dim,
             None,
-            case_type_dim_ids,
+            dim_ids,
             CrudOperation.READ_SOME,
         )
-        case_type_dim_map: dict[UUID, model.CaseTypeDim] = {
-            x.id: x for x in case_type_dims  # type: ignore[misc]
-        }
+        dim_map: dict[UUID, model.Dim] = {x.id: x for x in dims}  # type: ignore[misc]
 
         # Get cols
-        ref_col_ids = list({x.ref_col_id for x in case_type_cols})
+        ref_col_ids = list({x.ref_col_id for x in cols})
         ref_cols: list[model.RefCol] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
@@ -213,7 +206,7 @@ def case_service_retrieve_complete_case_type(
         # Get tree algorithms
         tree_algorithm_codes: set[enum.TreeAlgorithmType] = set.union(
             set(),
-            *[x.tree_algorithm_codes for x in case_type_cols if x.tree_algorithm_codes],
+            *[x.tree_algorithm_codes for x in cols if x.tree_algorithm_codes],
         )
         tree_algorithms = self.app.handle(
             command.TreeAlgorithmCrudCommand(
@@ -225,15 +218,15 @@ def case_service_retrieve_complete_case_type(
             x.code: x for x in tree_algorithms if x.code in tree_algorithm_codes
         }
 
-        # Derive stats_time_case_type_dim_id from CaseTypeDim.is_time
-        case_date_case_type_dim_id: UUID | None = None
-        for case_type_dim in case_type_dims:
-            if case_type_dim.is_case_date_dim:
-                case_date_case_type_dim_id = case_type_dim.id
+        # Derive stats_time_dim_id from Dim.is_time
+        case_date_dim_id: UUID | None = None
+        for dim in dims:
+            if dim.is_case_date_dim:
+                case_date_dim_id = dim.id
                 break
-            # TODO: add geo_case_type_dim flag if needed
+            # TODO: add geo_dim flag if needed
 
-        # Compose complete case type and return
+        # Compose complete CaseType and return
         return model.CompleteCaseType(
             **case_type.model_dump(),
             user_id=cmd.user.id if cmd.user else None,
@@ -241,11 +234,11 @@ def case_service_retrieve_complete_case_type(
             etiological_agents=etiological_agents,
             ref_dims=ref_dim_map,
             ref_cols=ref_col_map,
-            case_type_dims=case_type_dim_map,
-            case_type_cols=case_type_col_map,
+            dims=dim_map,
+            cols=col_map,
             genetic_distance_protocols=genetic_distance_protocols,
             tree_algorithms=tree_algorithms,
             case_type_access_abacs=case_type_access_abacs,
             case_type_share_abacs=case_type_share_abacs,
-            case_date_case_type_dim_id=case_date_case_type_dim_id,
+            case_date_dim_id=case_date_dim_id,
         )

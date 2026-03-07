@@ -95,9 +95,7 @@ class TestManual:
         phylogenetic_tree = env.app.handle(
             command.RetrievePhylogeneticTreeByCasesCommand(
                 user=user,
-                genetic_distance_case_type_col_id=UUID(
-                    "0191c0e1-041b-f639-4e7f-59cd1fbf0b11"
-                ),
+                genetic_distance_col_id=UUID("0191c0e1-041b-f639-4e7f-59cd1fbf0b11"),
                 case_ids=[
                     UUID(x)
                     for x in [

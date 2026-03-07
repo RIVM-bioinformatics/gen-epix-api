@@ -113,7 +113,7 @@ class BaseCaseService(DomainBaseCaseService):
         on_invalid_case_id: str = "raise",
         filter_content: bool = True,
         calculate_case_date: bool = False,
-        extra_access_case_type_col_ids: set[UUID] | None = None,
+        extra_access_case_col_ids: set[UUID] | None = None,
         apply_max_n_cases: bool = True,
     ) -> list[model.Case]:
         """Retrieve cases that the user has specific content rights for."""
@@ -169,9 +169,9 @@ class BaseCaseService(DomainBaseCaseService):
         raise NotImplementedError()
 
     @abstractmethod
-    def _retrieve_sequence_column_data(
-        self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
-    ) -> tuple[model.CaseTypeCol, model.RefCol]:
+    def _retrieve_seq_column_data(
+        self, uow: BaseUnitOfWork, user: model.User, seq_col_id: UUID
+    ) -> tuple[model.Col, model.RefCol]:
         """Retrieve sequence column data and validate it's a genetic sequence column."""
         raise NotImplementedError()
 
@@ -179,7 +179,7 @@ class BaseCaseService(DomainBaseCaseService):
     def _verify_case_set_member_case_type(
         self, user: model.User, case_set_members: list[model.CaseSetMember]
     ) -> None:
-        """Verify that case set members have matching case types with their case sets."""
+        """Verify that case set members have matching CaseTypes with their case sets."""
         raise NotImplementedError()
 
     @staticmethod

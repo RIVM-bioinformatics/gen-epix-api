@@ -72,7 +72,7 @@ class AbacService(BaseAbacService):
           Analogous for UserShareCasePolicy.
         - Create UserAccessCasePolicies for the user and their new organization, one
           for each OrganizationAccessCasePolicy for the new organization combined with
-          each case type set and rights from the user's UserAccessCasePolicies from
+          each CaseTypeSet and rights from the user's UserAccessCasePolicies from
           the previous organization. Analogous for OrganizationShareCasePolicy and
           UserShareCasePolicy.
         """
@@ -240,7 +240,7 @@ class AbacService(BaseAbacService):
             operator=LogicalOperator.AND,
         )
 
-        # Retrieve all the policies as well as the case type set members and case_type_col_set_members
+        # Retrieve all the policies as well as the CaseTypeSetMembers and ColSetMembers
         with self.repository.uow() as uow:
             # Retrieve organization access and share case policies
             organization_access_case_policies: list[
@@ -288,12 +288,12 @@ class AbacService(BaseAbacService):
                     filter=user_filter,
                 )
             )
-            # Retrieve case type cols per case type
-            case_type_col_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
+            # Retrieve Cols per CaseType
+            col_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
                 [
                     (x.case_type_id, x.id)
                     for x in self.app.handle(
-                        command.CaseTypeColCrudCommand(
+                        command.ColCrudCommand(
                             user=user,
                             objs=None,
                             obj_ids=None,
@@ -303,7 +303,7 @@ class AbacService(BaseAbacService):
                 ],
                 as_set=True,
             )
-            # Retrieve relevant case_type_set_members and case_type_col_set_members
+            # Retrieve relevant CaseTypeSetMembers and ColSetMembers
             all_case_policies: list[
                 model.OrganizationAccessCasePolicy
                 | model.UserAccessCasePolicy
@@ -337,27 +337,25 @@ class AbacService(BaseAbacService):
             all_access_case_policies: list[
                 model.OrganizationAccessCasePolicy | model.UserAccessCasePolicy
             ] = (organization_access_case_policies + user_access_case_policies)
-            case_type_col_set_ids: set[UUID] = set(
-                x.read_case_type_col_set_id
-                for x in all_access_case_policies
-                if x.read_case_type_col_set_id
+            col_set_ids: set[UUID] = set(
+                x.read_col_set_id for x in all_access_case_policies if x.read_col_set_id
             ) | set(
-                x.write_case_type_col_set_id
+                x.write_col_set_id
                 for x in all_access_case_policies
-                if x.write_case_type_col_set_id
+                if x.write_col_set_id
             )
-            case_type_col_set_member_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
+            col_set_member_map: dict[UUID, set[UUID]] = map_paired_elements(  # type: ignore[assignment]
                 [
-                    (x.case_type_col_set_id, x.case_type_col_id)
+                    (x.col_set_id, x.col_id)
                     for x in self.app.handle(
-                        command.CaseTypeColSetMemberCrudCommand(
+                        command.ColSetMemberCrudCommand(
                             user=user,
                             objs=None,
                             obj_ids=None,
                             operation=CrudOperation.READ_ALL,
                             query_filter=UuidSetFilter(
-                                key="case_type_col_set_id",
-                                members=frozenset(case_type_col_set_ids),
+                                key="col_set_id",
+                                members=frozenset(col_set_ids),
                             ),
                         ),
                     )
@@ -372,8 +370,8 @@ class AbacService(BaseAbacService):
                 organization_access_case_policies,
                 user_access_case_policies,
                 case_type_set_member_map,
-                case_type_col_map,
-                case_type_col_set_member_map,
+                col_map,
+                col_set_member_map,
             ),
             case_type_share_abacs=AbacService._get_share_intersect(
                 organization_share_case_policies,
@@ -388,17 +386,13 @@ class AbacService(BaseAbacService):
             model.OrganizationAccessCasePolicy | model.UserAccessCasePolicy
         ],
         case_type_set_member_map: dict[UUID, set[UUID]],
-        case_type_col_map: dict[UUID, set[UUID]],
-        case_type_col_set_member_map: dict[UUID, set[UUID]],
+        col_map: dict[UUID, set[UUID]],
+        col_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeAccessAbac]]:
-        def _get_case_type_col_ids(
-            case_type_col_set_id: UUID | None,
+        def _get_col_ids(
+            col_set_id: UUID | None,
         ) -> set[UUID]:
-            return (
-                case_type_col_set_member_map.get(case_type_col_set_id, set())
-                if case_type_col_set_id
-                else set()
-            )
+            return col_set_member_map.get(col_set_id, set()) if col_set_id else set()
 
         dict_: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = {}
         for x in case_policies:
@@ -406,21 +400,19 @@ class AbacService(BaseAbacService):
             is_private = (
                 getattr(x, "is_private", True) if hasattr(x, "is_private") else True
             )
-            # Create case type access abac object for each case type id
+            # Create CaseTypeAccessAbac object for each CaseType id
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
                     dict_[case_type_id] = {}
-                all_case_type_col_ids = case_type_col_map.get(case_type_id, set())
+                all_col_ids = col_map.get(case_type_id, set())
                 case_type_access_abac = model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
                     data_collection_id=x.data_collection_id,
                     is_private=is_private,
                     add_case=x.add_case,
                     remove_case=x.remove_case,
-                    read_case_type_col_ids=all_case_type_col_ids
-                    & _get_case_type_col_ids(x.read_case_type_col_set_id),
-                    write_case_type_col_ids=all_case_type_col_ids
-                    & _get_case_type_col_ids(x.write_case_type_col_set_id),
+                    read_col_ids=all_col_ids & _get_col_ids(x.read_col_set_id),
+                    write_col_ids=all_col_ids & _get_col_ids(x.write_col_set_id),
                     add_case_set=x.add_case_set,
                     remove_case_set=x.remove_case_set,
                     read_case_set=x.read_case_set,
@@ -434,23 +426,23 @@ class AbacService(BaseAbacService):
         organization_access_case_policies: list[model.OrganizationAccessCasePolicy],
         user_access_case_policies: list[model.UserAccessCasePolicy],
         case_type_set_member_map: dict[UUID, set[UUID]],
-        case_type_col_map: dict[UUID, set[UUID]],
-        case_type_col_set_member_map: dict[UUID, set[UUID]],
+        col_map: dict[UUID, set[UUID]],
+        col_set_member_map: dict[UUID, set[UUID]],
     ) -> dict[UUID, dict[UUID, model.CaseTypeAccessAbac]]:
         dict1: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = (
             AbacService._get_access_dict(
                 organization_access_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
-                case_type_col_map,
-                case_type_col_set_member_map,
+                col_map,
+                col_set_member_map,
             )
         )
         dict2: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = (
             AbacService._get_access_dict(
                 user_access_case_policies,  # type: ignore[arg-type]
                 case_type_set_member_map,
-                case_type_col_map,
-                case_type_col_set_member_map,
+                col_map,
+                col_set_member_map,
             )
         )
         dict3: dict[UUID, dict[UUID, model.CaseTypeAccessAbac]] = {}
@@ -463,7 +455,7 @@ class AbacService(BaseAbacService):
                 # Get both access case policies
                 x = data1[data_collection_id]
                 y = data2[data_collection_id]
-                # Create the case type access abac object with the intersection of
+                # Create the CaseType access abac object with the intersection of
                 # the rights
                 case_type_access_abac = model.CaseTypeAccessAbac(
                     case_type_id=case_type_id,
@@ -471,10 +463,8 @@ class AbacService(BaseAbacService):
                     is_private=x.is_private and y.is_private,
                     add_case=x.add_case and y.add_case,
                     remove_case=x.remove_case and y.remove_case,
-                    read_case_type_col_ids=x.read_case_type_col_ids
-                    & y.read_case_type_col_ids,
-                    write_case_type_col_ids=x.write_case_type_col_ids
-                    & y.write_case_type_col_ids,
+                    read_col_ids=x.read_col_ids & y.read_col_ids,
+                    write_col_ids=x.write_col_ids & y.write_col_ids,
                     add_case_set=x.add_case_set and y.add_case_set,
                     remove_case_set=x.remove_case_set and y.remove_case_set,
                     read_case_set=x.read_case_set and y.read_case_set,
@@ -495,7 +485,7 @@ class AbacService(BaseAbacService):
     ) -> dict[UUID, dict[UUID, model.CaseTypeShareAbac]]:
         dict_: dict[UUID, dict[UUID, model.CaseTypeShareAbac]] = {}
         for policy in case_policies:
-            # Create case type share abac object for each case type id
+            # Create CaseType share abac object for each CaseType id
             case_type_ids = case_type_set_member_map.get(policy.case_type_set_id, set())
             for case_type_id in case_type_ids:
                 if case_type_id not in dict_:
@@ -511,7 +501,7 @@ class AbacService(BaseAbacService):
                             remove_case_set_from_data_collection_ids=set(),
                         )
                     )
-                # Based on the policy, get the case type share abac object
+                # Based on the policy, get the CaseTypeShareAbac object
                 case_type_share_abac = dict_[case_type_id][policy.data_collection_id]
                 case_type_share_abac = AbacService.get_case_type_share_abac_dict(
                     policy,
@@ -577,7 +567,7 @@ class AbacService(BaseAbacService):
                 # Get both share case policies
                 x = dict1[case_type_id][data_collection_id]
                 y = dict2[case_type_id][data_collection_id]
-                # Create the case type share abac object with the intersection of the
+                # Create the CaseTypeShareAbac object with the intersection of the
                 # rights
                 dict3[case_type_id][data_collection_id] = model.CaseTypeShareAbac(
                     case_type_id=case_type_id,
@@ -591,7 +581,7 @@ class AbacService(BaseAbacService):
                     remove_case_set_from_data_collection_ids=x.remove_case_set_from_data_collection_ids
                     & y.remove_case_set_from_data_collection_ids,
                 )
-        # Remove any case type share abac objects with no rights
+        # Remove any CaseTypeShareAbac objects with no rights
         for case_type_id in dict3:
             to_pop_data_collection_ids = {
                 x for x, y in dict3[case_type_id].items() if not y.has_any_rights()
@@ -608,9 +598,9 @@ class AbacService(BaseAbacService):
                 is_full_access=True,
                 case_type_set_ids=set(),
                 case_type_ids=set(),
-                case_type_col_set_ids=set(),
-                case_type_col_ids=set(),
-                case_type_dim_ids=set(),
+                col_set_ids=set(),
+                col_ids=set(),
+                dim_ids=set(),
                 ref_dim_ids=set(),
                 ref_col_ids=set(),
             )
@@ -627,9 +617,9 @@ class AbacService(BaseAbacService):
                 is_full_access=True,
                 case_type_set_ids=set(),
                 case_type_ids=set(),
-                case_type_col_set_ids=set(),
-                case_type_col_ids=set(),
-                case_type_dim_ids=set(),
+                col_set_ids=set(),
+                col_ids=set(),
+                dim_ids=set(),
                 ref_dim_ids=set(),
                 ref_col_ids=set(),
             )
@@ -694,21 +684,15 @@ class AbacService(BaseAbacService):
                 model.OrganizationAccessCasePolicy | model.OrganizationShareCasePolicy
             ] = (org_access_policies + org_share_policies)
 
-        # Collect case_type and case_type_col_set IDs from policies
+        # Collect CaseTypeSet and ColSet IDs from policies
         case_type_set_ids = {
             x.case_type_set_id for x in all_policies if x.case_type_set_id
         }
-        case_type_col_set_ids = {
-            x.read_case_type_col_set_id
-            for x in org_access_policies
-            if x.read_case_type_col_set_id
-        } | {
-            x.write_case_type_col_set_id
-            for x in org_access_policies
-            if x.write_case_type_col_set_id
-        }
+        col_set_ids = {
+            x.read_col_set_id for x in org_access_policies if x.read_col_set_id
+        } | {x.write_col_set_id for x in org_access_policies if x.write_col_set_id}
 
-        # Retrieve all case type set members and from there derive the case type ids
+        # Retrieve all CaseTypeSetMembers and from there derive the CaseType IDs
         case_type_set_members: list[model.CaseTypeSetMember] = self.app.handle(
             command.CaseTypeSetMemberCrudCommand(
                 user=user,
@@ -723,62 +707,58 @@ class AbacService(BaseAbacService):
         )
         case_type_ids: set[UUID] = {x.case_type_id for x in case_type_set_members}
 
-        # Retrieve all case_type_col_set_members and from there derive the case_type_col_ids
-        case_type_col_set_members: list[model.CaseTypeColSetMember] = self.app.handle(
-            command.CaseTypeColSetMemberCrudCommand(
+        # Retrieve all ColSetMembers and from there derive the Col IDs
+        col_set_members: list[model.ColSetMember] = self.app.handle(
+            command.ColSetMemberCrudCommand(
                 user=user,
                 objs=None,
                 obj_ids=None,
                 operation=CrudOperation.READ_ALL,
                 query_filter=UuidSetFilter(
-                    key="case_type_col_set_id",
-                    members=case_type_col_set_ids,
+                    key="col_set_id",
+                    members=col_set_ids,
                 ),
             )
         )
-        case_type_col_ids_from_sets: set[UUID] = {
-            x.case_type_col_id for x in case_type_col_set_members
-        }
+        col_ids_from_sets: set[UUID] = {x.col_id for x in col_set_members}
 
-        # Retrieve all case type cols for the allowed case types, and derive the allowed cols and case type dims from that
-        case_type_cols: list[model.CaseTypeCol] = self.app.handle(
-            command.CaseTypeColCrudCommand(
+        # Retrieve all Cols for the allowed CaseTypes, and derive the allowed cols and CaseType dims from that
+        cols: list[model.Col] = self.app.handle(
+            command.ColCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
                 query_filter=CompositeFilter(
                     filters=[
                         UuidSetFilter(key="case_type_id", members=case_type_ids),
-                        UuidSetFilter(key="id", members=case_type_col_ids_from_sets),
+                        UuidSetFilter(key="id", members=col_ids_from_sets),
                     ],
                     operator=LogicalOperator.AND,
                 ),
             )
         )
-        case_type_col_ids: set[UUID] = {
-            x.id for x in case_type_cols if x.id is not None
-        }
-        case_type_dim_ids = {x.case_type_dim_id for x in case_type_cols}
-        col_ids = {x.ref_col_id for x in case_type_cols}
+        col_ids: set[UUID] = {x.id for x in cols if x.id is not None}
+        dim_ids = {x.dim_id for x in cols}
+        col_ids = {x.ref_col_id for x in cols}
 
-        # Retrieve all dims for the allowed case type dims
-        case_type_dims: list[model.CaseTypeDim] = self.app.handle(
-            command.CaseTypeDimCrudCommand(
+        # Retrieve all dims for the allowed CaseType dims
+        dims: list[model.Dim] = self.app.handle(
+            command.DimCrudCommand(
                 user=user,
                 objs=None,
-                obj_ids=list(case_type_dim_ids),
+                obj_ids=list(dim_ids),
                 operation=CrudOperation.READ_SOME,
             )
         )
-        ref_dim_ids = {x.ref_dim_id for x in case_type_dims}
+        ref_dim_ids = {x.ref_dim_id for x in dims}
 
         return model.RefDataAccess(
             user_id=user.id,
             is_full_access=False,
             case_type_set_ids=case_type_set_ids,
             case_type_ids=case_type_ids,
-            case_type_col_set_ids=case_type_col_set_ids,
-            case_type_col_ids=case_type_col_ids,
-            case_type_dim_ids=case_type_dim_ids,
+            col_set_ids=col_set_ids,
+            col_ids=col_ids,
+            dim_ids=dim_ids,
             ref_dim_ids=ref_dim_ids,
             ref_col_ids=col_ids,
         )

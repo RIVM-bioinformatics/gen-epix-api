@@ -14,6 +14,18 @@ erDiagram
     Concept }o--|| ConceptSet : "concept_set_id"
 
     %% Entity definitions
+    EtiologicalAgent {
+        UUID id PK
+        string name
+        string type
+    }
+
+    Disease {
+        UUID id PK
+        string name
+        string icd_code
+    }
+
     Etiology {
         UUID id PK
         UUID disease_id FK
@@ -27,12 +39,6 @@ erDiagram
         enum relation
     }
 
-    EtiologicalAgent {
-        UUID id PK
-        string name
-        string type
-    }
-
     ConceptSet {
         UUID id PK
         string code
@@ -42,12 +48,6 @@ erDiagram
         string schema_definition
         string schema_uri
         string description
-    }
-
-    Disease {
-        UUID id PK
-        string name
-        string icd_code
     }
 
     Concept {

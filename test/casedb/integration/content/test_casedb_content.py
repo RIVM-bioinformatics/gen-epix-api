@@ -229,16 +229,16 @@ class TestContent:
             for concept_set in concept_sets
         }
 
-        # Get case type and and case set stats
+        # Get CaseType and and case set stats
         case_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
         case_set_stats = app.handle(command.RetrieveCaseStatsCommand(user=org_user))
 
-        # Go over all case types with data
+        # Go over all CaseTypes with data
         found_some_similar_cases = False
         has_cases_case_type_ids = {x.case_type_id for x in case_stats if x.n_cases > 0}
         for case_type in case_types:
             if VERBOSE:
-                print(f"Checking case type {case_type.name}")
+                print(f"Checking CaseType {case_type.name}")
             assert case_type.id is not None
             if case_type.id not in has_cases_case_type_ids:
                 continue
@@ -249,20 +249,20 @@ class TestContent:
                 )
             )
             assert complete_case_type.id is not None
-            if len(complete_case_type.case_type_cols) <= 1:
+            if len(complete_case_type.cols) <= 1:
                 continue
 
             # Retrieve cases based on a filter
-            # print(f"Retrieving cases for case type {complete_case_type.name}")
+            # print(f"Retrieving cases for CaseType {complete_case_type.name}")
             filters: list = []
-            for case_type_col in complete_case_type.case_type_cols.values():
-                ref_col = complete_case_type.ref_cols[case_type_col.ref_col_id]
+            for col in complete_case_type.cols.values():
+                ref_col = complete_case_type.ref_cols[col.ref_col_id]
                 if ref_col.concept_set_id:
                     # Create a filter for a portion of the terms in the concept set
                     filters.append(
                         TypedStringSetFilter(
                             type="STRING_SET",
-                            key=str(case_type_col.id),
+                            key=str(col.id),
                             members={  # type: ignore[arg-type]
                                 str(x)
                                 for i, x in enumerate(
@@ -304,27 +304,25 @@ class TestContent:
 
             # Retrieve phylogenetic tree
             found_similar_cases = False
-            dist_case_type_cols = [
-                case_type_col
-                for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.ref_cols[case_type_col.ref_col_id].col_type
+            dist_cols = [
+                col
+                for col in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[col.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
-            for dist_case_type_col in dist_case_type_cols:
-                assert dist_case_type_col is not None
-                assert dist_case_type_col.id is not None
-                for tree_algorithm_code in (
-                    dist_case_type_col.tree_algorithm_codes or []
-                ):
+            for dist_col in dist_cols:
+                assert dist_col is not None
+                assert dist_col.id is not None
+                for tree_algorithm_code in dist_col.tree_algorithm_codes or []:
                     if VERBOSE:
                         print(
-                            f"\tRetrieving phylogenetic tree for {dist_case_type_col.code} using tree algorithm {tree_algorithm_code}"
+                            f"\tRetrieving phylogenetic tree for {dist_col.code} using tree algorithm {tree_algorithm_code}"
                         )
                     phylogenetic_tree: model.PhylogeneticTree = app.handle(
                         command.RetrievePhylogeneticTreeByCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
-                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            genetic_distance_col_id=dist_col.id,
                             tree_algorithm=tree_algorithm_code,
                             case_ids=case_ids,
                         )
@@ -338,7 +336,7 @@ class TestContent:
                         command.RetrieveSimilarCasesCommand(
                             user=org_user,
                             case_type_id=complete_case_type.id,
-                            genetic_distance_case_type_col_id=dist_case_type_col.id,
+                            genetic_distance_col_id=dist_col.id,
                             case_ids=case_ids[0:5],
                             max_distance=20,
                         )
@@ -348,23 +346,21 @@ class TestContent:
 
             if found_similar_cases:
                 found_some_similar_cases = True
-                assert len(dist_case_type_cols) >= 1
+                assert len(dist_cols) >= 1
                 # assert that any item in similar_case_ids is a UUID
                 for similar_case_id in similar_case_ids:
                     assert isinstance(similar_case_id, UUID)
 
             # Retrieve genetic sequence
-            genetic_sequence_case_type_cols = [
-                case_type_col
-                for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.ref_cols[case_type_col.ref_col_id].col_type
+            genetic_sequence_cols = [
+                x
+                for x in complete_case_type.cols.values()
+                if complete_case_type.ref_cols[x.ref_col_id].col_type
                 == enum.ColType.GENETIC_SEQUENCE
             ]
-            for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:
+            for genetic_sequence_col in genetic_sequence_cols:
                 has_seq_case_ids = [
-                    x.id
-                    for x in cases
-                    if x.content.get(genetic_sequence_case_type_col.id)
+                    x.id for x in cases if x.content.get(genetic_sequence_col.id)
                 ]
                 if not has_seq_case_ids:
                     continue
@@ -377,7 +373,7 @@ class TestContent:
                         user=org_user,
                         case_type_id=complete_case_type.id,
                         case_ids=has_seq_case_ids[0:1],
-                        genetic_sequence_case_type_col_id=genetic_sequence_case_type_col.id,  # type: ignore[arg-type]
+                        genetic_sequence_col_id=genetic_sequence_col.id,  # type: ignore[arg-type]
                     )
                 )
                 if not fasta_iterator:
@@ -413,7 +409,7 @@ class TestContent:
 
         if not found_some_similar_cases:
             raise ValueError(
-                "Did not find similar cases for any case type, cannot validate RetrieveSimilarCasesCommand"
+                "Did not find similar cases for any CaseType, cannot validate RetrieveSimilarCasesCommand"
             )
 
         # Go over all case sets

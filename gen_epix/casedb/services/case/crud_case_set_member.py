@@ -53,7 +53,7 @@ def _crud_case_set_member_without_abac(
     """CaseSetMember admin command handling."""
     # Non-ABAC restrictions not enforced anywhere else
     if cmd.is_create() or cmd.is_update():
-        # Verify that the case set and case have the same case type
+        # Verify that the case set and case have the same CaseType
         self._verify_case_set_member_case_type(cmd.user, cmd.get_objs())
 
     _crud_cascade_delete(self, uow, cmd)

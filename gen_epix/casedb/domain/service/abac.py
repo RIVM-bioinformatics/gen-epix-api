@@ -55,9 +55,9 @@ class BaseAbacService(CommonAbacService):
         command.CaseTypeCrudCommand,
         command.CaseTypeSetMemberCrudCommand,
         command.CaseTypeSetCrudCommand,
-        command.CaseTypeColCrudCommand,
-        command.CaseTypeColSetCrudCommand,
-        command.CaseTypeColSetMemberCrudCommand,
+        command.ColCrudCommand,
+        command.ColSetCrudCommand,
+        command.ColSetMemberCrudCommand,
         command.CaseCrudCommand,
         command.CreateFileForReadSetCommand,
         command.CreateFileForSeqCommand,
@@ -76,7 +76,7 @@ class BaseAbacService(CommonAbacService):
         command.RetrieveSimilarCasesCommand,
         command.RetrieveGeneticSequenceFastaByCaseCommand,
         command.RetrieveCaseStatsCommand,
-        command.CaseTypeDimCrudCommand,
+        command.DimCrudCommand,
     }
 
     @abc.abstractmethod

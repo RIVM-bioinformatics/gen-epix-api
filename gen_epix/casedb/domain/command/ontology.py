@@ -2,7 +2,6 @@ from typing import ClassVar
 from uuid import UUID
 
 import gen_epix.casedb.domain.model.ontology as model
-from gen_epix.casedb.domain import enum
 from gen_epix.commondb.domain.command import CrudCommand, UpdateAssociationCommand
 
 # Non-CRUD
@@ -45,7 +44,7 @@ class ConceptRelationCrudCommand(CrudCommand):
 
 
 class DiseaseCrudCommand(CrudCommand):
-    """Manage diseases (ICD-coded when available) to anchor case types and etiologies to specific conditions."""
+    """Manage diseases (ICD-coded when available) to anchor CaseTypes and etiologies to specific conditions."""
 
     MODEL_CLASS: ClassVar = model.Disease
 

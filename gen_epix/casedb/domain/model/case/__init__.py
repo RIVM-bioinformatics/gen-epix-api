@@ -35,12 +35,6 @@ from gen_epix.casedb.domain.model.case.ref_data import (
 )
 from gen_epix.casedb.domain.model.case.ref_data import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case.ref_data import CaseType as CaseType
-from gen_epix.casedb.domain.model.case.ref_data import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.domain.model.case.ref_data import CaseTypeColSet as CaseTypeColSet
-from gen_epix.casedb.domain.model.case.ref_data import (
-    CaseTypeColSetMember as CaseTypeColSetMember,
-)
-from gen_epix.casedb.domain.model.case.ref_data import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case.ref_data import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeSetCategory as CaseTypeSetCategory,
@@ -48,6 +42,10 @@ from gen_epix.casedb.domain.model.case.ref_data import (
 from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
+from gen_epix.casedb.domain.model.case.ref_data import Col as Col
+from gen_epix.casedb.domain.model.case.ref_data import ColSet as ColSet
+from gen_epix.casedb.domain.model.case.ref_data import ColSetMember as ColSetMember
+from gen_epix.casedb.domain.model.case.ref_data import Dim as Dim
 from gen_epix.casedb.domain.model.case.ref_data import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )

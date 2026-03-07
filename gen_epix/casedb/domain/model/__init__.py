@@ -42,16 +42,14 @@ from gen_epix.casedb.domain.model.case import CaseSetRights as CaseSetRights
 from gen_epix.casedb.domain.model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.domain.model.case import CaseStats as CaseStats
 from gen_epix.casedb.domain.model.case import CaseType as CaseType
-from gen_epix.casedb.domain.model.case import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.domain.model.case import CaseTypeColSet as CaseTypeColSet
-from gen_epix.casedb.domain.model.case import (
-    CaseTypeColSetMember as CaseTypeColSetMember,
-)
-from gen_epix.casedb.domain.model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseUploadResult as CaseUploadResult
+from gen_epix.casedb.domain.model.case import Col as Col
+from gen_epix.casedb.domain.model.case import ColSet as ColSet
+from gen_epix.casedb.domain.model.case import ColSetMember as ColSetMember
+from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
@@ -163,10 +161,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseType,
             CaseTypeSet,
             CaseTypeSetMember,
-            CaseTypeDim,
-            CaseTypeCol,
-            CaseTypeColSet,
-            CaseTypeColSetMember,
+            Dim,
+            Col,
+            ColSet,
+            ColSetMember,
             CompleteCaseType,
             Case,
             CaseSetCategory,

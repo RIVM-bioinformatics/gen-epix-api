@@ -9,7 +9,7 @@ erDiagram
     %% Relationships
     RegionRelation }o--|| Region : "from_region_id"
     RegionRelation }o--|| Region : "to_region_id"
-    RegionSetShape }o--|| RegionSet : "region_set_id"
     Region }o--|| RegionSet : "region_set_id"
+    RegionSetShape }o--|| RegionSet : "region_set_id"
 
 ```

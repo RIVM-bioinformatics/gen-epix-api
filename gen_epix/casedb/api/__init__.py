@@ -24,10 +24,10 @@ from gen_epix.casedb.api.case import (
     RetrievePhylogeneticTreeRequestBody as RetrievePhylogeneticTreeRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    UpdateCaseTypeColSetCaseTypeColsRequestBody as UpdateCaseTypeColSetCaseTypeColsRequestBody,
+    UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
 )
 from gen_epix.casedb.api.case import (
-    UpdateCaseTypeSetCaseTypesRequestBody as UpdateCaseTypeSetCaseTypesRequestBody,
+    UpdateColSetColsRequestBody as UpdateColSetColsRequestBody,
 )
 from gen_epix.casedb.api.ontology import (
     UpdateDiseaseEtiologicalAgentRequestBody as UpdateDiseaseEtiologicalAgentRequestBody,

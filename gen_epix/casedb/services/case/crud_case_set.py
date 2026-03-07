@@ -59,7 +59,7 @@ def _crud_case_set_with_abac(
     # Initialise some
     assert cmd.user is not None and cmd.user.id is not None
 
-    # Determine valid case types and data collections
+    # Determine valid CaseTypes and data collections
     case_set_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
     if cmd.is_create():
         # Implemented through separate create case set command

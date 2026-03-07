@@ -42,12 +42,12 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.CUD),
             (command.CaseTypeSetCaseTypeUpdateAssociationCommand, PermissionTypeSet.E),
             (
-                command.CaseTypeColSetCrudCommand,
+                command.ColSetCrudCommand,
                 PermissionTypeSet.D,
             ),  # Create/update has no impact on abac
-            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.CUD),
+            (command.ColSetMemberCrudCommand, PermissionTypeSet.CUD),
             (
-                command.CaseTypeColSetCaseTypeColUpdateAssociationCommand,
+                command.ColSetColUpdateAssociationCommand,
                 PermissionTypeSet.E,
             ),
             # abac
@@ -62,18 +62,18 @@ class RoleGenerator(CommonRoleGenerator):
             # case
             (command.GeneticDistanceProtocolCrudCommand, PermissionTypeSet.CRU),
             (command.CaseSetCategoryCrudCommand, PermissionTypeSet.R),
-            (command.CaseTypeColCrudCommand, PermissionTypeSet.CRU),
+            (command.ColCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeCrudCommand, PermissionTypeSet.CRU),
-            (command.CaseTypeDimCrudCommand, PermissionTypeSet.CRU),
+            (command.DimCrudCommand, PermissionTypeSet.CRU),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.CRU),
             (
                 command.CaseTypeSetCrudCommand,
                 PermissionTypeSet.CRU,
             ),  # Create/update has no impact on abac
-            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.R),
+            (command.ColSetMemberCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.R),
             (
-                command.CaseTypeColSetCrudCommand,
+                command.ColSetCrudCommand,
                 PermissionTypeSet.CRU,
             ),  # Create/update has no impact on abac
             (command.RefColCrudCommand, PermissionTypeSet.CRU),
@@ -108,11 +108,11 @@ class RoleGenerator(CommonRoleGenerator):
             (command.CaseSetDataCollectionLinkCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseSetMemberCrudCommand, PermissionTypeSet.CRUD),
             (command.CaseSetStatusCrudCommand, PermissionTypeSet.R),
-            (command.CaseTypeColCrudCommand, PermissionTypeSet.R),
-            (command.CaseTypeColSetCrudCommand, PermissionTypeSet.R),
-            (command.CaseTypeColSetMemberCrudCommand, PermissionTypeSet.R),
+            (command.ColCrudCommand, PermissionTypeSet.R),
+            (command.ColSetCrudCommand, PermissionTypeSet.R),
+            (command.ColSetMemberCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeCrudCommand, PermissionTypeSet.R),
-            (command.CaseTypeDimCrudCommand, PermissionTypeSet.R),
+            (command.DimCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetCategoryCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetCrudCommand, PermissionTypeSet.R),
             (command.CaseTypeSetMemberCrudCommand, PermissionTypeSet.R),

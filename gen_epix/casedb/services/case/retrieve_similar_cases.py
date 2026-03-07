@@ -11,7 +11,7 @@ def case_service_retrieve_similar_cases(
     self: BaseCaseService, cmd: command.RetrieveSimilarCasesCommand
 ) -> list[UUID]:
     case_type_id = cmd.case_type_id
-    dist_case_type_col_id = cmd.genetic_distance_case_type_col_id
+    dist_col_id = cmd.genetic_distance_col_id
     case_ids = cmd.case_ids
     max_distance = cmd.max_distance
     user: model.User
@@ -26,29 +26,29 @@ def case_service_retrieve_similar_cases(
 
     with repository.uow() as uow:
         # Get distance column data
-        dist_case_type_col: model.CaseTypeCol = repository.crud(  # type: ignore[assignment]
+        dist_col: model.Col = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
-            model.CaseTypeCol,
+            model.Col,
             None,
-            dist_case_type_col_id,
+            dist_col_id,
             CrudOperation.READ_ONE,
         )
-        if dist_case_type_col.case_type_id != case_type_id:
+        if dist_col.case_type_id != case_type_id:
             raise exc.InvalidArgumentsError(
-                f"Case type column {dist_case_type_col_id} does not belong to case type {case_type_id}"
+                f"Col {dist_col_id} does not belong to CaseType {case_type_id}"
             )
-        dist_col: model.RefCol = repository.crud(  # type: ignore[assignment]
+        dist_ref_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
             model.RefCol,
             None,
-            dist_case_type_col.ref_col_id,
+            dist_col.ref_col_id,
             CrudOperation.READ_ONE,
         )
-        if dist_col.col_type != enum.ColType.GENETIC_DISTANCE:
+        if dist_ref_col.col_type != enum.ColType.GENETIC_DISTANCE:
             raise exc.InvalidArgumentsError(
-                f"Case type column {dist_case_type_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
+                f"Column {dist_col_id} is not of type {enum.ColType.GENETIC_DISTANCE.value}"
             )
 
         # Get genetic distance protocol
@@ -58,7 +58,7 @@ def case_service_retrieve_similar_cases(
                 user.id,
                 model.GeneticDistanceProtocol,
                 None,
-                dist_col.genetic_distance_protocol_id,
+                dist_ref_col.genetic_distance_protocol_id,
                 CrudOperation.READ_ONE,
             )
         )
@@ -78,9 +78,9 @@ def case_service_retrieve_similar_cases(
             apply_max_n_cases=False,
         )
 
-        # Get profile_ids from dist_case_type_col
+        # Get profile_ids from dist_ref_col
         case_id_profile_id_map: dict[UUID, str | None] = {
-            x.id: x.content.get(dist_case_type_col_id) for x in all_cases
+            x.id: x.content.get(dist_col_id) for x in all_cases
         }
         case_ids_set = set(case_ids)
         profile_ids: list[UUID] = [
@@ -89,7 +89,7 @@ def case_service_retrieve_similar_cases(
             if profile_id is not None and case_id in case_ids_set
         ]
 
-        # Get similar profile ids from seqdb, expected not to include the query profile ids
+        # Get similar profile IDs from seqdb, expected not to include the query profile ids
         similar_profile_ids: list[UUID] = self.app.handle(
             seqdb_command.RetrieveSimilarProfilesCommand(
                 seq_distance_protocol_id=seqdb_seq_distance_protocol_id,

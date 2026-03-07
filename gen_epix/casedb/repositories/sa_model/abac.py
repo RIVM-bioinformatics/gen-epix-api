@@ -45,11 +45,11 @@ class OrganizationAccessCasePolicy(Base, RowMetadataMixin):
     remove_case_set: Mapped[bool] = create_mapped_column(
         DOMAIN, model.OrganizationAccessCasePolicy, "remove_case_set"
     )
-    read_case_type_col_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationAccessCasePolicy, "read_case_type_col_set_id"
+    read_col_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.OrganizationAccessCasePolicy, "read_col_set_id"
     )
-    write_case_type_col_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.OrganizationAccessCasePolicy, "write_case_type_col_set_id"
+    write_col_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.OrganizationAccessCasePolicy, "write_col_set_id"
     )
     read_case_set: Mapped[bool] = create_mapped_column(
         DOMAIN, model.OrganizationAccessCasePolicy, "read_case_set"
@@ -86,11 +86,11 @@ class UserAccessCasePolicy(Base, RowMetadataMixin):
     remove_case_set: Mapped[bool] = create_mapped_column(
         DOMAIN, model.UserAccessCasePolicy, "remove_case_set"
     )
-    read_case_type_col_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.UserAccessCasePolicy, "read_case_type_col_set_id"
+    read_col_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.UserAccessCasePolicy, "read_col_set_id"
     )
-    write_case_type_col_set_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.UserAccessCasePolicy, "write_case_type_col_set_id"
+    write_col_set_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.UserAccessCasePolicy, "write_col_set_id"
     )
     read_case_set: Mapped[bool] = create_mapped_column(
         DOMAIN, model.UserAccessCasePolicy, "read_case_set"

@@ -14,7 +14,7 @@ from gen_epix.casedb.domain.enum import (
 from gen_epix.casedb.domain.model.case.upload import CaseBatchUploadResult
 from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.case_date import (
-    case_service_get_case_date_case_type_col_mappers_from_cols,
+    case_service_get_case_date_col_mappers_from_cols,
 )
 from gen_epix.commondb.domain.enum import DataIssueType
 from gen_epix.commondb.domain.literal import (
@@ -96,7 +96,7 @@ class CaseValidator:
         self.case_service = case_service
         self.complete_case_type = complete_case_type
         self.user_id = user_id
-        # Unique concept and region sets across the complete case type
+        # Unique concept and region sets across the complete CaseType
         self.concept_set_ids: set[UUID] = set()
         self.interval_concept_set_ids: set[UUID] = set()
         self.regex_concept_set_ids: set[UUID] = set()
@@ -158,7 +158,7 @@ class CaseValidator:
         as a convenience for easily updating these in-place.
         """
         if cmd.case_type_id != self.complete_case_type.id:
-            raise ValueError("Cases are not for the correct case type")
+            raise ValueError("Cases are not for the correct CaseType")
 
         # Get contents, updated_contents and data_issues_list references
         contents = [
@@ -176,23 +176,23 @@ class CaseValidator:
         contents: list[dict[UUID, str | None] | None],
         data_issues_list: list[list[model.CaseDataIssue] | None],
     ) -> None:
-        """Handle any unknown case type columns and add appropriate data issues."""
+        """Handle any unknown Cols and add appropriate data issues."""
         for content, data_issues in zip(contents, data_issues_list):
             if content is None:
                 continue
             assert data_issues is not None
-            for case_type_col_id in content.keys():
-                if case_type_col_id in self.complete_case_type.case_type_cols:
+            for col_id in content.keys():
+                if col_id in self.complete_case_type.cols:
                     continue
-                # Unknown case_type_col
+                # Unknown Col, add data issue and ignore value
                 data_issues.append(
                     model.CaseDataIssue(
-                        case_type_col_id=case_type_col_id,
-                        original_value=content[case_type_col_id],
+                        col_id=col_id,
+                        original_value=content[col_id],
                         updated_value=None,
                         data_issue_type=DataIssueType.UNAUTHORIZED,
                         code="a7b3f9d2",
-                        message="Unknown case_type_col",
+                        message="Unknown Col",
                     )
                 )
 
@@ -204,10 +204,10 @@ class CaseValidator:
     ) -> None:
         """Validate and transform individual values."""
         msg_template = "{orig_value}"
-        for case_type_col in self.complete_case_type.case_type_cols.values():
-            case_type_col_id = case_type_col.id
-            assert case_type_col_id is not None
-            ref_col = self.complete_case_type.ref_cols[case_type_col.ref_col_id]
+        for col in self.complete_case_type.cols.values():
+            col_id = col.id
+            assert col_id is not None
+            ref_col = self.complete_case_type.ref_cols[col.ref_col_id]
             if ref_col.col_type == ColType.REGULAR_LANGUAGE:
                 pattern = self.regex_patterns[
                     ref_col.concept_set_id
@@ -263,16 +263,16 @@ class CaseValidator:
                     continue
                 assert updated_content is not None
                 assert data_issues is not None
-                if case_type_col_id not in content:
+                if col_id not in content:
                     continue
-                orig_value = content[case_type_col_id]
+                orig_value = content[col_id]
                 new_value: str | None | NoReturn = transform_fn(orig_value)  # type: ignore[assignment]
                 if new_value == NoReturn:
                     new_value = None
                     # No mapping found
                     data_issues.append(
                         model.CaseDataIssue(
-                            case_type_col_id=case_type_col_id,
+                            col_id=col_id,
                             original_value=orig_value,
                             updated_value=new_value,
                             data_issue_type=DataIssueType.INVALID,
@@ -286,7 +286,7 @@ class CaseValidator:
                     # Value transformed
                     data_issues.append(
                         model.CaseDataIssue(
-                            case_type_col_id=case_type_col_id,
+                            col_id=col_id,
                             original_value=orig_value,
                             updated_value=new_value,
                             data_issue_type=DataIssueType.TRANSFORMED,
@@ -296,10 +296,10 @@ class CaseValidator:
                     )
                     if new_value is None:
                         raise AssertionError(
-                            f"Unexpected None value after transformation of value {orig_value} for case type column {case_type_col_id}"
+                            f"Unexpected None value after transformation of value {orig_value} for Col {col_id}"
                         )
                 # Add to updated_content
-                updated_content[case_type_col_id] = new_value
+                updated_content[col_id] = new_value
 
     def transform_value_pairs(
         self,
@@ -312,37 +312,33 @@ class CaseValidator:
         This method assumes that only standard values are present in updated_contents.
         """
 
-        # Go over each case type dimension
-        for case_type_dim in self.complete_case_type.case_type_dims.values():
-            assert case_type_dim.id is not None
-            dim_type = self.complete_case_type.ref_dims[case_type_dim.ref_dim_id]
-            case_type_col_ids = (
-                self.complete_case_type.ordered_case_type_col_ids_by_dim[
-                    case_type_dim.id
-                ]
-            )
+        # Go over each Dim
+        for dim in self.complete_case_type.dims.values():
+            assert dim.id is not None
+            dim_type = self.complete_case_type.ref_dims[dim.ref_dim_id]
+            col_ids = self.complete_case_type.ordered_col_ids_by_dim[dim.id]
             # Handle each type of dimension
             if dim_type.dim_type == enum.DimType.GEO:
-                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(col_ids)
                 self._transform_geo_value_pairs(
                     contents, updated_contents, data_issues_list, col_pairs
                 )
             elif dim_type.dim_type == enum.DimType.TIME:
                 # Sort col_pairs by time resolution descending (DAY, WEEK, MONTH, QUARTER, YEAR)
-                case_type_col_ids.sort(
+                col_ids.sort(
                     key=lambda x: enum.ColTypeOrder.TIME_RESOLUTION_DESC.value.get(
                         self.complete_case_type.ref_cols[
-                            self.complete_case_type.case_type_cols[x].ref_col_id
+                            self.complete_case_type.cols[x].ref_col_id
                         ].col_type,
-                        len(case_type_col_ids),
+                        len(col_ids),
                     )
                 )
-                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(col_ids)
                 self._transform_time_value_pairs(
                     contents, updated_contents, data_issues_list, col_pairs
                 )
             elif dim_type.dim_type == enum.DimType.NUMBER:
-                col_pairs = CaseValidator._get_col_pairs(case_type_col_ids)
+                col_pairs = CaseValidator._get_col_pairs(col_ids)
                 self._transform_number_value_pairs(
                     contents, updated_contents, data_issues_list, col_pairs
                 )
@@ -358,25 +354,23 @@ class CaseValidator:
         updated_contents: list[dict[UUID, str | None] | None],
     ) -> None:
         """Calculate case date based on TIME dimension columns."""
-        # Determine case type columns from which the case date needs to be derived
+        # Determine Cols from which the case date needs to be derived
         # Calculate case date where possible
-        case_date_case_type_dim_id = self.complete_case_type.case_date_case_type_dim_id
-        if case_date_case_type_dim_id is None:
-            case_date_case_type_col_mappers = {}
+        case_date_dim_id = self.complete_case_type.case_date_dim_id
+        if case_date_dim_id is None:
+            case_date_col_mappers = {}
         else:
-            case_type_cols = [
-                self.complete_case_type.case_type_cols[x]
-                for x in self.complete_case_type.ordered_case_type_col_ids_by_dim[
-                    case_date_case_type_dim_id
+            cols = [
+                self.complete_case_type.cols[x]
+                for x in self.complete_case_type.ordered_col_ids_by_dim[
+                    case_date_dim_id
                 ]
             ]
-            case_date_case_type_col_mappers = (
-                case_service_get_case_date_case_type_col_mappers_from_cols(
-                    case_type_cols,
-                    self.complete_case_type.ref_cols,
-                )
+            case_date_col_mappers = case_service_get_case_date_col_mappers_from_cols(
+                cols,
+                self.complete_case_type.ref_cols,
             )
-        if not case_date_case_type_col_mappers:
+        if not case_date_col_mappers:
             # No case date columns defined, skip calculation
             return
 
@@ -389,8 +383,8 @@ class CaseValidator:
                 continue
             assert updated_content is not None
             assert case_result is not None
-            for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
-                iso_datetime_value: str | None = updated_content.get(case_type_col_id)
+            for col_id, mapper in case_date_col_mappers.items():
+                iso_datetime_value: str | None = updated_content.get(col_id)
                 if iso_datetime_value is None:
                     continue
                 if not re.match(ISODATE_PATTERN, iso_datetime_value):
@@ -418,10 +412,10 @@ class CaseValidator:
         """
         for col_pair in col_pairs:
             col1 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[0]].ref_col_id
+                self.complete_case_type.cols[col_pair[0]].ref_col_id
             ]
             col2 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[1]].ref_col_id
+                self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
             if (
                 col1.col_type != ColType.GEO_REGION
@@ -466,21 +460,21 @@ class CaseValidator:
         """Validate and transform TIME pairs of values."""
         # For TIME dimension: use IsoTimeTransformer with TimeUnitTransformStrategy.EXACT_ONLY to transform from-values to to-values. When no transformation is possible (e.g. from MONTH to DAY), skip that pair of cols to avoid a call to the IsoTimeTransformer.
         for col_pair in col_pairs:
-            col1 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[0]].ref_col_id
+            ref_col1 = self.complete_case_type.ref_cols[
+                self.complete_case_type.cols[col_pair[0]].ref_col_id
             ]
-            col2 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[1]].ref_col_id
+            ref_col2 = self.complete_case_type.ref_cols[
+                self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
             # Skip if columns are not TIME types
             if (
-                col1.col_type not in ColTypeSet.TIME.value
-                or col2.col_type not in ColTypeSet.TIME.value
+                ref_col1.col_type not in ColTypeSet.TIME.value
+                or ref_col2.col_type not in ColTypeSet.TIME.value
             ):
                 continue
 
-            from_time_unit = self.COL_TYPE_TO_TIME_UNIT[col1.col_type]
-            to_time_unit = self.COL_TYPE_TO_TIME_UNIT[col2.col_type]
+            from_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col1.col_type]
+            to_time_unit = self.COL_TYPE_TO_TIME_UNIT[ref_col2.col_type]
 
             # Skip if transformation is not possible
             if not IsoTimeTransformer.can_transform_time(from_time_unit, to_time_unit):
@@ -504,12 +498,12 @@ class CaseValidator:
                 from_time = updated_content.get(col_pair[0])
                 if from_time is None:
                     continue
-                col1 = self.complete_case_type.ref_cols[
-                    self.complete_case_type.case_type_cols[col_pair[0]].ref_col_id
+                ref_col1 = self.complete_case_type.ref_cols[
+                    self.complete_case_type.cols[col_pair[0]].ref_col_id
                 ]
 
                 # Check if from_time is a valid time value for col1's type
-                if self.TIME_MATCHERS[col1.col_type](from_time) is NoReturn:
+                if self.TIME_MATCHERS[ref_col1.col_type](from_time) is NoReturn:
                     continue
 
                 # Transform the time value using ObjectAdapter
@@ -544,17 +538,17 @@ class CaseValidator:
         Applies only to DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL column pairs.
         """
         for col_pair in col_pairs:
-            col1 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[0]].ref_col_id
+            ref_col1 = self.complete_case_type.ref_cols[
+                self.complete_case_type.cols[col_pair[0]].ref_col_id
             ]
-            col2 = self.complete_case_type.ref_cols[
-                self.complete_case_type.case_type_cols[col_pair[1]].ref_col_id
+            ref_col2 = self.complete_case_type.ref_cols[
+                self.complete_case_type.cols[col_pair[1]].ref_col_id
             ]
 
             # Only handle DECIMAL_XXX-INTERVAL and INTERVAL-INTERVAL pairs
-            is_col1_decimal = col1.col_type in ColTypeSet.NUMBER.value
-            is_col2_interval = col2.col_type == ColType.INTERVAL
-            is_col1_interval = col1.col_type == ColType.INTERVAL
+            is_col1_decimal = ref_col1.col_type in ColTypeSet.NUMBER.value
+            is_col2_interval = ref_col2.col_type == ColType.INTERVAL
+            is_col1_interval = ref_col1.col_type == ColType.INTERVAL
 
             # DECIMAL_XXX -> INTERVAL transformation
             if is_col1_decimal and is_col2_interval:
@@ -563,7 +557,7 @@ class CaseValidator:
                     updated_contents,
                     data_issues_list,
                     col_pair,
-                    col2,
+                    ref_col2,
                 )
 
             # INTERVAL -> INTERVAL transformation using IntervalToIntervalTransformer
@@ -573,8 +567,8 @@ class CaseValidator:
                     updated_contents,
                     data_issues_list,
                     col_pair,
-                    col1,
-                    col2,
+                    ref_col1,
+                    ref_col2,
                 )
 
     def _transform_decimal_to_interval(
@@ -732,7 +726,7 @@ class CaseValidator:
             # Overwrite existing different value
             data_issues.append(
                 model.CaseDataIssue(
-                    case_type_col_id=col_pair[1],
+                    col_id=col_pair[1],
                     original_value=content[col_pair[1]],
                     updated_value=new_value,
                     data_issue_type=DataIssueType.CONFLICT,
@@ -744,7 +738,7 @@ class CaseValidator:
             # Set derived value
             data_issues.append(
                 model.CaseDataIssue(
-                    case_type_col_id=col_pair[1],
+                    col_id=col_pair[1],
                     original_value=content.get(col_pair[1]),
                     updated_value=new_value,
                     data_issue_type=DataIssueType.DERIVED,
@@ -764,7 +758,7 @@ class CaseValidator:
         self.interval_concept_set_ids = set()
         self.regex_concept_set_ids = set()
         self.region_set_ids = set()
-        # Get unique concept and region sets across the complete case type
+        # Get unique concept and region sets across the complete CaseType
         for ref_col in self.complete_case_type.ref_cols.values():
             if ref_col.col_type in ColTypeSet.HAS_CONCEPT_SET.value:
                 assert ref_col.concept_set_id
@@ -1036,10 +1030,8 @@ class CaseValidator:
         return organizations
 
     @staticmethod
-    def _get_col_pairs(case_type_col_ids: list[UUID]) -> list[tuple[UUID, UUID]]:
+    def _get_col_pairs(col_ids: list[UUID]) -> list[tuple[UUID, UUID]]:
         """
-        Generate all pairs of case_type_col IDs in both directions.
+        Generate all pairs of Col IDs in both directions.
         """
-        return list(combinations(case_type_col_ids, 2)) + list(
-            combinations(case_type_col_ids[::-1], 2)
-        )
+        return list(combinations(col_ids, 2)) + list(combinations(col_ids[::-1], 2))

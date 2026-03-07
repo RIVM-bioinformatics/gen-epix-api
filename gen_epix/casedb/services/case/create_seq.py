@@ -34,16 +34,16 @@ def case_service_create_file_for_read_set_or_seq(
     # Handle transaction for reading case
     with repository.uow() as uow:
         cases = _get_cases_for_create_file_for_read_sets_or_seqs(
-            self, cmd, case_abac, uow, user_id, [cmd.case_id], [cmd.case_type_col_id]
+            self, cmd, case_abac, uow, user_id, [cmd.case_id], [cmd.col_id]
         )
         case = cases[0]
 
         # Retrieve ReadSet or Seq ID from case content
-        if cmd.case_type_col_id not in case.content:
+        if cmd.col_id not in case.content:
             raise exc.InvalidArgumentsError(
-                "No ReadSet linked to case for the given case type column"
+                "No ReadSet linked to case for the given Col"
             )
-        read_set_or_seq_id = UUID(case.content[cmd.case_type_col_id])
+        read_set_or_seq_id = UUID(case.content[cmd.col_id])
 
     if is_read_set:
         assert isinstance(cmd, command.CreateFileForReadSetCommand)
@@ -120,27 +120,21 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     uow: BaseUnitOfWork,
     user_id: UUID,
     case_ids: list[UUID],
-    case_type_col_ids: list[UUID],
+    col_ids: list[UUID],
 ) -> list[model.Case]:
-    # Get CaseTypeCol and RefCol data
-    case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user_id,
-            model.CaseTypeCol,
-            None,
-            list(set(case_type_col_ids)),
-            CrudOperation.READ_SOME,
-        )
+    # Get Col and RefCol data
+    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.Col,
+        None,
+        list(set(col_ids)),
+        CrudOperation.READ_SOME,
     )
-    case_type_col_by_id: dict[UUID, model.CaseTypeCol] = {
-        x.id: x for x in case_type_cols if x.id is not None
-    }
+    col_map: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
 
     # Get RefCol data
-    ref_col_ids: set[UUID] = {
-        case_type_col.ref_col_id for case_type_col in case_type_cols
-    }
+    ref_col_ids: set[UUID] = {col.ref_col_id for col in cols}
     ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
@@ -153,26 +147,24 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         x.id: x for x in ref_cols if x.id is not None
     }
 
-    # TODO: Verify all case type cols are for the given case type
+    # TODO: Verify all Cols are for the given CaseType
 
-    # Verify all case type cols are of type GENETIC_READS
+    # Verify all Cols are of type GENETIC_READS
     if isinstance(cmd, command.CreateFileForReadSetCommand):
         expected_col_type = enum.ColType.GENETIC_READS
     elif isinstance(cmd, command.CreateFileForSeqCommand):
         expected_col_type = enum.ColType.GENETIC_SEQUENCE
     else:
         raise exc.InvalidArgumentsError("Invalid command type")
-    invalid_case_type_col_ids = [
+    invalid_col_ids = [
         x.ref_col_id
-        for x in case_type_cols
+        for x in cols
         if ref_col_by_id[x.ref_col_id].col_type != expected_col_type
     ]
-    if invalid_case_type_col_ids:
-        invalid_case_type_col_ids_str = ", ".join(
-            str(x) for x in invalid_case_type_col_ids
-        )
+    if invalid_col_ids:
+        invalid_col_ids_str = ", ".join(str(x) for x in invalid_col_ids)
         raise exc.InvalidArgumentsError(
-            f"Some columns are not of type {expected_col_type.name}: {invalid_case_type_col_ids_str}"
+            f"Some columns are not of type {expected_col_type.name}: {invalid_col_ids_str}"
         )
 
     # Get Case data
@@ -185,43 +177,39 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         CrudOperation.READ_SOME,
     )
 
-    # Verify if all case type cols are for the same case type as the cases
-    # TODO: remove once the command is adjusted to be for only one case type
-    invalid_case_type_col_ids = [
-        y
-        for x, y in zip(cases, case_type_col_ids)
-        if case_type_col_by_id[y].case_type_id != x.case_type_id
+    # Verify if all Cols are for the same CaseType as the cases
+    # TODO: remove once the command is adjusted to be for only one CaseType
+    invalid_col_ids = [
+        y for x, y in zip(cases, col_ids) if col_map[y].case_type_id != x.case_type_id
     ]
-    if invalid_case_type_col_ids:
-        invalid_case_type_col_ids_str = ", ".join(
-            str(x) for x in invalid_case_type_col_ids
-        )
+    if invalid_col_ids:
+        invalid_col_ids_str = ", ".join(str(x) for x in invalid_col_ids)
         raise exc.InvalidArgumentsError(
-            f"Some case type column ids are for a different case type than the given cases: {invalid_case_type_col_ids_str}"
+            f"Some Col IDs are for a different CaseType than the given cases: {invalid_col_ids_str}"
         )
 
-    # @ABAC: Verify write rights to case_type_col for each case
+    # @ABAC: Verify write rights to Col for each case
     if not case_abac.is_full_access:
-        # Get some write rights to case_type_col
-        writable_data_collections_by_case_type_col: dict[UUID, set[UUID]] = {
-            x: case_abac.get_data_collections_with_access_right_for_case_type_col(
+        # Get some write rights to Col
+        writable_data_collections_by_col: dict[UUID, set[UUID]] = {
+            x: case_abac.get_data_collections_with_access_right_for_col(
                 x, enum.CaseRight.WRITE_CASE
             )
-            for x in case_type_col_ids
+            for x in col_ids
         }
-        # Retrieve data collections by case id for ABAC column-level write checks
+        # Retrieve data collections by Case ID for ABAC column-level write checks
         case_data_collections_map: dict[UUID, set[UUID]] = (
             self._retrieve_case_data_collections_map(uow, user_id, case_ids=case_ids)
         )
-        # For each requested (case, case_type_col), ensure the user has write access
+        # For each requested (Case, Col), ensure the user has write access
         # to that column in at least one data collection the case belongs to
-        for case, case_type_col_id in zip(cases, case_type_col_ids):
+        for case, col_id in zip(cases, col_ids):
             # Membership includes created_in_data_collection_id
             assert case.id is not None
             case_data_collections = set(case_data_collections_map.get(case.id, set()))
             case_data_collections.add(case.created_in_data_collection_id)
             if case_data_collections.isdisjoint(
-                writable_data_collections_by_case_type_col[case_type_col_id]
+                writable_data_collections_by_col[col_id]
             ):
                 raise exc.UnauthorizedAuthError(
                     "User has no WRITE_CASE access to the specified column in any data collection of the case"

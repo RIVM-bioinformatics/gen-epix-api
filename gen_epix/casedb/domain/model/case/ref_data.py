@@ -12,6 +12,7 @@ from gen_epix.casedb.domain.model.ontology import ConceptSet, Disease, Etiologic
 from gen_epix.commondb.domain.model import Model
 from gen_epix.fastapp.domain import Entity, create_keys, create_links
 from gen_epix.seqdb.domain import enum as seqdb_enum
+from gen_epix.seqdb.domain.literal import NCBI_TAXID_PATTERN
 from gen_epix.util import copy_model_field
 
 
@@ -116,7 +117,7 @@ class TreeAlgorithm(Model):
 
 class RefDim(Model):
     """
-    A reference dimension that is not linked to a specific case type, to promote reuse
+    A reference dimension that is not linked to a specific CaseType, to promote reuse
     and consistency. The reference dimension groups a number of reference columns that
     logically belong together and contains part of the information needed to define a
     dimension in a case, such as the code and label.
@@ -158,7 +159,7 @@ class RefDim(Model):
 
 class RefCol(Model):
     """
-    A reference column that is not linked to a specific case type, to promote reuse
+    A reference column that is not linked to a specific CaseType, to promote reuse
     and consistency. The reference column belongs to a reference dimension and contains
     part of the information needed to define a column in a case, such as the code, type
     and possible concept set.
@@ -269,12 +270,12 @@ class RefCol(Model):
 
 class CaseType(Model):
     """
-    A case type is the data equivalent of an epidemiological case definition. By
+    A CaseType is the data equivalent of an epidemiological case definition. By
     extension, it can also include non-cases that are relevant for the case definition,
-    e.g. controls or samples from non-human origin. In addition, the case type contains
+    e.g. controls or samples from non-human origin. In addition, the CaseType contains
     some operational settings information.
 
-    Columns and dimensions are linked to case types.
+    Columns and dimensions are linked to CaseTypes.
     """
 
     ENTITY: ClassVar = Entity(
@@ -289,9 +290,9 @@ class CaseType(Model):
             }
         ),
     )
-    name: str = Field(description="The name of the case type", max_length=255)
+    name: str = Field(description="The name of the CaseType", max_length=255)
     description: str | None = Field(
-        default=None, description="The description of the case type", max_length=1000
+        default=None, description="The description of the CaseType", max_length=1000
     )
     disease_id: UUID | None = Field(
         default=None, description="The ID of the disease. FOREIGN KEY"
@@ -348,17 +349,17 @@ class CaseTypeSetCategory(Model):
         keys=create_keys({1: "name"}),
     )
     name: str = Field(
-        description="The name of the case type set category", max_length=255
+        description="The name of the CaseTypeSet category", max_length=255
     )
     description: str | None = Field(
         default=None,
-        description="The description of the case type set category",
+        description="The description of the CaseTypeSet category",
         max_length=1000,
     )
-    rank: int = Field(description="The rank of the case type set category")
+    rank: int = Field(description="The rank of the CaseTypeSet category")
     purpose: enum.CaseTypeSetCategoryPurpose = Field(
         default=enum.CaseTypeSetCategoryPurpose.CONTENT,
-        description="The purpose of the case type set category",
+        description="The purpose of the CaseTypeSet category",
     )
 
     @field_serializer("purpose", mode="plain")
@@ -366,10 +367,17 @@ class CaseTypeSetCategory(Model):
         return value.value
 
 
-class CaseTypeDim(Model):
+class Dim(Model):
+    """
+    A dimension of a CaseType, logically grouping a number of columns. It is derived
+    from a reference dimension and possibly occurs multiple times in the same case
+    type. Multiple occurrences can capture e.g. multiple vaccinations or multiple
+    samples taken during the time span of the case.
+    """
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_dims",
-        table_name="case_type_dim",
+        snake_case_plural_name="dims",
+        table_name="dim",
         persistable=True,
         keys=create_keys({1: ("case_type_id", "ref_dim_id", "occurrence")}),
         links=create_links(
@@ -379,14 +387,14 @@ class CaseTypeDim(Model):
             }
         ),
     )
-    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
-    case_type: CaseType | None = Field(default=None, description="The case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The CaseType")
     ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
     ref_dim: RefDim | None = Field(default=None, description="The dimension")
     occurrence: int = Field(
         default=0,
         description=(
-            "The index of the occurrence of the dimension for this case type. "
+            "The index of the occurrence of the dimension for this CaseType. "
             "E.g. for first and second vaccination time it would be 1 and 2. "
             "Zero if only a single occurrence is expected or created."
         ),
@@ -394,8 +402,8 @@ class CaseTypeDim(Model):
     )
     code: str = Field(
         description=(
-            "The code for the case type dimension, "
-            "equal to the dimension code and, if present, dot 'x' occurrence. "
+            "The code for the Dim, "
+            "equal to the RefDim code and, if present, dot 'x' occurrence. "
             "E.g. 'Host.Vaccination.Date.COVID19.x1' for occurrence=1, "
             "'Specimen.Sampling.Date' for occurrence=0"
         ),
@@ -404,53 +412,55 @@ class CaseTypeDim(Model):
     label: str | None = Field(
         default=None,
         description=(
-            "The label of the dimension for this case type,"
-            " if different from the general dimension label."
+            "The label of the Dim for this CaseType,"
+            " if different from the RefDim label."
         ),
         max_length=255,
     )
     description: str | None = Field(
         default=None,
-        description="Description of the case type dimension.",
+        description="Description of the Dim.",
         max_length=1000,
     )
     rank: int = Field(
-        description="The rank of the case type dimension within the case type for (partial) ordering."
+        description="The rank of the Dim within the CaseType for (partial) ordering."
     )
     is_case_date_dim: bool = Field(
         default=False,
-        description="Indicates if this dimension is to be used to derive the case date.",
+        description="Indicates if this Dim is to be used to derive the case date.",
     )
 
 
-class CaseTypeCol(Model):
+class Col(Model):
+    """
+    A column of a CaseType, part of a Dim, and containing the actual data for
+    the case. It is derived from a RefCol, from which it takes its
+    properties such as the column type.
+    """
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_cols",
-        table_name="case_type_col",
+        snake_case_plural_name="cols",
+        table_name="col",
         persistable=True,
-        keys=create_keys({1: ("case_type_dim_id", "ref_col_id")}),
+        keys=create_keys({1: ("dim_id", "ref_col_id")}),
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
-                2: ("case_type_dim_id", CaseTypeDim, "case_type_dim"),
+                2: ("dim_id", Dim, "dim"),
                 3: ("ref_col_id", RefCol, "ref_col"),
             }
         ),
     )
-    case_type_id: UUID = copy_model_field(CaseTypeDim, "case_type_id")
-    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
-    case_type_dim_id: UUID = Field(
-        description="The ID of the case type dimension. FOREIGN KEY"
-    )
-    case_type_dim: CaseTypeDim | None = Field(
-        default=None, description="The case type dimension"
-    )
+    case_type_id: UUID = copy_model_field(Dim, "case_type_id")
+    case_type: CaseType | None = copy_model_field(Dim, "case_type")
+    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
+    dim: Dim | None = Field(default=None, description="The dimension")
     ref_col_id: UUID = Field(description="The ID of the column. FOREIGN KEY")
     ref_col: RefCol | None = Field(default=None, description="The column")
     code: str = Field(
         description=(
-            "The code for the case type column, "
-            "equal to the column code and, if present, dot 'x' occurrence. "
+            "The code for the Col, "
+            "equal to the RefCol code and, if present, dot 'x' occurrence. "
             "E.g. 'Host.Vaccination.Date.COVID19.x1' for occurrence=1, "
             "'Specimen.Sampling.Date' for occurrence=0"
         ),
@@ -458,21 +468,21 @@ class CaseTypeCol(Model):
     )
     rank: int = Field(
         description=(
-            "The rank of the column within the case type dim for (partial) ordering, "
-            "if different from the general dimension and column rank."
+            "The rank of the Col within the CaseType Dim for (partial) ordering, "
+            "if different from the RefDim and RefCol rank."
         ),
     )
     label: str | None = Field(
         default=None,
         description=(
-            "The label of the column for this case type,"
-            " if different from the general column label."
+            "The label of the Col for this CaseType,"
+            " if different from the RefCol label."
         ),
         max_length=255,
     )
     description: str | None = Field(
         default=None,
-        description="Description of the case type column.",
+        description="Description of the Col.",
         max_length=1000,
     )
     min_value: float | None = Field(
@@ -502,25 +512,22 @@ class CaseTypeCol(Model):
         description=(
             "The NCBI taxid for the column, if the column is a genetic sequence"
         ),
-        # TODO: move to seqdb literal.py, variable NCBI_TAXID_PATTERN
-        pattern=r"^NCBI:txid\d+$",
+        pattern=NCBI_TAXID_PATTERN,
     )
-    genetic_sequence_case_type_col_id: UUID | None = Field(
+    genetic_sequence_col_id: UUID | None = Field(
         default=None,
         description=(
-            "The ID of the genetic sequence case type column, "
+            "The ID of the genetic sequence column, "
             "if this is a genetic sequence column. FOREIGN KEY"
         ),
     )
     tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = Field(
         default=None,
-        description=(
-            "The set of tree algorithms that can be used for the case type column"
-        ),
+        description=("The set of tree algorithms that can be used for the Col"),
     )
     props: dict[str, Any] = Field(
         default_factory=dict,
-        description="Additional properties of the case type column.",
+        description="Additional properties of the Col.",
     )
 
     @field_validator("code", mode="before")
@@ -546,48 +553,38 @@ class CaseTypeCol(Model):
         return None if value is None else [x.value for x in value]
 
 
-class CaseTypeColSet(Model):
+class ColSet(Model):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_col_sets",
-        table_name="case_type_col_set",
+        snake_case_plural_name="col_sets",
+        table_name="col_set",
         persistable=True,
         keys=create_keys({1: "name"}),
     )
-    name: str = Field(
-        description="The name of a case type column set, UNIQUE", max_length=255
-    )
+    name: str = Field(description="The name of the ColSet, UNIQUE", max_length=255)
     description: str | None = Field(
         default=None,
-        description="The description of the case type column set",
+        description="The description of the ColSet",
         max_length=1000,
     )
 
 
-class CaseTypeColSetMember(Model):
+class ColSetMember(Model):
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="case_type_col_set_members",
-        table_name="case_type_col_set_member",
+        snake_case_plural_name="col_set_members",
+        table_name="col_set_member",
         persistable=True,
-        keys=create_keys({1: ("case_type_col_set_id", "case_type_col_id")}),
+        keys=create_keys({1: ("col_set_id", "col_id")}),
         links=create_links(
             {
-                1: ("case_type_col_set_id", CaseTypeColSet, "case_type_col_set"),
-                2: ("case_type_col_id", CaseTypeCol, "case_type_col"),
+                1: ("col_set_id", ColSet, "col_set"),
+                2: ("col_id", Col, "col"),
             }
         ),
     )
-    case_type_col_set_id: UUID = Field(
-        description="The ID of the case type column set. FOREIGN KEY"
-    )
-    case_type_col_set: CaseTypeColSet | None = Field(
-        default=None, description="The case type column set"
-    )
-    case_type_col_id: UUID = Field(
-        description="The ID of the case type column. FOREIGN KEY"
-    )
-    case_type_col: CaseTypeCol | None = Field(
-        default=None, description="The case type column"
-    )
+    col_set_id: UUID = Field(description="The ID of the ColSet. FOREIGN KEY")
+    col_set: ColSet | None = Field(default=None, description="The ColSet")
+    col_id: UUID = Field(description="The ID of the Col. FOREIGN KEY")
+    col: Col | None = Field(default=None, description="The Col")
 
 
 class CaseSetCategory(Model):
@@ -598,10 +595,10 @@ class CaseSetCategory(Model):
         keys=create_keys({1: "name"}),
     )
     name: str = Field(
-        description="The name of the case set category, UNIQUE", max_length=255
+        description="The name of the CaseSetCategory, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        description="The description of the case set category", max_length=1000
+        description="The description of the CaseSetCategory", max_length=1000
     )
 
 
@@ -613,10 +610,10 @@ class CaseSetStatus(Model):
         keys=create_keys({1: "name"}),
     )
     name: str = Field(
-        description="The name of the case set status, UNIQUE", max_length=255
+        description="The name of the CaseSetStatus, UNIQUE", max_length=255
     )
     description: str | None = Field(
-        description="The description of the case set status", max_length=1000
+        description="The description of the CaseSetStatus", max_length=1000
     )
 
 
@@ -636,20 +633,20 @@ class CaseTypeSet(Model):
             }
         ),
     )
-    name: str = Field(description="The name of the case type set", max_length=255)
+    name: str = Field(description="The name of the CaseTypeSet, UNIQUE", max_length=255)
     description: str | None = Field(
         default=None,
-        description="The description of the case type set",
+        description="The description of the CaseTypeSet",
         max_length=1000,
     )
     case_type_set_category_id: UUID = Field(
-        description="The id of the category of the case type set. FOREIGN KEY"
+        description="The ID of the category of the CaseTypeSet. FOREIGN KEY"
     )
     case_type_set_category: CaseTypeSetCategory | None = Field(
-        default=None, description="The category of the case type set"
+        default=None, description="The category of the CaseTypeSet"
     )
     rank: float = Field(
-        description="The rank of the case type set, establishing a partial order"
+        description="The rank of the CaseTypeSet, establishing a partial order"
     )
 
 
@@ -666,12 +663,9 @@ class CaseTypeSetMember(Model):
             }
         ),
     )
-    case_type_set_id: UUID = Field(
-        description="The ID of the case type set. FOREIGN KEY"
-    )
+    case_type_set_id: UUID = Field(description="The ID of the CaseTypeSet. FOREIGN KEY")
     case_type_set: CaseTypeSet | None = Field(
-        default=None, description="The case type set"
+        default=None, description="The CaseTypeSet"
     )
-    case_type_id: UUID = copy_model_field(CaseTypeDim, "case_type_id")
-    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
-    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
+    case_type_id: UUID = copy_model_field(Dim, "case_type_id")
+    case_type: CaseType | None = copy_model_field(Dim, "case_type")

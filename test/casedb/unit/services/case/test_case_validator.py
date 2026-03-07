@@ -16,12 +16,7 @@ import pytest
 from gen_epix.casedb.domain import command, enum, model
 from gen_epix.casedb.domain.model.case.case_data import Case
 from gen_epix.casedb.domain.model.case.complete_case_type import CompleteCaseType
-from gen_epix.casedb.domain.model.case.ref_data import (
-    CaseTypeCol,
-    CaseTypeDim,
-    RefCol,
-    RefDim,
-)
+from gen_epix.casedb.domain.model.case.ref_data import Col, Dim, RefCol, RefDim
 from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.enum import DataIssueType
 from gen_epix.commondb.domain.model.organization import Organization
@@ -41,18 +36,18 @@ class BaseCaseValidatorTestCase(TestCase):
         self.regex_ref_dim_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400af")
         self.org_ref_dim_id: UUID = UUID("550e8400-e29b-41d4-a716-4466554400b0")
 
-        # Case type col IDs (case type col ids)
-        self.time_day_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440101")
-        self.time_week_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440102")
-        self.geo_from_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440103")
-        self.geo_to_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440104")
-        self.num_decimal_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440105")
-        self.num_interval1_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440106")
-        self.num_interval2_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440107")
-        self.string_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440108")
-        self.regex_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440109")
-        self.org_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-44665544010a")
-        self.other_ctc_id: UUID = UUID("550e8400-e29b-41d4-a716-44665544010b")
+        # Col IDs (Col ids)
+        self.time_day_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440101")
+        self.time_week_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440102")
+        self.geo_from_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440103")
+        self.geo_to_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440104")
+        self.num_decimal_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440105")
+        self.num_interval1_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440106")
+        self.num_interval2_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440107")
+        self.string_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440108")
+        self.regex_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440109")
+        self.org_col_id: UUID = UUID("550e8400-e29b-41d4-a716-44665544010a")
+        self.other_col_id: UUID = UUID("550e8400-e29b-41d4-a716-44665544010b")
 
         # Underlying reference column IDs
         self.time_day_ref_col_id: UUID = UUID("550e8400-e29b-41d4-a716-446655440201")
@@ -227,7 +222,7 @@ class BaseCaseValidatorTestCase(TestCase):
             col_type=enum.ColType.OTHER,
         )
 
-        ctd_time = CaseTypeDim(
+        time_dim = Dim(
             id=self.time_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.time_ref_dim_id,
@@ -236,7 +231,7 @@ class BaseCaseValidatorTestCase(TestCase):
             rank=1,
             is_case_date_dim=True,
         )
-        ctd_geo = CaseTypeDim(
+        geo_dim = Dim(
             id=self.geo_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.geo_ref_dim_id,
@@ -244,7 +239,7 @@ class BaseCaseValidatorTestCase(TestCase):
             code="Geo",
             rank=2,
         )
-        ctd_num = CaseTypeDim(
+        num_dim = Dim(
             id=self.num_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.num_ref_dim_id,
@@ -252,7 +247,7 @@ class BaseCaseValidatorTestCase(TestCase):
             code="Number",
             rank=3,
         )
-        ctd_text = CaseTypeDim(
+        text_dim = Dim(
             id=self.text_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.text_ref_dim_id,
@@ -260,7 +255,7 @@ class BaseCaseValidatorTestCase(TestCase):
             code="Text",
             rank=4,
         )
-        ctd_regex = CaseTypeDim(
+        regex_dim = Dim(
             id=self.regex_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.regex_ref_dim_id,
@@ -268,7 +263,7 @@ class BaseCaseValidatorTestCase(TestCase):
             code="Regex",
             rank=5,
         )
-        ctd_org = CaseTypeDim(
+        org_dim = Dim(
             id=self.org_ref_dim_id,
             case_type_id=self.case_type_id,
             ref_dim_id=self.org_ref_dim_id,
@@ -277,97 +272,97 @@ class BaseCaseValidatorTestCase(TestCase):
             rank=6,
         )
 
-        # CaseTypeCols
-        ctc_time_day = CaseTypeCol(
-            id=self.time_day_ctc_id,
+        # Cols
+        time_day_col = Col(
+            id=self.time_day_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.time_ref_dim_id,
+            dim_id=self.time_ref_dim_id,
             ref_col_id=self.time_day_ref_col_id,
             code="Time.Day",
             rank=1,
         )
-        ctc_time_week = CaseTypeCol(
-            id=self.time_week_ctc_id,
+        time_week_col = Col(
+            id=self.time_week_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.time_ref_dim_id,
+            dim_id=self.time_ref_dim_id,
             ref_col_id=self.time_week_ref_col_id,
             code="Time.Week",
             rank=2,
         )
-        ctc_geo_from = CaseTypeCol(
-            id=self.geo_from_ctc_id,
+        geo_from_col = Col(
+            id=self.geo_from_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.geo_ref_dim_id,
+            dim_id=self.geo_ref_dim_id,
             ref_col_id=self.geo_ref_col_from_id,
             code="Geo.From",
             rank=1,
         )
-        ctc_geo_to = CaseTypeCol(
-            id=self.geo_to_ctc_id,
+        geo_to_col = Col(
+            id=self.geo_to_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.geo_ref_dim_id,
+            dim_id=self.geo_ref_dim_id,
             ref_col_id=self.geo_ref_col_to_id,
             code="Geo.To",
             rank=2,
         )
-        ctc_num_decimal = CaseTypeCol(
-            id=self.num_decimal_ctc_id,
+        num_decimal_col = Col(
+            id=self.num_decimal_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.num_ref_dim_id,
+            dim_id=self.num_ref_dim_id,
             ref_col_id=self.num_decimal_ref_col_id,
             code="Number.Decimal",
             rank=1,
         )
-        ctc_num_interval1 = CaseTypeCol(
-            id=self.num_interval1_ctc_id,
+        num_interval1_col = Col(
+            id=self.num_interval1_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.num_ref_dim_id,
+            dim_id=self.num_ref_dim_id,
             ref_col_id=self.num_interval1_ref_col_id,
             code="Number.Interval1",
             rank=2,
         )
-        ctc_num_interval2 = CaseTypeCol(
-            id=self.num_interval2_ctc_id,
+        num_interval2_col = Col(
+            id=self.num_interval2_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.num_ref_dim_id,
+            dim_id=self.num_ref_dim_id,
             ref_col_id=self.num_interval2_ref_col_id,
             code="Number.Interval2",
             rank=3,
         )
-        ctc_string = CaseTypeCol(
-            id=self.string_ctc_id,
+        string_col = Col(
+            id=self.string_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.text_ref_dim_id,
+            dim_id=self.text_ref_dim_id,
             ref_col_id=self.string_ref_col_id,
             code="Text.String",
             rank=1,
         )
-        ctc_regex = CaseTypeCol(
-            id=self.regex_ctc_id,
+        regex_col = Col(
+            id=self.regex_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.regex_ref_dim_id,
+            dim_id=self.regex_ref_dim_id,
             ref_col_id=self.regex_ref_col_id,
             code="Regex.Pattern",
             rank=2,
         )
-        ctc_org = CaseTypeCol(
-            id=self.org_ctc_id,
+        org_col = Col(
+            id=self.org_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.org_ref_dim_id,
+            dim_id=self.org_ref_dim_id,
             ref_col_id=self.org_ref_col_id,
             code="Org.Org",
             rank=1,
         )
-        ctc_other = CaseTypeCol(
-            id=self.other_ctc_id,
+        other_col = Col(
+            id=self.other_col_id,
             case_type_id=self.case_type_id,
-            case_type_dim_id=self.text_ref_dim_id,
+            dim_id=self.text_ref_dim_id,
             ref_col_id=self.other_ref_col_id,
             code="Text.Other",
             rank=99,
         )
 
-        complete = CompleteCaseType(
+        complete_case_type = CompleteCaseType(
             id=self.case_type_id,
             user_id=self.user_id,
             name="Test CT",
@@ -394,34 +389,34 @@ class BaseCaseValidatorTestCase(TestCase):
                 self.org_ref_col_id: ref_col_org,
                 self.other_ref_col_id: ref_col_other,
             },
-            case_type_dims={
-                self.time_ref_dim_id: ctd_time,
-                self.geo_ref_dim_id: ctd_geo,
-                self.num_ref_dim_id: ctd_num,
-                self.text_ref_dim_id: ctd_text,
-                self.regex_ref_dim_id: ctd_regex,
-                self.org_ref_dim_id: ctd_org,
+            dims={
+                self.time_ref_dim_id: time_dim,
+                self.geo_ref_dim_id: geo_dim,
+                self.num_ref_dim_id: num_dim,
+                self.text_ref_dim_id: text_dim,
+                self.regex_ref_dim_id: regex_dim,
+                self.org_ref_dim_id: org_dim,
             },
-            case_type_cols={
-                self.time_day_ctc_id: ctc_time_day,
-                self.time_week_ctc_id: ctc_time_week,
-                self.geo_from_ctc_id: ctc_geo_from,
-                self.geo_to_ctc_id: ctc_geo_to,
-                self.num_decimal_ctc_id: ctc_num_decimal,
-                self.num_interval1_ctc_id: ctc_num_interval1,
-                self.num_interval2_ctc_id: ctc_num_interval2,
-                self.string_ctc_id: ctc_string,
-                self.regex_ctc_id: ctc_regex,
-                self.org_ctc_id: ctc_org,
-                self.other_ctc_id: ctc_other,
+            cols={
+                self.time_day_col_id: time_day_col,
+                self.time_week_col_id: time_week_col,
+                self.geo_from_col_id: geo_from_col,
+                self.geo_to_col_id: geo_to_col,
+                self.num_decimal_col_id: num_decimal_col,
+                self.num_interval1_col_id: num_interval1_col,
+                self.num_interval2_col_id: num_interval2_col,
+                self.string_col_id: string_col,
+                self.regex_col_id: regex_col,
+                self.org_col_id: org_col,
+                self.other_col_id: other_col,
             },
             genetic_distance_protocols={},
             tree_algorithms={},
             case_type_access_abacs={},
             case_type_share_abacs={},
-            case_date_case_type_dim_id=self.time_ref_dim_id,
+            case_date_dim_id=self.time_ref_dim_id,
         )
-        return complete
+        return complete_case_type
 
     def _concept_data(self) -> tuple[
         dict[UUID, model.ConceptSet],
@@ -559,7 +554,7 @@ class BaseCaseValidatorTestCase(TestCase):
         ]
 
     def _create_validator(self) -> CaseValidator:
-        complete = self._build_complete_case_type()
+        complete_case_type = self._build_complete_case_type()
         with (
             patch.object(
                 CaseValidator,
@@ -575,7 +570,7 @@ class BaseCaseValidatorTestCase(TestCase):
                 return_value=self._organizations(),
             ),
         ):
-            validator = CaseValidator(self.case_service, complete, uuid4())
+            validator = CaseValidator(self.case_service, complete_case_type, uuid4())
         return validator
 
     def _make_cmd_and_result(
@@ -634,7 +629,7 @@ class TestValidateUnknownColumns(BaseCaseValidatorTestCase):
         assert data_issues_list[0] is not None
         assert len(data_issues_list[0]) == 1
         issue = data_issues_list[0][0]
-        assert issue.case_type_col_id == unknown_col_id
+        assert issue.col_id == unknown_col_id
         assert issue.data_issue_type == DataIssueType.UNAUTHORIZED
         assert issue.code == "a7b3f9d2"
 
@@ -646,21 +641,21 @@ class TestTransformIndividualValues(BaseCaseValidatorTestCase):
         # Prepare contents with values for each type
         contents: list[dict[UUID, str | None] | None] = [
             {
-                self.string_ctc_id: "code1",  # maps to concept id (case-insensitive)
-                self.regex_ctc_id: "AB123",  # matches pattern
-                self.geo_from_ctc_id: "a",  # maps to region id
-                self.time_day_ctc_id: "2023-02-05",  # valid day
-                self.num_decimal_ctc_id: "3.1415",  # rounded
-                self.org_ctc_id: self.org_name,
-                self.other_ctc_id: "keep",
+                self.string_col_id: "code1",  # maps to concept id (case-insensitive)
+                self.regex_col_id: "AB123",  # matches pattern
+                self.geo_from_col_id: "a",  # maps to region id
+                self.time_day_col_id: "2023-02-05",  # valid day
+                self.num_decimal_col_id: "3.1415",  # rounded
+                self.org_col_id: self.org_name,
+                self.other_col_id: "keep",
             },
             {
-                self.string_ctc_id: "unknown",  # cannot map
-                self.regex_ctc_id: "xx",  # invalid
-                self.geo_from_ctc_id: "unknown",  # cannot map
-                self.time_day_ctc_id: "invalid-date",  # invalid
-                self.num_decimal_ctc_id: "oops",  # invalid
-                self.org_ctc_id: "unknown-org",
+                self.string_col_id: "unknown",  # cannot map
+                self.regex_col_id: "xx",  # invalid
+                self.geo_from_col_id: "unknown",  # cannot map
+                self.time_day_col_id: "invalid-date",  # invalid
+                self.num_decimal_col_id: "oops",  # invalid
+                self.org_col_id: "unknown-org",
             },
         ]
         updated_contents: list[dict[UUID, str | None] | None] = [{}, {}]
@@ -676,18 +671,18 @@ class TestTransformIndividualValues(BaseCaseValidatorTestCase):
         # Success case assertions
         uc0 = updated_contents[0]
         assert uc0 is not None
-        assert uc0[self.string_ctc_id] == str(self.string_concept1_id)
-        assert uc0[self.regex_ctc_id] == "AB123"
+        assert uc0[self.string_col_id] == str(self.string_concept1_id)
+        assert uc0[self.regex_col_id] == "AB123"
         # region mapping
-        assert uc0[self.geo_from_ctc_id] == str(self.region_a_id)
+        assert uc0[self.geo_from_col_id] == str(self.region_a_id)
         # time day copied
-        assert uc0[self.time_day_ctc_id] == "2023-02-05"
+        assert uc0[self.time_day_col_id] == "2023-02-05"
         # number rounded
-        assert uc0[self.num_decimal_ctc_id] == "3.14"
+        assert uc0[self.num_decimal_col_id] == "3.14"
         # organization
-        assert uc0[self.org_ctc_id] == str(self.org_id)
+        assert uc0[self.org_col_id] == str(self.org_id)
         # other passthrough
-        assert uc0[self.other_ctc_id] == "keep"
+        assert uc0[self.other_col_id] == "keep"
 
         issues0 = data_issues_list[0]
         assert issues0 is not None
@@ -700,12 +695,12 @@ class TestTransformIndividualValues(BaseCaseValidatorTestCase):
         # Failure case assertions
         uc1 = updated_contents[1]
         assert uc1 is not None
-        assert self.string_ctc_id not in uc1
-        assert self.regex_ctc_id not in uc1
-        assert self.geo_from_ctc_id not in uc1
-        assert self.time_day_ctc_id not in uc1
-        assert self.num_decimal_ctc_id not in uc1
-        assert self.org_ctc_id not in uc1
+        assert self.string_col_id not in uc1
+        assert self.regex_col_id not in uc1
+        assert self.geo_from_col_id not in uc1
+        assert self.time_day_col_id not in uc1
+        assert self.num_decimal_col_id not in uc1
+        assert self.org_col_id not in uc1
 
         issues1 = data_issues_list[1]
         assert issues1 is not None
@@ -722,7 +717,7 @@ class TestTransformIndividualValuesEdgeCases(BaseCaseValidatorTestCase):
     def test_empty_string_in_string_set_raises(self) -> None:
         validator = self._create_validator()
         # Prepare one content with empty string for a STRING_SET column
-        contents: list[dict[UUID, str | None] | None] = [{self.string_ctc_id: ""}]
+        contents: list[dict[UUID, str | None] | None] = [{self.string_col_id: ""}]
         updated_contents: list[dict[UUID, str | None] | None] = [{}]
         data_issues_list: list[list[model.CaseDataIssue] | None] = [[]]
         with pytest.raises(AssertionError):
@@ -746,10 +741,10 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
 
         contents: list[dict[UUID, str | None] | None] = [
             {
-                self.geo_from_ctc_id: from_region_value,
-                self.time_day_ctc_id: day_value,
-                self.num_decimal_ctc_id: decimal_value,
-                self.num_interval1_ctc_id: str(
+                self.geo_from_col_id: from_region_value,
+                self.time_day_col_id: day_value,
+                self.num_decimal_col_id: decimal_value,
+                self.num_interval1_col_id: str(
                     self.interval1_a_id
                 ),  # for interval->interval
             }
@@ -757,9 +752,9 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
         updated_contents: list[dict[UUID, str | None] | None] = [
             {
                 # Pre-populate conflicting target GEO value
-                self.geo_to_ctc_id: str(uuid4()),
+                self.geo_to_col_id: str(uuid4()),
                 # Pre-populate different WEEK to cause conflict
-                self.time_week_ctc_id: "2099-W01",
+                self.time_week_col_id: "2099-W01",
                 # No pre for number targets
             }
         ]
@@ -775,18 +770,18 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
         uc = updated_contents[0]
         assert uc is not None
         # GEO derived to container region -> conflict overwrite
-        assert uc[self.geo_to_ctc_id] == str(self.region_a_id)
+        assert uc[self.geo_to_col_id] == str(self.region_a_id)
         # TIME derived week
-        assert uc[self.time_week_ctc_id] == "2024-W01"
+        assert uc[self.time_week_col_id] == "2024-W01"
 
         # NUMBER decimal -> interval1
-        assert uc[self.num_interval1_ctc_id] in {
+        assert uc[self.num_interval1_col_id] in {
             str(self.interval1_a_id),
             str(self.interval1_b_id),
         }
 
         # NUMBER interval1 -> interval2
-        assert uc[self.num_interval2_ctc_id] in {
+        assert uc[self.num_interval2_col_id] in {
             str(self.interval2_x_id),
             str(self.interval2_y_id),
         }
@@ -804,9 +799,9 @@ class TestTransformValuePairs(BaseCaseValidatorTestCase):
 class TestCalculateCaseDate(BaseCaseValidatorTestCase):
     def test_no_case_date_dim_returns(self) -> None:
         validator = self._create_validator()
-        # Override complete case type to not have a case_date_dim
-        validator.complete_case_type.case_date_case_type_dim_id = None
-        cmd, retval = self._make_cmd_and_result([{self.time_day_ctc_id: "2024-01-05"}])
+        # Override complete CaseType to not have a case_date_dim
+        validator.complete_case_type.case_date_dim_id = None
+        cmd, retval = self._make_cmd_and_result([{self.time_day_col_id: "2024-01-05"}])
         # Should not raise and not add issues
         validator.calculate_case_date(
             cmd, [retval.cases[0].validated_content], [retval.cases[0].data_issues]
@@ -817,7 +812,7 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
         validator = self._create_validator()
         # Valid ISO date -> updates case_date and logs derived
         cmd1, retval1 = self._make_cmd_and_result(
-            [{self.time_day_ctc_id: "2024-02-02"}]
+            [{self.time_day_col_id: "2024-02-02"}]
         )
 
         updated_contents = [
@@ -829,7 +824,7 @@ class TestCalculateCaseDate(BaseCaseValidatorTestCase):
 
         assert any(x.code == "b2c3d4e5" for x in logs)
         # Non ISO value -> assertion
-        cmd2, retval2 = self._make_cmd_and_result([{self.time_day_ctc_id: "NOT_ISO"}])
+        cmd2, retval2 = self._make_cmd_and_result([{self.time_day_col_id: "NOT_ISO"}])
         with pytest.raises(AssertionError):
             updated_contents = [
                 None if x is None else x.validated_content for x in retval2.cases
@@ -848,11 +843,11 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
         # Build one case with values that exercise multiple paths
         contents = [
             {
-                self.string_ctc_id: "name1",
-                self.num_decimal_ctc_id: "1.234",
-                self.geo_from_ctc_id: "b",
-                self.time_day_ctc_id: "2024-03-03",
-                self.org_ctc_id: self.org_code,
+                self.string_col_id: "name1",
+                self.num_decimal_col_id: "1.234",
+                self.geo_from_col_id: "b",
+                self.time_day_col_id: "2024-03-03",
+                self.org_col_id: self.org_code,
             }
         ]
         cmd, retval = self._make_cmd_and_result(contents)  # type: ignore[arg-type]
@@ -861,10 +856,10 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
         case_res = out.cases[0]
         # Updated content present
         vc = case_res.validated_content
-        assert vc[self.string_ctc_id] == str(self.string_concept1_id)
-        assert vc[self.num_decimal_ctc_id] == "1.23"
+        assert vc[self.string_col_id] == str(self.string_concept1_id)
+        assert vc[self.num_decimal_col_id] == "1.23"
         # Derived week present
-        assert vc[self.time_week_ctc_id] == "2024-W09"
+        assert vc[self.time_week_col_id] == "2024-W09"
         # Case date set and logged
         assert any(x.code == "b2c3d4e5" for x in case_res.logs)
 
@@ -872,7 +867,7 @@ class TestValidateAndTransformEndToEnd(BaseCaseValidatorTestCase):
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestRetrieveConceptData(BaseCaseValidatorTestCase):
     def test_retrieve_concept_data_builds_maps(self) -> None:
-        complete = self._build_complete_case_type()
+        complete_case_type = self._build_complete_case_type()
         # Patch init to avoid fetching metadata on construction; we want to test retrieval explicitly
         with (
             patch.object(CaseValidator, "_init_concept_metadata", return_value=None),
@@ -881,7 +876,7 @@ class TestRetrieveConceptData(BaseCaseValidatorTestCase):
                 CaseValidator, "_init_organization_metadata", return_value=None
             ),
         ):
-            validator = CaseValidator(self.case_service, complete, uuid4())
+            validator = CaseValidator(self.case_service, complete_case_type, uuid4())
 
         # Ensure set metadata is present
         validator._init_set_metadata()

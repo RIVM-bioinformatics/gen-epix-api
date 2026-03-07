@@ -26,12 +26,6 @@ from gen_epix.casedb.repositories.sa_model.case import (
 from gen_epix.casedb.repositories.sa_model.case import CaseSetMember as CaseSetMember
 from gen_epix.casedb.repositories.sa_model.case import CaseSetStatus as CaseSetStatus
 from gen_epix.casedb.repositories.sa_model.case import CaseType as CaseType
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeColSet as CaseTypeColSet
-from gen_epix.casedb.repositories.sa_model.case import (
-    CaseTypeColSetMember as CaseTypeColSetMember,
-)
-from gen_epix.casedb.repositories.sa_model.case import CaseTypeDim as CaseTypeDim
 from gen_epix.casedb.repositories.sa_model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetCategory as CaseTypeSetCategory,
@@ -39,6 +33,10 @@ from gen_epix.casedb.repositories.sa_model.case import (
 from gen_epix.casedb.repositories.sa_model.case import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
+from gen_epix.casedb.repositories.sa_model.case import Col as Col
+from gen_epix.casedb.repositories.sa_model.case import ColSet as ColSet
+from gen_epix.casedb.repositories.sa_model.case import ColSetMember as ColSetMember
+from gen_epix.casedb.repositories.sa_model.case import Dim as Dim
 from gen_epix.casedb.repositories.sa_model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
@@ -152,10 +150,10 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.CaseSetMember: CaseSetMember,
         model.CaseSetStatus: CaseSetStatus,
         model.CaseType: CaseType,
-        model.CaseTypeCol: CaseTypeCol,
-        model.CaseTypeColSet: CaseTypeColSet,
-        model.CaseTypeColSetMember: CaseTypeColSetMember,
-        model.CaseTypeDim: CaseTypeDim,
+        model.Col: Col,
+        model.ColSet: ColSet,
+        model.ColSetMember: ColSetMember,
+        model.Dim: Dim,
         model.CaseTypeSet: CaseTypeSet,
         model.CaseTypeSetCategory: CaseTypeSetCategory,
         model.CaseTypeSetMember: CaseTypeSetMember,

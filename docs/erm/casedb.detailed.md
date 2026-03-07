@@ -41,13 +41,13 @@ erDiagram
     CaseTypeSet }o--|| CaseTypeSetCategory : "case_type_set_category_id"
     CaseTypeSetMember }o--|| CaseTypeSet : "case_type_set_id"
     CaseTypeSetMember }o--|| CaseType : "case_type_id"
-    CaseTypeDim }o--|| CaseType : "case_type_id"
-    CaseTypeDim }o--|| RefDim : "ref_dim_id"
-    CaseTypeCol }o--|| CaseType : "case_type_id"
-    CaseTypeCol }o--|| CaseTypeDim : "case_type_dim_id"
-    CaseTypeCol }o--|| RefCol : "ref_col_id"
-    CaseTypeColSetMember }o--|| CaseTypeColSet : "case_type_col_set_id"
-    CaseTypeColSetMember }o--|| CaseTypeCol : "case_type_col_id"
+    Dim }o--|| CaseType : "case_type_id"
+    Dim }o--|| RefDim : "ref_dim_id"
+    Col }o--|| CaseType : "case_type_id"
+    Col }o--|| Dim : "dim_id"
+    Col }o--|| RefCol : "ref_col_id"
+    ColSetMember }o--|| ColSet : "col_set_id"
+    ColSetMember }o--|| Col : "col_id"
     Case }o--|| CaseType : "case_type_id"
     Case }o--|| Subject : "subject_id"
     Case }o--|| DataCollection : "created_in_data_collection_id"
@@ -66,8 +66,8 @@ erDiagram
     OrganizationAccessCasePolicy }o--|| Organization : "organization_id"
     OrganizationAccessCasePolicy }o--|| DataCollection : "data_collection_id"
     OrganizationAccessCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
-    OrganizationAccessCasePolicy }o--|| CaseTypeColSet : "read_case_type_col_set_id"
-    OrganizationAccessCasePolicy }o--|| CaseTypeColSet : "write_case_type_col_set_id"
+    OrganizationAccessCasePolicy }o--|| ColSet : "read_col_set_id"
+    OrganizationAccessCasePolicy }o--|| ColSet : "write_col_set_id"
     OrganizationShareCasePolicy }o--|| Organization : "organization_id"
     OrganizationShareCasePolicy }o--|| DataCollection : "data_collection_id"
     OrganizationShareCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
@@ -75,8 +75,8 @@ erDiagram
     UserAccessCasePolicy }o--|| User : "user_id"
     UserAccessCasePolicy }o--|| DataCollection : "data_collection_id"
     UserAccessCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
-    UserAccessCasePolicy }o--|| CaseTypeColSet : "read_case_type_col_set_id"
-    UserAccessCasePolicy }o--|| CaseTypeColSet : "write_case_type_col_set_id"
+    UserAccessCasePolicy }o--|| ColSet : "read_col_set_id"
+    UserAccessCasePolicy }o--|| ColSet : "write_col_set_id"
     UserShareCasePolicy }o--|| User : "user_id"
     UserShareCasePolicy }o--|| DataCollection : "data_collection_id"
     UserShareCasePolicy }o--|| CaseTypeSet : "case_type_set_id"
@@ -372,7 +372,7 @@ erDiagram
         UUID case_type_id FK
     }
 
-    CaseTypeDim {
+    Dim {
         UUID id PK
         UUID case_type_id FK
         UUID ref_dim_id FK
@@ -384,10 +384,10 @@ erDiagram
         bool is_case_date_dim
     }
 
-    CaseTypeCol {
+    Col {
         UUID id PK
         UUID case_type_id FK
-        UUID case_type_dim_id FK
+        UUID dim_id FK
         UUID ref_col_id FK
         string code
         int rank
@@ -401,21 +401,21 @@ erDiagram
         int max_length
         string pattern
         string ncbi_taxid
-        UUID genetic_sequence_case_type_col_id
+        UUID genetic_sequence_col_id
         set[enum] tree_algorithm_codes
         dict[string, Any] props
     }
 
-    CaseTypeColSet {
+    ColSet {
         UUID id PK
         string name
         string description
     }
 
-    CaseTypeColSetMember {
+    ColSetMember {
         UUID id PK
-        UUID case_type_col_set_id FK
-        UUID case_type_col_id FK
+        UUID col_set_id FK
+        UUID col_id FK
     }
 
     Case {
@@ -489,8 +489,8 @@ erDiagram
         bool remove_case_set
         UUID organization_id FK
         bool is_private
-        UUID read_case_type_col_set_id FK
-        UUID write_case_type_col_set_id FK
+        UUID read_col_set_id FK
+        UUID write_col_set_id FK
         bool read_case_set
         bool write_case_set
     }
@@ -518,8 +518,8 @@ erDiagram
         bool add_case_set
         bool remove_case_set
         UUID user_id FK
-        UUID read_case_type_col_set_id FK
-        UUID write_case_type_col_set_id FK
+        UUID read_col_set_id FK
+        UUID write_col_set_id FK
         bool read_case_set
         bool write_case_set
     }

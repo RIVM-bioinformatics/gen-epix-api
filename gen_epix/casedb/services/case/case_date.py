@@ -49,139 +49,130 @@ CONVERT_ISO_DATE_TO_FIRST_DAY_MAP: dict[
 }
 
 
-def case_service_get_case_date_case_type_col_mappers(
+def case_service_get_case_date_col_mappers(
     self: BaseCaseService, uow: BaseUnitOfWork, user_id: UUID, case_type_id: UUID
 ) -> dict[UUID, Callable[[str], datetime.datetime]]:
     """
-    Retrieve all case_type_col_ids for the given case type that can be used to compute
+    Retrieve all Col IDs for the given CaseType that can be used to compute
     case date statistics, along with a callable to convert the string date values to
-    full dates, and based on the provided stats_time_case_type_col_id.
+    full dates, and based on the provided stats_time_col_id.
 
-    All case_type_cols returned will have the same (ref_dim, occurrence) as the
-    stats_time_case_type_col_id ref_col, will be of a time col_type, and will be ordered by
+    All Cols returned will have the same (ref_dim, occurrence) as the
+    stats_time_col_id ref_col, will be of a time col_type, and will be ordered by
     descending time resolution. The highest time resolution returned will be that of
-    the stats_time_case_type_col_id ref_col.
+    the stats_time_col_id ref_col.
 
-    The returned dict has the the case_type_col_ids as keys, in order of descending
+    The returned dict has the the Col IDs as keys, in order of descending
     time resolution, and as values a callable that converts the string date value to a
     full date. Weeks are converted to the first day of the week, months to the first day
     of the month, quarters to the first day of the first month of the quarter, and
     years to the first day of the year. As such, it is not possible to create a date in
     the future.
     """
-    case_type_dims: list[model.CaseTypeDim] = (
-        self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user_id,
-            model.CaseTypeDim,
-            None,
-            None,
-            CrudOperation.READ_ALL,
-            filter=CompositeFilter(
-                operator=LogicalOperator.AND,
-                filters=[
-                    EqualsUuidFilter(key="case_type_id", value=case_type_id),
-                    EqualsBooleanFilter(key="is_case_date_dim", value=True),
-                ],
-            ),
-        )
+    dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.Dim,
+        None,
+        None,
+        CrudOperation.READ_ALL,
+        filter=CompositeFilter(
+            operator=LogicalOperator.AND,
+            filters=[
+                EqualsUuidFilter(key="case_type_id", value=case_type_id),
+                EqualsBooleanFilter(key="is_case_date_dim", value=True),
+            ],
+        ),
     )
-    if not case_type_dims:
-        # No case type dims for case date, return empty dict
+    if not dims:
+        # No Dims for case date, return empty dict
         return {}
-    case_type_dim: model.CaseTypeDim = case_type_dims[0]
+    dim: model.Dim = dims[0]
 
     ref_dim: model.RefDim = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.RefDim,
         None,
-        case_type_dim.ref_dim_id,
+        dim.ref_dim_id,
         CrudOperation.READ_ONE,
     )
     if ref_dim.dim_type != enum.DimType.TIME:
         raise ValueError(
-            f"CaseTypeDim {case_type_dim.id} is not of time DimType, but of {ref_dim.dim_type}"
+            f"Dim {dim.id} is not of time DimType, but of {ref_dim.dim_type}"
         )
 
-    case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user_id,
-            model.CaseTypeCol,
-            None,
-            None,
-            CrudOperation.READ_ALL,
-            filter=EqualsUuidFilter(
-                key="case_type_dim_id", value=case_type_dim.id
-            ),  # type: ignore[arg-type]
-        )
+    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+        uow,
+        user_id,
+        model.Col,
+        None,
+        None,
+        CrudOperation.READ_ALL,
+        filter=EqualsUuidFilter(key="dim_id", value=dim.id),  # type: ignore[arg-type]
     )
-    if not case_type_cols:
-        # No case type cols for time dimension, return empty dict
+    if not cols:
+        # No Cols for time dimension, return empty dict
         return {}
 
-    # Verify case_type_cols are of time col_type
-    col_ids = list({x.ref_col_id for x in case_type_cols})
-    cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
+    # Verify Cols are of time col_type
+    ref_col_ids = list({x.ref_col_id for x in cols})
+    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
         model.RefCol,
         None,
-        col_ids,
+        ref_col_ids,
         CrudOperation.READ_SOME,
     )
-    cols_map: dict[UUID, model.RefCol] = {x.id: x for x in cols if x.id is not None}
+    ref_cols_map: dict[UUID, model.RefCol] = {
+        x.id: x for x in ref_cols if x.id is not None
+    }
     if not all(
-        cols_map[x.ref_col_id].col_type in enum.ColTypeSet.TIME.value
-        for x in case_type_cols
+        ref_cols_map[x.ref_col_id].col_type in enum.ColTypeSet.TIME.value for x in cols
     ):
-        raise ValueError(
-            "Not all case type cols for case_date_dim are of time col_type"
-        )
+        raise ValueError("Not all Cols for case_date_dim are of time col_type")
 
-    # Order case type cols by descending time resolution
-    case_type_cols.sort(
+    # Order Cols by descending time resolution
+    cols.sort(
         key=lambda x: enum.ColTypeOrder.TIME_RESOLUTION_DESC.value[
-            cols_map[x.ref_col_id].col_type
+            ref_cols_map[x.ref_col_id].col_type
         ]
     )
 
-    return case_service_get_case_date_case_type_col_mappers_from_cols(
-        case_type_cols, cols_map
-    )
+    return case_service_get_case_date_col_mappers_from_cols(cols, ref_cols_map)
 
 
-def case_service_get_case_date_case_type_col_mappers_from_cols(
-    case_type_cols: list[model.CaseTypeCol] | None, cols_map: dict[UUID, model.RefCol]
+def case_service_get_case_date_col_mappers_from_cols(
+    cols: list[model.Col] | None, cols_map: dict[UUID, model.RefCol]
 ) -> dict[UUID, Callable[[str], datetime.datetime]]:
-    if case_type_cols is None:
+    if cols is None:
         return {}
     retval: dict[UUID, Callable[[str], datetime.datetime]] = {  # type: ignore[assignment]
         x.id: CONVERT_ISO_DATE_TO_FIRST_DAY_MAP[cols_map[x.ref_col_id].col_type]
-        for x in case_type_cols
+        for x in cols
     }
     return retval
 
 
 def case_service_calculate_case_date(
     cases: list[model.Case],
-    case_date_case_type_col_mappers: dict[UUID, Callable[[str], datetime.datetime]],
+    case_date_col_mappers: dict[UUID, Callable[[str], datetime.datetime]],
 ) -> None:
     """
     Calculate and set the case date for each case in the provided list of cases,
-    using the provided mapping of case_type_col_ids to callables that convert string
+    using the provided mapping of col_ids to callables that convert string
     date values to full dates. The first mapping found, is used. The
-    time_case_type_col_map is expected to be ordered by descending time resolution.
-    The cases are expected to have any time case_type_cols removed that should not
+    time_col_map is expected to be ordered by descending time resolution.
+    The cases are expected to have any case_date_col_ids removed that should not
     be taken into account for calculating the case date.
     """
-    if not case_date_case_type_col_mappers:
+    if not case_date_col_mappers:
         return
 
     for case in cases:
-        for case_type_col_id, mapper in case_date_case_type_col_mappers.items():
-            iso_datetime_value: str | None = case.content.get(case_type_col_id)
+        for col_id, mapper in case_date_col_mappers.items():
+            iso_datetime_value: str | None = case.content.get(col_id)
             if iso_datetime_value is None:
                 continue
             case.case_date = mapper(iso_datetime_value)

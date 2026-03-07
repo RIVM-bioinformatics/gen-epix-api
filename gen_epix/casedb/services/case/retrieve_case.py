@@ -38,7 +38,7 @@ def case_service_retrieve_cases_by_query(
         enum.CaseRight.READ_CASE
     )
     if case_type_id not in has_case_read and not is_full_access:
-        raise exc.UnauthorizedAuthError(f"Unauthorized case type: {case_type_id}")
+        raise exc.UnauthorizedAuthError(f"Unauthorized CaseType: {case_type_id}")
 
     with repository.uow() as uow:
         if case_set_ids:
@@ -50,7 +50,7 @@ def case_service_retrieve_cases_by_query(
             # @ABAC: Verify validity of filter
             cols = _verify_filter_validity(self, user, case_query, uow)
 
-        # @ABAC: Retrieve all cases with read access, and content filtered on case_type_col read access
+        # @ABAC: Retrieve all cases with read access, and content filtered on Col read access
         cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
@@ -85,7 +85,7 @@ def case_service_retrieve_cases_by_query(
                 if y
             ]
 
-        # retrieve case type to apply max results limit
+        # retrieve CaseType to apply max results limit
         cases, is_max_results_exceeded = _apply_max_results_limit(
             self, user, case_type_id, uow, cases
         )
@@ -113,7 +113,7 @@ def _apply_max_results_limit(
         CrudOperation.READ_SOME,
     )
     if not case_types:
-        raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+        raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
     case_type = case_types[0]
     # Apply max results limit
     is_max_results_exceeded = False
@@ -207,7 +207,7 @@ def case_service_retrieve_cases_by_id(
             CrudOperation.READ_SOME,
         )
         if not case_types:
-            raise exc.InvalidArgumentsError(f"Invalid case type ID: {case_type_id}")
+            raise exc.InvalidArgumentsError(f"Invalid CaseType ID: {case_type_id}")
         case_type = case_types[0]
 
         # Apply max results limit
@@ -245,10 +245,10 @@ def case_service_retrieve_cases_by_id(
 #         enum.CaseRight.READ_CASE
 #     )
 
-#     # @ABAC: Verify read access to all given case types if applicable
+#     # @ABAC: Verify read access to all given CaseTypes if applicable
 #     if case_type_ids and not is_full_access:
 #         if not case_type_ids.issubset(set(has_case_read.keys())):
-#             raise exc.UnauthorizedAuthError(f"Unauthorized case types: {case_type_ids}")
+#             raise exc.UnauthorizedAuthError(f"Unauthorized CaseTypes: {case_type_ids}")
 
 #     case_ids: list[UUID] = []
 #     with repository.uow() as uow:
@@ -284,7 +284,7 @@ def case_service_retrieve_cases_by_id(
 #             case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
 #             ref_cols = _verify_case_filter(self, uow, user, case_query.filter)
 
-#         # @ABAC: Retrieve all cases with read access, and content filtered on case_type_col
+#         # @ABAC: Retrieve all cases with read access, and content filtered on Col
 #         # read access
 #         cases = self._retrieve_cases_with_content_right(
 #             uow,
@@ -297,7 +297,7 @@ def case_service_retrieve_cases_by_id(
 #             filter_content=True,
 #         )
 
-#         # Filter cases by case types
+#         # Filter cases by CaseTypes
 #         if case_type_ids:
 #             cases = [x for x in cases if x.case_type_id in case_type_ids]
 
@@ -365,36 +365,34 @@ def _verify_case_filter(
     user: model.User,
     composite_filter: CompositeFilter,
 ) -> list[model.RefCol]:
-    # Retrieve case type cols corresponding to filter keys
-    filter_case_type_col_ids = composite_filter.get_keys()
-    filter_case_type_cols: list[model.CaseTypeCol] = (
-        self.repository.crud(  # type: ignore[assignment]
-            uow,
-            user.id,
-            model.CaseTypeCol,
-            None,
-            filter_case_type_col_ids,
-            CrudOperation.READ_SOME,
-        )
+    # Retrieve Cols corresponding to filter keys
+    filter_col_ids = composite_filter.get_keys()
+    filter_cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+        uow,
+        user.id,
+        model.Col,
+        None,
+        filter_col_ids,
+        CrudOperation.READ_SOME,
     )
-    # Retrieve cols for case type cols
+    # Retrieve cols for Cols
     ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user.id,
         model.RefCol,
         None,
         list(
-            {x.ref_col_id for x in filter_case_type_cols}
+            {x.ref_col_id for x in filter_cols}
         ),  # TODO: consider READ_SOME allowing duplicate ids
         CrudOperation.READ_SOME,
     )
     ref_cols_map = {x.id: x for x in ref_cols}
-    ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_case_type_cols]
+    ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_cols]
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for case_type_col, ref_col, composite_filter in zip(  # type: ignore[assignment]
-        filter_case_type_cols, ref_cols, composite_filter.filters
+    for col, ref_col, composite_filter in zip(  # type: ignore[assignment]
+        filter_cols, ref_cols, composite_filter.filters
     ):
         if ref_col.concept_set_id or ref_col.region_set_id:
             if isinstance(composite_filter, StringSetFilter):
@@ -404,12 +402,12 @@ def _verify_case_filter(
                     composite_filter,
                     concept_valid_values,
                     region_valid_values,
-                    case_type_col,
+                    col,
                     ref_col,
                 )
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Column {case_type_col.id}: invalid filter type: {composite_filter.__class__.__name__}"
+                    f"Column {col.id}: invalid filter type: {composite_filter.__class__.__name__}"
                 )
 
     return ref_cols
@@ -421,7 +419,7 @@ def validate_concept_or_region(
     stringset_filter: StringSetFilter,
     concept_valid_values: dict[UUID, set[str]],
     region_valid_values: dict[UUID, set[str]],
-    case_type_col: model.CaseTypeCol,
+    col: model.Col,
     ref_col: model.RefCol,
 ) -> None:
     valid_values = None
@@ -435,12 +433,12 @@ def validate_concept_or_region(
         )
         # Handle invalid values
     if valid_values is not None:
-        _validate_filter_members(stringset_filter, case_type_col, valid_values)
+        _validate_filter_members(stringset_filter, col, valid_values)
 
 
 def _validate_filter_members(
     stringset_filter: StringSetFilter,
-    case_type_col: model.CaseTypeCol,
+    col: model.Col,
     valid_values: set[str],
 ) -> None:
     invalid_values = [
@@ -449,7 +447,7 @@ def _validate_filter_members(
     if len(invalid_values):
         invalid_values_str = ", ".join(invalid_values)
         raise exc.InvalidArgumentsError(
-            f"Column {case_type_col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}"
+            f"Column {col.id}: invalid {stringset_filter.__class__.__name__} filter members: {invalid_values_str}"
         )
 
 

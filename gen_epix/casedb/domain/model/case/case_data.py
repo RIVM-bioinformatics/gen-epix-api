@@ -43,8 +43,8 @@ class Case(Model):
     code: str | None = Field(
         default=None, description="A code for the case for further reference."
     )
-    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
-    case_type: CaseType | None = Field(default=None, description="The case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The CaseType")
     subject_id: UUID | None = Field(
         default=None, description="The ID of the subject. FOREIGN KEY"
     )
@@ -65,7 +65,7 @@ class Case(Model):
         description="The datetime of the case used for sorting results, limiting results and statistics such as first and last case date. Normally re-calculated from the case content variables upon persisting. Default is the current datetime.",
     )
     content: dict[UUID, str | None] = Field(
-        description=r"The data content of the case as {case_type_col_id: str_value | None}. Only case type columns defined for the case type of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed but will be removed upon serialization."
+        description=r"The data content of the case as {col_id: str_value | None}. Only columns defined for the CaseType of the case should be present here, and if no value is present, the key should be omitted. None content values are allowed but will be removed upon serialization."
     )
 
     @field_serializer("content", mode="plain")
@@ -117,8 +117,8 @@ class CaseSet(Model):
             }
         ),
     )
-    case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
-    case_type: CaseType | None = Field(default=None, description="The case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType. FOREIGN KEY")
+    case_type: CaseType | None = Field(default=None, description="The CaseType")
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the case set was created. FOREIGN KEY",
     )
@@ -134,12 +134,12 @@ class CaseSet(Model):
         default_factory=datetime.now,
     )
     case_set_category_id: UUID = Field(
-        description="The id of the category of the case set"
+        description="The CaseSetCategory ID. FOREIGN KEY"
     )
     case_set_category: CaseSetCategory | None = Field(
         default=None, description="The category of the case set"
     )
-    case_set_status_id: UUID = Field(description="The id of the status of the case set")
+    case_set_status_id: UUID = Field(description="The CaseSetStatus ID. FOREIGN KEY")
     case_set_status: CaseSetStatus | None = Field(
         default=None, description="The status of the case set"
     )
