@@ -94,7 +94,22 @@ python run.py other_general_run_pylint <error_code>
 python run.py other_general_run_mypy
 ```
 
-CI runs strict `mypy` flags. (Source: `.github/workflows/main.yml#L136-L140`)
+Gen-EpiX uses `mypy` to protect architecture boundaries, catch defects earlier, and improve refactoring safety. The goal is pragmatic typing, not full static coverage.
+
+Typing strictness is layered:
+
+- **Strict**: `gen_epix.*.domain.*`, `gen_epix.*.services.*`, `gen_epix.*.policies.*`
+- **Moderate**: `gen_epix.*.repositories.*`, `gen_epix.fastapp.*`, `gen_epix.*.config.*`
+- **Relaxed**: `test.*`, `tests.*`
+
+Guidelines:
+
+- Type public interfaces and return values first.
+- Avoid `Any` at domain/service/repository/config boundaries.
+- Prefer explicit domain types (`BaseModel`, `TypedDict`, dataclasses).
+- Use `# type: ignore[...]` only when necessary, and keep ignores minimal.
+
+CI also runs `mypy` as a required quality gate. (Source: `.github/workflows/main.yml#L136-L140`; Source: `mypy.ini#L1-L80`)
 
 ### All linters at once
 
@@ -133,6 +148,7 @@ Operator Note: `CASEDB` env setup also sets `SEQDB` env variables, so multi-app 
 
 - `run.py#L15-L887`
 - `.github/workflows/main.yml#L73-L197`
+- `mypy.ini#L1-L80`
 - `gen_epix/commondb/util.py#L61-L119`
 - `gen_epix/commondb/config/settings_manager.py#L43-L67`
 - `gen_epix/commondb/env.py#L185-L197`
