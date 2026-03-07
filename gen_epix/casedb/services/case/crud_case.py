@@ -14,7 +14,7 @@ from gen_epix.casedb.services.case.crud_common import (
     get_case_abac_from_command,
     is_app_admin_or_above,
 )
-from gen_epix.fastapp import CrudOperation, CrudOperationSet
+from gen_epix.fastapp import CrudOperation
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -25,9 +25,8 @@ def case_service_crud_case(
 
     # Start unit of work
     with self.repository.uow() as uow:
-        assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_app_admin_or_above(self, cmd.user):
+        if cmd.user is None or is_app_admin_or_above(self, cmd.user):
             return _crud_case_without_abac(self, uow, cmd)
         return _crud_case_with_abac(self, uow, cmd)
 
@@ -47,6 +46,7 @@ def _crud_case_with_abac(
     cmd: command.CaseCrudCommand,
 ) -> list[model.Case] | model.Case | list[UUID] | UUID | list[bool] | bool | None:
     """Case user command handling, ABAC applied."""
+    assert cmd.user is not None and cmd.user.id is not None
     # @ABAC: get case abac
     case_abac = get_case_abac_from_command(cmd)
 
@@ -55,22 +55,14 @@ def _crud_case_with_abac(
         # No policy: allows for internal commands to retrieve all
         return self.crud(cmd)  # type: ignore[return-value]
 
-    # Initialise some
-    is_create = cmd.operation in CrudOperationSet.CREATE.value
-    is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-    is_update = cmd.operation in CrudOperationSet.UPDATE.value
-    is_delete = cmd.operation in CrudOperationSet.DELETE.value
-    is_delete_all = cmd.operation == CrudOperation.DELETE_ALL
-    assert cmd.user is not None and cmd.user.id is not None
-
     # Determine valid case types and data collections
     case_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
-    if is_create | is_read | is_update:
-        # Implemented through separate create case set command
+    if cmd.is_create() | cmd.is_read() | cmd.is_update():
+        # Implemented through commands
         raise AssertionError("Unexpected operation")
-    elif is_delete:
+    elif cmd.is_delete():
         # All linked data collections have remove right
-        if is_delete_all:
+        if cmd.is_delete_all():
             # Delete all not allowed due to potential large number of case
             raise exc.UnauthorizedAuthError(
                 f"Operation {cmd.operation.value} not allowed for cases for this user"

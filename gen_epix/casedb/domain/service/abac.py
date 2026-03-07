@@ -58,6 +58,8 @@ class BaseAbacService(CommonAbacService):
         command.CaseTypeColCrudCommand,
         command.CaseTypeColSetCrudCommand,
         command.CaseTypeColSetMemberCrudCommand,
+        command.ColCrudCommand,
+        command.DimCrudCommand,
         command.CaseCrudCommand,
         command.CreateFileForReadSetCommand,
         command.CreateFileForSeqCommand,
@@ -82,7 +84,5 @@ class BaseAbacService(CommonAbacService):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_readable_reference_data(
-        self, cmd: command.Command
-    ) -> model.ReadableReferenceData:
+    def get_ref_data_access(self, cmd: command.Command) -> model.RefDataAccess:
         raise NotImplementedError

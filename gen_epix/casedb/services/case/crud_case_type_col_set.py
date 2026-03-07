@@ -10,11 +10,9 @@ from gen_epix.casedb.services.case.base import BaseCaseService
 from gen_epix.casedb.services.case.crud_common import (
     _crud_cascade_delete,
     crud_with_access_filter,
-    get_case_abac_from_command,
-    get_readable_reference_data_from_command,
-    is_metadata_admin_or_above,
+    get_ref_data_access_from_command,
+    is_refdata_admin_or_above,
 )
-from gen_epix.fastapp import CrudOperationSet
 from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
@@ -34,7 +32,7 @@ def case_service_crud_case_type_col_set(
     with self.repository.uow() as uow:
         assert cmd.user is not None
         _crud_cascade_delete(self, uow, cmd)
-        if is_metadata_admin_or_above(self, cmd.user):
+        if is_refdata_admin_or_above(self, cmd.user):
             return _crud_case_type_col_set_without_abac(self, uow, cmd)
         return _crud_case_type_col_set_with_abac(self, uow, cmd)
 
@@ -70,16 +68,10 @@ def _crud_case_type_col_set_with_abac(
     | None
 ):
     """CaseTypeColSet user command handling, ABAC applied."""
-    if not get_case_abac_from_command(cmd):
+    ref_data_access = get_ref_data_access_from_command(cmd)
+    if ref_data_access is None or ref_data_access.is_full_access:
+        # Special case: no policy (implies full access) or explicit full access
         return self.crud(cmd)  # type: ignore[return-value]
-
-    is_read = cmd.operation in CrudOperationSet.READ_OR_EXISTS.value
-    if not is_read:
-        raise AssertionError("Unexpected operation")
-
-    readable_reference_data = get_readable_reference_data_from_command(cmd)
-    assert readable_reference_data is not None
-    access_filter = self._compose_id_filter(
-        ("id", readable_reference_data.case_type_col_set_ids)
-    )
+    access_filter = ref_data_access.get_case_type_col_set_filter("id")
+    # No cascade delete to force conscious decision to delete from other models
     return crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]

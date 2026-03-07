@@ -5,7 +5,7 @@ from gen_epix.commondb.app_impl_details import AppImplDetails
 from gen_epix.commondb.domain import command, enum, model
 from gen_epix.commondb.domain.policy import BaseReadOrganizationResultsOnlyPolicy
 from gen_epix.commondb.domain.service import BaseAbacService
-from gen_epix.fastapp import CrudOperation, CrudOperationSet, exc
+from gen_epix.fastapp import CrudOperation, exc
 
 
 class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
@@ -39,7 +39,7 @@ class ReadOrganizationResultsOnlyPolicy(BaseReadOrganizationResultsOnlyPolicy):
             return retval
         if not isinstance(cmd, command.CrudCommand):
             raise NotImplementedError
-        if cmd.operation not in CrudOperationSet.READ_OR_EXISTS.value:
+        if not cmd.is_read():
             # Policy only applies to read or exists operations
             return retval
 

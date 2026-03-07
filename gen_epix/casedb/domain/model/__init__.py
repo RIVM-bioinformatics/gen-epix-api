@@ -57,10 +57,8 @@ from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
-from gen_epix.casedb.domain.model.case import (
-    ReadableReferenceData as ReadableReferenceData,
-)
 from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
+from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
@@ -177,7 +175,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             CaseSetMember,
             CaseDataCollectionLink,
             CaseSetDataCollectionLink,
-            ReadableReferenceData,
+            RefDataAccess,
             ReadSetForUpload,
             SeqForUpload,
             CaseForUpload,

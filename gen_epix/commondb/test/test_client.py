@@ -236,7 +236,7 @@ class TestClient:
         tgt_user: model.User = self.handle(
             self.register_invited_user_command_class(
                 user=self.user_class(
-                    key=f"{user_name}@{organization_name}.org" if set_key else None,
+                    key=f"{user_name}@{organization_name}.org",
                     email=f"{user_name}@{organization_name}.org",
                     name=user_name,
                     organization_id=organization_id,

@@ -35,7 +35,7 @@ class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
 class CreateCaseSetRequestBody(PydanticBaseModel):
     case_set: model.CaseSet
     data_collection_ids: set[UUID] = Field(
-        default=set(),
+        default_factory=set,
         description="The data collections in which the case set will be put initially",
     )
     case_ids: set[UUID] | None = Field(

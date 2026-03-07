@@ -8,7 +8,6 @@ from gen_epix.commondb.domain import command, model
 from gen_epix.commondb.domain.service.organization import BaseOrganizationService
 from gen_epix.fastapp import Command, CrudOperation, exc
 from gen_epix.fastapp.app import App
-from gen_epix.fastapp.enum import CrudOperationSet
 from gen_epix.fastapp.model import CrudCommand
 
 
@@ -46,7 +45,7 @@ class OrganizationService(BaseOrganizationService):
             issubclass(
                 type(cmd), (command.UserCrudCommand, command.OrganizationCrudCommand)
             )
-            and cmd.operation in CrudOperationSet.DELETE.value
+            and cmd.is_delete()
             and cmd.user
             and self.app.user_manager.is_root_user(cmd.user)
         ):
@@ -54,7 +53,7 @@ class OrganizationService(BaseOrganizationService):
             is_delete_user = issubclass(type(cmd), command.UserCrudCommand)
             id_ = user.id if is_delete_user else user.organization_id
             raise_error = False
-            if cmd.operation == CrudOperation.DELETE_ALL:
+            if cmd.is_delete_all():
                 raise_error = True
             elif cmd.operation == CrudOperation.DELETE_ONE:
                 raise_error = id_ == cmd.obj_ids
@@ -221,7 +220,6 @@ class OrganizationService(BaseOrganizationService):
                             filtered_user_invitations.append(x)
                     else:
                         filtered_user_invitations.append(x)
-                    
 
             if not filtered_user_invitations:
                 raise exc.UnauthorizedAuthError(

@@ -5,8 +5,8 @@ Tests follow the structure and conventions of the commondb upload tests,
 ensuring strict isolation and full coverage of the public entry point.
 """
 
-from typing import Any, Iterable, List, Set
-from unittest import TestCase
+from test.casedb.unit.services.case.base import BaseCrudTestCase
+from typing import Any, List
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -14,7 +14,6 @@ import pytest
 
 from gen_epix.casedb.domain import enum, exc, model
 from gen_epix.fastapp import CrudOperation
-from gen_epix.fastapp.unit_of_work import BaseUnitOfWork
 
 
 # Helpers
@@ -47,43 +46,10 @@ class DimLike:
         self.dim_type = dim_type
 
 
-def make_command(
-    operation: CrudOperation,
-    user_id: UUID,
-    objs: Iterable[Any] | None = None,
-    obj_ids: Iterable[UUID] | UUID | None = None,
-) -> Any:
-    """Build a mock CaseTypeDimCrudCommand with required API."""
-    cmd: Any = Mock()
-    cmd.operation = operation
-    cmd.user = Mock()
-    cmd.user.id = user_id
-    cmd.get_objs.return_value = list(objs) if objs is not None else None
-    cmd.obj_ids = obj_ids
-    return cmd
-
-
-def make_uow() -> BaseUnitOfWork:
-    uow: BaseUnitOfWork = Mock(spec=BaseUnitOfWork)
-    uow.__enter__ = Mock(return_value=uow)
-    uow.__exit__ = Mock(return_value=None)
-    return uow
-
-
-class BaseCaseTypeDimTestCase(TestCase):
+class BaseCaseTypeDimTestCase(BaseCrudTestCase):
     def setUp(self) -> None:
-        # Service mock
-        self.service = Mock()
+        super().setUp()
         self.service._compose_id_filter = Mock(side_effect=lambda *pairs: (pairs))
-
-        # Repository + UOW
-        self.uow = make_uow()
-        self.service.repository = Mock()
-        self.service.repository.uow.return_value = self.uow
-        self.service.repository.crud.return_value = []
-
-        # Top-level service crud
-        self.service.crud = Mock(return_value=[])
 
         # IDs
         self.user_id = uuid4()
@@ -112,7 +78,9 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
             dim_id=self.dim_id,
             is_case_date_dim=True,
         )
-        cmd = make_command(CrudOperation.CREATE_ONE, self.user_id, objs=[ctd])
+        cmd = self.create_crud_command(
+            CrudOperation.CREATE_ONE, user_id=self.user_id, objs=[ctd]
+        )
 
         # 2. Mocks
         # existing CaseTypeDim for same (case_type_id, dim_id): none
@@ -133,7 +101,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -177,7 +145,9 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
             occurrence=1,
             is_case_date_dim=True,
         )
-        cmd = make_command(CrudOperation.CREATE_ONE, self.user_id, objs=[new_ctd])
+        cmd = self.create_crud_command(
+            CrudOperation.CREATE_ONE, user_id=self.user_id, objs=[new_ctd]
+        )
 
         # 2. Mocks
         dim_obj: DimLike = DimLike(self.dim_id, "Dim.TIME", enum.DimType.TIME)
@@ -200,7 +170,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -236,7 +206,9 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
             dim_id=self.dim_id,
             is_case_date_dim=True,
         )
-        cmd = make_command(CrudOperation.CREATE_ONE, self.user_id, objs=[ctd])
+        cmd = self.create_crud_command(
+            CrudOperation.CREATE_ONE, user_id=self.user_id, objs=[ctd]
+        )
 
         # 2. Mocks
         non_time_dim: DimLike = DimLike(self.dim_id, "Dim.GEO", enum.DimType.GEO)
@@ -253,7 +225,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -276,7 +248,9 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
             dim_id=self.dim_id,
             is_case_date_dim=True,
         )
-        cmd = make_command(CrudOperation.CREATE_ONE, self.user_id, objs=[ctd])
+        cmd = self.create_crud_command(
+            CrudOperation.CREATE_ONE, user_id=self.user_id, objs=[ctd]
+        )
 
         # 2. Mocks
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
@@ -291,7 +265,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -316,7 +290,9 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
             case_type_id=self.case_type_id,
             dim_id=self.dim_id,
         )
-        cmd = make_command(CrudOperation.UPDATE_ONE, self.user_id, objs=[updated])
+        cmd = self.create_crud_command(
+            CrudOperation.UPDATE_ONE, user_id=self.user_id, objs=[updated]
+        )
 
         # 2. Mocks
         stored: CaseTypeDimLike = CaseTypeDimLike(
@@ -335,7 +311,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -358,7 +334,9 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
             dim_id=self.dim_id,
             is_case_date_dim=True,
         )
-        cmd = make_command(CrudOperation.UPDATE_ONE, self.user_id, objs=[updated])
+        cmd = self.create_crud_command(
+            CrudOperation.UPDATE_ONE, user_id=self.user_id, objs=[updated]
+        )
 
         # 2. Mocks
         stored: CaseTypeDimLike = CaseTypeDimLike(
@@ -386,7 +364,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=True,
             ),
             patch(
@@ -418,18 +396,18 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
 class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
     def test_abac_none_policy_returns_service_crud(self) -> None:
         # 1. Input
-        cmd = make_command(CrudOperation.READ_ALL, self.user_id)
+        cmd = self.create_crud_command(CrudOperation.READ_ALL, user_id=self.user_id)
         expected: List[Any] = [object()]
 
         # 2. Mocks
         self.service.crud.return_value = expected
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.get_case_abac_from_command",
+                "gen_epix.casedb.services.case.crud_case_type_dim.get_ref_data_access_from_command",
                 return_value=None,
             ),
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=False,
             ),
             patch(
@@ -449,17 +427,18 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
 
     def test_abac_non_read_operation_raises_assertion(self) -> None:
         # 1. Input
-        cmd = make_command(CrudOperation.UPDATE_ONE, self.user_id)
+        cmd = self.create_crud_command(CrudOperation.UPDATE_ONE, user_id=self.user_id)
 
         # 2. Mocks
-        case_abac = Mock()
+        ref_data_access = Mock()
+        ref_data_access.is_full_access = False
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.get_case_abac_from_command",
-                return_value=case_abac,
+                "gen_epix.casedb.services.case.crud_case_type_dim.get_ref_data_access_from_command",
+                return_value=ref_data_access,
             ),
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=False,
             ),
             patch(
@@ -476,26 +455,22 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
 
     def test_abac_read_filters_by_access(self) -> None:
         # 1. Input
-        cmd = make_command(CrudOperation.READ_ALL, self.user_id)
-        allowed_dim_ids: Set[UUID] = {uuid4(), uuid4()}
+        cmd = self.create_crud_command(CrudOperation.READ_ALL, user_id=self.user_id)
         expected: List[Any] = [object()]
+        access_filter = Mock()
 
         # 2. Mocks
-        case_abac = Mock()
-        readable_ref_data = Mock()
-        readable_ref_data.case_type_dim_ids = allowed_dim_ids
+        ref_data_access = Mock()
+        ref_data_access.is_full_access = False
+        ref_data_access.get_case_type_dim_filter.return_value = access_filter
 
         with (
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.get_case_abac_from_command",
-                return_value=case_abac,
+                "gen_epix.casedb.services.case.crud_case_type_dim.get_ref_data_access_from_command",
+                return_value=ref_data_access,
             ),
             patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.get_readable_reference_data_from_command",
-                return_value=readable_ref_data,
-            ),
-            patch(
-                "gen_epix.casedb.services.case.crud_case_type_dim.is_metadata_admin_or_above",
+                "gen_epix.casedb.services.case.crud_case_type_dim.is_refdata_admin_or_above",
                 return_value=False,
             ),
             patch(
@@ -515,15 +490,13 @@ class TestAbacReadAndWrite(BaseCaseTypeDimTestCase):
 
             # 4. Verify
             self.assertEqual(retval, expected)
-            # Filter must be composed from readable reference data case_type_dim_ids
-            self.service._compose_id_filter.assert_called_once_with(
-                ("id", allowed_dim_ids)
-            )
+            ref_data_access.get_case_type_dim_filter.assert_called_once_with("id")
             caf.assert_called_once()
             called_args = caf.call_args[0]
             self.assertIs(called_args[0], self.service)
             self.assertIs(called_args[1], self.uow)
             self.assertIs(called_args[2], cmd)
+            self.assertIs(called_args[3], access_filter)
 
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")

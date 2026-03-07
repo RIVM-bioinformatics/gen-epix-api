@@ -18,7 +18,7 @@ from gen_epix.casedb.domain.model.case.non_persistable import (
 )
 from gen_epix.casedb.domain.model.case.non_persistable import CaseStats as CaseStats
 from gen_epix.casedb.domain.model.case.non_persistable import (
-    ReadableReferenceData as ReadableReferenceData,
+    RefDataAccess as RefDataAccess,
 )
 from gen_epix.casedb.domain.model.case.operational_data import Case as Case
 from gen_epix.casedb.domain.model.case.operational_data import (
