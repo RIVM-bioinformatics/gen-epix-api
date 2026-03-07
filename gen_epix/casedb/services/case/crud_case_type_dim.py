@@ -68,19 +68,19 @@ def _crud_create_case_type_dim(
 ) -> None:
     """
     Apply validation logic for CaseTypeDim creation:
-    - Check if other CaseTypeDims for the same CaseType and Dim exist
+    - Check if other CaseTypeDims for the same CaseType and RefDim exist
     - Check if is_time_stats_dim or is_geo_stats_dim is True
-        and that the linked Dim is of correct type
+        and that the linked RefDim is of correct type
     - Check if another CaseTypeDim for the same CaseType has
         is_time_stats_dim or is_geo_stats_dim set to True
     """
     for case_type_dim in case_type_dim_list:
         existing_dims = _load_existing_case_type_dims(self, cmd, uow, case_type_dim)
         _set_case_type_dim_occurrence(case_type_dim, existing_dims)
-        # Dim type check for stats dims
+        # Dimension type check for case date dimension
         if case_type_dim.is_case_date_dim:
             _validate_case_date_dim(self, cmd, uow, case_type_dim)
-        # Only one stats dim per case type
+        # Only one case date dimension per case type
         if case_type_dim.is_case_date_dim:
             _verify_one_case_date_dim(self, cmd, uow, case_type_dim)
 
@@ -92,7 +92,7 @@ def _verify_one_case_date_dim(
     case_type_dim: model.CaseTypeDim,
 ) -> None:
     """
-    Method to ensure only one case date dim per case type.
+    Method to ensure only one case_date_dim per case type.
     If another is found, set its is_case_date_dim to False.
     """
     other_time_dims: list[model.CaseTypeDim] = (
@@ -130,25 +130,25 @@ def _validate_case_date_dim(
     uow: BaseUnitOfWork,
     case_type_dim: model.CaseTypeDim,
 ) -> None:
-    dim: model.Dim | None = None
-    dim_list: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+    ref_dim: model.RefDim | None = None
+    ref_dim_list: list[model.RefDim] = self.repository.crud(  # type: ignore[assignment]
         uow,
         cmd.user.id,
-        model.Dim,
+        model.RefDim,
         None,
-        [case_type_dim.dim_id],
+        [case_type_dim.ref_dim_id],
         CrudOperation.READ_SOME,
     )
-    if not dim_list:
+    if not ref_dim_list:
         raise exc.InvalidIdsError(
-            f"Invalid dim_id provided: {case_type_dim.dim_id}",
-            ids=[case_type_dim.dim_id],
+            f"Invalid ref_dim_id provided: {case_type_dim.ref_dim_id}",
+            ids=[case_type_dim.ref_dim_id],
         )
-    dim = dim_list[0]
-    if case_type_dim.is_case_date_dim and dim.dim_type != enum.DimType.TIME:
+    ref_dim = ref_dim_list[0]
+    if case_type_dim.is_case_date_dim and ref_dim.dim_type != enum.DimType.TIME:
         raise exc.InvalidArgumentsError(
-            f"Dim {dim.code} must be of type TIME for is_time_stats_dim=True",
-            ids=[case_type_dim.dim_id],
+            f"RefDim {ref_dim.code} must be of type TIME for is_case_date_dim=True",
+            ids=[case_type_dim.ref_dim_id],
         )
 
 
@@ -178,7 +178,7 @@ def _load_existing_case_type_dims(
             CrudOperation.READ_ALL,
             filter=self._compose_id_filter(
                 ("case_type_id", {case_type_dim.case_type_id}),
-                ("dim_id", {case_type_dim.dim_id}),
+                ("ref_dim_id", {case_type_dim.ref_dim_id}),
             ),
         )
     )
@@ -194,19 +194,19 @@ def _crud_update_case_type_dim(
 ) -> None:
     """
     Apply validation logic for CaseTypeDim updates:
-    - Check if the linked Dim may not be updated (write-once)
+    - Check if the linked RefDim may not be updated (write-once)
     - Check if another CaseTypeDim for the same CaseType has
         is_time_stats_dim or is_geo_stats_dim set to True
     """
     for updated in case_type_dim_list:
         # Read current stored entity to compare immutable fields
         existing = _get_existing_case_type_dim(self, cmd, uow, updated)
-        # Prevent changing linked Dim (write-once)
-        if updated.dim_id != existing.dim_id:
+        # Prevent changing linked RefDim (write-once)
+        if updated.ref_dim_id != existing.ref_dim_id:
             raise exc.InvalidArgumentsError(
-                "dim_id is immutable and cannot be updated", ids=[updated.id]
+                "ref_dim_id is immutable and cannot be updated", ids=[updated.id]
             )
-        # Ensure exclusivity for is_time_stats_dim within same CaseType
+        # Ensure exclusivity for is_case_date_dim within same CaseType
         if updated.is_case_date_dim:
             _verify_one_case_date_dim(self, cmd, uow, updated)
 

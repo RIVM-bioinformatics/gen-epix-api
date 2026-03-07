@@ -69,8 +69,8 @@ class CaseUploadSetup:
         model.DataCollection: "DataCollection",
         model.IdentifierIssuer: "IdentifierIssuer",
         model.CaseTypeSetCategory: "CaseTypeSetCategory",
-        model.Dim: "Dim",
-        model.Col: "Col",
+        model.RefDim: "RefDim",
+        model.RefCol: "RefCol",
         model.Disease: "Disease",
         model.EtiologicalAgent: "EtiologicalAgent",
         model.CaseType: "CaseType",
@@ -228,22 +228,22 @@ class TestCaseUpload(CaseUploadSetup):
         uq_users = {str(x.id): x for x in uq_users_list}
 
         # Get read set and seq case type columns
-        cols: list[model.Col] = env.app.handle(
-            command.ColCrudCommand(
+        cols: list[model.RefCol] = env.app.handle(
+            command.RefColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        col_map: dict[UUID, model.Col] = {x.id: x for x in cols}
+        col_map: dict[UUID, model.RefCol] = {x.id: x for x in cols}
         case_type_cols: list[model.CaseTypeCol] = env.app.handle(  # type: ignore[assignment]
             command.CaseTypeColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
         )
-        sample_id_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[assignment]
-        read_set_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[assignment]
-        seq_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
+        sample_id_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.ref_col_id].col_type == enum.ColType.ID_SAMPLE}  # type: ignore[assignment]
+        read_set_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_READS}  # type: ignore[assignment]
+        seq_case_type_col_ids: set[UUID] = {x.id for x in case_type_cols if col_map[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE}  # type: ignore[assignment]
 
         # Create and execute each command
         for row in rows:
@@ -417,7 +417,7 @@ class TestCaseUpload(CaseUploadSetup):
             env._set_obj(user)
         env._set_obj(root_user, update=True)
 
-        # Get policies and case type col ids
+        # Get policies and case_type_col_ids
         organization_access_case_policies: dict[
             tuple[UUID, UUID], model.OrganizationAccessCasePolicy
         ] = {
@@ -459,7 +459,7 @@ class TestCaseUpload(CaseUploadSetup):
             user = uq_users[row["user.id"]]
             assert user.id is not None
 
-            # Get writable case type col ids
+            # Get writable case_type_col_ids
             if user.roles.intersection(env.role_set_map[enum.RoleSet.GE_APP_ADMIN]):
                 write_case_type_col_ids = all_case_type_col_ids
             else:
@@ -630,7 +630,7 @@ class TestCaseUpload(CaseUploadSetup):
         i = 0
         while True:
             i += 1
-            # Get case type col and value
+            # Get case_type_col and value
             case_type_col_id_key = f"case.content.case_type_col_id{i}"
             if case_type_col_id_key not in row:
                 break

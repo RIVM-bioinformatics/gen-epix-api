@@ -1,5 +1,5 @@
 """
-CRUD operations for Col entities.
+CRUD operations for RefCol entities.
 This is a simple metadata entity with no ABAC restrictions.
 """
 
@@ -17,10 +17,10 @@ from gen_epix.casedb.services.case.crud_common import (
 from gen_epix.fastapp import CrudOperation
 
 
-def case_service_crud_col(
-    self: BaseCaseService, cmd: command.ColCrudCommand
-) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-    """Handle CRUD operations for Col entities."""
+def case_service_crud_ref_col(
+    self: BaseCaseService, cmd: command.RefColCrudCommand
+) -> list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None:
+    """Handle CRUD operations for RefCol entities."""
     assert cmd.user is not None and cmd.user.id is not None
 
     if cmd.is_read():
@@ -28,7 +28,7 @@ def case_service_crud_col(
         if ref_data_access is None or ref_data_access.is_full_access:
             # Special case: no policy (implies full access) or explicit full access
             return self.crud(cmd)  # type: ignore[return-value]
-        access_filter = ref_data_access.get_col_filter("id")
+        access_filter = ref_data_access.get_ref_col_filter("id")
         # No cascade delete to force conscious decision to delete from other models
         with self.repository.uow() as uow:
             retval = crud_with_access_filter(self, uow, cmd, access_filter)  # type: ignore[return-value]
@@ -38,63 +38,76 @@ def case_service_crud_col(
         return self.crud(cmd)  # type: ignore[return-value]
 
     # Perform some validation on CREATE/UPDATE
-    cols: list[model.Col] = cmd.get_objs()  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = cmd.get_objs()  # type: ignore[assignment]
     if cmd.is_create():
         with self.repository.uow() as uow:
             # Get dims
-            dim_ids = list({x.dim_id for x in cols})
-            dims: list[model.Dim] = self.repository.crud(  # type: ignore[assignment]
+            ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
+            ref_dims: list[model.RefDim] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,
-                model.Dim,
+                model.RefDim,
                 None,
-                dim_ids,
+                ref_dim_ids,
                 CrudOperation.READ_SOME,
             )
-            dim_map: dict[UUID, model.Dim] = {
-                x.id: x for x in dims
+            ref_dim_map: dict[UUID, model.RefDim] = {
+                x.id: x for x in ref_dims
             }  # type: ignore[assignment]
 
             # Verify col_type corresponds to dim_type
-            invalid_cols = [
+            invalid_ref_col_ids = [
                 x
-                for x in cols
+                for x in ref_cols
                 if x.col_type
-                not in enum.DimColTypeSet[dim_map[x.dim_id].dim_type.value].value
+                not in enum.DimColTypeSet[
+                    ref_dim_map[x.ref_dim_id].dim_type.value
+                ].value
             ]
-            if invalid_cols:
-                invalid_cols_ids = [x.id for x in invalid_cols if x.id is not None]
+            if invalid_ref_col_ids:
+                invalid_ref_col_ids = [
+                    x.id for x in invalid_ref_col_ids if x.id is not None
+                ]
                 raise exc.InvalidArgumentsError(
-                    "col_type must correspond to Dim.dim_type",
-                    ids=invalid_cols_ids,
+                    "col_type must correspond to RefDim.dim_type",
+                    ids=invalid_ref_col_ids,
                 )
         return self.crud(cmd)  # type: ignore[return-value]
 
     if cmd.is_update():
         with self.repository.uow() as uow:
-            existing_cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+            existing_ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
                 uow,
                 cmd.user.id,
-                model.Col,
+                model.RefCol,
                 None,
-                [x.id for x in cols],
+                [x.id for x in ref_cols],
                 CrudOperation.READ_SOME,
             )
-            if any(x.dim_id != y.dim_id for x, y in zip(cols, existing_cols)):
-                invalid_cols = [
-                    x.id for x, y in zip(cols, existing_cols) if x.dim_id != y.dim_id
+            if any(
+                x.ref_dim_id != y.ref_dim_id
+                for x, y in zip(ref_cols, existing_ref_cols)
+            ):
+                invalid_ref_col_ids = [
+                    x.id
+                    for x, y in zip(ref_cols, existing_ref_cols)
+                    if x.ref_dim_id != y.ref_dim_id
                 ]
                 raise exc.InvalidArgumentsError(
-                    "dim_id is immutable and cannot be updated", ids=invalid_cols
+                    "ref_dim_id is immutable and cannot be updated",
+                    ids=invalid_ref_col_ids,
                 )
-            if any(x.col_type != y.col_type for x, y in zip(cols, existing_cols)):
-                invalid_cols = [
+            if any(
+                x.col_type != y.col_type for x, y in zip(ref_cols, existing_ref_cols)
+            ):
+                invalid_ref_col_ids = [
                     x.id
-                    for x, y in zip(cols, existing_cols)
+                    for x, y in zip(ref_cols, existing_ref_cols)
                     if x.col_type != y.col_type
                 ]
                 raise exc.InvalidArgumentsError(
-                    "col_type is immutable and cannot be updated", ids=invalid_cols
+                    "col_type is immutable and cannot be updated",
+                    ids=invalid_ref_col_ids,
                 )
         return self.crud(cmd)  # type: ignore[return-value]
 

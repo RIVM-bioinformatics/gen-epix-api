@@ -171,7 +171,7 @@ class BaseCaseService(DomainBaseCaseService):
     @abstractmethod
     def _retrieve_sequence_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
-    ) -> tuple[model.CaseTypeCol, model.Col]:
+    ) -> tuple[model.CaseTypeCol, model.RefCol]:
         """Retrieve sequence column data and validate it's a genetic sequence column."""
         raise NotImplementedError()
 

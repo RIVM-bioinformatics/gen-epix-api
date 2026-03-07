@@ -187,10 +187,10 @@ def test_casedb_seqdb_connection(
     )
 
     # Get all cols, case_type_cols and cases
-    cols: dict[UUID, model.Col] = {
+    cols: dict[UUID, model.RefCol] = {
         x.id: x
         for x in casedb_app.handle(
-            command.ColCrudCommand(
+            command.RefColCrudCommand(
                 user=root_user,
                 operation=CrudOperation.READ_ALL,
             )
@@ -218,7 +218,7 @@ def test_casedb_seqdb_connection(
     genetic_distance_case_type_col_ids: list[UUID] = [
         x.id  # type: ignore[misc]
         for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_DISTANCE
+        if cols[x.ref_col_id].col_type == enum.ColType.GENETIC_DISTANCE
     ]
     for case_type_col_id in genetic_distance_case_type_col_ids:
         case_type_col = case_type_cols[case_type_col_id]
@@ -269,7 +269,7 @@ def test_casedb_seqdb_connection(
     genetic_sequence_case_type_cols = [
         x
         for x in case_type_cols.values()
-        if cols[x.col_id].col_type == enum.ColType.GENETIC_SEQUENCE
+        if cols[x.ref_col_id].col_type == enum.ColType.GENETIC_SEQUENCE
     ]
     has_seq_case_ids: list[UUID] = []
     for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:

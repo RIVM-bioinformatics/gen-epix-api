@@ -34,8 +34,8 @@ class BaseSimilarCasesTestCase(TestCase):
         # IDs
         self.case_type_id: UUID = uuid4()
         self.dist_case_type_col_id: UUID = uuid4()
-        self.col_id: UUID = uuid4()
-        self.dim_id: UUID = uuid4()
+        self.ref_col_id: UUID = uuid4()
+        self.ref_dim_id: UUID = uuid4()
         self.protocol_id: UUID = uuid4()
         self.data_collection_id: UUID = uuid4()
 
@@ -90,7 +90,7 @@ class BaseSimilarCasesTestCase(TestCase):
         return model.CaseTypeCol(
             case_type_id=case_type_id or self.case_type_id,
             case_type_dim_id=uuid4(),
-            col_id=self.col_id,
+            ref_col_id=self.ref_col_id,
             code="Specimen.Genetic.Distance",
             rank=0,
         )
@@ -99,9 +99,9 @@ class BaseSimilarCasesTestCase(TestCase):
         self,
         col_type: enum.ColType,
         genetic_distance_protocol_id: UUID | None = None,
-    ) -> model.Col:
-        return model.Col(
-            dim_id=self.dim_id,
+    ) -> model.RefCol:
+        return model.RefCol(
+            ref_dim_id=self.ref_dim_id,
             code="Specimen.Genetic.Distance",
             col_type=col_type,
             genetic_distance_protocol_id=genetic_distance_protocol_id,
@@ -194,7 +194,7 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
         dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
             case_type_id=self.case_type_id
         )
-        wrong_col: model.Col = self.create_col(col_type=enum.ColType.TEXT)
+        wrong_col: model.RefCol = self.create_col(col_type=enum.ColType.TEXT)
         self.repository.crud.side_effect = [
             dist_case_type_col,
             wrong_col,
@@ -218,9 +218,9 @@ class TestBranchErrors(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.Col,
+                model.RefCol,
                 None,
-                dist_case_type_col.col_id,
+                dist_case_type_col.ref_col_id,
                 CrudOperation.READ_ONE,
             ),
         ]
@@ -246,7 +246,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
             case_type_id=self.case_type_id
         )
-        dist_col: model.Col = self.create_col(
+        dist_col: model.RefCol = self.create_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
             genetic_distance_protocol_id=self.protocol_id,
         )
@@ -284,9 +284,9 @@ class TestHappyPath(BaseSimilarCasesTestCase):
             call(
                 self.uow,
                 self.user.id,
-                model.Col,
+                model.RefCol,
                 None,
-                dist_case_type_col.col_id,
+                dist_case_type_col.ref_col_id,
                 CrudOperation.READ_ONE,
             ),
             call(
@@ -322,7 +322,7 @@ class TestHappyPath(BaseSimilarCasesTestCase):
         dist_case_type_col: model.CaseTypeCol = self.create_case_type_col(
             case_type_id=self.case_type_id
         )
-        dist_col: model.Col = self.create_col(
+        dist_col: model.RefCol = self.create_col(
             col_type=enum.ColType.GENETIC_DISTANCE,
             genetic_distance_protocol_id=self.protocol_id,
         )

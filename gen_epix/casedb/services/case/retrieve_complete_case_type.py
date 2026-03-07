@@ -171,28 +171,28 @@ def case_service_retrieve_complete_case_type(
         }
 
         # Get cols
-        col_ids = list({x.col_id for x in case_type_cols})
-        cols: list[model.Col] = repository.crud(  # type: ignore[assignment]
+        ref_col_ids = list({x.ref_col_id for x in case_type_cols})
+        ref_cols: list[model.RefCol] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
-            model.Col,
+            model.RefCol,
             None,
-            col_ids,
+            ref_col_ids,
             CrudOperation.READ_SOME,
         )
-        col_map: dict[UUID, model.Col] = {x.id: x for x in cols}  # type: ignore[misc]
+        ref_col_map: dict[UUID, model.RefCol] = {x.id: x for x in ref_cols}  # type: ignore[misc]
 
         # Get dims
-        dim_ids = list({x.dim_id for x in cols})
-        dims: list[model.Dim] = repository.crud(  # type: ignore[assignment]
+        ref_dim_ids = list({x.ref_dim_id for x in ref_cols})
+        ref_dims: list[model.RefDim] = repository.crud(  # type: ignore[assignment]
             uow,
             user_id,
-            model.Dim,
+            model.RefDim,
             None,
-            dim_ids,
+            ref_dim_ids,
             CrudOperation.READ_SOME,
         )
-        dim_map: dict[UUID, model.Dim] = {x.id: x for x in dims}  # type: ignore[misc]
+        ref_dim_map: dict[UUID, model.RefDim] = {x.id: x for x in ref_dims}  # type: ignore[misc]
 
         # Get genetic distance protocols
         genetic_distance_protocols = self.app.handle(
@@ -202,7 +202,7 @@ def case_service_retrieve_complete_case_type(
                 obj_ids=list(
                     {
                         x.genetic_distance_protocol_id
-                        for x in cols
+                        for x in ref_cols
                         if x.genetic_distance_protocol_id
                     }
                 ),
@@ -231,7 +231,7 @@ def case_service_retrieve_complete_case_type(
             if case_type_dim.is_case_date_dim:
                 case_date_case_type_dim_id = case_type_dim.id
                 break
-            # TODO: add geo case type dim flag if needed
+            # TODO: add geo_case_type_dim flag if needed
 
         # Compose complete case type and return
         return model.CompleteCaseType(
@@ -239,8 +239,8 @@ def case_service_retrieve_complete_case_type(
             user_id=cmd.user.id if cmd.user else None,
             etiologies=etiologies,
             etiological_agents=etiological_agents,
-            dims=dim_map,
-            cols=col_map,
+            ref_dims=ref_dim_map,
+            ref_cols=ref_col_map,
             case_type_dims=case_type_dim_map,
             case_type_cols=case_type_col_map,
             genetic_distance_protocols=genetic_distance_protocols,

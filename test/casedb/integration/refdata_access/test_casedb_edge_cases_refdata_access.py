@@ -11,23 +11,6 @@ It uses:
 """
 
 import logging
-
-import pytest
-from rich import print as rich_print
-
-from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command import (
-    CaseTypeCrudCommand,
-    CaseTypeSetCategoryCrudCommand,
-    CaseTypeSetCrudCommand,
-    ColCrudCommand,
-    DimCrudCommand,
-)
-from gen_epix.casedb.repositories.sa_model.ontology import Disease
-from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp import CrudOperation
-from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_empty import (
     DEV_REPOSITORY_CONFIG,
@@ -40,6 +23,23 @@ from test.casedb.integration.setup.define_edge_cases import (
     EDGE_CASES,
     EdgeCaseSpec,
 )
+
+import pytest
+from rich import print as rich_print
+
+from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.command import (
+    CaseTypeCrudCommand,
+    CaseTypeSetCategoryCrudCommand,
+    CaseTypeSetCrudCommand,
+    RefColCrudCommand,
+    RefDimCrudCommand,
+)
+from gen_epix.casedb.repositories.sa_model.ontology import Disease
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.fastapp import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE
@@ -96,8 +96,8 @@ class TestCaseDBEdgeCasesRefDataAccess:
         #     rich_print(env.db[model.CaseTypeColSet])
         #     rich_print(env.db[model.CaseTypeCol])
         #     rich_print(env.db[model.CaseTypeDim])
-        #     rich_print(env.db[model.Col])
-        #     rich_print(env.db[model.Dim])
+        #     rich_print(env.db[model.RefCol])
+        #     rich_print(env.db[model.RefDim])
 
         #     rich_print(env.db[model.DataCollection])
 
@@ -207,11 +207,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible case type col sets exactly matches
+        For each edge case, assert that the set of accessible case_type_col_sets exactly matches
         the expected set declared in EdgeCaseSpec.expected_case_type_col_sets — neither more nor less.
 
-        Only case type col sets referenced in org-level policies should be accessible.
-        User policies must not grant access to additional case type col sets.
+        Only case_type_col_sets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional case_type_col_sets.
         """
         user = self.get_user(spec.user_name)
 
@@ -249,7 +249,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
-        the expected set declared in EdgeCaseSpec.expected_cols — neither more nor less.
+        the expected set declared in EdgeCaseSpec.expected_ref_cols — neither more nor less.
 
         Accessible cols are derived from accessible case type cols (via org access policies only).
         User policies must not grant access to additional cols.
@@ -259,11 +259,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         if VERBOSE:
             rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
-        get_cmd = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        get_cmd = RefColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
         actual = {x.code for x in result} if isinstance(result, list) else set()
-        expected = set(spec.expected_cols)
+        expected = set(spec.expected_ref_cols)
 
         missing = expected - actual
         unexpected = actual - expected
@@ -279,26 +279,26 @@ class TestCaseDBEdgeCasesRefDataAccess:
         EDGE_CASES,
         ids=[x.user_name for x in EDGE_CASES],
     )
-    def test_dim_access_matches_expected(
+    def test_ref_dim_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible dims exactly matches
-        the expected set declared in EdgeCaseSpec.expected_dims — neither more nor less.
+        For each edge case, assert that the set of accessible ref_dims exactly matches
+        the expected set declared in EdgeCaseSpec.expected_ref_dims — neither more nor less.
 
-        Accessible dims are derived from accessible case type cols (via org access policies only).
-        User policies must not grant access to additional dims.
+        Accessible ref_dims are derived from accessible case type cols (via org access policies only).
+        User policies must not grant access to additional ref_dims.
         """
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
             rich_print([x for x in EDGE_CASES if x.user_name == user.name])
 
-        get_cmd = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        get_cmd = RefDimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        actual = {dim.code for dim in result} if isinstance(result, list) else set()
-        expected = set(spec.expected_dims)
+        actual = {x.code for x in result} if isinstance(result, list) else set()
+        expected = set(spec.expected_ref_dims)
 
         missing = expected - actual
         unexpected = actual - expected

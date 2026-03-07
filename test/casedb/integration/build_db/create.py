@@ -292,7 +292,7 @@ class TestCreate:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_concept(exec_user, "category1_1", "concept_set1_nominal")
-        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept set, which should not be allowed; alternatively regex and context free grammar Cols do not have a concept set but rather the regex/schema is part of the Col definition
+        # TODO [LSP-2694]: add test for creating concept under regex or context free grammar concept set, which should not be allowed; alternatively regex and context free grammar RefCols do not have a concept set but rather the regex/schema is part of the RefCol definition
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_region_set(self, env: Env) -> None:
@@ -378,31 +378,31 @@ class TestCreate:
                 )
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_dim(self, env: Env) -> None:
-        # Create dim as root, app_admin, refdata_admin
+    def test_create_ref_dim(self, env: Env) -> None:
+        # Create RefDim as root, app_admin, refdata_admin
         users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
             enum.DimType
         )
         for i, dim_type in enumerate(enum.DimType, start=1):
-            env.create_dim(users[i - 1], f"dim{i}", dim_type)
+            env.create_ref_dim(users[i - 1], f"ref_dim{i}", dim_type)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
-    def test_create_dim_raise(self, env: Env) -> None:
+    def test_create_ref_dim_raise(self, env: Env) -> None:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_dim(exec_user, "time11", enum.DimType.TIME)
+                env.create_ref_dim(exec_user, "ref_dim11", enum.DimType.TIME)
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
-    def test_create_col(self, env: Env) -> None:
-        # Create col as root, app_admin, refdata_admin
+    def test_create_ref_col(self, env: Env) -> None:
+        # Create ref_col as root, app_admin, refdata_admin
         users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
             enum.ColType
         )
         for i, dim_type in enumerate(enum.DimType, start=1):
             col_types = enum.DimColTypeSet[dim_type.name].value
-            col_str = f"col{i}"
+            ref_col_str = f"ref_col{i}"
             for j, col_type in enumerate(col_types, start=1):
                 concept_set: str | None = None
                 region_set: str | None = None
@@ -423,35 +423,35 @@ class TestCreate:
                     region_set = f"region_set{j}"
                 elif col_type == enum.ColType.GENETIC_DISTANCE:
                     genetic_distance_protocol = f"genetic_distance_protocol1"
-                env.create_col(
+                env.create_ref_col(
                     users[j - 1],
-                    f"{col_str}_{j}",
+                    f"{ref_col_str}_{j}",
                     col_type=col_type,
                     concept_set=concept_set,
                     region_set=region_set,
                     genetic_distance_protocol=genetic_distance_protocol,
                 )
-                cols = env.read_all("root1_1", model.Col)
+                cols = env.read_all("root1_1", model.RefCol)
 
     @pytest.mark.skipif(
         SKIP_RAISE or SKIP_CREATE_DATA, reason="Skipped to facilitate debugging"
     )
-    def test_create_col_raise(self, env: Env) -> None:
+    def test_create_ref_col_raise(self, env: Env) -> None:
         for exec_user in BELOW_APP_ADMIN_DATA_USERS:
             with pytest.raises(exc.UnauthorizedAuthError):
-                env.create_col(
+                env.create_ref_col(
                     exec_user,
-                    "col1_99",
+                    "ref_col1_99",
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set1_nominal",
                 )
-        # TODO [LSP-2691] create additional tests for casedb build_db create Col:
-        #  invalid col type for dim type
+        # TODO [LSP-2691] create additional tests for casedb build_db create RefCol:
+        #  invalid col_type for RefDim type
         #  missing concept_set for nominal, ordinal, interval, regular_language,
-        #    context_free_grammar_json, context_free_grammar_xml col types
-        #  missing region_set for region col types
-        #  missing genetic_sequence_case_type_col for genetic_distance col
-        #  missing tree_algorithm_codes for genetic_distance col
+        #    context_free_grammar_json, context_free_grammar_xml col_types
+        #  missing region_set for region col_types
+        #  missing genetic_sequence_case_type_col for genetic_distance ref_col
+        #  missing tree_algorithm_codes for genetic_distance ref_col
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_disease(self, env: Env) -> None:
@@ -638,9 +638,9 @@ class TestCreate:
             with pytest.raises(exc.UnauthorizedAuthError):
                 env.create_case_type_dim(exec_user, "case_type_dim1_1_11")
         # TODO [LSP-2616]: add test for creating case_type_dim for
-        # non-existing dim
+        # non-existing ref_dim
         # non-existing case_type
-        # is_case_date_dim=True and dim.dim_type != TIME
+        # is_case_date_dim=True and ref_dim.dim_type != TIME
 
     def test_create_case_type_dim_invalid_dim_type(self, env: Env) -> None:
         users: list[str] = ["root1_1", "app_admin1_1"] + ["refdata_admin1_1"] * len(
@@ -656,8 +656,8 @@ class TestCreate:
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col(self, env: Env) -> None:
         # Create case_type_col as root, app_admin, refdata_admin
-        cols: list[model.Col] = env.read_all(
-            "root1_1", model.Col
+        ref_cols: list[model.RefCol] = env.read_all(
+            "root1_1", model.RefCol
         )  # type: ignore[assignment]
         case_type_dims: list[model.CaseTypeDim] = env.read_all(
             "root1_1", model.CaseTypeDim
@@ -666,15 +666,15 @@ class TestCreate:
             enum.ColType
         )
         for case_type_dim in case_type_dims:
-            dim_id = case_type_dim.dim_id
-            curr_cols = [x for x in cols if x.dim_id == dim_id]
+            ref_dim_id = case_type_dim.ref_dim_id
+            curr_ref_cols = [x for x in ref_cols if x.ref_dim_id == ref_dim_id]
             genetic_distance_case_type_col_kwargs: dict[str, Any] = {}
             genetic_distance_case_type_col_index: int | None = None
             genetic_sequence_case_type_col: model.CaseTypeCol | None = None
-            for i, col in enumerate(curr_cols, start=1):
+            for i, ref_col in enumerate(curr_ref_cols, start=1):
                 kwargs: dict[str, Any] = {}
                 is_genetic_distance_col = False
-                if col.col_type == enum.ColType.GENETIC_DISTANCE:
+                if ref_col.col_type == enum.ColType.GENETIC_DISTANCE:
                     is_genetic_distance_col = True
                     genetic_distance_case_type_col_index = i
                     genetic_distance_case_type_col_kwargs["tree_algorithm_codes"] = {
@@ -686,9 +686,9 @@ class TestCreate:
                     case_type_col = env.create_case_type_col(
                         users[i - 1], f"{code}_{i}", **kwargs
                     )
-                if col.col_type == enum.ColType.GENETIC_SEQUENCE:
+                if ref_col.col_type == enum.ColType.GENETIC_SEQUENCE:
                     genetic_sequence_case_type_col = case_type_col
-            # Handle genetic distance col case_type_col creation with extra args
+            # Handle genetic distance ref_col case_type_col creation with extra args
             if genetic_sequence_case_type_col:
                 genetic_distance_case_type_col_kwargs[
                     "genetic_sequence_case_type_col_id"
@@ -717,8 +717,8 @@ class TestCreate:
         # TODO [LSP-2693] Add test for creating case_type_col for
         # non-existing case_type
         # non-existing case_type_dim
-        # non-existing col
-        # col is for different dim than case_type_dim
+        # non-existing ref_col
+        # RefCol is for different RefDim than case_type_dim
 
     @pytest.mark.skipif(SKIP_CREATE_DATA, reason="Skipped to facilitate debugging")
     def test_create_case_type_col_set(self, env: Env) -> None:
@@ -985,16 +985,16 @@ class TestCreate:
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
                 env.create_genetic_distance_protocol(ROOT, "genetic_distance_protocol1")
-        # Dim already exists
+        # RefDim already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_dim(ROOT, "dim1", enum.DimType.TIME)
-        # Col already exists
+                env.create_ref_dim(ROOT, "ref_dim1", enum.DimType.TIME)
+        # RefCol already exists
         if not SKIP_CREATE_DATA:
             with pytest.raises(exc.UniqueConstraintViolationError):
-                env.create_col(
+                env.create_ref_col(
                     ROOT,
-                    "col1_1",
+                    "ref_col1_1",
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set1_nominal",
                 )
@@ -1126,7 +1126,7 @@ class TestCreate:
                 1,
                 set_dummy_region_set=True,
             )
-        # Col.concept_set does not exist
+        # RefCol.concept_set does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 index = [
@@ -1134,14 +1134,14 @@ class TestCreate:
                     for i, x in enumerate(enum.DimType, start=1)
                     if x == enum.DimType.TEXT
                 ][0]
-                env.create_col(
+                env.create_ref_col(
                     ROOT,
-                    f"col{index}_99",
+                    f"ref_col{index}_99",
                     col_type=enum.ColType.NOMINAL,
                     concept_set="concept_set11_nominal",
                     set_dummy_concept_set=True,
                 )
-        # Col.region_set does not exist
+        # RefCol.region_set does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 index = [
@@ -1149,14 +1149,14 @@ class TestCreate:
                     for i, x in enumerate(enum.DimType, start=1)
                     if x == enum.DimType.GEO
                 ][0]
-                env.create_col(
+                env.create_ref_col(
                     ROOT,
-                    f"col{index}_99",
+                    f"ref_col{index}_99",
                     col_type=enum.ColType.GEO_REGION,
                     region_set="region_set11",
                     set_dummy_region_set=True,
                 )
-        # Col.genetic_distance_protocol does not exist
+        # RefCol.genetic_distance_protocol does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 index = [
@@ -1164,9 +1164,9 @@ class TestCreate:
                     for i, x in enumerate(enum.DimType, start=1)
                     if x == enum.DimType.TEXT
                 ][0]
-                env.create_col(
+                env.create_ref_col(
                     ROOT,
-                    f"col{index}_99",
+                    f"ref_col{index}_99",
                     col_type=enum.ColType.GENETIC_DISTANCE,
                     genetic_distance_protocol="genetic_distance_protocol11",
                     set_dummy_genetic_distance_protocol=True,
@@ -1225,10 +1225,12 @@ class TestCreate:
                     "case_type_set_category1",
                     set_dummy_case_types=True,
                 )
-        # CaseTypeDim.dim does not exist
+        # CaseTypeDim.ref_dim does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
-                env.create_case_type_dim(ROOT, "case_type_dim1_1_1", set_dummy_dim=True)
+                env.create_case_type_dim(
+                    ROOT, "case_type_dim1_1_1", set_dummy_ref_dim=True
+                )
         # CaseTypeCol.case_type does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises(
@@ -1241,11 +1243,11 @@ class TestCreate:
                 env.create_case_type_col(
                     ROOT, "case_type_col1_1_1_1", set_dummy_case_type=True
                 )
-        # CaseTypeCol.col does not exist
+        # CaseTypeCol.ref_col does not exist
         if not SKIP_CREATE_DATA:
             with pytest.raises((exc.InvalidLinkIdsError, exc.InvalidIdsError)):
                 env.create_case_type_col(
-                    ROOT, "case_type_col1_1_1_1", set_dummy_col=True
+                    ROOT, "case_type_col1_1_1_1", set_dummy_ref_col=True
                 )
         # CaseTypeColSetMember.case_type_col does not exist
         if not SKIP_CREATE_DATA:

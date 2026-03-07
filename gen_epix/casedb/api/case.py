@@ -28,7 +28,7 @@ class UpdateCaseTypeSetCaseTypesRequestBody(PydanticBaseModel):
 
 class UpdateCaseTypeColSetCaseTypeColsRequestBody(PydanticBaseModel):
     case_type_col_set_members: list[model.CaseTypeColSetMember] = Field(
-        description="The members of the case type col set."
+        description="The members of the case_type_col_set."
     )
 
 
@@ -136,14 +136,14 @@ class CreateFileForSeqRequestBody(PydanticBaseModel):
     )
 
 
-class ColValidationRulesResponseBody(PydanticBaseModel):
+class RefColValidationRulesResponseBody(PydanticBaseModel):
     """
-    The additional validation rules that a Col instance must comply with.
+    The additional validation rules that a RefCol instance must comply with.
     """
 
     valid_col_types_by_dim_type: dict[enum.DimType, set[enum.ColType]] = Field(
         default={enum.DimType[x.name]: set(x.value) for x in enum.DimColTypeSet},
-        description="The Col.col_type values that are allowed depending on the Col.dim.dim_type.",
+        description="The RefCol.col_type values that are allowed depending on the RefCol.ref_dim.dim_type.",
     )
 
     @field_serializer("valid_col_types_by_dim_type")
@@ -637,16 +637,16 @@ def create_case_endpoints(
         )
 
     @router.get(
-        "/" + model.Col.ENTITY.snake_case_plural_name + "/validation_rules",
-        operation_id=model.Col.ENTITY.snake_case_plural_name + "__validation_rules",
-        name="Col validation rules",
-        description=ColValidationRulesResponseBody.__doc__,
+        "/" + model.RefCol.ENTITY.snake_case_plural_name + "/validation_rules",
+        operation_id=model.RefCol.ENTITY.snake_case_plural_name + "__validation_rules",
+        name="RefCol validation rules",
+        description=RefColValidationRulesResponseBody.__doc__,
     )
-    async def get__col__validation_rules(
+    async def get__ref_col__validation_rules(
         user: registered_user_dependency,  # type: ignore
-    ) -> ColValidationRulesResponseBody:
+    ) -> RefColValidationRulesResponseBody:
         try:
-            retval = ColValidationRulesResponseBody()
+            retval = RefColValidationRulesResponseBody()
         except Exception as exception:
             handle_exception("f2a4b8c6", user, exception)
         return retval

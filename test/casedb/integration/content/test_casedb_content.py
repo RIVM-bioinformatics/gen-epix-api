@@ -256,8 +256,8 @@ class TestContent:
             # print(f"Retrieving cases for case type {complete_case_type.name}")
             filters: list = []
             for case_type_col in complete_case_type.case_type_cols.values():
-                col = complete_case_type.cols[case_type_col.col_id]
-                if col.concept_set_id:
+                ref_col = complete_case_type.ref_cols[case_type_col.ref_col_id]
+                if ref_col.concept_set_id:
                     # Create a filter for a portion of the terms in the concept set
                     filters.append(
                         TypedStringSetFilter(
@@ -266,7 +266,7 @@ class TestContent:
                             members={  # type: ignore[arg-type]
                                 str(x)
                                 for i, x in enumerate(
-                                    concept_ids_by_set[col.concept_set_id]
+                                    concept_ids_by_set[ref_col.concept_set_id]
                                 )
                                 if i // 4 == 0  # Keep only a portion of the terms
                             },
@@ -307,7 +307,7 @@ class TestContent:
             dist_case_type_cols = [
                 case_type_col
                 for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.cols[case_type_col.col_id].col_type
+                if complete_case_type.ref_cols[case_type_col.ref_col_id].col_type
                 == enum.ColType.GENETIC_DISTANCE
             ]
             for dist_case_type_col in dist_case_type_cols:
@@ -357,7 +357,7 @@ class TestContent:
             genetic_sequence_case_type_cols = [
                 case_type_col
                 for case_type_col in complete_case_type.case_type_cols.values()
-                if complete_case_type.cols[case_type_col.col_id].col_type
+                if complete_case_type.ref_cols[case_type_col.ref_col_id].col_type
                 == enum.ColType.GENETIC_SEQUENCE
             ]
             for genetic_sequence_case_type_col in genetic_sequence_case_type_cols:

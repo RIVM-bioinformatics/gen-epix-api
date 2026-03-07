@@ -23,11 +23,11 @@ class BaseCaseService(BaseService):
         command.TreeAlgorithmClassCrudCommand,
         command.TreeAlgorithmCrudCommand,
         command.GeneticDistanceProtocolCrudCommand,
-        command.DimCrudCommand,
-        command.ColCrudCommand,
         command.CaseTypeSetCategoryCrudCommand,
         command.CaseSetCategoryCrudCommand,
         command.CaseSetStatusCrudCommand,
+        command.RefDimCrudCommand,
+        command.RefColCrudCommand,
     }
     ABAC_REFDATA_COMMAND_CLASSES: set[type[command.Command]] = {
         command.CaseTypeCrudCommand,
@@ -149,12 +149,12 @@ class BaseCaseService(BaseService):
         f(command.CaseTypeSetCrudCommand, self.crud_case_type_set)
         f(command.CaseTypeSetMemberCrudCommand, self.crud_case_type_set_member)
         f(command.CaseTypeDimCrudCommand, self.crud_case_type_dim)
-        f(command.ColCrudCommand, self.crud_col)
-        f(command.DimCrudCommand, self.crud_dim)
         f(
             command.GeneticDistanceProtocolCrudCommand,
             self.crud_genetic_distance_protocol,
         )
+        f(command.RefColCrudCommand, self.crud_ref_col)
+        f(command.RefDimCrudCommand, self.crud_ref_dim)
         f(command.TreeAlgorithmClassCrudCommand, self.crud_tree_algorithm_class)
         f(command.TreeAlgorithmCrudCommand, self.crud_tree_algorithm)
         f(command.UploadCasesCommand, self.upload_cases)
@@ -403,17 +403,21 @@ class BaseCaseService(BaseService):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_col(
-        self, cmd: command.ColCrudCommand
-    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Col entities."""
+    def crud_ref_col(
+        self, cmd: command.RefColCrudCommand
+    ) -> (
+        list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefCol entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def crud_dim(
-        self, cmd: command.DimCrudCommand
-    ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Dim entities."""
+    def crud_ref_dim(
+        self, cmd: command.RefDimCrudCommand
+    ) -> (
+        list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefDim entities."""
         raise NotImplementedError()
 
     @abc.abstractmethod

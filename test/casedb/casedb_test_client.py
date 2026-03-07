@@ -49,8 +49,8 @@ class CasedbTestClient(TestClient):
         model.RegionSetShape: ("region_set_id", "scale"),
         model.Region: ("region_set_id", "code"),
         model.GeneticDistanceProtocol: "name",
-        model.Dim: "code",
-        model.Col: "code",
+        model.RefDim: "code",
+        model.RefCol: "code",
         model.CaseTypeCol: "code",
         model.CaseTypeDim: "code",
         model.CaseTypeColSet: "name",
@@ -396,21 +396,21 @@ class CasedbTestClient(TestClient):
         )
         return self._set_obj(genetic_distance_protocol)  # type: ignore[return-value]
 
-    def create_dim(
+    def create_ref_dim(
         self,
         user_or_str: str | model.User,
         code: str,
         dim_type: enum.DimType,
         rank: int = 1,
-    ) -> model.Dim:
+    ) -> model.RefDim:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
-        dim = self.handle(
-            command.DimCrudCommand(
+        ref_dim = self.handle(
+            command.RefDimCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Dim(
+                objs=model.RefDim(
                     code=code,
                     label=code,
                     dim_type=dim_type,
@@ -418,9 +418,9 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(dim)  # type: ignore[return-value]
+        return self._set_obj(ref_dim)  # type: ignore[return-value]
 
-    def create_col(
+    def create_ref_col(
         self,
         user_or_str: str | model.User,
         code: str,
@@ -428,21 +428,21 @@ class CasedbTestClient(TestClient):
         concept_set: str | model.ConceptSet | None = None,
         region_set: str | model.RegionSet | None = None,
         genetic_distance_protocol: str | model.GeneticDistanceProtocol | None = None,
-        set_dummy_dim: bool = False,
+        set_dummy_ref_dim: bool = False,
         set_dummy_concept_set: bool = False,
         set_dummy_region_set: bool = False,
         set_dummy_genetic_distance_protocol: bool = False,
-    ) -> model.Col:
+    ) -> model.RefCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_?(.*)$", code.lower())
         if not m:
             raise ValueError(f"Invalid code {code}")
-        dim = "dim" + m.group(2)
+        ref_dim = "ref_dim" + m.group(2)
         rank = int(m.group(3))
-        dim_id: UUID = (
-            self.generate_id() if set_dummy_dim else self._get_obj(model.Dim, dim).id  # type: ignore[union-attr]
+        ref_dim_id: UUID = (
+            self.generate_id() if set_dummy_ref_dim else self._get_obj(model.RefDim, ref_dim).id  # type: ignore[union-attr]
         )
         concept_set_id: UUID | None = (
             self.generate_id()
@@ -474,14 +474,14 @@ class CasedbTestClient(TestClient):
                 ).id  # type: ignore[union-attr]
             )
         )
-        col = self.handle(
-            command.ColCrudCommand(
+        ref_col = self.handle(
+            command.RefColCrudCommand(
                 user=user,
                 operation=CrudOperation.CREATE_ONE,
-                objs=model.Col(
+                objs=model.RefCol(
                     code=code,
                     label=code,
-                    dim_id=dim_id,
+                    ref_dim_id=ref_dim_id,
                     col_type=col_type,
                     rank=rank,
                     concept_set_id=concept_set_id,
@@ -490,7 +490,7 @@ class CasedbTestClient(TestClient):
                 ),
             )
         )
-        return self._set_obj(col)  # type: ignore[return-value]
+        return self._set_obj(ref_col)  # type: ignore[return-value]
 
     def create_disease(
         self, user_or_str: str | model.User, disease_name: str
@@ -721,17 +721,17 @@ class CasedbTestClient(TestClient):
         rank: int = 0,
         is_case_date_dim: bool = False,
         set_dummy_case_type: bool = False,
-        set_dummy_dim: bool = False,
+        set_dummy_ref_dim: bool = False,
     ) -> model.CaseTypeDim:
         user: model.User = self._get_obj(
             model.User, user_or_str
         )  # type: ignore[assignment]
         m = re.match(r"^(.*?)(\d+)_(\d+)_(\d+)$", code.lower())
-        # (case_type)(dim)(occurrence)
+        # (case_type)(ref_dim)(occurrence)
         if not m:
             raise ValueError(f"Invalid code {code}")
         case_type_str = "case_type" + m.group(2)
-        dim_str = "dim" + m.group(3)
+        ref_dim_str = "ref_dim" + m.group(3)
         occurrence = int(m.group(4))
         case_type_id: UUID = (
             self.generate_id()
@@ -740,10 +740,10 @@ class CasedbTestClient(TestClient):
                 model.CaseType, case_type_str
             ).id  # type: ignore[assignment]
         )
-        dim_id = (
+        ref_dim_id = (
             self.generate_id()
-            if set_dummy_dim
-            else self._get_obj(model.Dim, dim_str).id
+            if set_dummy_ref_dim
+            else self._get_obj(model.RefDim, ref_dim_str).id
         )
         case_type_dim = self.handle(
             command.CaseTypeDimCrudCommand(
@@ -751,7 +751,7 @@ class CasedbTestClient(TestClient):
                 operation=CrudOperation.CREATE_ONE,
                 objs=model.CaseTypeDim(
                     case_type_id=case_type_id,
-                    dim_id=dim_id,
+                    ref_dim_id=ref_dim_id,
                     occurrence=occurrence,
                     code=code,
                     rank=rank,
@@ -770,7 +770,7 @@ class CasedbTestClient(TestClient):
         tree_algorithm_codes: set[enum.TreeAlgorithmType] | None = None,
         set_dummy_case_type: bool = False,
         set_dummy_case_type_dim: bool = False,
-        set_dummy_col: bool = False,
+        set_dummy_ref_col: bool = False,
     ) -> model.CaseTypeCol:
         user: model.User = self._get_obj(
             model.User, user_or_str
@@ -782,7 +782,7 @@ class CasedbTestClient(TestClient):
         case_type_dim_str = (
             "case_type_dim" + m.group(2) + "_" + m.group(3) + "_" + m.group(4)
         )
-        col_str = "col" + m.group(3) + "_" + m.group(5)
+        ref_col_str = "ref_col" + m.group(3) + "_" + m.group(5)
         if set_dummy_case_type:
             case_type_id = self.generate_id()
         else:
@@ -793,11 +793,11 @@ class CasedbTestClient(TestClient):
         else:
             case_type_dim = self._get_obj(model.CaseTypeDim, case_type_dim_str)
             case_type_dim_id = case_type_dim.id
-        if set_dummy_col:
-            col_id = self.generate_id()
+        if set_dummy_ref_col:
+            ref_col_id = self.generate_id()
         else:
-            col = self._get_obj(model.Col, col_str)
-            col_id = col.id
+            ref_col = self._get_obj(model.RefCol, ref_col_str)
+            ref_col_id = ref_col.id
         case_type_col = self.handle(
             command.CaseTypeColCrudCommand(
                 user=user,
@@ -805,7 +805,7 @@ class CasedbTestClient(TestClient):
                 objs=model.CaseTypeCol(
                     case_type_id=case_type_id,
                     case_type_dim_id=case_type_dim_id,
-                    col_id=col_id,
+                    ref_col_id=ref_col_id,
                     code=code,
                     rank=0,
                     genetic_sequence_case_type_col_id=genetic_sequence_case_type_col_id,
@@ -1138,7 +1138,7 @@ class CasedbTestClient(TestClient):
         case_index = int(m.group(3))
         case_type = self._get_obj(model.CaseType, f"case_type{case_type_index}")
         # TODO: get case_type_cols from complete_case_type
-        case_type_cols = self.read_some_by_property(
+        case_type_cols: list[model.CaseTypeCol] = self.read_some_by_property(  # type: ignore[assignment]
             root_user,
             model.CaseTypeCol,
             "case_type_id",
@@ -1151,13 +1151,13 @@ class CasedbTestClient(TestClient):
             col_index_pattern if col_index_pattern else r"^.*[a-z]*(\d+)_?\w*$"
         )
         for case_type_col in case_type_cols:
-            col = case_type_col.col
-            m = re.match(col_index_pattern, col.code.lower())
+            ref_col = case_type_col.ref_col
+            m = re.match(col_index_pattern, ref_col.code.lower())
             col_index = int(m.group(1))
-            value = self.DUMMY_VALUES[col.col_type]
-            if col.col_type == enum.ColType.TEXT:
+            value = self.DUMMY_VALUES[ref_col.col_type]
+            if ref_col.col_type == enum.ColType.TEXT:
                 value = f"{case_index}_{col_index}"
-            elif col.col_type in {
+            elif ref_col.col_type in {
                 enum.ColType.NOMINAL,
                 enum.ColType.ORDINAL,
                 enum.ColType.INTERVAL,
@@ -1166,12 +1166,12 @@ class CasedbTestClient(TestClient):
                     root_user,
                     model.ConceptRelation,
                     "concept_set_id",
-                    col.concept_set_id,
+                    ref_col.concept_set_id,
                 )
                 value = concept_set_members[0].concept_id
-            elif col.col_type == enum.ColType.GEO_REGION:
+            elif ref_col.col_type == enum.ColType.GEO_REGION:
                 regions = self.read_some_by_property(
-                    root_user, model.Region, "region_set_id", col.region_set_id
+                    root_user, model.Region, "region_set_id", ref_col.region_set_id
                 )
                 value = regions[0].id
             content[case_type_col.id] = str(value)
@@ -1949,19 +1949,19 @@ class CasedbTestClient(TestClient):
         case_type_map: dict[UUID, model.CaseType] = {
             x.id: x for x in case_types
         }  # type: ignore[assignment]
-        cols: list[model.Col] = self.read_all(
-            "root1_1", model.Col
+        ref_cols: list[model.RefCol] = self.read_all(
+            "root1_1", model.RefCol
         )  # type: ignore[assignment]
-        col_map: dict[UUID, model.Col] = {
-            x.id: x for x in cols
+        ref_col_map: dict[UUID, model.RefCol] = {
+            x.id: x for x in ref_cols
         }  # type: ignore[assignment]
         print("\nCaseTypeCols:")
         for x in sorted(
             case_type_cols, key=lambda x: (case_type_map[x.case_type_id].name, x.code)
         ):
             case_type = case_type_map[x.case_type_id]
-            col = col_map[x.col_id]
-            print(f"{x.code}: {case_type.name}, {col.col_type.value} ({x.id})")
+            ref_col = ref_col_map[x.ref_col_id]
+            print(f"{x.code}: {case_type.name}, {ref_col.col_type.value} ({x.id})")
 
     def print_case_type_col_sets(self) -> None:
         case_type_cols: list[model.CaseTypeCol] = self.read_all(

@@ -24,7 +24,7 @@ class CaseTypeDimLike:
         self,
         id: UUID,
         case_type_id: UUID,
-        dim_id: UUID,
+        ref_dim_id: UUID,
         occurrence: int = 0,
         is_case_date_dim: bool = False,
         is_time_stats_dim: bool = False,
@@ -32,14 +32,14 @@ class CaseTypeDimLike:
     ) -> None:
         self.id = id
         self.case_type_id = case_type_id
-        self.dim_id = dim_id
+        self.ref_dim_id = ref_dim_id
         self.occurrence = occurrence
         self.is_case_date_dim = is_case_date_dim
         self.is_time_stats_dim = is_time_stats_dim
         self.is_geo_stats_dim = is_geo_stats_dim
 
 
-class DimLike:
+class RefDimLike:
     def __init__(self, id: UUID, code: str, dim_type: enum.DimType) -> None:
         self.id = id
         self.code = code
@@ -54,8 +54,8 @@ class BaseCaseTypeDimTestCase(BaseCrudTestCase):
         # IDs
         self.user_id = uuid4()
         self.case_type_id = UUID("550e8400-e29b-41d4-a716-446655440001")
-        self.dim_id = UUID("550e8400-e29b-41d4-a716-446655440002")
-        self.other_dim_id = UUID("550e8400-e29b-41d4-a716-446655440003")
+        self.ref_dim_id = UUID("550e8400-e29b-41d4-a716-446655440002")
+        self.other_ref_dim_id = UUID("550e8400-e29b-41d4-a716-446655440003")
         self.ctd_id = UUID("550e8400-e29b-41d4-a716-446655440004")
         self.other_ctd_id = UUID("550e8400-e29b-41d4-a716-446655440005")
 
@@ -75,7 +75,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         ctd: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             is_case_date_dim=True,
         )
         cmd = self.create_crud_command(
@@ -83,16 +83,18 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         )
 
         # 2. Mocks
-        # existing CaseTypeDim for same (case_type_id, dim_id): none
-        # dim list: TIME
-        dim_obj: DimLike = DimLike(self.dim_id, "Dim.TIME", enum.DimType.TIME)
+        # existing CaseTypeDim for same (case_type_id, ref_dim_id): none
+        # ref_dim list: TIME
+        ref_dim_obj: RefDimLike = RefDimLike(
+            self.ref_dim_id, "RefDim.TIME", enum.DimType.TIME
+        )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
             if op == CrudOperation.READ_ALL:
                 return []
-            if op == CrudOperation.READ_SOME and args[2] == model.Dim:
-                return [dim_obj]
+            if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
+                return [ref_dim_obj]
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
@@ -128,20 +130,20 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         new_ctd: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             is_case_date_dim=True,
         )
         existing_same_key: CaseTypeDimLike = CaseTypeDimLike(
             id=uuid4(),
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             occurrence=2,
             is_case_date_dim=False,
         )
         other_for_same_case_type: CaseTypeDimLike = CaseTypeDimLike(
             id=self.other_ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.other_dim_id,
+            ref_dim_id=self.other_ref_dim_id,
             occurrence=1,
             is_case_date_dim=True,
         )
@@ -150,7 +152,9 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         )
 
         # 2. Mocks
-        dim_obj: DimLike = DimLike(self.dim_id, "Dim.TIME", enum.DimType.TIME)
+        ref_dim_obj: RefDimLike = RefDimLike(
+            self.ref_dim_id, "RefDim.TIME", enum.DimType.TIME
+        )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
@@ -161,8 +165,8 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
                 # Use call count to branch
                 count = self.service.repository.crud.call_count
                 return [existing_same_key] if count <= 1 else [other_for_same_case_type]
-            if op == CrudOperation.READ_SOME and model_class == model.Dim:
-                return [dim_obj]
+            if op == CrudOperation.READ_SOME and model_class == model.RefDim:
+                return [ref_dim_obj]
             return []
 
         self.service.repository.crud.side_effect = repo_crud_side_effect
@@ -186,7 +190,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
             # 4. Verify
             self.assertEqual(new_ctd.occurrence, 3)
-            # Ensure other case date dim is unset and updated
+            # Ensure other case_date_dim is unset and updated
             self.assertFalse(other_for_same_case_type.is_case_date_dim)
             self.service.repository.crud.assert_any_call(
                 self.uow,
@@ -203,7 +207,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         ctd: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             is_case_date_dim=True,
         )
         cmd = self.create_crud_command(
@@ -211,13 +215,15 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         )
 
         # 2. Mocks
-        non_time_dim: DimLike = DimLike(self.dim_id, "Dim.GEO", enum.DimType.GEO)
+        non_time_dim: RefDimLike = RefDimLike(
+            self.ref_dim_id, "RefDim.GEO", enum.DimType.GEO
+        )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
             op: CrudOperation = args[5]
             if op == CrudOperation.READ_ALL:
                 return []
-            if op == CrudOperation.READ_SOME and args[2] == model.Dim:
+            if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
                 return [non_time_dim]
             return []
 
@@ -245,7 +251,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
         ctd: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             is_case_date_dim=True,
         )
         cmd = self.create_crud_command(
@@ -257,7 +263,7 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
             op: CrudOperation = args[5]
             if op == CrudOperation.READ_ALL:
                 return []
-            if op == CrudOperation.READ_SOME and args[2] == model.Dim:
+            if op == CrudOperation.READ_SOME and args[2] == model.RefDim:
                 return []
             return []
 
@@ -283,12 +289,12 @@ class TestAdminCreate(BaseCaseTypeDimTestCase):
 
 @pytest.mark.scenario_ids("TC-SEC-29-02")
 class TestAdminUpdate(BaseCaseTypeDimTestCase):
-    def test_update_dim_id_changes_raises(self) -> None:
+    def test_update_ref_dim_id_changes_raises(self) -> None:
         # 1. Input
         updated: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
         )
         cmd = self.create_crud_command(
             CrudOperation.UPDATE_ONE, user_id=self.user_id, objs=[updated]
@@ -298,7 +304,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
         stored: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.other_dim_id,
+            ref_dim_id=self.other_ref_dim_id,
         )
 
         def repo_crud_side_effect(*args: Any, **kwargs: Any) -> List[Any]:
@@ -331,7 +337,7 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
         updated: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
             is_case_date_dim=True,
         )
         cmd = self.create_crud_command(
@@ -342,12 +348,12 @@ class TestAdminUpdate(BaseCaseTypeDimTestCase):
         stored: CaseTypeDimLike = CaseTypeDimLike(
             id=self.ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.dim_id,
+            ref_dim_id=self.ref_dim_id,
         )
         other_time_true: CaseTypeDimLike = CaseTypeDimLike(
             id=self.other_ctd_id,
             case_type_id=self.case_type_id,
-            dim_id=self.other_dim_id,
+            ref_dim_id=self.other_ref_dim_id,
             is_case_date_dim=True,
         )
 

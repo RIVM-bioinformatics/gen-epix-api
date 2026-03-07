@@ -38,12 +38,12 @@ def case_service_retrieve_similar_cases(
             raise exc.InvalidArgumentsError(
                 f"Case type column {dist_case_type_col_id} does not belong to case type {case_type_id}"
             )
-        dist_col: model.Col = repository.crud(  # type: ignore[assignment]
+        dist_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
-            model.Col,
+            model.RefCol,
             None,
-            dist_case_type_col.col_id,
+            dist_case_type_col.ref_col_id,
             CrudOperation.READ_ONE,
         )
         if dist_col.col_type != enum.ColType.GENETIC_DISTANCE:

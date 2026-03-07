@@ -432,16 +432,16 @@ class CaseTypeSetMemberCrudCommand(CrudCommand):
     MODEL_CLASS: ClassVar = model.CaseTypeSetMember
 
 
-class ColCrudCommand(CrudCommand):
+class RefColCrudCommand(CrudCommand):
     """Manage reusable column definitions (code/label/type) referenced by case-type columns and vocabularies."""
 
-    MODEL_CLASS: ClassVar = model.Col
+    MODEL_CLASS: ClassVar = model.RefCol
 
 
-class DimCrudCommand(CrudCommand):
+class RefDimCrudCommand(CrudCommand):
     """Manage column dimensions, including code prefixes and ordering, reused across case types."""
 
-    MODEL_CLASS: ClassVar = model.Dim
+    MODEL_CLASS: ClassVar = model.RefDim
 
 
 class GeneticDistanceProtocolCrudCommand(CrudCommand):

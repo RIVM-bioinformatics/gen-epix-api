@@ -52,13 +52,13 @@ from gen_epix.casedb.domain.model.case import CaseTypeSet as CaseTypeSet
 from gen_epix.casedb.domain.model.case import CaseTypeSetCategory as CaseTypeSetCategory
 from gen_epix.casedb.domain.model.case import CaseTypeSetMember as CaseTypeSetMember
 from gen_epix.casedb.domain.model.case import CaseUploadResult as CaseUploadResult
-from gen_epix.casedb.domain.model.case import Col as Col
-from gen_epix.casedb.domain.model.case import Dim as Dim
 from gen_epix.casedb.domain.model.case import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
 from gen_epix.casedb.domain.model.case import ReadSetForUpload as ReadSetForUpload
+from gen_epix.casedb.domain.model.case import RefCol as RefCol
 from gen_epix.casedb.domain.model.case import RefDataAccess as RefDataAccess
+from gen_epix.casedb.domain.model.case import RefDim as RefDim
 from gen_epix.casedb.domain.model.case import SeqForUpload as SeqForUpload
 from gen_epix.casedb.domain.model.case import TreeAlgorithm as TreeAlgorithm
 from gen_epix.casedb.domain.model.case import TreeAlgorithmClass as TreeAlgorithmClass
@@ -157,8 +157,8 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, list[type[fastapp.Model]]]
             TreeAlgorithmClass,
             TreeAlgorithm,
             GeneticDistanceProtocol,
-            Dim,
-            Col,
+            RefDim,
+            RefCol,
             CaseTypeSetCategory,
             CaseType,
             CaseTypeSet,

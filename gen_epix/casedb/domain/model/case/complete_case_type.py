@@ -8,13 +8,13 @@ from gen_epix.casedb.domain.model.abac.rights import (
     CaseTypeAccessAbac,
     CaseTypeShareAbac,
 )
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseType,
     CaseTypeCol,
     CaseTypeDim,
-    Col,
-    Dim,
     GeneticDistanceProtocol,
+    RefCol,
+    RefDim,
     TreeAlgorithm,
 )
 from gen_epix.casedb.domain.model.ontology import EtiologicalAgent, Etiology
@@ -43,8 +43,12 @@ class CompleteCaseType(CaseType):
     etiological_agents: dict[UUID, EtiologicalAgent] = Field(
         description="The etiological agents used by the case type"
     )
-    dims: dict[UUID, Dim] = Field(description="The dimensions used by the case type")
-    cols: dict[UUID, Col] = Field(description="The columns used by the case type")
+    ref_dims: dict[UUID, RefDim] = Field(
+        description="The reference dimensions used by the case type"
+    )
+    ref_cols: dict[UUID, RefCol] = Field(
+        description="The reference columns used by the case type"
+    )
     case_type_dims: dict[UUID, CaseTypeDim] = Field(
         description="The case type dimensions"
     )
@@ -148,12 +152,12 @@ class CompleteCaseType(CaseType):
             time_col_types = enum.ColTypeSet.TIME.value
             for case_type_col_id in case_type_col_ids:
                 case_type_col = self.case_type_cols[case_type_col_id]
-                col = self.cols[case_type_col.col_id]
-                if col.col_type not in time_col_types:
+                ref_col = self.ref_cols[case_type_col.ref_col_id]
+                if ref_col.col_type not in time_col_types:
                     continue
-                if col.col_type in self.case_date_col_type_map:
+                if ref_col.col_type in self.case_date_col_type_map:
                     raise ValueError(
-                        f"Multiple case date columns found for col_type {col.col_type}"
+                        f"Multiple case date columns found for col_type {ref_col.col_type}"
                     )
-                self.case_date_col_type_map[col.col_type] = case_type_col_id
+                self.case_date_col_type_map[ref_col.col_type] = case_type_col_id
         return self

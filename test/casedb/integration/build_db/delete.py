@@ -118,11 +118,11 @@ class TestDelete:
         env.delete_object(ROOT, model.CaseType, "case_type99")
 
     def test_delete_case_type_col(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
+        env.create_ref_col(ROOT, "ref_col1_99")
         for user in APP_ADMIN_OR_ABOVE_USERS:
             case_type_col = env.create_case_type_col(user, "case_type_col1_1_1_99")
             env.delete_object(ROOT, model.CaseTypeCol, case_type_col, verify=True)
-        env.delete_object(ROOT, model.Col, "col1_99")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_case_type_col_raise(self, env: Env) -> None:
@@ -146,7 +146,7 @@ class TestDelete:
                 env.delete_object(user, model.CaseTypeColSet, "case_type_col_set1")
 
     def test_delete_case_type_col_set_member(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
+        env.create_ref_col(ROOT, "ref_col1_99")
         env.create_case_type_col(ROOT, "case_type_col1_1_1_99")
         for user in APP_ADMIN_OR_ABOVE_USERS:
             case_type_col_set_member = env.create_case_type_col_set_member(
@@ -158,11 +158,11 @@ class TestDelete:
                 user, model.CaseTypeColSetMember, case_type_col_set_member, verify=True
             )
         env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_99")
-        env.delete_object(ROOT, model.Col, "col1_99")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     @pytest.mark.skipif(SKIP_RAISE, reason="Skipped to facilitate debugging")
     def test_delete_case_type_col_set_member_raise(self, env: Env) -> None:
-        env.create_col(ROOT, "col1_99")
+        env.create_ref_col(ROOT, "ref_col1_99")
         env.create_case_type_col(ROOT, "case_type_col1_1_1_99")
         case_type_col_set_member = env.create_case_type_col_set_member(
             ROOT,
@@ -176,7 +176,7 @@ class TestDelete:
                 )
         env.delete_object(ROOT, model.CaseTypeColSetMember, case_type_col_set_member)
         env.delete_object(ROOT, model.CaseTypeCol, "case_type_col1_1_1_99")
-        env.delete_object(ROOT, model.Col, "col1_99")
+        env.delete_object(ROOT, model.RefCol, "ref_col1_99")
 
     def test_delete_case_set(self, env: Env) -> None:
         env.create_case_type(ROOT, "case_type99", "disease1", "etiological_agent1")
@@ -239,9 +239,9 @@ class TestDelete:
         with pytest.raises(exc.LinkConstraintViolationError):
             env.delete_object(ROOT, model.RegionSet, "region_set1")
         with pytest.raises(exc.LinkConstraintViolationError):
-            env.delete_object(ROOT, model.Dim, "dim1")
+            env.delete_object(ROOT, model.RefDim, "ref_dim1")
         with pytest.raises(exc.LinkConstraintViolationError):
-            env.delete_object(ROOT, model.Col, "col1_1")
+            env.delete_object(ROOT, model.RefCol, "ref_col1_1")
         with pytest.raises(exc.LinkConstraintViolationError):
             env.delete_object(ROOT, model.Disease, "disease1")
         with pytest.raises(exc.LinkConstraintViolationError):

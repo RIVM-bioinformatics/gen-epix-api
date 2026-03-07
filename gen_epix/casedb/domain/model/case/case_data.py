@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import Field, field_serializer
 
 from gen_epix.casedb.domain import enum
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetCategory,
     CaseSetStatus,
     CaseType,
@@ -21,7 +21,7 @@ from gen_epix.fastapp.domain import Entity, create_keys, create_links
 
 class Case(Model):
     """
-    A class representing a case.
+    A class representing an epidemiological case.
     """
 
     ENTITY: ClassVar = Entity(

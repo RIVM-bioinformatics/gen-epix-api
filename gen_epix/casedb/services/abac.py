@@ -240,7 +240,7 @@ class AbacService(BaseAbacService):
             operator=LogicalOperator.AND,
         )
 
-        # Retrieve all the policies as well as the case type set members and case type col set members
+        # Retrieve all the policies as well as the case type set members and case_type_col_set_members
         with self.repository.uow() as uow:
             # Retrieve organization access and share case policies
             organization_access_case_policies: list[
@@ -303,7 +303,7 @@ class AbacService(BaseAbacService):
                 ],
                 as_set=True,
             )
-            # Retrieve relevant case type set members and case type col set members
+            # Retrieve relevant case_type_set_members and case_type_col_set_members
             all_case_policies: list[
                 model.OrganizationAccessCasePolicy
                 | model.UserAccessCasePolicy
@@ -611,8 +611,8 @@ class AbacService(BaseAbacService):
                 case_type_col_set_ids=set(),
                 case_type_col_ids=set(),
                 case_type_dim_ids=set(),
-                dim_ids=set(),
-                col_ids=set(),
+                ref_dim_ids=set(),
+                ref_col_ids=set(),
             )
         return self._get_ref_data_access_cached(user)
 
@@ -630,8 +630,8 @@ class AbacService(BaseAbacService):
                 case_type_col_set_ids=set(),
                 case_type_col_ids=set(),
                 case_type_dim_ids=set(),
-                dim_ids=set(),
-                col_ids=set(),
+                ref_dim_ids=set(),
+                ref_col_ids=set(),
             )
 
         with self.repository.uow() as uow:
@@ -694,7 +694,7 @@ class AbacService(BaseAbacService):
                 model.OrganizationAccessCasePolicy | model.OrganizationShareCasePolicy
             ] = (org_access_policies + org_share_policies)
 
-        # Collect case type and case type col set IDs from policies
+        # Collect case_type and case_type_col_set IDs from policies
         case_type_set_ids = {
             x.case_type_set_id for x in all_policies if x.case_type_set_id
         }
@@ -723,7 +723,7 @@ class AbacService(BaseAbacService):
         )
         case_type_ids: set[UUID] = {x.case_type_id for x in case_type_set_members}
 
-        # Retrieve all case type col set members and from there derive the case type col ids
+        # Retrieve all case_type_col_set_members and from there derive the case_type_col_ids
         case_type_col_set_members: list[model.CaseTypeColSetMember] = self.app.handle(
             command.CaseTypeColSetMemberCrudCommand(
                 user=user,
@@ -758,7 +758,7 @@ class AbacService(BaseAbacService):
             x.id for x in case_type_cols if x.id is not None
         }
         case_type_dim_ids = {x.case_type_dim_id for x in case_type_cols}
-        col_ids = {x.col_id for x in case_type_cols}
+        col_ids = {x.ref_col_id for x in case_type_cols}
 
         # Retrieve all dims for the allowed case type dims
         case_type_dims: list[model.CaseTypeDim] = self.app.handle(
@@ -769,7 +769,7 @@ class AbacService(BaseAbacService):
                 operation=CrudOperation.READ_SOME,
             )
         )
-        dim_ids = {x.dim_id for x in case_type_dims}
+        ref_dim_ids = {x.ref_dim_id for x in case_type_dims}
 
         return model.RefDataAccess(
             user_id=user.id,
@@ -779,6 +779,6 @@ class AbacService(BaseAbacService):
             case_type_col_set_ids=case_type_col_set_ids,
             case_type_col_ids=case_type_col_ids,
             case_type_dim_ids=case_type_dim_ids,
-            dim_ids=dim_ids,
-            col_ids=col_ids,
+            ref_dim_ids=ref_dim_ids,
+            ref_col_ids=col_ids,
         )

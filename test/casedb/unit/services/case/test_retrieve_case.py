@@ -82,7 +82,7 @@ class BaseRetrieveCaseTestCase(TestCase):
         # Storage for unified repo side-effect
         self._repo_case_type: model.CaseType | None = None
         self._repo_case_type_cols: list[model.CaseTypeCol] | None = None
-        self._repo_cols: list[model.Col] | None = None
+        self._repo_cols: list[model.RefCol] | None = None
 
         # Default ABAC mock
         self.case_abac: Any = Mock()
@@ -127,17 +127,17 @@ class BaseRetrieveCaseTestCase(TestCase):
     def create_case_type_col(
         self,
         case_type_col_id: UUID,
-        col_id: UUID,
+        ref_col_id: UUID,
         col_type: enum.ColType,
         concept_set_id: UUID | None = None,
         region_set_id: UUID | None = None,
-    ) -> tuple[model.CaseTypeCol, model.Col]:
-        dim_id: UUID = uuid4()
-        col: model.Col = model.Col(
-            dim_id=dim_id,
-            dim=None,
+    ) -> tuple[model.CaseTypeCol, model.RefCol]:
+        ref_dim_id: UUID = uuid4()
+        ref_col: model.RefCol = model.RefCol(
+            ref_dim_id=ref_dim_id,
+            ref_dim=None,
             code_suffix=None,
-            code=f"DIM.{case_type_col_id.hex[:8]}",
+            code=f"REF_DIM.{case_type_col_id.hex[:8]}",
             rank=0,
             label=None,
             col_type=col_type,
@@ -155,8 +155,8 @@ class BaseRetrieveCaseTestCase(TestCase):
             case_type=None,
             case_type_dim_id=uuid4(),
             case_type_dim=None,
-            col_id=col_id,
-            col=col,
+            ref_col_id=ref_col_id,
+            ref_col=ref_col,
             code=f"CTC.{case_type_col_id.hex[:8]}",
             rank=0,
             label=None,
@@ -174,8 +174,8 @@ class BaseRetrieveCaseTestCase(TestCase):
             props={},
         )
         case_type_col.id = case_type_col_id
-        col.id = col_id
-        return case_type_col, col
+        ref_col.id = ref_col_id
+        return case_type_col, ref_col
 
     def create_typed_string_set_filter(
         self, key: UUID, members: set[str]
@@ -222,7 +222,7 @@ class BaseRetrieveCaseTestCase(TestCase):
                 return [
                     next(x for x in self._repo_case_type_cols if x.id == i) for i in ids
                 ]
-            if cls is model.Col:
+            if cls is model.RefCol:
                 if not ids or self._repo_cols is None:
                     return []
                 # Preserve input order of ids to align filters → map functions
@@ -236,7 +236,7 @@ class BaseRetrieveCaseTestCase(TestCase):
         self._install_repo_side_effect()
 
     def set_repository_case_type_cols_and_cols(
-        self, case_type_cols: list[model.CaseTypeCol], cols: list[model.Col]
+        self, case_type_cols: list[model.CaseTypeCol], cols: list[model.RefCol]
     ) -> None:
         self._repo_case_type_cols = case_type_cols
         self._repo_cols = cols
@@ -351,12 +351,12 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
     def test_filter_invalid_members_raises(self) -> None:
         # 1. Input: one concept-backed column, invalid member
         ctc_id: UUID = uuid4()
-        col_id: UUID = uuid4()
-        case_type_col, col = self.create_case_type_col(
-            ctc_id, col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
+        ref_col_id: UUID = uuid4()
+        case_type_col, ref_col = self.create_case_type_col(
+            ctc_id, ref_col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
         )
         invalid_member: str = "invalid_member"
-        filt: TypedCompositeFilter = self.create_composite_filter(
+        filter: TypedCompositeFilter = self.create_composite_filter(
             [self.create_typed_string_set_filter(ctc_id, {invalid_member})]
         )
         cq: model.CaseQuery = model.CaseQuery(
@@ -364,7 +364,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             case_type_id=self.case_type_id,
             case_set_ids=None,
             datetime_range_filter=None,
-            filter=filt,
+            filter=filter,
         )
         cmd: command.RetrieveCasesByQueryCommand = command.RetrieveCasesByQueryCommand(
             user=self.user, case_query=cq
@@ -372,7 +372,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
 
         # 2. Mocks
         self.attach_abac_policy(cmd)
-        self.set_repository_case_type_cols_and_cols([case_type_col], [col])
+        self.set_repository_case_type_cols_and_cols([case_type_col], [ref_col])
         # No concept IDs returned → invalid
         self.service.app.handle = Mock(return_value=[])
         # Provide minimal cases to reach filter validation
@@ -385,11 +385,11 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
     def test_filter_invalid_type_raises(self) -> None:
         # 1. Input: concept-backed column, wrong filter type
         ctc_id: UUID = uuid4()
-        col_id: UUID = uuid4()
-        case_type_col, col = self.create_case_type_col(
-            ctc_id, col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
+        ref_col_id: UUID = uuid4()
+        case_type_col, ref_col = self.create_case_type_col(
+            ctc_id, ref_col_id, enum.ColType.NOMINAL, concept_set_id=uuid4()
         )
-        filt: TypedCompositeFilter = self.create_composite_filter(
+        filter: TypedCompositeFilter = self.create_composite_filter(
             [self.create_typed_number_set_filter(ctc_id, {1.0})]
         )
         cq: model.CaseQuery = model.CaseQuery(
@@ -397,7 +397,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
             case_type_id=self.case_type_id,
             case_set_ids=None,
             datetime_range_filter=None,
-            filter=filt,
+            filter=filter,
         )
         cmd: command.RetrieveCasesByQueryCommand = command.RetrieveCasesByQueryCommand(
             user=self.user, case_query=cq
@@ -405,7 +405,7 @@ class TestRetrieveCasesByQuery(BaseRetrieveCaseTestCase):
 
         # 2. Mocks
         self.attach_abac_policy(cmd)
-        self.set_repository_case_type_cols_and_cols([case_type_col], [col])
+        self.set_repository_case_type_cols_and_cols([case_type_col], [ref_col])
         self.service._retrieve_cases_with_content_right = Mock(return_value=[])
 
         # 3. Execute
@@ -690,13 +690,13 @@ def test_mapping_branches_decimal_col_type() -> None:
 
     # Prepare column and filter
     ctc_id: UUID = uuid4()
-    col_id: UUID = uuid4()
-    case_type_col, col = base.create_case_type_col(ctc_id, col_id, col_type)
+    ref_col_id: UUID = uuid4()
+    case_type_col, ref_col = base.create_case_type_col(ctc_id, ref_col_id, col_type)
     # Compose an OR with Exists to avoid filtering away matching rows
     exists_filter: TypedExistsFilter = TypedExistsFilter(
         type=FilterType.EXISTS.value, key=str(ctc_id)
     )
-    filt: TypedCompositeFilter = base.create_composite_filter(
+    filter: TypedCompositeFilter = base.create_composite_filter(
         [filter_factory(base, ctc_id), exists_filter], operator=LogicalOperator.OR
     )
     cq: model.CaseQuery = model.CaseQuery(
@@ -704,7 +704,7 @@ def test_mapping_branches_decimal_col_type() -> None:
         case_type_id=base.case_type_id,
         case_set_ids=None,
         datetime_range_filter=None,
-        filter=filt,
+        filter=filter,
     )
     cmd: command.RetrieveCasesByQueryCommand = command.RetrieveCasesByQueryCommand(
         user=base.user, case_query=cq
@@ -712,7 +712,7 @@ def test_mapping_branches_decimal_col_type() -> None:
 
     # 2. Mocks
     base.attach_abac_policy(cmd)
-    base.set_repository_case_type_cols_and_cols([case_type_col], [col])
+    base.set_repository_case_type_cols_and_cols([case_type_col], [ref_col])
     case_content: dict[UUID, str | None] = {ctc_id: value_factory()}
     base.service._retrieve_cases_with_content_right = Mock(
         return_value=[base.create_case(base.case_id1, case_content)]
@@ -742,13 +742,13 @@ def test_mapping_branches_text_col_type() -> None:
 
     # Prepare column and filter
     ctc_id: UUID = uuid4()
-    col_id: UUID = uuid4()
-    case_type_col, col = base.create_case_type_col(ctc_id, col_id, col_type)
+    ref_col_id: UUID = uuid4()
+    case_type_col, ref_col = base.create_case_type_col(ctc_id, ref_col_id, col_type)
     # Compose an OR with Exists to avoid filtering away matching rows
     exists_filter: TypedExistsFilter = TypedExistsFilter(
         type=FilterType.EXISTS.value, key=str(ctc_id)
     )
-    filt: TypedCompositeFilter = base.create_composite_filter(
+    filter: TypedCompositeFilter = base.create_composite_filter(
         [filter_factory(base, ctc_id), exists_filter], operator=LogicalOperator.OR
     )
     cq: model.CaseQuery = model.CaseQuery(
@@ -756,7 +756,7 @@ def test_mapping_branches_text_col_type() -> None:
         case_type_id=base.case_type_id,
         case_set_ids=None,
         datetime_range_filter=None,
-        filter=filt,
+        filter=filter,
     )
     cmd: command.RetrieveCasesByQueryCommand = command.RetrieveCasesByQueryCommand(
         user=base.user, case_query=cq
@@ -764,7 +764,7 @@ def test_mapping_branches_text_col_type() -> None:
 
     # 2. Mocks
     base.attach_abac_policy(cmd)
-    base.set_repository_case_type_cols_and_cols([case_type_col], [col])
+    base.set_repository_case_type_cols_and_cols([case_type_col], [ref_col])
     case_content: dict[UUID, str | None] = {ctc_id: value_factory()}
     base.service._retrieve_cases_with_content_right = Mock(
         return_value=[base.create_case(base.case_id1, case_content)]

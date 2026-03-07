@@ -10,14 +10,14 @@ class TestModelCompleteCaseType:
     def test_case_type_dim_col_order(self) -> None:
         case_type_id = uuid4()
 
-        dims: list[model.Dim] = [
-            model.Dim(
+        ref_dims: list[model.RefDim] = [
+            model.RefDim(
                 id=uuid4(), code="dim1", label="dim1", dim_type=enum.DimType.TEXT
             ),
-            model.Dim(
+            model.RefDim(
                 id=uuid4(), code="dim2", label="dim2", dim_type=enum.DimType.TEXT
             ),
-            model.Dim(
+            model.RefDim(
                 id=uuid4(), code="dim3", label="dim3", dim_type=enum.DimType.TEXT
             ),
         ]
@@ -25,7 +25,7 @@ class TestModelCompleteCaseType:
         case_type_dims: list[model.CaseTypeDim] = [
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[0].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D",
                 rank=1,
@@ -33,7 +33,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[0].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C",
                 rank=2,
@@ -41,7 +41,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[2].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B",
                 rank=2,
@@ -49,7 +49,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeDim(
                 id=uuid4(),
-                dim_id=dims[1].id,  # type: ignore[arg-type]
+                ref_dim_id=ref_dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A",
                 rank=1,
@@ -61,7 +61,7 @@ class TestModelCompleteCaseType:
         case_type_cols: list[model.CaseTypeCol] = [
             model.CaseTypeCol(
                 id=uuid4(),
-                col_id=uuid4(),
+                ref_col_id=uuid4(),
                 case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.B",
@@ -69,7 +69,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeCol(
                 id=uuid4(),
-                col_id=uuid4(),
+                ref_col_id=uuid4(),
                 case_type_dim_id=case_type_dims[0].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="D.A",
@@ -77,7 +77,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeCol(
                 id=uuid4(),
-                col_id=uuid4(),
+                ref_col_id=uuid4(),
                 case_type_dim_id=case_type_dims[1].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="C.A",
@@ -85,7 +85,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeCol(
                 id=uuid4(),
-                col_id=uuid4(),
+                ref_col_id=uuid4(),
                 case_type_dim_id=case_type_dims[2].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="B.A",
@@ -93,7 +93,7 @@ class TestModelCompleteCaseType:
             ),
             model.CaseTypeCol(
                 id=uuid4(),
-                col_id=uuid4(),
+                ref_col_id=uuid4(),
                 case_type_dim_id=case_type_dims[3].id,  # type: ignore[arg-type]
                 case_type_id=case_type_id,
                 code="A.A",
@@ -107,8 +107,8 @@ class TestModelCompleteCaseType:
             name="test",
             etiologies={},
             etiological_agents={},
-            dims={},
-            cols={},
+            ref_dims={},
+            ref_cols={},
             case_type_dims={x.id: x for x in case_type_dims if x.id is not None},
             case_type_cols={x.id: x for x in case_type_cols if x.id is not None},
             genetic_distance_protocols={},

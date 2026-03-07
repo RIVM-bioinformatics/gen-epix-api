@@ -605,9 +605,11 @@ class TestRefdataAccess:
             actual_col_set_ids: list[UUID] = self._read_all(env, model.CaseTypeColSet, user=user, return_id=True)  # type: ignore[assignment]
 
             if VERBOSE:
-                print("all col_set_ids:", len(all_col_set_ids))
-                print("expected col_sets:", len(expected_case_type_col_set_ids))
-                print("actual col_sets:", len(actual_col_set_ids))
+                print("all case_type_col_set_ids:", len(all_col_set_ids))
+                print(
+                    "expected case_type_col_sets:", len(expected_case_type_col_set_ids)
+                )
+                print("actual case_type_col_sets:", len(actual_col_set_ids))
 
-            # Optionally, assert that the user only sees the expected col sets
+            # Optionally, assert that the user only sees the expected case_type_col_sets
             assert sorted(actual_col_set_ids) == sorted(expected_case_type_col_set_ids)  # type: ignore[comparison-overlap]

@@ -109,56 +109,60 @@ class GeneticDistanceProtocol(Base, RowMetadataMixin):
     )
 
 
-class Dim(Base, RowMetadataMixin):
+class RefDim(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.Dim)
+    __tablename__, __table_args__ = create_table_args(model.RefDim)
 
-    dim_type: Mapped[enum.DimType] = create_mapped_column(DOMAIN, model.Dim, "dim_type")
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Dim, "code")
-    label: Mapped[str] = create_mapped_column(DOMAIN, model.Dim, "label")
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Dim, "rank")
+    dim_type: Mapped[enum.DimType] = create_mapped_column(
+        DOMAIN, model.RefDim, "dim_type"
+    )
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefDim, "code")
+    label: Mapped[str] = create_mapped_column(DOMAIN, model.RefDim, "label")
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.RefDim, "rank")
     col_code_prefix: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Dim, "col_code_prefix"
+        DOMAIN, model.RefDim, "col_code_prefix"
     )
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Dim, "description"
+        DOMAIN, model.RefDim, "description"
     )
-    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Dim, "props")
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefDim, "props")
 
 
-class Col(Base, RowMetadataMixin):
+class RefCol(Base, RowMetadataMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.Col)
+    __tablename__, __table_args__ = create_table_args(model.RefCol)
 
-    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.Col, "dim_id")
+    ref_dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.RefCol, "ref_dim_id")
     code_suffix: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Col, "code_suffix"
+        DOMAIN, model.RefCol, "code_suffix"
     )
-    code: Mapped[str] = create_mapped_column(DOMAIN, model.Col, "code")
-    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.Col, "rank")
-    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.Col, "label")
-    col_type: Mapped[enum.ColType] = create_mapped_column(DOMAIN, model.Col, "col_type")
+    code: Mapped[str] = create_mapped_column(DOMAIN, model.RefCol, "code")
+    rank: Mapped[int | None] = create_mapped_column(DOMAIN, model.RefCol, "rank")
+    label: Mapped[str | None] = create_mapped_column(DOMAIN, model.RefCol, "label")
+    col_type: Mapped[enum.ColType] = create_mapped_column(
+        DOMAIN, model.RefCol, "col_type"
+    )
     concept_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "concept_set_id"
+        DOMAIN, model.RefCol, "concept_set_id"
     )
     region_set_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "region_set_id"
+        DOMAIN, model.RefCol, "region_set_id"
     )
     genetic_distance_protocol_id: Mapped[UUID | None] = create_mapped_column(
-        DOMAIN, model.Col, "genetic_distance_protocol_id"
+        DOMAIN, model.RefCol, "genetic_distance_protocol_id"
     )
     description: Mapped[str | None] = create_mapped_column(
-        DOMAIN, model.Col, "description"
+        DOMAIN, model.RefCol, "description"
     )
-    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.Col, "props")
+    props: Mapped[dict[str, Any]] = create_mapped_column(DOMAIN, model.RefCol, "props")
 
-    dim: Mapped[Dim] = relationship(Dim, foreign_keys=[dim_id])
+    ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
 
 
 class CaseType(Base, RowMetadataMixin):
@@ -266,7 +270,9 @@ class CaseTypeCol(Base, RowMetadataMixin):
     case_type_dim_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "case_type_dim_id"
     )
-    col_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeCol, "col_id")
+    ref_col_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeCol, "ref_col_id"
+    )
     code: Mapped[str] = create_mapped_column(DOMAIN, model.CaseTypeCol, "code")
     description: Mapped[str | None] = create_mapped_column(
         DOMAIN, model.CaseTypeCol, "description"
@@ -308,7 +314,7 @@ class CaseTypeCol(Base, RowMetadataMixin):
     )
 
     case_type: Mapped[CaseType] = relationship(CaseType, foreign_keys=[case_type_id])
-    col: Mapped[Col] = relationship(Col, foreign_keys=[col_id])
+    ref_col: Mapped[RefCol] = relationship(RefCol, foreign_keys=[ref_col_id])
 
 
 class CaseTypeColSet(Base, RowMetadataMixin):
@@ -352,7 +358,9 @@ class CaseTypeDim(Base, RowMetadataMixin):
     case_type_id: Mapped[UUID] = create_mapped_column(
         DOMAIN, model.CaseTypeDim, "case_type_id"
     )
-    dim_id: Mapped[UUID] = create_mapped_column(DOMAIN, model.CaseTypeDim, "dim_id")
+    ref_dim_id: Mapped[UUID] = create_mapped_column(
+        DOMAIN, model.CaseTypeDim, "ref_dim_id"
+    )
     occurrence: Mapped[int] = create_mapped_column(
         DOMAIN, model.CaseTypeDim, "occurrence"
     )
@@ -365,6 +373,8 @@ class CaseTypeDim(Base, RowMetadataMixin):
     is_case_date_dim: Mapped[bool] = create_mapped_column(
         DOMAIN, model.CaseTypeDim, "is_case_date_dim"
     )
+
+    ref_dim: Mapped[RefDim] = relationship(RefDim, foreign_keys=[ref_dim_id])
 
 
 class Case(Base, RowMetadataMixin):

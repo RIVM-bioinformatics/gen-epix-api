@@ -111,30 +111,30 @@ def _validate_case_type_cols(
         }
 
         # Get cols
-        col_ids: list[UUID] = list({x.col_id for x in case_type_cols})
-        cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+        ref_col_ids: list[UUID] = list({x.ref_col_id for x in case_type_cols})
+        ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
-            model.Col,
+            model.RefCol,
             None,
-            col_ids,
+            ref_col_ids,
             CrudOperation.READ_SOME,
         )
-        col_map: dict[UUID, model.Col] = {
-            x.id: x for x in cols
+        ref_col_map: dict[UUID, model.RefCol] = {
+            x.id: x for x in ref_cols
         }  # type: ignore[assignment]
 
         # Verify each case_type_col
         for case_type_col in case_type_cols:
             case_type_dim = case_type_dim_map[case_type_col.case_type_dim_id]
-            col = col_map[case_type_col.col_id]
+            ref_col = ref_col_map[case_type_col.ref_col_id]
             if case_type_col.case_type_id != case_type_dim.case_type_id:
                 raise exc.InvalidArgumentsError(
                     "case_type_id must match case_type_id of CaseTypeDim",
                     ids=[case_type_col.case_type_dim_id],
                 )
-            if col.dim_id != case_type_dim.dim_id:
+            if ref_col.ref_dim_id != case_type_dim.ref_dim_id:
                 raise exc.InvalidArgumentsError(
-                    "col.dim_id must match dim_id of CaseTypeDim",
-                    ids=[case_type_col.col_id],
+                    "ref_col.ref_dim_id must match ref_dim_id of CaseTypeDim",
+                    ids=[case_type_col.ref_col_id],
                 )  # type: ignore[return-value]

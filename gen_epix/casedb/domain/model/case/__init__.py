@@ -1,3 +1,13 @@
+from gen_epix.casedb.domain.model.case.case_data import Case as Case
+from gen_epix.casedb.domain.model.case.case_data import (
+    CaseDataCollectionLink as CaseDataCollectionLink,
+)
+from gen_epix.casedb.domain.model.case.case_data import CaseSet as CaseSet
+from gen_epix.casedb.domain.model.case.case_data import (
+    CaseSetDataCollectionLink as CaseSetDataCollectionLink,
+)
+from gen_epix.casedb.domain.model.case.case_data import CaseSetMember as CaseSetMember
+
 # pylint: disable=useless-import-alias
 from gen_epix.casedb.domain.model.case.complete_case_type import (
     CompleteCaseType as CompleteCaseType,
@@ -20,48 +30,31 @@ from gen_epix.casedb.domain.model.case.non_persistable import CaseStats as CaseS
 from gen_epix.casedb.domain.model.case.non_persistable import (
     RefDataAccess as RefDataAccess,
 )
-from gen_epix.casedb.domain.model.case.operational_data import Case as Case
-from gen_epix.casedb.domain.model.case.operational_data import (
-    CaseDataCollectionLink as CaseDataCollectionLink,
-)
-from gen_epix.casedb.domain.model.case.operational_data import CaseSet as CaseSet
-from gen_epix.casedb.domain.model.case.operational_data import (
-    CaseSetDataCollectionLink as CaseSetDataCollectionLink,
-)
-from gen_epix.casedb.domain.model.case.operational_data import (
-    CaseSetMember as CaseSetMember,
-)
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseSetCategory as CaseSetCategory,
 )
-from gen_epix.casedb.domain.model.case.reference_data import (
-    CaseSetStatus as CaseSetStatus,
-)
-from gen_epix.casedb.domain.model.case.reference_data import CaseType as CaseType
-from gen_epix.casedb.domain.model.case.reference_data import CaseTypeCol as CaseTypeCol
-from gen_epix.casedb.domain.model.case.reference_data import (
-    CaseTypeColSet as CaseTypeColSet,
-)
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import CaseSetStatus as CaseSetStatus
+from gen_epix.casedb.domain.model.case.ref_data import CaseType as CaseType
+from gen_epix.casedb.domain.model.case.ref_data import CaseTypeCol as CaseTypeCol
+from gen_epix.casedb.domain.model.case.ref_data import CaseTypeColSet as CaseTypeColSet
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeColSetMember as CaseTypeColSetMember,
 )
-from gen_epix.casedb.domain.model.case.reference_data import CaseTypeDim as CaseTypeDim
-from gen_epix.casedb.domain.model.case.reference_data import CaseTypeSet as CaseTypeSet
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import CaseTypeDim as CaseTypeDim
+from gen_epix.casedb.domain.model.case.ref_data import CaseTypeSet as CaseTypeSet
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeSetCategory as CaseTypeSetCategory,
 )
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     CaseTypeSetMember as CaseTypeSetMember,
 )
-from gen_epix.casedb.domain.model.case.reference_data import Col as Col
-from gen_epix.casedb.domain.model.case.reference_data import Dim as Dim
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import (
     GeneticDistanceProtocol as GeneticDistanceProtocol,
 )
-from gen_epix.casedb.domain.model.case.reference_data import (
-    TreeAlgorithm as TreeAlgorithm,
-)
-from gen_epix.casedb.domain.model.case.reference_data import (
+from gen_epix.casedb.domain.model.case.ref_data import RefCol as RefCol
+from gen_epix.casedb.domain.model.case.ref_data import RefDim as RefDim
+from gen_epix.casedb.domain.model.case.ref_data import TreeAlgorithm as TreeAlgorithm
+from gen_epix.casedb.domain.model.case.ref_data import (
     TreeAlgorithmClass as TreeAlgorithmClass,
 )
 from gen_epix.casedb.domain.model.case.upload import (

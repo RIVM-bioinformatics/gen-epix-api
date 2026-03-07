@@ -480,28 +480,28 @@ class TestCasedbCaseCreateSeq:
         @pytest.fixture
         def sample_case_type_cols(self) -> tuple[list[Mock], UUID]:
             """Create sample CaseTypeCol objects for testing."""
-            col_id = uuid4()
+            ref_col_id = uuid4()
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
-            case_type_col.col_id = col_id
+            case_type_col.ref_col_id = ref_col_id
             case_type_col.case_type_id = uuid4()
-            return [case_type_col], col_id
+            return [case_type_col], ref_col_id
 
         @pytest.fixture
         def sample_cols_genetic_reads(self) -> list[Mock]:
-            """Create sample Col objects with GENETIC_READS type for testing."""
-            col = Mock(spec=model.Col)
-            col.id = uuid4()
-            col.col_type = enum.ColType.GENETIC_READS
-            return [col]
+            """Create sample RefCol objects with GENETIC_READS type for testing."""
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = uuid4()
+            ref_col.col_type = enum.ColType.GENETIC_READS
+            return [ref_col]
 
         @pytest.fixture
         def sample_cols_genetic_sequence(self) -> list[Mock]:
-            """Create sample Col objects with GENETIC_SEQUENCE type for testing."""
-            col = Mock(spec=model.Col)
-            col.id = uuid4()
-            col.col_type = enum.ColType.GENETIC_SEQUENCE
-            return [col]
+            """Create sample RefCol objects with GENETIC_SEQUENCE type for testing."""
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = uuid4()
+            ref_col.col_type = enum.ColType.GENETIC_SEQUENCE
+            return [ref_col]
 
         @pytest.fixture
         def sample_cases(self) -> list[Mock]:
@@ -523,9 +523,9 @@ class TestCasedbCaseCreateSeq:
         ) -> None:
             """Test successful retrieval of cases for ReadSets creation."""
             cmd = Mock(spec=command.CreateFileForReadSetCommand)
-            case_type_cols, col_id = sample_case_type_cols
-            case_type_cols[0].col_id = col_id
-            sample_cols_genetic_reads[0].id = col_id
+            case_type_cols, ref_col_id = sample_case_type_cols
+            case_type_cols[0].ref_col_id = ref_col_id
+            sample_cols_genetic_reads[0].id = ref_col_id
             sample_cases[0].case_type_id = case_type_cols[0].case_type_id
 
             # Configure repository.crud to return appropriate objects
@@ -533,7 +533,7 @@ class TestCasedbCaseCreateSeq:
                 model_class = args[2]
                 if model_class == model.CaseTypeCol:
                     return case_type_cols
-                elif model_class == model.Col:
+                elif model_class == model.RefCol:
                     return sample_cols_genetic_reads
                 elif model_class == model.Case:
                     return sample_cases
@@ -564,9 +564,9 @@ class TestCasedbCaseCreateSeq:
         ) -> None:
             """Test successful retrieval of cases for Seqs creation."""
             cmd = Mock(spec=command.CreateFileForSeqCommand)
-            case_type_cols, col_id = sample_case_type_cols
-            case_type_cols[0].col_id = col_id
-            sample_cols_genetic_sequence[0].id = col_id
+            case_type_cols, ref_col_id = sample_case_type_cols
+            case_type_cols[0].ref_col_id = ref_col_id
+            sample_cols_genetic_sequence[0].id = ref_col_id
             sample_cases[0].case_type_id = case_type_cols[0].case_type_id
 
             # Configure repository.crud to return appropriate objects
@@ -574,7 +574,7 @@ class TestCasedbCaseCreateSeq:
                 model_class = args[2]
                 if model_class == model.CaseTypeCol:
                     return case_type_cols
-                elif model_class == model.Col:
+                elif model_class == model.RefCol:
                     return sample_cols_genetic_sequence
                 elif model_class == model.Case:
                     return sample_cases
@@ -602,18 +602,18 @@ class TestCasedbCaseCreateSeq:
 
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
+            case_type_col.ref_col_id = uuid4()
 
-            col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.TEXT  # Wrong type for ReadSets
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = case_type_col.ref_col_id
+            ref_col.col_type = enum.ColType.TEXT  # Wrong type for ReadSets
 
             def crud_side_effect(*args: Any, **kwargs: Any) -> Any:
                 model_class = args[2]
                 if model_class == model.CaseTypeCol:
                     return [case_type_col]
-                elif model_class == model.Col:
-                    return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 return []
 
             mock_service.repository.crud.side_effect = crud_side_effect
@@ -640,12 +640,12 @@ class TestCasedbCaseCreateSeq:
 
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
+            case_type_col.ref_col_id = uuid4()
             case_type_col.case_type_id = uuid4()  # Different from case
 
-            col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.GENETIC_READS
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = case_type_col.ref_col_id
+            ref_col.col_type = enum.ColType.GENETIC_READS
 
             case = Mock(spec=model.Case)
             case.id = uuid4()
@@ -655,8 +655,8 @@ class TestCasedbCaseCreateSeq:
                 model_class = args[2]
                 if model_class == model.CaseTypeCol:
                     return [case_type_col]
-                elif model_class == model.Col:
-                    return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 elif model_class == model.Case:
                     return [case]
                 return []
@@ -689,12 +689,12 @@ class TestCasedbCaseCreateSeq:
 
             case_type_col = Mock(spec=model.CaseTypeCol)
             case_type_col.id = uuid4()
-            case_type_col.col_id = uuid4()
+            case_type_col.ref_col_id = uuid4()
             case_type_col.case_type_id = uuid4()
 
-            col = Mock(spec=model.Col)
-            col.id = case_type_col.col_id
-            col.col_type = enum.ColType.GENETIC_READS
+            ref_col = Mock(spec=model.RefCol)
+            ref_col.id = case_type_col.ref_col_id
+            ref_col.col_type = enum.ColType.GENETIC_READS
 
             case = Mock(spec=model.Case)
             case.id = uuid4()
@@ -705,8 +705,8 @@ class TestCasedbCaseCreateSeq:
                 model_class = args[2]
                 if model_class == model.CaseTypeCol:
                     return [case_type_col]
-                elif model_class == model.Col:
-                    return [col]
+                elif model_class == model.RefCol:
+                    return [ref_col]
                 elif model_class == model.Case:
                     return [case]
                 return []

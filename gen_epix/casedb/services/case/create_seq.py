@@ -122,7 +122,7 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     case_ids: list[UUID],
     case_type_col_ids: list[UUID],
 ) -> list[model.Case]:
-    # Get CaseTypeCol and col data
+    # Get CaseTypeCol and RefCol data
     case_type_cols: list[model.CaseTypeCol] = (
         self.repository.crud(  # type: ignore[assignment]
             uow,
@@ -137,17 +137,21 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
         x.id: x for x in case_type_cols if x.id is not None
     }
 
-    # Get Col data
-    col_ids: set[UUID] = {case_type_col.col_id for case_type_col in case_type_cols}
-    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    # Get RefCol data
+    ref_col_ids: set[UUID] = {
+        case_type_col.ref_col_id for case_type_col in case_type_cols
+    }
+    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user_id,
-        model.Col,
+        model.RefCol,
         None,
-        list(col_ids),
+        list(ref_col_ids),
         CrudOperation.READ_SOME,
     )
-    col_by_id: dict[UUID, model.Col] = {x.id: x for x in cols if x.id is not None}
+    ref_col_by_id: dict[UUID, model.RefCol] = {
+        x.id: x for x in ref_cols if x.id is not None
+    }
 
     # TODO: Verify all case type cols are for the given case type
 
@@ -159,16 +163,16 @@ def _get_cases_for_create_file_for_read_sets_or_seqs(
     else:
         raise exc.InvalidArgumentsError("Invalid command type")
     invalid_case_type_col_ids = [
-        x.col_id
+        x.ref_col_id
         for x in case_type_cols
-        if col_by_id[x.col_id].col_type != expected_col_type
+        if ref_col_by_id[x.ref_col_id].col_type != expected_col_type
     ]
     if invalid_case_type_col_ids:
         invalid_case_type_col_ids_str = ", ".join(
             str(x) for x in invalid_case_type_col_ids
         )
         raise exc.InvalidArgumentsError(
-            f"Some columns are not of type GENETIC_READS: {invalid_case_type_col_ids_str}"
+            f"Some columns are not of type {expected_col_type.name}: {invalid_case_type_col_ids_str}"
         )
 
     # Get Case data

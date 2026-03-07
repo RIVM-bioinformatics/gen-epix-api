@@ -204,11 +204,11 @@ class RefDataAccess(Model):
     case_type_dim_ids: set[UUID] = Field(
         default_factory=set, description="The IDs of the allowed case type dimensions."
     )
-    dim_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed dimensions."
+    ref_dim_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed reference dimensions."
     )
-    col_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed columns."
+    ref_col_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed reference columns."
     )
 
     def get_case_type_set_filter(self, field_name: str) -> UuidSetFilter | None:
@@ -246,19 +246,19 @@ class RefDataAccess(Model):
         """
         return self._get_filter(field_name, self.case_type_dim_ids)
 
-    def get_dim_filter(self, field_name: str) -> UuidSetFilter | None:
+    def get_ref_dim_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed dimensions. Returns None if the user has full
-        access to all dimensions.
+        Get a filter for the allowed reference dimensions. Returns None if the user has full
+        access to all reference dimensions.
         """
-        return self._get_filter(field_name, self.dim_ids)
+        return self._get_filter(field_name, self.ref_dim_ids)
 
-    def get_col_filter(self, field_name: str) -> UuidSetFilter | None:
+    def get_ref_col_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed columns. Returns None if the user has full
-        access to all columns.
+        Get a filter for the allowed reference columns. Returns None if the user has full
+        access to all reference columns.
         """
-        return self._get_filter(field_name, self.col_ids)
+        return self._get_filter(field_name, self.ref_col_ids)
 
     def _get_filter(self, field_name: str, members: set[UUID]) -> UuidSetFilter | None:
         """

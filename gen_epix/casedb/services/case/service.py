@@ -54,11 +54,11 @@ from gen_epix.casedb.services.case.crud_case_type_set_category import (
 from gen_epix.casedb.services.case.crud_case_type_set_member import (
     case_service_crud_case_type_set_member,
 )
-from gen_epix.casedb.services.case.crud_col import case_service_crud_col
-from gen_epix.casedb.services.case.crud_dim import case_service_crud_dim
 from gen_epix.casedb.services.case.crud_genetic_distance_protocol import (
     case_service_crud_genetic_distance_protocol,
 )
+from gen_epix.casedb.services.case.crud_ref_col import case_service_crud_ref_col
+from gen_epix.casedb.services.case.crud_ref_dim import case_service_crud_ref_dim
 from gen_epix.casedb.services.case.crud_tree_algorithm import (
     case_service_crud_tree_algorithm,
 )
@@ -812,7 +812,7 @@ class CaseService(BaseCaseService):
 
     def _retrieve_sequence_column_data(
         self, uow: BaseUnitOfWork, user: model.User, seq_case_type_col_id: UUID
-    ) -> tuple[model.CaseTypeCol, model.Col]:
+    ) -> tuple[model.CaseTypeCol, model.RefCol]:
         repository = self.repository
         seq_case_type_col: model.CaseTypeCol = repository.crud(  # type: ignore[assignment]
             uow,
@@ -822,12 +822,12 @@ class CaseService(BaseCaseService):
             seq_case_type_col_id,
             CrudOperation.READ_ONE,
         )
-        seq_col: model.Col = repository.crud(  # type: ignore[assignment]
+        seq_col: model.RefCol = repository.crud(  # type: ignore[assignment]
             uow,
             user.id,
-            model.Col,
+            model.RefCol,
             None,
-            seq_case_type_col.col_id,
+            seq_case_type_col.ref_col_id,
             CrudOperation.READ_ONE,
         )
         if seq_col.col_type != enum.ColType.GENETIC_SEQUENCE:
@@ -1078,17 +1078,21 @@ class CaseService(BaseCaseService):
         """Handle CRUD operations for CaseTypeDim entities."""
         return case_service_crud_case_type_dim(self, cmd)
 
-    def crud_col(
-        self, cmd: command.ColCrudCommand
-    ) -> list[model.Col] | model.Col | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Col entities."""
-        return case_service_crud_col(self, cmd)
+    def crud_ref_col(
+        self, cmd: command.RefColCrudCommand
+    ) -> (
+        list[model.RefCol] | model.RefCol | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefCol entities."""
+        return case_service_crud_ref_col(self, cmd)
 
-    def crud_dim(
-        self, cmd: command.DimCrudCommand
-    ) -> list[model.Dim] | model.Dim | list[UUID] | UUID | list[bool] | bool | None:
-        """Handle CRUD operations for Dim entities."""
-        return case_service_crud_dim(self, cmd)
+    def crud_ref_dim(
+        self, cmd: command.RefDimCrudCommand
+    ) -> (
+        list[model.RefDim] | model.RefDim | list[UUID] | UUID | list[bool] | bool | None
+    ):
+        """Handle CRUD operations for RefDim entities."""
+        return case_service_crud_ref_dim(self, cmd)
 
     def crud_genetic_distance_protocol(
         self, cmd: command.GeneticDistanceProtocolCrudCommand

@@ -50,7 +50,7 @@ def case_service_retrieve_cases_by_query(
             # @ABAC: Verify validity of filter
             cols = _verify_filter_validity(self, user, case_query, uow)
 
-        # @ABAC: Retrieve all cases with read access, and content filtered on case type col read access
+        # @ABAC: Retrieve all cases with read access, and content filtered on case_type_col read access
         cases = self._retrieve_cases_with_content_right(
             uow,
             user.id,
@@ -129,7 +129,7 @@ def _verify_filter_validity(
     user: model.User,
     case_query: model.CaseQuery,
     uow: BaseUnitOfWork,
-) -> list[model.Col]:
+) -> list[model.RefCol]:
     case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
     cols = _verify_case_filter(self, uow, user, case_query.filter)
     return cols
@@ -278,14 +278,14 @@ def case_service_retrieve_cases_by_id(
 #                 )
 
 #         # @ABAC: Verify validity of filter
-#         cols: list[model.Col] = []
+#         ref_cols: list[model.RefCol] = []
 #         if case_query.filter:
 #             # Make sure filter keys are UUIDs
 #             case_query.filter.set_keys(lambda x: UUID(x) if isinstance(x, str) else x)
-#             cols = _verify_case_filter(self, uow, user, case_query.filter)
+#             ref_cols = _verify_case_filter(self, uow, user, case_query.filter)
 
-#         # @ABAC: Retrieve all cases with read access, and content filtered on case type
-#         # col read access
+#         # @ABAC: Retrieve all cases with read access, and content filtered on case_type_col
+#         # read access
 #         cases = self._retrieve_cases_with_content_right(
 #             uow,
 #             user.id,
@@ -364,7 +364,7 @@ def _verify_case_filter(
     uow: BaseUnitOfWork,
     user: model.User,
     composite_filter: CompositeFilter,
-) -> list[model.Col]:
+) -> list[model.RefCol]:
     # Retrieve case type cols corresponding to filter keys
     filter_case_type_col_ids = composite_filter.get_keys()
     filter_case_type_cols: list[model.CaseTypeCol] = (
@@ -378,25 +378,25 @@ def _verify_case_filter(
         )
     )
     # Retrieve cols for case type cols
-    cols: list[model.Col] = self.repository.crud(  # type: ignore[assignment]
+    ref_cols: list[model.RefCol] = self.repository.crud(  # type: ignore[assignment]
         uow,
         user.id,
-        model.Col,
+        model.RefCol,
         None,
         list(
-            {x.col_id for x in filter_case_type_cols}
+            {x.ref_col_id for x in filter_case_type_cols}
         ),  # TODO: consider READ_SOME allowing duplicate ids
         CrudOperation.READ_SOME,
     )
-    cols_ = {x.id: x for x in cols}
-    cols = [cols_[x.col_id] for x in filter_case_type_cols]
+    ref_cols_map = {x.id: x for x in ref_cols}
+    ref_cols = [ref_cols_map[x.ref_col_id] for x in filter_case_type_cols]
     # Verify filter validity
     concept_valid_values: dict[UUID, set[str]] = {}
     region_valid_values: dict[UUID, set[str]] = {}
-    for case_type_col, col, composite_filter in zip(  # type: ignore[assignment]
-        filter_case_type_cols, cols, composite_filter.filters
+    for case_type_col, ref_col, composite_filter in zip(  # type: ignore[assignment]
+        filter_case_type_cols, ref_cols, composite_filter.filters
     ):
-        if col.concept_set_id or col.region_set_id:
+        if ref_col.concept_set_id or ref_col.region_set_id:
             if isinstance(composite_filter, StringSetFilter):
                 validate_concept_or_region(
                     self,
@@ -405,14 +405,14 @@ def _verify_case_filter(
                     concept_valid_values,
                     region_valid_values,
                     case_type_col,
-                    col,
+                    ref_col,
                 )
             else:
                 raise exc.InvalidArgumentsError(
                     f"Column {case_type_col.id}: invalid filter type: {composite_filter.__class__.__name__}"
                 )
 
-    return cols
+    return ref_cols
 
 
 def validate_concept_or_region(
@@ -422,15 +422,17 @@ def validate_concept_or_region(
     concept_valid_values: dict[UUID, set[str]],
     region_valid_values: dict[UUID, set[str]],
     case_type_col: model.CaseTypeCol,
-    col: model.Col,
+    ref_col: model.RefCol,
 ) -> None:
     valid_values = None
-    if col.concept_set_id is not None:
+    if ref_col.concept_set_id is not None:
         # Get valid region set values
-        valid_values = _get_valid_concepts(self, user, concept_valid_values, col)
-    elif col.region_set_id is not None:
+        valid_values = _get_valid_concepts(self, user, concept_valid_values, ref_col)
+    elif ref_col.region_set_id is not None:
         # Get valid region set values
-        valid_values = _get_valid_region_values(self, user, region_valid_values, col)
+        valid_values = _get_valid_region_values(
+            self, user, region_valid_values, ref_col
+        )
         # Handle invalid values
     if valid_values is not None:
         _validate_filter_members(stringset_filter, case_type_col, valid_values)
@@ -455,22 +457,22 @@ def _get_valid_region_values(
     self: BaseCaseService,
     user: model.User,
     region_valid_values: dict[UUID, set[str]],
-    col: model.Col,
+    ref_col: model.RefCol,
 ) -> set[str]:
-    if col.region_set_id not in region_valid_values:
+    if ref_col.region_set_id not in region_valid_values:
         regions: list[model.Region] = self.app.handle(
             command.RegionCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
                 query_filter=UuidSetFilter(
                     key="region_set_id",
-                    members=frozenset({col.region_set_id}),  # type: ignore[arg-type]
+                    members=frozenset({ref_col.region_set_id}),  # type: ignore[arg-type]
                 ),
             )
         )
         assert isinstance(regions, list)
-        region_valid_values[col.region_set_id] = {str(x.id).lower() for x in regions}  # type: ignore[index]
-    valid_values = region_valid_values[col.region_set_id]  # type: ignore[index]
+        region_valid_values[ref_col.region_set_id] = {str(x.id).lower() for x in regions}  # type: ignore[index]
+    valid_values = region_valid_values[ref_col.region_set_id]  # type: ignore[index]
     return valid_values
 
 
@@ -478,37 +480,37 @@ def _get_valid_concepts(
     self: BaseCaseService,
     user: model.User,
     concept_valid_values: dict[UUID, set[str]],
-    col: model.Col,
+    ref_col: model.RefCol,
 ) -> set[str]:
-    if col.concept_set_id not in concept_valid_values:
+    if ref_col.concept_set_id not in concept_valid_values:
         concepts: list[model.Concept] = self.app.handle(
             command.ConceptCrudCommand(
                 user=user,
                 operation=CrudOperation.READ_ALL,
                 query_filter=UuidSetFilter(
                     key="concept_set_id",
-                    members=frozenset({col.concept_set_id}),  # type: ignore[arg-type]
+                    members=frozenset({ref_col.concept_set_id}),  # type: ignore[arg-type]
                 ),
             )
         )
-        concept_valid_values[col.concept_set_id] = {str(x.id).lower() for x in concepts}  # type: ignore[index]
-    return concept_valid_values[col.concept_set_id]  # type: ignore[index]
+        concept_valid_values[ref_col.concept_set_id] = {str(x.id).lower() for x in concepts}  # type: ignore[index]
+    return concept_valid_values[ref_col.concept_set_id]  # type: ignore[index]
 
 
 def _get_map_functions_for_filters(
-    cols: Iterable[model.Col],
+    ref_cols: Iterable[model.RefCol],
 ) -> list[Callable[[Any], Any]]:
 
     # Check validity of filter and generate map_fns
     map_fns: list[Callable[[Any], Any]] = []
-    for col in cols:
-        _get_map_function_for_col(map_fns, col)
+    for ref_col in ref_cols:
+        _get_map_function_for_col(map_fns, ref_col)
     return map_fns
 
 
 def _get_map_function_for_col(
     map_fns: list[Callable[[Any], Any]],
-    col: model.Col,
+    ref_col: model.RefCol,
 ) -> None:
     mapping: dict[enum.ColType, Callable[[Any], Any]] = {
         enum.ColType.TIME_DAY: lambda x: (
@@ -521,11 +523,11 @@ def _get_map_function_for_col(
             else x
         ),
     }
-    if col.col_type in mapping:
-        map_fns.append(mapping[col.col_type])
-    elif col.col_type in enum.ColTypeSet.COL_TYPES_STR_LIKE.value:
+    if ref_col.col_type in mapping:
+        map_fns.append(mapping[ref_col.col_type])
+    elif ref_col.col_type in enum.ColTypeSet.COL_TYPES_STR_LIKE.value:
         map_fns.append(lambda x: x if isinstance(x, str) else str(x))
-    elif col.col_type in enum.ColTypeSet.NUMBER.value - {enum.ColType.DECIMAL_0}:
+    elif ref_col.col_type in enum.ColTypeSet.NUMBER.value - {enum.ColType.DECIMAL_0}:
         map_fns.append(lambda x: Decimal(x) if isinstance(x, str) else x)
     else:
-        raise exc.InvalidArgumentsError(f"Unsupported column type: {col.col_type}")
+        raise exc.InvalidArgumentsError(f"Unsupported column type: {ref_col.col_type}")

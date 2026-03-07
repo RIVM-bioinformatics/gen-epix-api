@@ -284,7 +284,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         self.assertEqual(self.service.app.handle.call_count, 3)  # type: ignore[attr-defined]
 
     def test_get_case_abac_with_policies_builds_intersection(self) -> None:
-        """Intersection across org/user policies and col sets is computed correctly."""
+        """Intersection across org/user policies and case type col sets is computed correctly."""
 
         cmd = self.create_cmd_with_user(self.user_id)
 
@@ -346,7 +346,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
 
         # app.handle calls: CaseTypeColCrud, CaseTypeSetMemberCrud, CaseTypeColSetMemberCrud
         self.service.app.handle.side_effect = [  # type: ignore[attr-defined]
-            # CaseTypeColCrudCommand -> produces mapping case_type_id -> {col ids}
+            # CaseTypeColCrudCommand -> produces mapping case_type_id -> {case type col ids}
             [
                 SimpleNamespace(
                     id=self.case_type_col_id_1, case_type_id=self.case_type_id
@@ -365,7 +365,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
                     case_type_id=self.case_type_id,
                 ),
             ],
-            # CaseTypeColSetMemberCrudCommand -> memberships for read/write sets
+            # CaseTypeColSetMemberCrudCommand -> memberships for read/write case type col sets
             [
                 SimpleNamespace(
                     case_type_col_set_id=self.read_case_type_col_set_id,
@@ -395,7 +395,7 @@ class TestGetCaseAbac(BaseAbacTestCase):
         access = access_for_ct[self.data_collection_id]
         self.assertTrue(access.add_case)
         self.assertFalse(access.remove_case)  # AND of True and False -> False
-        # read/write col ids are intersection across col map and set members AND across org/user dicts
+        # read/write case type col ids are intersection across case type col map and set members AND across org/user dicts
         self.assertSetEqual(
             access.read_case_type_col_ids,
             {self.case_type_col_id_1, self.case_type_col_id_2},

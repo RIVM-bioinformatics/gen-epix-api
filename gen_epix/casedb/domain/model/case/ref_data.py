@@ -114,10 +114,17 @@ class TreeAlgorithm(Model):
     )
 
 
-class Dim(Model):
+class RefDim(Model):
+    """
+    A reference dimension that is not linked to a specific case type, to promote reuse
+    and consistency. The reference dimension groups a number of reference columns that
+    logically belong together and contains part of the information needed to define a
+    dimension in a case, such as the code and label.
+    """
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="dims",
-        table_name="dim",
+        snake_case_plural_name="ref_dims",
+        table_name="ref_dim",
         persistable=True,
         keys=create_keys({1: "code"}),
     )
@@ -145,18 +152,26 @@ class Dim(Model):
     @field_validator("code", mode="before")
     @classmethod
     def validate_code(cls, value: Any) -> str:
+        """Ensure that the code is always a string."""
         return str(value)
 
 
-class Col(Model):
+class RefCol(Model):
+    """
+    A reference column that is not linked to a specific case type, to promote reuse
+    and consistency. The reference column belongs to a reference dimension and contains
+    part of the information needed to define a column in a case, such as the code, type
+    and possible concept set.
+    """
+
     ENTITY: ClassVar = Entity(
-        snake_case_plural_name="cols",
-        table_name="col",
+        snake_case_plural_name="ref_cols",
+        table_name="ref_col",
         persistable=True,
-        keys=create_keys({1: ("dim_id", "code")}),
+        keys=create_keys({1: ("ref_dim_id", "code")}),
         links=create_links(
             {
-                1: ("dim_id", Dim, "dim"),
+                1: ("ref_dim_id", RefDim, "ref_dim"),
                 2: ("concept_set_id", ConceptSet, "concept_set"),
                 3: ("region_set_id", RegionSet, "region_set"),
                 4: (
@@ -167,8 +182,8 @@ class Col(Model):
             }
         ),
     )
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    dim: Dim | None = Field(default=None, description="The dimension")
+    ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
+    ref_dim: RefDim | None = Field(default=None, description="The dimension")
     code_suffix: str | None = Field(
         default=None,
         description=(
@@ -228,10 +243,12 @@ class Col(Model):
     @field_validator("code", mode="before")
     @classmethod
     def validate_code(cls, value: Any) -> str:
+        """Ensure that the code is always a string."""
         return str(value)
 
     @model_validator(mode="after")
     def _validate_state(self) -> Self:
+        """Validate the consistency of the RefCol based on its type and linked entities."""
         if self.col_type in enum.ColTypeSet.HAS_CONCEPT_SET.value:
             if self.concept_set_id is None:
                 raise exc.InvalidArgumentsError(
@@ -251,6 +268,15 @@ class Col(Model):
 
 
 class CaseType(Model):
+    """
+    A case type is the data equivalent of an epidemiological case definition. By
+    extension, it can also include non-cases that are relevant for the case definition,
+    e.g. controls or samples from non-human origin. In addition, the case type contains
+    some operational settings information.
+
+    Columns and dimensions are linked to case types.
+    """
+
     ENTITY: ClassVar = Entity(
         snake_case_plural_name="case_types",
         table_name="case_type",
@@ -345,18 +371,18 @@ class CaseTypeDim(Model):
         snake_case_plural_name="case_type_dims",
         table_name="case_type_dim",
         persistable=True,
-        keys=create_keys({1: ("case_type_id", "dim_id", "occurrence")}),
+        keys=create_keys({1: ("case_type_id", "ref_dim_id", "occurrence")}),
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
-                2: ("dim_id", Dim, "dim"),
+                2: ("ref_dim_id", RefDim, "ref_dim"),
             }
         ),
     )
     case_type_id: UUID = Field(description="The ID of the case type. FOREIGN KEY")
     case_type: CaseType | None = Field(default=None, description="The case type")
-    dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
-    dim: Dim | None = Field(default=None, description="The dimension")
+    ref_dim_id: UUID = Field(description="The ID of the dimension. FOREIGN KEY")
+    ref_dim: RefDim | None = Field(default=None, description="The dimension")
     occurrence: int = Field(
         default=0,
         description=(
@@ -402,12 +428,12 @@ class CaseTypeCol(Model):
         snake_case_plural_name="case_type_cols",
         table_name="case_type_col",
         persistable=True,
-        keys=create_keys({1: ("case_type_dim_id", "col_id")}),
+        keys=create_keys({1: ("case_type_dim_id", "ref_col_id")}),
         links=create_links(
             {
                 1: ("case_type_id", CaseType, "case_type"),
                 2: ("case_type_dim_id", CaseTypeDim, "case_type_dim"),
-                3: ("col_id", Col, "col"),
+                3: ("ref_col_id", RefCol, "ref_col"),
             }
         ),
     )
@@ -419,8 +445,8 @@ class CaseTypeCol(Model):
     case_type_dim: CaseTypeDim | None = Field(
         default=None, description="The case type dimension"
     )
-    col_id: UUID = Field(description="The ID of the column. FOREIGN KEY")
-    col: Col | None = Field(default=None, description="The column")
+    ref_col_id: UUID = Field(description="The ID of the column. FOREIGN KEY")
+    ref_col: RefCol | None = Field(default=None, description="The column")
     code: str = Field(
         description=(
             "The code for the case type column, "
@@ -647,4 +673,5 @@ class CaseTypeSetMember(Model):
         default=None, description="The case type set"
     )
     case_type_id: UUID = copy_model_field(CaseTypeDim, "case_type_id")
+    case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
     case_type: CaseType | None = copy_model_field(CaseTypeDim, "case_type")
