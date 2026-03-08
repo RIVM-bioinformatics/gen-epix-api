@@ -267,34 +267,24 @@ class OrganizationIdentifierIssuerLinkMixin(RowMetadataMixin):
 
 
 @declarative_mixin
-class ExternalIdentifierMixin(RowMetadataMixin):
+class IdentifierMixin(RowMetadataMixin):
     """
     SQLAlchemy model mixin for derived domain models whose SQLAlchemy models are
     created under a different declarative base.
     """
 
-    identifier_type: Mapped[enum.IdentifierType] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "identifier_type"
-    )
-
     @declared_attr
     def identifier_issuer_id(cls) -> Mapped[UUID]:
         return create_mapped_column(
-            DOMAIN, model.ExternalIdentifier, "identifier_issuer_id"
-        )
-
-    @declared_attr
-    def identifier_issuer(cls) -> Mapped[model.IdentifierIssuer]:
-        return create_mapped_column(
-            DOMAIN, model.ExternalIdentifier, "identifier_issuer"
+            DOMAIN, model.BaseIdentifier, "identifier_issuer_id"
         )
 
     external_id: Mapped[str] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "external_id"
+        DOMAIN, model.BaseIdentifier, "external_id"
     )
 
     internal_id: Mapped[UUID] = create_mapped_column(
-        DOMAIN, model.ExternalIdentifier, "internal_id"
+        DOMAIN, model.BaseIdentifier, "internal_id"
     )
 
 
@@ -396,9 +386,9 @@ class OrganizationIdentifierIssuerLink(Base, OrganizationIdentifierIssuerLinkMix
     )
 
 
-class ExternalIdentifier(Base, ExternalIdentifierMixin):
+class Identifier(Base, IdentifierMixin):
     """
     SQLAlchemy model for the corresponding persistable domain model.
     """
 
-    __tablename__, __table_args__ = create_table_args(model.ExternalIdentifier)
+    __tablename__, __table_args__ = create_table_args(model.BaseIdentifier)

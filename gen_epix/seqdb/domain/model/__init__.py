@@ -5,16 +5,14 @@ from gen_epix.commondb.domain import model as common_model
 from gen_epix.commondb.domain.model import (
     SORTED_MODELS_BY_SERVICE_TYPE as _COMMON_SORTED_MODELS_BY_SERVICE_TYPE,
 )
+from gen_epix.commondb.domain.model import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model import Contact as Contact
 from gen_epix.commondb.domain.model import DataCollection as DataCollection
 from gen_epix.commondb.domain.model import DataCollectionSet as DataCollectionSet
 from gen_epix.commondb.domain.model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.domain.model import ExternalIdentifier as ExternalIdentifier
-from gen_epix.commondb.domain.model import (
-    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
-)
+from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 from gen_epix.commondb.domain.model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.domain.model import Model as Model
 from gen_epix.commondb.domain.model import Organization as Organization

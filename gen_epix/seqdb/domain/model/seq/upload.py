@@ -9,6 +9,7 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
+    IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -33,13 +34,15 @@ from gen_epix.seqdb.domain.model.seq.seq import Seq
 from gen_epix.util import copy_model_field
 
 
-class ReadSetForUpload(ReadSet):
+class ReadSetForUpload(ReadSet, IdentifiersMixin):
     """
     A read set intended for upload.
     """
 
     ENTITY: ClassVar = ReadSet.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "ReadSetForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -65,13 +68,15 @@ class ReadSetForUpload(ReadSet):
         return self
 
 
-class SeqForUpload(Seq):
+class SeqForUpload(Seq, IdentifiersMixin):
     """
     A sequence intended for upload.
     """
 
     ENTITY: ClassVar = Seq.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "SeqForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -97,7 +102,7 @@ class SeqForUpload(Seq):
         return self
 
 
-class SnpProfileForUpload(SnpProfile):
+class SnpProfileForUpload(SnpProfile, IdentifiersMixin):
     """
     A SNP profile record intended for upload. Equal to a SnpProfile, with
     additional variables.
@@ -105,6 +110,8 @@ class SnpProfileForUpload(SnpProfile):
 
     ENTITY: ClassVar[Entity] = SnpProfile.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "SnpProfileForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -191,7 +198,7 @@ class AlleleForUpload(Allele):
     )
 
 
-class AlleleProfileForUpload(AlleleProfile):
+class AlleleProfileForUpload(AlleleProfile, IdentifiersMixin):
     """
     An allele profile record intended for upload. Equal to an AlleleProfile, with
     additional variables.
@@ -199,6 +206,8 @@ class AlleleProfileForUpload(AlleleProfile):
 
     ENTITY: ClassVar[Entity] = AlleleProfile.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "AlleleProfileForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -330,7 +339,7 @@ class AlleleProfileForUpload(AlleleProfile):
         return self
 
 
-class MlvaProfileForUpload(MlvaProfile):
+class MlvaProfileForUpload(MlvaProfile, IdentifiersMixin):
     """
     An MLVA profile record intended for upload. Equal to an MlvaProfile, with
     additional variables.
@@ -338,6 +347,8 @@ class MlvaProfileForUpload(MlvaProfile):
 
     ENTITY: ClassVar[Entity] = MlvaProfile.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "MlvaProfileForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -449,7 +460,7 @@ class MlvaProfileForUpload(MlvaProfile):
         return self
 
 
-class KmerProfileForUpload(KmerProfile):
+class KmerProfileForUpload(KmerProfile, IdentifiersMixin):
     """
     A k-mer profile record intended for upload. Equal to a KmerProfile, with
     additional variables.
@@ -457,6 +468,8 @@ class KmerProfileForUpload(KmerProfile):
 
     ENTITY: ClassVar[Entity] = KmerProfile.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "KmerProfileForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -541,7 +554,8 @@ class SampleForUpload(ParentForUpload):
     ENTITY: ClassVar = ParentForUpload.ENTITY.clone()
     NAME = "SampleForUpload"
 
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
     PARENT_CLASS: ClassVar = Sample
     PARENT_FIELD_NAME: ClassVar = "sample"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
@@ -780,21 +794,6 @@ class SampleBatchForUpload(BaseBatchForUpload):
     def has_ast_measurements(self) -> bool:
         """Indicates whether there are any AST measurements in the sample set."""
         return any(len(x.ast_measurements or []) > 0 for x in self.samples)
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        # Verify that samples contain no duplicate sample_ids
-        sample_ids = [x.id for x in self.samples if x.id is not None]
-        if len(sample_ids) != len(set(sample_ids)):
-            raise ValueError("Samples must not contain duplicate sample IDs.")
-        # Verify that samples contains no duplicate external_identifiers
-        all_external_identifiers = []
-        for sample in self.samples:
-            if sample.external_identifiers is not None:
-                all_external_identifiers.extend(sample.external_identifiers)
-        if len(all_external_identifiers) != len(set(all_external_identifiers)):
-            raise ValueError("Samples must not contain duplicate external_identifiers.")
-        return self
 
 
 class CalculateSeqDistancesResult(UploadResult):

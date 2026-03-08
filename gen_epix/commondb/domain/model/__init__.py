@@ -5,6 +5,7 @@ from gen_epix.commondb.domain.model.abac import (
     OrganizationAdminPolicy as OrganizationAdminPolicy,
 )
 from gen_epix.commondb.domain.model.base import Model as Model
+from gen_epix.commondb.domain.model.organization import BaseIdentifier as BaseIdentifier
 from gen_epix.commondb.domain.model.organization import Contact as Contact
 from gen_epix.commondb.domain.model.organization import DataCollection as DataCollection
 from gen_epix.commondb.domain.model.organization import (
@@ -14,10 +15,7 @@ from gen_epix.commondb.domain.model.organization import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
 from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifier as ExternalIdentifier,
-)
-from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
+    IdentifierForUpload as IdentifierForUpload,
 )
 from gen_epix.commondb.domain.model.organization import (
     IdentifierIssuer as IdentifierIssuer,
@@ -51,16 +49,14 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchUploadResult as BaseBatchUploadResult,
 )
 from gen_epix.commondb.domain.model.upload import DataIssue as DataIssue
-from gen_epix.commondb.domain.model.upload import (
-    ExternalIdentifiersMixin as ExternalIdentifiersMixin,
-)
+from gen_epix.commondb.domain.model.upload import IdentifiersMixin as IdentifiersMixin
 from gen_epix.commondb.domain.model.upload import ParentForUpload as ParentForUpload
 from gen_epix.commondb.domain.model.upload import (
     ParentUploadResult as ParentUploadResult,
 )
 from gen_epix.commondb.domain.model.upload import UploadResult as UploadResult
 from gen_epix.commondb.domain.model.upload import (
-    UploadResultWithExternalIdentifiers as UploadResultWithExternalIdentifiers,
+    UploadResultWithIdentifiers as UploadResultWithIdentifiers,
 )
 from gen_epix.commondb.domain.util import (
     complete_stored_model_field_props as complete_stored_model_field_props,
@@ -86,7 +82,7 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
         DataCollectionSetMember,
         IdentifierIssuer,
         OrganizationIdentifierIssuerLink,
-        ExternalIdentifier,
+        BaseIdentifier,
         Site,
         Contact,
         UserNameEmail,
@@ -99,6 +95,10 @@ SORTED_MODELS_BY_SERVICE_TYPE: dict[
 }
 
 SORTED_SERVICE_TYPES = tuple(SORTED_MODELS_BY_SERVICE_TYPE.keys())
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
+
+COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 
 COMMON_MODEL_MAP: dict[type[fastapp.Model], type[fastapp.Model]] = {}
 

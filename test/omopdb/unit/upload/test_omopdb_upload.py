@@ -83,8 +83,8 @@ from gen_epix.commondb.domain.enum import (
 )
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.organization import (
-    ExternalIdentifier,
-    ExternalIdentifierForUpload,
+    BaseIdentifier,
+    IdentifierForUpload,
     IdentifierIssuer,
     User,
 )
@@ -213,7 +213,7 @@ class BasePersonUploadTestCase(TestCase):
         self,
         person_id: UUID | None = None,
         person: Person | None | object = "_DEFAULT",
-        external_identifiers: list[ExternalIdentifierForUpload] | None = None,
+        external_identifiers: list[IdentifierForUpload] | None = None,
         measurements: list[MeasurementForUpload] | None = None,
         observations: list[ObservationForUpload] | None = None,
         specimens: list[SpecimenForUpload] | None = None,
@@ -225,7 +225,7 @@ class BasePersonUploadTestCase(TestCase):
         return PersonForUpload(
             id=person_id or NULL_ID,
             person=person,  # type: ignore[arg-type]
-            external_identifiers=external_identifiers,
+            identifiers=external_identifiers,
             measurements=measurements,
             observations=observations,
             specimens=specimens,
@@ -336,7 +336,7 @@ class BasePersonUploadTestCase(TestCase):
         specimen_concept_int_id: int = 4001225,
         specimen_type_concept_int_id: int = 32817,
         specimen_date: date | None = None,
-        external_identifiers: list[ExternalIdentifierForUpload] | None = None,
+        external_identifiers: list[IdentifierForUpload] | None = None,
     ) -> SpecimenForUpload:
         """Create a test SpecimenForUpload with integer concept IDs.
 
@@ -355,7 +355,7 @@ class BasePersonUploadTestCase(TestCase):
             anatomic_site_concept_int_id=0,
             disease_status_concept_int_id=0,
             derived_from_specimen_concept_int_id=0,
-            external_identifiers=external_identifiers,  # type: ignore[call-arg]
+            identifiers=external_identifiers,  # type: ignore[call-arg]
         )
 
     def create_measurement_relation_for_upload(
@@ -406,9 +406,9 @@ class BasePersonUploadTestCase(TestCase):
         identifier_issuer_id: UUID | None = None,
         identifier_issuer_code: str = "test_issuer",
         external_id: str = "test_external_id",
-    ) -> ExternalIdentifierForUpload:
+    ) -> IdentifierForUpload:
         """Create a test external identifier for upload."""
-        return ExternalIdentifierForUpload(
+        return IdentifierForUpload(
             identifier_issuer_id=identifier_issuer_id or NULL_ID,
             identifier_issuer_code=identifier_issuer_code,
             external_id=external_id,
@@ -416,13 +416,13 @@ class BasePersonUploadTestCase(TestCase):
 
     def get_external_identifier_from_for_upload(
         self,
-        external_identifier_for_upload: ExternalIdentifierForUpload,
+        external_identifier_for_upload: IdentifierForUpload,
         internal_id: UUID,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
-    ) -> ExternalIdentifier:
+    ) -> BaseIdentifier:
         """Get an ExternalIdentifier from an ExternalIdentifierForUpload, with optional overrides."""
-        return ExternalIdentifier(
+        return BaseIdentifier(
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -432,13 +432,13 @@ class BasePersonUploadTestCase(TestCase):
 
     def get_specimen_external_identifier_from_for_upload(
         self,
-        external_identifier_for_upload: ExternalIdentifierForUpload,
+        external_identifier_for_upload: IdentifierForUpload,
         internal_id: UUID,
         identifier_issuer_id: UUID | None = None,
         external_id: str | None = None,
-    ) -> ExternalIdentifier:
+    ) -> BaseIdentifier:
         """Get the ExternalIdentifier model for Specimen, corresponding to an ExternalIdentifierForUpload model, with optional overrides."""
-        return ExternalIdentifier(
+        return BaseIdentifier(
             identifier_issuer_id=identifier_issuer_id
             or external_identifier_for_upload.identifier_issuer_id,  # type: ignore[arg-type]
             external_id=external_id or external_identifier_for_upload.external_id,
@@ -877,7 +877,7 @@ class Test6ExternalIdentifiers(BasePersonUploadTestCase):
         self.assertStatusCount(batch_result, n_created=2)
         self.assertEqual(batch_result.persons[0].id, created_person_id)
         self.assertEqual(
-            batch_result.persons[0].external_identifiers[0].id,  # type: ignore[index]
+            batch_result.persons[0].identifiers[0].id,  # type: ignore[index]
             created_external_identifier_id,
         )
 

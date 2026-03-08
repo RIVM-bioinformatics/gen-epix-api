@@ -72,9 +72,7 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.repositories.sa_model import (
-    ExternalIdentifier as ExternalIdentifier,
-)
+from gen_epix.commondb.repositories.sa_model import Identifier as Identifier
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
@@ -111,7 +109,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
         model.IdentifierIssuer: IdentifierIssuer,
-        model.ExternalIdentifier: ExternalIdentifier,
+        model.BaseIdentifier: Identifier,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,
         model.OrganizationSetMember: OrganizationSetMember,

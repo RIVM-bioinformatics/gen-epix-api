@@ -1,6 +1,4 @@
-from gen_epix.commondb.domain.model import (
-    ExternalIdentifierForUpload as ExternalIdentifierForUpload,
-)
+from gen_epix.commondb.domain.model import IdentifierForUpload as IdentifierForUpload
 
 # pylint: disable=useless-import-alias
 from gen_epix.seqdb.domain.model.seq.alignment import (

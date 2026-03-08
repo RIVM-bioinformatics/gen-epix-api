@@ -660,14 +660,14 @@ class TestCaseUpload(CaseUploadSetup):
             if value is not None:
                 case_content[col_id] = value
         # Add read sets and seqs if applicable
-        external_identifier: commondb_model.ExternalIdentifierForUpload | None = None
+        external_identifier: commondb_model.IdentifierForUpload | None = None
         if found_read_set_col_ids or found_seq_col_ids:
             # Get external identifier if applicable
             identifier_issuer_id = UUID(row["seqdb.identifier_issuer_id"])
             sample_id_col_id = UUID(row["seqdb.sample_id_col_id"])
             sample_id = case_content.get(sample_id_col_id)
             external_identifier = (
-                commondb_model.ExternalIdentifierForUpload(
+                commondb_model.IdentifierForUpload(
                     identifier_issuer_id=identifier_issuer_id, external_id=sample_id
                 )
                 if sample_id is not None
@@ -681,7 +681,7 @@ class TestCaseUpload(CaseUploadSetup):
                 read_sets.append(
                     model.ReadSetForUpload(
                         col_id=col_id,
-                        external_sample_id=external_identifier,
+                        other_sample_identifier=external_identifier,
                         sequencing_protocol_id=sequencing_protocol_id,
                     )
                 )
@@ -704,7 +704,7 @@ class TestCaseUpload(CaseUploadSetup):
         if for_upload:
             return model.CaseForUpload(
                 id=case.id,
-                external_identifiers=(
+                identifiers=(
                     None if external_identifier is None else [external_identifier]
                 ),
                 case=case,

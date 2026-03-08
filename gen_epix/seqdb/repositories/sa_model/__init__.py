@@ -7,9 +7,7 @@ from gen_epix.commondb.repositories.sa_model import (
 from gen_epix.commondb.repositories.sa_model import (
     DataCollectionSetMember as DataCollectionSetMember,
 )
-from gen_epix.commondb.repositories.sa_model import (
-    ExternalIdentifier as ExternalIdentifier,
-)
+from gen_epix.commondb.repositories.sa_model import Identifier as Identifier
 from gen_epix.commondb.repositories.sa_model import IdentifierIssuer as IdentifierIssuer
 from gen_epix.commondb.repositories.sa_model import Organization as Organization
 from gen_epix.commondb.repositories.sa_model import (
@@ -23,9 +21,7 @@ from gen_epix.commondb.repositories.sa_model import (
     OrganizationSetMember as OrganizationSetMember,
 )
 from gen_epix.commondb.repositories.sa_model import Outage as Outage
-from gen_epix.commondb.repositories.sa_model import (
-    RowMetadataMixin,
-)
+from gen_epix.commondb.repositories.sa_model import RowMetadataMixin
 from gen_epix.commondb.repositories.sa_model import Site as Site
 from gen_epix.commondb.repositories.sa_model import User as User
 from gen_epix.commondb.repositories.sa_model import UserInvitation as UserInvitation
@@ -119,7 +115,7 @@ SA_MODELS_BY_SERVICE_TYPE: dict[enum.ServiceType, dict[type[model.Model], type]]
         model.DataCollection: DataCollection,
         model.DataCollectionSet: DataCollectionSet,
         model.DataCollectionSetMember: DataCollectionSetMember,
-        model.ExternalIdentifier: ExternalIdentifier,
+        model.BaseIdentifier: Identifier,
         model.IdentifierIssuer: IdentifierIssuer,
         model.Organization: Organization,
         model.OrganizationSet: OrganizationSet,

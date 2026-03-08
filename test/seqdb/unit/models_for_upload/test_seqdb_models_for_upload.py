@@ -18,7 +18,7 @@ import pytest
 from pydantic import ValidationError
 
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.seqdb.domain import model
 
 
@@ -27,7 +27,7 @@ class TestModelExternalIdentifier(TestCase):
 
     def test_valid_with_identifier_issuer_code(self) -> None:
         """Test valid ExternalIdentifier with identifier_issuer_code."""
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_code="TEST_ISSUER", external_id="SAMPLE123"
         )
         self.assertEqual(external_identifier.identifier_issuer_code, "TEST_ISSUER")
@@ -37,7 +37,7 @@ class TestModelExternalIdentifier(TestCase):
     def test_valid_with_identifier_issuer_id(self) -> None:
         """Test valid ExternalIdentifier with identifier_issuer_id."""
         issuer_id = uuid4()
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_id=issuer_id, external_id="SAMPLE123"
         )
         self.assertIsNone(external_identifier.identifier_issuer_code)
@@ -47,7 +47,7 @@ class TestModelExternalIdentifier(TestCase):
     def test_valid_with_both_issuer_fields(self) -> None:
         """Test valid ExternalIdentifier with both issuer fields."""
         issuer_id = uuid4()
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_code="TEST_ISSUER",
             identifier_issuer_id=issuer_id,
             external_id="SAMPLE123",
@@ -58,22 +58,22 @@ class TestModelExternalIdentifier(TestCase):
     def test_invalid_missing_both_issuer_fields(self) -> None:
         """Test ValidationError when both issuer fields are missing."""
         with pytest.raises(ValidationError):
-            model.ExternalIdentifierForUpload(external_id="SAMPLE123")
+            model.IdentifierForUpload(external_id="SAMPLE123")
 
     def test_max_length_validation(self) -> None:
         """Test field length validation."""
         # Valid lengths
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_code="A" * 255, external_id="B" * 255
         )
         self.assertEqual(len(external_identifier.identifier_issuer_code or []), 255)
         self.assertEqual(len(external_identifier.external_id), 255)
         # Exceeding max lengths
         with pytest.raises(ValidationError):
-            model.ExternalIdentifierForUpload(
+            model.IdentifierForUpload(
                 identifier_issuer_code="A" * 256, external_id="B" * 255
             )
-            model.ExternalIdentifierForUpload(
+            model.IdentifierForUpload(
                 identifier_issuer_code="A" * 255, external_id="B" * 256
             )
 
@@ -788,12 +788,12 @@ class TestModelSampleForUpload(TestCase):
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(sample.id, sample_id)
-        self.assertIsNone(sample.external_identifiers)
+        self.assertIsNone(sample.identifiers)
 
     def test_valid_with_sample_ids(self) -> None:
         """Test valid SampleForUpload with external_identifiers."""
 
-        external_identifier = ExternalIdentifierForUpload(
+        external_identifier = IdentifierForUpload(
             identifier_issuer_id=uuid4(),
             external_id="SAMPLE123",
         )
@@ -802,17 +802,17 @@ class TestModelSampleForUpload(TestCase):
             [allele_id]
         )
         sample = model.SampleForUpload(
-            external_identifiers=[external_identifier],
+            identifiers=[external_identifier],
             allele_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertIsNone(sample.id)
-        self.assertEqual(len(sample.external_identifiers or []), 1)
+        self.assertEqual(len(sample.identifiers or []), 1)
 
     def test_valid_with_both_sample_identifiers(self) -> None:
         """Test valid SampleForUpload with both sample_id and sample_ids."""
         sample_id = uuid4()
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_code="ISSUER123", external_id="SAMPLE123"
         )
         allele_id = uuid4()
@@ -821,20 +821,20 @@ class TestModelSampleForUpload(TestCase):
         )
         sample = model.SampleForUpload(
             id=sample_id,
-            external_identifiers=[external_identifier],
+            identifiers=[external_identifier],
             allele_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertEqual(sample.id, sample_id)
-        self.assertEqual(len(sample.external_identifiers or []), 1)
+        self.assertEqual(len(sample.identifiers or []), 1)
 
     def test_valid_with_multiple_external_ids(self) -> None:
         """Test valid SampleForUpload with multiple external identifiers."""
         external_identifiers = [
-            model.ExternalIdentifierForUpload(
+            model.IdentifierForUpload(
                 identifier_issuer_code="ISSUER1", external_id="SAMPLE1"
             ),
-            model.ExternalIdentifierForUpload(
+            model.IdentifierForUpload(
                 identifier_issuer_code="ISSUER2", external_id="SAMPLE2"
             ),
         ]
@@ -843,11 +843,11 @@ class TestModelSampleForUpload(TestCase):
             [allele_id]
         )
         sample_for_upload = model.SampleForUpload(
-            external_identifiers=external_identifiers,
+            identifiers=external_identifiers,
             allele_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
-        self.assertEqual(len(sample_for_upload.external_identifiers or []), 2)
+        self.assertEqual(len(sample_for_upload.identifiers or []), 2)
 
     def test_valid_with_optional_fields(self) -> None:
         """Test valid SampleForUpload with optional fields."""
@@ -876,7 +876,7 @@ class TestModelSampleForUpload(TestCase):
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
         self.assertIsNone(sample.id)
-        self.assertIsNone(sample.external_identifiers)
+        self.assertIsNone(sample.identifiers)
 
     def test_invalid_empty_sample_ids(self) -> None:
         """Test that SampleForUpload accepts empty external_identifiers list."""
@@ -886,11 +886,11 @@ class TestModelSampleForUpload(TestCase):
         )
         # This should not raise ValidationError since empty list is valid
         sample_for_upload = model.SampleForUpload(
-            external_identifiers=[],
+            identifiers=[],
             allele_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
-        self.assertEqual(len(sample_for_upload.external_identifiers or []), 0)
+        self.assertEqual(len(sample_for_upload.identifiers or []), 0)
 
     def test_valid_with_single_seq(self) -> None:
         """Test SampleForUpload with a single SeqForUpload."""
@@ -965,7 +965,7 @@ class TestModelSampleForUpload(TestCase):
     def test_valid_with_seqs_and_external_ids(self) -> None:
         """Test SampleForUpload with both seqs and external_identifiers."""
         sample_id = uuid4()
-        external_identifier = model.ExternalIdentifierForUpload(
+        external_identifier = model.IdentifierForUpload(
             identifier_issuer_code="TEST_ISSUER", external_id="SAMPLE_123"
         )
         seq_upload = self._create_sample_seq_for_upload(sample_id=NULL_ID)
@@ -977,14 +977,14 @@ class TestModelSampleForUpload(TestCase):
 
         sample_for_upload = model.SampleForUpload(
             id=sample_id,
-            external_identifiers=[external_identifier],
+            identifiers=[external_identifier],
             seqs=[seq_upload],
             allele_profiles=[allele_profile],
             sample=model.Sample(created_in_data_collection_id=uuid4()),
         )
 
         self.assertEqual(sample_for_upload.id, sample_id)
-        self.assertEqual(len(sample_for_upload.external_identifiers or []), 1)
+        self.assertEqual(len(sample_for_upload.identifiers or []), 1)
         self.assertEqual(len(sample_for_upload.seqs or []), 1)
         self.assertEqual((sample_for_upload.seqs or [])[0].sample_id, NULL_ID)
 

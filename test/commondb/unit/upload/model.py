@@ -7,7 +7,6 @@ import gen_epix.fastapp.model
 from gen_epix import fastapp
 from gen_epix.commondb.domain import command as commondb_command
 from gen_epix.commondb.domain import model as commondb_model
-from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model.upload import UploadResult
 from gen_epix.commondb.services.upload import BatchUploader
@@ -65,6 +64,14 @@ class Parent(fastapp.Model):
         default=None,
         description="A dict value that can be mutated only if the current value is empty (None).",
     )
+
+
+class ParentIdentifier(commondb_model.BaseIdentifier):
+    ENTITY: ClassVar = commondb_model.BaseIdentifier.ENTITY.clone(
+        update={"persistable": True}
+    )
+    NAME: ClassVar = "ParentIdentifier"
+    MODEL_CLASS: ClassVar = Parent
 
 
 class Child1(fastapp.Model):
@@ -135,6 +142,14 @@ class Child2(fastapp.Model):
     )
 
 
+class Child2Identifier(commondb_model.BaseIdentifier):
+    ENTITY: ClassVar = commondb_model.BaseIdentifier.ENTITY.clone(
+        update={"persistable": True}
+    )
+    NAME: ClassVar = "Child2Identifier"
+    MODEL_CLASS: ClassVar = Child2
+
+
 class Child1ForUpload(Child1):
     ENTITY: ClassVar = Child1.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child1ForUpload"
@@ -163,10 +178,11 @@ class Child1ForUpload(Child1):
         return self
 
 
-class Child2ForUpload(Child2, commondb_model.ExternalIdentifiersMixin):
+class Child2ForUpload(Child2, commondb_model.IdentifiersMixin):
     ENTITY: ClassVar = Child2.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "Child2ForUpload"
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.SAMPLE
+    IDENTIFIER_CLASS: ClassVar = Child2Identifier
+
     parent_id: UUID = Field(
         default=NULL_ID,
         description="The ID of the parent model, if available. Otherwise put the null ID.",
@@ -180,7 +196,7 @@ class Child2ForUpload(Child2, commondb_model.ExternalIdentifiersMixin):
 class ParentForUpload(commondb_model.ParentForUpload):
     ENTITY: ClassVar = commondb_model.ParentForUpload.ENTITY.clone()
     NAME: ClassVar = "ParentForUpload"
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = IdentifierType.PERSON
+    IDENTIFIER_CLASS: ClassVar = ParentIdentifier
     PARENT_CLASS: ClassVar = Parent
     PARENT_FIELD_NAME: ClassVar = "parent"
     CHILD_FOR_UPLOAD_CLASS_MAP: ClassVar = {
@@ -395,8 +411,10 @@ class ParentBatchUploader(BatchUploader):
 # Set model class in entities
 for model_class in [
     Parent,
+    ParentIdentifier,
     Child1,
     Child2,
+    Child2Identifier,
     Child1ForUpload,
     Child2ForUpload,
     ParentForUpload,

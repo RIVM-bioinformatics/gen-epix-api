@@ -21,10 +21,10 @@ from gen_epix.commondb.domain.command import (
     DataCollectionSetMemberCrudCommand as DataCollectionSetMemberCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
-    ExternalIdentifierCrudCommand as ExternalIdentifierCrudCommand,
+    GetIdentityProvidersCommand as GetIdentityProvidersCommand,
 )
 from gen_epix.commondb.domain.command import (
-    GetIdentityProvidersCommand as GetIdentityProvidersCommand,
+    IdentifierCrudCommand as IdentifierCrudCommand,
 )
 from gen_epix.commondb.domain.command import (
     IdentifierIssuerCrudCommand as IdentifierIssuerCrudCommand,

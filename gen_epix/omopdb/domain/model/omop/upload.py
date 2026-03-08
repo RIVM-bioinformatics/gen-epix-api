@@ -1,7 +1,7 @@
-from typing import ClassVar, Self
+from typing import ClassVar
 from uuid import UUID
 
-from pydantic import Field, computed_field, model_validator
+from pydantic import Field, computed_field
 
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
@@ -9,7 +9,7 @@ from gen_epix.commondb.domain.model.upload import (
     BaseBatchForUpload,
     BaseBatchUploadResult,
     DataIssue,
-    ExternalIdentifiersMixin,
+    IdentifiersMixin,
     ParentForUpload,
     ParentUploadResult,
     UploadResult,
@@ -24,7 +24,7 @@ from gen_epix.omopdb.domain.model.omop.clinical_data import (
 from gen_epix.util import copy_model_field
 
 
-class MeasurementForUpload(Measurement):
+class MeasurementForUpload(Measurement, IdentifiersMixin):
     """
     An measurement record intended for upload. Equal to a Measurement, with
     additional variables.
@@ -32,6 +32,8 @@ class MeasurementForUpload(Measurement):
 
     ENTITY: ClassVar = Measurement.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "MeasurementForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -43,7 +45,7 @@ class MeasurementForUpload(Measurement):
     )
 
 
-class ObservationForUpload(Observation):
+class ObservationForUpload(Observation, IdentifiersMixin):
     """
     An observation record intended for upload. Equal to an Observation, with
     additional variables.
@@ -51,6 +53,8 @@ class ObservationForUpload(Observation):
 
     ENTITY: ClassVar = Observation.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "ObservationForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -62,7 +66,7 @@ class ObservationForUpload(Observation):
     )
 
 
-class SpecimenForUpload(Specimen, ExternalIdentifiersMixin):
+class SpecimenForUpload(Specimen, IdentifiersMixin):
     """
     A specimen record intended for upload. Equal to a Specimen, with
     additional variables.
@@ -70,7 +74,8 @@ class SpecimenForUpload(Specimen, ExternalIdentifiersMixin):
 
     ENTITY: ClassVar = Specimen.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "SpecimenForUpload"
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.SAMPLE
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     person_id: UUID = Field(
         default=NULL_ID,
@@ -82,7 +87,7 @@ class SpecimenForUpload(Specimen, ExternalIdentifiersMixin):
     )
 
 
-class MeasurementRelationForUpload(MeasurementRelation):
+class MeasurementRelationForUpload(MeasurementRelation, IdentifiersMixin):
     """
     A measurement relation record intended for upload. Equal to a MeasurementRelation, with
     additional variables.
@@ -90,6 +95,8 @@ class MeasurementRelationForUpload(MeasurementRelation):
 
     ENTITY: ClassVar = MeasurementRelation.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "MeasurementRelationForUpload"
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.SAMPLE
 
     measurement_relation_id: UUID = Field(
         default=NULL_ID,
@@ -104,8 +111,8 @@ class PersonForUpload(ParentForUpload):
 
     ENTITY: ClassVar = ParentForUpload.ENTITY.clone(update={"persistable": False})
     NAME: ClassVar = "PersonForUpload"
-
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar = IdentifierType.PERSON
+    # TODO:3015
+    IDENTIFIERS_CLASS: ClassVar = IdentifierType.PERSON
     PARENT_CLASS: ClassVar = Person
     PARENT_FIELD_NAME: ClassVar = "person"
     CHILDREN_FIELD_NAME_MAP: ClassVar = {
@@ -221,21 +228,6 @@ class PersonBatchForUpload(BaseBatchForUpload):
     def has_specimens(self) -> bool:
         """Indicates whether there are any specimens in the person set."""
         return any(len(x.specimens or []) > 0 for x in self.persons)
-
-    @model_validator(mode="after")
-    def _validate_model(self) -> Self:
-        # Verify that persons contain no duplicate person_ids
-        person_ids = [x.id for x in self.persons if x.id is not None]
-        if len(person_ids) != len(set(person_ids)):
-            raise ValueError("Persons must not contain duplicate person IDs.")
-        # Verify that persons contains no duplicate external_identifiers
-        all_external_identifiers = []
-        for person in self.persons:
-            if person.external_identifiers is not None:
-                all_external_identifiers.extend(person.external_identifiers)
-        if len(all_external_identifiers) != len(set(all_external_identifiers)):
-            raise ValueError("Persons must not contain duplicate external_identifiers.")
-        return self
 
 
 class PersonBatchUploadResult(BaseBatchUploadResult):

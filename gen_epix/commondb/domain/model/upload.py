@@ -10,55 +10,57 @@ from pydantic import Field, field_serializer, field_validator, model_validator
 from gen_epix.commondb.domain import enum
 from gen_epix.commondb.domain.enum import (
     DataIssueTypeSet,
-    IdentifierType,
     UploadStatus,
     UploadStatusSet,
 )
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import (
+    BaseIdentifier,
+    IdentifierForUpload,
+)
 from gen_epix.fastapp import Model
 from gen_epix.fastapp.domain import Entity
 from gen_epix.fastapp.domain.entity import Entity
 from gen_epix.fastapp.enum import LogLevel, LogLevelSet
 
 
-class ExternalIdentifiersMixin:
+class IdentifiersMixin:
     """
-    Mixin that adds external identifiers fields and validation. Assumes that the
-    inheriting model also has an 'external_identifiers' field.
+    Mixin that adds identifiers fields and validation. Assumes that the
+    inheriting model also has an 'identifiers' field.
 
     Additional validation:
-    - All external identifiers must have the same identifier type.
-    - All external identifiers must have unique values.
+    - All identifiers must have the same identifier type.
+    - All identifiers must have unique values.
     """
 
     # Must be set in child class
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar[IdentifierType] = None  # type: ignore[assignment]
+    IDENTIFIER_CLASS: ClassVar[type[BaseIdentifier]] = None  # type: ignore[assignment]
 
-    external_identifiers: list[ExternalIdentifierForUpload] | None = Field(
+    identifiers: list[IdentifierForUpload] | None = Field(
         default=None,
-        description="External identifiers for the model, if any. Must be a unique values.",
+        description="Identifiers for the model, if any. Must be a unique values.",
     )
 
-    @field_validator("external_identifiers", mode="after")
-    def _validate_external_identifiers(
-        cls, external_identifiers: list[ExternalIdentifierForUpload] | None
-    ) -> list[ExternalIdentifierForUpload] | None:
+    @field_validator("identifiers", mode="after")
+    def _validate_identifiers(
+        cls, identifiers: list[IdentifierForUpload] | None
+    ) -> list[IdentifierForUpload] | None:
         """
-        Validate external identifiers consistency. Assumes that the inheriting model
-        also has an 'external_identifiers' field.
+        Validate identifiers consistency. Assumes that the inheriting model
+        also has an 'identifiers' field.
         """
-        if external_identifiers is None:
-            return external_identifiers
-        if len(external_identifiers) == 1:
+        if identifiers is None:
+            return identifiers
+        if len(identifiers) == 1:
             # Nothing to check
-            return external_identifiers
+            return identifiers
         identifier_issuer_code_id_map = {}
         seen_ids = set()
         seen_codes = set()
-        for external_identifier in external_identifiers:
-            identifier_issuer_id = external_identifier.identifier_issuer_id
-            identifier_issuer_code = external_identifier.identifier_issuer_code
+        for identifier in identifiers:
+            identifier_issuer_id = identifier.identifier_issuer_id
+            identifier_issuer_code = identifier.identifier_issuer_code
             if identifier_issuer_id is not None:
                 if identifier_issuer_id in seen_ids:
                     raise ValueError(
@@ -82,7 +84,7 @@ class ExternalIdentifiersMixin:
                         f"Duplicate identifier issuer code found: {identifier_issuer_code}"
                     )
                 seen_codes.add(identifier_issuer_code)
-        return external_identifiers
+        return identifiers
 
 
 class UploadLogItem(BaseModel):
@@ -221,39 +223,39 @@ class UploadResult(Model):
         """Check if any log item has the specified code."""
         return any(log.code == code for log in self.logs)
 
-    def get_external_identifier_upload_results(self) -> list["UploadResult"] | None:
+    def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """
-        Get the upload results for the external identifiers associated with the model, if any.
+        Get the upload results for the identifiers associated with the model, if any.
         """
         return None
 
 
-class UploadResultWithExternalIdentifiers(UploadResult):
+class UploadResultWithIdentifiers(UploadResult):
     """
-    Represents an upload result that also includes upload results for external
-    identifiers, mirroring a for upload class that has external identifiers.
+    Represents an upload result that also includes upload results for
+    identifiers, mirroring a for upload class that has identifiers.
     """
 
     ENTITY: ClassVar = UploadResult.ENTITY.clone()
-    NAME: ClassVar = "UploadResultWithExternalIdentifiers"
+    NAME: ClassVar = "UploadResultWithIdentifiers"
 
-    external_identifiers: list[UploadResult] | None = Field(
+    identifiers: list[UploadResult] | None = Field(
         default=None,
-        description="The upload results for the external identifiers associated with the model, if any.",
+        description="The upload results for the identifiers associated with the model, if any.",
     )
 
-    def get_external_identifier_upload_results(self) -> list["UploadResult"] | None:
+    def get_identifier_upload_results(self) -> list["UploadResult"] | None:
         """
-        Get the upload results for the external identifiers associated with the model, if any.
+        Get the upload results for the identifiers associated with the model, if any.
         """
-        return self.external_identifiers
+        return self.identifiers
 
 
-class ParentForUpload(Model, ExternalIdentifiersMixin):
+class ParentForUpload(Model, IdentifiersMixin):
     """
     Represents a parent model for upload, where the term "parent" refers to a model
-    that can have child models associated with it through a link. External identifiers
-    can also be added here.
+    that can have child models associated with it through a link. Other identifiers
+    can also be added here, in the "identifiers" field.
 
     This class must be subclassed for specific parent models, adding the following
     fields:
@@ -277,8 +279,8 @@ class ParentForUpload(Model, ExternalIdentifiersMixin):
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
 
     # Must be set in child class
-    # The type of identifier for external identifiers (inherited from mixin)
-    EXTERNAL_IDENTIFIER_TYPE: ClassVar = None  # type: ignore[assignment]
+    # The type of identifier for identifiers (inherited from mixin)
+    IDENTIFIER_CLASS: ClassVar = None  # type: ignore[assignment]
 
     # Must be set in child class
     # The actual Parent model child class
@@ -362,6 +364,8 @@ class ParentForUpload(Model, ExternalIdentifiersMixin):
             if children is None:
                 continue
             seen_child_ids = set()
+            has_identifiers = issubclass(child_model_class, IdentifiersMixin)
+            seen_child_identifiers = set()
             for i, child in enumerate(children):
                 # Check for duplicate child IDs
                 child_id = getattr(child, child_id_field_name)
@@ -372,15 +376,29 @@ class ParentForUpload(Model, ExternalIdentifiersMixin):
                         )
                     seen_child_ids.add(child_id)
                 # Check child parent ID consistency
-                if not has_id:
-                    continue
-                child_parent_id = getattr(child, parent_id_field_name)
-                if child_parent_id is None or child_parent_id == NULL_ID:
-                    continue
-                if child_parent_id != self.id:
-                    raise ValueError(
-                        f"{children_field_name}[{i}].{parent_id_field_name}={child_parent_id} does not match parent.id={self.id}."
-                    )
+                if has_id:
+                    child_parent_id = getattr(child, parent_id_field_name)
+                    if child_parent_id is None or child_parent_id == NULL_ID:
+                        pass
+                    elif child_parent_id != self.id:
+                        raise ValueError(
+                            f"{children_field_name}[{i}].{parent_id_field_name}={child_parent_id} does not match parent.id={self.id}."
+                        )
+                # Check for duplicate child identifiers
+                if has_identifiers:
+                    assert isinstance(child, IdentifiersMixin)
+                    if not child.identifiers:
+                        continue
+                    if len(child.identifiers) != len(set(child.identifiers)):
+                        raise ValueError(
+                            f"Duplicate identifiers found in {children_field_name}[{i}]."
+                        )
+                    for identifier in child.identifiers:
+                        if identifier in seen_child_identifiers:
+                            raise ValueError(
+                                f"Duplicate identifier {identifier} found in {children_field_name}."
+                            )
+                        seen_child_identifiers.add(identifier)
         return self
 
     def get_parent(self) -> Model | None:
@@ -390,20 +408,20 @@ class ParentForUpload(Model, ExternalIdentifiersMixin):
         parent: Model | None = getattr(self, self.PARENT_FIELD_NAME)
         return parent
 
-    def get_external_identifiers(self) -> list[ExternalIdentifierForUpload] | None:
+    def get_identifiers(self) -> list[IdentifierForUpload] | None:
         """
-        Get the list of external identifiers for upload, or an empty list if none are set.
+        Get the list of identifiers for upload, or an empty list if none are set.
         """
-        return self.external_identifiers
+        return self.identifiers
 
 
-class ParentUploadResult(UploadResultWithExternalIdentifiers):
+class ParentUploadResult(UploadResultWithIdentifiers):
     """
     Represents the upload result for a Parent model upload. This class must be
     subclassed analogous to the ParentForUpload model it corresponds to.
     """
 
-    ENTITY: ClassVar = UploadResultWithExternalIdentifiers.ENTITY.clone()
+    ENTITY: ClassVar = UploadResultWithIdentifiers.ENTITY.clone()
     NAME: ClassVar = "ParentUploadResult"
 
     # Must be set in child class
@@ -427,14 +445,14 @@ class ParentUploadResult(UploadResultWithExternalIdentifiers):
             child_results: list[UploadResult] = getattr(self, field_name, None) or []
             for child_result in child_results:
                 retval[child_result.status] += 1
-                # Any child external identifiers
-                for external_id_result in (
-                    child_result.get_external_identifier_upload_results() or []
+                # Any child identifiers
+                for identifier_result in (
+                    child_result.get_identifier_upload_results() or []
                 ):
-                    retval[external_id_result.status] += 1
-        # Parent external identifiers
-        for external_id_result in self.external_identifiers or []:
-            retval[external_id_result.status] += 1
+                    retval[identifier_result.status] += 1
+        # Parent identifiers
+        for identifier_result in self.identifiers or []:
+            retval[identifier_result.status] += 1
         return retval
 
     def update_status_with_data_issues(self) -> None:
@@ -496,7 +514,7 @@ class BaseBatchForUpload(Model):
 
     Additional validation:
     - All ParentForUpload objects must have unique IDs (if provided)
-    - All ParentForUpload objects must have unique external identifiers
+    - All ParentForUpload objects must have unique other identifiers
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -529,7 +547,7 @@ class BaseBatchForUpload(Model):
     @model_validator(mode="after")
     def _validate_parent_ids(self) -> Self:
         """
-        Validate that all parents for upload in the batch have unique IDs and external
+        Validate that all parents for upload in the batch have unique IDs and other
         identifiers.
         """
         # Verify duplicate parent IDs
@@ -545,41 +563,58 @@ class BaseBatchForUpload(Model):
             raise ValueError(
                 f"Duplicate parent IDs found in batch: {duplicate_ids_str}"
             )
-        # Verify duplicate child IDs across all types of children
-        child_ids = []
+        # Verify duplicate parent identifiers
+        seen_parent_identifiers = set()
+        for parent_for_upload in parents_for_upload:
+            if not parent_for_upload.identifiers:
+                continue
+            parent_identifiers = set(parent_for_upload.identifiers or [])
+            if parent_identifiers.isdisjoint(seen_parent_identifiers):
+                seen_parent_identifiers.update(parent_identifiers)
+            else:
+                raise ValueError("Duplicate parent identifiers found in batch.")
+        # Verify duplicate child IDs and identifiers across all types of children
+        seen_child_ids = set()
         for (
             child_model_class,
             children_field_name,
         ) in self.PARENT_FOR_UPLOAD_CLASS.CHILDREN_FIELD_NAME_MAP.items():
             # Get all children
             child_id_field_name = child_model_class.ENTITY.get_id_field_name()
-            child_parent_id_field_name = (
-                self.PARENT_FOR_UPLOAD_CLASS.CHILD_PARENT_ID_FIELD_NAME_MAP[
-                    child_model_class
-                ]
-            )
             children_for_upload: list[Model] = [
                 y
                 for x in parents_for_upload
                 for y in (getattr(x, children_field_name) or [])
             ]
-            # Add all IDs
+            # Add all IDs and identifiers
+            seen_child_identifiers = set()
+            has_identifiers = issubclass(child_model_class, IdentifiersMixin)
             for child_for_upload in children_for_upload:
-                child_id = getattr(child_for_upload, child_parent_id_field_name)
-                if child_id is None or child_id == NULL_ID:
+                child_id = getattr(child_for_upload, child_id_field_name)
+                if child_id is not None and child_id != NULL_ID:
+                    if child_id in seen_child_ids:
+                        raise ValueError(
+                            f"Duplicate child ID {child_id} found in batch in field {children_field_name}."
+                        )
+                    seen_child_ids.add(child_id)
+                if not has_identifiers:
                     continue
-                child_ids.append(child_id)
-        if len(child_ids) != len(set(child_ids)):
-            duplicate_ids = sorted(set(x for x in child_ids if child_ids.count(x) > 1))
-            duplicate_ids_str = ", ".join(str(x) for x in duplicate_ids)
-            raise ValueError(f"Duplicate child IDs found in batch: {duplicate_ids_str}")
-        # Verify duplicate external identifiers
-        all_external_identifiers = []
-        for parent_for_upload in parents_for_upload:
-            if parent_for_upload.external_identifiers is not None:
-                all_external_identifiers.extend(parent_for_upload.external_identifiers)
-        if len(all_external_identifiers) != len(set(all_external_identifiers)):
-            raise ValueError("Duplicate parent external identifiers found in batch.")
+                assert isinstance(child_for_upload, IdentifiersMixin)
+                if not child_for_upload.identifiers:
+                    continue
+                child_identifiers = set(child_for_upload.identifiers or [])
+                if child_identifiers.isdisjoint(seen_child_identifiers):
+                    seen_child_identifiers.update(child_identifiers)
+                else:
+                    duplicate_identifiers = child_identifiers.intersection(
+                        seen_child_identifiers
+                    )
+                    duplicate_identifiers_str = ", ".join(
+                        str(x) for x in duplicate_identifiers
+                    )
+                    raise ValueError(
+                        f"Duplicate child identifiers found in batch in field {children_field_name}: {duplicate_identifiers_str}"
+                    )
         return self
 
     def get_parents_for_upload(self) -> list[ParentForUpload]:

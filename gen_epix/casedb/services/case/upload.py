@@ -12,7 +12,7 @@ from gen_epix.casedb.services.case.case_validator import CaseValidator
 from gen_epix.commondb.domain.command.base import UploadBatchCommandMixin
 from gen_epix.commondb.domain.enum import UploadStatus
 from gen_epix.commondb.domain.literal import NULL_ID
-from gen_epix.commondb.domain.model.organization import ExternalIdentifierForUpload
+from gen_epix.commondb.domain.model.organization import IdentifierForUpload
 from gen_epix.commondb.domain.model.upload import BaseBatchUploadResult
 from gen_epix.commondb.services.upload import BatchUploader
 from gen_epix.fastapp.enum import CrudOperation
@@ -328,13 +328,13 @@ class CaseBatchUploader(BatchUploader):
         external_identifier_ids: list[UUID] = [
             y.id  # type: ignore[misc]
             for x in batch_result.cases
-            for y in x.external_identifiers or []
+            for y in x.identifiers or []
             if y.status == UploadStatus.CREATED
         ]
         if not external_identifier_ids:
             return success
         existing_new_external_identifier_ids: list[UUID] = self.service.app.handle(
-            command.ExternalIdentifierCrudCommand(
+            command.IdentifierCrudCommand(
                 user=cmd.user,
                 operation=CrudOperation.READ_ALL,
                 query_filter=UuidSetFilter(
@@ -345,7 +345,7 @@ class CaseBatchUploader(BatchUploader):
         )
         try:
             self.service.app.handle(
-                command.ExternalIdentifierCrudCommand(
+                command.IdentifierCrudCommand(
                     user=cmd.user,
                     operation=CrudOperation.DELETE_SOME,
                     obj_ids=existing_new_external_identifier_ids,
@@ -413,7 +413,7 @@ class CaseBatchUploader(BatchUploader):
         # Initialise some
         samples_for_upload: list[seqdb_model.SampleForUpload] = []
         sample_id_to_index_map: dict[UUID, int] = {}
-        sample_external_id_to_index_map: dict[ExternalIdentifierForUpload, int] = {}
+        sample_external_id_to_index_map: dict[IdentifierForUpload, int] = {}
         sample_case_index_map: dict[int, int] = {}
         child_index_map: dict[
             type[model.Model], dict[tuple[int, int], tuple[int, int]]
@@ -423,7 +423,7 @@ class CaseBatchUploader(BatchUploader):
         def _get_or_create_sample_for_upload(
             case_index: int,
             sample_id: UUID | None,
-            external_sample_id: ExternalIdentifierForUpload | None,
+            external_sample_id: IdentifierForUpload | None,
         ) -> int:
             has_id = sample_id is not None and sample_id != NULL_ID
             has_external_id = external_sample_id is not None
@@ -444,7 +444,7 @@ class CaseBatchUploader(BatchUploader):
                     id=sample_id,
                     created_in_data_collection_id=cmd.created_in_data_collection_id,
                 ),
-                external_identifiers=[external_sample_id] if has_external_id else [],
+                identifiers=[external_sample_id] if has_external_id else [],
                 read_sets=[],
                 seqs=[],
             )
@@ -467,7 +467,7 @@ class CaseBatchUploader(BatchUploader):
                 sample_index = _get_or_create_sample_for_upload(
                     case_index,
                     read_set_for_upload.sample_id,
-                    read_set_for_upload.external_sample_id,
+                    read_set_for_upload.other_sample_identifier,
                 )
                 sample_for_upload = samples_for_upload[sample_index]
                 # Add read set
