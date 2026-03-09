@@ -16,7 +16,7 @@ class CaseStats(fastapp.Model):
         snake_case_plural_name="case_set_stats",
         persistable=False,
     )
-    case_type_id: UUID = Field(description="The ID of the case type.")
+    case_type_id: UUID = Field(description="The ID of the CaseType.")
     case_set_id: UUID | None = Field(
         default=None, description="The ID of the case set, if applicable."
     )
@@ -63,11 +63,11 @@ class CaseQuery(Model):
     )
     label: str | None = Field(default=None, description="The label for the query.")
     case_type_id: UUID = Field(
-        description="The ID of the case type that the cases must belong to.",
+        description="The ID of the CaseType that the cases must belong to.",
     )
     case_set_ids: set[UUID] | None = Field(
         default=None,
-        description="The IDs of the case set(s) that the case must belong to. Not applied if not provided. All case sets must belong to the same case type as case_type_id.",
+        description="The IDs of the case set(s) that the case must belong to. Not applied if not provided. All case sets must belong to the same CaseType as case_type_id.",
     )
     datetime_range_filter: TypedDatetimeRangeFilter | None = Field(
         default=None,
@@ -97,7 +97,7 @@ class BaseCaseRights(Model):
     created_in_data_collection_id: UUID = Field(
         description="The ID of the data collection where the item was created",
     )
-    case_type_id: UUID = Field(description="The ID of the case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType")
     data_collection_ids: set[UUID] = Field(
         description="The IDs of the data collections in which the item is currently shared, including the created_in_data_collection_id",
     )
@@ -130,11 +130,11 @@ class CaseRights(BaseCaseRights):
         persistable=False,
     )
     case_id: UUID = Field(description="The ID of the case")
-    read_case_type_col_ids: set[UUID] = Field(
-        description="The IDs of the case type columns that are allowed to be read for the case",
+    read_col_ids: set[UUID] = Field(
+        description="The IDs of the Cols that are allowed to be read for the case",
     )
-    write_case_type_col_ids: set[UUID] = Field(
-        description="The IDs of the case type columns that are allowed to be written for the case",
+    write_col_ids: set[UUID] = Field(
+        description="The IDs of the Cols that are allowed to be written for the case",
     )
 
 
@@ -187,64 +187,57 @@ class RefDataAccess(Model):
     )
     user_id: UUID | None = Field(description="The ID of the user")
     is_full_access: bool = Field(
-        description="Whether the user has full access to all reference data, i.e. all case type sets, case types, case type columns, case type dimensions, dimensions, and columns. If so, the corresponding fields are left empty and should not be used.",
+        description="Whether the user has full access to all reference data. If so, the corresponding fields are left empty and should not be used.",
     )
     case_type_set_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed case type sets."
+        default_factory=set, description="The IDs of the allowed CaseTypeSets."
     )
     case_type_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed case types."
+        default_factory=set, description="The IDs of the allowed CaseTypes."
     )
-    case_type_col_set_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed case type column sets."
-    )
-    case_type_col_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed case type columns."
-    )
-    case_type_dim_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed case type dimensions."
-    )
-    dim_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed dimensions."
+    col_set_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed ColSets."
     )
     col_ids: set[UUID] = Field(
-        default_factory=set, description="The IDs of the allowed columns."
+        default_factory=set, description="The IDs of the allowed Cols."
+    )
+    dim_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed Dims."
+    )
+    ref_dim_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed RefDims."
+    )
+    ref_col_ids: set[UUID] = Field(
+        default_factory=set, description="The IDs of the allowed RefCols."
     )
 
     def get_case_type_set_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed case type sets. Returns None if the user has full
-        access to all case type sets.
+        Get a filter for the allowed CaseTypeSets. Returns None if the user has full
+        access to all CaseTypeSets.
         """
         return self._get_filter(field_name, self.case_type_set_ids)
 
     def get_case_type_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed case types. Returns None if the user has full
-        access to all case types.
+        Get a filter for the allowed CaseTypes. Returns None if the user has full
+        access to all CaseTypes.
         """
         return self._get_filter(field_name, self.case_type_ids)
 
-    def get_case_type_col_set_filter(self, field_name: str) -> UuidSetFilter | None:
+    def get_col_set_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed case type column sets. Returns None if the user has full
-        access to all case type column sets.
+        Get a filter for the allowed column sets. Returns None if the user has full
+        access to all column sets.
         """
-        return self._get_filter(field_name, self.case_type_col_set_ids)
+        return self._get_filter(field_name, self.col_set_ids)
 
-    def get_case_type_col_filter(self, field_name: str) -> UuidSetFilter | None:
+    def get_col_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed case type columns. Returns None if the user has full
-        access to all case type columns.
+        Get a filter for the allowed columns. Returns None if the user has full
+        access to all columns.
         """
-        return self._get_filter(field_name, self.case_type_col_ids)
-
-    def get_case_type_dim_filter(self, field_name: str) -> UuidSetFilter | None:
-        """
-        Get a filter for the allowed case type dimensions. Returns None if the user has full
-        access to all case type dimensions.
-        """
-        return self._get_filter(field_name, self.case_type_dim_ids)
+        return self._get_filter(field_name, self.col_ids)
 
     def get_dim_filter(self, field_name: str) -> UuidSetFilter | None:
         """
@@ -253,12 +246,19 @@ class RefDataAccess(Model):
         """
         return self._get_filter(field_name, self.dim_ids)
 
-    def get_col_filter(self, field_name: str) -> UuidSetFilter | None:
+    def get_ref_dim_filter(self, field_name: str) -> UuidSetFilter | None:
         """
-        Get a filter for the allowed columns. Returns None if the user has full
-        access to all columns.
+        Get a filter for the allowed reference dimensions. Returns None if the user has full
+        access to all reference dimensions.
         """
-        return self._get_filter(field_name, self.col_ids)
+        return self._get_filter(field_name, self.ref_dim_ids)
+
+    def get_ref_col_filter(self, field_name: str) -> UuidSetFilter | None:
+        """
+        Get a filter for the allowed reference columns. Returns None if the user has full
+        access to all reference columns.
+        """
+        return self._get_filter(field_name, self.ref_col_ids)
 
     def _get_filter(self, field_name: str, members: set[UUID]) -> UuidSetFilter | None:
         """

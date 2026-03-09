@@ -3,8 +3,8 @@ This module defines the EDGE_CASES data structure, both used to:
 1) generate test data in setup_case_type_data and
 2) drive the test scenarios in test_casedb_edge_cases_refdata_access.
 
-EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (case types, case type sets,
-and case type column sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
+EDGE_CASES is a comprehensive set of edge cases for testing ABAC access control on CaseDB reference data (CaseTypes, CaseTypeSets,
+and Col sets). Each edge case represents a unique combination of organizational membership and policies at both the org and user level,
 along with the expected access results for that scenario.
 
 The expectations are defined based on the principle that for reference data access,
@@ -14,16 +14,16 @@ while user-level policies should not grant any additional access beyond what the
 but from this principle and the org-level policies in each case).
 
 
-- case types can also be accessed by being referred to by a case type col
-    - so we configure what case types are referred to by case type cols in case type col sets
-    - this is by naming convention (code: case_type_col{ct}_{dim}_{occ}_{col_rank}) where ct is the case type number (e.g. 1, 2, 3, 4)
+- CaseTypes can also be accessed by being referred to by a Col
+    - so we configure what CaseTypes are referred to by Cols in ColSets
+    - this is by naming convention (code: col{ct}_{ref_dim}_{occ}_{col_rank}) where ct is the CaseType number (e.g. 1, 2, 3, 4)
 
 Method:
-- define case type col sets
-    - with sets of case type cols that are partly overlapping
-    between col sets to test that access is correctly determined at the col set level, not just the case type level
-- define case type cols, cols, and dims for each case type col set
-- add tests that user-level policies do not grant access to additional case type col sets, case type cols, cols, or dims beyond what org-level policies grant access to
+- define ColSets
+    - with sets of Cols that are partly overlapping
+    between ColSets to test that access is correctly determined at the ColSet level, not just the CaseType level
+- define Cols, and dims for each ColSet
+- add tests that user-level policies do not grant access to additional ColSets, Cols, RefCols, or RefDims beyond what org-level policies grant access to
 
 
 """
@@ -40,17 +40,17 @@ class EdgeCaseSpec:
 
     Captures all relevant dimensions for a user-based access control test scenario:
     - user_name / org_name: identity and organizational membership
-    - org_access_policies: (case_type_set, case_type_col_set) pairs granted at org level via OrganizationAccessCasePolicy
-    - org_share_policy_sets: case type sets granted at org level via OrganizationShareCasePolicy
-    - user_access_policies: (case_type_set, case_type_col_set) pairs granted directly to this user via UserAccessCasePolicy
-    - user_share_policy_sets: case type sets granted directly to this user via UserShareCasePolicy
-    - expected_case_types: expected accessible case type names (union of org access + org share)
-    - expected_case_type_sets: expected accessible case type set names (union of org access + org share)
-    - expected_case_type_col_sets: expected accessible col set names (from org access policies only — share policies do not grant col access)
-    - expected_case_type_cols: expected accessible col codes — intersection of cols in accessible col sets
-      with the accessible case types (cols reference a case type via naming convention case_type_col{ct}_...)
+    - org_access_policies: (case_type_set, ColSet) pairs granted at org level via OrganizationAccessCasePolicy
+    - org_share_policy_sets: CaseTypeSets granted at org level via OrganizationShareCasePolicy
+    - user_access_policies: (case_type_set, ColSet) pairs granted directly to this user via UserAccessCasePolicy
+    - user_share_policy_sets: CaseTypeSets granted directly to this user via UserShareCasePolicy
+    - expected_case_types: expected accessible CaseType names (union of org access + org share)
+    - expected_case_type_sets: expected accessible CaseTypeSet names (union of org access + org share)
+    - expected_col_sets: expected accessible ColSet names (from org access policies only — share policies do not grant Col access)
+    - expected_cols: expected accessible Col codes — intersection of Cols in accessible ColSets
+      with the accessible CaseTypes (Cols reference a CaseType via naming convention col{ct}_...)
 
-    For reference data (case types / case type sets / case type col sets), only org-level policies determine access.
+    For reference data (CaseTypes / CaseTypeSets / ColSets), only org-level policies determine access.
     User-level policies (both access and share) are intentionally ignored — tests verify this.
 
     Both setup fixtures iterate EDGE_CASES to drive user/org creation and policy setup.
@@ -62,20 +62,16 @@ class EdgeCaseSpec:
     user_name: str
     org_name: str
     label: str
-    org_access_policies: list[
-        tuple[str, str]
-    ]  # [(case_type_set, case_type_col_set), ...]
+    org_access_policies: list[tuple[str, str]]  # [(case_type_set, ColSet), ...]
     org_share_policy_sets: list[str]
-    user_access_policies: list[
-        tuple[str, str]
-    ]  # [(case_type_set, case_type_col_set), ...]
+    user_access_policies: list[tuple[str, str]]  # [(case_type_set, ColSet), ...]
     user_share_policy_sets: list[str]
     expected_case_types: list[str]
     expected_case_type_sets: list[str]
-    expected_case_type_col_sets: list[str]
-    expected_case_type_cols: list[str]
+    expected_col_sets: list[str]
     expected_cols: list[str]
-    expected_dims: list[str]
+    expected_ref_cols: list[str]
+    expected_ref_dims: list[str]
 
     @property
     def description(self) -> str:
@@ -93,10 +89,10 @@ class EdgeCaseSpec:
             f"user_share=[{_fmt(self.user_share_policy_sets)}]\n"
             f"  → expected_case_types=[{_fmt(self.expected_case_types)}], "
             f"expected_case_type_sets=[{_fmt(self.expected_case_type_sets)}], "
-            f"expected_case_type_col_sets=[{_fmt(self.expected_case_type_col_sets)}], "
-            f"expected_case_type_cols=[{_fmt(self.expected_case_type_cols)}], "
+            f"expected_col_sets=[{_fmt(self.expected_col_sets)}], "
             f"expected_cols=[{_fmt(self.expected_cols)}], "
-            f"expected_dims=[{_fmt(self.expected_dims)}]"
+            f"expected_ref_cols=[{_fmt(self.expected_ref_cols)}], "
+            f"expected_ref_dims=[{_fmt(self.expected_ref_dims)}]"
         )
 
 
@@ -111,46 +107,46 @@ class EdgeCaseSpec:
 # lets you test the cross-user dimension within one org.
 # The user within that org is determined by the user-level combo (access + share).
 #
-# For reference data (case types / case type sets), access = union of:
+# For reference data (CaseTypes / CaseTypeSets), access = union of:
 #   OrganizationAccessCasePolicy ∪ OrganizationShareCasePolicy
 # User-level policies (both access and share) have NO influence.
 
-# Each entry is a list of (case_type_set, case_type_col_set) tuples granted at org level via
-# OrganizationAccessCasePolicy. The col set is independent of the case type set, enabling tests
-# of inconsistent pairings (e.g. set1 with colset2).
+# Each entry is a list of (case_type_set, ColSet) tuples granted at org level via
+# OrganizationAccessCasePolicy. The ColSet is independent of the CaseTypeSet, enabling tests
+# of inconsistent pairings (e.g. case_type_set1 with col_set2).
 _ORG_ACCESS_COMBOS: list[list[tuple[str, str]]] = [
     [],  # no org access policy
-    [("case_type_set1", "colset1")],  # set1 with matching colset1
-    [("case_type_set1", "colset2")],  # set1 with inconsistent colset2
-    [("case_type_set2", "colset1")],  # set2 with inconsistent colset1 (reversed)
-    [("case_type_set2", "colset3")],  # set2 with overlapping colset3
+    [("case_type_set1", "col_set1")],  # set1 with matching col_set1
+    [("case_type_set1", "col_set2")],  # set1 with inconsistent col_set2
+    [("case_type_set2", "col_set1")],  # set2 with inconsistent col_set1 (reversed)
+    [("case_type_set2", "col_set3")],  # set2 with overlapping col_set3
 ]
 
-# Each entry is the list of case type sets granted at org level via OrganizationShareCasePolicy.
-# Share policies do NOT grant col set access — only access policies determine col set access.
+# Each entry is the list of CaseTypeSets granted at org level via OrganizationShareCasePolicy.
+# Share policies do NOT grant ColSet access — only access policies determine ColSet access.
 _ORG_SHARE_COMBOS: list[list[str]] = [
     [],  # no org share policy
     ["case_type_set2"],  # org has shared access to case_type_set2
     ["case_type_set3"],  # org has shared access to case_type_set3
 ]
 
-# Each entry is a list of (case_type_set, case_type_col_set) tuples granted directly to one user
+# Each entry is a list of (case_type_set, ColSet) tuples granted directly to one user
 # via UserAccessCasePolicy. User policies do NOT affect reference data access — tests verify this.
 _USER_ACCESS_COMBOS: list[list[tuple[str, str]]] = [
     [],  # no user-level access policy
-    [("case_type_set1", "colset1")],  # user access matching common org access
-    [("case_type_set2", "colset2")],  # user access on a different set/colset
+    [("case_type_set1", "col_set1")],  # user access matching common org access
+    [("case_type_set2", "col_set2")],  # user access on a different set/col_set
 ]
 
-# Each entry is the list of case type sets granted directly to one user via UserShareCasePolicy.
+# Each entry is the list of CaseTypeSets granted directly to one user via UserShareCasePolicy.
 _USER_SHARE_COMBOS: list[list[str]] = [
     [],  # no user-level share policy
     ["case_type_set1"],  # user share policy on case_type_set1
     ["case_type_set3"],  # user share policy on case_type_set3
 ]
 
-# Define case type set
-# should contain case types
+# Define CaseTypeSet
+# should contain CaseTypes
 CASE_TYPE_SETS = {
     "case_type_set1": ["case_type1", "case_type2"],
     "case_type_set2": ["case_type2", "case_type3"],
@@ -158,16 +154,16 @@ CASE_TYPE_SETS = {
 }
 
 
-# col (code: col{dim}_{rank})
+# RefCol (code: ref_col{ref_dim}_{rank})
 
-# (code: case_type_col{ct}_{dim}_{occ}_{col_rank})
-CASE_TYPE_COL_SETS = {
-    # colset1 contains cols for case_type_1, case_type_2, and case_type_3 (from ct sets 1 and 2)
-    "colset1": ["case_type_col1_1_1_1", "case_type_col2_2_1_1", "case_type_col3_3_1_1"],
-    # colset2 contains cols for case_type_4 (from ct set 3) — negative control
-    "colset2": ["case_type_col4_4_1_1"],
-    # colset3 partially overlaps: shares col2_2_1_1 with colset1, and col4_4_1_1 with colset2
-    "colset3": ["case_type_col2_2_1_1", "case_type_col4_4_1_1"],
+# (code: col{ct}_{ref_dim}_{occ}_{col_rank})
+COL_SETS = {
+    # col_set1 contains cols for case_type_1, case_type_2, and case_type_3 (from ct sets 1 and 2)
+    "col_set1": ["col1_1_1_1", "col2_2_1_1", "col3_3_1_1"],
+    # col_set2 contains cols for case_type_4 (from ct set 3) — negative control
+    "col_set2": ["col4_4_1_1"],
+    # col_set3 partially overlaps: shares col2_2_1_1 with col_set1, and col4_4_1_1 with col_set2
+    "col_set3": ["col2_2_1_1", "col4_4_1_1"],
 }
 
 
@@ -175,11 +171,11 @@ def _compute_expected_case_types(
     org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
     """For reference data access, only org-level policies determine access (union of access + share).
-    Case types are looked up from CASE_TYPE_SETS. User policies are intentionally ignored.
+    CaseTypes are looked up from CASE_TYPE_SETS. User policies are intentionally ignored.
     """
-    ct_sets = {ct_set for ct_set, _ in org_access_policies} | set(org_share_sets)
+    case_type_sets = {x for x, _ in org_access_policies} | set(org_share_sets)
     result: set[str] = set()
-    for s in ct_sets:
+    for s in case_type_sets:
         result.update(CASE_TYPE_SETS.get(s, []))
     return sorted(result)
 
@@ -187,18 +183,18 @@ def _compute_expected_case_types(
 def _compute_expected_case_type_sets(
     org_access_policies: list[tuple[str, str]], org_share_sets: list[str]
 ) -> list[str]:
-    """Only the case type sets referenced in org-level policies (access ∪ share) are accessible.
+    """Only the CaseTypeSets referenced in org-level policies (access ∪ share) are accessible.
     User policies are intentionally ignored — tests verify this explicitly."""
-    ct_sets = {ct_set for ct_set, _ in org_access_policies} | set(org_share_sets)
-    return sorted(ct_sets)
+    case_type_sets = {x for x, _ in org_access_policies} | set(org_share_sets)
+    return sorted(case_type_sets)
 
 
-def _compute_expected_case_type_col_sets(
+def _compute_expected_col_sets(
     org_access_policies: list[tuple[str, str]],
 ) -> list[str]:
-    """Col set access comes exclusively from org access policies — not from share policies and not
-    from user-level policies. The col set is taken directly from each access policy tuple and is
-    independent of the case type set, supporting inconsistent pairings."""
+    """ColSet access comes exclusively from org access policies — not from share policies and not
+    from user-level policies. The ColSet is taken directly from each access policy tuple and is
+    independent of the CaseTypeSet, supporting inconsistent pairings."""
     return sorted({col_set for _, col_set in org_access_policies})
 
 
@@ -238,7 +234,7 @@ def _generate_label(
     if not has_org:
         return f"{user_desc}, {org_desc} — user policies must not grant ref data access"
     if not has_user:
-        return f"{org_desc} — should access org-level case types/sets"
+        return f"{org_desc} — should access org-level CaseTypes/sets"
     return f"{org_desc} + {user_desc} — user policies must not extend ref data access beyond org"
 
 
@@ -253,58 +249,58 @@ _user_combos = list(
 
 
 def _get_case_type_from_col(col_code: str) -> str:
-    """Extract the case type name from a case_type_col code by naming convention:
-    case_type_col{ct}_{dim}_{occ}_{col_rank} → case_type{ct}"""
-    m = re.match(r"^case_type_col(\d+)_", col_code)
-    assert m, f"Cannot extract case type index from col code: '{col_code}'"
+    """Extract the CaseType name from a Col code by naming convention:
+    col{ct}_{ref_dim}_{occ}_{col_rank} → case_type{ct}"""
+    m = re.match(r"^col(\d+)_", col_code)
+    assert m, f"Cannot extract CaseType index from col code: '{col_code}'"
     return f"case_type{m.group(1)}"
 
 
-def _compute_expected_case_type_cols(
+def _compute_expected_cols(
     org_access_policies: list[tuple[str, str]],
     org_share_sets: list[str],
 ) -> list[str]:
-    """Accessible cols = those in accessible col sets whose embedded case type is accessible.
+    """Accessible Cols = those in accessible ColSets whose embedded CaseType is accessible.
 
-    Col set access = org access policies only (not share).
-    Accessible case types = org access policies + org share policies (union).
-    The intersection is restrictive: a col is only included if its referenced case type
-    (embedded in the col code as case_type_col{ct}_...) is in the accessible case types.
+    ColSet access = org access policies only (not share).
+    Accessible CaseTypes = org access policies + org share policies (union).
+    The intersection is restrictive: a Col is only included if its referenced CaseType
+    (embedded in the Col code as col{ct}_...) is in the accessible CaseTypes.
     """
-    accessible_case_types = set(
+    accessible_case_type_codes = set(
         _compute_expected_case_types(org_access_policies, org_share_sets)
     )
-    accessible_col_sets = _compute_expected_case_type_col_sets(org_access_policies)
+    accessible_col_set_codes = _compute_expected_col_sets(org_access_policies)
     result: set[str] = set()
-    for colset in accessible_col_sets:
-        for col_code in CASE_TYPE_COL_SETS.get(colset, []):
-            if _get_case_type_from_col(col_code) in accessible_case_types:
+    for col_set_code in accessible_col_set_codes:
+        for col_code in COL_SETS.get(col_set_code, []):
+            if _get_case_type_from_col(col_code) in accessible_case_type_codes:
                 result.add(col_code)
     return sorted(result)
 
 
-def _parse_case_type_col(col_code: str) -> tuple[str, str, str, str]:
-    """Parse case_type_col{ct}_{dim}_{occ}_{rank} → (ct, dim, occ, rank)."""
-    m = re.match(r"^case_type_col(\d+)_(\d+)_(\d+)_(\d+)$", col_code)
-    assert m, f"Cannot parse case_type_col code: '{col_code}'"
+def _parse_col(col_code: str) -> tuple[str, str, str, str]:
+    """Parse col{ct}_{ref_dim}_{occ}_{rank} → (ct, ref_dim, occ, rank)."""
+    m = re.match(r"^col(\d+)_(\d+)_(\d+)_(\d+)$", col_code)
+    assert m, f"Cannot parse col code: '{col_code}'"
     return m.group(1), m.group(2), m.group(3), m.group(4)
 
 
-def _compute_expected_cols(case_type_col_codes: list[str]) -> list[str]:
-    """Cols referenced by the accessible case type cols: col{dim}_{rank}."""
+def _compute_expected_ref_cols(col_codes: list[str]) -> list[str]:
+    """RefCols referenced by the accessible Cols: ref_col{ref_dim}_{rank}."""
     result: set[str] = set()
-    for code in case_type_col_codes:
-        _, dim, _, rank = _parse_case_type_col(code)
-        result.add(f"col{dim}_{rank}")
+    for col_code in col_codes:
+        _, ref_dim, _, rank = _parse_col(col_code)
+        result.add(f"ref_col{ref_dim}_{rank}")
     return sorted(result)
 
 
-def _compute_expected_dims(case_type_col_codes: list[str]) -> list[str]:
-    """Dims referenced by the accessible case type cols: dim{dim}."""
+def _compute_expected_ref_dims(col_codes: list[str]) -> list[str]:
+    """RefDims referenced by the accessible Cols: ref_dim{ref_dim}."""
     result: set[str] = set()
-    for code in case_type_col_codes:
-        _, dim, _, _ = _parse_case_type_col(code)
-        result.add(f"dim{dim}")
+    for code in col_codes:
+        _, ref_dim, _, _ = _parse_col(code)
+        result.add(f"ref_dim{ref_dim}")
     return sorted(result)
 
 
@@ -321,13 +317,13 @@ EDGE_CASES: list[EdgeCaseSpec] = [
         user_share_policy_sets=user_share,
         expected_case_types=_compute_expected_case_types(org_access, org_share),
         expected_case_type_sets=_compute_expected_case_type_sets(org_access, org_share),
-        expected_case_type_col_sets=_compute_expected_case_type_col_sets(org_access),
-        expected_case_type_cols=_compute_expected_case_type_cols(org_access, org_share),
-        expected_cols=_compute_expected_cols(
-            _compute_expected_case_type_cols(org_access, org_share)
+        expected_col_sets=_compute_expected_col_sets(org_access),
+        expected_cols=_compute_expected_cols(org_access, org_share),
+        expected_ref_cols=_compute_expected_ref_cols(
+            _compute_expected_cols(org_access, org_share)
         ),
-        expected_dims=_compute_expected_dims(
-            _compute_expected_case_type_cols(org_access, org_share)
+        expected_ref_dims=_compute_expected_ref_dims(
+            _compute_expected_cols(org_access, org_share)
         ),
     )
     for org_idx, ((_, org_access), (_, org_share)) in _org_combos

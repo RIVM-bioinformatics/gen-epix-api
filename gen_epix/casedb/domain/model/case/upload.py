@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import Field, computed_field, field_serializer, model_validator
 
-from gen_epix.casedb.domain.model.case.operational_data import Case
+from gen_epix.casedb.domain.model.case.case_data import Case
 from gen_epix.commondb.domain.enum import IdentifierType
 from gen_epix.commondb.domain.literal import NULL_ID
 from gen_epix.commondb.domain.model import Model
@@ -31,7 +31,7 @@ class ReadSetForUpload(Model):
     The sample can be identified in seqdb either by its internal ID (sample_id) or
     by an external identifier (external_sample_id). The ID of created read set is
     intended to be added to the corresponding case in casedb as the content of the
-    given case type column.
+    given Col.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -40,8 +40,8 @@ class ReadSetForUpload(Model):
         default=NULL_ID,
         description="The UUID of the case that the read set is associated with. If not available, the null ID is put.",
     )
-    case_type_col_id: UUID = Field(
-        description="The ID of the case type column with column type genetic reads that the read set is or will be associated with."
+    col_id: UUID = Field(
+        description="The ID of the column with column type genetic reads that the read set is or will be associated with."
     )
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -69,9 +69,7 @@ class ReadSetForUpload(Model):
             )
         return self
 
-    @field_serializer(
-        "id", "case_id", "case_type_col_id", "sample_id", "sequencing_protocol_id"
-    )
+    @field_serializer("id", "case_id", "col_id", "sample_id", "sequencing_protocol_id")
     def _serialize_id(self, value: UUID | None) -> str | None:
         return str(value) if value is not None else None
 
@@ -84,7 +82,7 @@ class SeqForUpload(Model):
     The sample can be identified in seqdb either by its internal ID (sample_id) or
     by an external identifier (external_sample_id). The ID of created sequence is
     intended to be added to the corresponding case in casedb as the content of the
-    given case type column.
+    given Col.
     """
 
     ENTITY: ClassVar = Entity(persistable=False, id_field_name="id")
@@ -93,8 +91,8 @@ class SeqForUpload(Model):
         default=NULL_ID,
         description="The UUID of the case that the read set is associated with. If not available, the null ID is put.",
     )
-    case_type_col_id: UUID = Field(
-        description="The ID of the case type column that the sequence is or will be associated with."
+    col_id: UUID = Field(
+        description="The ID of the column that the sequence is or will be associated with."
     )
     sample_id: UUID = Field(
         default=NULL_ID,
@@ -122,9 +120,7 @@ class SeqForUpload(Model):
             )
         return self
 
-    @field_serializer(
-        "id", "case_id", "case_type_col_id", "sample_id", "assembly_protocol_id"
-    )
+    @field_serializer("id", "case_id", "col_id", "sample_id", "assembly_protocol_id")
     def _serialize_id(self, value: UUID | None) -> str | None:
         return str(value) if value is not None else None
 
@@ -161,17 +157,17 @@ class CaseForUpload(ParentForUpload):
     # Children
     read_sets: list[ReadSetForUpload] | None = Field(
         default=None,
-        description="The read sets to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different case type column.",
+        description="The read sets to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different Col.",
     )
     seqs: list[SeqForUpload] | None = Field(
         default=None,
-        description="The sequences to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different case type column.",
+        description="The sequences to be uploaded and associated with the case. If None, this element is not taken into consideration during the upload. Must each be for a different Col.",
     )
 
     @model_validator(mode="after")
     def _validate_case_for_upload(self) -> Self:
         """
-        Verify that read_sets and seqs contain no duplicate case_type_col_id and no
+        Verify that read_sets and seqs contain no duplicate col_id and no
         inconsistent external ID to sample ID mappings
         """
         self._validate_read_sets_or_seqs(self.read_sets)
@@ -185,14 +181,12 @@ class CaseForUpload(ParentForUpload):
             return
         if len(values) == 0:
             return
-        case_type_col_ids = [x.case_type_col_id for x in values]
-        if len(case_type_col_ids) != len(set(case_type_col_ids)):
+        col_ids = [x.col_id for x in values]
+        if len(col_ids) != len(set(col_ids)):
             field_name = (
                 "read_sets" if isinstance(values[0], ReadSetForUpload) else "seqs"
             )
-            raise ValueError(
-                f"{field_name} must not contain duplicate case_type_col_id."
-            )
+            raise ValueError(f"{field_name} must not contain duplicate col_id.")
         sample_id_map: dict[ExternalIdentifierForUpload, UUID] = {}
         field_name = "read_sets" if isinstance(values[0], ReadSetForUpload) else "seqs"
         for value in values:
@@ -216,7 +210,7 @@ class CaseForUpload(ParentForUpload):
 
 
 class CaseDataIssue(DataIssue):
-    case_type_col_id: UUID = Field(description="The ID of the case type column")
+    col_id: UUID = Field(description="The ID of the column")
 
 
 class CaseUploadResult(ParentUploadResult):

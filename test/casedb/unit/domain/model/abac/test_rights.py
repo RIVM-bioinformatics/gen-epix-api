@@ -49,8 +49,8 @@ class BaseCaseAbacTestCase(TestCase):
             remove_case=remove_case,
             add_case_set=add_case_set,
             remove_case_set=remove_case_set,
-            read_case_type_col_ids=read_cols or set(),
-            write_case_type_col_ids=write_cols or set(),
+            read_col_ids=read_cols or set(),
+            write_col_ids=write_cols or set(),
             read_case_set=read_case_set,
             write_case_set=write_case_set,
         )
@@ -152,8 +152,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     remove_case=False,
                     add_case_set=False,
                     remove_case_set=False,
-                    read_case_type_col_ids=set(),
-                    write_case_type_col_ids=set(),
+                    read_col_ids=set(),
+                    write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
                 ),
@@ -202,8 +202,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     remove_case=False,
                     add_case_set=False,
                     remove_case_set=False,
-                    read_case_type_col_ids={self.col1},
-                    write_case_type_col_ids=set(),
+                    read_col_ids={self.col1},
+                    write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
                 )
@@ -217,7 +217,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         case_types = abac.get_case_types_with_access_right(CaseRight.READ_CASE)
         self.assertEqual(case_types, {self.case_type_id_2})
 
-    def test_get_case_type_cols_with_any_rights_unfiltered(self) -> None:
+    def test_get_cols_with_any_rights_unfiltered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(
@@ -233,8 +233,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     remove_case=False,
                     add_case_set=False,
                     remove_case_set=False,
-                    read_case_type_col_ids={self.col3},
-                    write_case_type_col_ids=set(),
+                    read_col_ids={self.col3},
+                    write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
                 )
@@ -245,11 +245,11 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        cols = abac.get_case_type_cols_with_any_rights()
+        cols = abac.get_cols_with_any_rights()
         self.assertEqual(cols, {self.col1, self.col2, self.col3})
 
-    def test_get_case_type_cols_with_any_rights_filtered_includes_all(self) -> None:
-        # Due to implementation, filtered path still aggregates all case types.
+    def test_get_cols_with_any_rights_filtered_includes_all(self) -> None:
+        # Due to implementation, filtered path still aggregates all CaseTypes.
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1})
@@ -263,8 +263,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     remove_case=False,
                     add_case_set=False,
                     remove_case_set=False,
-                    read_case_type_col_ids={self.col2},
-                    write_case_type_col_ids=set(),
+                    read_col_ids={self.col2},
+                    write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
                 )
@@ -275,10 +275,10 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        cols = abac.get_case_type_cols_with_any_rights(self.case_type_id_1)
+        cols = abac.get_cols_with_any_rights(self.case_type_id_1)
         self.assertEqual(cols, {self.col1, self.col2})
 
-    def test_get_case_type_cols_with_access_rights_read_filtered(self) -> None:
+    def test_get_cols_with_access_rights_read_filtered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1}),
@@ -290,16 +290,16 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        cols_read = abac.get_case_type_cols_with_access_rights(
+        cols_read = abac.get_cols_with_access_rights(
             CaseRight.READ_CASE, case_type_id=self.case_type_id_1
         )
         self.assertEqual(cols_read, {self.col1})
-        cols_write = abac.get_case_type_cols_with_access_rights(
+        cols_write = abac.get_cols_with_access_rights(
             CaseRight.WRITE_CASE, case_type_id=self.case_type_id_1
         )
         self.assertEqual(cols_write, {self.col2})
         with self.assertRaises(exc.InvalidArgumentsError):
-            abac.get_case_type_cols_with_access_rights(
+            abac.get_cols_with_access_rights(
                 CaseRight.ADD_CASE, case_type_id=self.case_type_id_1
             )
 
@@ -325,7 +325,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         dcs = abac.get_data_collections_with_any_rights()
         self.assertEqual(dcs, {self.dc1, self.dc2, self.dc3})
 
-    def test_get_data_collections_with_access_right_for_case_type_col(self) -> None:
+    def test_get_data_collections_with_access_right_for_col(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1}),
@@ -340,8 +340,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
                     remove_case=False,
                     add_case_set=False,
                     remove_case_set=False,
-                    read_case_type_col_ids={self.col1},
-                    write_case_type_col_ids=set(),
+                    read_col_ids={self.col1},
+                    write_col_ids=set(),
                     read_case_set=False,
                     write_case_set=False,
                 )
@@ -352,16 +352,16 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        read_dcs = abac.get_data_collections_with_access_right_for_case_type_col(
+        read_dcs = abac.get_data_collections_with_access_right_for_col(
             self.col1, CaseRight.READ_CASE
         )
         self.assertEqual(read_dcs, {self.dc1, self.dc3})
-        write_dcs = abac.get_data_collections_with_access_right_for_case_type_col(
+        write_dcs = abac.get_data_collections_with_access_right_for_col(
             self.col1, CaseRight.WRITE_CASE
         )
         self.assertEqual(write_dcs, {self.dc2})
         with self.assertRaises(exc.InvalidArgumentsError):
-            abac.get_data_collections_with_access_right_for_case_type_col(
+            abac.get_data_collections_with_access_right_for_col(
                 self.col1, CaseRight.ADD_CASE
             )
 
@@ -688,8 +688,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertEqual(rights.case_id, case_id)
         self.assertEqual(rights.add_data_collection_ids, {self.dc3, self.dc4})
         self.assertEqual(rights.remove_data_collection_ids, {self.dc1, self.dc2})
-        self.assertEqual(rights.read_case_type_col_ids, {self.col1, self.col2})
-        self.assertEqual(rights.write_case_type_col_ids, {self.col3})
+        self.assertEqual(rights.read_col_ids, {self.col1, self.col2})
+        self.assertEqual(rights.write_col_ids, {self.col3})
         self.assertTrue(rights.can_delete)
         self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
 
@@ -746,8 +746,8 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         self.assertEqual(rights.add_data_collection_ids, set())
         self.assertEqual(rights.remove_data_collection_ids, set())
         self.assertTrue(rights.can_delete)
-        self.assertEqual(rights.read_case_type_col_ids, set())
-        self.assertEqual(rights.write_case_type_col_ids, set())
+        self.assertEqual(rights.read_col_ids, set())
+        self.assertEqual(rights.write_col_ids, set())
         self.assertEqual(rights.shared_in_data_collection_ids, {self.dc2})
 
     def test_get_case_set_rights_full_access(self) -> None:
@@ -799,7 +799,7 @@ class TestCaseAbac(BaseCaseAbacTestCase):
         case_types = abac.get_case_types_with_any_rights()
         self.assertEqual(case_types, {self.case_type_id_2})
 
-    def test_get_case_type_cols_with_any_rights_filtered_missing_case_type_returns_empty(
+    def test_get_cols_with_any_rights_filtered_missing_case_type_returns_empty(
         self,
     ) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -812,10 +812,10 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_access_abacs=access_map,
             case_type_share_abacs={},
         )
-        cols = abac.get_case_type_cols_with_any_rights(self.case_type_id_2)
+        cols = abac.get_cols_with_any_rights(self.case_type_id_2)
         self.assertEqual(cols, set())
 
-    def test_get_case_type_cols_with_access_rights_unfiltered_invalid_right_raises(
+    def test_get_cols_with_access_rights_unfiltered_invalid_right_raises(
         self,
     ) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
@@ -830,9 +830,9 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         with self.assertRaises(exc.InvalidArgumentsError):
-            abac.get_case_type_cols_with_access_rights(CaseRight.ADD_CASE)
+            abac.get_cols_with_access_rights(CaseRight.ADD_CASE)
 
-    def test_get_case_type_cols_with_access_rights_unfiltered(self) -> None:
+    def test_get_cols_with_access_rights_unfiltered(self) -> None:
         access_map: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = {
             self.case_type_id_1: {
                 self.dc1: self.make_access(self.dc1, read_cols={self.col1}),
@@ -848,11 +848,11 @@ class TestCaseAbac(BaseCaseAbacTestCase):
             case_type_share_abacs={},
         )
         self.assertEqual(
-            abac.get_case_type_cols_with_access_rights(CaseRight.READ_CASE),
+            abac.get_cols_with_access_rights(CaseRight.READ_CASE),
             {self.col1, self.col3},
         )
         self.assertEqual(
-            abac.get_case_type_cols_with_access_rights(CaseRight.WRITE_CASE),
+            abac.get_cols_with_access_rights(CaseRight.WRITE_CASE),
             {self.col2},
         )
 

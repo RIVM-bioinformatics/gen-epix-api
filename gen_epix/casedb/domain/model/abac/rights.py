@@ -9,34 +9,34 @@ from gen_epix.fastapp import exc
 
 
 class CaseTypeAccessAbac(BaseModel):
-    case_type_id: UUID = Field(description="The ID of the case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     is_private: bool = Field(
-        description="Whether the data collection is private, limited to the case types in the case type set. When true, add/remove case and add/remove case set are considered (i) as the right to create/delete a case or case set in this data collection (setting case.created_in_data_collection to this data collection) and (ii) as the right to share the case or case set further in other data collections. Deleting a case or case set is only allowed when it can or has been removed from all other data collections as well."
+        description="Whether the data collection is private, limited to the CaseTypes in the CaseTypeSet. When true, add/remove case and add/remove case set are considered (i) as the right to create/delete a case or case set in this data collection (setting case.created_in_data_collection to this data collection) and (ii) as the right to share the case or case set further in other data collections. Deleting a case or case set is only allowed when it can or has been removed from all other data collections as well."
     )
     add_case: bool = Field(
-        description="Whether cases may be added, limited to the case type and data collection"
+        description="Whether cases may be added, limited to the CaseType and data collection"
     )
     remove_case: bool = Field(
-        description="Whether cases may be removed, limited to the case type and data collection"
+        description="Whether cases may be removed, limited to the CaseType and data collection"
     )
     add_case_set: bool = Field(
-        description="Whether case sets may be added, limited to the case type and data collection"
+        description="Whether case sets may be added, limited to the CaseType and data collection"
     )
     remove_case_set: bool = Field(
-        description="Whether case sets may be removed, limited to the case type and data collection"
+        description="Whether case sets may be removed, limited to the CaseType and data collection"
     )
-    read_case_type_col_ids: set[UUID] = Field(
-        description="The IDs of the case type columns for which values can be read, limited to the case type and data collection"
+    read_col_ids: set[UUID] = Field(
+        description="The IDs of the columns for which values can be read, limited to the CaseType and data collection"
     )
-    write_case_type_col_ids: set[UUID] = Field(
-        description="The IDs of the case type columns for which values can be updated, limited to the case types in the case type set"
+    write_col_ids: set[UUID] = Field(
+        description="The IDs of the columns for which values can be updated, limited to the CaseTypes in the CaseTypeSet"
     )
     read_case_set: bool = Field(
-        description="Whether case set be read, limited to the case type and data collection"
+        description="Whether case set be read, limited to the CaseType and data collection"
     )
     write_case_set: bool = Field(
-        description="Whether case set be updated, limited to the case type and data collection"
+        description="Whether case set be updated, limited to the CaseType and data collection"
     )
 
     def has_any_rights(self) -> bool:
@@ -48,27 +48,27 @@ class CaseTypeAccessAbac(BaseModel):
             or self.remove_case
             or self.add_case_set
             or self.remove_case_set
-            or len(self.read_case_type_col_ids) > 0
-            or len(self.write_case_type_col_ids) > 0
+            or len(self.read_col_ids) > 0
+            or len(self.write_col_ids) > 0
             or self.read_case_set
             or self.write_case_set
         )
 
 
 class CaseTypeShareAbac(BaseModel):
-    case_type_id: UUID = Field(description="The ID of the case type")
+    case_type_id: UUID = Field(description="The ID of the CaseType")
     data_collection_id: UUID = Field(description="The ID of the data collection")
     add_case_from_data_collection_ids: set[UUID] = Field(
-        description="The IDs of the data collections from which cases may be added to this data collection, limited to the case type"
+        description="The IDs of the data collections from which cases may be added to this data collection, limited to the CaseType"
     )
     remove_case_from_data_collection_ids: set[UUID] = Field(
-        description="The IDs of the data collections from which cases may be removed from this data collection, limited to the case type"
+        description="The IDs of the data collections from which cases may be removed from this data collection, limited to the CaseType"
     )
     add_case_set_from_data_collection_ids: set[UUID] = Field(
-        description="The IDs of the data collections from which case sets may be added to this data collection, limited to the case type"
+        description="The IDs of the data collections from which case sets may be added to this data collection, limited to the CaseType"
     )
     remove_case_set_from_data_collection_ids: set[UUID] = Field(
-        description="The IDs of the data collections from which case sets may be removed from this data collection, limited to the case type"
+        description="The IDs of the data collections from which case sets may be removed from this data collection, limited to the CaseType"
     )
 
     def has_any_rights(self) -> bool:
@@ -88,10 +88,10 @@ class CaseAbac(BaseModel):
         description="Whether the user has full access, i.e. is not limited by any ABAC policies. If so, the other fields are empty and are to be ignored."
     )
     case_type_access_abacs: dict[UUID, dict[UUID, CaseTypeAccessAbac]] = Field(
-        description="The case type data collection ABACs for the user, keyed by case type set ID and then data collection ID"
+        description="The CaseTypeAccessAbac objects for the user, keyed by CaseTypeSet ID and then data collection ID"
     )
     case_type_share_abacs: dict[UUID, dict[UUID, CaseTypeShareAbac]] = Field(
-        description="The case type share ABACs for the user, keyed by case type set ID and then data collection ID"
+        description="The CaseTypeShareAbac objects for the user, keyed by CaseTypeSet ID and then data collection ID"
     )
 
     def get_case_rights(
@@ -106,7 +106,7 @@ class CaseAbac(BaseModel):
 
         Arguments:
             case_id: The ID of the case.
-            case_type_id: The ID of the case type that the case belongs to.
+            case_type_id: The ID of the CaseType that the case belongs to.
             created_in_data_collection_id: The ID of the data collection where the case was created.
             data_collection_ids: The IDs of the data collections in which the case is currently shared.
         """
@@ -133,7 +133,7 @@ class CaseAbac(BaseModel):
 
         Arguments:
             case_set_id: The ID of the case set.
-            case_type_id: The ID of the case type that the case set belongs to.
+            case_type_id: The ID of the CaseType that the case set belongs to.
             created_in_data_collection_id: The ID of the data collection where the case set was created.
             data_collection_ids: The IDs of the data collections in which the case set is currently shared.
         """
@@ -238,12 +238,10 @@ class CaseAbac(BaseModel):
                 retval.add(case_type_id)
         return retval
 
-    def get_case_type_cols_with_any_rights(
-        self, case_type_id: UUID | None = None
-    ) -> set[UUID]:
+    def get_cols_with_any_rights(self, case_type_id: UUID | None = None) -> set[UUID]:
         """
-        Get the set[case_type_col_id] for which there is any read or write access in at
-        least one of the data collections. Optionally limited to the given case type.
+        Get the set[col_id] for which there is any read or write access in at
+        least one of the data collections. Optionally limited to the given CaseType.
         """
         retval: set[UUID] = set()
         if case_type_id is not None:
@@ -251,20 +249,20 @@ class CaseAbac(BaseModel):
                 return retval
             data = self.case_type_access_abacs[case_type_id]
             for access_abac in data.values():
-                retval.update(access_abac.read_case_type_col_ids)
-                retval.update(access_abac.write_case_type_col_ids)
+                retval.update(access_abac.read_col_ids)
+                retval.update(access_abac.write_col_ids)
         for case_type_id, data in self.case_type_access_abacs.items():
             for access_abac in data.values():
-                retval.update(access_abac.read_case_type_col_ids)
-                retval.update(access_abac.write_case_type_col_ids)
+                retval.update(access_abac.read_col_ids)
+                retval.update(access_abac.write_col_ids)
         return retval
 
-    def get_case_type_cols_with_access_rights(
+    def get_cols_with_access_rights(
         self, right: CaseRight, case_type_id: UUID | None = None
     ) -> set[UUID]:
         """
-        Get the set[case_type_col_id] for which there is any read or write access in at
-        least one of the data collections. Optionally limited to the given case type.
+        Get the set[col_id] for which there is any read or write access in at
+        least one of the data collections. Optionally limited to the given CaseType.
         """
         retval: set[UUID] = set()
         if case_type_id is not None:
@@ -311,30 +309,30 @@ class CaseAbac(BaseModel):
                 )
         return data_collection_ids
 
-    def get_data_collections_with_access_right_for_case_type_col(
-        self, case_type_col_id: UUID, right: CaseRight
+    def get_data_collections_with_access_right_for_col(
+        self, col_id: UUID, right: CaseRight
     ) -> set[UUID]:
         """
         Get the set[data_collection_id] for which there is the given right on the
-        given case_type_col.
+        given Col.
         """
         if right == CaseRight.READ_CASE:
             return {
                 data_collection_id
                 for access_by_data_collection in self.case_type_access_abacs.values()
                 for data_collection_id, access_abac in access_by_data_collection.items()
-                if case_type_col_id in access_abac.read_case_type_col_ids
+                if col_id in access_abac.read_col_ids
             }
         elif right == CaseRight.WRITE_CASE:
             return {
                 data_collection_id
                 for access_by_data_collection in self.case_type_access_abacs.values()
                 for data_collection_id, access_abac in access_by_data_collection.items()
-                if case_type_col_id in access_abac.write_case_type_col_ids
+                if col_id in access_abac.write_col_ids
             }
         else:
             raise exc.InvalidArgumentsError(
-                f"Right {right.value} is invalid for case_type_col access"
+                f"Right {right.value} is invalid for Col access"
             )
 
     def get_removable_data_collections_ids(
@@ -395,7 +393,7 @@ class CaseAbac(BaseModel):
         tgt_data_collection_ids: set[UUID] | None = None,
     ) -> bool:
         """
-        Determine if the given right is allowed for the given case type and data
+        Determine if the given right is allowed for the given CaseType and data
         collections. This covers the following rights:
         - ADD_CASE/SET: create a case or case set and/or add it to all the given data
           collections
@@ -411,7 +409,7 @@ class CaseAbac(BaseModel):
         current_data_collection_ids = current_data_collection_ids or set()
         tgt_data_collection_ids = tgt_data_collection_ids or set()
 
-        # Get rights for the case type
+        # Get rights for the CaseType
         access_abac = self.case_type_access_abacs.get(case_type_id, {})
         share_abac = self.case_type_share_abacs.get(case_type_id, {})
 
@@ -482,15 +480,15 @@ class CaseAbac(BaseModel):
     def _update_access_rights(
         self, right: CaseRight, retval: set[UUID], data: dict[UUID, CaseTypeAccessAbac]
     ) -> set[UUID]:
-        """Helper to update the set of case type column IDs based on the given right."""
+        """Helper to update the set of Col IDs based on the given right."""
         for access_abac in data.values():
             if right == CaseRight.READ_CASE:
-                retval.update(access_abac.read_case_type_col_ids)
+                retval.update(access_abac.read_col_ids)
             elif right == CaseRight.WRITE_CASE:
-                retval.update(access_abac.write_case_type_col_ids)
+                retval.update(access_abac.write_col_ids)
             else:
                 raise exc.InvalidArgumentsError(
-                    f"Right {right.value} is invalid for case_type_col access"
+                    f"Right {right.value} is invalid for Col access"
                 )
         return retval
 
@@ -673,8 +671,8 @@ class CaseAbac(BaseModel):
             is_full_access=True,
             add_data_collection_ids=set(),
             remove_data_collection_ids=set(),
-            read_case_type_col_ids=set(),
-            write_case_type_col_ids=set(),
+            read_col_ids=set(),
+            write_col_ids=set(),
             can_delete=True,
             shared_in_data_collection_ids=shared_in_data_collection_ids,
         )
@@ -744,12 +742,12 @@ class CaseAbac(BaseModel):
                 can_delete=can_delete,
                 shared_in_data_collection_ids=shared_in_data_collection_ids,
             )
-        # Case type cols that can be read/written
-        read_case_type_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.read_case_type_col_ids
+        # Cols that can be read/written
+        read_col_ids: set[UUID] = {
+            col_id for x in access.values() for col_id in x.read_col_ids
         }
-        write_case_type_col_ids: set[UUID] = {
-            col_id for x in access.values() for col_id in x.write_case_type_col_ids
+        write_col_ids: set[UUID] = {
+            col_id for x in access.values() for col_id in x.write_col_ids
         }
         return CaseRights(
             case_id=case_or_set_id,
@@ -759,8 +757,8 @@ class CaseAbac(BaseModel):
             is_full_access=self.is_full_access,
             add_data_collection_ids=add_data_collection_ids,
             remove_data_collection_ids=remove_data_collection_ids,
-            read_case_type_col_ids=read_case_type_col_ids,
-            write_case_type_col_ids=write_case_type_col_ids,
+            read_col_ids=read_col_ids,
+            write_col_ids=write_col_ids,
             can_delete=can_delete,
             shared_in_data_collection_ids=shared_in_data_collection_ids,
         )
@@ -818,7 +816,7 @@ class CaseAbac(BaseModel):
         Arguments:
             case_or_set_id: The ID of the case or case set.
             is_case_set: Whether the ID is for a case set.
-            case_type_id: The ID of the case type that the case or case set belongs to.
+            case_type_id: The ID of the CaseType that the case or case set belongs to.
             created_in_data_collection_id: The ID of the data collection where the case or case set was created.
             data_collection_ids: The IDs of the data collections in which the case or case set is currently shared.
         """
@@ -853,9 +851,9 @@ class CaseAbac(BaseModel):
         elif right == CaseRight.REMOVE_CASE:
             has_right_fn = lambda x: x.remove_case
         elif right == CaseRight.READ_CASE:
-            has_right_fn = lambda x: len(x.read_case_type_col_ids) > 0
+            has_right_fn = lambda x: len(x.read_col_ids) > 0
         elif right == CaseRight.WRITE_CASE:
-            has_right_fn = lambda x: len(x.write_case_type_col_ids) > 0
+            has_right_fn = lambda x: len(x.write_col_ids) > 0
         elif right == CaseRight.ADD_CASE_SET:
             has_right_fn = lambda x: x.add_case_set
         elif right == CaseRight.REMOVE_CASE_SET:

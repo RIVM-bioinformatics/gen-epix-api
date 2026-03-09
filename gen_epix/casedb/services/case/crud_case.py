@@ -55,7 +55,7 @@ def _crud_case_with_abac(
         # No policy: allows for internal commands to retrieve all
         return self.crud(cmd)  # type: ignore[return-value]
 
-    # Determine valid case types and data collections
+    # Determine valid CaseTypes and data collections
     case_ids: list[UUID] = cmd.get_obj_ids()  # type: ignore[assignment]
     if cmd.is_create() | cmd.is_read() | cmd.is_update():
         # Implemented through commands

@@ -10,15 +10,15 @@ erDiagram
     DataCollectionSetMember }o--|| DataCollectionSet : "data_collection_set_id"
     DataCollectionSetMember }o--|| DataCollection : "data_collection_id"
     Site }o--|| Organization : "organization_id"
+    User }o--|| Organization : "organization_id"
     OrganizationSetMember }o--|| OrganizationSet : "organization_set_id"
     OrganizationSetMember }o--|| Organization : "organization_id"
-    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
-    UserInvitation }o--|| Organization : "organization_id"
-    UserInvitation }o--|| User : "invited_by_user_id"
-    User }o--|| Organization : "organization_id"
-    Contact }o--|| Site : "site_id"
     OrganizationIdentifierIssuerLink }o--|| Organization : "organization_id"
     OrganizationIdentifierIssuerLink }o--|| IdentifierIssuer : "identifier_issuer_id"
+    UserInvitation }o--|| Organization : "organization_id"
+    UserInvitation }o--|| User : "invited_by_user_id"
+    Contact }o--|| Site : "site_id"
+    ExternalIdentifier }o--|| IdentifierIssuer : "identifier_issuer_id"
 
     %% Entity definitions
     DataCollectionSetMember {
@@ -27,60 +27,16 @@ erDiagram
         UUID data_collection_id FK
     }
 
-    DataCollectionSet {
-        UUID id PK
-        string name
-        string description
-    }
-
-    DataCollection {
-        UUID id PK
-        string name
-        string description
-    }
-
     Site {
         UUID id PK
         UUID organization_id FK
         string name
     }
 
-    OrganizationSetMember {
-        UUID id PK
-        UUID organization_set_id FK
-        UUID organization_id FK
-    }
-
-    ExternalIdentifier {
-        UUID id PK
-        enum identifier_type
-        UUID identifier_issuer_id FK
-        string external_id
-        UUID internal_id
-    }
-
-    UserNameEmail {
+    UserInvitationConstraints {
         UUID id
-        string name
-        string email
-    }
-
-    Organization {
-        UUID id PK
-        string name
-        string legal_entity_code
-    }
-
-    UserInvitation {
-        UUID id PK
-        string key
-        string email
-        string name
-        string token
-        timestamp expires_at
         set[string] roles
-        UUID invited_by_user_id FK
-        UUID organization_id FK
+        set[UUID] organization_ids
     }
 
     IdentifierIssuer {
@@ -100,18 +56,10 @@ erDiagram
         UUID organization_id FK
     }
 
-    Contact {
+    OrganizationSetMember {
         UUID id PK
-        UUID site_id FK
-        string name
-        string email
-        string phone
-    }
-
-    OrganizationSet {
-        UUID id PK
-        string name
-        string description
+        UUID organization_set_id FK
+        UUID organization_id FK
     }
 
     OrganizationIdentifierIssuerLink {
@@ -120,10 +68,62 @@ erDiagram
         UUID identifier_issuer_id FK
     }
 
-    UserInvitationConstraints {
-        UUID id
+    UserInvitation {
+        UUID id PK
+        string key
+        string email
+        string name
+        string token
+        timestamp expires_at
         set[string] roles
-        set[UUID] organization_ids
+        UUID invited_by_user_id FK
+        UUID organization_id FK
+    }
+
+    DataCollectionSet {
+        UUID id PK
+        string name
+        string description
+    }
+
+    DataCollection {
+        UUID id PK
+        string name
+        string description
+    }
+
+    Organization {
+        UUID id PK
+        string name
+        string legal_entity_code
+    }
+
+    UserNameEmail {
+        UUID id
+        string name
+        string email
+    }
+
+    OrganizationSet {
+        UUID id PK
+        string name
+        string description
+    }
+
+    Contact {
+        UUID id PK
+        UUID site_id FK
+        string name
+        string email
+        string phone
+    }
+
+    ExternalIdentifier {
+        UUID id PK
+        enum identifier_type
+        UUID identifier_issuer_id FK
+        string external_id
+        UUID internal_id
     }
 
 ```

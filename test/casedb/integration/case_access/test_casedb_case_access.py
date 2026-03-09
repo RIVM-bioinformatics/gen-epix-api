@@ -54,17 +54,17 @@ class CaseAccessSetup:
         model.UserInvitation: "UserInvitation",
         model.DataCollection: "DataCollection",
         model.CaseTypeSetCategory: "CaseTypeSetCategory",
-        model.Dim: "Dim",
-        model.Col: "Col",
+        model.RefDim: "RefDim",
+        model.RefCol: "RefCol",
         model.Disease: "Disease",
         model.EtiologicalAgent: "EtiologicalAgent",
         model.CaseType: "CaseType",
         model.CaseTypeSet: "CaseTypeSet",
         model.CaseTypeSetMember: "CaseTypeSetMember",
-        model.CaseTypeDim: "CaseTypeDim",
-        model.CaseTypeCol: "CaseTypeCol",
-        model.CaseTypeColSet: "CaseTypeColSet",
-        model.CaseTypeColSetMember: "CaseTypeColSetMember",
+        model.Dim: "Dim",
+        model.Col: "Col",
+        model.ColSet: "ColSet",
+        model.ColSetMember: "ColSetMember",
         model.OrganizationAdminPolicy: "OrganizationAdminPolicy",
         model.OrganizationAccessCasePolicy: "OrganizationAccessCasePolicy",
         model.UserAccessCasePolicy: "UserAccessCasePolicy",
@@ -117,7 +117,7 @@ class TestCaseAccess(CaseAccessSetup):
         df = df.loc[df["dm.is_active"] == True, :]
         # command_idx_to_test = None
         command_idx_to_test = {6}  # For debugging, set set of indices, otherwise None
-        n_case_type_cols = 3
+        n_cols = 3
         # Sort by index to have correct order
         df = df.sort_values(by="index", axis=0).to_dict(orient="records")
         # Get unique users
@@ -136,12 +136,12 @@ class TestCaseAccess(CaseAccessSetup):
             row: dict[str, Any], for_upload: bool = False, is_create: bool = True
         ) -> model.Case | model.CaseForUpload:
             case_content = {}
-            for i in range(1, n_case_type_cols):
-                case_type_col_id = row[f"case.content.case_type_col_id{i}"]
-                if case_type_col_id is None:
+            for i in range(1, n_cols):
+                col_id = row[f"case.content.col_id{i}"]
+                if col_id is None:
                     continue
-                value = row[f"case.content.case_type_col_value{i}"]
-                case_content[case_type_col_id] = value
+                value = row[f"case.content.col_value{i}"]
+                case_content[col_id] = value
             if for_upload:
                 return model.CaseForUpload(
                     id=row["case.id"],

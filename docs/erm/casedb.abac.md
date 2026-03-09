@@ -12,13 +12,13 @@ erDiagram
     OrganizationAdminPolicy {
     }
 
-    OrganizationAccessCasePolicy {
-    }
-
     UserShareCasePolicy {
     }
 
     UserAccessCasePolicy {
+    }
+
+    OrganizationAccessCasePolicy {
     }
 
 ```

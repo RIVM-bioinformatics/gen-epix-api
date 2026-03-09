@@ -11,7 +11,7 @@ from gen_epix.fastapp import CrudOperation
 def case_service_create_case_set(
     self: BaseCaseService, cmd: command.CreateCaseSetCommand
 ) -> model.CaseSet | None:
-    # Get case type and created_in data collection IDs
+    # Get CaseType and created_in data collection IDs
     case_type_id = cmd.case_set.case_type_id
     created_in_data_collection_id = cmd.case_set.created_in_data_collection_id
 

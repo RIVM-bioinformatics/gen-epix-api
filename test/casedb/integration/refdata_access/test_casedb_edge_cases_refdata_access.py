@@ -6,28 +6,11 @@ It uses:
 - an empty database to begin with, see DevRepositoryConfig.DICT_EMPTY in base_empty.py for configuration
 - the definitions in EDGE_CASES from define_edge_cases.py
 - the setup_case_type_data fixture to create reference data and policies for all edge cases defined in define_edge_cases.py,
-- and then tests that each user has access to exactly the expected case types or other reference data
+- and then tests that each user has access to exactly the expected CaseTypes or other reference data
 
 """
 
 import logging
-
-import pytest
-from rich import print as rich_print
-
-from gen_epix.casedb.domain import command, enum, model
-from gen_epix.casedb.domain.command import (
-    CaseTypeCrudCommand,
-    CaseTypeSetCategoryCrudCommand,
-    CaseTypeSetCrudCommand,
-    ColCrudCommand,
-    DimCrudCommand,
-)
-from gen_epix.casedb.repositories.sa_model.ontology import Disease
-from gen_epix.commondb.domain.enum import AppType
-from gen_epix.commondb.domain.util import get_app_cfgs
-from gen_epix.fastapp import CrudOperation
-from gen_epix.seqdb.domain import enum as seqdb_enum
 from test.casedb.casedb_test_client import CasedbTestClient as Env
 from test.casedb.integration.refdata_access.base_empty import (
     DEV_REPOSITORY_CONFIG,
@@ -40,6 +23,23 @@ from test.casedb.integration.setup.define_edge_cases import (
     EDGE_CASES,
     EdgeCaseSpec,
 )
+
+import pytest
+from rich import print as rich_print
+
+from gen_epix.casedb.domain import command, enum, model
+from gen_epix.casedb.domain.command import (
+    CaseTypeCrudCommand,
+    CaseTypeSetCategoryCrudCommand,
+    CaseTypeSetCrudCommand,
+    RefColCrudCommand,
+    RefDimCrudCommand,
+)
+from gen_epix.casedb.repositories.sa_model.ontology import Disease
+from gen_epix.commondb.domain.enum import AppType
+from gen_epix.commondb.domain.util import get_app_cfgs
+from gen_epix.fastapp import CrudOperation
+from gen_epix.seqdb.domain import enum as seqdb_enum
 
 SEQDB_APP_CFGS = get_app_cfgs(
     AppType.SEQDB, seqdb_enum.ServiceType, seqdb_enum.RepositoryType, TEST_TYPE
@@ -72,11 +72,11 @@ def get_test_client() -> Env:
 
 @pytest.mark.integration
 class TestCaseDBEdgeCasesRefDataAccess:
-    """Test ABAC filtering on reference data (case type) access across all edge cases.
+    """Test ABAC filtering on reference data (CaseType) access across all edge cases.
 
     Each user in EDGE_CASES represents one combination of org membership, org-level policies,
     and user-level policies. A single parametrized test iterates all specs and asserts that
-    the accessible case types exactly match the expected set declared in EdgeCaseSpec.
+    the accessible CaseTypes exactly match the expected set declared in EdgeCaseSpec.
 
     The root user is tested separately as a superuser baseline (not an ABAC edge case).
     """
@@ -93,11 +93,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         #     rich_print(env.db[model.Organization])
         #     rich_print(env.db[model.OrganizationAccessCasePolicy])
 
-        #     rich_print(env.db[model.CaseTypeColSet])
-        #     rich_print(env.db[model.CaseTypeCol])
-        #     rich_print(env.db[model.CaseTypeDim])
+        #     rich_print(env.db[model.ColSet])
         #     rich_print(env.db[model.Col])
         #     rich_print(env.db[model.Dim])
+        #     rich_print(env.db[model.RefCol])
+        #     rich_print(env.db[model.RefDim])
 
         #     rich_print(env.db[model.DataCollection])
 
@@ -115,7 +115,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
     def test_root_user_has_access_to_all_case_types(
         self, setup_case_type_data: None
     ) -> None:
-        """Root user should have access to all case types regardless of policies (superuser baseline)."""
+        """Root user should have access to all CaseTypes regardless of policies (superuser baseline)."""
         root_user = self.env.get_root_user()
 
         get_cmd = CaseTypeCrudCommand(user=root_user, operation=CrudOperation.READ_ALL)
@@ -123,7 +123,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         assert isinstance(result, list)
 
-        assert len(result) >= 2, "Root user should have access to all case types"
+        assert len(result) >= 2, "Root user should have access to all CaseTypes"
 
     @pytest.mark.parametrize(
         "spec",
@@ -134,7 +134,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible case types exactly matches
+        For each edge case, assert that the set of accessible CaseTypes exactly matches
         the expected set declared in EdgeCaseSpec — neither more nor less.
 
         Failure output includes the full edge case description so the cause is immediately clear, example:
@@ -172,11 +172,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible case type sets exactly matches
+        For each edge case, assert that the set of accessible CaseTypeSets exactly matches
         the expected set declared in EdgeCaseSpec.expected_case_type_sets — neither more nor less.
 
-        Only case type sets referenced in org-level policies should be accessible.
-        User policies must not grant access to additional case type sets.
+        Only CaseTypeSets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional CaseTypeSets.
         """
         user = self.get_user(spec.user_name)
 
@@ -203,24 +203,22 @@ class TestCaseDBEdgeCasesRefDataAccess:
         EDGE_CASES,
         ids=[x.user_name for x in EDGE_CASES],
     )
-    def test_case_type_col_set_access_matches_expected(
+    def test_col_set_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible case type col sets exactly matches
-        the expected set declared in EdgeCaseSpec.expected_case_type_col_sets — neither more nor less.
+        For each edge case, assert that the set of accessible ColSets exactly matches
+        the expected set declared in EdgeCaseSpec.expected_col_sets — neither more nor less.
 
-        Only case type col sets referenced in org-level policies should be accessible.
-        User policies must not grant access to additional case type col sets.
+        Only ColSets referenced in org-level policies should be accessible.
+        User policies must not grant access to additional ColSets.
         """
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
             rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
-        get_cmd = command.CaseTypeColSetCrudCommand(
-            user=user, operation=CrudOperation.READ_ALL
-        )
+        get_cmd = command.ColSetCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
         # Fix: handle None or unexpected result type
@@ -228,7 +226,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
             actual = set()
         else:
             actual = {x.name for x in result}
-        expected = set(spec.expected_case_type_col_sets)
+        expected = set(spec.expected_col_sets)
 
         missing = expected - actual
         unexpected = actual - expected
@@ -249,9 +247,9 @@ class TestCaseDBEdgeCasesRefDataAccess:
     ) -> None:
         """
         For each edge case, assert that the set of accessible cols exactly matches
-        the expected set declared in EdgeCaseSpec.expected_cols — neither more nor less.
+        the expected set declared in EdgeCaseSpec.expected_ref_cols — neither more nor less.
 
-        Accessible cols are derived from accessible case type cols (via org access policies only).
+        Accessible cols are derived from accessible Cols (via org access policies only).
         User policies must not grant access to additional cols.
         """
         user = self.get_user(spec.user_name)
@@ -259,11 +257,11 @@ class TestCaseDBEdgeCasesRefDataAccess:
         if VERBOSE:
             rich_print(EDGE_CASE_BY_USER[spec.user_name])
 
-        get_cmd = ColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        get_cmd = RefColCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
         actual = {x.code for x in result} if isinstance(result, list) else set()
-        expected = set(spec.expected_cols)
+        expected = set(spec.expected_ref_cols)
 
         missing = expected - actual
         unexpected = actual - expected
@@ -279,26 +277,26 @@ class TestCaseDBEdgeCasesRefDataAccess:
         EDGE_CASES,
         ids=[x.user_name for x in EDGE_CASES],
     )
-    def test_dim_access_matches_expected(
+    def test_ref_dim_access_matches_expected(
         self, spec: EdgeCaseSpec, setup_case_type_data: None
     ) -> None:
         """
-        For each edge case, assert that the set of accessible dims exactly matches
-        the expected set declared in EdgeCaseSpec.expected_dims — neither more nor less.
+        For each edge case, assert that the set of accessible ref_dims exactly matches
+        the expected set declared in EdgeCaseSpec.expected_ref_dims — neither more nor less.
 
-        Accessible dims are derived from accessible case type cols (via org access policies only).
-        User policies must not grant access to additional dims.
+        Accessible ref_dims are derived from accessible Cols (via org access policies only).
+        User policies must not grant access to additional ref_dims.
         """
         user = self.get_user(spec.user_name)
 
         if VERBOSE:
             rich_print([x for x in EDGE_CASES if x.user_name == user.name])
 
-        get_cmd = DimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
+        get_cmd = RefDimCrudCommand(user=user, operation=CrudOperation.READ_ALL)
         result = self.env.app.handle(get_cmd)
 
-        actual = {dim.code for dim in result} if isinstance(result, list) else set()
-        expected = set(spec.expected_dims)
+        actual = {x.code for x in result} if isinstance(result, list) else set()
+        expected = set(spec.expected_ref_dims)
 
         missing = expected - actual
         unexpected = actual - expected
@@ -372,7 +370,7 @@ class TestCaseDBEdgeCasesRefDataAccess:
         self, setup_case_type_data: None
     ) -> None:
         """
-        Assert that all created case type set categories are accessible to any user,
+        Assert that all created CaseTypeSet categories are accessible to any user,
         since category access is not filtered by access policies in this setup.
         """
         spec = EDGE_CASES[
@@ -393,6 +391,6 @@ class TestCaseDBEdgeCasesRefDataAccess:
 
         assert actual == expected, (
             f"\n{spec.description}"
-            f"\n  Expected access to all case type set categories: {sorted(expected)}"
+            f"\n  Expected access to all CaseTypeSet categories: {sorted(expected)}"
             f"\n  Actual access: {sorted(actual) if actual else '\u2205'}"
         )

@@ -1,4 +1,4 @@
-class TestGetCaseDateCaseTypeColIds:
-    """Unit tests for CaseService.get_case_date_case_type_col_ids() method."""
+class TestGetCaseDateColIds:
+    """Unit tests for CaseService.get_case_date_col_ids() method."""
 
     pass

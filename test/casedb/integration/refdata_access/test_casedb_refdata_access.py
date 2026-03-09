@@ -206,7 +206,7 @@ class TestRefdataAccess:
         user: model.User,
     ) -> set[UUID]:
         """
-        Get expected case type IDs for reference data access.
+        Get expected CaseType IDs for reference data access.
 
         For reference data, the actual rights of organization users are limited to read rights
         and are the union of the reference data available to the organization through the
@@ -226,69 +226,69 @@ class TestRefdataAccess:
         )
         all_case_type_set_members = self._get_all_case_type_set_members(env)
 
-        # Get case type sets from organization access policies for this user's org
+        # Get CaseTypeSets from organization access policies for this user's org
         org_access_case_type_set_ids = {
             x.case_type_set_id
             for x in all_organization_access_case_policies
             if x.organization_id == user.organization_id
         }
 
-        # Get case type sets from organization share policies for this user's org
+        # Get CaseTypeSets from organization share policies for this user's org
         org_share_case_type_set_ids = {
             x.case_type_set_id
             for x in all_organization_share_case_policies
             if x.organization_id == user.organization_id
         }
 
-        # Get all case types accessible through organization access policies
+        # Get all CaseTypes accessible through organization access policies
         org_access_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in org_access_case_type_set_ids
         }
 
-        # Get all case types accessible through organization share policies
+        # Get all CaseTypes accessible through organization share policies
         org_share_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in org_share_case_type_set_ids
         }
 
-        # Union: case types accessible through organization access OR share policies
+        # Union: CaseTypes accessible through organization access OR share policies
         expected_case_type_ids = org_access_case_type_ids | org_share_case_type_ids
 
         if VERBOSE:
             all_case_type_sets = self._get_all_case_type_sets(env)
-            case_type_set_name_map = {cts.id: cts.name for cts in all_case_type_sets}
+            case_type_set_name_map = {x.id: x.name for x in all_case_type_sets}
 
             org_access_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in org_access_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in org_access_case_type_set_ids
             ]
             org_share_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in org_share_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in org_share_case_type_set_ids
             ]
 
             print(
-                "org access case type sets:",
+                "org access CaseTypeSets:",
                 len(org_access_case_type_set_ids),
                 org_access_case_type_set_names,
             )
             print(
-                "org share case type sets:",
+                "org share CaseTypeSets:",
                 len(org_share_case_type_set_ids),
                 org_share_case_type_set_names,
             )
-            print("org access case types:", len(org_access_case_type_ids))
-            print("org share case types:", len(org_share_case_type_ids))
-            print("reference data case type IDs:", len(expected_case_type_ids))
+            print("org access CaseTypes:", len(org_access_case_type_ids))
+            print("org share CaseTypes:", len(org_share_case_type_ids))
+            print("reference data CaseType IDs:", len(expected_case_type_ids))
 
         return expected_case_type_ids
 
     # Note that this method is currently not used in the test, but it can be used for future more fine-grained tests that check ABAC filtering for operational data access,
     # instead of the current all-or-nothing approach for reference data access
-    # It should test for access on case level, not just case type level, to verify that ABAC filtering is correctly applied for operational data access
+    # It should test for access on case level, not just CaseType level, to verify that ABAC filtering is correctly applied for operational data access
     @pytest.mark.skip(
         reason="Skipped, but kept for future reference when implementing more fine-grained tests for operational data access with ABAC filtering"
     )
@@ -298,34 +298,34 @@ class TestRefdataAccess:
         user: model.User,
     ) -> set[UUID]:
         """
-        Determine the case type IDs that a user should have access to for operational data.
+        Determine the CaseType IDs that a user should have access to for operational data.
 
-        This method calculates the union of case types accessible through either access rights
+        This method calculates the union of CaseTypes accessible through either access rights
         or share rights. For each type of right (access/share), a user must satisfy BOTH
-        organization-level and user-level policies to gain access to case types.
+        organization-level and user-level policies to gain access to CaseTypes.
 
         Args:
             env (Env): The environment context for retrieving reference data
-            user (model.User): The user for whom to determine accessible case type IDs
+            user (model.User): The user for whom to determine accessible CaseType IDs
 
         Returns:
-            set[UUID]: A set of case type IDs that the user should have operational access to
+            set[UUID]: A set of CaseType IDs that the user should have operational access to
 
         Logic:
-            1. Retrieves all relevant policies and case type set memberships
+            1. Retrieves all relevant policies and CaseTypeSetMemberships
             2. For access rights:
-               - Finds case type sets from organization access policies for user's org
-               - Finds case type sets from user access policies for the specific user
-               - Gets case types that are in BOTH org AND user accessible case type sets
+               - Finds CaseTypeSets from organization access policies for user's org
+               - Finds CaseTypeSets from user access policies for the specific user
+               - Gets CaseTypes that are in BOTH org AND user accessible CaseTypeSets
             3. For share rights:
-               - Finds case type sets from organization share policies for user's org
-               - Finds case type sets from user share policies for the specific user
-               - Gets case types that are in BOTH org AND user shareable case type sets
-            4. Returns the union of case types accessible through either access OR share rights
+               - Finds CaseTypeSets from organization share policies for user's org
+               - Finds CaseTypeSets from user share policies for the specific user
+               - Gets CaseTypes that are in BOTH org AND user shareable CaseTypeSets
+            4. Returns the union of CaseTypes accessible through either access OR share rights
 
         Note:
             - Access requires intersection of org AND user policies
-            - Final result is union of access OR share case types
+            - Final result is union of access OR share CaseTypes
         """
 
         # Get all the reference data using cached methods
@@ -339,119 +339,119 @@ class TestRefdataAccess:
         all_user_share_case_policies = self._get_all_user_share_case_policies(env)
         all_case_type_set_members = self._get_all_case_type_set_members(env)
 
-        # Get case type sets from organization access policies for this user's org
+        # Get CaseTypeSets from organization access policies for this user's org
         org_access_case_type_set_ids = {
             x.case_type_set_id
             for x in all_organization_access_case_policies
             if x.organization_id == user.organization_id
         }
 
-        # Get case type sets from user access policies for this user
+        # Get CaseTypeSets from user access policies for this user
         user_access_case_type_set_ids = {
             x.case_type_set_id
             for x in all_user_access_case_policies
             if x.user_id == user.id
         }
 
-        # Get all case types accessible through organization access policies
+        # Get all CaseTypes accessible through organization access policies
         org_access_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in org_access_case_type_set_ids
         }
 
-        # Get all case types accessible through user access policies
+        # Get all CaseTypes accessible through user access policies
         user_access_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in user_access_case_type_set_ids
         }
 
-        # Intersection: case types that are accessible through BOTH org AND user access policies
+        # Intersection: CaseTypes that are accessible through BOTH org AND user access policies
         access_case_type_ids = org_access_case_type_ids & user_access_case_type_ids
 
-        # Get case type sets from organization share policies for this user's org
+        # Get CaseTypeSets from organization share policies for this user's org
         org_share_case_type_set_ids = {
             x.case_type_set_id
             for x in all_organization_share_case_policies
             if x.organization_id == user.organization_id
         }
 
-        # Get case type sets from user share policies for this user
+        # Get CaseTypeSets from user share policies for this user
         user_share_case_type_set_ids = {
             x.case_type_set_id
             for x in all_user_share_case_policies
             if x.user_id == user.id
         }
 
-        # Get all case types accessible through organization share policies
+        # Get all CaseTypes accessible through organization share policies
         org_share_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in org_share_case_type_set_ids
         }
 
-        # Get all case types accessible through user share policies
+        # Get all CaseTypes accessible through user share policies
         user_share_case_type_ids = {
             x.case_type_id
             for x in all_case_type_set_members
             if x.case_type_set_id in user_share_case_type_set_ids
         }
 
-        # Intersection: case types that are accessible through BOTH org AND user share policies
+        # Intersection: CaseTypes that are accessible through BOTH org AND user share policies
         share_case_type_ids = org_share_case_type_ids & user_share_case_type_ids
 
-        # Union: case types accessible through either access OR share rights
+        # Union: CaseTypes accessible through either access OR share rights
         expected_case_type_ids = access_case_type_ids | share_case_type_ids
 
         if VERBOSE:
             all_case_type_sets = self._get_all_case_type_sets(env)
-            case_type_set_name_map = {cts.id: cts.name for cts in all_case_type_sets}
+            case_type_set_name_map = {x.id: x.name for x in all_case_type_sets}
 
             org_access_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in org_access_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in org_access_case_type_set_ids
             ]
             user_access_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in user_access_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in user_access_case_type_set_ids
             ]
             org_share_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in org_share_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in org_share_case_type_set_ids
             ]
             user_share_case_type_set_names = [
-                case_type_set_name_map.get(cts_id, str(cts_id))
-                for cts_id in user_share_case_type_set_ids
+                case_type_set_name_map.get(x, str(x))
+                for x in user_share_case_type_set_ids
             ]
 
             print(
-                "org access case type sets:",
+                "org access CaseTypeSets:",
                 len(org_access_case_type_set_ids),
                 org_access_case_type_set_names,
             )
             print(
-                "user access case type sets:",
+                "user access CaseTypeSets:",
                 len(user_access_case_type_set_ids),
                 user_access_case_type_set_names,
             )
-            print("org access case types:", len(org_access_case_type_ids))
-            print("user access case types:", len(user_access_case_type_ids))
-            print("access intersection case types:", len(access_case_type_ids))
+            print("org access CaseTypes:", len(org_access_case_type_ids))
+            print("user access CaseTypes:", len(user_access_case_type_ids))
+            print("access intersection CaseTypes:", len(access_case_type_ids))
             print(
-                "org share case type sets:",
+                "org share CaseTypeSets:",
                 len(org_share_case_type_set_ids),
                 org_share_case_type_set_names,
             )
             print(
-                "user share case type sets:",
+                "user share CaseTypeSets:",
                 len(user_share_case_type_set_ids),
                 user_share_case_type_set_names,
             )
-            print("org share case types:", len(org_share_case_type_ids))
-            print("user share case types:", len(user_share_case_type_ids))
-            print("share intersection case types:", len(share_case_type_ids))
-            print("final union case type IDs:", len(expected_case_type_ids))
+            print("org share CaseTypes:", len(org_share_case_type_ids))
+            print("user share CaseTypes:", len(user_share_case_type_ids))
+            print("share intersection CaseTypes:", len(share_case_type_ids))
+            print("final union CaseType IDs:", len(expected_case_type_ids))
 
         return expected_case_type_ids
 
@@ -460,18 +460,18 @@ class TestRefdataAccess:
     )
     def test_case_type(self, env: Env) -> None:
         """
-        Test that case type access is correctly controlled by ABAC policies for reference data.
+        Test that CaseType access is correctly controlled by ABAC policies for reference data.
 
-        This test verifies that users can only access case types they are authorized to see
+        This test verifies that users can only access CaseTypes they are authorized to see
         based on organization-level policies. For reference data, all users within the same
         organization see the same reference data.
 
         Access logic for reference data:
-        - Organization access policies OR organization share policies (union) = accessible case types
+        - Organization access policies OR organization share policies (union) = accessible CaseTypes
         - User-level policies are NOT considered for reference data access
         - All users in the same organization have identical reference data access
 
-        Users with GE_REFDATA_ADMIN role have access to all case types.
+        Users with GE_REFDATA_ADMIN role have access to all CaseTypes.
 
         :param env: Test environment with app context and test utilities
         :type env: Env
@@ -481,7 +481,7 @@ class TestRefdataAccess:
 
         assert (
             len(all_case_types) > 0
-        ), "No case types found in the system, cannot test access control for case types"
+        ), "No CaseTypes found in the system, cannot test access control for CaseTypes"
 
         all_users = self._get_all_users(env)
         all_organizations = self._get_all_organizations(env)
@@ -503,22 +503,22 @@ class TestRefdataAccess:
                 assert case_types == all_case_types
 
             else:
-                # retrieve all unique case type IDs from the retrieved policies for the user in question
+                # retrieve all unique CaseType IDs from the retrieved policies for the user in question
                 expected_case_type_ids = (
                     self._get_expected_case_type_ids_for_reference_data(env, user)
                 )
 
-                # get actual case type IDs from the returned case types
+                # get actual CaseType IDs from the returned CaseTypes
                 actual_case_type_ids: set[UUID] = set(case_types)  # type: ignore[assignment]
 
-                # temporarily print the user and the actual vs expected case type IDs for debugging purposes
+                # temporarily print the user and the actual vs expected CaseType IDs for debugging purposes
                 if VERBOSE:
                     print(
                         f"user: {user.name} actual: {len(actual_case_type_ids)}, expected: {len(expected_case_type_ids)}"
                     )
 
                 assert actual_case_type_ids == expected_case_type_ids, (
-                    f"User {user.name} should have access to case types: {expected_case_type_ids}, "
+                    f"User {user.name} should have access to CaseTypes: {expected_case_type_ids}, "
                     f"but got: {actual_case_type_ids}"
                 )
 
@@ -528,15 +528,15 @@ class TestRefdataAccess:
     # Save all generated data as a pickle file
     # In case of stable set of data for testing => use pickle file instead of generating new data each time
 
-    def _get_expected_case_type_col_set_ids_for_reference_data(
+    def _get_expected_col_set_ids_for_reference_data(
         self,
         env: Env,
         user: model.User,
     ) -> set[UUID]:
         """
-        Get expected CaseTypeColSet IDs for reference data access for a user.
+        Get expected ColSet IDs for reference data access for a user.
 
-        For reference data, the allowed CaseTypeColSet IDs are those referenced directly in the
+        For reference data, the allowed ColSet IDs are those referenced directly in the
         organization access and share policies for the user's organization.
         """
         all_org_access_policies: list[model.OrganizationAccessCasePolicy] = (
@@ -547,10 +547,10 @@ class TestRefdataAccess:
         )
 
         org_access_col_set_ids = {
-            x.read_case_type_col_set_id
+            x.read_col_set_id
             for x in all_org_access_policies
             if x.organization_id == user.organization_id
-            and x.read_case_type_col_set_id is not None
+            and x.read_col_set_id is not None
         }
 
         # For share policies, collect all from_data_collection Data Collection IDs shared with the user's organization
@@ -560,27 +560,27 @@ class TestRefdataAccess:
             if x.organization_id == user.organization_id
         }
 
-        # Only include read_case_type_col_set_id from share policies where from_data_collection_id is in org_share_data_collection_ids
+        # Only include read_col_set_id from share policies where from_data_collection_id is in org_share_data_collection_ids
         org_share_col_set_ids = {
-            x.read_case_type_col_set_id
+            x.read_col_set_id
             for x in all_org_access_policies
             if x.data_collection_id in org_share_data_collection_ids
-            and x.read_case_type_col_set_id is not None
+            and x.read_col_set_id is not None
         }
 
-        expected_case_type_col_set_ids = org_access_col_set_ids | org_share_col_set_ids
+        expected_col_set_ids = org_access_col_set_ids | org_share_col_set_ids
 
-        return expected_case_type_col_set_ids
+        return expected_col_set_ids
 
-    # Note: test data do not currently include any reference data for case type columns set members
+    # Note: test data do not currently include any reference data for Cols set members
     # but this test can be used when such data is added
     @pytest.mark.skip(
         reason="Skipped, but kept for future reference when implementing more fine-grained tests for operational data access with ABAC filtering"
     )
-    def test_case_type_col_set(self, env: Env) -> None:
+    def test_col_set(self, env: Env) -> None:
 
         all_organizations = self._get_all_organizations(env)
-        all_col_set_ids: list[UUID] = self._read_all(env, model.CaseTypeColSet, return_id=True)  # type: ignore[assignment]
+        all_col_set_ids: list[UUID] = self._read_all(env, model.ColSet, return_id=True)  # type: ignore[assignment]
 
         for user in self._get_all_users(env):
 
@@ -594,20 +594,18 @@ class TestRefdataAccess:
 
             if self._has_role(env, user, RoleSet.GE_REFDATA_ADMIN):
 
-                expected_case_type_col_set_ids: set[UUID] = all_col_set_ids
+                expected_col_set_ids: set[UUID] = all_col_set_ids
             else:
-                expected_case_type_col_set_ids: set[UUID] = (
-                    self._get_expected_case_type_col_set_ids_for_reference_data(
-                        env, user
-                    )
+                expected_col_set_ids: set[UUID] = (
+                    self._get_expected_col_set_ids_for_reference_data(env, user)
                 )
 
-            actual_col_set_ids: list[UUID] = self._read_all(env, model.CaseTypeColSet, user=user, return_id=True)  # type: ignore[assignment]
+            actual_col_set_ids: list[UUID] = self._read_all(env, model.ColSet, user=user, return_id=True)  # type: ignore[assignment]
 
             if VERBOSE:
                 print("all col_set_ids:", len(all_col_set_ids))
-                print("expected col_sets:", len(expected_case_type_col_set_ids))
-                print("actual col_sets:", len(actual_col_set_ids))
+                print("expected col_set_ids:", len(expected_col_set_ids))
+                print("actual col_set_ids:", len(actual_col_set_ids))
 
-            # Optionally, assert that the user only sees the expected col sets
-            assert sorted(actual_col_set_ids) == sorted(expected_case_type_col_set_ids)  # type: ignore[comparison-overlap]
+            # Optionally, assert that the user only sees the expected ColSets
+            assert sorted(actual_col_set_ids) == sorted(expected_col_set_ids)  # type: ignore[comparison-overlap]

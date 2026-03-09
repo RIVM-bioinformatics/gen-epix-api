@@ -474,13 +474,13 @@ class Run:
             ]
         )
 
-    def test_casedb_unit_case_type_col_order(self) -> None:
+    def test_casedb_unit_col_order(self) -> None:
         import pytest
 
         pytest.main(
             Run.DEFAULT_PYTEST_ARGS
             + [
-                "test/casedb/unit/case_type_col_order",
+                "test/casedb/unit/col_order",
             ]
         )
 
