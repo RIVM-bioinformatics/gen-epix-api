@@ -43,7 +43,7 @@ class ValidateRefDataIdCodeMixin:
     @model_validator(mode="after")
     def _validate_refdata(self) -> Self:
         """Validate that either refdata code or refdata id is provided."""
-        for refdata_code_field, refdata_id_field in self.REFDATA_FIELD_ID_CODE_PAIRS:
+        for refdata_id_field, refdata_code_field in self.REFDATA_FIELD_ID_CODE_PAIRS:
             refdata_code = getattr(self, refdata_code_field)
             refdata_id = getattr(self, refdata_id_field)
             if not refdata_code and refdata_id == NULL_ID:
