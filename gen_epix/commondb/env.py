@@ -155,9 +155,7 @@ class AppComposer(BaseAppComposer):
                 organization_service,
                 rbac_service,
                 root_cfg=app.cfg["service"]["auth"]["props"]["root"],
-                automatic_new_user_cfg=app.cfg["service"]["auth"]["props"][
-                    "automatic_new_user"
-                ],  # set to None if no automatic new user
+                automatic_new_user_cfg=app.cfg["service"]["auth"]["props"].get("automatic_new_user"),
             )
 
             # Get current user and new user dependencies for injecting authentication in endpoints
